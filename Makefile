@@ -10,8 +10,24 @@ objects = loader.o kernel.o
 %.o : %.s
 	as $(ASPARAMS) -o $@ $<
 
-mykernel.bin : linker.ld $(objects)
+GTOS.bin : linker.ld $(objects)
 	ld $(LDPARAMS) -T $< -o $@ $(objects)
 
-install : mykernel.bin
-	sudo cp $< /boot/mykernel.bin
+install : GTOS.bin
+	sudo cp $< /boot/GTOS.bin
+
+GTOS.iso: GTOS.bin
+	mkdir iso
+	mkdir iso/boot
+	mkdir iso/boot/grub
+	cp $< iso/boot/GTOS.bin
+	cp gpl3.txt iso/
+	echo 'set timeout=0'                 > iso/boot/grub/grub.cfg
+	echo 'set default=0'                >> iso/boot/grub/grub.cfg
+	echo ''                             >> iso/boot/grub/grub.cfg
+	echo 'menuentry "KayOS" {'          >> iso/boot/grub/grub.cfg
+	echo '  multiboot /boot/GTOS.bin'  >> iso/boot/grub/grub.cfg
+	echo '  boot'                       >> iso/boot/grub/grub.cfg
+	echo '}'                            >> iso/boot/grub/grub.cfg
+	grub-mkrescue --output=$@ iso
+	rm -rf iso
