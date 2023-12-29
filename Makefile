@@ -31,3 +31,6 @@ GTOS.iso: GTOS.bin
 	echo '}'                            >> iso/boot/grub/grub.cfg
 	grub-mkrescue --output=$@ iso
 	rm -rf iso
+	
+run : GTOS.iso
+	VirtualBoxVM --startvm GTOS &
