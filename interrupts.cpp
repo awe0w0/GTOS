@@ -2,7 +2,25 @@
 
 void printf(char* str);
 
+InterruptHandler::InterruptHandler(uint8_t InterruptNumber, InterruptsManager* interruptsManager) {
+    this->interruptNumber = interruptNumber;
+    this->interruptManager = interruptsManager;
+    interruptsManager->handlers[interruptNumber] = this;
+}
+
+InterruptHandler::~InterruptHandler() {
+    if (interruptManager->handlers[interruptNumber] == this) {
+        interruptManager->handlers[interruptNumber] = 0;
+    }
+}
+
+uint32_t InterruptHandler::HandlerInterrupt(uint32_t esp) {
+    return esp;
+}
+
 InterruptsManager::GateDescriptor InterruptsManager::interruptDescriptorTable[256];
+
+InterruptsManager* InterruptsManager::ActivateInterruptsManager = 0;
 
 void InterruptsManager::SetInterruptDescriptorTableEntry(
     uint8_t interruptNumber,
@@ -29,6 +47,7 @@ picSlaveData(0xA1) {
     const uint8_t IDT_INTERRUPT_GATE = 0xE;
 
     for (uint16_t i = 0;i < 256;i++) {
+        handlers[i] = 0;
         SetInterruptDescriptorTableEntry(i, CodeSegment, &IgnoreInterruptRequest, 0, IDT_INTERRUPT_GATE);
     }
     SetInterruptDescriptorTableEntry(0x20, CodeSegment, &HandleInterruptRequest0x00, 0, IDT_INTERRUPT_GATE);
@@ -61,12 +80,45 @@ InterruptsManager::~InterruptsManager() {
 }
 
 void InterruptsManager::Activate() {
+
+    if (ActivateInterruptsManager != 0)
+        ActivateInterruptsManager->Deactivate();
+    ActivateInterruptsManager = this;
     asm("sti");
 }
 
+void InterruptsManager::Deactivate() {
+    if (ActivateInterruptsManager == this) {
+        ActivateInterruptsManager = 0;
+        asm("cli");
+    }
+}
 
 uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t esp) {
-    printf(" INTERRUPT");
+    if (ActivateInterruptsManager != 0) {
+        return ActivateInterruptsManager->DoHandleInterrupt(interruptNumber, esp);
+    }
 
+    return esp;
+}
+
+uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
+    if (handlers[interruptNumber] != 0) {
+        esp = handlers[interruptNumber]->HandlerInterrupt(esp);
+    }
+    else if (interruptNumber != 0x20) {
+        char* foo = "UNHANDLED INTERRUPT 0x00";
+        char* hex = "123456789ABCDEF";
+        foo[22] = hex[(interruptNumber >> 4) & 0x0f];
+        foo[23] = hex[(interruptNumber) & 0x0f];
+        printf(foo);
+    }
+    
+    if (0x20 <= interruptNumber && interruptNumber < 0x30) {
+        picMasterCommand.Write(0x20);
+        if (0x28 <= interruptNumber) {
+            picSlaveCommand.Write(0x20);
+        }
+    }
     return esp;
 }
