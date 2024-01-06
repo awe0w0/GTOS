@@ -7,6 +7,7 @@
 
 class InterruptsManager;
 class KeyboardDriver;
+class MouseDriver;
 
 class InterruptHandler {
     protected:
@@ -22,6 +23,7 @@ class InterruptHandler {
 class InterruptsManager{
     friend InterruptHandler;
     friend KeyboardDriver;
+    friend MouseDriver;
     protected:
         static InterruptsManager* ActivateInterruptsManager;
         InterruptHandler* handlers[256];
@@ -66,6 +68,7 @@ class InterruptsManager{
         static void IgnoreInterruptRequest();
         static void HandleInterruptRequest0x00();
         static void HandleInterruptRequest0x01();
+        static void HandleInterruptRequest0x0C();
 };
 
 #endif
