@@ -40,16 +40,16 @@ uint32_t MouseDriver::HandlerInterrupt(uint32_t esp) {
     }
 
     static int8_t x = 40,y = 12;
-
+    static uint16_t* VideoMemory = (uint16_t*)0xb8000;
     buffer[offset] = dataport.Read();
     offset = (offset + 1) % 3;
+
+
 
     if (offset == 0) {
         static uint16_t* VideoMemory = (uint16_t*)0xb8000;
 
-        VideoMemory[80 * y + x] -= (VideoMemory[80 * y + x] & 0xF000 >> 4)
-                                | ((VideoMemory[80 * y + x] & 0x0F00) << 4)
-                                | (VideoMemory[80 * y + x] & 0x00FF);
+        VideoMemory[80 * y + x] = 0x0720;
 
         x += buffer[1];
         if (x < 0) x = 0;
