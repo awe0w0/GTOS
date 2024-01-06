@@ -6,6 +6,7 @@
 #include "gdt.h"
 
 class InterruptsManager;
+class KeyboardDriver;
 
 class InterruptHandler {
     protected:
@@ -20,6 +21,7 @@ class InterruptHandler {
 
 class InterruptsManager{
     friend InterruptHandler;
+    friend KeyboardDriver;
     protected:
         static InterruptsManager* ActivateInterruptsManager;
         InterruptHandler* handlers[256];
@@ -51,6 +53,7 @@ class InterruptsManager{
         Port8BitSlow picSlaveCommand;
         Port8BitSlow picSlaveData;
     public:
+        
         InterruptsManager(GlobalDescriptorTable* gdt);
         ~InterruptsManager();
 

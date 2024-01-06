@@ -45,7 +45,6 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     InterruptsManager interrups(&gdt);
 
     KeyboardDriver keyboard(&interrups);
-
     interrups.Activate();
 
     while (true);

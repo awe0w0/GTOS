@@ -15,6 +15,7 @@ InterruptHandler::~InterruptHandler() {
 }
 
 uint32_t InterruptHandler::HandlerInterrupt(uint32_t esp) {
+
     return esp;
 }
 
@@ -80,7 +81,6 @@ InterruptsManager::~InterruptsManager() {
 }
 
 void InterruptsManager::Activate() {
-
     if (ActivateInterruptsManager != 0)
         ActivateInterruptsManager->Deactivate();
     ActivateInterruptsManager = this;
@@ -105,10 +105,11 @@ uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t es
 uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
     if (handlers[interruptNumber] != 0) {
         esp = handlers[interruptNumber]->HandlerInterrupt(esp);
+        
     }
     else if (interruptNumber != 0x20) {
         char* foo = "UNHANDLED INTERRUPT 0x00";
-        char* hex = "123456789ABCDEF";
+        char* hex = "0123456789ABCDEF";
         foo[22] = hex[(interruptNumber >> 4) & 0x0f];
         foo[23] = hex[(interruptNumber) & 0x0f];
         printf(foo);
