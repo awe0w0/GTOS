@@ -3,6 +3,7 @@
 #include "interrupts.h"
 #include "keyboard.h"
 #include "mouse.h"
+#include "driver.h"
 
 void printf(char* str) {
     static uint16_t* VideoMemory = (uint16_t*) 0xb8000;
@@ -32,6 +33,56 @@ void printf(char* str) {
     }
 }
 
+void printfHex(uint8_t key) {
+    char* foo = "00";
+    char* hex = "0123456789ABCDEF";
+    foo[0] = hex[(key >> 4) & 0x0F];
+    foo[1] = hex[key & 0x0F];
+
+    printf(foo);
+}
+
+class PrintfKeyboardEventHandler : public KeyboardEventHandler {
+    public:
+    void OnKeuDown(char c) {
+        char* foo = " ";
+        foo[0] = c;
+        printf(foo);
+    }
+};
+
+class MouseToConsole : public MouseEventHandler {
+    int8_t x = 40, y = 12;
+    uint16_t pre;
+public:
+    MouseToConsole() {
+        static uint16_t* VideoMemory = (uint16_t*)0xb8000;
+
+        VideoMemory[80 * 12 + 40] = (VideoMemory[80 * 12 + 40] & 0xF000 >> 4)
+                                | ((VideoMemory[80 * 12 + 40] & 0x0F00) << 4)
+                                | (VideoMemory[80 * 12 + 40] & 0x00FF);
+    }
+
+    void OnMouseMove(int8_t xoffset,int8_t yoffset) {
+            static uint16_t* VideoMemory = (uint16_t*)0xb8000;
+
+            VideoMemory[80 * y + x] = pre;
+
+            x += xoffset;
+            if (x < 0) x = 0;
+            if (x >= 80) x = 79;
+            
+            y += yoffset;
+            if (y < 0) y = 0;
+            if (y >= 25) y = 24;
+            
+            pre = VideoMemory[80 * y + x]; 
+            VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xF000 >> 4)
+                                    | ((VideoMemory[80 * y + x] & 0x0F00) << 4)
+                                    | (VideoMemory[80 * y + x] & 0x00FF);
+    }
+};
+
 typedef void (*constructor)();
 extern "C" constructor start_ctors;
 extern "C" constructor end_ctors;
@@ -43,10 +94,23 @@ extern "C" void callConstructors() {
 extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     printf("NOW_LODING...\n");
     GlobalDescriptorTable gdt;
-    InterruptsManager interrups(&gdt);
+    InterruptsManager interrups(0x20, &gdt);
 
-    KeyboardDriver keyboard(&interrups);
-    MouseDriver mouse(&interrups);
+    printf("Initializing Hardware, Stage 1\n");
+
+    DriverManager drvManager;
+        PrintfKeyboardEventHandler kbhandler;
+        KeyboardDriver keyboard(&interrups, &kbhandler);
+        drvManager.AddDriver(&keyboard);
+
+        MouseToConsole mousehandler;
+        MouseDriver mouse(&interrups, &mousehandler);
+        drvManager.AddDriver(&mouse);
+
+    printf("Initializing Hardware, Stage 2\n");
+        drvManager.ActivateAll();
+
+    printf("Initializing Hardware, Stage 3\n");
     interrups.Activate();
 
     while (true);

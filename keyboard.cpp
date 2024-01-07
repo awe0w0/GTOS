@@ -1,10 +1,31 @@
 #include "keyboard.h"
 
-KeyboardDriver::KeyboardDriver(InterruptsManager* manager) 
+KeyboardEventHandler::KeyboardEventHandler() {
+
+}
+
+void KeyboardEventHandler::OnKeyDown(char) {
+
+}
+
+void KeyboardEventHandler::OnKeyUp(char) {
+
+}
+
+KeyboardDriver::KeyboardDriver(InterruptsManager* manager, KeyboardEventHandler* handler) 
 :InterruptHandler(0x21,manager),
 dataport(0x60),
 commandport(0x64) {
     manager->handlers[0x21] = this;
+    this->handler = handler;
+}
+
+KeyboardDriver::~KeyboardDriver() {
+
+}
+
+void KeyboardDriver::Activate() {
+
     while (commandport.Read() & 0x1) {
         dataport.Read();
     }
@@ -15,17 +36,16 @@ commandport(0x64) {
     dataport.Write(status);
 
     dataport.Write(0xF4);
-
-}
-
-KeyboardDriver::~KeyboardDriver() {
-
 }
 
 void printf(char*);
+void printfHex(uint8_t);
 
 uint32_t KeyboardDriver::HandlerInterrupt(uint32_t esp) {
     uint8_t key = dataport.Read();
+
+    if (handler == 0) return esp;
+
     char* ans = " ";
     static bool Shift = false;
     static bool CapsLock = false;
@@ -127,12 +147,8 @@ uint32_t KeyboardDriver::HandlerInterrupt(uint32_t esp) {
         
         default:
             if (key <= 0x80) {
-                char* foo = "KEYBOARD 0x00";
-                char* hex = "0123456789ABCDEF";
-                foo[11] = hex[(key >> 4) & 0x0F];
-                foo[12] = hex[key & 0x0F];
-
-                printf(foo);
+                printf("KEYBOARD 0x00");
+                printfHex(key);
                 break;
             }
         }
