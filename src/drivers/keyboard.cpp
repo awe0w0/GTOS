@@ -1,4 +1,8 @@
-#include "keyboard.h"
+#include <drivers/keyboard.h>
+
+using namespace gtos::hardwarecommunication;
+using namespace gtos::drivers;
+
 
 KeyboardEventHandler::KeyboardEventHandler() {
 
@@ -12,19 +16,18 @@ void KeyboardEventHandler::OnKeyUp(char) {
 
 }
 
-KeyboardDriver::KeyboardDriver(InterruptsManager* manager, KeyboardEventHandler* handler) 
+gtos::drivers::KeyboardDriver::KeyboardDriver(InterruptsManager* manager, KeyboardEventHandler* handler) 
 :InterruptHandler(0x21,manager),
 dataport(0x60),
 commandport(0x64) {
-    manager->handlers[0x21] = this;
     this->handler = handler;
 }
 
-KeyboardDriver::~KeyboardDriver() {
+gtos::drivers::KeyboardDriver::~KeyboardDriver() {
 
 }
 
-void KeyboardDriver::Activate() {
+void gtos::drivers::KeyboardDriver::Activate() {
 
     while (commandport.Read() & 0x1) {
         dataport.Read();
@@ -41,7 +44,7 @@ void KeyboardDriver::Activate() {
 void printf(char*);
 void printfHex(uint8_t);
 
-uint32_t KeyboardDriver::HandlerInterrupt(uint32_t esp) {
+uint32_t gtos::drivers::KeyboardDriver::HandlerInterrupt(uint32_t esp) {
     uint8_t key = dataport.Read();
 
     if (handler == 0) return esp;

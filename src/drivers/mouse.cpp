@@ -1,4 +1,7 @@
-#include "mouse.h"
+#include <drivers/mouse.h>
+
+using namespace gtos::drivers;
+using namespace gtos::hardwarecommunication;
 
 MouseEventHandler::MouseEventHandler() {
 
@@ -20,21 +23,20 @@ void MouseEventHandler::OnMouseMove(int8_t x, int8_t y) {
 
 }
 
-MouseDriver::MouseDriver(InterruptsManager* manager, MouseEventHandler* handler)
+gtos::drivers::MouseDriver::MouseDriver(InterruptsManager* manager, MouseEventHandler* handler)
 : InterruptHandler(0x2C, manager),
 dataport(0x60),
 commandport(0x64) {
-    manager->handlers[0x2C] = this;
 
     this->handler = handler;
 
 }
 
-MouseDriver::~MouseDriver() {
+gtos::drivers::MouseDriver::~MouseDriver() {
 
 }
 
-void MouseDriver::Activate() {
+void gtos::drivers::MouseDriver::Activate() {
     offset = 0;
     buttons = 0;
 
@@ -50,7 +52,7 @@ void MouseDriver::Activate() {
 }
 void printf(char*);
 
-uint32_t MouseDriver::HandlerInterrupt(uint32_t esp) {
+uint32_t gtos::drivers::MouseDriver::HandlerInterrupt(uint32_t esp) {
     uint8_t status = commandport.Read();
     if ((!(status & 0x20)) || handler == 0) {
         return esp;

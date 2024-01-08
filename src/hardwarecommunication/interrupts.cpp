@@ -1,4 +1,6 @@
-#include "interrupts.h"
+#include <hardwarecommunication/interrupts.h>
+
+using namespace gtos::hardwarecommunication;
 
 void printf(char* str);
 void printfHex(uint8_t);
@@ -163,4 +165,8 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
         }
     }
     return esp;
+}
+
+void InterruptsManager::load(InterruptHandler* handler,uint8_t interruptNumber) {
+    this->handlers[interruptNumber] = handler;
 }

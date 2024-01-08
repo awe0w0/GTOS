@@ -1,9 +1,13 @@
-#include "types.h"
-#include "gdt.h"
-#include "interrupts.h"
-#include "keyboard.h"
-#include "mouse.h"
-#include "driver.h"
+#include <common/types.h>
+#include <gdt.h>
+#include <hardwarecommunication/interrupts.h>
+#include <drivers/keyboard.h>
+#include <drivers/mouse.h>
+#include <drivers/driver.h>
+
+using namespace gtos;
+using namespace gtos::hardwarecommunication;
+using namespace gtos::drivers;
 
 void printf(char* str) {
     static uint16_t* VideoMemory = (uint16_t*) 0xb8000;
@@ -94,24 +98,26 @@ extern "C" void callConstructors() {
 extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     printf("NOW_LODING...\n");
     GlobalDescriptorTable gdt;
-    InterruptsManager interrups(0x20, &gdt);
+    InterruptsManager interrupts(0x20, &gdt);
 
     printf("Initializing Hardware, Stage 1\n");
 
     DriverManager drvManager;
         PrintfKeyboardEventHandler kbhandler;
-        KeyboardDriver keyboard(&interrups, &kbhandler);
+        drivers::KeyboardDriver keyboard(&interrupts, &kbhandler);
         drvManager.AddDriver(&keyboard);
+        interrupts.load(&keyboard, 0x21);
 
         MouseToConsole mousehandler;
-        MouseDriver mouse(&interrups, &mousehandler);
+        drivers::MouseDriver mouse(&interrupts, &mousehandler);
         drvManager.AddDriver(&mouse);
+        interrupts.load(&mouse, 0x2C);
 
     printf("Initializing Hardware, Stage 2\n");
         drvManager.ActivateAll();
 
     printf("Initializing Hardware, Stage 3\n");
-    interrups.Activate();
+    interrupts.Activate();
 
     while (true);
 }

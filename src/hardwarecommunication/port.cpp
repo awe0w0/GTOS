@@ -1,4 +1,6 @@
-#include "port.h"
+#include "hardwarecommunication/port.h"
+
+using namespace gtos::hardwarecommunication;
 
 Port::Port(uint16_t portnumber) {
     this->portnumber = portnumber;
