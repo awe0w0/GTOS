@@ -1,13 +1,26 @@
 #ifndef __GTOS__HARDWARECOMMUNICATION__PCI_H
 #define __GTOS__HARDWARECOMMUNICATION__PCI_H
 
-#include <hardwarecommunication/port.h>
-#include <common/types.h>
 #include <hardwarecommunication/interrupts.h>
+#include <hardwarecommunication/port.h>
 #include <drivers/driver.h>
+#include <common/types.h>
 
 namespace gtos {
     namespace hardwarecommunication{
+
+        enum BaseAddressRegisterType {
+            MemoryMapping = 0,
+            InputOutput = 1
+        };
+
+        class BaseAddressRegister {
+            public:
+                bool prefetchable;
+                uint8_t* address;
+                uint32_t size;
+                BaseAddressRegisterType type;
+        };
 
         class PeripheralComponentInterconnectDeviceDescriptor {
             public:
@@ -43,8 +56,10 @@ namespace gtos {
             void Write(uint16_t bus, uint16_t device, uint16_t function, uint32_t registeroffset, uint32_t value);
             bool DeviceHasFunctions(uint16_t bus, uint16_t device);
 
-            void SelectDrivers(drivers::DriverManager* driverManager);
+            void SelectDrivers(drivers::DriverManager* driverManager, hardwarecommunication::InterruptsManager* interrupts);
+            drivers::Driver* GetDriver(PeripheralComponentInterconnectDeviceDescriptor, hardwarecommunication::InterruptsManager* interrupts);
             PeripheralComponentInterconnectDeviceDescriptor GetDeviceDescriptor(uint16_t bus, uint16_t device, uint16_t function);
+            BaseAddressRegister GetBaseAddressRegister(uint16_t bus, uint16_t device, uint16_t function, uint16_t bar);
         };
 
     }

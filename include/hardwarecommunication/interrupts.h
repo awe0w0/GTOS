@@ -24,8 +24,6 @@ namespace gtos {
 
         class InterruptsManager{
             friend InterruptHandler;
-            friend ::gtos::hardwarecommunication::KeyboardDriver;
-            friend ::gtos::hardwarecommunication::MouseDriver;
             protected:
                 static InterruptsManager* ActivateInterruptsManager;
                 InterruptHandler* handlers[256];
