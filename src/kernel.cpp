@@ -128,8 +128,8 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     vga.SetMode(320, 200, 8);
 
-    for (uint8_t y = 0;y < 200;y++) {
-        for (uint8_t x = 0;x < 320;x++) 
+    for (int32_t y = 0;y < 200;y++) {
+        for (int32_t x = 0;x < 320;x++) 
             vga.PutPixel(x, y,0x00, 0x00, 0xA8);
     }
 
