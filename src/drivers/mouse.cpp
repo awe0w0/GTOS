@@ -66,7 +66,7 @@ uint32_t gtos::drivers::MouseDriver::HandlerInterrupt(uint32_t esp) {
     if (offset == 0) {
         if (buffer[1] != 0 || buffer[2] != 0) {
             uint8_t x = 40, y = 12;
-            handler->OnMouseMove(buffer[1], -buffer[2]);
+            handler->OnMouseMove((int)buffer[1], -((int)buffer[2]));
         }        
         for (uint8_t i = 0;i < 3;i++) {
             if ((buffer[0] & (0x01 << i)) != (buttons & (0x01 << i))) {
