@@ -3,10 +3,11 @@
 
 #include <common/types.h>
 #include <common/graphicscontext.h>
+#include <drivers/keyboard.h>
 
 namespace gtos {
     namespace gui {
-        class Widget {
+        class Widget : public gtos::drivers::KeyboardEventHandler {
         protected:
             Widget* parent;
             int32_t x;
@@ -34,16 +35,14 @@ namespace gtos {
 
             virtual void GetFocus(Widget* widget);
             virtual void ModelToScreen(int32_t &x, int32_t &y);
-
-            virtual void Draw(gtos::common::GraphicsContext* gc);
-            virtual void OnMouseDown(int32_t x,int32_t y);
-            virtual void OnMouseUp(int32_t x,int32_t y);
-            virtual void OnMouseMove(int32_t oldx, int32_t oldy, int32_t newx, int32_t newy);
+            virtual bool ContainCoordinate(int32_t x, int32_t y); 
             
-            virtual void OnKeyDown(char* str);
-            virtual void OnKeyUp(char* str);
+            virtual void Draw(gtos::common::GraphicsContext* gc);
+            virtual void OnMouseDown(int32_t x,int32_t y, uint8_t button);
+            virtual void OnMouseUp(int32_t x,int32_t y, uint8_t button);
+            virtual void OnMouseMove(int32_t oldx, int32_t oldy, int32_t newx, int32_t newy);
 
-            virtual bool ContainCoordinate(int32_t x, int32_t y);   
+              
         };
 
         class CompositeWidget : public Widget {
@@ -67,12 +66,13 @@ namespace gtos {
             virtual void GetFocus(Widget* widget);
 
             virtual void Draw(gtos::common::GraphicsContext* gc);
-            virtual void OnMouseDown(int32_t x,int32_t y);
-            virtual void OnMouseUp(int32_t x,int32_t y);
+            virtual void OnMouseDown(int32_t x,int32_t y, uint8_t button);
+            virtual void OnMouseUp(int32_t x,int32_t y, uint8_t button);
             virtual void OnMouseMove(int32_t oldx, int32_t oldy, int32_t newx, int32_t newy);
-            
-            virtual void OnKeyDown(char* str);
-            virtual void OnKeyUp(char* str); 
+            virtual bool AddChild(Widget* child);
+
+            virtual void OnKeyDown(char);
+            virtual void OnKeyUp(char); 
         };
     }
 }
