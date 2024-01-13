@@ -140,6 +140,7 @@ void InterruptsManager::Deactivate() {
     }
 }
 
+//汇编调用的入口函数
 uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t esp) {
     if (ActivateInterruptsManager != 0) {
         return ActivateInterruptsManager->DoHandleInterrupt(interruptNumber, esp);
@@ -167,6 +168,6 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
     return esp;
 }
 
-void InterruptsManager::load(InterruptHandler* handler,uint8_t interruptNumber) {
+void InterruptsManager::Load(InterruptHandler* handler,uint8_t interruptNumber) {
     this->handlers[interruptNumber] = handler;
 }

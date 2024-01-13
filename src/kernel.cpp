@@ -1,13 +1,20 @@
 #include <common/types.h>
 #include <gdt.h>
 #include <hardwarecommunication/interrupts.h>
+#include <hardwarecommunication/pci.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/driver.h>
+#include <drivers/vga.h>
+#include <gui/desktop.h>
+#include <gui/window.h>
+
+#define GRAPHICSMODE
 
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
+using namespace gtos::gui;
 
 void printf(char* str) {
     static uint16_t* VideoMemory = (uint16_t*) 0xb8000;
@@ -55,8 +62,10 @@ class PrintfKeyboardEventHandler : public KeyboardEventHandler {
     }
 };
 
+//b8000模式下的鼠标控制类
 class MouseToConsole : public MouseEventHandler {
     int8_t x = 40, y = 12;
+    //pre用来获取鼠标经过的上个地址的数据
     uint16_t pre;
 public:
     MouseToConsole() {
@@ -100,24 +109,49 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     GlobalDescriptorTable gdt;
     InterruptsManager interrupts(0x20, &gdt);
 
+    Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
     printf("Initializing Hardware, Stage 1\n");
 
     DriverManager drvManager;
-        PrintfKeyboardEventHandler kbhandler;
-        drivers::KeyboardDriver keyboard(&interrupts, &kbhandler);
+        // PrintfKeyboardEventHandler kbhandler;
+        // drivers::KeyboardDriver keyboard(&interrupts, &kbhandler);
+#ifdef GRAPHICSMODE
+        drivers::KeyboardDriver keyboard(&interrupts, &desktop);
+#endif
         drvManager.AddDriver(&keyboard);
-        interrupts.load(&keyboard, 0x21);
+        interrupts.Load(&keyboard, 0x21);
 
-        MouseToConsole mousehandler;
-        drivers::MouseDriver mouse(&interrupts, &mousehandler);
+        // MouseToConsole mousehandler;
+        // drivers::MouseDriver mouse(&interrupts, &mousehandler);
+#ifdef GRAPHICSMODE
+        drivers::MouseDriver mouse(&interrupts, &desktop);
+#endif
         drvManager.AddDriver(&mouse);
-        interrupts.load(&mouse, 0x2C);
+        interrupts.Load(&mouse, 0x2C);
+
+        PeripheralComponentInterconnectController PCIController;
+        PCIController.SelectDrivers(&drvManager, &interrupts);
+
+        VideoGraphicsArray vga;
 
     printf("Initializing Hardware, Stage 2\n");
         drvManager.ActivateAll();
 
     printf("Initializing Hardware, Stage 3\n");
+
+
+    vga.SetMode(320, 200, 8);
+
+    Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
+    desktop.AddChild(&win1);
+
+    Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
+    desktop.AddChild(&win2);
+
     interrupts.Activate();
 
-    while (true);
+
+    while (true) {
+        desktop.Draw(&vga);
+    }    
 }
