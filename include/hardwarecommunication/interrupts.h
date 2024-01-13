@@ -65,7 +65,7 @@ namespace gtos {
 
                 void Activate();
                 void Deactivate();
-                void load(InterruptHandler* handler,uint8_t interruptNumber);
+                void Load(InterruptHandler* handler,uint8_t interruptNumber);
                 
                 static uint32_t handleInterrupt(uint8_t interruptNamber, uint32_t esp);
                 uint32_t DoHandleInterrupt(uint8_t interruptNamber, uint32_t esp);

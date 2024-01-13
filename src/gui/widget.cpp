@@ -35,6 +35,7 @@ void Widget::ModelToScreen(int32_t &x, int32_t &y) {
     y += this->y;
 }
 
+//绘制窗口函数
 void Widget::Draw(gtos::common::GraphicsContext* gc) {
     int X = 0;
     int Y = 0;
@@ -90,12 +91,14 @@ void CompositeWidget::GetFocus(Widget* widget) {
     }
 }
 
+//添加窗口
 bool CompositeWidget::AddChild(Widget* child) {
     if (numChildren >= 100) return false;
     children[numChildren++] = child;
     return true;
 }
 
+//绘制所有窗口
 void CompositeWidget::Draw(gtos::common::GraphicsContext* gc) {
     Widget::Draw(gc);
     for (int i = numChildren - 1;i >= 0;--i) 
