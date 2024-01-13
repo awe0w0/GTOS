@@ -16,6 +16,7 @@ _ZN4gtos21hardwarecommunication17InterruptsManager19HandleException\num\()Ev:
 .global _ZN4gtos21hardwarecommunication17InterruptsManager26HandleInterruptRequest\num\()Ev
 _ZN4gtos21hardwarecommunication17InterruptsManager26HandleInterruptRequest\num\()Ev:
     movb $\num + IRO_BASE, (interruptnumber)
+    pushl $0
     jmp int_bottom
 .endm
 
@@ -60,22 +61,51 @@ HandleInterruptRequest 0x31
 
 int_bottom:
 
-    pusha
-    pushl %ds
-    pushl %es
-    pushl %fs
-    pushl %gs
+    # pusha
+    # pushl %ds
+    # pushl %es
+    # pushl %fs
+    # pushl %gs
 
+    // 按照multitasking中的CPUState结构体顺序入栈
+    pushl %ebp
+    pushl %edi
+    pushl %esi
+
+    pushl %edx
+    pushl %ecx
+    pushl %ebx
+    pushl %eax
+
+    # load ring 0 segment register laden
+    # cld
+    # mov $0x10, %eax
+    # mov %eax. %eds
+    # mov %eax, %ees
+
+    # call cpp handler
     pushl %esp
     push (interruptnumber)
     call _ZN4gtos21hardwarecommunication17InterruptsManager15handleInterruptEhj
-    movl %eax, %esp
+    # add %esp, 6
+    movl %eax, %esp # 切获取到的esp来换栈
 
-    popl %gs
-    popl %fs
-    popl %es
-    popl %ds
-    popa
+    popl %eax
+    popl %ebx
+    popl %ecx
+    popl %edx
+
+    popl %esi
+    popl %edi
+    popl %ebp
+    
+    # popl %gs
+    # popl %fs
+    # popl %es
+    # popl %ds
+    # popa
+
+    add $4, %esp
 
 _ZN4gtos21hardwarecommunication17InterruptsManager15InterruptIgnoreEv:
 

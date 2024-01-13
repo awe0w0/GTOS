@@ -4,6 +4,7 @@
 #include <common/types.h>
 #include <hardwarecommunication/port.h>
 #include <gdt.h>
+#include <multitasking.h>
 
 namespace gtos {
     namespace hardwarecommunication {
@@ -26,6 +27,7 @@ namespace gtos {
             friend InterruptHandler;
             protected:
                 static InterruptsManager* ActivateInterruptsManager;
+                TaskManager* taskManager;
                 InterruptHandler* handlers[256];
 
                 
@@ -60,7 +62,7 @@ namespace gtos {
                 Port8BitSlow picSlaveData;
             public:
                 
-                InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt);
+                InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt, gtos::TaskManager* taskmanager);
                 ~InterruptsManager();
 
                 void Activate();

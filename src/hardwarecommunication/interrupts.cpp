@@ -1,5 +1,6 @@
 #include <hardwarecommunication/interrupts.h>
 
+using namespace gtos;
 using namespace gtos::hardwarecommunication;
 
 void printf(char* str);
@@ -44,12 +45,13 @@ void InterruptsManager::SetInterruptDescriptorTableEntry(
     interruptDescriptorTable[interruptNumber].reserved = 0;
 }
 
-        InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt) 
+        InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt, TaskManager* taskmanager) 
             :picMasterCommand(0x20),
             picMasterData(0x21),
             picSlaveCommand(0xA0),
             picSlaveData(0xA1)
         {
+            this->taskManager = taskManager;
             this->hardwareInterruptOffset = hardwareInterruptOffset;
             uint32_t CodeSegment = gdt->CodeSegmentSelector();
 
@@ -126,6 +128,7 @@ InterruptsManager::~InterruptsManager() {
 
 }
 
+//激活idt
 void InterruptsManager::Activate() {
     if (ActivateInterruptsManager != 0)
         ActivateInterruptsManager->Deactivate();
@@ -159,6 +162,10 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
         printfHex(interruptNumber);
     }
     
+    if (interruptNumber == hardwareInterruptOffset) {
+        esp = (uint32_t)taskManager->Schedule((CPUState*)esp);
+    }
+
     if (hardwareInterruptOffset <= interruptNumber && interruptNumber < hardwareInterruptOffset + 16) {
         picMasterCommand.Write(0x20);
         if (hardwareInterruptOffset + 8 <= interruptNumber) {

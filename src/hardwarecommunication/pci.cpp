@@ -52,6 +52,7 @@ bool PeripheralComponentInterconnectController::DeviceHasFunctions(uint16_t bus,
 void printf(char*);
 void printfHex(uint8_t);
 
+//遍历每个pci总线里的每个设备的每个函数
 void PeripheralComponentInterconnectController::SelectDrivers(DriverManager* driverManager, InterruptsManager* interrupts) {
     for (int bus = 0;bus < 8;bus++) {
         for (int device = 0;device < 32;device++) {

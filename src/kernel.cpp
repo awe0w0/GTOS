@@ -8,8 +8,9 @@
 #include <drivers/vga.h>
 #include <gui/desktop.h>
 #include <gui/window.h>
+#include <multitasking.h>
 
-#define GRAPHICSMODE
+// #define GRAPHICSMODE
 
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
@@ -96,6 +97,14 @@ public:
     }
 };
 
+void taskA() {
+    while (true) printf("A");
+}
+
+void taskB() {
+    while (true) printf("B");
+}
+
 typedef void (*constructor)();
 extern "C" constructor start_ctors;
 extern "C" constructor end_ctors;
@@ -107,25 +116,36 @@ extern "C" void callConstructors() {
 extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     printf("NOW_LODING...\n");
     GlobalDescriptorTable gdt;
-    InterruptsManager interrupts(0x20, &gdt);
 
+    TaskManager taskManager;
+    Task task1(&gdt, taskA);
+    Task task2(&gdt, taskB);
+    taskManager.AddTask(&task1);
+    taskManager.AddTask(&task2);
+    InterruptsManager interrupts(0x20, &gdt, &taskManager);
+#ifdef GRAPHICSMODE
     Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
+#endif
     printf("Initializing Hardware, Stage 1\n");
 
     DriverManager drvManager;
-        // PrintfKeyboardEventHandler kbhandler;
-        // drivers::KeyboardDriver keyboard(&interrupts, &kbhandler);
-#ifdef GRAPHICSMODE
+
+    #ifdef GRAPHICSMODE
         drivers::KeyboardDriver keyboard(&interrupts, &desktop);
-#endif
+    #else
+        PrintfKeyboardEventHandler kbhandler;
+        drivers::KeyboardDriver keyboard(&interrupts, &kbhandler);
+    #endif
         drvManager.AddDriver(&keyboard);
         interrupts.Load(&keyboard, 0x21);
 
-        // MouseToConsole mousehandler;
-        // drivers::MouseDriver mouse(&interrupts, &mousehandler);
-#ifdef GRAPHICSMODE
+
+    #ifdef GRAPHICSMODE
         drivers::MouseDriver mouse(&interrupts, &desktop);
-#endif
+    #else
+        MouseToConsole mousehandler;
+        drivers::MouseDriver mouse(&interrupts, &mousehandler);
+    #endif
         drvManager.AddDriver(&mouse);
         interrupts.Load(&mouse, 0x2C);
 
@@ -139,7 +159,7 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     printf("Initializing Hardware, Stage 3\n");
 
-
+#ifdef GRAPHICSMODE
     vga.SetMode(320, 200, 8);
 
     Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
@@ -147,11 +167,13 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
     desktop.AddChild(&win2);
-
+#endif
     interrupts.Activate();
 
 
     while (true) {
-        desktop.Draw(&vga);
+        #ifdef GRAPHICSMODE
+            desktop.Draw(&vga);
+        #endif
     }    
 }
