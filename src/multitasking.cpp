@@ -54,9 +54,7 @@ bool TaskManager::AddTask(Task* task) {
 
 //调用这个函数获取下个进程的esp
 CPUState* TaskManager::Schedule(CPUState* cpustate) {
-    printf("~~~~~~");
     if (numTasks <= 0) return cpustate;
-    printf("!!!!!!!!!!!!!");
     //存储当前值
     if (currentTask >= 0) tasks[currentTask]->cpustate = cpustate;
 
