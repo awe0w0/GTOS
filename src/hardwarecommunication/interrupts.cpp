@@ -164,6 +164,7 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
     
     if (interruptNumber == hardwareInterruptOffset) {
         esp = (uint32_t)taskManager->Schedule((CPUState*)esp);
+        
     }
 
     if (hardwareInterruptOffset <= interruptNumber && interruptNumber < hardwareInterruptOffset + 16) {
@@ -177,4 +178,8 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
 
 void InterruptsManager::Load(InterruptHandler* handler,uint8_t interruptNumber) {
     this->handlers[interruptNumber] = handler;
+}
+
+void InterruptsManager::Load(TaskManager* taskManager) {
+    this->taskManager = taskManager;
 }

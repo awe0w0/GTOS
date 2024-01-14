@@ -86,6 +86,7 @@ int_bottom:
     # call cpp handler
     pushl %esp
     push (interruptnumber)
+    movl %eax, 0
     call _ZN4gtos21hardwarecommunication17InterruptsManager15handleInterruptEhj
     # add %esp, 6
     movl %eax, %esp # 切获取到的esp来换栈

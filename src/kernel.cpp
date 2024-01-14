@@ -41,6 +41,7 @@ void printf(char* str) {
             for (y = 0;y < 25;y++)
                 for (x = 0;x < 80;x++)
                     VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | ' ';
+            y = 0;
          }
     }
 }
@@ -123,6 +124,8 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     taskManager.AddTask(&task1);
     taskManager.AddTask(&task2);
     InterruptsManager interrupts(0x20, &gdt, &taskManager);
+    interrupts.Load(&taskManager);
+    
 #ifdef GRAPHICSMODE
     Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
 #endif

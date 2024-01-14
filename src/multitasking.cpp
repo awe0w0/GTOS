@@ -2,6 +2,10 @@
 
 using namespace gtos;
 
+void printf(char*);
+
+void taskA();
+
 Task::Task(GlobalDescriptorTable* gdt, void entrypoint()) {
     cpustate = (CPUState*)(stack + 4096 - sizeof(CPUState));
     cpustate->eax = 0;
@@ -46,17 +50,21 @@ bool TaskManager::AddTask(Task* task) {
     return true;
 }
 
+
+
 //调用这个函数获取下个进程的esp
 CPUState* TaskManager::Schedule(CPUState* cpustate) {
+    printf("~~~~~~");
     if (numTasks <= 0) return cpustate;
-    
+    printf("!!!!!!!!!!!!!");
     //存储当前值
     if (currentTask >= 0) tasks[currentTask]->cpustate = cpustate;
 
-    //当前任务超过数组大小，返回新的，重新开始
+    //当前任务超过数组大小，重新开始
     if (++currentTask >= numTasks) {
         currentTask %= numTasks;
     }
-
+    
+    // 让cpu直接弹出当前任务的栈
     return  tasks[currentTask]->cpustate;
 }

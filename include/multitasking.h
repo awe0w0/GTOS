@@ -7,6 +7,7 @@
 namespace gtos {
     struct CPUState
     {
+
         uint32_t eax;
         uint32_t ebx;
         uint32_t ecx;
