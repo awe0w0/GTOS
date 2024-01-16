@@ -6,11 +6,13 @@ using namespace gtos::hardwarecommunication;
 void printf(char* str);
 void printfHex(uint8_t);
 
-InterruptHandler::InterruptHandler(uint8_t InterruptNumber, InterruptsManager* interruptsManager) {
+InterruptHandler::InterruptHandler(InterruptsManager* interruptsManager, uint8_t InterruptNumber) {
     this->interruptNumber = interruptNumber;
     this->interruptManager = interruptsManager;
     interruptsManager->handlers[interruptNumber] = this;
 }
+
+
 
 InterruptHandler::~InterruptHandler() {
     if (interruptManager->handlers[interruptNumber] == this) {
@@ -27,6 +29,7 @@ InterruptsManager::GateDescriptor InterruptsManager::interruptDescriptorTable[25
 
 InterruptsManager* InterruptsManager::ActivateInterruptsManager = 0;
 
+//请求中断时包含的数据
 void InterruptsManager::SetInterruptDescriptorTableEntry(
     uint8_t interruptNumber,
     uint16_t codeSegmentSelectorOffset,
@@ -126,7 +129,12 @@ void InterruptsManager::SetInterruptDescriptorTableEntry(
         }
 
 InterruptsManager::~InterruptsManager() {
+    Deactivate();
+}
 
+uint16_t InterruptsManager::HardwareInterruptOffset()
+{
+    return hardwareInterruptOffset;
 }
 
 //激活idt
@@ -154,6 +162,7 @@ uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t es
 }
 
 uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
+    //if (interruptNumber == 0x29) printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     if (handlers[interruptNumber] != 0) {
         esp = handlers[interruptNumber]->HandlerInterrupt(esp);
         
@@ -184,3 +193,7 @@ void InterruptsManager::Load(InterruptHandler* handler,uint8_t interruptNumber) 
 void InterruptsManager::Load(TaskManager* taskManager) {
     this->taskManager = taskManager;
 }
+
+// void InterruptsManager::Load(uint8_t InterruptNumber, InterruptsManager* InterruptManager) {
+//     InterruptManager->handlers[InterruptNumber] = this;
+// }

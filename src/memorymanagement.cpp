@@ -2,6 +2,8 @@
 
 using namespace gtos;
 
+void printf(char*);
+
 MemoryManager::MemoryManager(size_t start, size_t size) {
 
     activeMemoryManager = this;
@@ -74,4 +76,33 @@ void MemoryManager::free(void* ptr) {
     }
 
 
+}
+
+void* operator new(unsigned size) {
+    if (gtos::MemoryManager::activeMemoryManager == 0) return 0;
+    return gtos::MemoryManager::activeMemoryManager->malloc(size);
+}
+
+void* operator new[](unsigned size){
+    if (gtos::MemoryManager::activeMemoryManager == 0) return 0;
+    return gtos::MemoryManager::activeMemoryManager->malloc(size);
+}
+
+void* operator new(unsigned size, void* ptr) {
+    return ptr;
+}
+
+void* operator new[](unsigned size, void* ptr){
+    return ptr;
+}
+
+
+void operator delete(void* ptr) {
+    if (gtos::MemoryManager::activeMemoryManager != 0) 
+        gtos::MemoryManager::activeMemoryManager->free(ptr);
+}
+
+void operator delete[](void* ptr) {
+    if (gtos::MemoryManager::activeMemoryManager != 0) 
+        gtos::MemoryManager::activeMemoryManager->free(ptr);
 }

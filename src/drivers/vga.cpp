@@ -3,7 +3,7 @@
 using namespace gtos::drivers;
 
 
-
+//vga的关键端口
 VideoGraphicsArray::VideoGraphicsArray() 
 : miscPort(0x3c2), 
 crtcIndexPort(0x3d4),
@@ -23,6 +23,7 @@ VideoGraphicsArray::~VideoGraphicsArray() {
 
 }
 
+//激活vga的关键函数
 //把显示模式数据写进vga端口里面
 void VideoGraphicsArray::WriteRegisters(uint8_t* registers) {
     //misc

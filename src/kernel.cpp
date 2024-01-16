@@ -39,10 +39,13 @@ void printf(char* str) {
             x = 0;
          }
          if (y >= 25) {
-            for (y = 0;y < 25;y++)
-                for (x = 0;x < 80;x++)
-                    VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | ' ';
-            y = 0;
+			for(y = 0; y < 24; y++)
+				for(x = 0; x < 80; x++)
+					VideoMemory[80*y+x] = VideoMemory[80*(y+1)+x];
+			for(x = 0; x < 80; x++)
+				VideoMemory[80*24+x] = (VideoMemory[80*24+x] & 0xFF00) | ' ';
+			y = 24;
+			x = 0;
          }
     }
 }
@@ -54,6 +57,19 @@ void printfHex(uint8_t key) {
     foo[1] = hex[key & 0x0F];
 
     printf(foo);
+}
+
+void printfHex16(uint16_t key)
+{
+    printfHex((key >> 8) & 0xFF);
+    printfHex( key & 0xFF);
+}
+void printfHex32(uint32_t key)
+{
+    printfHex((key >> 24) & 0xFF);
+    printfHex((key >> 16) & 0xFF);
+    printfHex((key >> 8) & 0xFF);
+    printfHex( key & 0xFF);
 }
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler {
@@ -122,6 +138,7 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     //grub的multiboot
     uint32_t* memupper = (uint32_t*)(((size_t)multiboot_structure) + 8);
     size_t heap = 10 * 1024 * 1024;
+    //内存动态分配
     MemoryManager memoryManager(heap, (*memupper) * 1024 - heap - 10 * 1024);
 
     printf("heap: 0x");
@@ -139,12 +156,14 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     printfHex(((size_t)allocated >>  0) & 0xFF);
     printf("\n");
 
+    //初始化多线程
     TaskManager taskManager;
     // Task task1(&gdt, taskA);
     // Task task2(&gdt, taskB);
     // taskManager.AddTask(&task1);
     // taskManager.AddTask(&task2);
     InterruptsManager interrupts(0x20, &gdt, &taskManager);
+    //中断管理类构造函数赋不上值，另写个Load直接赋值
     interrupts.Load(&taskManager);
     
 #ifdef GRAPHICSMODE
@@ -173,7 +192,9 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
         drvManager.AddDriver(&mouse);
         interrupts.Load(&mouse, 0x2C);
 
+        // pci设备初始化
         PeripheralComponentInterconnectController PCIController;
+        //从pci端口读取数据
         PCIController.SelectDrivers(&drvManager, &interrupts);
 
         VideoGraphicsArray vga;
@@ -184,6 +205,7 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     printf("Initializing Hardware, Stage 3\n");
 
 #ifdef GRAPHICSMODE
+    //开启vga模式
     vga.SetMode(320, 200, 8);
 
     Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
@@ -192,6 +214,7 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
     desktop.AddChild(&win2);
 #endif
+    //激活handlers数组中的中断
     interrupts.Activate();
 
 
