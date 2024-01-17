@@ -5,6 +5,7 @@ using namespace gtos::hardwarecommunication;
 
 void printf(char* str);
 void printfHex(uint8_t);
+void printfHex32(uint32_t);
 
 InterruptHandler::InterruptHandler(InterruptsManager* interruptsManager, uint8_t InterruptNumber) {
     this->interruptNumber = interruptNumber;
@@ -54,7 +55,7 @@ void InterruptsManager::SetInterruptDescriptorTableEntry(
             picSlaveCommand(0xA0),
             picSlaveData(0xA1)
         {
-            //挂载在中断管理上时，中断管理的默认函数赋不了值
+            //挂载在中断管理上时，中断管理的构造函数赋不了值
             this->taskManager = taskManager;
             this->hardwareInterruptOffset = hardwareInterruptOffset;
             uint32_t CodeSegment = gdt->CodeSegmentSelector();

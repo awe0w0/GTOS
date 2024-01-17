@@ -58,7 +58,7 @@ namespace gtos {
                 
                 void Activate();
                 int Reset();
-                uint32_t HandleInterrupt(uint32_t esp);
+                uint32_t HandlerInterrupt(uint32_t esp);
         };
     }
 }

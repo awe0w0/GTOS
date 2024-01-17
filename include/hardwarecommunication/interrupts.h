@@ -25,7 +25,7 @@ namespace gtos {
             friend class InterruptHandler;
             protected:
                 static InterruptsManager* ActivateInterruptsManager;
-                InterruptHandler* handlers[256];
+                
                 TaskManager* taskManager;
                 
                 
@@ -105,7 +105,7 @@ namespace gtos {
                 Port8BitSlow picSlaveData;
 
             public:
-                
+                InterruptHandler* handlers[256];
                 InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt, gtos::TaskManager* taskmanager);
                 ~InterruptsManager();
                 uint16_t HardwareInterruptOffset();

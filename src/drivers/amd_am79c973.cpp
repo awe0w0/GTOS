@@ -6,6 +6,7 @@ using namespace gtos::hardwarecommunication;
 
 void printf(char*);
 void printfHex(uint8_t);
+void printfHex32(uint32_t);
 
 amd_am79c973::amd_am79c973(PeripheralComponentInterconnectDeviceDescriptor* dev, InterruptsManager* interrupts)
 : Driver(),
@@ -18,8 +19,6 @@ registerAddressPort(dev->portBase + 0x12),
 resetPort(dev->portBase + 0x14),
 busControlRegisterDataPort(dev->portBase + 0x16)
 {
-    //interrupts->Load(this, dev->interrupt + interrupts->HardwareInterruptOffset());
-
     currentSendBuffer = 0;
     currentRecvBuffer = 0;
 
@@ -107,7 +106,7 @@ int amd_am79c973::Reset() {
 
 
 
-uint32_t amd_am79c973::HandleInterrupt(uint32_t esp) {
+uint32_t amd_am79c973::HandlerInterrupt(uint32_t esp) {
     printf("INTERRUPT FROM AMD am79c973\n");
 
     registerAddressPort.Write(0);
