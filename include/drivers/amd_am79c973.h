@@ -59,6 +59,9 @@ namespace gtos {
                 void Activate();
                 int Reset();
                 uint32_t HandlerInterrupt(uint32_t esp);
+
+                void Send(uint8_t* buffer, int count);
+                void Receive();
         };
     }
 }

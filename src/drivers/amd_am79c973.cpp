@@ -116,8 +116,8 @@ uint32_t amd_am79c973::HandlerInterrupt(uint32_t esp) {
     if((temp & 0x2000) == 0x2000) printf("AMD am79c973 Collision Error\n");
     if((temp & 0x1000) == 0x1000) printf("AMD am79c973 Missed Frame\n");
     if((temp & 0x0800) == 0x0800) printf("AMD am79c973 Memory Error\n");
-    if((temp & 0x0400) == 0x0400) printf("AMD am79c973 DATA RECEVED");
-    if((temp & 0x0200) == 0x0200) printf("AMD am79c973 DATA SENT");
+    if((temp & 0x0400) == 0x0400) Receive();
+    if((temp & 0x0200) == 0x0200) printf("AMD am79c973 DATA SENT\n");
 
     // acknowledge
     registerAddressPort.Write(0);
@@ -126,4 +126,49 @@ uint32_t amd_am79c973::HandlerInterrupt(uint32_t esp) {
     if((temp & 0x0100) == 0x0100) // initialization done
         printf("AMD am79c973 INIT DONE");
     return esp;
+}
+
+//从传来的缓冲区参数逐字发送数据
+void amd_am79c973::Send(uint8_t* buffer, int size) {
+    int sendDescriptor = currentSendBuffer;
+    currentSendBuffer = (currentSendBuffer + 1) % 8;
+
+    if (size > 1518) size = 1518;
+
+    for (uint8_t *src = buffer + size - 1,
+    * dst = (uint8_t*)(sendBufferDescr[sendDescriptor].address + size - 1);
+    src >= buffer; src--, dst--)
+        *dst = *src;
+    sendBufferDescr[sendDescriptor].avail = 0;
+    sendBufferDescr[sendDescriptor].flags2 = 0;
+    sendBufferDescr[sendDescriptor].flags = 0x8300F000
+                                            | ((uint16_t)((-size) & 0xFFF));
+    
+    registerAddressPort.Write(0);
+    registerDataPort.Write(0x48);
+}
+
+
+void amd_am79c973::Receive() {
+    printf("AMD am79c973 DATA RECEVED\n");
+    //循环删除当前的接收缓冲区
+    for (; (recvBufferDescr[currentRecvBuffer].flags & 0x80000000) == 0;
+        currentRecvBuffer = (currentRecvBuffer + 1) % 8)
+    {
+        if (!(recvBufferDescr[currentRecvBuffer].flags & 0x40000000)
+        && (recvBufferDescr[currentRecvBuffer].flags & 0x30000000) == 0x03000000)
+        {
+            uint32_t size = recvBufferDescr[currentRecvBuffer].flags & 0xFFF;
+            if (size > 64) size -= 4;
+            uint8_t* buffer = (uint8_t*)(recvBufferDescr[currentRecvBuffer].address);
+
+            for (int i = 0;i < size;i++) {
+                printfHex(buffer[i]);
+                printf("");
+            }
+        }
+
+        recvBufferDescr[currentRecvBuffer].flags2 = 0;
+        recvBufferDescr[currentRecvBuffer].flags = 0x8000F7FF;
+    }
 }
