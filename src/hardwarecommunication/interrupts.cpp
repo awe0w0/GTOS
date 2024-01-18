@@ -1,15 +1,19 @@
 #include <hardwarecommunication/interrupts.h>
 
+using namespace gtos;
 using namespace gtos::hardwarecommunication;
 
 void printf(char* str);
 void printfHex(uint8_t);
+void printfHex32(uint32_t);
 
-InterruptHandler::InterruptHandler(uint8_t InterruptNumber, InterruptsManager* interruptsManager) {
+InterruptHandler::InterruptHandler(InterruptsManager* interruptsManager, uint8_t InterruptNumber) {
     this->interruptNumber = interruptNumber;
     this->interruptManager = interruptsManager;
     interruptsManager->handlers[interruptNumber] = this;
 }
+
+
 
 InterruptHandler::~InterruptHandler() {
     if (interruptManager->handlers[interruptNumber] == this) {
@@ -26,6 +30,7 @@ InterruptsManager::GateDescriptor InterruptsManager::interruptDescriptorTable[25
 
 InterruptsManager* InterruptsManager::ActivateInterruptsManager = 0;
 
+//请求中断时包含的数据
 void InterruptsManager::SetInterruptDescriptorTableEntry(
     uint8_t interruptNumber,
     uint16_t codeSegmentSelectorOffset,
@@ -44,12 +49,14 @@ void InterruptsManager::SetInterruptDescriptorTableEntry(
     interruptDescriptorTable[interruptNumber].reserved = 0;
 }
 
-        InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt) 
+        InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* gdt, TaskManager* taskmanager) 
             :picMasterCommand(0x20),
             picMasterData(0x21),
             picSlaveCommand(0xA0),
             picSlaveData(0xA1)
         {
+            //挂载在中断管理上时，中断管理的构造函数赋不了值
+            this->taskManager = taskManager;
             this->hardwareInterruptOffset = hardwareInterruptOffset;
             uint32_t CodeSegment = gdt->CodeSegmentSelector();
 
@@ -123,9 +130,15 @@ void InterruptsManager::SetInterruptDescriptorTableEntry(
         }
 
 InterruptsManager::~InterruptsManager() {
-
+    Deactivate();
 }
 
+uint16_t InterruptsManager::HardwareInterruptOffset()
+{
+    return hardwareInterruptOffset;
+}
+
+//激活idt
 void InterruptsManager::Activate() {
     if (ActivateInterruptsManager != 0)
         ActivateInterruptsManager->Deactivate();
@@ -150,6 +163,7 @@ uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t es
 }
 
 uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
+    //if (interruptNumber == 0x29) printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     if (handlers[interruptNumber] != 0) {
         esp = handlers[interruptNumber]->HandlerInterrupt(esp);
         
@@ -159,6 +173,11 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
         printfHex(interruptNumber);
     }
     
+    if (interruptNumber == hardwareInterruptOffset) {
+        esp = (uint32_t)taskManager->Schedule((CPUState*)esp);
+        
+    }
+
     if (hardwareInterruptOffset <= interruptNumber && interruptNumber < hardwareInterruptOffset + 16) {
         picMasterCommand.Write(0x20);
         if (hardwareInterruptOffset + 8 <= interruptNumber) {
@@ -171,3 +190,11 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
 void InterruptsManager::Load(InterruptHandler* handler,uint8_t interruptNumber) {
     this->handlers[interruptNumber] = handler;
 }
+
+void InterruptsManager::Load(TaskManager* taskManager) {
+    this->taskManager = taskManager;
+}
+
+// void InterruptsManager::Load(uint8_t InterruptNumber, InterruptsManager* InterruptManager) {
+//     InterruptManager->handlers[InterruptNumber] = this;
+// }

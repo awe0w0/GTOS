@@ -5,6 +5,8 @@
 #include <hardwarecommunication/port.h>
 #include <drivers/driver.h>
 #include <common/types.h>
+#include <memorymanagement.h>
+
 
 namespace gtos {
     namespace hardwarecommunication{
@@ -60,6 +62,7 @@ namespace gtos {
             drivers::Driver* GetDriver(PeripheralComponentInterconnectDeviceDescriptor, hardwarecommunication::InterruptsManager* interrupts);
             PeripheralComponentInterconnectDeviceDescriptor GetDeviceDescriptor(uint16_t bus, uint16_t device, uint16_t function);
             BaseAddressRegister GetBaseAddressRegister(uint16_t bus, uint16_t device, uint16_t function, uint16_t bar);
+            
         };
 
     }

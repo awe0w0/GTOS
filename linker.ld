@@ -30,7 +30,7 @@ SECTIONS
 
     /DISCARD/ :
     {
-        *( .fini_array*)
-        *( .comment)
+        *(.fini_array*)
+        *(.comment)
     }
 }

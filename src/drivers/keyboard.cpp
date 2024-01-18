@@ -17,7 +17,7 @@ void KeyboardEventHandler::OnKeyUp(char) {
 }
 
 gtos::drivers::KeyboardDriver::KeyboardDriver(InterruptsManager* manager, KeyboardEventHandler* handler) 
-:InterruptHandler(0x21,manager),
+:InterruptHandler(manager,0x21),
 dataport(0x60),
 commandport(0x64) {
     this->handler = handler;

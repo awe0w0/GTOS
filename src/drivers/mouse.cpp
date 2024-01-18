@@ -24,7 +24,7 @@ void MouseEventHandler::OnMouseMove(int8_t x, int8_t y) {
 }
 
 gtos::drivers::MouseDriver::MouseDriver(InterruptsManager* manager, MouseEventHandler* handler)
-: InterruptHandler(0x2C, manager),
+: InterruptHandler(manager, 0x2C),
 dataport(0x60),
 commandport(0x64) {
 
@@ -83,3 +83,4 @@ uint32_t gtos::drivers::MouseDriver::HandlerInterrupt(uint32_t esp) {
 
     return esp;
 }
+
