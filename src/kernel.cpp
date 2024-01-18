@@ -3,6 +3,7 @@
 #include <memorymanagement.h>
 #include <hardwarecommunication/interrupts.h>
 #include <hardwarecommunication/pci.h>
+#include <syscalls.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/driver.h>
@@ -117,12 +118,17 @@ public:
     }
 };
 
+void sysprintf(char* str) {
+    //0x80号中断，ax为4 调用sys_write bx为str
+    asm("int $0x80" : : "a" (4), "b" (str));
+}
+
 void taskA() {
-    while (true) printf("A");
+    while (true) sysprintf("A");
 }
 
 void taskB() {
-    while (true) printf("B");
+    while (true) sysprintf("B");
 }
 
 typedef void (*constructor)();
@@ -160,13 +166,14 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     //初始化多线程
     TaskManager taskManager;
-    // Task task1(&gdt, taskA);
-    // Task task2(&gdt, taskB);
-    // taskManager.AddTask(&task1);
-    // taskManager.AddTask(&task2);
+    Task task1(&gdt, taskA);
+    Task task2(&gdt, taskB);
+    taskManager.AddTask(&task1);
+    taskManager.AddTask(&task2);
     InterruptsManager interrupts(0x20, &gdt, &taskManager);
     //中断管理类构造函数赋不上值，另写个Load直接赋值
     interrupts.Load(&taskManager);
+    SyscallHandler syscalls(&interrupts, 0x80);
     
 #ifdef GRAPHICSMODE
     Desktop desktop(320, 200, 0x00, 0x00, 0xA8);

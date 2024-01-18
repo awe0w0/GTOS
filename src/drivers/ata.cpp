@@ -153,3 +153,5 @@ void AdvancedTechnologyAttachment::Flush() {
         return;
     }
 }
+
+//0X2E是旧驱动的中断号，旧版本不会在发送读命令后等待
