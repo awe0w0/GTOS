@@ -1,5 +1,7 @@
-#ifndef __TYPES_H
-#define __TYPES_H
+#ifndef __GTOS__COMMON__TYPES_H
+#define __GTOS__COMMON__TYPES_H
+
+
 
     typedef char int8_t;
     typedef unsigned char uint8_t;
@@ -12,5 +14,8 @@
 
     typedef long long int int64_t;
     typedef unsigned long long int uint64_t;
+
+    typedef const char* string;
+    typedef uint32_t size_t;
 
 #endif
