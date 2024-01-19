@@ -8,6 +8,23 @@ void printf(char*);
 void printfHex(uint8_t);
 void printfHex32(uint32_t);
 
+RawDataHandler::RawDataHandler(amd_am79c973* backend) {
+    this->backend = backend;
+    backend->SetHandler(this);
+}
+
+RawDataHandler::~RawDataHandler() {
+    backend->SetHandler(0);
+}
+
+bool RawDataHandler::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
+    return false;
+}
+
+void RawDataHandler::Send(uint8_t* buffer, uint32_t size) {
+    backend->Send(buffer, size);
+}
+
 amd_am79c973::amd_am79c973(PeripheralComponentInterconnectDeviceDescriptor* dev, InterruptsManager* interrupts)
 : Driver(),
 InterruptHandler(interrupts, dev->interrupt + interrupts->HardwareInterruptOffset()),
@@ -19,6 +36,7 @@ registerAddressPort(dev->portBase + 0x12),
 resetPort(dev->portBase + 0x14),
 busControlRegisterDataPort(dev->portBase + 0x16)
 {
+    this->handler = 0;
     currentSendBuffer = 0;
     currentRecvBuffer = 0;
 
@@ -54,11 +72,13 @@ busControlRegisterDataPort(dev->portBase + 0x16)
     initBlock.reserved3 = 0;
     initBlock.logicalAddress = 0;
 
+    //对地址进行收发
     sendBufferDescr = (BufferDescriptor*)((((uint32_t)&sendBufferDescrMemory[0]) + 15) & ~((uint32_t)0xF));
     initBlock.sendBufferDescrAddress = (uint32_t)sendBufferDescr;
     recvBufferDescr = (BufferDescriptor*)((((uint32_t)&recvBufferDescrMemory[0]) + 15) & ~((uint32_t)0xF));
     initBlock.recvBufferDescrAddress = (uint32_t)recvBufferDescr;
 
+    //初始化收发缓存指针
     for (uint8_t i = 0;i < 8;i++) {
         sendBufferDescr[i].address = (((uint32_t)&sendBuffers[i]) + 15) & ~(uint32_t)0xF;
         sendBufferDescr[i].flags = 0x7FF
@@ -162,13 +182,24 @@ void amd_am79c973::Receive() {
             if (size > 64) size -= 4;
             uint8_t* buffer = (uint8_t*)(recvBufferDescr[currentRecvBuffer].address);
 
-            for (int i = 0;i < size;i++) {
-                printfHex(buffer[i]);
-                printf("");
-            }
+            if (handler != 0) 
+                if (handler->OnRawDataReceived(buffer, size)) Send(buffer, size);
+
+            // for (int i = 0;i < size;i++) {
+            //     printfHex(buffer[i]);
+            //     printf("");
+            // }
         }
 
         recvBufferDescr[currentRecvBuffer].flags2 = 0;
         recvBufferDescr[currentRecvBuffer].flags = 0x8000F7FF;
     }
+}
+
+void amd_am79c973::SetHandler(RawDataHandler* handler) {
+    this->handler = handler;
+}
+
+uint64_t amd_am79c973::GetMACAddress() {
+    return initBlock.physicalAddress;
 }

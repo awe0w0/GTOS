@@ -13,6 +13,7 @@
 #include <multitasking.h>
 #include <drivers/amd_am79c973.h>
 #include <drivers/ata.h>
+#include <net/etherframe.h>
 
 // #define GRAPHICSMODE
 
@@ -20,6 +21,7 @@ using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
 using namespace gtos::gui;
+using namespace gtos::net;
 
 void printf(char* str) {
     static uint16_t* VideoMemory = (uint16_t*) 0xb8000;
@@ -166,10 +168,10 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     //初始化多线程
     TaskManager taskManager;
-    Task task1(&gdt, taskA);
-    Task task2(&gdt, taskB);
-    taskManager.AddTask(&task1);
-    taskManager.AddTask(&task2);
+    // Task task1(&gdt, taskA);
+    // Task task2(&gdt, taskB);
+    // taskManager.AddTask(&task1);
+    // taskManager.AddTask(&task2);
     InterruptsManager interrupts(0x20, &gdt, &taskManager);
     //中断管理类构造函数赋不上值，另写个Load直接赋值
     interrupts.Load(&taskManager);
@@ -246,8 +248,10 @@ AdvancedTechnologyAttachment ata1s(0x170, false);
 //third: 0x1E8
 //fourth: 0x168
 
-// amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
-// eth0->Send((uint8_t*)"Hello Network", 13);
+amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
+EtherFrameProvider etherframe(eth0);
+etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
+//eth0->Send((uint8_t*)"Hello Network", 13);
 
     //激活handlers数组中的中断
     interrupts.Activate();
