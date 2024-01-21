@@ -159,6 +159,12 @@ void amd_am79c973::Send(uint8_t* buffer, int size) {
     * dst = (uint8_t*)(sendBufferDescr[sendDescriptor].address + size - 1);
     src >= buffer; src--, dst--)
         *dst = *src;
+
+    printf("Sending");
+    for (int i = 0;i < size;i++) {
+        printfHex(buffer[i]);
+        printf(" ");
+    }
     sendBufferDescr[sendDescriptor].avail = 0;
     sendBufferDescr[sendDescriptor].flags2 = 0;
     sendBufferDescr[sendDescriptor].flags = 0x8300F000
@@ -176,7 +182,7 @@ void amd_am79c973::Receive() {
         currentRecvBuffer = (currentRecvBuffer + 1) % 8)
     {
         if (!(recvBufferDescr[currentRecvBuffer].flags & 0x40000000)
-        && (recvBufferDescr[currentRecvBuffer].flags & 0x30000000) == 0x03000000)
+        && (recvBufferDescr[currentRecvBuffer].flags & 0x03000000) == 0x03000000)
         {
             uint32_t size = recvBufferDescr[currentRecvBuffer].flags & 0xFFF;
             if (size > 64) size -= 4;
@@ -184,11 +190,12 @@ void amd_am79c973::Receive() {
 
             if (handler != 0) 
                 if (handler->OnRawDataReceived(buffer, size)) Send(buffer, size);
+            size = 64;
+            for (int i = 0;i < size;i++) {
+                printfHex(buffer[i]);
+                printf(" ");
+            }
 
-            // for (int i = 0;i < size;i++) {
-            //     printfHex(buffer[i]);
-            //     printf("");
-            // }
         }
 
         recvBufferDescr[currentRecvBuffer].flags2 = 0;
@@ -202,4 +209,12 @@ void amd_am79c973::SetHandler(RawDataHandler* handler) {
 
 uint64_t amd_am79c973::GetMACAddress() {
     return initBlock.physicalAddress;
+}
+
+void amd_am79c973::SetIPAddress(uint32_t ip) {
+    initBlock.logicalAddress = ip;
+}
+
+uint32_t amd_am79c973::GetIPAddress() {
+    return initBlock.logicalAddress;
 }

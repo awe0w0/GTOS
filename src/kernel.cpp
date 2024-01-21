@@ -14,6 +14,7 @@
 #include <drivers/amd_am79c973.h>
 #include <drivers/ata.h>
 #include <net/etherframe.h>
+#include <net/arp.h>
 
 // #define GRAPHICSMODE
 
@@ -177,10 +178,10 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     interrupts.Load(&taskManager);
     SyscallHandler syscalls(&interrupts, 0x80);
     
-#ifdef GRAPHICSMODE
-    Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
-#endif
-    printf("Initializing Hardware, Stage 1\n");
+    #ifdef GRAPHICSMODE
+        Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
+    #endif
+        printf("Initializing Hardware, Stage 1\n");
 
     DriverManager drvManager;
 
@@ -215,47 +216,62 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     printf("Initializing Hardware, Stage 3\n");
 
-#ifdef GRAPHICSMODE
-    //开启vga模式
-    vga.SetMode(320, 200, 8);
+    #ifdef GRAPHICSMODE
+        //开启vga模式
+        vga.SetMode(320, 200, 8);
 
-    Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
-    desktop.AddChild(&win1);
+        Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
+        desktop.AddChild(&win1);
 
-    Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
-    desktop.AddChild(&win2);
-#endif
+        Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
+        desktop.AddChild(&win2);
+    #endif
 
 // 14号中断
-AdvancedTechnologyAttachment ata0m(0x1F0, true);
-printf("ATA Primary Master:");
-ata0m.Identify();
+    AdvancedTechnologyAttachment ata0m(0x1F0, true);
+    printf("ATA Primary Master:");
+    ata0m.Identify();
 
-AdvancedTechnologyAttachment ata0s(0x1F0, false);
-printf("ATA Primary Slave:");
-ata0s.Identify();
+    AdvancedTechnologyAttachment ata0s(0x1F0, false);
+    printf("ATA Primary Slave:");
+    ata0s.Identify();
 
-char* atabuffer = "https://awe0w0.top";
-ata0s.Write28(0,(uint8_t*)atabuffer,18);
-ata0s.Flush();
+    char* atabuffer = "https://awe0w0.top";
+    ata0s.Write28(0,(uint8_t*)atabuffer,18);
+    ata0s.Flush();
 
-ata0s.Read28(0, (uint8_t*)atabuffer, 18);
+    ata0s.Read28(0, (uint8_t*)atabuffer, 18);
 
-//15号中断
-AdvancedTechnologyAttachment ata1m(0x170, true);
-AdvancedTechnologyAttachment ata1s(0x170, false);
+    //15号中断
+    AdvancedTechnologyAttachment ata1m(0x170, true);
+    AdvancedTechnologyAttachment ata1s(0x170, false);
 
-//third: 0x1E8
-//fourth: 0x168
+    //third: 0x1E8
+    //fourth: 0x168
+    uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 =15;
+    uint32_t ip_be = ((uint32_t)ip4 << 24)
+                    | ((uint32_t)ip3 << 16)
+                    | ((uint32_t)ip2 << 8)
+                    | ((uint32_t)ip1);
+    uint8_t gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
+    uint32_t gip_be = ((uint32_t)gip4 << 24)
+                    | ((uint32_t)gip3 << 16)
+                    | ((uint32_t)gip2 << 8)
+                    | ((uint32_t)gip1);
+    amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
 
-amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
-EtherFrameProvider etherframe(eth0);
-etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
-//eth0->Send((uint8_t*)"Hello Network", 13);
+    eth0->SetIPAddress(ip_be);
+
+    EtherFrameProvider etherframe(eth0);
+
+    AddressResolutionProtocol arp(&etherframe);
+    // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
+    //eth0->Send((uint8_t*)"Hello Network", 13);
 
     //激活handlers数组中的中断
     interrupts.Activate();
-
+    printf("\n\n\n\n");
+    arp.Resolve(gip_be);
 
     while (true) {
         #ifdef GRAPHICSMODE
