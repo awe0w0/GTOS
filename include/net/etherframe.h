@@ -3,7 +3,7 @@
 
 #include <common/types.h>
 #include <drivers/amd_am79c973.h>
-#include <multitasking.h>
+#include <memorymanagement.h>
 
 using namespace gtos::drivers;
 
@@ -29,22 +29,23 @@ namespace gtos {
 
             virtual bool OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size);
             void Send(uint64_t dstMAC_BE, uint8_t* etherframePayload, uint32_t size);
+			uint32_t GetIPAddress();
         };
 
         class EtherFrameProvider : public RawDataHandler {
         friend class EtherFrameHandler;
-        public:
         protected:
             EtherFrameHandler* handlers[65535];
         public:
             EtherFrameProvider(amd_am79c973* backend);
             ~EtherFrameProvider();
 
-            bool OnRawDataReceived(uint8_t* buffer, uint32_t size);
+            virtual bool OnRawDataReceived(uint8_t* buffer, uint32_t size);
             void Send(uint64_t dstMAC_BE, uint16_t etherType_BE, uint8_t* buffer, uint32_t size);
 
             uint64_t GetMACAddress();
             uint32_t GetIPAddress();
+            void SetHandlers(EtherFrameHandler* handler, uint16_t etherType);
         };
     }
 }

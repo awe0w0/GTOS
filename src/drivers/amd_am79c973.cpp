@@ -6,6 +6,7 @@ using namespace gtos::hardwarecommunication;
 
 void printf(char*);
 void printfHex(uint8_t);
+void printfHex16(uint16_t);
 void printfHex32(uint32_t);
 
 RawDataHandler::RawDataHandler(amd_am79c973* backend) {
@@ -160,7 +161,7 @@ void amd_am79c973::Send(uint8_t* buffer, int size) {
     src >= buffer; src--, dst--)
         *dst = *src;
 
-    printf("Sending");
+    printf("Sending: ");
     for (int i = 0;i < size;i++) {
         printfHex(buffer[i]);
         printf(" ");
@@ -187,14 +188,19 @@ void amd_am79c973::Receive() {
             uint32_t size = recvBufferDescr[currentRecvBuffer].flags & 0xFFF;
             if (size > 64) size -= 4;
             uint8_t* buffer = (uint8_t*)(recvBufferDescr[currentRecvBuffer].address);
-
-            if (handler != 0) 
-                if (handler->OnRawDataReceived(buffer, size)) Send(buffer, size);
+            // buffer[6] = 0x0008;
+            //printfHex32((uint32_t)buffer);
             size = 64;
-            for (int i = 0;i < size;i++) {
+            for (int i = 0;i < ((size > 64) ? 64 : size);i++) {
                 printfHex(buffer[i]);
                 printf(" ");
             }
+            if (handler != 0) 
+                if (handler->OnRawDataReceived(buffer, size)) 
+                    Send((uint8_t*)buffer, size);
+                // else printf("!!!!!!!!!!!!!!!!!!!!!");
+            
+
 
         }
 
