@@ -9,6 +9,7 @@ using namespace gtos::drivers;
 
 namespace gtos {
     namespace net {
+        //以太网帧报头
         struct EtherFrameHeader {
             uint64_t dstMAC_BE : 48;
             uint64_t srcMAC_BE : 48;

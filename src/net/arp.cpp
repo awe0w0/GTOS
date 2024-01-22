@@ -22,6 +22,7 @@ bool AddressResolutionProtocol::OnEtherFrameReceived(uint8_t* etherframePayload,
     if (size < sizeof(AddressResolutionProtocolMessage)) return false;
     // printf("!!!!!!!!!!!!!!!!!!");
 
+    //接受到的数据去除表头后为arpMessage
     AddressResolutionProtocolMessage* arp = (AddressResolutionProtocolMessage*)etherframePayload;
     // printf("!!!!!!!!!!!!!!!!!!");
     // printfHex16(arp->hardwareType);
@@ -32,7 +33,7 @@ bool AddressResolutionProtocol::OnEtherFrameReceived(uint8_t* etherframePayload,
     //     printf(" ");
     // }
     if (arp->hardwareType == 0x0100) {
-        if (arp->protocol == 0x0008 
+        if (arp->protocol == 0x0008 //ipv4协议
         && arp->hardwareAddressSize == 6 && arp->protocolAddressSize == 4 
         && arp->dstIP == backend->GetIPAddress()) {
             switch (arp->command) {
@@ -59,6 +60,7 @@ bool AddressResolutionProtocol::OnEtherFrameReceived(uint8_t* etherframePayload,
     return false;
 }
 
+//arp广播获取其他设备MAC地址
 void AddressResolutionProtocol::RequestMACAddress(uint32_t IP_BE) {
     AddressResolutionProtocolMessage arp;
     arp.hardwareType = 0x0100; // ethernet

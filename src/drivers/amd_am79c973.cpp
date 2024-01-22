@@ -154,8 +154,10 @@ void amd_am79c973::Send(uint8_t* buffer, int size) {
     int sendDescriptor = currentSendBuffer;
     currentSendBuffer = (currentSendBuffer + 1) % 8;
 
+    //MTU最大值
     if (size > 1518) size = 1518;
 
+    //往待发送区写入数据
     for (uint8_t *src = buffer + size - 1,
     * dst = (uint8_t*)(sendBufferDescr[sendDescriptor].address + size - 1);
     src >= buffer; src--, dst--)

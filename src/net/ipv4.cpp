@@ -64,6 +64,9 @@ bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t* etherframePayload, 
 }
 
 void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t* data, uint32_t size) {
+
+
+    //构建ipv4表头
     uint8_t* buffer = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(InternetProtocolV4Message) + size);
     InternetProtocolV4Message* message = (InternetProtocolV4Message*)buffer;
     message->version = 4;
@@ -83,10 +86,12 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
     message->checksum = 0;
     message->checksum = Checksum((uint16_t*)message, sizeof(InternetProtocolV4Message));
 
-    uint8_t* databuffer = buffer + sizeof(InternetProtocolV4Message);
+    uint8_t* databuffer = buffer + sizeof(InternetProtocolV4Message); //去除表头后填入要传输的数据
     for (int i = 0;i < size;i++) databuffer[i] = data[i];
 
     uint32_t route = dstIP_BE;
+
+    //与上子网掩码检测是否同一子网
     if ((dstIP_BE & subnetMask) != (message->srcIP & subnetMask)) route = gatewayIP;
 
     backend->Send(arp->Resolve(route), this->etherType_BE, buffer, sizeof(InternetProtocolV4Message) + size);

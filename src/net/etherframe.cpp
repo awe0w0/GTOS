@@ -60,9 +60,11 @@ bool EtherFrameProvider::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
     if (frame->dstMAC_BE == 0xFFFFFFFFFFFF || frame->dstMAC_BE == backend->GetMACAddress()) {
         //OnEtherFramReceived函数执行时出现问题
         // printf("!!!!!!!!!!!!!!!!");
-        
         // printfHex((uint8_t)(frame->etherType_BE & 0x00FF));
         // printfHex((uint8_t)((frame->etherType_BE & 0xFF00 )>> 8));
+
+
+        //根据数据帧里的协议类型（frame->etherType_BE）选择不同类的发送函数
         if (handlers[frame->etherType_BE] != 0) sendBack = handlers[frame->etherType_BE]->OnEtherFrameReceived(buffer + sizeof(EtherFrameHeader), size - sizeof(EtherFrameHeader));
     }
 
@@ -75,11 +77,15 @@ bool EtherFrameProvider::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
 }
 
 void EtherFrameProvider::Send(uint64_t dstMAC_BE, uint16_t etherType_BE, uint8_t* buffer, uint32_t size) {
+
+
     //将buffer复制到buffer2
     uint8_t* buffer2 = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(EtherFrameHeader) + size);
     EtherFrameHeader* frame = (EtherFrameHeader*)buffer2;
 
     frame->dstMAC_BE = dstMAC_BE;
+
+    //获取本机MAC
     frame->srcMAC_BE = backend->GetMACAddress();
     frame->etherType_BE = etherType_BE;
 

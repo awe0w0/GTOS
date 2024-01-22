@@ -7,6 +7,7 @@
 
 namespace gtos {
     namespace net {
+        //ipv4协议表头
         struct InternetProtocolV4Message {
             uint8_t headerLength : 4;
             uint8_t version : 4;
