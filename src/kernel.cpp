@@ -16,6 +16,7 @@
 #include <net/etherframe.h>
 #include <net/arp.h>
 #include <net/ipv4.h>
+#include <net/icmp.h>
 
 // #define GRAPHICSMODE
 
@@ -279,14 +280,16 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     InternetProtocolProvider ipv4(&etherframe, &arp, gip_be, subnet_be);
     // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
     //eth0->Send((uint8_t*)"Hello Network", 13);
+    InternetControlMessageProtocol icmp(&ipv4);
+
+    // arp.Resolve(gip_be);
+    //发送前会进行arp广播
+    // ipv4.Send(gip_be, 0x0008, (uint8_t*)"foobar", 6);
 
     //激活handlers数组中的中断
     interrupts.Activate();
     printf("\n\n\n\n");
-    // arp.Resolve(gip_be);
-
-    //发送前会进行arp广播
-    ipv4.Send(gip_be, 0x0008, (uint8_t*)"foobar", 6);
+    icmp.RequestEchoReply(gip_be);
 
     while (true) {
         #ifdef GRAPHICSMODE
