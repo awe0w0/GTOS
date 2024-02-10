@@ -79,24 +79,23 @@ bool EtherFrameProvider::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
 void EtherFrameProvider::Send(uint64_t dstMAC_BE, uint16_t etherType_BE, uint8_t* buffer, uint32_t size) {
 
 
-    //将buffer复制到buffer2
-    uint8_t* buffer2 = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(EtherFrameHeader) + size);
-    EtherFrameHeader* frame = (EtherFrameHeader*)buffer2;
+    //将buffer复制到etherbuffer，加上帧头
+    uint8_t* etherbuffer = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(EtherFrameHeader) + size);
+    EtherFrameHeader* frame = (EtherFrameHeader*)etherbuffer;
 
+    //加上帧头
     frame->dstMAC_BE = dstMAC_BE;
-
-    //获取本机MAC
     frame->srcMAC_BE = backend->GetMACAddress();
     frame->etherType_BE = etherType_BE;
 
     uint8_t* src = buffer;
-    uint8_t* dst = buffer2 + sizeof(EtherFrameHeader);
+    uint8_t* dst = etherbuffer + sizeof(EtherFrameHeader);
     for (uint32_t i = 0;i < size;i++) {
         dst[i] = src[i];
 		}
-    backend->Send(buffer2, size + sizeof(EtherFrameHeader));
+    backend->Send(etherbuffer, size + sizeof(EtherFrameHeader));
 
-    MemoryManager::activeMemoryManager->free(buffer2);
+    MemoryManager::activeMemoryManager->free(etherbuffer);
 }
 
 uint32_t EtherFrameProvider::GetIPAddress() {

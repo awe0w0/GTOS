@@ -34,8 +34,9 @@ InternetProtocolProvider::~InternetProtocolProvider() {
 
 }
 
+//接受到数据后判断是否为发到本地ip的数据包
+//然后根据协议号调用对应类的on_ip_received函数
 bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size) {
-    // printf("!!!!!!!!!!!!!!!!!!!!!!!");
     if (size < sizeof(InternetProtocolV4Message)) return false;
     InternetProtocolV4Message* ipmessage = (InternetProtocolV4Message*)etherframePayload;
     bool sendBack = false;
@@ -67,6 +68,7 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
 
 
     //构建ipv4表头
+    //创建一个缓冲区，内容为ipv4表头加上调用ip::send函数时传来的data参数
     uint8_t* buffer = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(InternetProtocolV4Message) + size);
     InternetProtocolV4Message* message = (InternetProtocolV4Message*)buffer;
     message->version = 4;
@@ -85,13 +87,15 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
 
     message->checksum = 0;
     message->checksum = Checksum((uint16_t*)message, sizeof(InternetProtocolV4Message));
-
-    uint8_t* databuffer = buffer + sizeof(InternetProtocolV4Message); //去除表头后填入要传输的数据
+    
+    //去除表头后填入要传输的数据
+    uint8_t* databuffer = buffer + sizeof(InternetProtocolV4Message); 
     for (int i = 0;i < size;i++) databuffer[i] = data[i];
 
     uint32_t route = dstIP_BE;
 
     //与上子网掩码检测是否同一子网
+    //如果不是就转交给网关路由器，由网关路由器路由
     if ((dstIP_BE & subnetMask) != (message->srcIP & subnetMask)) route = gatewayIP;
 
     backend->Send(arp->Resolve(route), this->etherType_BE, buffer, sizeof(InternetProtocolV4Message) + size);

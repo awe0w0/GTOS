@@ -17,6 +17,7 @@
 #include <net/arp.h>
 #include <net/ipv4.h>
 #include <net/icmp.h>
+#include <net/udp.h>
 
 // #define GRAPHICSMODE
 
@@ -80,9 +81,10 @@ void printfHex32(uint32_t key)
     printfHex( key & 0xFF);
 }
 
+//键盘驱动入口类
 class PrintfKeyboardEventHandler : public KeyboardEventHandler {
     public:
-    void OnKeuDown(char c) {
+    void OnKeyDown(char c) {
         char* foo = " ";
         foo[0] = c;
         printf(foo);
@@ -123,8 +125,19 @@ public:
     }
 };
 
+class PrintUDPHandler : public UserDatagramProtocolHandler {
+    public:
+    void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket* socket, uint8_t* data, uint16_t size) {
+        char* foo = " ";
+        for (int i = 0;i < size;i++) {
+            foo[0] = data[i];
+            printf(foo);
+        }
+    }
+};
+
 void sysprintf(char* str) {
-    //0x80号中断，ax为4 调用sys_write bx为str
+    //0x80号中断，ax为4时调用sys_write bx为str
     asm("int $0x80" : : "a" (4), "b" (str));
 }
 
@@ -281,6 +294,7 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
     //eth0->Send((uint8_t*)"Hello Network", 13);
     InternetControlMessageProtocol icmp(&ipv4);
+    UserDatagramProtocolProvider udp(&ipv4);
 
     // arp.Resolve(gip_be);
     //发送前会进行arp广播
@@ -290,6 +304,14 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     interrupts.Activate();
     printf("\n\n\n\n");
     icmp.RequestEchoReply(gip_be);
+
+    PrintUDPHandler udphandler;
+    // UserDatagramProtocolSocket* udpsocket = udp.Connect(gip_be, 1234);
+    // udp.Bind(udpsocket, &udphandler);
+    // udpsocket->Send((uint8_t*)"Hello UDP!", 10);
+
+    UserDatagramProtocolSocket* udpsocket = udp.Listen(1234);
+    udp.Bind(udpsocket, &udphandler);
 
     while (true) {
         #ifdef GRAPHICSMODE
