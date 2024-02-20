@@ -3,6 +3,7 @@
 #include <memorymanagement.h>
 #include <hardwarecommunication/interrupts.h>
 #include <hardwarecommunication/pci.h>
+#include <syscalls.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/driver.h>
@@ -12,6 +13,11 @@
 #include <multitasking.h>
 #include <drivers/amd_am79c973.h>
 #include <drivers/ata.h>
+#include <net/etherframe.h>
+#include <net/arp.h>
+#include <net/ipv4.h>
+#include <net/icmp.h>
+#include <net/udp.h>
 
 // #define GRAPHICSMODE
 
@@ -19,6 +25,7 @@ using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
 using namespace gtos::gui;
+using namespace gtos::net;
 
 void printf(char* str) {
     static uint16_t* VideoMemory = (uint16_t*) 0xb8000;
@@ -74,9 +81,10 @@ void printfHex32(uint32_t key)
     printfHex( key & 0xFF);
 }
 
+//键盘驱动入口类
 class PrintfKeyboardEventHandler : public KeyboardEventHandler {
     public:
-    void OnKeuDown(char c) {
+    void OnKeyDown(char c) {
         char* foo = " ";
         foo[0] = c;
         printf(foo);
@@ -117,12 +125,28 @@ public:
     }
 };
 
+class PrintUDPHandler : public UserDatagramProtocolHandler {
+    public:
+    void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket* socket, uint8_t* data, uint16_t size) {
+        char* foo = " ";
+        for (int i = 0;i < size;i++) {
+            foo[0] = data[i];
+            printf(foo);
+        }
+    }
+};
+
+void sysprintf(char* str) {
+    //0x80号中断，ax为4时调用sys_write bx为str
+    asm("int $0x80" : : "a" (4), "b" (str));
+}
+
 void taskA() {
-    while (true) printf("A");
+    while (true) sysprintf("A");
 }
 
 void taskB() {
-    while (true) printf("B");
+    while (true) sysprintf("B");
 }
 
 typedef void (*constructor)();
@@ -167,11 +191,12 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     InterruptsManager interrupts(0x20, &gdt, &taskManager);
     //中断管理类构造函数赋不上值，另写个Load直接赋值
     interrupts.Load(&taskManager);
+    SyscallHandler syscalls(&interrupts, 0x80);
     
-#ifdef GRAPHICSMODE
-    Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
-#endif
-    printf("Initializing Hardware, Stage 1\n");
+    #ifdef GRAPHICSMODE
+        Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
+    #endif
+        printf("Initializing Hardware, Stage 1\n");
 
     DriverManager drvManager;
 
@@ -206,45 +231,87 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
 
     printf("Initializing Hardware, Stage 3\n");
 
-#ifdef GRAPHICSMODE
-    //开启vga模式
-    vga.SetMode(320, 200, 8);
+    #ifdef GRAPHICSMODE
+        //开启vga模式
+        vga.SetMode(320, 200, 8);
 
-    Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
-    desktop.AddChild(&win1);
+        Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
+        desktop.AddChild(&win1);
 
-    Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
-    desktop.AddChild(&win2);
-#endif
+        Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
+        desktop.AddChild(&win2);
+    #endif
 
 // 14号中断
-AdvancedTechnologyAttachment ata0m(0x1F0, true);
-printf("ATA Primary Master:");
-ata0m.Identify();
+    AdvancedTechnologyAttachment ata0m(0x1F0, true);
+    printf("ATA Primary Master:");
+    ata0m.Identify();
 
-AdvancedTechnologyAttachment ata0s(0x1F0, false);
-printf("ATA Primary Slave:");
-ata0s.Identify();
+    AdvancedTechnologyAttachment ata0s(0x1F0, false);
+    printf("ATA Primary Slave:");
+    ata0s.Identify();
 
-char* atabuffer = "https://awe0w0.top";
-ata0s.Write28(0,(uint8_t*)atabuffer,18);
-ata0s.Flush();
+    char* atabuffer = "https://awe0w0.top";
+    ata0s.Write28(0,(uint8_t*)atabuffer,18);
+    ata0s.Flush();
 
-ata0s.Read28(0, (uint8_t*)atabuffer, 18);
+    ata0s.Read28(0, (uint8_t*)atabuffer, 18);
 
-//15号中断
-AdvancedTechnologyAttachment ata1m(0x170, true);
-AdvancedTechnologyAttachment ata1s(0x170, false);
+    //15号中断
+    AdvancedTechnologyAttachment ata1m(0x170, true);
+    AdvancedTechnologyAttachment ata1s(0x170, false);
 
-//third: 0x1E8
-//fourth: 0x168
+    //third: 0x1E8
+    //fourth: 0x168
+    uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 =15;
+    uint32_t ip_be = ((uint32_t)ip4 << 24)
+                    | ((uint32_t)ip3 << 16)
+                    | ((uint32_t)ip2 << 8)
+                    | ((uint32_t)ip1);
 
-// amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
-// eth0->Send((uint8_t*)"Hello Network", 13);
+    amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
+
+    eth0->SetIPAddress(ip_be);
+
+    EtherFrameProvider etherframe(eth0);
+    //eth0->SetHandler(&etherframe);
+    AddressResolutionProtocol arp(&etherframe);
+    
+    uint8_t gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
+    uint32_t gip_be = ((uint32_t)gip4 << 24)
+                    | ((uint32_t)gip3 << 16)
+                    | ((uint32_t)gip2 << 8)
+                    | ((uint32_t)gip1);
+
+    uint8_t subnet1 = 255, subnet2 = 255, subnet3 = 255, subnet4 = 0;
+    uint32_t subnet_be = ((uint32_t)subnet4 << 24)
+                    | ((uint32_t)subnet3 << 16)
+                    | ((uint32_t)subnet2 << 8)
+                    | ((uint32_t)subnet1);    
+
+
+    InternetProtocolProvider ipv4(&etherframe, &arp, gip_be, subnet_be);
+    // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
+    //eth0->Send((uint8_t*)"Hello Network", 13);
+    InternetControlMessageProtocol icmp(&ipv4);
+    UserDatagramProtocolProvider udp(&ipv4);
+
+    // arp.Resolve(gip_be);
+    //发送前会进行arp广播
+    // ipv4.Send(gip_be, 0x0008, (uint8_t*)"foobar", 6);
 
     //激活handlers数组中的中断
     interrupts.Activate();
+    printf("\n\n\n\n");
+    icmp.RequestEchoReply(gip_be);
 
+    PrintUDPHandler udphandler;
+    // UserDatagramProtocolSocket* udpsocket = udp.Connect(gip_be, 1234);
+    // udp.Bind(udpsocket, &udphandler);
+    // udpsocket->Send((uint8_t*)"Hello UDP!", 10);
+
+    UserDatagramProtocolSocket* udpsocket = udp.Listen(1234);
+    udp.Bind(udpsocket, &udphandler);
 
     while (true) {
         #ifdef GRAPHICSMODE

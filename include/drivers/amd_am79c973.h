@@ -7,8 +7,22 @@
 #include <hardwarecommunication/pci.h>
 #include <hardwarecommunication/port.h>
 
+
 namespace gtos {
     namespace drivers {
+        class amd_am79c973;
+
+        class RawDataHandler {
+        protected:
+            amd_am79c973* backend;
+        public:
+            RawDataHandler(amd_am79c973* backend);
+            ~RawDataHandler();
+
+            virtual bool OnRawDataReceived(uint8_t* buffer, uint32_t size);
+            void Send(uint8_t* buffer, uint32_t size);
+        };
+
         class amd_am79c973 : public Driver , public hardwarecommunication::InterruptHandler {
             //初始化
             struct InitializationBlock {
@@ -52,6 +66,8 @@ namespace gtos {
             uint8_t recvBuffers[2 * 1024 + 15][8];
             uint8_t currentRecvBuffer;
 
+            RawDataHandler* handler;
+
             public:
                 amd_am79c973(hardwarecommunication::PeripheralComponentInterconnectDeviceDescriptor* dev, hardwarecommunication::InterruptsManager* interrupts);
                 ~amd_am79c973();
@@ -62,6 +78,12 @@ namespace gtos {
 
                 void Send(uint8_t* buffer, int count);
                 void Receive();
+
+                void SetHandler(RawDataHandler* handler);
+                uint64_t GetMACAddress();
+
+                void SetIPAddress(uint32_t);
+                uint32_t GetIPAddress();
         };
     }
 }
