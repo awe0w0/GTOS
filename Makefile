@@ -9,6 +9,8 @@ objects = 	obj/loader.o \
 			obj/hardwarecommunication/port.o \
 			obj/hardwarecommunication/interruptstubs.o \
 			obj/hardwarecommunication/interrupts.o \
+			obj/syscalls.o \
+			obj/multitasking.o \
 			obj/drivers/amd_am79c973.o \
 			obj/hardwarecommunication/pci.o \
 			obj/drivers/keyboard.o \
@@ -18,7 +20,12 @@ objects = 	obj/loader.o \
 			obj/gui/widget.o \
 			obj/gui/window.o \
 			obj/gui/desktop.o \
-			obj/multitasking.o \
+			obj/net/etherframe.o \
+			obj/net/arp.o \
+			obj/net/ipv4.o \
+			obj/net/icmp.o \
+			obj/net/udp.o \
+			obj/net/tcp.o \
 			obj/kernel.o
 
 obj/%.o : src/%.cpp
