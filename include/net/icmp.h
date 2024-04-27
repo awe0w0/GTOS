@@ -10,7 +10,7 @@ namespace gtos
 {
     namespace net
     {
-
+        //icmp报头
         struct InternetControlMessageProtocolMessage
         {
             uint8_t type;

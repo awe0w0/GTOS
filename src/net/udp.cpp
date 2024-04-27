@@ -48,6 +48,7 @@ UserDatagramProtocolProvider::~UserDatagramProtocolProvider() {
 
 }
 
+//由ip基类中的OnEtherFrameReceived函数根据协议号调用
 //接受到消息后从sockets表中匹配本地端口
 bool UserDatagramProtocolProvider::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t dstIP_BE, uint8_t* internetprotocolPayload, uint32_t size) {
     if (size < sizeof(UserDatagramProtocolHeader)) return false;

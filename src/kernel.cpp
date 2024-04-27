@@ -18,6 +18,7 @@
 #include <net/ipv4.h>
 #include <net/icmp.h>
 #include <net/udp.h>
+#include <net/tcp.h>
 
 // #define GRAPHICSMODE
 
@@ -295,6 +296,7 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     //eth0->Send((uint8_t*)"Hello Network", 13);
     InternetControlMessageProtocol icmp(&ipv4);
     UserDatagramProtocolProvider udp(&ipv4);
+    TransmissionControlProtocolProvider tcp(&ipv4);
 
     // arp.Resolve(gip_be);
     //发送前会进行arp广播
@@ -303,15 +305,19 @@ extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
     //激活handlers数组中的中断
     interrupts.Activate();
     printf("\n\n\n\n");
-    icmp.RequestEchoReply(gip_be);
 
-    PrintUDPHandler udphandler;
+    //arp.BroadcastMACAddress(gip_be);
+    tcp.Connect(gip_be, 1234);
+
+    //icmp.RequestEchoReply(gip_be);
+
+    //PrintUDPHandler udphandler;
     // UserDatagramProtocolSocket* udpsocket = udp.Connect(gip_be, 1234);
     // udp.Bind(udpsocket, &udphandler);
     // udpsocket->Send((uint8_t*)"Hello UDP!", 10);
 
-    UserDatagramProtocolSocket* udpsocket = udp.Listen(1234);
-    udp.Bind(udpsocket, &udphandler);
+    //UserDatagramProtocolSocket* udpsocket = udp.Listen(1234);
+    //udp.Bind(udpsocket, &udphandler);
 
     while (true) {
         #ifdef GRAPHICSMODE
