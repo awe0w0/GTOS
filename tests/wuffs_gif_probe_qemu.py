@@ -15,6 +15,7 @@ manifest=json.loads((build/'manifest.json').read_text())
 assert manifest['build_pass'] and manifest['host_asan_ubsan_pass']
 elf=build/'wuffs-gif-probe.elf'
 assert hashlib.sha256(elf.read_bytes()).hexdigest()==manifest['elf_sha256']
+assert elf.stat().st_size<=65536,'The unchanged StartNativeDemo boot fixture limits each external ELF to 64 KiB'
 kernel_stage=(args.kernel_stage or repo/'obj/iso-native-test').resolve()
 assert (kernel_stage/'boot/GTOS.bin').is_file(),'Build make GTOS-native-test.iso first'
 assert not out.exists(),'Choose a fresh evidence directory'

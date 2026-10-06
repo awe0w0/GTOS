@@ -74,6 +74,7 @@ assert not run('component-undefined',[nm,'--undefined-only',component]).strip()
 elf=out/'wuffs-gif-probe.elf'
 run('link-native-probe',[ld,'-m','elf_i386','--gc-sections','--build-id=none','-T',app/'linker.ld',
                         '-o',elf,start,objects['main'],objects['codec_test'],library])
+assert elf.stat().st_size<=65536,'The unchanged StartNativeDemo boot fixture limits each external ELF to 64 KiB'
 assert not run('probe-undefined',[nm,'--undefined-only',elf]).strip()
 assembly=run('native-disassembly',[objdump,'-d',elf])
 assert not re.search(r'%(?:[xyz]mm\d+|mm\d+|st)\b',assembly),'Unexpected native FP/SIMD'
@@ -103,6 +104,7 @@ state=dict(timestamp_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(
            component=str(component),component_sha256=hashlib.sha256(component.read_bytes()).hexdigest(),
            compiler_version=subprocess.check_output([str(clang),'--version'],text=True),
            dependency_manifest=manifest,downloaded=downloaded,checks=checks,
-           native_unresolved_symbols=0,native_simd_registers=0,system_install=False)
+           native_unresolved_symbols=0,native_simd_registers=0,system_install=False,
+           boot_demo_file_limit_bytes=65536,generic_trusted_image_limit_bytes=2*1024*1024)
 (out/'manifest.json').write_text(json.dumps(state,indent=2)+'\n')
 print(json.dumps(dict(build_pass=True,host_asan_ubsan_pass=True,guest_pass=False,elf=str(elf),elf_sha256=state['elf_sha256']),indent=2))

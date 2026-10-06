@@ -13,6 +13,13 @@ probe source. The larger app uses the existing multi-page ELF32 loader and keeps
 RX/RW segments disjoint with at most 224 image pages, below the native runtime's
 254-image-page limit plus two stack pages.
 
+The boot demonstration has a separate **64 KiB file limit** for each external
+ELF in `src/kernel.cpp:StartNativeDemo`. This is stricter than the generic
+`NativeRuntime::TrustedImage` 2 MiB trusted-file limit. Large zero-filled BSS does
+not count as file bytes. This module's tested ELF is 38,484 bytes; the builder and
+guest runner both check the boot-demo limit before starting. Passing the generic
+validator alone does not prove admission through that boot entry point.
+
 ## Reproduce
 
 Run from a Linux x86-64 development host with Python 3, Clang/LLD/LLVM tools, GCC,
