@@ -1,0 +1,70 @@
+{
+  "wuffs_revision": "7411f488fe2e2c205c3d3b3d28638b7356522930",
+  "compiler_rt_revision": "62397f8b3c3986f54187ce08f00b3448ea1f8880",
+  "files": [
+    {
+      "file": "wuffs-v0.3.c",
+      "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git/+/7411f488fe2e2c205c3d3b3d28638b7356522930/release/c/wuffs-v0.3.c?format=TEXT",
+      "bytes": 1825612,
+      "sha256": "82c6741dd751eb962a287882991836498526eb02dbe0c7f19adc01810b8bac96",
+      "encoding": "base64"
+    },
+    {
+      "file": "licenses/WUFFS-LICENSE",
+      "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git/+/7411f488fe2e2c205c3d3b3d28638b7356522930/LICENSE?format=TEXT",
+      "bytes": 11372,
+      "sha256": "f8ac2c75e7f629a87565c80d61ff9fe5aa15cdea0bda997d52a4dc13fdbd19cb",
+      "encoding": "base64"
+    },
+    {
+      "file": "licenses/WUFFS-LICENSE-APACHE",
+      "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git/+/7411f488fe2e2c205c3d3b3d28638b7356522930/LICENSE-APACHE?format=TEXT",
+      "bytes": 10174,
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "encoding": "base64"
+    },
+    {
+      "file": "licenses/WUFFS-LICENSE-MIT",
+      "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git/+/7411f488fe2e2c205c3d3b3d28638b7356522930/LICENSE-MIT?format=TEXT",
+      "bytes": 1057,
+      "sha256": "bb811a4b485eac3caeb8bdc58bbafb355fbcb6116010a7ea9179e5c70b0bc878",
+      "encoding": "base64"
+    },
+    {
+      "file": "compiler-rt/ashldi3.c",
+      "url": "https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/lib/builtins/ashldi3.c",
+      "bytes": 1217,
+      "sha256": "7982c05b8a139ab662ac1a88be061669d7ee838d2153b42e4b0f4ec410bdf5a5"
+    },
+    {
+      "file": "compiler-rt/int_lib.h",
+      "url": "https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/lib/builtins/int_lib.h",
+      "bytes": 5146,
+      "sha256": "a5735bf1bfacecd6cf5785ed19ae62a981ff2f0923c38caa99f4af47f2be57b5"
+    },
+    {
+      "file": "compiler-rt/int_util.h",
+      "url": "https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/lib/builtins/int_util.h",
+      "bytes": 2221,
+      "sha256": "63d06198ab720a75c20bfd84be895c2746581b129168bae6201e7384bbb0473b"
+    },
+    {
+      "file": "compiler-rt/int_types.h",
+      "url": "https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/lib/builtins/int_types.h",
+      "bytes": 7220,
+      "sha256": "198552b25faf8a75b077ea145591cd7f6762b7f2712321b18f5e38fee8cc2a1e"
+    },
+    {
+      "file": "compiler-rt/int_endianness.h",
+      "url": "https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/lib/builtins/int_endianness.h",
+      "bytes": 2804,
+      "sha256": "ec5175561075845b7b16a92ad5ecdfd42a284de2736dd07e4ca7011b75c37709"
+    },
+    {
+      "file": "licenses/COMPILER-RT-LICENSE.TXT",
+      "url": "https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/LICENSE.TXT",
+      "bytes": 16708,
+      "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d"
+    }
+  ]
+}
