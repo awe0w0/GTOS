@@ -167,7 +167,7 @@ A test-only AP hold and null-write injection verifies a real AP page fault,
 failure of 16 pending tickets, offline admission rejection, and continued
 computation on a healthy AP. Test hooks are absent from production builds.
 Existing AP parked-path and BSP scheduler suites must continue to pass alongside
-these tests. The root task separately validates the live desktop integration.
+these tests. Integrated desktop acceptance separately validates the live desktop.
 
 ## References
 
