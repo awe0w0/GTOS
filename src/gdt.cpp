@@ -3,47 +3,42 @@
 using namespace gtos;
 
 GlobalDescriptorTable::GlobalDescriptorTable()
-: nullSegmentSelector(0,0,0) ,
-unusedSegmentSelector(0,0,0) ,
-codeSegmentSelector(0, 0xFFFFFFFF, 0x9A) ,
-dataSegmentSelector(0, 0xFFFFFFFF, 0x92)
-{
+    : nullSegmentSelector(0, 0, 0), unusedSegmentSelector(0, 0, 0),
+      codeSegmentSelector(0, 0xFFFFFFFF, 0x9A), dataSegmentSelector(0, 0xFFFFFFFF, 0x92) {
 
     struct __attribute__((packed)) {
         uint16_t limit;
         uint32_t base;
-    } gdtr = { (uint16_t)(sizeof(GlobalDescriptorTable) - 1), (uint32_t)this };
+    } gdtr = {(uint16_t)(sizeof(GlobalDescriptorTable) - 1), (uint32_t)this};
     asm volatile("lgdt %0" : : "m"(gdtr) : "memory");
     asm volatile("mov $0x18, %%ax; mov %%ax, %%ds; mov %%ax, %%es; "
                  "mov %%ax, %%fs; mov %%ax, %%gs; mov %%ax, %%ss; "
-                 "ljmp $0x10, $1f; 1:" : : : "eax", "memory");
-
+                 "ljmp $0x10, $1f; 1:"
+                 :
+                 :
+                 : "eax", "memory");
 }
 
-GlobalDescriptorTable::~GlobalDescriptorTable() {
-
-}
+GlobalDescriptorTable::~GlobalDescriptorTable() {}
 
 uint16_t GlobalDescriptorTable::DataSegmentSelector() {
-    return (uint8_t*)&dataSegmentSelector - (uint8_t*)this;
+    return (uint8_t *)&dataSegmentSelector - (uint8_t *)this;
 }
 
 uint16_t GlobalDescriptorTable::CodeSegmentSelector() {
-    return (uint8_t*)&codeSegmentSelector - (uint8_t*)this;
+    return (uint8_t *)&codeSegmentSelector - (uint8_t *)this;
 }
 
-GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint32_t limit, uint8_t flags) {
-    uint8_t* target = (uint8_t*)this;
+GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint32_t limit,
+                                                            uint8_t flags) {
+    uint8_t *target = (uint8_t *)this;
 
-    if (limit <= 65536)
-    {
+    if (limit <= 65536) {
         // 16-bit address space - yay!
         // 64K of memory should be enough for anybody
         // (640K? Are you kidding me, Bill?)
         target[6] = 0x40;
-    }
-    else
-    {
+    } else {
         // 32-bit address space - booo!
         // Now we have to squeeze the (32-bit) limit into 2.5 regiters (20-bit).
         // This is done by discarding the 12 least significant bits, but this
@@ -54,8 +49,8 @@ GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint3
         // the physical limit) so we have to compensate this by decreasing a
         // higher bit (and might have some wasted bytes behind the used memory)
 
-        if((limit & 0xFFF) != 0xFFF)
-            limit = (limit >> 12)-1;
+        if ((limit & 0xFFF) != 0xFFF)
+            limit = (limit >> 12) - 1;
         else
             limit = limit >> 12;
 
@@ -78,7 +73,7 @@ GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint3
 }
 
 uint32_t GlobalDescriptorTable::SegmentDescriptor::Base() {
-    uint8_t* target = (uint8_t*)this;
+    uint8_t *target = (uint8_t *)this;
     uint32_t result = target[7];
     result = (result << 8) + target[4];
     result = (result << 8) + target[3];
@@ -87,7 +82,7 @@ uint32_t GlobalDescriptorTable::SegmentDescriptor::Base() {
 }
 
 uint32_t GlobalDescriptorTable::SegmentDescriptor::Limit() {
-    uint8_t* target = (uint8_t*)this;
+    uint8_t *target = (uint8_t *)this;
     uint32_t result = target[6] & 0xF;
     result = (result << 8) + target[1];
     result = (result << 8) + target[0];

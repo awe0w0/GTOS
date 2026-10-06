@@ -2,11 +2,11 @@
 
 A 32-bit x86 educational operating system, developed on the `dev` branch.
 The current foundation milestone includes a real VGA desktop, hardware monitor,
-validated memory allocators, a timer-driven scheduler, safe dedicated ATA app
+validated memory allocators, page-level kernel protection, a timer-driven scheduler, safe dedicated ATA app
 storage, and an externally packaged playable Catch game.
 
 This is an evolving OS, not a production operating system. The current desktop is
-a 320×200 foundation interface. Paging/process isolation, AP scheduling, a general
+a 320×200 foundation interface. Process isolation, AP scheduling, a general
 filesystem and a modern multi-window compositor remain explicit roadmap work.
 See [the engineering roadmap](docs/ROADMAP.md).
 
@@ -80,4 +80,8 @@ missing-AP timeouts and no-APIC rejection are tested too.
 The default build uses -O2. Use `make OPTIMIZATION=-O0` for an unoptimized build
 after `make clean`. App data under `data/` survives build cleanup.
 
-More details: [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).
+The BSP now enables real non-PAE paging: page zero is absent, kernel text/rodata
+are read-only with CR0.WP, and device mappings are explicit. This does not yet
+provide ring-3 process isolation or NX protection.
+
+More details: [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).

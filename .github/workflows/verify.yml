@@ -22,5 +22,7 @@ jobs:
         run: make test
       - name: Verify AP startup and bounded error paths
         run: ./tests/cpu_startup_smoke.sh
+      - name: Verify page protections with actual CPU faults
+        run: ./tests/paging_smoke.sh
       - name: Boot and interact with the desktop under QEMU
         run: /usr/bin/python3 tests/qemu_smoke.py --output /tmp/gtos-qemu-acceptance

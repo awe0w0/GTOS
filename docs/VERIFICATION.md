@@ -60,3 +60,14 @@ APs execute on independent retained stacks, publish identity/stack/checksum
 observations atomically and park with interrupts disabled. They are not scheduled.
 The integrated desktop acceptance matrix passes with the expected parked counts.
 Low-bootstrap allocation adds 486 assertions at each optimization level.
+
+## Paging protection extension
+
+The integrated desktop runs with CR0.PG and CR0.WP set, a null guard and read-only
+kernel text/rodata. Independent GRUB/QEMU tests verify exact CR2/error values for
+null access, text write, rodata write, unrequested IOAPIC access, access after
+unmap and write after protection. Additional cases reject unsafe PAE activation
+without changing CR0/CR3, retry after clearing PAE, and support compatible PSE/PGE
+bits. Host tests exercise mapping bounds, borrowed-frame ownership, pinned boot
+mappings and failure cleanup. These protections are supervisor-only; they do not
+create isolated userspace processes or NX permissions.

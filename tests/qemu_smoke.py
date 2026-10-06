@@ -82,6 +82,7 @@ def boot(out,image,memory=64,cpus=4):
     out.mkdir(parents=True,exist_ok=True)
     g=Guest(out,image,memory,cpus)
     check('PHYSICAL SELFTEST PASS' in g.text(),'physical allocator boot self-test')
+    check('PAGING PG WP NULL RO PASS' in g.text(),'paging, supervisor write protection and null/text permissions')
     check('HEAP SELFTEST PASS' in g.text(),'heap boot self-test')
     check(f'CPU DETECTED {cpus:08X}' in g.text(),f'{cpus} firmware CPUs detected')
     check('CPU ONLINE 00000001' in g.text(),'BSP-only scheduling reported honestly')
