@@ -1,327 +1,87 @@
 #include <common/types.h>
 #include <gdt.h>
 #include <memorymanagement.h>
+#include <memory/physical.h>
+#include <memory/selftest.h>
 #include <hardwarecommunication/interrupts.h>
-#include <hardwarecommunication/pci.h>
-#include <syscalls.h>
+#include <hardwarecommunication/cpu.h>
+#include <hardwarecommunication/port.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
-#include <drivers/driver.h>
-#include <drivers/vga.h>
-#include <gui/desktop.h>
-#include <gui/window.h>
-#include <multitasking.h>
-#include <drivers/amd_am79c973.h>
 #include <drivers/ata.h>
-#include <net/etherframe.h>
-#include <net/arp.h>
-#include <net/ipv4.h>
-#include <net/icmp.h>
-#include <net/udp.h>
-#include <net/tcp.h>
-
-// #define GRAPHICSMODE
-
+#include <drivers/vga.h>
+#include <gui/shell.h>
+#include <multitasking.h>
+#include <syscalls.h>
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
-using namespace gtos::gui;
-using namespace gtos::net;
-
-void printf(char* str) {
-    static uint16_t* VideoMemory = (uint16_t*) 0xb8000;
-
-    static uint8_t x = 0, y = 0;
-
-    for (int i = 0;str[i] != '\0';i++) {
-        switch(str[i]) {
-            case '\n':
-                y++;
-                x = 0;
-                break;
-            default:
-                VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | str[i];
-                x++;
-                break;
-        }
-         if (x >= 80) {
-            y++;
-            x = 0;
-         }
-         if (y >= 25) {
-			for(y = 0; y < 24; y++)
-				for(x = 0; x < 80; x++)
-					VideoMemory[80*y+x] = VideoMemory[80*(y+1)+x];
-			for(x = 0; x < 80; x++)
-				VideoMemory[80*24+x] = (VideoMemory[80*24+x] & 0xFF00) | ' ';
-			y = 24;
-			x = 0;
-         }
-    }
+static bool graphicsActive=false;
+void printf(char* text){
+    static uint32_t x=0,y=0;volatile uint16_t* video=(volatile uint16_t*)0xB8000;
+    for(uint32_t i=0;text&&text[i];++i){char c=text[i];asm volatile("outb %0,$0xe9"::"a"((uint8_t)c));
+      if(graphicsActive)continue;if(c=='\n'){++y;x=0;}else{video[y*80+x]=0x0700|(uint8_t)c;++x;}
+      if(x>=80){x=0;++y;}if(y>=25){for(uint32_t j=0;j<24*80;++j)video[j]=video[j+80];for(uint32_t j=24*80;j<25*80;++j)video[j]=0x0720;y=24;}}
 }
-
-void printfHex(uint8_t key) {
-    char* foo = "00";
-    char* hex = "0123456789ABCDEF";
-    foo[0] = hex[(key >> 4) & 0x0F];
-    foo[1] = hex[key & 0x0F];
-
-    printf(foo);
-}
-
-void printfHex16(uint16_t key)
-{
-    printfHex((key >> 8) & 0xFF);
-    printfHex( key & 0xFF);
-}
-void printfHex32(uint32_t key)
-{
-    printfHex((key >> 24) & 0xFF);
-    printfHex((key >> 16) & 0xFF);
-    printfHex((key >> 8) & 0xFF);
-    printfHex( key & 0xFF);
-}
-
-//键盘驱动入口类
-class PrintfKeyboardEventHandler : public KeyboardEventHandler {
-    public:
-    void OnKeyDown(char c) {
-        char* foo = " ";
-        foo[0] = c;
-        printf(foo);
-    }
-};
-
-//b8000模式下的鼠标控制类
-class MouseToConsole : public MouseEventHandler {
-    int8_t x = 40, y = 12;
-    //pre用来获取鼠标经过的上个地址的数据
-    uint16_t pre;
-public:
-    MouseToConsole() {
-        static uint16_t* VideoMemory = (uint16_t*)0xb8000;
-
-        VideoMemory[80 * 12 + 40] = (VideoMemory[80 * 12 + 40] & 0xF000 >> 4)
-                                | ((VideoMemory[80 * 12 + 40] & 0x0F00) << 4)
-                                | (VideoMemory[80 * 12 + 40] & 0x00FF);
-    }
-
-    void OnMouseMove(int8_t xoffset,int8_t yoffset) {
-            static uint16_t* VideoMemory = (uint16_t*)0xb8000;
-
-            VideoMemory[80 * y + x] = pre;
-
-            x += xoffset;
-            if (x < 0) x = 0;
-            if (x >= 80) x = 79;
-            
-            y += yoffset;
-            if (y < 0) y = 0;
-            if (y >= 25) y = 24;
-            
-            pre = VideoMemory[80 * y + x]; 
-            VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xF000 >> 4)
-                                    | ((VideoMemory[80 * y + x] & 0x0F00) << 4)
-                                    | (VideoMemory[80 * y + x] & 0x00FF);
-    }
-};
-
-class PrintUDPHandler : public UserDatagramProtocolHandler {
-    public:
-    void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket* socket, uint8_t* data, uint16_t size) {
-        char* foo = " ";
-        for (int i = 0;i < size;i++) {
-            foo[0] = data[i];
-            printf(foo);
-        }
-    }
-};
-
-void sysprintf(char* str) {
-    //0x80号中断，ax为4时调用sys_write bx为str
-    asm("int $0x80" : : "a" (4), "b" (str));
-}
-
-void taskA() {
-    while (true) sysprintf("A");
-}
-
-void taskB() {
-    while (true) sysprintf("B");
-}
-
+void printf(const char* text){printf((char*)text);}
+void printfHex(uint8_t v){char t[3]={"0123456789ABCDEF"[v>>4],"0123456789ABCDEF"[v&15],0};printf(t);}
+void printfHex16(uint16_t v){printfHex(v>>8);printfHex(v);}
+void printfHex32(uint32_t v){printfHex16(v>>16);printfHex16(v);}
+static void LogValue(const char* label,uint32_t v){printf((char*)label);printfHex32(v);printf("\n");}
+static void Panic(const char* message){printf("PANIC ");printf((char*)message);printf("\n");for(;;)asm volatile("cli; hlt");}
 typedef void (*constructor)();
-extern "C" constructor start_ctors;
-extern "C" constructor end_ctors;
-extern "C" void callConstructors() {
-    for (constructor* i = &start_ctors;i != &end_ctors;i++)
-        (*i)();
-}
-
-extern "C" void kernelMain (void* multiboot_structure, uint32_t magicnumber) {
-    printf("NOW_LODING...\n");
-    GlobalDescriptorTable gdt;
-
-    //grub的multiboot
-    uint32_t* memupper = (uint32_t*)(((size_t)multiboot_structure) + 8);
-    size_t heap = 10 * 1024 * 1024;
-    //内存动态分配
-    MemoryManager memoryManager(heap, (*memupper) * 1024 - heap - 10 * 1024);
-
-    printf("heap: 0x");
-    printfHex((heap >> 24) & 0xFF);
-    printfHex((heap >> 16) & 0xFF);
-    printfHex((heap >>  8) & 0xFF);
-    printfHex((heap >>  0) & 0xFF);
-
-    void* allocated = memoryManager.malloc(1024);
-
-    printf("\nallocated: 0x");
-    printfHex(((size_t)allocated >> 24) & 0xFF);
-    printfHex(((size_t)allocated >> 16) & 0xFF);
-    printfHex(((size_t)allocated >>  8) & 0xFF);
-    printfHex(((size_t)allocated >>  0) & 0xFF);
-    printf("\n");
-
-    //初始化多线程
-    TaskManager taskManager;
-    // Task task1(&gdt, taskA);
-    // Task task2(&gdt, taskB);
-    // taskManager.AddTask(&task1);
-    // taskManager.AddTask(&task2);
-    InterruptsManager interrupts(0x20, &gdt, &taskManager);
-    //中断管理类构造函数赋不上值，另写个Load直接赋值
-    interrupts.Load(&taskManager);
-    SyscallHandler syscalls(&interrupts, 0x80);
-    
-    #ifdef GRAPHICSMODE
-        Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
-    #endif
-        printf("Initializing Hardware, Stage 1\n");
-
-    DriverManager drvManager;
-
-    #ifdef GRAPHICSMODE
-        drivers::KeyboardDriver keyboard(&interrupts, &desktop);
-    #else
-        PrintfKeyboardEventHandler kbhandler;
-        drivers::KeyboardDriver keyboard(&interrupts, &kbhandler);
-    #endif
-        drvManager.AddDriver(&keyboard);
-        interrupts.Load(&keyboard, 0x21);
-
-
-    #ifdef GRAPHICSMODE
-        drivers::MouseDriver mouse(&interrupts, &desktop);
-    #else
-        MouseToConsole mousehandler;
-        drivers::MouseDriver mouse(&interrupts, &mousehandler);
-    #endif
-        drvManager.AddDriver(&mouse);
-        interrupts.Load(&mouse, 0x2C);
-
-        // pci设备初始化
-        PeripheralComponentInterconnectController PCIController;
-        //从pci端口读取数据
-        PCIController.SelectDrivers(&drvManager, &interrupts);
-
-        VideoGraphicsArray vga;
-
-    printf("Initializing Hardware, Stage 2\n");
-        drvManager.ActivateAll();
-
-    printf("Initializing Hardware, Stage 3\n");
-
-    #ifdef GRAPHICSMODE
-        //开启vga模式
-        vga.SetMode(320, 200, 8);
-
-        Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
-        desktop.AddChild(&win1);
-
-        Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
-        desktop.AddChild(&win2);
-    #endif
-
-// 14号中断
-    AdvancedTechnologyAttachment ata0m(0x1F0, true);
-    printf("ATA Primary Master:");
-    ata0m.Identify();
-
-    AdvancedTechnologyAttachment ata0s(0x1F0, false);
-    printf("ATA Primary Slave:");
-    ata0s.Identify();
-
-    char* atabuffer = "https://awe0w0.top";
-    ata0s.Write28(0,(uint8_t*)atabuffer,18);
-    ata0s.Flush();
-
-    ata0s.Read28(0, (uint8_t*)atabuffer, 18);
-
-    //15号中断
-    AdvancedTechnologyAttachment ata1m(0x170, true);
-    AdvancedTechnologyAttachment ata1s(0x170, false);
-
-    //third: 0x1E8
-    //fourth: 0x168
-    uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 =15;
-    uint32_t ip_be = ((uint32_t)ip4 << 24)
-                    | ((uint32_t)ip3 << 16)
-                    | ((uint32_t)ip2 << 8)
-                    | ((uint32_t)ip1);
-
-    amd_am79c973* eth0 = (amd_am79c973*)(drvManager.drivers[2]);
-
-    eth0->SetIPAddress(ip_be);
-
-    EtherFrameProvider etherframe(eth0);
-    //eth0->SetHandler(&etherframe);
-    AddressResolutionProtocol arp(&etherframe);
-    
-    uint8_t gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
-    uint32_t gip_be = ((uint32_t)gip4 << 24)
-                    | ((uint32_t)gip3 << 16)
-                    | ((uint32_t)gip2 << 8)
-                    | ((uint32_t)gip1);
-
-    uint8_t subnet1 = 255, subnet2 = 255, subnet3 = 255, subnet4 = 0;
-    uint32_t subnet_be = ((uint32_t)subnet4 << 24)
-                    | ((uint32_t)subnet3 << 16)
-                    | ((uint32_t)subnet2 << 8)
-                    | ((uint32_t)subnet1);    
-
-
-    InternetProtocolProvider ipv4(&etherframe, &arp, gip_be, subnet_be);
-    // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"F00", 3);
-    //eth0->Send((uint8_t*)"Hello Network", 13);
-    InternetControlMessageProtocol icmp(&ipv4);
-    UserDatagramProtocolProvider udp(&ipv4);
-    TransmissionControlProtocolProvider tcp(&ipv4);
-
-    // arp.Resolve(gip_be);
-    //发送前会进行arp广播
-    // ipv4.Send(gip_be, 0x0008, (uint8_t*)"foobar", 6);
-
-    //激活handlers数组中的中断
-    interrupts.Activate();
-    printf("\n\n\n\n");
-
-    //arp.BroadcastMACAddress(gip_be);
-    tcp.Connect(gip_be, 1234);
-
-    //icmp.RequestEchoReply(gip_be);
-
-    //PrintUDPHandler udphandler;
-    // UserDatagramProtocolSocket* udpsocket = udp.Connect(gip_be, 1234);
-    // udp.Bind(udpsocket, &udphandler);
-    // udpsocket->Send((uint8_t*)"Hello UDP!", 10);
-
-    //UserDatagramProtocolSocket* udpsocket = udp.Listen(1234);
-    //udp.Bind(udpsocket, &udphandler);
-
-    while (true) {
-        #ifdef GRAPHICSMODE
-            desktop.Draw(&vga);
-        #endif
-    }    
+extern "C" constructor start_ctors,end_ctors;
+extern "C" void callConstructors(){for(constructor* i=&start_ctors;i!=&end_ctors;++i)(*i)();}
+extern "C" uint8_t kernel_start,kernel_end;
+static memory::PhysicalMemoryManager frames;
+static TaskManager* activeTasks;
+static volatile uint32_t sleeperWakes=0,yielderRuns=0;
+static void Sleeper(){for(uint32_t i=0;i<3;++i){if(!activeTasks->SleepCurrent(20))return;++sleeperWakes;}printf("TASK SLEEP RETURN OK\n");}
+static void Yielder(){for(uint32_t i=0;i<10;++i){++yielderRuns;if(!activeTasks->YieldCurrent())return;}printf("TASK YIELD RETURN OK\n");asm volatile("int $0x80"::"a"(4),"b"("SYSCALL ABI PASS\n"):"memory","cc");}
+extern "C" void kernelMain(void* multiboot,uint32_t magic){
+    printf("GTOS 0.2 FOUNDATION BOOT\n");GlobalDescriptorTable gdt;
+    if(!frames.initialize(multiboot,magic,(uint32_t)&kernel_start,(uint32_t)&kernel_end))Panic("INVALID MEMORY MAP");
+    memory::PhysicalMemoryStatistics physical=frames.getStatistics();
+    LogValue("MEMORY FREE FRAMES ",physical.freeFrames);
+    bool physicalOK=memory::RunPhysicalMemorySelfTest(frames);
+    printf(physicalOK?"PHYSICAL SELFTEST PASS\n":"PHYSICAL SELFTEST FAIL\n");
+    uint32_t heapAddress=0;const uint32_t heapPages=1024;
+    if(!frames.allocateContiguous(heapPages,heapAddress))Panic("NO HEAP RAM");
+    MemoryManager heap(heapAddress,heapPages*4096);
+    bool memoryOK=physicalOK&&memory::RunHeapSelfTest()&&heap.validate();
+    printf(memoryOK?"HEAP SELFTEST PASS\n":"HEAP SELFTEST FAIL\n");
+    if(!memoryOK)Panic("MEMORY SELFTEST");
+    const memory::MultibootInfo* mbi=(const memory::MultibootInfo*)multiboot;
+    uint32_t ramMiB=(mbi->flags&1)?(mbi->memUpper+2047)/1024:physical.addressableFrames/256;
+    CpuManager cpu;cpu.Detect(ramMiB*1024*1024);
+    printf("CPU VENDOR ");printf((char*)cpu.GetInfo().vendor);printf(" SOURCE ");printf((char*)cpu.EnumerationSourceName());printf("\n");
+    LogValue("CPU DETECTED ",cpu.DetectedLogicalProcessors());LogValue("CPU ONLINE ",cpu.OnlineProcessors());
+    TaskManager tasks;activeTasks=&tasks;
+    bool schedulerOK=TaskManager::RunSelfTests(&gdt);
+    printf(schedulerOK?"SCHEDULER SELFTEST PASS\n":"SCHEDULER SELFTEST FAIL\n");
+    if(!schedulerOK)Panic("SCHEDULER SELFTEST");
+    InterruptsManager interrupts(0x20,&gdt,&tasks);SyscallHandler syscalls(&interrupts,0x80);
+    AdvancedTechnologyAttachment disk(0x1F0,true);storage::AppStore store(&disk);
+    bool diskOK=store.Mount();printf(diskOK?"APP STORE MOUNT OK\n":"APP STORE UNAVAILABLE\n");
+    LogValue("APP STORE COUNT ",store.Count());LogValue("APP STORE GENERATION ",store.Generation());
+    gui::DesktopShell desktop(&store);
+    if((mbi->flags&(1<<3))&&mbi->moduleCount){const memory::MultibootModule* m=(const memory::MultibootModule*)mbi->modules;
+      if(m[0].end>m[0].start&&m[0].end-m[0].start<=apps::PackageLimit){desktop.SetInstaller((const uint8_t*)m[0].start,m[0].end-m[0].start);printf("APP INSTALLER MODULE READY\n");}}
+    KeyboardDriver keyboard(&interrupts,&desktop);MouseDriver mouse(&interrupts,&desktop);
+    keyboard.Activate();mouse.Activate();
+    VideoGraphicsArray vga;if(!vga.SetMode(320,200,8))Panic("VGA MODE");graphicsActive=true;
+    Task sleeper(&gdt,Sleeper),yielder(&gdt,Yielder);tasks.AddTask(&sleeper);tasks.AddTask(&yielder);
+    // Explicit 100 Hz PIT, so VM/game timing is independent of loop throughput.
+    Port8Bit pitControl(0x43),pitData(0x40);uint16_t divisor=1193182/100;pitControl.Write(0x36);pitData.Write(divisor&255);pitData.Write(divisor>>8);
+    interrupts.Activate();printf("DESKTOP READY\n");
+    bool runtimeChecked=false;
+    for(;;){
+      if(!runtimeChecked&&sleeper.State()==TaskTerminated&&yielder.State()==TaskTerminated){runtimeChecked=true;schedulerOK=schedulerOK&&sleeperWakes==3&&yielderRuns==10&&tasks.ContextSwitches()>10;
+        printf(schedulerOK?"SCHEDULER RUNTIME PASS\n":"SCHEDULER RUNTIME FAIL\n");tasks.RemoveTask(&sleeper);tasks.RemoveTask(&yielder);}
+      gui::SystemSnapshot snapshot;physical=frames.getStatistics();HeapStatistics hs=heap.getStatistics();
+      snapshot.ramMiB=ramMiB;snapshot.freePages=physical.freeFrames;snapshot.heapKiB=hs.totalBytes/1024;snapshot.heapUsedKiB=hs.usedBytes/1024;
+      snapshot.logicalCPUs=cpu.DetectedLogicalProcessors();snapshot.onlineCPUs=cpu.OnlineProcessors();snapshot.ticks=tasks.Ticks();snapshot.taskCount=tasks.TaskCount()+1;snapshot.contextSwitches=tasks.ContextSwitches();snapshot.diskSectors=disk.SectorCount();
+      snapshot.memoryOK=memoryOK&&hs.valid;snapshot.schedulerOK=schedulerOK;snapshot.diskOK=diskOK;for(uint32_t i=0;i<13;++i)snapshot.vendor[i]=cpu.GetInfo().vendor[i];
+      desktop.Update(snapshot);asm volatile("sti; hlt");
+    }
 }

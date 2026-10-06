@@ -1,0 +1,24 @@
+name: GTOS kernel and desktop acceptance
+on:
+  push:
+    branches: [dev]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install official build and emulation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ binutils grub-pc-bin grub-common xorriso qemu-system-x86 qemu-user python3-pil
+      - name: Build GRUB boot image
+        run: make -j2 GTOS.iso
+      - name: Test actual allocator, scheduler, storage and VM code
+        run: make test
+      - name: Boot and interact with the desktop under QEMU
+        run: /usr/bin/python3 tests/qemu_smoke.py --output /tmp/gtos-qemu-acceptance

@@ -60,7 +60,7 @@ void VideoGraphicsArray::WriteRegisters(uint8_t* registers) {
     for (uint8_t i = 0;i < 21;i++) {
         attributeControllerResetPort.Read();
         attributeControllerIndexPort.Write(i);
-        attributeControllerWritePort.Write(*(registers));
+        attributeControllerWritePort.Write(*(registers++));
     }
 
     attributeControllerResetPort.Read();
@@ -96,6 +96,17 @@ bool VideoGraphicsArray::SetMode(uint32_t width, uint32_t height, uint32_t color
     };
     
     WriteRegisters(g_320x200x256);
+    // Fixed desktop palette. The guest owns all VGA registers in mode 13h.
+    const uint8_t colors[16][3] = {
+        {8,14,27},{16,26,43},{25,39,58},{39,56,75},
+        {51,73,91},{112,132,148},{177,197,203},{239,245,234},
+        {191,239,106},{93,193,158},{96,187,222},{105,139,220},
+        {233,173,95},{223,110,104},{173,136,207},{255,255,255}
+    };
+    gtos::hardwarecommunication::Port8Bit paletteIndex(0x3C8), paletteData(0x3C9);
+    paletteIndex.Write(0);
+    for (uint32_t i = 0; i < 16; ++i)
+        for (uint32_t j = 0; j < 3; ++j) paletteData.Write(colors[i][j] >> 2);
 
     return true;
 }
@@ -126,7 +137,8 @@ uint8_t VideoGraphicsArray::GetColorIndex(uint8_t r, uint8_t g, uint8_t b) {
     if (r == 0x00 && g == 0x00 && b == 0x00) return 0x00; //black
     if (r == 0x00 && g == 0xA8 && b == 0x00) return 0x02; //green
     if (r == 0xA8 && g == 0x00 && b == 0x00) return 0x04; //red
-    if (r == 0xFF && g == 0xFF && b == 0xFF) return 0x3F; //white
+    if (r == 0xFF && g == 0xFF && b == 0xFF) return 0x0F; //white
+    return 0x07;
 }
 
 void VideoGraphicsArray::PutPixel(int32_t x, int32_t y, uint8_t r,uint8_t g, uint8_t b) {

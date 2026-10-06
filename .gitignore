@@ -1,4 +1,8 @@
+obj/
 *.o
+*.d
 *.bin
 *.iso
-*.json
+*.img
+__pycache__/
+*.pyc
