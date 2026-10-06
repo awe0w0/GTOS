@@ -5,16 +5,30 @@
 #include <gdt.h>
 
 namespace gtos {
+    namespace process { class NativeRuntime; }
     // Must match interruptstubs.s. esp/ss are present only on a privilege change;
     // a ring-0 interrupt frame ends at eflags. Initial tasks use those two words
     // as the bootstrap function's return-address and argument stack slots.
     struct CPUState {
+        uint32_t gs, fs, es, ds;
         uint32_t eax, ebx, ecx, edx;
         uint32_t esi, edi, ebp;
         uint32_t vector, error;
         uint32_t eip, cs, eflags;
         uint32_t esp, ss;
     } __attribute__((packed));
+
+    static_assert(__builtin_offsetof(CPUState, gs) == 0, "trap gs offset");
+    static_assert(__builtin_offsetof(CPUState, fs) == 4, "trap fs offset");
+    static_assert(__builtin_offsetof(CPUState, es) == 8, "trap es offset");
+    static_assert(__builtin_offsetof(CPUState, ds) == 12, "trap ds offset");
+    static_assert(__builtin_offsetof(CPUState, eax) == 16, "trap eax offset");
+    static_assert(__builtin_offsetof(CPUState, vector) == 44, "trap vector offset");
+    static_assert(__builtin_offsetof(CPUState, error) == 48, "trap error offset");
+    static_assert(__builtin_offsetof(CPUState, eip) == 52, "trap eip offset");
+    static_assert(__builtin_offsetof(CPUState, eflags) == 60, "trap flags offset");
+    static_assert(__builtin_offsetof(CPUState, esp) == 64, "trap user esp offset");
+    static_assert(sizeof(CPUState) == 72, "trap privilege frame size");
 
     enum TaskState { TaskNew, TaskReady, TaskRunning, TaskSleeping, TaskTerminated };
     struct TaskStatistics {
@@ -27,6 +41,7 @@ namespace gtos {
 
     class Task {
         friend class TaskManager;
+        friend class process::NativeRuntime;
         private:
             uint8_t stack[4096] __attribute__((aligned(16)));
             CPUState* cpustate;
@@ -36,6 +51,8 @@ namespace gtos {
             uint32_t wakeTick;
             uint32_t affinityMask;
             TaskStatistics statistics;
+            bool userMode;
+            uint32_t directoryAddress, kernelStackTop;
             void Initialize(uint16_t codeSelector, void (*entry)());
             static void Bootstrap(Task* task) __attribute__((noreturn));
             Task(const Task&);
@@ -47,12 +64,14 @@ namespace gtos {
             TaskState State() const;
             TaskStatistics Statistics() const;
             uint32_t AffinityMask() const;
+            bool UserMode() const;
     };
 
     // BSP-only round robin. The pre-existing kernel/GUI context is always kept
     // as a runnable slot, so adding tasks cannot strand the main loop.
     class TaskManager {
         friend class Task;
+        friend class process::NativeRuntime;
         private:
             Task* tasks[256];
             int numTasks;
@@ -61,6 +80,10 @@ namespace gtos {
             volatile uint32_t ticks;
             uint32_t bootTicks;
             uint32_t switches;
+            GlobalDescriptorTable* nativeGdt;
+            uint32_t kernelDirectory, kernelCr0;
+            CPUState* Dispatch(CPUState* cpustate, bool timer);
+            CPUState* SelectContext(Task* task, CPUState* state);
             int IndexOf(Task* task) const;
             TaskManager(const TaskManager&);
             TaskManager& operator=(const TaskManager&);
@@ -81,6 +104,8 @@ namespace gtos {
             bool YieldCurrent();
             void ExitCurrent() __attribute__((noreturn));
             CPUState* Schedule(CPUState* cpustate);
+            // Used by bounded syscall/fault handlers with IF clear; no fake tick.
+            CPUState* Reschedule(CPUState* cpustate);
             uint32_t Ticks() const;
             uint32_t BootTicks() const;
             uint32_t ContextSwitches() const;

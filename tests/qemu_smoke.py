@@ -12,7 +12,7 @@ def check(value, text):
     if not value: raise AssertionError(text)
     print('PASS', text, flush=True)
 class Guest:
-    def __init__(self, out, image, memory=64, cpus=4):
+    def __init__(self, out, image, memory=64, cpus=4, wait_ready=True, trace_interrupts=False):
         self.out=out; self.log=out/'debug.log'; self.sequence=0
         runtime=ROOT.parent/'gtos-runtime'; env=os.environ.copy()
         qemu=shutil.which('qemu-system-i386'); bios=[]
@@ -24,8 +24,12 @@ class Guest:
             bios=['-L',str(runtime/'root/usr/share/qemu')]
         if not qemu: raise RuntimeError('qemu-system-i386 is required')
         cmd=[qemu]+bios+['-machine','pc','-accel','tcg','-m',str(memory)+'M','-smp',str(cpus),'-cdrom',str(BOOT_ISO),'-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-qmp','stdio','-no-reboot','-no-shutdown','-debugcon','file:'+str(self.log),'-global','isa-debugcon.iobase=0xe9']
+        if trace_interrupts: cmd += ['-d','int','-D',str(out/'interrupt-trace.log')]
         self.err=open(out/'qemu.log','w');self.p=subprocess.Popen(cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.err,env=env,bufsize=0)
-        self.buffer=b'';self.line(10);self.call('qmp_capabilities');self.wait('SCHEDULER RUNTIME PASS',15)
+        self.buffer=b'';self.line(10);self.call('qmp_capabilities')
+        if wait_ready:
+            self.wait('SCHEDULER RUNTIME PASS',15);self.wait('NATIVE RUNTIME PASS',15);self.wait('BROWSER PLATFORM PROBE PASS ABI1',5)
+            check('BROWSER PROBE EXIT 00000000' in self.text(), 'external browser-platform ABI fixture exits successfully')
     def line(self,timeout):
         end=time.monotonic()+timeout
         while b'\n' not in self.buffer:

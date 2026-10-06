@@ -47,8 +47,9 @@ edge-triggered install/remove commands and repeated mouse-close behavior.
 
 ## Deliberate limitations
 
-No process/ring-3 isolation, general filesystem, production compositor,
-AHCI/NVMe or AP scheduler is claimed. The VM permits only its bounded instruction
+No general-purpose native application runtime/POSIX, full filesystem, production
+compositor, AHCI/NVMe or AP scheduler is claimed. The later native extension below
+adds bounded CPL3 isolation; it does not supply all those services. The VM permits only its bounded instruction
 set, but it does not replace hardware-enforced userspace isolation. ATA support
 is the tested legacy IDE PIO path. Hardware outside QEMU remains unverified.
 
@@ -121,3 +122,32 @@ seven APs. Incompatible AP memory-type state on QEMU `-cpu max` is rejected whil
 the BSP GUI remains responsive. No-APIC uniprocessor also passes; APIC-disabled
 four-CPU timer/input delivery stalls on both this and the previous Chinese build.
 See the [explicit emulator limitation](cpu-work-pool.md#known-emulator-interrupt-limitation).
+
+## Native ELF32 process extension
+
+Process-memory tests exercise private page ownership, immutable borrowed kernel
+mappings, effective permissions, trusted aliases, range preflight and cleanup.
+ELF tests cover generated GNU as/ld images, every-byte truncations, 21,000
+deterministic fuzz inputs, unsupported features, resource bounds, and strict
+host sanitizers. The diagnostic enums have fixed-width underlying types so
+unknown-value fallback tests are defined.
+
+Real GRUB/QEMU tests at O0/O2 cover CPL3 entry, distinct CR3s, same-VA/private data,
+preemption alongside ring0 tasks, checked syscalls, null/unusual segments and DF,
+user faults, stack guards, integer-only FP/SIMD rejection, ELF/BSS loading,
+read-only final text, allocation-exhaustion rollback and repeated deferred reap.
+The default modern and legacy ISOs load the compiled probes as separate GRUB ELF
+modules. One intentionally faults; the other continues, and the desktop verifies
+the exact physical-frame baseline is restored after both are reaped.
+
+Full modern/Chinese/legacy interaction tests also require `NATIVE RUNTIME PASS`.
+A separate128MiB/eight-vCPU integrated boot verifies seven real AP workers while
+the same native-process proof and GUI language switch run. These tests establish
+a bounded native foundation, not a completed Chromium port or safe web sandbox.
+
+The separately authored browser-platform fixture is also loaded as a third native
+ELF process and must print its ABI PASS marker and exit0. Permanent concurrent
+UI acceptance uses a longer peer, verifies game launch/input before that peer
+exits, and inspects QEMU traces for keyboard/mouse IRQs with CPL3 origin. It then
+requires all three address spaces reaped, memory baseline restored, and continued
+AP work. This verifies the shared application ABI, not a Chromium binary.

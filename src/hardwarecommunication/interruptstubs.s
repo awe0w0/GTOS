@@ -6,7 +6,7 @@
 .macro HandleException num
 .global _ZN4gtos21hardwarecommunication17InterruptsManager19HandleException\num\()Ev
 _ZN4gtos21hardwarecommunication17InterruptsManager19HandleException\num\()Ev:
-    .if (\num != 8) && (\num != 10) && (\num != 11) && (\num != 12) && (\num != 13) && (\num != 14) && (\num != 17)
+    .if (\num != 8) && (\num != 10) && (\num != 11) && (\num != 12) && (\num != 13) && (\num != 14) && (\num != 17) && (\num != 21) && (\num != 29) && (\num != 30)
         pushl $0
     .endif
     pushl $\num
@@ -41,6 +41,18 @@ HandleException 0x10
 HandleException 0x11
 HandleException 0x12
 HandleException 0x13
+HandleException 0x14
+HandleException 0x15
+HandleException 0x16
+HandleException 0x17
+HandleException 0x18
+HandleException 0x19
+HandleException 0x1A
+HandleException 0x1B
+HandleException 0x1C
+HandleException 0x1D
+HandleException 0x1E
+HandleException 0x1F
 
 HandleInterruptRequest 0x00, 0x20
 HandleInterruptRequest 0x01, 0x21
@@ -69,15 +81,34 @@ int_bottom:
     pushl %ecx
     pushl %ebx
     pushl %eax
+    # Save selectors as full initialized words: push %ds can leave high bits dirty.
+    xorl %eax, %eax
+    movw %ds, %ax
+    pushl %eax
+    movw %es, %ax
+    pushl %eax
+    movw %fs, %ax
+    pushl %eax
+    movw %gs, %ax
+    pushl %eax
+    movw $0x18, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
     cld
     movl %esp, %edx
-    movl 28(%edx), %eax
+    movl 44(%edx), %eax
     andl $-16, %esp
     subl $8, %esp
     pushl %edx
     pushl %eax
     call _ZN4gtos21hardwarecommunication17InterruptsManager15handleInterruptEhj
     movl %eax, %esp
+    popl %gs
+    popl %fs
+    popl %es
+    popl %ds
     popl %eax
     popl %ebx
     popl %ecx
@@ -86,6 +117,9 @@ int_bottom:
     popl %edi
     popl %ebp
     addl $8, %esp
-_ZN4gtos21hardwarecommunication17InterruptsManager15InterruptIgnoreEv:
     iret
+_ZN4gtos21hardwarecommunication17InterruptsManager15InterruptIgnoreEv:
+    pushl $0
+    pushl $255
+    jmp int_bottom
 .section .note.GNU-stack,"",@progbits

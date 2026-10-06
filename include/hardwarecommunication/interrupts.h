@@ -97,6 +97,19 @@ namespace gtos {
                 static void HandleException0x11();
                 static void HandleException0x12();
                 static void HandleException0x13();
+                static void HandleException0x14();
+                static void HandleException0x15();
+                static void HandleException0x16();
+                static void HandleException0x17();
+                static void HandleException0x18();
+                static void HandleException0x19();
+                static void HandleException0x1A();
+                static void HandleException0x1B();
+                static void HandleException0x1C();
+                static void HandleException0x1D();
+                static void HandleException0x1E();
+                static void HandleException0x1F();
+
 
                 static uint32_t handleInterrupt(uint8_t interruptNamber, uint32_t esp);
                 uint32_t DoHandleInterrupt(uint8_t interruptNamber, uint32_t esp);

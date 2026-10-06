@@ -1,4 +1,5 @@
 #include <hardwarecommunication/interrupts.h>
+#include <process/native_runtime.h>
 
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
@@ -94,6 +95,19 @@ InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDes
     SetInterruptDescriptorTableEntry(0x11, CodeSegment, &HandleException0x11, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x12, CodeSegment, &HandleException0x12, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x13, CodeSegment, &HandleException0x13, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x14, CodeSegment, &HandleException0x14, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x15, CodeSegment, &HandleException0x15, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x16, CodeSegment, &HandleException0x16, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x17, CodeSegment, &HandleException0x17, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x18, CodeSegment, &HandleException0x18, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x19, CodeSegment, &HandleException0x19, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x1A, CodeSegment, &HandleException0x1A, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x1B, CodeSegment, &HandleException0x1B, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x1C, CodeSegment, &HandleException0x1C, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x1D, CodeSegment, &HandleException0x1D, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x1E, CodeSegment, &HandleException0x1E, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x1F, CodeSegment, &HandleException0x1F, 0, IDT_INTERRUPT_GATE);
+
     
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x00, CodeSegment, &HandleInterruptRequest0x00, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x01, CodeSegment, &HandleInterruptRequest0x01, 0, IDT_INTERRUPT_GATE);
@@ -113,7 +127,7 @@ InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDes
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0F, CodeSegment, &HandleInterruptRequest0x0F, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x31, CodeSegment, &HandleInterruptRequest0x31, 0, IDT_INTERRUPT_GATE);
 
-    SetInterruptDescriptorTableEntry(                          0x80, CodeSegment, &HandleInterruptRequest0x80, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(                          0x80, CodeSegment, &HandleInterruptRequest0x80, 3, IDT_INTERRUPT_GATE);
 
     picMasterCommand.Write(0x11);
     picSlaveCommand.Write(0x11);
@@ -173,10 +187,13 @@ uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t es
 uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
     if (interruptNumber < 0x20) {
         CPUState* state = (CPUState*)esp;
+        uint32_t cr2; asm volatile("mov %%cr2,%0" : "=r"(cr2));
+        process::NativeRuntime* runtime = process::NativeRuntime::Active();
+        CPUState* next = runtime ? runtime->HandleFault(state, interruptNumber == 14 ? cr2 : 0) : 0;
+        if (next) return (uint32_t)next;
         printf("\nPANIC EXCEPTION vector="); printfHex(interruptNumber);
         printf(" error="); printfHex32(state->error);
         printf(" eip="); printfHex32(state->eip);
-        uint32_t cr2; asm volatile("mov %%cr2,%0" : "=r"(cr2));
         printf(" cr2="); printfHex32(cr2); printf("\n");
         for (;;) asm volatile("cli; hlt");
     }
@@ -198,6 +215,9 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
         if (hardwareInterruptOffset + 8 <= interruptNumber) picSlaveCommand.Write(0x20);
         picMasterCommand.Write(0x20);
     }
+    CPUState* returning = (CPUState*)esp;
+    if ((returning->cs & 3) == 3)
+        returning->eflags = (returning->eflags & 0xCD5U) | 0x202U;
     return esp;
 }
 

@@ -12,8 +12,10 @@ storage, and an externally packaged playable Catch game.
 
 This is an evolving OS, not a production operating system. The current desktop supports movable/resizable windows, launcher search,
 minimize/restore, appearance settings and installable apps. A legacy 320×200
-fallback is retained. Process isolation, general AP scheduling, a full filesystem,
-persistent sessions and richer desktop services remain explicit roadmap work.
+fallback is retained. Bounded native ELF32 processes now have separate CPL3 address
+spaces, checked system calls and recoverable user faults. General AP scheduling,
+a full filesystem/POSIX runtime, persistent sessions and richer desktop services
+remain explicit roadmap work.
 See [the engineering roadmap](docs/ROADMAP.md).
 
 ## Build and run
@@ -66,6 +68,24 @@ QEMU direct `-kernel` is not the supported Multiboot launch path.
 Installations and removals survive reboot. The game is bytecode in
 `apps/catch.gtapp`, built from `apps/catch.json`; game logic is not built into the
 kernel. See [the app protocol](docs/apps.md) and [storage format](docs/storage.md).
+
+## Native userspace foundation
+
+The boot ISO also carries two independently compiled ELF32 programs from
+`apps/native/` plus the application-side `apps/browser_probe/` ABI fixture. They execute at CPL3 with different page directories and private
+data at the same virtual addresses. One deliberately faults on a kernel-page
+write; the peer continues and exits normally. The kernel checks both results and
+requires the independent ABI fixture to exit0, then reclaims all three processes
+back to the exact free-frame baseline before reporting
+`NATIVE RUNTIME PASS`. The intentional `NATIVE USER FAULT` diagnostic is part of
+this acceptance test, not an unexpected kernel crash.
+
+This is an experimental integer-only ABI with four process slots, bounded image
+sizes, checked console writes, ticks, yield and exit. Non-PAE paging has no NX;
+FP/SIMD, TLS, dynamic linking, general files/threads and a browser runtime are not
+provided by this proof. Native ELF installation through the bytecode app store
+is not claimed. See [process contract](docs/native-processes.md),
+[process memory](docs/process-memory.md), and [ELF validation](docs/elf32-loader.md).
 
 ## Verification
 

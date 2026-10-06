@@ -4,12 +4,20 @@ using namespace gtos;
 
 GlobalDescriptorTable::GlobalDescriptorTable()
     : nullSegmentSelector(0, 0, 0), unusedSegmentSelector(0, 0, 0),
-      codeSegmentSelector(0, 0xFFFFFFFF, 0x9A), dataSegmentSelector(0, 0xFFFFFFFF, 0x92) {
+      codeSegmentSelector(0, 0xFFFFFFFF, 0x9A), dataSegmentSelector(0, 0xFFFFFFFF, 0x92),
+      userCodeSegmentSelector(0, 0xFFFFFFFF, 0xFA),
+      userDataSegmentSelector(0, 0xFFFFFFFF, 0xF2),
+      taskSegmentSelector((uint32_t)&taskState, sizeof(TaskStateSegment) - 1, 0x89),
+      taskStateLoaded(false) {
+    static_assert(sizeof(TaskStateSegment) == 104, "i386 TSS layout");
+    for (uint32_t i = 0; i < sizeof(taskState); ++i) ((uint8_t*)&taskState)[i] = 0;
+    taskState.ss0 = 0x18;
+    taskState.ioMapBase = sizeof(TaskStateSegment);
 
     struct __attribute__((packed)) {
         uint16_t limit;
         uint32_t base;
-    } gdtr = {(uint16_t)(sizeof(GlobalDescriptorTable) - 1), (uint32_t)this};
+    } gdtr = {(uint16_t)(7 * sizeof(SegmentDescriptor) - 1), (uint32_t)this};
     asm volatile("lgdt %0" : : "m"(gdtr) : "memory");
     asm volatile("mov $0x18, %%ax; mov %%ax, %%ds; mov %%ax, %%es; "
                  "mov %%ax, %%fs; mov %%ax, %%gs; mov %%ax, %%ss; "
@@ -37,7 +45,7 @@ GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint3
         // 16-bit address space - yay!
         // 64K of memory should be enough for anybody
         // (640K? Are you kidding me, Bill?)
-        target[6] = 0x40;
+        target[6] = (flags & 0x10) ? 0x40 : 0;
     } else {
         // 32-bit address space - booo!
         // Now we have to squeeze the (32-bit) limit into 2.5 regiters (20-bit).
@@ -92,4 +100,15 @@ uint32_t GlobalDescriptorTable::SegmentDescriptor::Limit() {
     }
 
     return result;
+}
+uint16_t GlobalDescriptorTable::UserCodeSegmentSelector() { return 0x23; }
+uint16_t GlobalDescriptorTable::UserDataSegmentSelector() { return 0x2B; }
+void GlobalDescriptorTable::SetKernelStack(uint32_t top) { taskState.esp0 = top; }
+void GlobalDescriptorTable::LoadTaskState(uint32_t top) {
+    SetKernelStack(top);
+    if (!taskStateLoaded) {
+        uint16_t selector = 0x30;
+        asm volatile("ltr %0" : : "r"(selector) : "memory");
+        taskStateLoaded = true;
+    }
 }

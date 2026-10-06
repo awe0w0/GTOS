@@ -4,7 +4,10 @@ cd "$(dirname "$0")/.."
 ./tests/memory_test.sh
 ./tests/paging_test.sh
 ./tests/process_memory_test.sh
+./tests/native_process_test.sh
 ./tests/elf32_test.sh
+./tests/browser_probe_test.sh
+python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/keymap_test.sh
 ./tests/cpu_test.sh
 ./tests/cpu_startup_test.sh

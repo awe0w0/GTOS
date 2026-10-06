@@ -1,11 +1,14 @@
-# Native Chromium port: queued next project
+# Native Chromium port: assessed prerequisites
 
 The requested outcome is Chromium executing inside GTOS and rendering real web
 pages through GTOS services. A host browser, remote browser session, screenshot
 proxy, or set of unimplemented API stubs does not satisfy that outcome.
 
-No Chromium source download or build is part of the current foundation phase.
-This work starts after the current gates below are complete.
+The current foundation gates below are complete at `29f6002`, with exact-head
+CI passing. See the [official-upstream and resource assessment](browser-assessment.md).
+Native process/isolation prerequisites are now being implemented; a full Chromium
+checkout/build remains blocked in this cloud workspace by its capacity. A larger
+authorized workspace is being prepared separately for browser-side work.
 
 ## Finish the current phase first
 

@@ -39,6 +39,8 @@ void Task::Initialize(uint16_t codeSelector, void (*entry)()) {
     // The frame plus 12 padding bytes yields ESP % 16 == 12 on entry to
     // Bootstrap. Ring-0 IRET consumes the frame except its final esp/ss slots.
     cpustate = (CPUState*)(stack + sizeof(stack) - sizeof(CPUState) - 12);
+    cpustate->ds = cpustate->es = cpustate->fs = cpustate->gs = 0x18;
+    userMode = false; directoryAddress = kernelStackTop = 0;
     cpustate->eax = cpustate->ebx = cpustate->ecx = cpustate->edx = 0;
     cpustate->esi = cpustate->edi = cpustate->ebp = 0;
     cpustate->vector = cpustate->error = 0;
@@ -70,9 +72,10 @@ void Task::Bootstrap(Task* task) {
 TaskState Task::State() const { return state; }
 TaskStatistics Task::Statistics() const { InterruptGuard guard; return statistics; }
 uint32_t Task::AffinityMask() const { return affinityMask; }
+bool Task::UserMode() const { return userMode; }
 
 TaskManager::TaskManager() : numTasks(0), currentTask(-1), bootContext(0),
-    ticks(0), bootTicks(0), switches(0) {
+    ticks(0), bootTicks(0), switches(0), nativeGdt(0), kernelDirectory(0), kernelCr0(0) {
     for (int i = 0; i < 256; ++i) tasks[i] = 0;
 }
 TaskManager::~TaskManager() {}
@@ -83,7 +86,7 @@ int TaskManager::IndexOf(Task* task) const {
 bool TaskManager::AddTask(Task* task) {
     InterruptGuard guard;
     if (!task || numTasks == 256 || task->owner || task->state != TaskNew
-        || !task->entrypoint || !task->cpustate->cs) return false;
+        || (!task->entrypoint && !task->userMode) || !task->cpustate->cs) return false;
     tasks[numTasks++] = task;
     task->owner = this;
     task->state = TaskReady;
@@ -158,19 +161,43 @@ void TaskManager::ExitCurrent() {
     for (;;) WaitForInterrupt();
 }
 
-CPUState* TaskManager::Schedule(CPUState* cpustate) {
-    // Called once per PIT IRQ with IF clear, never by another processor.
+CPUState* TaskManager::Schedule(CPUState* cpustate) { return Dispatch(cpustate, true); }
+CPUState* TaskManager::Reschedule(CPUState* cpustate) { return Dispatch(cpustate, false); }
+CPUState* TaskManager::SelectContext(Task* task, CPUState* frame) {
+#ifndef GTOS_CPU_TEST
+    if (nativeGdt) {
+        const bool user = task && task->userMode;
+        const uint32_t directory = user ? task->directoryAddress : kernelDirectory;
+        if (user) {
+            nativeGdt->SetKernelStack(task->kernelStackTop);
+            // Return only arithmetic flags + DF, with IF forced on. Users
+            // cannot carry NT/VM/IOPL/AC or reserved flags into a resumed frame.
+            frame->eflags = (frame->eflags & 0xCD5U) | 0x202U;
+        }
+        uint32_t current; asm volatile("mov %%cr3,%0" : "=r"(current));
+        if (current != directory) asm volatile("mov %0,%%cr3" : : "r"(directory) : "memory");
+        // No FP ownership exists yet. TS traps x87/MMX/SSE in user tasks.
+        const uint32_t cr0 = user ? (kernelCr0 | 0xAU) : kernelCr0;
+        asm volatile("mov %0,%%cr0" : : "r"(cr0) : "memory");
+    }
+#else
+    (void)task;
+#endif
+    return frame;
+}
+CPUState* TaskManager::Dispatch(CPUState* cpustate, bool timer) {
+    // Called with IF clear on BSP. Only real PIT dispatch advances time.
     if (!cpustate) return cpustate;
-    ++ticks;
+    if (timer) ++ticks;
     int previous = currentTask;
     if (currentTask >= 0) {
         Task* task = tasks[currentTask];
         task->cpustate = cpustate;
-        ++task->statistics.runTicks;
+        if (timer) ++task->statistics.runTicks;
         if (task->state == TaskRunning) task->state = TaskReady;
     } else {
         bootContext = cpustate;
-        ++bootTicks;
+        if (timer) ++bootTicks;
     }
     for (int i = 0; i < numTasks; ++i) {
         if (tasks[i]->state == TaskSleeping
@@ -184,7 +211,7 @@ CPUState* TaskManager::Schedule(CPUState* cpustate) {
         if (slot == numTasks) {
             currentTask = -1;
             if (previous != currentTask) ++switches;
-            return bootContext;
+            return SelectContext(0, bootContext);
         }
         Task* task = tasks[slot];
         if (task->state == TaskReady && task->affinityMask == 1) {
@@ -192,7 +219,7 @@ CPUState* TaskManager::Schedule(CPUState* cpustate) {
             task->state = TaskRunning;
             ++task->statistics.dispatches;
             if (previous != currentTask) ++switches;
-            return task->cpustate;
+            return SelectContext(task, task->cpustate);
         }
     }
     return bootContext; // The boot slot above guarantees this is unreachable.

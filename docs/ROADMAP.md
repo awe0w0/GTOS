@@ -74,8 +74,10 @@ responsive while other tasks run, and a visual/interaction review covers all flo
 
 ## Current deliberate limits
 
-No user/kernel isolation, full filesystem, general ELF application ABI or modern
-compositor is claimed by phase 1. The tiny VM restricts application operations but
+The original phase1 checkpoint did not provide native process isolation. The
+subsequent bounded ELF32/CPL3 milestone adds checked private user address spaces
+and user-fault containment, but not a full filesystem, POSIX runtime, stable
+general application ABI or production compositor. The tiny VM restricts application operations but
 is not equivalent to hardware-enforced process isolation. ATA PIO support does not
 imply AHCI/NVMe support. Firmware-reported processors are not automatically online.
 
@@ -90,11 +92,13 @@ imply AHCI/NVMe support. Firmware-reported processors are not automatically onli
 This stage does not claim a complete system IME, unrestricted CJK typography or
 translation of arbitrary third-party applications before those are implemented.
 
-## Next queued project: native Chromium
+## Active next project: native Chromium prerequisites
 
 After the active kernel/desktop/Chinese phase gates, assess a real native Chromium
 port and required GTOS APIs. See [browser prerequisites and proof gates](BROWSER_PORT.md).
-No browser source download/build starts before the current phase completes.
+The current checkpoint is complete. The [assessment](browser-assessment.md)
+records the full-build storage blocker, architecture tradeoffs, and immediate
+CPL3 process/isolation proof. Chromium itself has not yet been built or run.
 
 ## Current phase checkpoint: kernel workers and localized desktop
 
@@ -109,3 +113,18 @@ processes, a filesystem, terminal/file manager, session restoration, broader
 hardware support and browser-facing services remain open. The queued browser
 assessment must turn those dependencies into executable milestones rather than
 assuming a desktop screenshot means a browser platform is already available.
+
+## Native-process prerequisite milestone
+
+Private process page tables, bounded checked copies, TSS/segment-safe interrupts,
+BSP native preemption and syscall dispatch, ELF32 load-plan validation, and
+transactional native-image admission are implemented as a first i386 proof.
+External boot-module programs exercise same-VA/private-data isolation, a contained
+kernel-write fault, surviving peer execution, and exact deferred reclamation
+while the existing desktop and AP workers continue. This milestone preserves the
+existing i386 build; it does not settle the final browser target architecture.
+
+Remaining immediate native-runtime work includes FP/SIMD ownership, richer VM and
+syscalls, threads/TLS, files/IPC, and userland surfaces. The current non-PAE scheme
+has no NX protection; fixed layout and four bounded process slots are explicit
+limits rather than a general-purpose browser platform.

@@ -20,11 +20,14 @@
 #include <gui/modern_desktop.h>
 #include <multitasking.h>
 #include <syscalls.h>
+#include <process/native_runtime.h>
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
 static bool graphicsActive = false;
+static process::NativeRuntime nativeRuntime;
 void printf(char *text) {
+    memory::InterruptGuard guard; // BSP console messages remain atomic across task switches.
     static uint32_t x = 0, y = 0;
     volatile uint16_t *video = (volatile uint16_t *)0xB8000;
     for (uint32_t i = 0; text && text[i]; ++i) {
@@ -210,8 +213,8 @@ static void ServiceWorkerDemo(CpuWorkPool &workers, uint32_t now) {
         if (!ready || slot.pending || slot.disabled || (int32_t)(now - slot.nextTick) < 0)
             continue;
         slot.seed = now ^ (slot.apicId * 0x9E3779B9U);
-        CpuWorkSubmitStatus submitted = workers.Submit(
-            slot.apicId, WorkRequest(WorkModularSum, 4096, slot.seed), slot.ticket);
+        CpuWorkSubmitStatus submitted =
+            workers.Submit(slot.apicId, WorkRequest(WorkModularSum, 4096, slot.seed), slot.ticket);
         if (submitted == CpuWorkAccepted || submitted == CpuWorkAcceptedWakeFailed) {
             slot.pending = true;
             slot.submittedTick = now;
@@ -239,6 +242,96 @@ static void ServiceWorkerDemo(CpuWorkPool &workers, uint32_t now) {
         printf("WORKER PERIODIC PASS\n");
         LogValue("WORKER VERIFIED JOBS ", verifiedWorkerJobs);
     }
+}
+struct NativeProbeData {
+    uint32_t signature, progress, errors;
+};
+static uint32_t nativeFaultId = 0, nativePeerId = 0, nativeBrowserId = 0, nativeFrameBaseline = 0,
+                nativeBeginTick = 0;
+static bool nativeDemoReady = false, nativeDemoReported = false, nativePeerAfterFault = false;
+static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
+                            const memory::MultibootInfo *boot) {
+    if (!paging.sealForSharedProcessors() || !nativeRuntime.Activate(tasks, gdt, paging, frames))
+        return false;
+    nativeFrameBaseline = frames.getStatistics().freeFrames;
+    if (!(boot->flags & (1u << 3)) || boot->moduleCount < 4)
+        return false;
+    const memory::MultibootModule *modules = (const memory::MultibootModule *)boot->modules;
+    for (uint32_t index = 1; index <= 3; ++index)
+        if (modules[index].end <= modules[index].start ||
+            modules[index].end - modules[index].start > 65536)
+            return false;
+    if (!nativeRuntime.CreateElf((const uint8_t *)modules[1].start,
+                                 modules[1].end - modules[1].start, nativeFaultId) ||
+        !nativeRuntime.CreateElf((const uint8_t *)modules[2].start,
+                                 modules[2].end - modules[2].start, nativePeerId) ||
+        !nativeRuntime.CreateElf((const uint8_t *)modules[3].start,
+                                 modules[3].end - modules[3].start, nativeBrowserId)) {
+        if (nativeFaultId)
+            nativeRuntime.RequestExit(nativeFaultId, 0xE0);
+        if (nativePeerId)
+            nativeRuntime.RequestExit(nativePeerId, 0xE0);
+        if (nativeBrowserId)
+            nativeRuntime.RequestExit(nativeBrowserId, 0xE0);
+        nativeRuntime.Reap();
+        return false;
+    }
+    nativeBeginTick = tasks.Ticks();
+    printf("NATIVE ELF PROCESSES READY\n");
+    return true;
+}
+static void ServiceNativeDemo(TaskManager &tasks) {
+    if (!nativeDemoReady || nativeDemoReported)
+        return;
+    process::NativeStatus fault, peer, browser;
+    if (!nativeRuntime.Status(nativeFaultId, fault) || !nativeRuntime.Status(nativePeerId, peer) ||
+        !nativeRuntime.Status(nativeBrowserId, browser))
+        return;
+    if (!fault.live && fault.faultVector == 14 && peer.live)
+        nativePeerAfterFault = true;
+    if (fault.live || peer.live || browser.live) {
+        if (tasks.Ticks() - nativeBeginTick < 1000)
+            return;
+        nativeRuntime.RequestExit(nativeFaultId, 0xE6);
+        nativeRuntime.RequestExit(nativePeerId, 0xE6);
+        nativeRuntime.RequestExit(nativeBrowserId, 0xE6);
+        nativeRuntime.Reap();
+        nativeDemoReported = true;
+        printf("NATIVE RUNTIME FAIL TIMEOUT\n");
+        return;
+    }
+    NativeProbeData a = {}, b = {};
+    bool isolated = nativeRuntime.ReadMemory(nativeFaultId, process::NativeRuntime::DataAddress, &a,
+                                             sizeof(a)) &&
+                    nativeRuntime.ReadMemory(nativePeerId, process::NativeRuntime::DataAddress, &b,
+                                             sizeof(b)) &&
+                    a.signature == 0xA11CE001U && b.signature == 0xB22CE002U && a.progress &&
+                    b.progress && !a.errors && !b.errors;
+    bool valid = isolated && nativePeerAfterFault && fault.faultVector == 14 &&
+                 fault.faultAddress == 0x100000 && (fault.faultError & 7) == 7 &&
+                 peer.faultVector == 0 && peer.exitCode == 0 && (fault.observedCs & 3) == 3 &&
+                 (peer.observedCs & 3) == 3 && fault.directory != peer.directory &&
+                 fault.observedCr3 == fault.directory && peer.observedCr3 == peer.directory &&
+                 fault.directory != paging.getStatistics().directoryAddress &&
+                 peer.directory != paging.getStatistics().directoryAddress &&
+                 fault.statistics.runTicks && peer.statistics.runTicks;
+    valid = valid && browser.exitCode == 0 && browser.faultVector == 0 &&
+            (browser.observedCs & 3) == 3 && browser.observedCr3 == browser.directory &&
+            browser.directory != fault.directory && browser.directory != peer.directory &&
+            browser.directory != paging.getStatistics().directoryAddress;
+    uint32_t reaped = nativeRuntime.Reap();
+    process::NativeStatistics counts = nativeRuntime.Statistics();
+    valid = valid && reaped == 3 && counts.created == 3 && counts.faulted == 1 &&
+            counts.exited == 2 && counts.reaped == 3 &&
+            frames.getStatistics().freeFrames == nativeFrameBaseline;
+    nativeDemoReported = true;
+    memory::InterruptGuard guard;
+    LogValue("NATIVE FAULT PROCESS CR3 ", fault.observedCr3);
+    LogValue("NATIVE PEER PROCESS CR3 ", peer.observedCr3);
+    LogValue("NATIVE PEER PROGRESS ", b.progress);
+    LogValue("BROWSER PROBE EXIT ", browser.exitCode);
+    LogValue("NATIVE REAPED ", reaped);
+    printf(valid ? "NATIVE RUNTIME PASS\n" : "NATIVE RUNTIME FAIL ISOLATION OR REAP\n");
 }
 extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     printf("GTOS 0.3 PROTECTED DESKTOP BOOT\n");
@@ -368,6 +461,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                                                deviceCount};
     if (!paging.prepareIdentity(frames, pagingConfig))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()));
+    bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames);
     bool workersStarted = workersPrepared && workers.Start(paging);
     // Only a pre-handoff failure may use the original parked path. Once an AP
     // has been handed off (even if it times out), never resend INIT/SIPI.
@@ -413,6 +507,9 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     Task sleeper(&gdt, Sleeper), yielder(&gdt, Yielder);
     tasks.AddTask(&sleeper);
     tasks.AddTask(&yielder);
+    nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);
+    if (!nativeDemoReady)
+        printf("NATIVE RUNTIME LIMITED\n");
     // Explicit 100 Hz PIT, so VM/game timing is independent of loop throughput.
     Port8Bit pitControl(0x43), pitData(0x40);
     uint16_t divisor = 1193182 / 100;
@@ -425,6 +522,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     InitializeWorkerDemo(workers);
     for (;;) {
         ServiceWorkerDemo(workers, tasks.Ticks());
+        ServiceNativeDemo(tasks);
         if (!runtimeChecked && sleeper.State() == TaskTerminated &&
             yielder.State() == TaskTerminated) {
             runtimeChecked = true;

@@ -17,19 +17,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y g++ binutils grub-pc-bin grub-common xorriso mtools qemu-system-x86 qemu-user python3-pil
       - name: Build GRUB boot image
-        run: make -j2 GTOS.iso GTOS-legacy.iso
+        run: make -j2 GTOS.iso GTOS-legacy.iso GTOS-native-test.iso
       - name: Test actual allocator, scheduler, storage and VM code
         run: make test
       - name: Verify AP startup and bounded error paths
         run: ./tests/cpu_startup_smoke.sh
       - name: Verify isolated AP workers and per-worker fault containment
         run: ./tests/cpu_work_pool_smoke.sh
+      - name: Verify real native userspace and recoverable process faults
+        run: ./tests/native_process_smoke.sh
       - name: Verify page protections with actual CPU faults
         run: ./tests/paging_smoke.sh
       - name: Verify legacy VGA fallback after GRUB video setup
         run: /usr/bin/python3 tests/qemu_smoke.py --iso GTOS-legacy.iso --output /tmp/gtos-qemu-legacy
       - name: Boot and interact with the high-resolution desktop
         run: /usr/bin/python3 tests/desktop_qemu.py --output /tmp/gtos-qemu-desktop
+      - name: Exercise desktop input while native processes are running
+        run: /usr/bin/python3 tests/native_desktop_qemu.py --output /tmp/gtos-qemu-native-desktop
       - name: Verify Chinese input and persistent language preferences
         run: /usr/bin/python3 tests/desktop_language_qemu.py --output /tmp/gtos-qemu-language
       - name: Run strict host sanitizers
