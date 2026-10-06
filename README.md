@@ -13,7 +13,7 @@ See [the engineering roadmap](docs/ROADMAP.md).
 ## Build and run
 
 Requirements: GNU g++/binutils with i386 freestanding support, GRUB i386-pc tools,
-xorriso, Python 3, and QEMU x86. No C++ standard library or multilib libc is needed.
+xorriso, mtools, Python 3, and QEMU x86. No C++ standard library or multilib libc is needed.
 
 ```sh
 make GTOS.iso
