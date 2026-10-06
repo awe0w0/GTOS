@@ -11,6 +11,7 @@
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/ata.h>
+#include <storage/settings.h>
 #include <drivers/vga.h>
 #include <drivers/framebuffer.h>
 #include <gui/shell.h>
@@ -171,6 +172,11 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     printf(diskOK ? "APP STORE MOUNT OK\n" : "APP STORE UNAVAILABLE\n");
     LogValue("APP STORE COUNT ", store.Count());
     LogValue("APP STORE GENERATION ", store.Generation());
+    storage::SettingsStore settings(&disk);
+    bool settingsWritable = settings.Load();
+    printf(settingsWritable ? "SETTINGS READY\n" : "SETTINGS SESSION ONLY\n");
+    LogValue("SETTINGS LOCALE ", (uint32_t)settings.Current().locale);
+    LogValue("SETTINGS THEME ", (uint32_t)settings.Current().theme);
     gui::DesktopShell desktop(&store);
     LogValue("MB FLAGS ", mbi->flags);
     LogValue("FB ADDRESS ", (uint32_t)mbi->framebufferAddress);
@@ -192,7 +198,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         if (frames.allocateContiguous(backbufferPages, backbuffer) &&
             framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
             printf("FB CONFIGURED\n");
-            modern = new gui::ModernDesktop(&framebuffer, &store);
+            modern = new gui::ModernDesktop(&framebuffer, &store, &settings);
         }
         if (!modern && backbuffer)
             frames.freeContiguous(backbuffer, backbufferPages);

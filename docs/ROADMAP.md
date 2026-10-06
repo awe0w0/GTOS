@@ -89,3 +89,9 @@ imply AHCI/NVMe support. Firmware-reported processors are not automatically onli
 
 This stage does not claim a complete system IME, unrestricted CJK typography or
 translation of arbitrary third-party applications before those are implemented.
+
+## Next queued project: native Chromium
+
+After the active kernel/desktop/Chinese phase gates, assess a real native Chromium
+port and required GTOS APIs. See [browser prerequisites and proof gates](BROWSER_PORT.md).
+No browser source download/build starts before the current phase completes.

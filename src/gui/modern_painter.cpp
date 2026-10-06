@@ -1,51 +1,88 @@
 #include "modern_font_data.inc"
 #include "modern_game_font.inc"
 #include <gui/modern_painter.h>
+#include <i18n/font.h>
+#include <i18n/utf8.h>
 using namespace gtos::gui;
-void ModernPainter::Text(int32_t x, int32_t y, const char *t, uint32_t c, uint32_t scale) {
-    if (!t || scale < 1 || scale > 3)
+namespace {
+struct TextGlyph {
+    const uint8_t *pixels;
+    uint32_t width, height, advance, zoom;
+};
+TextGlyph SelectTextGlyph(uint32_t codepoint, uint32_t scale) {
+    TextGlyph out = {};
+    uint32_t raster = scale == 2 ? 2 : 1;
+    out.zoom = scale / raster;
+    if (codepoint >= 32 && codepoint <= 126) {
+        uint32_t index = codepoint - 32;
+        out.pixels = raster == 2 ? modernFontPixelsLarge[index] : modernFontPixels[index];
+        out.width = 16 * raster;
+        out.height = 18 * raster;
+        out.advance = raster == 2 ? modernFontAdvanceLarge[index] : modernFontAdvance[index];
+    } else {
+        gtos::i18n::Glyph glyph = {};
+        if (!gtos::i18n::LookupGlyph(codepoint, raster, glyph))
+            gtos::i18n::LookupGlyph(0xFFFD, raster, glyph);
+        out.pixels = glyph.pixels;
+        out.width = glyph.width;
+        out.height = glyph.height;
+        out.advance = glyph.advance;
+    }
+    return out;
+}
+} // namespace
+void ModernPainter::Text(int32_t x, int32_t y, const char *text, uint32_t color, uint32_t scale) {
+    if (!text || scale < 1 || scale > 3)
         return;
     int64_t px = x, py = y;
-    for (uint32_t n = 0; n < 160 && t[n]; ++n) {
-        uint8_t ch = (uint8_t)t[n];
-        if (ch == '\n') {
+    uint32_t offset = 0;
+    for (uint32_t count = 0; count < 160 && offset < gtos::i18n::MaxTextBytes && text[offset];
+         ++count) {
+        gtos::i18n::DecodeResult cp =
+            gtos::i18n::Decode(text + offset, gtos::i18n::MaxTextBytes - offset);
+        if (!cp.bytes)
+            break;
+        offset += cp.bytes;
+        if (cp.codepoint == '\n') {
             px = x;
             py += 20 * scale;
             continue;
         }
-        if (ch < 32 || ch > 126)
-            ch = '?';
-        if (px >= -(int64_t)16 * scale && px < (int64_t)fb.Width() && py >= -(int64_t)18 * scale &&
-            py < (int64_t)fb.Height()) {
-            const uint8_t *glyph =
-                scale == 2 ? modernFontPixelsLarge[ch - 32] : modernFontPixels[ch - 32];
-            uint32_t raster = scale == 2 ? 2 : 1, zoom = scale / raster;
-            for (uint32_t r = 0; r < 18 * raster; ++r)
-                for (uint32_t b = 0; b < 16 * raster; ++b) {
-                    uint32_t at = r * 16 * raster + b;
-                    uint8_t a = (at & 1) ? glyph[at / 2] & 15 : glyph[at / 2] >> 4;
-                    if (!a)
+        TextGlyph glyph = SelectTextGlyph(cp.codepoint, scale);
+        if (px >= -(int64_t)glyph.width * glyph.zoom && px < (int64_t)fb.Width() &&
+            py >= -(int64_t)glyph.height * glyph.zoom && py < (int64_t)fb.Height()) {
+            for (uint32_t row = 0; row < glyph.height; ++row) {
+                for (uint32_t col = 0; col < glyph.width; ++col) {
+                    uint32_t at = row * glyph.width + col;
+                    uint8_t alpha = at & 1 ? glyph.pixels[at / 2] & 15 : glyph.pixels[at / 2] >> 4;
+                    if (!alpha)
                         continue;
-                    for (uint32_t sy = 0; sy < zoom; ++sy)
-                        for (uint32_t sx = 0; sx < zoom; ++sx)
-                            fb.Blend((int32_t)px + b * zoom + sx, (int32_t)py + r * zoom + sy, c,
-                                     a);
+                    for (uint32_t sy = 0; sy < glyph.zoom; ++sy)
+                        for (uint32_t sx = 0; sx < glyph.zoom; ++sx)
+                            fb.Blend((int32_t)px + col * glyph.zoom + sx,
+                                     (int32_t)py + row * glyph.zoom + sy, color, alpha);
                 }
+            }
         }
-        px += scale == 2 ? modernFontAdvanceLarge[ch - 32] : modernFontAdvance[ch - 32] * scale;
+        px += glyph.advance * glyph.zoom;
     }
 }
-int32_t ModernPainter::TextWidth(const char *t, uint32_t scale) const {
-    if (!t || scale < 1 || scale > 3)
+int32_t ModernPainter::TextWidth(const char *text, uint32_t scale) const {
+    if (!text || scale < 1 || scale > 3)
         return 0;
-    int32_t w = 0;
-    for (uint32_t i = 0; i < 160 && t[i] && t[i] != '\n'; ++i) {
-        uint8_t ch = (uint8_t)t[i];
-        if (ch < 32 || ch > 126)
-            ch = '?';
-        w += scale == 2 ? modernFontAdvanceLarge[ch - 32] : modernFontAdvance[ch - 32] * scale;
+    uint32_t offset = 0;
+    int32_t width = 0;
+    for (uint32_t count = 0; count < 160 && offset < gtos::i18n::MaxTextBytes && text[offset];
+         ++count) {
+        gtos::i18n::DecodeResult cp =
+            gtos::i18n::Decode(text + offset, gtos::i18n::MaxTextBytes - offset);
+        if (!cp.bytes || cp.codepoint == '\n')
+            break;
+        offset += cp.bytes;
+        TextGlyph glyph = SelectTextGlyph(cp.codepoint, scale);
+        width += glyph.advance * glyph.zoom;
     }
-    return w;
+    return width;
 }
 void ModernPainter::Number(int32_t x, int32_t y, uint32_t v, uint32_t c, uint32_t s) {
     char out[11], rev[10];

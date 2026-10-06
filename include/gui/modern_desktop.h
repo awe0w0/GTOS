@@ -3,6 +3,9 @@
 #include <gui/modern_geometry.h>
 #include <gui/modern_painter.h>
 #include <gui/shell.h>
+#include <i18n/catalog.h>
+#include <i18n/pinyin.h>
+#include <storage/settings.h>
 namespace gtos {
 namespace gui {
 class ModernDesktop : public drivers::KeyboardEventHandler,
@@ -20,6 +23,10 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     ModernWindowManager wm;
     storage::AppStore *store;
     apps::VirtualMachine vm;
+    storage::SettingsStore *preferences;
+    i18n::Locale locale;
+    i18n::PinyinComposer composer;
+    bool pinyinInput, preferencesPersisted, settingsConfirmed, bundledGame;
     SystemSnapshot state;
     const uint8_t *installer;
     uint32_t installerSize;
@@ -34,10 +41,22 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     bool resizing;
     uint32_t selected, lastFrame, lastStep, lastMonitor, noticeAt, lastTitleClick;
     int32_t titleClickKind, launcherSelected;
-    char query[32];
-    uint32_t queryLength;
+    char query[128];
+    uint32_t queryLength, queryCursor;
     const char *notice;
     Theme Colors() const;
+    const char *Label(const char *english) const;
+    const char *AppTitle(const storage::AppInfo *app) const;
+    const char *GameTitle() const;
+    void ApplyLocale(i18n::Locale next);
+    void ApplyTheme(bool light);
+    void SavePreferences();
+    void CancelComposition();
+    void ToggleInput();
+    bool AppendQuery(const char *text);
+    ModernRect CandidatePanel() const;
+    ModernRect CandidateBox(uint32_t index) const;
+    void DrawComposition();
     void Queue(uint8_t type, uint8_t code);
     void CancelCapture();
     void Key(uint8_t code, bool down);
@@ -64,7 +83,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     uint32_t HeldKeys() const;
 
   public:
-    ModernDesktop(drivers::Framebuffer *framebuffer, storage::AppStore *store);
+    ModernDesktop(drivers::Framebuffer *framebuffer, storage::AppStore *store,
+                  storage::SettingsStore *settings = 0);
     void SetInstaller(const uint8_t *data, uint32_t length);
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);
@@ -81,6 +101,11 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     bool LauncherOpen() const { return launcher; }
     bool RemovalPending() const { return confirmRemove; }
     bool LightTheme() const { return lightTheme; }
+    i18n::Locale CurrentLocale() const { return locale; }
+    bool PinyinInput() const { return pinyinInput; }
+    const char *SearchQuery() const { return query; }
+    uint32_t SearchCursor() const { return queryCursor; }
+    const i18n::PinyinComposer &Composition() const { return composer; }
     const char *ActiveApplicationID() const {
         return wm.Window(ModernGame).open ? vm.Info().id : 0;
     }

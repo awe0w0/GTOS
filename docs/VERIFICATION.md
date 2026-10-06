@@ -81,3 +81,17 @@ of uninstall, and installation persistence at 32/64/128 MiB. A separate legacy
 ISO verifies that disabling Bochs/QEMU VBE restores the VGA fallback correctly.
 The framebuffer ABI is guarded by a byte-encoded GRUB fixture: its aligned color
 union starts at112, with a120-byte Multiboot information structure.
+
+## Chinese localization and durable settings extension
+
+Real QEMU tests verify English/Simplified Chinese selection, all nine visible
+pinyin candidates, UTF-8 cursor/backspace/insertion, Chinese application search,
+localized playable 接球, and language/theme persistence across a full reboot.
+Unowned media permits only session-local choices and remains byte-for-byte intact.
+
+Strict UTF-8/catalog/composer/font tests pass i386, native x86-64 and fail-fast
+ASan/UBSan. All 154 catalog entries and 359 candidate phrases have verified
+coverage in the licensed 440-glyph atlas. Settings tests cover 2,052 torn-update
+cases and dirty-cache recovery without a power cycle. App-store recovery adds
+1,026 cases, with a flush barrier before reusing the older durable directory and
+matching half-range ambiguity checks in the offline tool.

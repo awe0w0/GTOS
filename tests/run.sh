@@ -7,9 +7,12 @@ cd "$(dirname "$0")/.."
 ./tests/cpu_test.sh
 ./tests/cpu_startup_test.sh
 ./tests/package_vm.sh
+./tests/i18n_test.sh
+./tests/settings_test.sh
 ./tests/desktop_test.sh
 python3 -m unittest discover -s tests -p 'package*_test.py'
 python3 -m unittest discover -s tests -p 'storage_tool_test.py'
+python3 -m unittest discover -s tests -p 'settings_tool_test.py'
 ./tests/storage_test.sh
 ./tests/storage_recovery_test.sh
 echo "All deterministic module tests passed"

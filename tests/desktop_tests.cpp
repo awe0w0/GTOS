@@ -1,5 +1,6 @@
 // Deterministic real desktop/framebuffer tests, executable without libc.
 #include <gui/modern_desktop.h>
+#include <i18n/font.h>
 using namespace gtos;
 using namespace gtos::gui;
 static uint32_t checks;
@@ -350,10 +351,11 @@ asm(".section .rodata\n.global desktop_catch_start\ndesktop_catch_start:\n.incbi
     "\"apps/catch.gtapp\"\n.global desktop_catch_end\ndesktop_catch_end:\n.previous\n");
 extern "C" const uint8_t desktop_catch_start[], desktop_catch_end[];
 class DesktopDisk : public storage::BlockDevice {
-    uint8_t data[storage::AppStore::TotalSectors][512];
+    uint8_t data[storage::SettingsStore::RequiredSectors][512];
 
   public:
-    DesktopDisk() {
+    bool failWrites, failReads;
+    DesktopDisk() : failWrites(false), failReads(false) {
         for (uint32_t i = 0; i < sizeof(data); ++i)
             ((uint8_t *)data)[i] = 0;
         const char *magic = "GTSTOR1";
@@ -375,16 +377,16 @@ class DesktopDisk : public storage::BlockDevice {
         }
     }
     virtual bool Identify() { return true; }
-    virtual uint32_t SectorCount() const { return storage::AppStore::TotalSectors; }
+    virtual uint32_t SectorCount() const { return storage::SettingsStore::RequiredSectors; }
     virtual bool ReadSector(uint32_t sector, uint8_t *out) {
-        if (sector >= SectorCount())
+        if (failReads || sector >= SectorCount())
             return false;
         for (uint32_t i = 0; i < 512; ++i)
             out[i] = data[sector][i];
         return true;
     }
     virtual bool WriteSector(uint32_t sector, const uint8_t *in) {
-        if (sector >= SectorCount())
+        if (failWrites || sector >= SectorCount())
             return false;
         for (uint32_t i = 0; i < 512; ++i)
             data[sector][i] = in[i];
@@ -585,11 +587,201 @@ static void ApplicationTests() {
                   "maximum-length launcher title cannot paint outside its panel");
     Key(d, 27);
 }
+static bool Same(const char *a, const char *b) {
+    if (!a || !b)
+        return false;
+    for (uint32_t i = 0; i < 4096; ++i) {
+        if (a[i] != b[i])
+            return false;
+        if (!a[i])
+            return true;
+    }
+    return false;
+}
+static void Type(ModernDesktop &desktop, const char *ascii) {
+    for (uint32_t i = 0; ascii[i]; ++i)
+        Key(desktop, ascii[i]);
+}
+static void CheckGameHan(ModernDesktop &d, uint32_t cp, int32_t cx, int32_t cy) {
+    i18n::Glyph glyph = {};
+    Check(i18n::LookupGlyph(cp, 1, glyph), "Chinese game glyph available");
+    ModernRect r = d.Windows().Window(ModernGame).bounds;
+    int32_t scale = (r.w - 48) / 272, vertical = (r.h - 124) / 128;
+    if (vertical < scale)
+        scale = vertical;
+    if (scale > 4)
+        scale = 4;
+    int32_t gx = r.x + (r.w - 272 * scale) / 2, gy = r.y + 89 + (r.h - 124 - 128 * scale) / 2;
+    for (uint32_t row = 0; row < glyph.height; ++row)
+        for (uint32_t col = 0; col < glyph.advance; ++col) {
+            uint32_t at = row * glyph.width + col;
+            uint8_t a = at & 1 ? glyph.pixels[at / 2] & 15 : glyph.pixels[at / 2] >> 4;
+            uint32_t pixel = display[(gy + (cy + row) * scale) * 800 + gx + (cx + col) * scale];
+            Check(pixel == (a >= 7 ? 0xFFFFFFu : 0x182633u),
+                  "bundled game draws real bounded Han glyph pixels");
+        }
+}
+static void LocalizationTests() {
+    DesktopDisk disk;
+    storage::AppStore store(&disk);
+    Check(store.Mount(), "localized app disk");
+    storage::SettingsStore settings(&disk);
+    Check(settings.Load(), "localized settings disk");
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "localized framebuffer");
+    ModernPainter painter(fb);
+    Check(painter.TextWidth("应用", 1) == 28 && painter.TextWidth("应用", 2) == 56,
+          "UTF-8 text width uses scalars and Chinese advances");
+    painter.Text(-9, -3, "中文 / 应用", 0xFFFFFF);
+    painter.Text(4, 4, "\xF0\x28\x8C\x28", 0xFFFFFF);
+    fb.Present();
+    ModernDesktop d(&fb, &store, &settings);
+    pointerX = 770;
+    pointerY = 16;
+    d.SetInstaller(desktop_catch_start, desktop_catch_end - desktop_catch_start);
+    Pump(d);
+    Key(d, '4');
+    Key(d, 'c');
+    Check(d.CurrentLocale() == i18n::SimplifiedChinese && d.PinyinInput(),
+          "language selector enables Chinese and pinyin");
+    Check(settings.Current().locale == storage::SimplifiedChinese &&
+              settings.HasPersistedSettings(),
+          "language choice persisted");
+    Key(d, 't');
+    Check(d.LightTheme() && settings.Current().theme == storage::Light,
+          "theme saves alongside language");
+    Key(d, 'l');
+    Type(d, "yingyong");
+    Check(d.Composition().Active() && Same(d.Composition().Candidate(0), "应用"),
+          "pinyin exposes Chinese phrase");
+    Key(d, ' ');
+    Check(Same(d.SearchQuery(), "应用") && d.SearchCursor() == 6,
+          "candidate commits complete UTF-8 phrase");
+    Key(d, 0x81);
+    Check(d.SearchCursor() == 3, "left cursor moves one scalar");
+    Key(d, '\b');
+    Check(Same(d.SearchQuery(), "用") && d.SearchCursor() == 0,
+          "backspace removes one scalar before cursor");
+    Type(d, "ying");
+    Key(d, '1');
+    Check(Same(d.SearchQuery(), "应用") && d.SearchCursor() == 3,
+          "pinyin inserts at middle cursor boundary");
+    Key(d, 0x82);
+    Check(d.SearchCursor() == 6, "right cursor advances complete scalar");
+    Key(d, '\n');
+    Check(d.Windows().Focused() == ModernApplications && !d.LauncherOpen(),
+          "Chinese query opens localized application window");
+    Key(d, 'l');
+    Type(d, "shezhi");
+    Key(d, ' ');
+    Key(d, '\n');
+    Check(d.Windows().Focused() == ModernSettings, "localized settings alias is searchable");
+    for (uint32_t choice = 1; choice <= 9; ++choice) {
+        Key(d, 'l');
+        Type(d, "shi");
+        Check(d.Composition().CandidateCount() == 9, "all nine pinyin choices available");
+        const char *expected = d.Composition().Candidate(choice - 1);
+        // All candidate cells are within the framebuffer and visibly painted.
+        int32_t bx = 26 + (choice - 1) % 3 * 162, by = 73 + (choice - 1) / 3 * 26;
+        Check(display[(by + 1) * 800 + bx + 2] == 0xE2E9EFu, "numbered candidate cell is rendered");
+        Key(d, '0' + choice);
+        Check(Same(d.SearchQuery(), expected), "number key selects exact candidate");
+        Key(d, 27);
+    }
+    Key(d, 'l');
+    Type(d, "shi");
+    Click(d, 26 + 2 * 162 + 50, 73 + 2 * 26 + 12);
+    Check(Same(d.SearchQuery(), "世") && !d.Composition().Active(),
+          "mouse selects ninth visible candidate");
+    Type(d, "ying");
+    Key(d, 27);
+    Check(d.LauncherOpen() && !d.Composition().Active(), "Esc cancels composition before launcher");
+    Key(d, 27);
+    Key(d, 'l');
+    Type(d, "ying");
+    Click(d, 600, 50);
+    Check(!d.LauncherOpen() && !d.Composition().Active(),
+          "outside click cancels preedit without committing");
+    Key(d, 'l');
+    Key(d, '`');
+    Check(!d.PinyinInput(), "direct input can be selected");
+    d.OnKeyDown('`');
+    d.OnKeyDown('`');
+    Pump(d);
+    d.OnKeyUp('`');
+    Pump(d);
+    Check(d.PinyinInput() && !d.SearchQuery()[0],
+          "input-mode key repeat does not insert literal backticks");
+    Key(d, '`');
+
+    for (uint32_t i = 0; i < 125; ++i)
+        Key(d, 'x');
+    Key(d, '`');
+    Type(d, "shi");
+    Key(d, ' ');
+    Check(d.Composition().Active() && i18n::ByteLength(d.SearchQuery(), 128) == 125,
+          "full query preserves uncommitted candidate");
+    Key(d, 27);
+    Key(d, 27);
+    Key(d, 'i');
+    Key(d, '\n');
+    Check(d.Windows().Focused() == ModernGame, "Chinese bundled game launches");
+    CheckGameHan(d, 0x63A5, 8, 1);
+    CheckGameHan(d, 0x79FB, 32, 109);
+    Key(d, 27);
+    uint8_t package[apps::PackageLimit];
+    uint32_t length = desktop_catch_end - desktop_catch_start;
+    for (uint32_t i = 0; i < length; ++i)
+        package[i] = desktop_catch_start[i];
+    package[32] = 'z';
+    apps::Write32(package + 120, apps::PackageCRC(package, length));
+    Check(store.Install(package, length), "third-party lookalike package installed");
+    Key(d, '3');
+    Key(d, 0x84);
+    Key(d, '\n');
+    Check(d.ActiveApplicationID() && d.ActiveApplicationID()[0] == 'z',
+          "arbitrary package retains original identity");
+    ModernRect game = d.Windows().Window(ModernGame).bounds;
+    int32_t gx = game.x + (game.w - 544) / 2, gy = game.y + 89 + (game.h - 124 - 256) / 2;
+    const uint8_t *cg = ModernGameGlyph('C');
+    for (int32_t row = 0; row < 7; ++row)
+        for (int32_t col = 0; col < 5; ++col)
+            Check(display[(gy + (7 + row) * 2) * 800 + gx + (8 + col) * 2] ==
+                      ((cg[row] & (1 << (4 - col))) ? 0xFFFFFFu : 0x182633u),
+                  "arbitrary app prompt is not translated");
+    Key(d, 27);
+    Key(d, '3');
+    Key(d, 'l');
+    Type(d, "shi");
+    disk.failReads = true;
+    Click(d, 100, 428);
+    Check(!d.LauncherOpen() && !d.Composition().Active(),
+          "failed app activation cancels hidden preedit");
+    disk.failReads = false;
+    Key(d, 'l');
+    Check(!d.Composition().Active() && !d.SearchQuery()[0],
+          "reopened launcher never resumes failed activation preedit");
+    Key(d, 27);
+    Key(d, '4');
+    disk.failWrites = true;
+    Key(d, 'c');
+    Check(d.CurrentLocale() == i18n::English &&
+              settings.Current().locale == storage::SimplifiedChinese,
+          "failed save keeps session change and previous stored settings distinct");
+    disk.failWrites = false;
+    storage::SettingsStore reboot(&disk);
+    Check(reboot.Load(), "settings remount after failed write");
+    ModernDesktop restored(&fb, &store, &reboot);
+    Check(restored.CurrentLocale() == i18n::SimplifiedChinese && restored.LightTheme(),
+          "locale and theme restore after remount");
+}
 static void RunTests() {
     FramebufferTests();
     GeometryTests();
     DesktopTests();
     ApplicationTests();
+    LocalizationTests();
     Output("Desktop/framebuffer safety and interaction tests passed\n");
 }
 #ifdef GTOS_DESKTOP_SANITIZE

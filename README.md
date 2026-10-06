@@ -1,5 +1,9 @@
 # GTOS
 
+简体中文与 English 可在外观设置中切换，语言和主题会保存在专用磁盘镜像中。
+启动器支持按字符编辑 UTF-8 文本和有范围限制的拼音候选词；这还不是通用输入法。
+详见[语言支持范围](docs/desktop-localization.md)。
+
 A 32-bit x86 educational operating system, developed on the `dev` branch.
 The current foundation milestone includes a real 800×600 windowed desktop, hardware monitor,
 validated memory allocators, page-level kernel protection, a timer-driven scheduler, safe dedicated ATA app
@@ -50,6 +54,8 @@ QEMU direct `-kernel` is not the supported Multiboot launch path.
 - Mouse focuses windows; drag titlebars, resize lower-right corners, or use title controls
 - `1`/`H`: Home; `2`/`M`: hardware monitor; `3`: applications; `4`: appearance
 - `L`: searchable launcher; `Tab`: cycle windows; `[` minimizes, `]` maximizes/restores
+- In Appearance, choose English/简体中文 or press `C`; language and theme persist
+- Chinese launcher: type pinyin, select1–9 or Space/Enter; backtick toggles direct input
 - `I`: install the external Catch package from the boot ISO
 - `Up`/`Down`: select an installed app; `Enter`/`G`: launch
 - `U`: ask to remove the selected app; Enter confirms, Esc cancels
@@ -65,6 +71,7 @@ kernel. See [the app protocol](docs/apps.md) and [storage format](docs/storage.m
 ```sh
 make test
 python3 tests/desktop_qemu.py --output /tmp/gtos-modern-new
+python3 tests/desktop_language_qemu.py --output /tmp/gtos-language-new
 make GTOS-legacy.iso
 python3 tests/qemu_smoke.py --iso GTOS-legacy.iso --output /tmp/gtos-legacy-new
 ```
@@ -88,4 +95,10 @@ The BSP now enables real non-PAE paging: page zero is absent, kernel text/rodata
 are read-only with CR0.WP, and device mappings are explicit. This does not yet
 provide ring-3 process isolation or NX protection.
 
-More details: [desktop](docs/desktop.md), [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).
+The Chinese atlas covers every localized interface/candidate string; arbitrary
+Unicode/CJK coverage and a general-purpose IME remain future work.
+
+More details: [language/input](docs/desktop-localization.md), [settings](docs/settings.md), [desktop](docs/desktop.md), [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).
+
+The [native Chromium port](docs/BROWSER_PORT.md) is queued after the current
+phase, beginning with a verified upstream/resource/API assessment.

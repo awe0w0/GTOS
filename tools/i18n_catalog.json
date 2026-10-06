@@ -1,0 +1,772 @@
+[
+  {
+    "id": "Welcome",
+    "en": "Welcome",
+    "zh-CN": "欢迎"
+  },
+  {
+    "id": "Applications",
+    "en": "Applications",
+    "zh-CN": "应用程序"
+  },
+  {
+    "id": "SystemMonitor",
+    "en": "System monitor",
+    "zh-CN": "系统监控"
+  },
+  {
+    "id": "Appearance",
+    "en": "Appearance",
+    "zh-CN": "外观"
+  },
+  {
+    "id": "CatchTitle",
+    "en": "Catch",
+    "zh-CN": "接球"
+  },
+  {
+    "id": "Home",
+    "en": "Home",
+    "zh-CN": "主页"
+  },
+  {
+    "id": "Apps",
+    "en": "Apps",
+    "zh-CN": "应用"
+  },
+  {
+    "id": "Monitor",
+    "en": "Monitor",
+    "zh-CN": "监控"
+  },
+  {
+    "id": "Settings",
+    "en": "Settings",
+    "zh-CN": "设置"
+  },
+  {
+    "id": "WelcomeNotice",
+    "en": "Welcome to GTOS",
+    "zh-CN": "欢迎使用 GTOS"
+  },
+  {
+    "id": "UnknownStatus",
+    "en": "Unknown status",
+    "zh-CN": "未知状态"
+  },
+  {
+    "id": "WindowClosed",
+    "en": "Window closed",
+    "zh-CN": "窗口已关闭"
+  },
+  {
+    "id": "NoApplicationStore",
+    "en": "No application store",
+    "zh-CN": "应用商店不可用"
+  },
+  {
+    "id": "NoBootPackage",
+    "en": "No package on boot media",
+    "zh-CN": "启动介质中没有安装包"
+  },
+  {
+    "id": "InstalledNotice",
+    "en": "Installed on disk. Select the app and press Enter to play.",
+    "zh-CN": "已安装到磁盘。选择应用并按 Enter 启动。"
+  },
+  {
+    "id": "SelectApplicationFirst",
+    "en": "Select an installed application first",
+    "zh-CN": "请先选择已安装的应用"
+  },
+  {
+    "id": "ApplicationRemoved",
+    "en": "Application removed from disk",
+    "zh-CN": "应用已从磁盘移除"
+  },
+  {
+    "id": "InstallCatchFirst",
+    "en": "Install the included Catch package to begin",
+    "zh-CN": "请先安装附带的接球游戏"
+  },
+  {
+    "id": "GameControlsNotice",
+    "en": "Arrow keys move. R restarts. Esc closes.",
+    "zh-CN": "方向键移动，R 重新开始，Esc 关闭。"
+  },
+  {
+    "id": "RemovalCanceled",
+    "en": "Removal canceled",
+    "zh-CN": "已取消移除"
+  },
+  {
+    "id": "LightSessionApplied",
+    "en": "Light appearance applied for this session",
+    "zh-CN": "已在本次会话中应用浅色外观"
+  },
+  {
+    "id": "DarkSessionApplied",
+    "en": "Dark appearance applied for this session",
+    "zh-CN": "已在本次会话中应用深色外观"
+  },
+  {
+    "id": "NoApplicationToRemove",
+    "en": "No installed application to remove",
+    "zh-CN": "没有可移除的已安装应用"
+  },
+  {
+    "id": "AppearanceSessionApplied",
+    "en": "Appearance applied for this session",
+    "zh-CN": "外观已应用于本次会话"
+  },
+  {
+    "id": "InputRecovered",
+    "en": "Input queue recovered; press the key again",
+    "zh-CN": "输入队列已恢复，请重新按键"
+  },
+  {
+    "id": "WallpaperTagline",
+    "en": "Built one layer at a time",
+    "zh-CN": "从每一层开始构建"
+  },
+  {
+    "id": "Workspace",
+    "en": "Workspace",
+    "zh-CN": "工作区"
+  },
+  {
+    "id": "Uptime",
+    "en": "Up",
+    "zh-CN": "运行"
+  },
+  {
+    "id": "Minutes",
+    "en": "min",
+    "zh-CN": "分钟"
+  },
+  {
+    "id": "Experimental",
+    "en": "Experimental",
+    "zh-CN": "实验版本"
+  },
+  {
+    "id": "DesktopTakingShape",
+    "en": "YOUR DESKTOP, TAKING SHAPE",
+    "zh-CN": "你的桌面，初具模样"
+  },
+  {
+    "id": "QuieterPlace",
+    "en": "A quieter place",
+    "zh-CN": "一处安静的空间"
+  },
+  {
+    "id": "ToBuild",
+    "en": "to build.",
+    "zh-CN": "自由构建。"
+  },
+  {
+    "id": "WelcomeDescription",
+    "en": "A real kernel. A working app store. Room to grow.",
+    "zh-CN": "真实内核，可用的应用商店，持续成长。"
+  },
+  {
+    "id": "WelcomeExplore",
+    "en": "Explore your hardware, install Catch, and make it yours.",
+    "zh-CN": "查看硬件，安装接球游戏，打造自己的桌面。"
+  },
+  {
+    "id": "MemoryChecked",
+    "en": "Memory checked",
+    "zh-CN": "内存检查通过"
+  },
+  {
+    "id": "MemoryAttention",
+    "en": "Memory needs attention",
+    "zh-CN": "内存需要检查"
+  },
+  {
+    "id": "OpenApplications",
+    "en": "Open applications",
+    "zh-CN": "打开应用"
+  },
+  {
+    "id": "ViewHardware",
+    "en": "View hardware",
+    "zh-CN": "查看硬件"
+  },
+  {
+    "id": "HomeShortcuts",
+    "en": "1 Home    2 Monitor    3 Apps    4 Settings    L Launcher",
+    "zh-CN": "1 主页    2 监控    3 应用    4 设置    L 启动器"
+  },
+  {
+    "id": "YourApplications",
+    "en": "Your applications",
+    "zh-CN": "你的应用"
+  },
+  {
+    "id": "InstalledPackagesSaved",
+    "en": "Installed packages are saved on your dedicated app disk.",
+    "zh-CN": "安装包保存在专用应用磁盘中。"
+  },
+  {
+    "id": "AppDiskUnavailable",
+    "en": "App disk unavailable. Nothing will be formatted automatically.",
+    "zh-CN": "应用磁盘不可用，不会自动格式化。"
+  },
+  {
+    "id": "StartWithPlay",
+    "en": "Start with a little play",
+    "zh-CN": "从小游戏开始"
+  },
+  {
+    "id": "InstallCatchFromMedia",
+    "en": "Install the Catch package from your boot media.",
+    "zh-CN": "从启动介质安装接球游戏。"
+  },
+  {
+    "id": "Bytes",
+    "en": "bytes",
+    "zh-CN": "字节"
+  },
+  {
+    "id": "MoreUpDown",
+    "en": "More: Up / Down",
+    "zh-CN": "更多：上 / 下"
+  },
+  {
+    "id": "OpenEnter",
+    "en": "Open  /  Enter",
+    "zh-CN": "打开 / Enter"
+  },
+  {
+    "id": "InstallPackage",
+    "en": "Install package",
+    "zh-CN": "安装应用包"
+  },
+  {
+    "id": "Remove",
+    "en": "Remove",
+    "zh-CN": "移除"
+  },
+  {
+    "id": "ApplicationShortcuts",
+    "en": "I Install    U Remove    Up / Down Select",
+    "zh-CN": "I 安装    U 移除    上 / 下 选择"
+  },
+  {
+    "id": "HardwareKernel",
+    "en": "Hardware & kernel",
+    "zh-CN": "硬件与内核"
+  },
+  {
+    "id": "Live",
+    "en": "LIVE",
+    "zh-CN": "实时"
+  },
+  {
+    "id": "PhysicalMemory",
+    "en": "PHYSICAL MEMORY",
+    "zh-CN": "物理内存"
+  },
+  {
+    "id": "Processors",
+    "en": "PROCESSORS",
+    "zh-CN": "处理器"
+  },
+  {
+    "id": "Detected",
+    "en": "detected",
+    "zh-CN": "已检测"
+  },
+  {
+    "id": "FreePhysicalPages",
+    "en": "Free physical pages",
+    "zh-CN": "空闲物理页"
+  },
+  {
+    "id": "HeapUsedKiB",
+    "en": "Heap used / KiB",
+    "zh-CN": "堆内存用量 / KiB"
+  },
+  {
+    "id": "CPUVendor",
+    "en": "CPU vendor",
+    "zh-CN": "处理器厂商"
+  },
+  {
+    "id": "SchedulingCPUs",
+    "en": "Scheduling CPUs",
+    "zh-CN": "调度处理器数"
+  },
+  {
+    "id": "APsStartedParked",
+    "en": "APs started / parked",
+    "zh-CN": "已启动 / 停驻的辅助处理器"
+  },
+  {
+    "id": "TasksSwitches",
+    "en": "Tasks / switches",
+    "zh-CN": "任务 / 切换次数"
+  },
+  {
+    "id": "AppDiskMiB",
+    "en": "App disk / MiB",
+    "zh-CN": "应用磁盘 / MiB"
+  },
+  {
+    "id": "Mounted",
+    "en": "Mounted",
+    "zh-CN": "已挂载"
+  },
+  {
+    "id": "Unavailable",
+    "en": "Unavailable",
+    "zh-CN": "不可用"
+  },
+  {
+    "id": "HeapOK",
+    "en": "Heap OK",
+    "zh-CN": "堆内存正常"
+  },
+  {
+    "id": "HeapFail",
+    "en": "Heap FAIL",
+    "zh-CN": "堆内存异常"
+  },
+  {
+    "id": "SchedulerOK",
+    "en": "Scheduler OK",
+    "zh-CN": "调度器正常"
+  },
+  {
+    "id": "SchedulerFail",
+    "en": "Scheduler FAIL",
+    "zh-CN": "调度器异常"
+  },
+  {
+    "id": "PagingWP",
+    "en": "Paging + WP",
+    "zh-CN": "分页与写保护"
+  },
+  {
+    "id": "PagingOn",
+    "en": "Paging on",
+    "zh-CN": "分页已启用"
+  },
+  {
+    "id": "PagingOff",
+    "en": "Paging off",
+    "zh-CN": "分页未启用"
+  },
+  {
+    "id": "MakeSpaceYours",
+    "en": "Make this space yours",
+    "zh-CN": "打造你的专属空间"
+  },
+  {
+    "id": "ChooseAppearance",
+    "en": "Choose an appearance. Changes apply immediately.",
+    "zh-CN": "选择外观，立即生效。"
+  },
+  {
+    "id": "Light",
+    "en": "Light",
+    "zh-CN": "浅色"
+  },
+  {
+    "id": "Dark",
+    "en": "Dark",
+    "zh-CN": "深色"
+  },
+  {
+    "id": "ThemeShortcuts",
+    "en": "T Toggle theme    [ Minimize    ] Maximize / restore",
+    "zh-CN": "T 切换主题    [ 最小化    ] 最大化 / 还原"
+  },
+  {
+    "id": "WindowShortcuts",
+    "en": "Tab Switch windows    Esc Close the focused window",
+    "zh-CN": "Tab 切换窗口    Esc 关闭当前窗口"
+  },
+  {
+    "id": "AppearanceSessionOnly",
+    "en": "Appearance is session-only. Saved settings are coming later.",
+    "zh-CN": "外观仅用于本次会话，持久保存功能尚未接入。"
+  },
+  {
+    "id": "GameShortcuts",
+    "en": "Arrows / A D move    R restart    Esc close",
+    "zh-CN": "方向键 / A D 移动    R 重开    Esc 关闭"
+  },
+  {
+    "id": "Restart",
+    "en": "Restart",
+    "zh-CN": "重新开始"
+  },
+  {
+    "id": "VMDescription",
+    "en": "External bytecode app  /  scaled framebuffer  /  one VM host",
+    "zh-CN": "外部字节码应用 / 缩放帧缓冲 / 单虚拟机"
+  },
+  {
+    "id": "ApplicationStopped",
+    "en": "Application stopped",
+    "zh-CN": "应用已停止"
+  },
+  {
+    "id": "RestartOrClose",
+    "en": "Press R to restart or Esc to close",
+    "zh-CN": "按 R 重新开始，按 Esc 关闭"
+  },
+  {
+    "id": "FindApplication",
+    "en": "Type to find an app...",
+    "zh-CN": "输入以查找应用…"
+  },
+  {
+    "id": "NoMatchingApplications",
+    "en": "No matching applications",
+    "zh-CN": "没有匹配的应用"
+  },
+  {
+    "id": "LauncherShortcuts",
+    "en": "Up / Down to choose    Enter to open",
+    "zh-CN": "上 / 下 选择    Enter 打开"
+  },
+  {
+    "id": "RemoveApplicationQuestion",
+    "en": "Remove this application?",
+    "zh-CN": "要移除此应用吗？"
+  },
+  {
+    "id": "Application",
+    "en": "Application",
+    "zh-CN": "应用"
+  },
+  {
+    "id": "RemoveApplicationWarning",
+    "en": "This removes the installed package from your app disk.",
+    "zh-CN": "此操作将从应用磁盘中移除已安装的应用包。"
+  },
+  {
+    "id": "CancelEsc",
+    "en": "Cancel / Esc",
+    "zh-CN": "取消 / Esc"
+  },
+  {
+    "id": "RemoveEnter",
+    "en": "Remove / Enter",
+    "zh-CN": "移除 / Enter"
+  },
+  {
+    "id": "DisplayLanguage",
+    "en": "Display language",
+    "zh-CN": "显示语言"
+  },
+  {
+    "id": "EnglishName",
+    "en": "English",
+    "zh-CN": "English"
+  },
+  {
+    "id": "SimplifiedChineseName",
+    "en": "简体中文",
+    "zh-CN": "简体中文"
+  },
+  {
+    "id": "KeyboardInput",
+    "en": "Keyboard input",
+    "zh-CN": "键盘输入"
+  },
+  {
+    "id": "Pinyin",
+    "en": "Pinyin",
+    "zh-CN": "拼音"
+  },
+  {
+    "id": "DirectInput",
+    "en": "Direct input",
+    "zh-CN": "直接输入"
+  },
+  {
+    "id": "PinyinHint",
+    "en": "Space / 1-9 select; Enter commits / opens; Esc cancels",
+    "zh-CN": "空格 / 1-9 选词；Enter 提交 / 打开；Esc 取消"
+  },
+  {
+    "id": "SettingsSaved",
+    "en": "Settings saved",
+    "zh-CN": "设置已保存"
+  },
+  {
+    "id": "SettingsUnavailable",
+    "en": "Settings unavailable",
+    "zh-CN": "设置存储不可用"
+  },
+  {
+    "id": "SessionOnly",
+    "en": "Changes apply to this session only",
+    "zh-CN": "更改仅用于本次会话"
+  },
+  {
+    "id": "LanguageChanged",
+    "en": "Display language changed",
+    "zh-CN": "显示语言已切换"
+  },
+  {
+    "id": "InputChanged",
+    "en": "Keyboard input changed",
+    "zh-CN": "键盘输入已切换"
+  },
+  {
+    "id": "NoCandidates",
+    "en": "No candidates",
+    "zh-CN": "没有候选词"
+  },
+  {
+    "id": "PinyinBounded",
+    "en": "Built-in phrase dictionary; limited Chinese input",
+    "zh-CN": "内置有限词库，支持基础中文输入"
+  },
+  {
+    "id": "PinyinPreedit",
+    "en": "Pinyin composition",
+    "zh-CN": "拼音组合"
+  },
+  {
+    "id": "InputFull",
+    "en": "Input is full",
+    "zh-CN": "输入已满"
+  },
+  {
+    "id": "StoreReady",
+    "en": "Ready",
+    "zh-CN": "就绪"
+  },
+  {
+    "id": "StoreNotMounted",
+    "en": "Store not mounted",
+    "zh-CN": "应用商店未挂载"
+  },
+  {
+    "id": "StoreNoDisk",
+    "en": "No ATA data disk",
+    "zh-CN": "没有 ATA 数据磁盘"
+  },
+  {
+    "id": "StoreIOFailure",
+    "en": "Disk I/O failed; remount",
+    "zh-CN": "磁盘读写失败，请重新挂载"
+  },
+  {
+    "id": "StoreNotFormatted",
+    "en": "Disk not GTOS formatted",
+    "zh-CN": "磁盘不是 GTOS 格式"
+  },
+  {
+    "id": "StoreCorrupt",
+    "en": "Store data corrupt",
+    "zh-CN": "应用商店数据损坏"
+  },
+  {
+    "id": "StoreFull",
+    "en": "App store full (8 apps)",
+    "zh-CN": "应用商店已满（最多八个应用）"
+  },
+  {
+    "id": "StoreNotFound",
+    "en": "App not installed",
+    "zh-CN": "应用未安装"
+  },
+  {
+    "id": "StoreInvalidPackage",
+    "en": "Invalid app package",
+    "zh-CN": "无效的应用包"
+  },
+  {
+    "id": "StoreBufferSmall",
+    "en": "App buffer too small",
+    "zh-CN": "应用缓冲区不足"
+  },
+  {
+    "id": "StoreUnknownError",
+    "en": "Unknown store error",
+    "zh-CN": "未知应用商店错误"
+  },
+  {
+    "id": "VMNoDisplay",
+    "en": "No app display",
+    "zh-CN": "应用显示设备不可用"
+  },
+  {
+    "id": "VMRanPastCode",
+    "en": "App ran past code",
+    "zh-CN": "应用执行超出代码范围"
+  },
+  {
+    "id": "VMDivisionZero",
+    "en": "App division by zero",
+    "zh-CN": "应用发生除零错误"
+  },
+  {
+    "id": "VMInvalidOpcode",
+    "en": "App invalid opcode",
+    "zh-CN": "应用指令无效"
+  },
+  {
+    "id": "VMBudgetExceeded",
+    "en": "App instruction budget exceeded",
+    "zh-CN": "应用指令预算已耗尽"
+  },
+  {
+    "id": "VMStopped",
+    "en": "Stopped",
+    "zh-CN": "已停止"
+  },
+  {
+    "id": "UnknownError",
+    "en": "Unknown error",
+    "zh-CN": "未知错误"
+  },
+  {
+    "id": "Cancel",
+    "en": "Cancel",
+    "zh-CN": "取消"
+  },
+  {
+    "id": "Confirm",
+    "en": "Confirm",
+    "zh-CN": "确认"
+  },
+  {
+    "id": "Save",
+    "en": "Save",
+    "zh-CN": "保存"
+  },
+  {
+    "id": "Close",
+    "en": "Close",
+    "zh-CN": "关闭"
+  },
+  {
+    "id": "Minimize",
+    "en": "Minimize",
+    "zh-CN": "最小化"
+  },
+  {
+    "id": "Maximize",
+    "en": "Maximize",
+    "zh-CN": "最大化"
+  },
+  {
+    "id": "Restore",
+    "en": "Restore",
+    "zh-CN": "还原"
+  },
+  {
+    "id": "Search",
+    "en": "Search",
+    "zh-CN": "搜索"
+  },
+  {
+    "id": "Language",
+    "en": "Language",
+    "zh-CN": "语言"
+  },
+  {
+    "id": "PackageValid",
+    "en": "Package valid",
+    "zh-CN": "应用包有效"
+  },
+  {
+    "id": "PackageSize",
+    "en": "Invalid package length",
+    "zh-CN": "应用包长度无效"
+  },
+  {
+    "id": "PackageMagic",
+    "en": "Not a GTOS app package",
+    "zh-CN": "不是 GTOS 应用包"
+  },
+  {
+    "id": "PackageVersion",
+    "en": "Unsupported package version",
+    "zh-CN": "不支持此应用包版本"
+  },
+  {
+    "id": "PackageChecksum",
+    "en": "Package checksum mismatch",
+    "zh-CN": "应用包校验和不匹配"
+  },
+  {
+    "id": "PackageManifest",
+    "en": "Invalid app manifest",
+    "zh-CN": "应用清单无效"
+  },
+  {
+    "id": "PackageInstruction",
+    "en": "Invalid bytecode instruction",
+    "zh-CN": "字节码指令无效"
+  },
+  {
+    "id": "PackageUnknown",
+    "en": "Unknown package error",
+    "zh-CN": "未知应用包错误"
+  },
+  {
+    "id": "CatchSummary",
+    "en": "A/D MOVE  SPACE RESTART",
+    "zh-CN": "A/D 移动  空格重新开始"
+  },
+  {
+    "id": "SwitchInput",
+    "en": "Switch input",
+    "zh-CN": "切换输入"
+  },
+  {
+    "id": "SearchFull",
+    "en": "Search is full",
+    "zh-CN": "搜索内容已满"
+  },
+  {
+    "id": "NoMatchingCandidate",
+    "en": "No matching candidate",
+    "zh-CN": "没有匹配的候选词"
+  },
+  {
+    "id": "PinyinCandidates",
+    "en": "Pinyin candidates",
+    "zh-CN": "拼音候选词"
+  },
+  {
+    "id": "UsingDefaultSettings",
+    "en": "Using default settings",
+    "zh-CN": "使用默认设置"
+  },
+  {
+    "id": "LanguageThemeShortcuts",
+    "en": "C Language    T Theme",
+    "zh-CN": "C 切换语言    T 切换主题"
+  },
+  {
+    "id": "WindowManagementShortcuts",
+    "en": "Tab Switch windows    [ Minimize    ] Maximize",
+    "zh-CN": "Tab 切换窗口    [ 最小化    ] 最大化"
+  },
+  {
+    "id": "InputModeShortcut",
+    "en": "` Switch input mode",
+    "zh-CN": "` 切换输入方式"
+  },
+  {
+    "id": "AutomaticPreferences",
+    "en": "Preferences save automatically on a supported app disk",
+    "zh-CN": "设置会自动保存在支持的应用磁盘中"
+  },
+  {
+    "id": "SettingsLoaded",
+    "en": "Settings loaded",
+    "zh-CN": "设置已加载"
+  }
+]

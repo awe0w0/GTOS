@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+python3 tests/desktop_catalog_test.py
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-desktop.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 compile() {
@@ -9,7 +10,7 @@ compile() {
       -fno-pie -no-pie -nostdlib -static -Wall -Wextra \
       -Werror -Wl,-e,_start tests/desktop_tests.cpp src/drivers/framebuffer.cpp \
       src/gui/modern_geometry.cpp src/gui/modern_painter.cpp src/gui/modern_desktop.cpp \
-      src/gui/modern_render.cpp src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp -o "$2"
+      src/gui/modern_render.cpp src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp -o "$2"
 }
 compile -m32 "$build/test32"
 runtime="$(pwd)/../gtos-runtime/root"
@@ -37,6 +38,6 @@ if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
       -fsanitize=address,undefined -fno-omit-frame-pointer \
       tests/desktop_tests.cpp src/drivers/framebuffer.cpp src/gui/modern_geometry.cpp \
       src/gui/modern_painter.cpp src/gui/modern_desktop.cpp src/gui/modern_render.cpp \
-      src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp -o "$build/sanitized"
-    ASAN_OPTIONS=detect_leaks=0 "$build/sanitized"
+      src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp -o "$build/sanitized"
+    ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 "$build/sanitized"
 fi

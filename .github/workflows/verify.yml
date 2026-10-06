@@ -28,3 +28,10 @@ jobs:
         run: /usr/bin/python3 tests/qemu_smoke.py --iso GTOS-legacy.iso --output /tmp/gtos-qemu-legacy
       - name: Boot and interact with the high-resolution desktop
         run: /usr/bin/python3 tests/desktop_qemu.py --output /tmp/gtos-qemu-desktop
+      - name: Verify Chinese input and persistent language preferences
+        run: /usr/bin/python3 tests/desktop_language_qemu.py --output /tmp/gtos-qemu-language
+      - name: Run strict host sanitizers
+        run: |
+          GTOS_DESKTOP_SANITIZERS=1 ./tests/desktop_test.sh
+          GTOS_I18N_SANITIZERS=1 ./tests/i18n_test.sh
+          ./tests/settings_sanitizer_test.sh

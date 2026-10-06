@@ -50,7 +50,9 @@ replaces that VM, rather than creating another isolated process.
 - Launcher with case-insensitive substring search across panels and installed apps
 - Application rows scroll to keep the keyboard selection visible, up to eight apps
 - Uninstall has a modal confirmation; Cancel/Esc leaves disk data unchanged
-- Light/dark appearance applies immediately and is intentionally session-only
+- English/Simplified Chinese and light/dark appearance apply immediately and
+  persist through the optional transactional settings store; unavailable storage
+  is explicitly labeled session-only
 - Live physical/heap memory, CPU discovery, BSP scheduling, parked AP, task, disk,
   paging and write-protect data comes from `SystemSnapshot`, not decorative values
 
@@ -80,16 +82,20 @@ Keyboard shortcuts:
 
 The game consumes ordinary letter keys while focused; Tab and window-management
 keys still work. The driver currently exposes translated keys without modifier
-state. There is no Alt-Tab, modifier chord API, IME, clipboard, text-selection,
+state. There is no Alt-Tab, modifier chord API, full IME, clipboard, text-selection,
 mouse wheel, touch support or screen-reader accessibility interface yet.
+The launcher now has a bounded pinyin composer and scalar-safe UTF-8 caret editing;
+see `desktop-localization.md` for its precise scope.
 
 ## Typography
 
 `modern_font_data.inc` embeds GTOS Sans, a 4-bit coverage rasterization of DejaVu
 Sans 2.37 at 14 and 28 pixels. Large headings use separately rasterized 28-pixel
 glyphs rather than enlarging the body glyphs. ASCII characters 32–126 are present;
-unsupported bytes become `?`. Unicode/CJK layout and scalable vector text remain
-future work. The original GTOS 5 × 7 font remains in the tiny VM game canvas.
+the UTF-8 painter also uses the licensed GTOS Han atlas for Simplified Chinese.
+Coverage is bounded to catalog/dictionary glyphs; unsupported scalars have an
+explicit replacement square. Universal font coverage, complex shaping and vector
+text remain future work. The original GTOS 5 × 7 font remains in the tiny VM game canvas.
 
 The complete font permission notice is in `desktop-font-license.txt`.
 `tests/desktop_font.py` regenerates the raster atlas with Pillow and the installed
@@ -127,9 +133,9 @@ host raster previews alone do not establish boot or hardware-input correctness.
 
 ## Remaining work toward the long-term desktop goal
 
-Persistent settings/session state, independent application processes and enforced
+Session restoration, independent application processes and enforced
 isolation, a filesystem-backed file manager, a terminal, reliable multi-app IPC,
-Unicode fonts, text editing and focus accessibility, richer input handling,
+broader Unicode fonts, general text editing and focus accessibility, richer input handling,
 notifications, display-mode changes, refresh synchronization, compositing damage
 optimization, and measured responsiveness remain separate milestones. The present
 single-address-space compositor and bounded VM are not a security boundary.

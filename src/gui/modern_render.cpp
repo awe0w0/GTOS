@@ -31,16 +31,16 @@ void ModernDesktop::Draw() {
         fb.Rect(start, y, end - start, 1, band);
     }
     paint.Text(width - 213, height - 154, "GTOS", lightTheme ? 0x52757F : 0x43636E, 3);
-    paint.Text(width - 210, height - 95, "Built one layer at a time",
+    paint.Text(width - 210, height - 95, Label("Built one layer at a time"),
                lightTheme ? 0x52757F : 0x6E8F99);
     fb.Rect(0, 0, width, 30, lightTheme ? 0xDBE8EC : 0x11202A);
     paint.Icon(14, 7, 0, c.accent);
     paint.Text(43, 6, "GTOS", c.text);
-    paint.Text(99, 6, "Workspace", c.muted);
-    paint.Text(width - 206, 6, "Up", c.muted);
+    paint.Text(99, 6, Label("Workspace"), c.muted);
+    paint.Text(width - 230, 6, Label("Up"), c.muted);
     uint32_t seconds = state.ticks / 100;
-    paint.Number(width - 179, 6, seconds / 60, c.text);
-    paint.Text(width - 136, 6, "min", c.muted);
+    paint.Number(width - 187, 6, seconds / 60, c.text);
+    paint.Text(width - 136, 6, Label("min"), c.muted);
     paint.Text(width - 83, 6, "BSP", c.muted);
     paint.Number(width - 46, 6, state.onlineCPUs, c.accent);
     for (uint32_t z = 0; z < ModernWindowCount; ++z) {
@@ -60,26 +60,29 @@ void ModernDesktop::Draw() {
         if (focused)
             paint.Rounded(x, dy + 8, 110, 36, 7, c.raised);
         paint.Icon(x + 9, dy + 17, i, focused ? c.accent : c.muted);
-        paint.Text(x + 35, dy + 17, dockTitles[i], focused ? c.text : c.muted);
+        paint.Text(x + 35, dy + 17, Label(dockTitles[i]), focused ? c.text : c.muted);
         if (wm.Window((ModernWindowKind)i).open)
             fb.Rect(x + 46, dy + 46, 18, 2,
                     wm.Window((ModernWindowKind)i).minimized ? c.muted : c.accent);
     }
     if (width >= 800) {
         fb.Rect(width - 125, dy + 15, 1, 22, c.line);
-        paint.Text(width - 112, dy + 18, "Experimental", c.muted);
+        paint.Text(width - 112, dy + 18, Label("Experimental"), c.muted);
     }
     if (notice && state.ticks - noticeAt < 450) {
-        int32_t nw = paint.TextWidth(notice) + 26;
+        int32_t nw = paint.TextWidth(Label(notice)) + 26;
         if (nw > width - 32)
             nw = width - 32;
         paint.Rounded((width - nw) / 2, dy - 35, nw, 27, 7, c.raised);
         fb.SetClip((width - nw) / 2 + 8, dy - 34, nw - 16, 25);
-        paint.Text((width - nw) / 2 + 13, dy - 30, notice, c.text);
+        paint.Text((width - nw) / 2 + 13, dy - 30, Label(notice), c.text);
         fb.ResetClip();
     }
-    if (launcher)
+    if (launcher) {
         DrawLauncher();
+        if (composer.Active())
+            DrawComposition();
+    }
     if (confirmRemove)
         DrawModal();
     int32_t mx = mouseX, my = mouseY;
@@ -102,7 +105,7 @@ void ModernDesktop::DrawWindow(ModernWindowKind k) {
     fb.Rect(r.x, r.y + 30, r.w, 8, focus ? c.raised : c.panel);
     fb.Rect(r.x, r.y + 38, r.w, 1, c.line);
     paint.Icon(r.x + 14, r.y + 11, k, focus ? c.accent : c.muted);
-    paint.Text(r.x + 42, r.y + 11, k == ModernGame ? vm.Info().title : titles[k],
+    paint.Text(r.x + 42, r.y + 11, k == ModernGame ? GameTitle() : Label(titles[k]),
                focus ? c.text : c.muted);
     int32_t bx = r.x + r.w - 98;
     fb.Rect(bx, r.y + 21, 11, 2, c.muted);
@@ -133,32 +136,34 @@ void ModernDesktop::DrawWindow(ModernWindowKind k) {
 void ModernDesktop::DrawWelcome(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 28, y = r.y + 60;
-    paint.Text(x, y, "YOUR DESKTOP, TAKING SHAPE", c.accent);
-    paint.Text(x, y + 34, "A quieter place", c.text, 2);
-    paint.Text(x, y + 72, "to build.", c.text, 2);
-    paint.Text(x, y + 128, "A real kernel. A working app store. Room to grow.", c.muted);
-    paint.Text(x, y + 151, "Explore your hardware, install Catch, and make it yours.", c.muted);
+    paint.Text(x, y, Label("YOUR DESKTOP, TAKING SHAPE"), c.accent);
+    paint.Text(x, y + 34, Label("A quieter place"), c.text, 2);
+    paint.Text(x, y + 72, Label("to build."), c.text, 2);
+    paint.Text(x, y + 128, Label("A real kernel. A working app store. Room to grow."), c.muted);
+    paint.Text(x, y + 151, Label("Explore your hardware, install Catch, and make it yours."),
+               c.muted);
     if (r.h >= 390) {
         int32_t sy = r.y + r.h - 127;
         paint.Rounded(x, sy, r.w - 56, 32, 6, c.raised);
         fb.Rect(x + 12, sy + 12, 6, 6, state.memoryOK ? c.accent : 0xE89696);
-        paint.Text(x + 27, sy + 7, state.memoryOK ? "Memory checked" : "Memory needs attention",
+        paint.Text(x + 27, sy + 7,
+                   state.memoryOK ? Label("Memory checked") : Label("Memory needs attention"),
                    c.text);
         paint.Text(x + r.w - 222, sy + 7, "32-bit x86  /  GTOS", c.muted);
     }
-    Button(x, r.y + r.h - 78, 170, "Open applications", true);
-    Button(x + 183, r.y + r.h - 78, 166, "View hardware");
-    paint.Text(x, r.y + r.h - 30, "1 Home    2 Monitor    3 Apps    4 Settings    L Launcher",
-               c.muted);
+    Button(x, r.y + r.h - 78, 170, Label("Open applications"), true);
+    Button(x + 183, r.y + r.h - 78, 166, Label("View hardware"));
+    paint.Text(x, r.y + r.h - 30,
+               Label("1 Home    2 Monitor    3 Apps    4 Settings    L Launcher"), c.muted);
 }
 void ModernDesktop::DrawApplications(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 22;
-    paint.Text(x, r.y + 58, "Your applications", c.text);
+    paint.Text(x, r.y + 58, Label("Your applications"), c.text);
     paint.Text(x, r.y + 80,
                store && store->Mounted()
-                   ? "Installed packages are saved on your dedicated app disk."
-                   : "App disk unavailable. Nothing will be formatted automatically.",
+                   ? Label("Installed packages are saved on your dedicated app disk.")
+                   : Label("App disk unavailable. Nothing will be formatted automatically."),
                c.muted);
     uint32_t count = store ? store->Count() : 0, visible = (r.h - 193) / 42;
     if (!visible)
@@ -167,8 +172,9 @@ void ModernDesktop::DrawApplications(const ModernRect &r) {
     if (!count) {
         paint.Rounded(x, r.y + 114, r.w - 44, r.h - 222, 8, c.raised);
         paint.Icon(x + 19, r.y + 135, 4, c.accent, 2);
-        paint.Text(x + 72, r.y + 129, "Start with a little play", c.text);
-        paint.Text(x + 72, r.y + 154, "Install the Catch package from your boot media.", c.muted);
+        paint.Text(x + 72, r.y + 129, Label("Start with a little play"), c.text);
+        paint.Text(x + 72, r.y + 154, Label("Install the Catch package from your boot media."),
+                   c.muted);
     } else
         for (uint32_t row = 0; row < visible; ++row) {
             uint32_t i = first + row;
@@ -181,39 +187,39 @@ void ModernDesktop::DrawApplications(const ModernRect &r) {
                 fb.Rect(x, y + 7, 3, 24, c.accent);
             paint.Icon(x + 13, y + 11, 4, c.accent);
             fb.SetClip(x + 46, y + 2, r.w - 216, 35);
-            paint.Text(x + 46, y + 4, a->title, c.text);
+            paint.Text(x + 46, y + 4, AppTitle(a), c.text);
             paint.Text(x + 46, y + 21, a->id, c.muted);
             fb.SetClip(r.x + 1, r.y + 39, r.w - 2, r.h - 40);
             paint.Number(r.x + r.w - 136, y + 12, a->length, c.muted);
-            paint.Text(r.x + r.w - 84, y + 12, "bytes", c.muted);
+            paint.Text(r.x + r.w - 84, y + 12, Label("bytes"), c.muted);
         }
     if (count > visible) {
-        paint.Text(r.x + r.w - 124, r.y + r.h - 90, "More: Up / Down", c.muted);
+        paint.Text(r.x + r.w - 124, r.y + r.h - 90, Label("More: Up / Down"), c.muted);
     }
     int32_t by = r.y + r.h - 68;
-    Button(x, by, 126, "Open  /  Enter", true);
-    Button(r.x + 158, by, 146, "Install package");
-    Button(r.x + r.w - 140, by, 120, "Remove", false, true);
-    paint.Text(x, r.y + r.h - 24, "I Install    U Remove    Up / Down Select", c.muted);
+    Button(x, by, 126, Label("Open  /  Enter"), true);
+    Button(r.x + 158, by, 146, Label("Install package"));
+    Button(r.x + r.w - 140, by, 120, Label("Remove"), false, true);
+    paint.Text(x, r.y + r.h - 24, Label("I Install    U Remove    Up / Down Select"), c.muted);
 }
 void ModernDesktop::DrawMonitor(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 24, y = r.y + 56;
-    paint.Text(x, y, "Hardware & kernel", c.text);
-    paint.Text(r.x + r.w - 96, y, "LIVE", c.accent);
+    paint.Text(x, y, Label("Hardware & kernel"), c.text);
+    paint.Text(r.x + r.w - 96, y, Label("LIVE"), c.accent);
     int32_t half = (r.w - 60) / 2;
     paint.Rounded(x, y + 32, half, 84, 8, c.raised);
     paint.Rounded(x + half + 12, y + 32, half, 84, 8, c.raised);
-    paint.Text(x + 14, y + 42, "PHYSICAL MEMORY", c.muted);
+    paint.Text(x + 14, y + 42, Label("PHYSICAL MEMORY"), c.muted);
     paint.Number(x + 14, y + 65, state.ramMiB, c.text, 2);
     paint.Text(x + 109, y + 81, "MiB", c.muted);
-    paint.Text(x + half + 26, y + 42, "PROCESSORS", c.muted);
+    paint.Text(x + half + 26, y + 42, Label("PROCESSORS"), c.muted);
     paint.Number(x + half + 26, y + 65, state.logicalCPUs, c.text, 2);
-    paint.Text(x + half + 68, y + 81, "detected", c.muted);
+    paint.Text(x + half + 68, y + 81, Label("detected"), c.muted);
     int32_t row = y + 132;
-    paint.Text(x, row, "Free physical pages", c.muted);
+    paint.Text(x, row, Label("Free physical pages"), c.muted);
     paint.Number(x + 192, row, state.freePages, c.text);
-    paint.Text(x, row + 25, "Heap used / KiB", c.muted);
+    paint.Text(x, row + 25, Label("Heap used / KiB"), c.muted);
     paint.Number(x + 192, row + 25, state.heapUsedKiB, c.text);
     paint.Text(x + 244, row + 25, "/", c.muted);
     paint.Number(x + 260, row + 25, state.heapKiB, c.text);
@@ -229,55 +235,67 @@ void ModernDesktop::DrawMonitor(const ModernRect &r) {
         }
         fb.Rect(x, row + 50, length, 5, c.accent);
     }
-    paint.Text(x, row + 68, "CPU vendor", c.muted);
+    paint.Text(x, row + 68, Label("CPU vendor"), c.muted);
     paint.Text(x + 192, row + 68, state.vendor, c.text);
-    paint.Text(x, row + 91, "Scheduling CPUs", c.muted);
+    paint.Text(x, row + 91, Label("Scheduling CPUs"), c.muted);
     paint.Number(x + 192, row + 91, state.onlineCPUs, c.text);
-    paint.Text(x + 226, row + 91, "APs started / parked", c.muted);
+    paint.Text(x + 226, row + 91, Label("APs started / parked"), c.muted);
     paint.Number(x + 404, row + 91, state.parkedAPs, c.accent);
-    paint.Text(x, row + 114, "Tasks / switches", c.muted);
+    paint.Text(x, row + 114, Label("Tasks / switches"), c.muted);
     paint.Number(x + 192, row + 114, state.taskCount, c.text);
     paint.Text(x + 223, row + 114, "/", c.muted);
     paint.Number(x + 240, row + 114, state.contextSwitches, c.text);
-    paint.Text(x, row + 137, "App disk / MiB", c.muted);
+    paint.Text(x, row + 137, Label("App disk / MiB"), c.muted);
     paint.Number(x + 192, row + 137, state.diskSectors / 2048, c.text);
-    paint.Text(x + 240, row + 137, store && store->Mounted() ? "Mounted" : "Unavailable",
+    paint.Text(x + 240, row + 137,
+               store && store->Mounted() ? Label("Mounted") : Label("Unavailable"),
                store && store->Mounted() ? c.accent : 0xEAA2A2);
     fb.Rect(x, r.y + r.h - 50, r.w - 48, 1, c.line);
-    paint.Text(x, r.y + r.h - 35, state.memoryOK ? "Heap OK" : "Heap FAIL",
+    paint.Text(x, r.y + r.h - 35, state.memoryOK ? Label("Heap OK") : Label("Heap FAIL"),
                state.memoryOK ? c.accent : 0xF29B9B);
-    paint.Text(x + 105, r.y + r.h - 35, state.schedulerOK ? "Scheduler OK" : "Scheduler FAIL",
+    paint.Text(x + 105, r.y + r.h - 35,
+               state.schedulerOK ? Label("Scheduler OK") : Label("Scheduler FAIL"),
                state.schedulerOK ? c.accent : 0xF29B9B);
     paint.Text(x + 262, r.y + r.h - 35,
-               state.pagingEnabled ? (state.writeProtectEnabled ? "Paging + WP" : "Paging on")
-                                   : "Paging off",
+               state.pagingEnabled
+                   ? (state.writeProtectEnabled ? Label("Paging + WP") : Label("Paging on"))
+                   : Label("Paging off"),
                c.muted);
 }
 void ModernDesktop::DrawSettings(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 24;
-    paint.Text(x, r.y + 58, "Make this space yours", c.text);
-    paint.Text(x, r.y + 83, "Choose an appearance. Changes apply immediately.", c.muted);
+    paint.Text(x, r.y + 58, Label("Make this space yours"), c.text);
+    paint.Text(x, r.y + 90, Label("Display language"), c.muted);
+    Button(x, r.y + 114, 196, gtos::i18n::Text(locale, gtos::i18n::EnglishName),
+           locale == gtos::i18n::English);
+    Button(x + 210, r.y + 114, 196, gtos::i18n::Text(locale, gtos::i18n::SimplifiedChineseName),
+           locale == gtos::i18n::SimplifiedChinese);
+    paint.Text(x, r.y + 164, Label("Appearance"), c.muted);
     uint32_t backgrounds[] = {0x172B39, 0xB4D2DA}, surfaces[] = {0x243541, 0xF5F7F9};
     for (uint32_t i = 0; i < 2; ++i) {
         int32_t px = x + i * 210;
-        paint.Rounded(px, r.y + 112, 196, 84, 8, backgrounds[i]);
-        paint.Rounded(px + 16, r.y + 128, 122, 50, 5, surfaces[i]);
-        fb.Rect(px + 27, r.y + 142, 66, 4, i ? 0x7D98A7 : 0x6EDFC0);
-        fb.Rect(px + 27, r.y + 153, 85, 3, i ? 0xBBC9D0 : 0x516877);
+        paint.Rounded(px, r.y + 188, 196, 70, 8, backgrounds[i]);
+        paint.Rounded(px + 16, r.y + 200, 122, 45, 5, surfaces[i]);
+        fb.Rect(px + 27, r.y + 213, 66, 4, i ? 0x7D98A7 : 0x6EDFC0);
+        fb.Rect(px + 27, r.y + 224, 85, 3, i ? 0xBBC9D0 : 0x516877);
         if (lightTheme == (i == 1))
-            paint.Outline(px - 2, r.y + 110, 200, 88, c.accent);
-        paint.Text(px, r.y + 207, i ? "Light" : "Dark", c.text);
+            paint.Outline(px - 2, r.y + 186, 200, 74, c.accent);
+        paint.Text(px, r.y + 266, Label(i ? "Light" : "Dark"), c.text);
     }
-    paint.Text(x, r.y + 248, "T Toggle theme    [ Minimize    ] Maximize / restore", c.muted);
-    paint.Text(x, r.y + 272, "Tab Switch windows    Esc Close the focused window", c.muted);
-    paint.Text(x, r.y + r.h - 30, "Appearance is session-only. Saved settings are coming later.",
-               c.muted);
+    paint.Text(x, r.y + 302, Label("C Language    T Theme"), c.muted);
+    paint.Text(x, r.y + 326, Label("Tab Switch windows    [ Minimize    ] Maximize"), c.muted);
+    const char *status =
+        preferencesPersisted
+            ? (settingsConfirmed ? "Settings saved" : "Settings loaded")
+            : (preferences && preferences->Writable() ? "Using default settings"
+                                                      : "Changes apply to this session only");
+    paint.Text(x, r.y + r.h - 30, Label(status), c.muted);
 }
 void ModernDesktop::DrawGame(const ModernRect &r) {
     Theme c = Colors();
-    paint.Text(r.x + 24, r.y + 54, "Arrows / A D move    R restart    Esc close", c.muted);
-    Button(r.x + r.w - 114, r.y + 48, 90, "Restart");
+    paint.Text(r.x + 24, r.y + 54, Label("Arrows / A D move    R restart    Esc close"), c.muted);
+    Button(r.x + r.w - 114, r.y + 48, 90, Label("Restart"));
     int32_t scale = (r.w - 48) / 272, sy = (r.h - 124) / 128;
     if (sy < scale)
         scale = sy;
@@ -299,12 +317,12 @@ void ModernDesktop::DrawGame(const ModernRect &r) {
         }
     }
     paint.Text(r.x + 24, r.y + r.h - 27,
-               "External bytecode app  /  scaled framebuffer  /  one VM host", c.muted);
+               Label("External bytecode app  /  scaled framebuffer  /  one VM host"), c.muted);
     if (!vm.Running()) {
         paint.Rounded(gx + 14, gy + 24, 272 * scale - 28, 90, 8, c.panel);
-        paint.Text(gx + 30, gy + 38, "Application stopped", 0xECA0A0);
-        paint.Text(gx + 30, gy + 62, vm.Fault(), c.text);
-        paint.Text(gx + 30, gy + 88, "Press R to restart or Esc to close", c.muted);
+        paint.Text(gx + 30, gy + 38, Label("Application stopped"), 0xECA0A0);
+        paint.Text(gx + 30, gy + 62, Label(vm.Fault()), c.text);
+        paint.Text(gx + 30, gy + 88, Label("Press R to restart or Esc to close"), c.muted);
     }
 }
 void ModernDesktop::DrawLauncher() {
@@ -313,18 +331,37 @@ void ModernDesktop::DrawLauncher() {
     paint.Rounded(x + 4, y + 6, 330, 354, 9, 0x08131A);
     paint.Rounded(x, y, 330, 354, 9, c.panel);
     paint.Rounded(x + 12, y + 13, 306, 37, 6, c.raised);
-    const char *visibleQuery = query;
-    while (*visibleQuery && paint.TextWidth(visibleQuery) > 280)
-        ++visibleQuery;
-    fb.SetClip(x + 22, y + 18, 288, 27);
-    paint.Text(x + 24, y + 23, queryLength ? visibleQuery : "Type to find an app...",
-               queryLength ? c.text : c.muted);
+    char entry[192], beforeCursor[192];
+    for (uint32_t i = 0; i < queryCursor; ++i)
+        entry[i] = query[i];
+    entry[queryCursor] = 0;
+    if (composer.Active())
+        gtos::i18n::Append(entry, sizeof(entry), composer.Preedit());
+    uint32_t caretBytes = gtos::i18n::ByteLength(entry, sizeof(entry));
+    gtos::i18n::Append(entry, sizeof(entry), query + queryCursor);
+    uint32_t firstText = 0;
+    for (;;) {
+        uint32_t n = 0;
+        for (uint32_t i = firstText; i < caretBytes; ++i)
+            beforeCursor[n++] = entry[i];
+        beforeCursor[n] = 0;
+        if (paint.TextWidth(beforeCursor) <= 224 || firstText >= caretBytes)
+            break;
+        firstText += gtos::i18n::Decode(entry + firstText, caretBytes - firstText).bytes;
+    }
+    fb.SetClip(x + 22, y + 18, 238, 27);
+    paint.Text(x + 24, y + 23, entry[0] ? entry + firstText : Label("Type to find an app..."),
+               entry[0] ? c.text : c.muted);
+    fb.Rect(x + 24 + paint.TextWidth(beforeCursor), y + 21, 1, 20, c.accent);
     fb.ResetClip();
+    paint.Rounded(x + 268, y + 18, 42, 27, 4, c.panel);
+    paint.Text(x + 275, y + 23, pinyinInput ? Label("Pinyin") : "EN",
+               pinyinInput ? c.accent : c.muted);
     uint8_t items[12];
     uint32_t count = LauncherItems(items);
     int32_t first = launcherSelected >= 6 ? launcherSelected - 5 : 0;
     if (!count)
-        paint.Text(x + 24, y + 84, "No matching applications", c.muted);
+        paint.Text(x + 24, y + 84, Label("No matching applications"), c.muted);
     for (uint32_t row = 0; row < 6; ++row) {
         uint32_t index = first + row;
         if (index >= count)
@@ -334,23 +371,50 @@ void ModernDesktop::DrawLauncher() {
         if (index == (uint32_t)launcherSelected)
             paint.Rounded(x + 10, ry, 310, 38, 5, c.raised);
         paint.Icon(x + 22, ry + 11, item < 4 ? item : 4, c.accent);
-        const char *title = item < 4 ? titles[item] : store->Get(item - 4)->title;
+        const char *title = item < 4 ? Label(titles[item]) : AppTitle(store->Get(item - 4));
         fb.SetClip(x + 57, ry + 4, 251, 31);
         paint.Text(x + 57, ry + 9, title, c.text);
         fb.ResetClip();
     }
     fb.Rect(x + 14, y + 322, 302, 1, c.line);
-    paint.Text(x + 20, y + 330, "Up / Down to choose    Enter to open", c.muted);
+    paint.Text(x + 20, y + 330, Label("Up / Down to choose    Enter to open"), c.muted);
+}
+void ModernDesktop::DrawComposition() {
+    Theme c = Colors();
+    ModernRect r = CandidatePanel();
+    paint.Rounded(r.x + 4, r.y + 6, r.w, r.h, 8, 0x08131A);
+    paint.Rounded(r.x, r.y, r.w, r.h, 8, c.panel);
+    fb.SetClip(r.x + 12, r.y + 8, r.w - 196, 25);
+    paint.Text(r.x + 14, r.y + 10, composer.Preedit(), c.accent);
+    fb.SetClip(r.x + r.w - 174, r.y + 8, 162, 25);
+    paint.Text(r.x + r.w - 160, r.y + 10, Label("Pinyin candidates"), c.muted);
+    fb.ResetClip();
+    uint32_t count = composer.CandidateCount();
+    if (!count)
+        paint.Text(r.x + 14, r.y + 44, Label("No matching candidate"), c.muted);
+    for (uint32_t i = 0; i < count; ++i) {
+        ModernRect b = CandidateBox(i);
+        paint.Rounded(b.x, b.y, b.w, b.h, 4, c.raised);
+        paint.Number(b.x + 5, b.y + 3, i + 1, c.accent);
+        fb.SetClip(b.x + 23, b.y + 1, b.w - 27, b.h - 2);
+        paint.Text(b.x + 23, b.y + 3, composer.Candidate(i), c.text);
+        fb.ResetClip();
+    }
+    fb.SetClip(r.x + 12, r.y + 115, r.w - 24, 20);
+    paint.Text(r.x + 14, r.y + 116, Label("Space / 1-9 select; Enter commits / opens; Esc cancels"),
+               c.muted);
+    fb.ResetClip();
 }
 void ModernDesktop::DrawModal() {
     Theme c = Colors();
     int32_t x = ((int32_t)fb.Width() - 430) / 2, y = ((int32_t)fb.Height() - 190) / 2;
     paint.Rounded(x + 5, y + 7, 430, 190, 9, 0x080F15);
     paint.Rounded(x, y, 430, 190, 9, c.panel);
-    paint.Text(x + 24, y + 23, "Remove this application?", c.text);
+    paint.Text(x + 24, y + 23, Label("Remove this application?"), c.text);
     const gtos::storage::AppInfo *a = store ? store->Get(selected) : 0;
-    paint.Text(x + 24, y + 58, a ? a->title : "Application", c.accent);
-    paint.Text(x + 24, y + 84, "This removes the installed package from your app disk.", c.muted);
-    Button(x + 150, y + 132, 114, "Cancel / Esc");
-    Button(x + 278, y + 132, 126, "Remove / Enter", false, true);
+    paint.Text(x + 24, y + 58, AppTitle(a), c.accent);
+    paint.Text(x + 24, y + 84, Label("This removes the installed package from your app disk."),
+               c.muted);
+    Button(x + 150, y + 132, 114, Label("Cancel / Esc"));
+    Button(x + 278, y + 132, 126, Label("Remove / Enter"), false, true);
 }

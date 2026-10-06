@@ -1,4 +1,5 @@
 #include <gui/modern_desktop.h>
+#include <i18n/font.h>
 using namespace gtos::gui;
 extern void printf(char *);
 static void Trace(const char *t) {
@@ -6,47 +7,144 @@ static void Trace(const char *t) {
 }
 static const char *windowTitles[] = {"Welcome", "Applications", "System monitor", "Appearance",
                                      "Catch"};
-static bool Match(const char *text, const char *query) {
-    if (!query[0])
-        return true;
-    for (uint32_t start = 0; text[start] && start < 80; ++start) {
-        uint32_t j = 0;
-        while (query[j]) {
-            char a = text[start + j], b = query[j];
-            if (a >= 'A' && a <= 'Z')
-                a += 32;
-            if (b >= 'A' && b <= 'Z')
-                b += 32;
-            if (!a || a != b)
-                break;
-            ++j;
-        }
-        if (!query[j])
+static bool EqualText(const char *a, const char *b) {
+    if (!a || !b)
+        return false;
+    for (uint32_t i = 0; i < 256; ++i) {
+        if (a[i] != b[i])
+            return false;
+        if (!a[i])
             return true;
     }
     return false;
 }
-ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppStore *s)
-    : fb(*f), paint(*f), wm(f->Width(), f->Height()), store(s), vm(this), installer(0),
-      installerSize(0), eventRead(0), eventWrite(0), overflow(false), mouseX(f->Width() - 30),
-      mouseY(16), leftDown(false), needsDraw(true), lightTheme(false), launcher(false),
-      confirmRemove(false), dragKind(-1), dragX(0), dragY(0), dragWidth(0), dragHeight(0),
-      resizing(false), selected(0), lastFrame(0), lastStep(0), lastMonitor(0), noticeAt(0),
-      lastTitleClick(0), titleClickKind(-1), launcherSelected(0), queryLength(0),
-      notice("Welcome to GTOS") {
+static bool BundledCatch(const gtos::storage::AppInfo *app) {
+    // Translation is bound to the shipped package bytes, never merely a name.
+    return app && app->length == 824 && app->checksum == 0x733AF7F5u && EqualText(app->id, "catch");
+}
+ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppStore *s,
+                             gtos::storage::SettingsStore *settings)
+    : fb(*f), paint(*f), wm(f->Width(), f->Height()), store(s), vm(this), preferences(settings),
+      locale(gtos::i18n::English), pinyinInput(false), preferencesPersisted(false),
+      settingsConfirmed(false), bundledGame(false), installer(0), installerSize(0), eventRead(0),
+      eventWrite(0), overflow(false), mouseX(f->Width() - 30), mouseY(16), leftDown(false),
+      needsDraw(true), lightTheme(false), launcher(false), confirmRemove(false), dragKind(-1),
+      dragX(0), dragY(0), dragWidth(0), dragHeight(0), resizing(false), selected(0), lastFrame(0),
+      lastStep(0), lastMonitor(0), noticeAt(0), lastTitleClick(0), titleClickKind(-1),
+      launcherSelected(0), queryLength(0), queryCursor(0), notice("Welcome to GTOS") {
     for (uint32_t i = 0; i < 256; ++i)
         keys[i] = false;
     uint8_t *p = (uint8_t *)&state;
     for (uint32_t i = 0; i < sizeof(state); ++i)
         p[i] = 0;
     query[0] = 0;
+    if (preferences) {
+        locale = preferences->Current().locale == gtos::storage::SimplifiedChinese
+                     ? gtos::i18n::SimplifiedChinese
+                     : gtos::i18n::English;
+        lightTheme = preferences->Current().theme == gtos::storage::Light;
+        preferencesPersisted = preferences->HasPersistedSettings();
+    }
+    pinyinInput = locale == gtos::i18n::SimplifiedChinese;
     Clear(0);
     wm.Open(ModernWelcome);
+    Trace(locale == gtos::i18n::SimplifiedChinese ? "UI LOCALE zh-CN\n" : "UI LOCALE en\n");
+    Trace(lightTheme ? "UI THEME light\n" : "UI THEME dark\n");
 }
 ModernDesktop::Theme ModernDesktop::Colors() const {
     Theme dark = {0x18232F, 0x22313F, 0xF1F5F9, 0xA3B6C8, 0x354655, 0x6EDFC0, 0x092E29};
     Theme light = {0xF2F5F7, 0xE2E9EF, 0x172E3C, 0x4A6374, 0xC1CFD8, 0x067F70, 0xFFFFFF};
     return lightTheme ? light : dark;
+}
+const char *ModernDesktop::Label(const char *english) const {
+    return gtos::i18n::Translate(locale, english);
+}
+const char *ModernDesktop::AppTitle(const gtos::storage::AppInfo *app) const {
+    if (!app)
+        return Label("Application");
+    return locale == gtos::i18n::SimplifiedChinese && BundledCatch(app)
+               ? gtos::i18n::Text(locale, gtos::i18n::CatchTitle)
+               : app->title;
+}
+const char *ModernDesktop::GameTitle() const {
+    return locale == gtos::i18n::SimplifiedChinese && bundledGame
+               ? gtos::i18n::Text(locale, gtos::i18n::CatchTitle)
+               : vm.Info().title;
+}
+void ModernDesktop::CancelComposition() {
+    composer.Cancel();
+}
+void ModernDesktop::SavePreferences() {
+    gtos::storage::Settings values = {locale == gtos::i18n::SimplifiedChinese
+                                          ? gtos::storage::SimplifiedChinese
+                                          : gtos::storage::English,
+                                      lightTheme ? gtos::storage::Light : gtos::storage::Dark};
+    bool saved = preferences && preferences->Writable() && preferences->Save(values);
+    preferencesPersisted = saved && preferences->HasPersistedSettings();
+    settingsConfirmed = saved;
+    Notice(saved ? (preferencesPersisted ? "Settings saved" : "Using default settings")
+                 : "Changes apply to this session only");
+}
+void ModernDesktop::ApplyLocale(gtos::i18n::Locale next) {
+    if (locale == next)
+        return;
+    CancelCapture();
+    CancelComposition();
+    locale = next;
+    pinyinInput = next == gtos::i18n::SimplifiedChinese;
+    query[0] = 0;
+    queryLength = 0;
+    queryCursor = 0;
+    launcherSelected = 0;
+    SavePreferences();
+    Trace("UI LANGUAGE CHANGED\n");
+    Trace(locale == gtos::i18n::SimplifiedChinese ? "UI LOCALE zh-CN\n" : "UI LOCALE en\n");
+}
+void ModernDesktop::ApplyTheme(bool light) {
+    if (lightTheme == light)
+        return;
+    lightTheme = light;
+    SavePreferences();
+    Trace("UI THEME CHANGED\n");
+    Trace(lightTheme ? "UI THEME light\n" : "UI THEME dark\n");
+}
+void ModernDesktop::ToggleInput() {
+    if (locale != gtos::i18n::SimplifiedChinese)
+        return;
+    CancelComposition();
+    pinyinInput = !pinyinInput;
+    if (locale != gtos::i18n::SimplifiedChinese)
+        pinyinInput = false;
+    Notice("Keyboard input changed");
+}
+bool ModernDesktop::AppendQuery(const char *text) {
+    char next[sizeof(query)];
+    for (uint32_t i = 0; i < queryCursor; ++i)
+        next[i] = query[i];
+    next[queryCursor] = 0;
+    if (!gtos::i18n::Append(next, sizeof(next), text) ||
+        !gtos::i18n::Append(next, sizeof(next), query + queryCursor)) {
+        Notice("Search is full");
+        return false;
+    }
+    queryCursor += gtos::i18n::ByteLength(text);
+    gtos::i18n::Copy(query, sizeof(query), next);
+    queryLength = gtos::i18n::ByteLength(query, sizeof(query));
+    launcherSelected = 0;
+    return true;
+}
+ModernRect ModernDesktop::CandidatePanel() const {
+    int32_t y = (int32_t)fb.Height() - ModernWindowManager::Bottom - 368 - 144;
+    if (y < ModernWindowManager::Top + 4)
+        y = ModernWindowManager::Top + 4;
+    ModernRect r = {14, y, 510, 138};
+    return r;
+}
+ModernRect ModernDesktop::CandidateBox(uint32_t index) const {
+    ModernRect r = CandidatePanel();
+    ModernRect box = {r.x + 12 + (int32_t)(index % 3) * 162, r.y + 37 + (int32_t)(index / 3) * 26,
+                      154, 24};
+    return box;
 }
 void ModernDesktop::SetInstaller(const uint8_t *d, uint32_t n) {
     installer = d;
@@ -105,6 +203,7 @@ void ModernDesktop::CancelCapture() {
 }
 void ModernDesktop::Open(ModernWindowKind k) {
     CancelCapture();
+    CancelComposition();
     wm.Open(k);
     launcher = false;
     Notice(windowTitles[k]);
@@ -114,6 +213,7 @@ void ModernDesktop::Open(ModernWindowKind k) {
         Trace("UI APPS\n");
 }
 void ModernDesktop::Close(ModernWindowKind k) {
+    CancelComposition();
     if (k == ModernGame) {
         vm.Stop();
         Trace("APP CLOSE OK\n");
@@ -125,6 +225,7 @@ void ModernDesktop::Close(ModernWindowKind k) {
 }
 void ModernDesktop::Install() {
     CancelCapture();
+    CancelComposition();
     wm.Open(ModernApplications);
     if (!store) {
         Notice("No application store");
@@ -188,6 +289,7 @@ void ModernDesktop::Launch() {
         Notice(vm.Fault());
         return;
     }
+    bundledGame = BundledCatch(a);
     Clear(0);
     Open(ModernGame);
     for (uint32_t i = 0; i < 256; ++i)
@@ -206,16 +308,22 @@ uint32_t ModernDesktop::HeldKeys() const {
 }
 uint32_t ModernDesktop::LauncherItems(uint8_t *out) const {
     uint32_t count = 0;
+    static const char *aliases[] = {"Home", "Apps", "Monitor", "Settings"};
     for (uint32_t i = 0; i < 4; ++i)
-        if (Match(windowTitles[i], query))
+        if (gtos::i18n::ContainsAsciiFold(Label(windowTitles[i]), query) ||
+            gtos::i18n::ContainsAsciiFold(windowTitles[i], query) ||
+            gtos::i18n::ContainsAsciiFold(Label(aliases[i]), query) ||
+            gtos::i18n::ContainsAsciiFold(aliases[i], query))
             out[count++] = i;
     if (store)
         for (uint32_t i = 0; i < store->Count(); ++i)
-            if (Match(store->Get(i)->title, query))
+            if (gtos::i18n::ContainsAsciiFold(AppTitle(store->Get(i)), query) ||
+                gtos::i18n::ContainsAsciiFold(store->Get(i)->title, query))
                 out[count++] = i + 4;
     return count;
 }
 void ModernDesktop::LauncherActivate(uint8_t item) {
+    CancelComposition();
     launcher = false;
     if (item < 4)
         Open((ModernWindowKind)item);
@@ -242,10 +350,35 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         return;
     }
     if (launcher) {
+        if (k == '`') {
+            if (!repeat)
+                ToggleInput();
+            return;
+        }
+        if (k == 0x81 || k == 0x82)
+            CancelComposition();
+        if (pinyinInput && locale == gtos::i18n::SimplifiedChinese) {
+            char committed[gtos::i18n::PinyinComposer::CommitCapacity];
+            uint32_t capacity = sizeof(query) - queryLength;
+            if (capacity > sizeof(committed))
+                capacity = sizeof(committed);
+            gtos::i18n::PinyinComposer::FeedResult result = composer.Feed(k, committed, capacity);
+            if (result == gtos::i18n::PinyinComposer::Committed) {
+                AppendQuery(committed);
+                return;
+            }
+            if (result == gtos::i18n::PinyinComposer::Rejected) {
+                Notice("No matching candidate");
+                return;
+            }
+            if (result != gtos::i18n::PinyinComposer::PassedThrough)
+                return;
+        }
         uint8_t items[12];
         uint32_t count = LauncherItems(items);
         if (k == 27) {
             launcher = false;
+            CancelComposition();
             return;
         }
         if (k == 0x83 && launcherSelected > 0)
@@ -255,19 +388,34 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         else if (k == '\n' && !repeat) {
             if (count)
                 LauncherActivate(items[launcherSelected]);
-        } else if (k == '\b' && queryLength) {
-            query[--queryLength] = 0;
-            launcherSelected = 0;
-        } else if (k >= 32 && k < 127 && queryLength < 31) {
-            query[queryLength++] = k;
-            query[queryLength] = 0;
-            launcherSelected = 0;
+        } else if (k == 0x81 || (k == '\b' && queryCursor)) {
+            CancelComposition();
+            uint32_t pos = 0, previous = 0;
+            while (pos < queryCursor) {
+                previous = pos;
+                pos += gtos::i18n::Decode(query + pos, queryLength - pos).bytes;
+            }
+            if (k == '\b') {
+                uint32_t removed = queryCursor - previous;
+                for (uint32_t i = queryCursor; i <= queryLength; ++i)
+                    query[i - removed] = query[i];
+                queryLength -= removed;
+                launcherSelected = 0;
+            }
+            queryCursor = previous;
+        } else if (k == 0x82 && queryCursor < queryLength) {
+            CancelComposition();
+            queryCursor += gtos::i18n::Decode(query + queryCursor, queryLength - queryCursor).bytes;
+        } else if (k >= 32 && k < 127) {
+            char text[2] = {(char)k, 0};
+            AppendQuery(text);
         }
         return;
     }
     if (repeat)
         return;
     if (k == '\t') {
+        CancelComposition();
         CancelCapture();
         wm.Cycle();
         return;
@@ -295,9 +443,11 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         return;
     }
     if (k == 'l') {
+        CancelComposition();
         CancelCapture();
         launcher = true;
         queryLength = 0;
+        queryCursor = 0;
         query[0] = 0;
         launcherSelected = 0;
         return;
@@ -313,10 +463,10 @@ void ModernDesktop::Key(uint8_t k, bool down) {
     else if (k == 'i')
         Install();
     else if (k == 't' && wm.Focused() == ModernSettings) {
-        lightTheme = !lightTheme;
-        Notice(lightTheme ? "Light appearance applied for this session"
-                          : "Dark appearance applied for this session");
-        Trace("UI THEME CHANGED\n");
+        ApplyTheme(!lightTheme);
+    } else if (k == 'c' && wm.Focused() == ModernSettings) {
+        ApplyLocale(locale == gtos::i18n::English ? gtos::i18n::SimplifiedChinese
+                                                  : gtos::i18n::English);
     } else if ((k == 'u') && wm.Focused() == ModernApplications) {
         if (store && store->Get(selected)) {
             CancelCapture();
@@ -372,8 +522,10 @@ void ModernDesktop::Pointer(const Input &e) {
     if (y >= (int32_t)fb.Height() - ModernWindowManager::Bottom) {
         if (x < 60) {
             CancelCapture();
+            CancelComposition();
             launcher = !launcher;
             queryLength = 0;
+            queryCursor = 0;
             query[0] = 0;
             launcherSelected = 0;
             return;
@@ -381,6 +533,8 @@ void ModernDesktop::Pointer(const Input &e) {
         int32_t index = (x - 68) / 118;
         if (x >= 68 && index >= 0 && index < ModernWindowCount && (x - 68) % 118 < 110 &&
             y >= (int32_t)fb.Height() - 44 && y < (int32_t)fb.Height() - 8) {
+            CancelComposition();
+            launcher = false;
             ModernWindowKind k = (ModernWindowKind)index;
             const ModernWindow &w = wm.Window(k);
             if (k == ModernGame && !w.open) {
@@ -395,9 +549,33 @@ void ModernDesktop::Pointer(const Input &e) {
         return;
     }
     if (launcher) {
+        if (composer.Active()) {
+            for (uint32_t i = 0; i < composer.CandidateCount(); ++i) {
+                if (CandidateBox(i).Contains(x, y)) {
+                    char committed[gtos::i18n::PinyinComposer::CommitCapacity];
+                    uint32_t capacity = sizeof(query) - queryLength;
+                    if (capacity > sizeof(committed))
+                        capacity = sizeof(committed);
+                    if (composer.Select(i, committed, capacity) ==
+                        gtos::i18n::PinyinComposer::Committed)
+                        AppendQuery(committed);
+                    else
+                        Notice("Search is full");
+                    return;
+                }
+            }
+            if (CandidatePanel().Contains(x, y))
+                return;
+        }
         int32_t ly = fb.Height() - ModernWindowManager::Bottom - 368;
         ModernRect menu = {14, ly, 330, 354};
+        ModernRect inputToggle = {14 + 268, ly + 18, 42, 27};
+        if (inputToggle.Contains(x, y)) {
+            ToggleInput();
+            return;
+        }
         if (!menu.Contains(x, y)) {
+            CancelComposition();
             launcher = false;
             return;
         }
@@ -484,12 +662,16 @@ void ModernDesktop::Pointer(const Input &e) {
                 selected = i;
         }
     } else if (k == ModernSettings) {
-        ModernRect dark = {r.x + 24, r.y + 112, 196, 84}, light = {r.x + 234, r.y + 112, 196, 84};
-        if (dark.Contains(x, y) || light.Contains(x, y)) {
-            lightTheme = light.Contains(x, y);
-            Notice("Appearance applied for this session");
-            Trace("UI THEME CHANGED\n");
-        }
+        ModernRect english = {r.x + 24, r.y + 114, 196, 34};
+        ModernRect chinese = {r.x + 234, r.y + 114, 196, 34};
+        ModernRect dark = {r.x + 24, r.y + 188, 196, 70};
+        ModernRect light = {r.x + 234, r.y + 188, 196, 70};
+        if (english.Contains(x, y))
+            ApplyLocale(gtos::i18n::English);
+        else if (chinese.Contains(x, y))
+            ApplyLocale(gtos::i18n::SimplifiedChinese);
+        else if (dark.Contains(x, y) || light.Contains(x, y))
+            ApplyTheme(light.Contains(x, y));
     } else if (k == ModernGame) {
         ModernRect restart = {r.x + r.w - 114, r.y + 48, 90, 34};
         if (restart.Contains(x, y)) {
@@ -517,6 +699,7 @@ void ModernDesktop::Update(const SystemSnapshot &s) {
             Pointer(e);
     }
     if (overflow) {
+        CancelComposition();
         overflow = false;
         leftDown = false;
         dragKind = -1;
@@ -558,21 +741,58 @@ void ModernDesktop::Rect(int32_t x, int32_t y, int32_t w, int32_t h, uint8_t c) 
         for (int32_t i = x; i < r; ++i)
             game[j * 272 + i] = c & 15;
 }
-void ModernDesktop::Text(int32_t x, int32_t y, const char *t, uint8_t c) {
-    if (!t)
+void ModernDesktop::Text(int32_t x, int32_t y, const char *text, uint8_t color) {
+    if (!text)
         return;
+    bool localized = false;
+    if (bundledGame && locale == gtos::i18n::SimplifiedChinese) {
+        if (EqualText(text, vm.Info().title)) {
+            text = gtos::i18n::Text(locale, gtos::i18n::CatchTitle);
+            y = 1;
+            localized = true;
+        } else if (EqualText(text, vm.Info().summary)) {
+            text = gtos::i18n::Text(locale, gtos::i18n::CatchSummary);
+            y = 109;
+            localized = true;
+        }
+    }
     int64_t px = x;
-    for (uint32_t n = 0; n < 96 && t[n]; ++n, px += 6) {
+    uint32_t offset = 0;
+    for (uint32_t count = 0; count < 96 && offset < gtos::i18n::MaxTextBytes && text[offset];
+         ++count) {
+        gtos::i18n::DecodeResult cp =
+            gtos::i18n::Decode(text + offset, gtos::i18n::MaxTextBytes - offset);
+        if (!cp.bytes)
+            break;
+        offset += cp.bytes;
         if (px >= 272)
             break;
-        if (px < -5 || y < -6 || y >= 128)
-            continue;
-        const uint8_t *g = ModernGameGlyph(t[n]);
-        if (g)
-            for (int32_t r = 0; r < 7; ++r)
-                for (int32_t b = 0; b < 5; ++b)
-                    if (g[r] & (1 << (4 - b)))
-                        Rect((int32_t)px + b, y + r, 1, 1, c);
+        if (cp.codepoint < 128) {
+            if (px >= -5 && y >= -18 && y < 128) {
+                const uint8_t *glyph = ModernGameGlyph((char)cp.codepoint);
+                if (glyph)
+                    for (int32_t row = 0; row < 7; ++row)
+                        for (int32_t col = 0; col < 5; ++col)
+                            if (glyph[row] & (1 << (4 - col)))
+                                Rect((int32_t)px + col, y + row + (localized ? 6 : 0), 1, 1, color);
+            }
+            px += 6;
+        } else {
+            gtos::i18n::Glyph glyph = {};
+            if (!gtos::i18n::LookupGlyph(cp.codepoint, 1, glyph))
+                gtos::i18n::LookupGlyph(0xFFFD, 1, glyph);
+            if (px >= -(int64_t)glyph.width && y >= -(int32_t)glyph.height && y < 128) {
+                for (uint32_t row = 0; row < glyph.height; ++row)
+                    for (uint32_t col = 0; col < glyph.width; ++col) {
+                        uint32_t at = row * glyph.width + col;
+                        uint8_t alpha =
+                            at & 1 ? glyph.pixels[at / 2] & 15 : glyph.pixels[at / 2] >> 4;
+                        if (alpha >= 7)
+                            Rect((int32_t)px + col, y + row, 1, 1, color);
+                    }
+            }
+            px += glyph.advance;
+        }
     }
 }
 void ModernDesktop::Number(int32_t x, int32_t y, int32_t v, uint8_t c) {
