@@ -32,6 +32,7 @@ struct fixture {
     struct model_page pages[MODEL_PAGES];
     unsigned context, recurse, recursive_checks, flushes, aliases;
     unsigned expected_retiring, free_before_retirement;
+    unsigned char retirement_mask[BOOT_MEMORY_MAX_FRAMES];
 };
 static struct fixture f, other;
 static _Alignas(4096) uint64_t unbound_root[512];
@@ -43,7 +44,8 @@ static struct {
     uint64_t root[512], ram[BOOT_MEMORY_MAX_FRAMES][512], pool_generation;
     unsigned flushes;
 } before;
-static unsigned checkpoints, injection_trials;
+static unsigned checkpoints, injection_trials, lifecycle_trials, metadata_trials;
+static uint64_t lifecycle_visits;
 
 static void check_error(enum vm_error actual, enum vm_error wanted, const char *what, unsigned line) {
     if (actual != wanted) {
@@ -79,6 +81,18 @@ static void host_write(void *opaque, uint64_t physical, uint64_t entry) {
     assert(!entry || !x->leaves[physical / VM_PAGE]);
     x->leaves[physical / VM_PAGE] = entry;
 }
+/* Walk actual links, independent of the core's backing-to-path lookup. Every
+ * flush must precede reuse, and no retiring frame may remain reachable. */
+static void callback_walk(struct fixture *x, uint64_t physical, unsigned level) {
+    unsigned index = physical_index(x, physical);
+    assert(x->pool.records[index].role != FRAME_RETIRING);
+    assert(x->pool.records[index].role != FRAME_FREE);
+    if (!level) return;
+    for (unsigned i = 0; i < 512; ++i) {
+        uint64_t entry = x->ram[index][i];
+        if (entry) callback_walk(x, entry & ADDRESS_MASK, level-1);
+    }
+}
 static void host_flush(void *opaque) {
     struct fixture *x = opaque;
     /* Reclamation must reach this callback before any retired ID becomes FREE.
@@ -87,9 +101,19 @@ static void host_flush(void *opaque) {
         if (x->pool.records[i].role == FRAME_RETIRING)
             assert(x->pool.records[i].owner && x->pool.records[i].generation);
     if (x->expected_retiring) {
-        assert(x->pool.roles[FRAME_RETIRING] >= x->expected_retiring);
+        assert(x->pool.roles[FRAME_RETIRING]);
         assert(x->pool.roles[FRAME_FREE] == x->free_before_retirement);
+        x->free_before_retirement += x->pool.roles[FRAME_RETIRING];
+        for (unsigned i = 0; i < x->pool.selection.managed_count; ++i) {
+            if (x->retirement_mask[i] == 1) {
+                assert(x->pool.records[i].role == FRAME_DATA || x->pool.records[i].role == FRAME_RETIRING);
+                if (x->pool.records[i].role == FRAME_RETIRING) x->retirement_mask[i] = 2;
+            } else if (x->retirement_mask[i] == 2) assert(x->pool.records[i].role == FRAME_FREE);
+        }
     }
+    if (x->space.ready)
+        for (unsigned i = 288; i < 304; ++i)
+            if (x->root[i]) callback_walk(x, x->root[i] & ADDRESS_MASK, 3);
     ++x->flushes;
 }
 static volatile unsigned char *host_alias(void *opaque, uint64_t physical) {
@@ -206,17 +230,29 @@ static void model_decommit(struct fixture *x, struct vm_region r, uint64_t off, 
 }
 static void expect_retirement(struct fixture *x, struct vm_region r, uint64_t off, uint64_t bytes) {
     x->expected_retiring = 0;
+    memset(x->retirement_mask, 0, sizeof(x->retirement_mask));
     x->free_before_retirement = x->pool.roles[FRAME_FREE];
     for (unsigned i = 0; i < MODEL_PAGES; ++i)
         if (x->pages[i].live && x->pages[i].va >= r.base+off &&
-            x->pages[i].va-r.base-off < bytes) ++x->expected_retiring;
+            x->pages[i].va-r.base-off < bytes) {
+            struct vm_page_state state;
+            OK(vm_query(&x->space, r.handle, x->pages[i].va-r.base, &state));
+            assert(state.backed);
+            x->retirement_mask[physical_index(x, state.frame.physical)] = 1;
+            ++x->expected_retiring;
+        }
+}
+static void retirement_complete(struct fixture *x) {
+    for (unsigned i = 0; i < x->pool.selection.managed_count; ++i)
+        if (x->retirement_mask[i]) assert(x->retirement_mask[i] == 2);
+    x->expected_retiring = 0;
 }
 static void decommit(struct fixture *x, struct vm_region r, uint64_t off, uint64_t bytes) {
     unsigned prior_flushes = x->flushes;
     expect_retirement(x, r, off, bytes);
     OK(vm_decommit(&x->space, r.handle, off, bytes));
     if (x->expected_retiring) assert(x->flushes > prior_flushes);
-    x->expected_retiring = 0;
+    retirement_complete(x);
     model_decommit(x, r, off, bytes);
 }
 static void release(struct fixture *x, struct vm_region r) {
@@ -224,7 +260,7 @@ static void release(struct fixture *x, struct vm_region r) {
     expect_retirement(x, r, 0, r.length);
     OK(vm_release(&x->space, r.handle));
     if (x->expected_retiring) assert(x->flushes > prior_flushes);
-    x->expected_retiring = 0;
+    retirement_complete(x);
     model_decommit(x, r, 0, r.length);
     unsigned found = 0;
     for (unsigned i = 0; i < VM_MAX_REGIONS; ++i)
@@ -642,6 +678,514 @@ static void test_nonwrapping_and_context(void) {
     release(&f, r); audit(&f);
     puts("VM_HOST_NONWRAPPING_CONTEXT_PASS");
 }
+/* Lifecycle oracle: intervals and retained bytes live only in this host model.
+ * Geometry is calculated from the request, never reconstructed from VM slots. */
+enum lifecycle_op { DISCARD, RESET, TRIM, SPLIT, PUNCH, LIFECYCLE_OPS };
+union lifecycle_output {
+    struct vm_disposition disposition;
+    struct vm_region replacement;
+    struct vm_regions parts;
+};
+static enum vm_error lifecycle_call(enum lifecycle_op op, struct fixture *x,
+                                    struct vm_handle h, uint64_t off, uint64_t bytes,
+                                    union lifecycle_output *out) {
+    switch (op) {
+    case DISCARD: return vm_discard(&x->space, h, off, bytes, out ? &out->disposition : NULL);
+    case RESET: return vm_reset(&x->space, h, off, bytes, out ? &out->replacement : NULL);
+    case TRIM: return vm_trim(&x->space, h, off, bytes, out ? &out->replacement : NULL);
+    case SPLIT: return vm_split(&x->space, h, off, out ? &out->parts : NULL);
+    case PUNCH: return vm_punch(&x->space, h, off, bytes, out ? &out->parts : NULL);
+    default: abort();
+    }
+}
+static void stale(struct fixture *x, struct vm_handle h) {
+    struct vm_page_state out, poison;
+    memset(&out, 0xe7, sizeof(out)); memcpy(&poison, &out, sizeof(out));
+    ERROR(vm_query(&x->space, h, 0, &out), VM_STALE);
+    assert(!memcmp(&out, &poison, sizeof(out)));
+}
+static void lifecycle_error(enum lifecycle_op op, struct vm_handle h, uint64_t off,
+                             uint64_t bytes, enum vm_error expected, unsigned null_output) {
+    union lifecycle_output out, poison;
+    memset(&out, 0xa7, sizeof(out)); memcpy(&poison, &out, sizeof(out));
+    snapshot(&f);
+    ERROR(lifecycle_call(op, &f, h, off, bytes, null_output ? NULL : &out), expected);
+    assert(!memcmp(&out, &poison, sizeof(out))); unchanged(&f);
+    ++lifecycle_trials;
+}
+static void model_replace(struct fixture *x, struct vm_region old,
+                           const struct vm_region *parts, unsigned count) {
+    unsigned found = 0;
+    for (unsigned i = 0; i < VM_MAX_REGIONS; ++i)
+        if (x->regions[i].live && same_handle(x->regions[i].region.handle, old.handle)) {
+            x->regions[i].live = 0; ++found;
+        }
+    assert(found == 1 && count <= 2);
+    for (unsigned n = 0; n < count; ++n) {
+        struct vm_region r = parts[n];
+        assert(r.handle.space_id == old.handle.space_id && r.handle.generation);
+        assert(r.handle.slot < VM_MAX_REGIONS && !same_handle(r.handle, old.handle));
+        if (r.handle.slot == old.handle.slot) assert(r.handle.generation > old.handle.generation);
+        assert(r.length && !(r.base & (VM_PAGE-1)) && !(r.length & (VM_PAGE-1)));
+        assert(r.base >= old.base && r.base-old.base < old.length);
+        assert(r.length <= old.length-(r.base-old.base));
+        unsigned free_slot = VM_MAX_REGIONS;
+        for (unsigned i = 0; i < VM_MAX_REGIONS; ++i) {
+            if (!x->regions[i].live) { free_slot = i; continue; }
+            struct vm_region existing = x->regions[i].region;
+            assert(r.base+r.length <= existing.base || existing.base+existing.length <= r.base);
+            assert(!same_handle(r.handle, existing.handle));
+        }
+        assert(free_slot < VM_MAX_REGIONS);
+        x->regions[free_slot] = (struct model_region){r, 1};
+    }
+    stale(x, old.handle);
+}
+static struct vm_regions lifecycle(struct fixture *x, enum lifecycle_op op,
+                                   struct vm_region old, uint64_t off, uint64_t bytes) {
+    struct vm_regions expected = {0}, actual = {0};
+    struct vm_disposition disposition = {0};
+    struct vm_frame_expectation { uint64_t va; struct frame_id id; unsigned live; } saved[MODEL_PAGES];
+    memset(saved, 0, sizeof(saved));
+    x->expected_retiring = 0;
+    memset(x->retirement_mask, 0, sizeof(x->retirement_mask));
+    x->free_before_retirement = x->pool.roles[FRAME_FREE];
+    unsigned prior_flushes = x->flushes;
+    uint64_t generation = x->pool.generation;
+    if (op == DISCARD || op == RESET) {
+        expected.count = 1; expected.regions[0] = old;
+    } else if (op == TRIM) {
+        expected.count = 1; expected.regions[0].base = old.base+off;
+        expected.regions[0].length = bytes;
+    } else if (op == SPLIT) {
+        expected.count = 2;
+        expected.regions[0].base = old.base; expected.regions[0].length = off;
+        expected.regions[1].base = old.base+off; expected.regions[1].length = old.length-off;
+    } else {
+        if (off) {
+            expected.regions[expected.count].base = old.base;
+            expected.regions[expected.count++].length = off;
+        }
+        if (bytes < old.length-off) {
+            expected.regions[expected.count].base = old.base+off+bytes;
+            expected.regions[expected.count++].length = old.length-off-bytes;
+        }
+    }
+    for (unsigned i = 0; i < MODEL_PAGES; ++i) if (x->pages[i].live) {
+        struct model_page *p = &x->pages[i];
+        if (p->va < old.base || p->va-old.base >= old.length) continue;
+        uint64_t relative = p->va-old.base;
+        unsigned selected = relative >= off && relative-off < bytes;
+        unsigned removed = (op == RESET || op == PUNCH) ? selected :
+                           op == TRIM ? !selected : op == DISCARD && selected && p->permission == VM_NONE;
+        struct vm_page_state state;
+        OK(vm_query(&x->space, old.handle, relative, &state)); assert(state.backed);
+        if (removed) {
+            x->retirement_mask[physical_index(x, state.frame.physical)] = 1;
+            ++x->expected_retiring;
+            if (op == DISCARD) ++disposition.released_pages;
+        } else {
+            saved[i] = (struct vm_frame_expectation){p->va, state.frame, 1};
+            if (op == DISCARD && selected) ++disposition.zeroed_pages;
+        }
+    }
+    union lifecycle_output out; memset(&out, 0xa7, sizeof(out));
+    uint64_t operation_start = x->space.operation_visits;
+    OK(lifecycle_call(op, x, old.handle, off, bytes, &out));
+    lifecycle_visits = x->space.operation_visits-operation_start;
+    /* No lifecycle operation is allowed to allocate or issue a frame epoch. */
+    assert(x->pool.generation == generation);
+    if (x->expected_retiring) assert(x->flushes > prior_flushes);
+    if (op == SPLIT) assert(x->flushes == prior_flushes);
+    retirement_complete(x);
+    if (op == DISCARD) {
+        assert(out.disposition.zeroed_pages == disposition.zeroed_pages);
+        assert(out.disposition.released_pages == disposition.released_pages);
+        actual = expected;
+    } else if (op == RESET || op == TRIM) {
+        actual.count = 1; actual.regions[0] = out.replacement;
+    } else actual = out.parts;
+    assert(actual.count == expected.count);
+    for (unsigned i = 0; i < actual.count; ++i) {
+        assert(actual.regions[i].base == expected.regions[i].base);
+        assert(actual.regions[i].length == expected.regions[i].length);
+    }
+    for (unsigned i = 0; i < MODEL_PAGES; ++i) if (x->pages[i].live) {
+        struct model_page *p = &x->pages[i];
+        if (p->va < old.base || p->va-old.base >= old.length) continue;
+        if (!saved[i].live) p->live = 0;
+        else if (op == DISCARD && p->va-old.base >= off && p->va-old.base-off < bytes) p->pattern = 0;
+    }
+    if (op != DISCARD) model_replace(x, old, actual.regions, actual.count);
+    for (unsigned i = 0; i < MODEL_PAGES; ++i) if (saved[i].live) {
+        unsigned found = 0;
+        for (unsigned j = 0; j < actual.count; ++j) {
+            struct vm_region r = actual.regions[j];
+            if (saved[i].va < r.base || saved[i].va-r.base >= r.length) continue;
+            struct vm_page_state state;
+            OK(vm_query(&x->space, r.handle, saved[i].va-r.base, &state));
+            assert(state.backed && state.frame.physical == saved[i].id.physical);
+            assert(state.frame.generation == saved[i].id.generation); ++found;
+        }
+        assert(found == 1);
+    }
+    audit(x); ++lifecycle_trials;
+    return actual;
+}
+static void release_all(struct fixture *x) {
+    for (unsigned i = 0; i < VM_MAX_REGIONS; ++i)
+        if (x->regions[i].live) release(x, x->regions[i].region);
+    audit(x); assert(x->pool.roles[FRAME_FREE] == x->pool.selection.managed_count);
+}
+static void test_lifecycle_arguments(void) {
+    start(&f, NORMAL_FRAMES); start(&other, 16);
+    struct vm_region r = reserve_at(&f, 8*VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+    struct vm_region foreign = reserve_at(&other, 8*VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+    commit(&f, r, 0, 4, VM_READ_WRITE); paint(&f, r, 0, 0xe1);
+    protect(&f, r, VM_PAGE, VM_PAGE, VM_NONE);
+    for (enum lifecycle_op op = DISCARD; op < LIFECYCLE_OPS; ++op) {
+        lifecycle_error(op, foreign.handle, VM_PAGE, VM_PAGE, VM_FOREIGN, 0);
+        struct vm_handle forged = r.handle; ++forged.generation;
+        lifecycle_error(op, forged, VM_PAGE, VM_PAGE, VM_STALE, 0);
+        forged = r.handle; forged.generation = 0;
+        lifecycle_error(op, forged, VM_PAGE, VM_PAGE, VM_STALE, 0);
+        forged = r.handle; forged.slot = VM_MAX_REGIONS;
+        lifecycle_error(op, forged, VM_PAGE, VM_PAGE, VM_STALE, 0);
+        lifecycle_error(op, r.handle, VM_PAGE, VM_PAGE, VM_ARGUMENT, 1);
+        lifecycle_error(op, r.handle, 1, VM_PAGE, VM_ALIGNMENT, 0);
+        lifecycle_error(op, r.handle, r.length, VM_PAGE, VM_RANGE, 0);
+        lifecycle_error(op, r.handle, UINT64_MAX-VM_PAGE+1, VM_PAGE, VM_RANGE, 0);
+        if (op != SPLIT) {
+            lifecycle_error(op, r.handle, 0, 0, VM_ARGUMENT, 0);
+            lifecycle_error(op, r.handle, 0, VM_PAGE+1, VM_ALIGNMENT, 0);
+            lifecycle_error(op, r.handle, VM_PAGE, UINT64_MAX-VM_PAGE+1, VM_RANGE, 0);
+            lifecycle_error(op, r.handle, 7*VM_PAGE, 2*VM_PAGE, VM_RANGE, 0);
+        }
+        union lifecycle_output out, poison; memset(&out, 0x9a, sizeof(out)); memcpy(&poison, &out, sizeof(out));
+        snapshot(&f); f.context = 0;
+        ERROR(lifecycle_call(op, &f, r.handle, VM_PAGE, VM_PAGE, &out), VM_STATE);
+        f.context = 1; assert(!memcmp(&out, &poison, sizeof(out))); unchanged(&f);
+        snapshot(&f); f.space.busy = 1;
+        ERROR(lifecycle_call(op, &f, r.handle, VM_PAGE, VM_PAGE, &out), VM_STATE);
+        f.space.busy = 0; assert(!memcmp(&out, &poison, sizeof(out))); unchanged(&f);
+        lifecycle_trials += 2;
+    }
+    /* Split at either end cannot produce the two required nonempty halves. */
+    lifecycle_error(SPLIT, r.handle, 0, 0, VM_ARGUMENT, 0);
+    struct vm_region old = r;
+    r = lifecycle(&f, RESET, r, VM_PAGE, VM_PAGE).regions[0];
+    for (enum lifecycle_op op = DISCARD; op < LIFECYCLE_OPS; ++op)
+        lifecycle_error(op, old.handle, VM_PAGE, VM_PAGE, VM_STALE, 0);
+    release_all(&f); release_all(&other);
+    puts("VM_HOST_LIFECYCLE_ARGUMENTS_ATOMIC_PASS");
+}
+static void test_lifecycle_bytes_and_neighbors(void) {
+    start(&f, NORMAL_FRAMES);
+    struct vm_region a = reserve_at(&f, VM_PAGE, VM_PAGE, VM_EXACT, VM_ARENA_START);
+    struct vm_region r = reserve_at(&f, 12*VM_PAGE, VM_PAGE, VM_EXACT, VM_ARENA_START+VM_PAGE);
+    struct vm_region b = reserve_at(&f, VM_PAGE, VM_PAGE, VM_EXACT, r.base+r.length);
+    commit(&f, a, 0, 1, VM_READ_WRITE); paint(&f, a, 0, 0x63);
+    commit(&f, b, 0, 1, VM_READ_WRITE); paint(&f, b, 0, 0x91);
+    protect(&f, b, 0, VM_PAGE, VM_NONE);
+    commit(&f, r, VM_PAGE, 5, VM_READ_WRITE);
+    for (unsigned i = 1; i <= 5; ++i) paint(&f, r, (uint64_t)i*VM_PAGE, (unsigned char)(0x20+i));
+    protect(&f, r, 2*VM_PAGE, VM_PAGE, VM_READ);
+    protect(&f, r, 3*VM_PAGE, 2*VM_PAGE, VM_NONE);
+    lifecycle(&f, DISCARD, r, 0, 5*VM_PAGE);
+    lifecycle(&f, DISCARD, r, 0, 5*VM_PAGE); /* Repeated discard remains deterministic. */
+    assert(page_find(&f, r.base) < 0 && page_find(&f, r.base+3*VM_PAGE) < 0);
+    commit(&f, r, 3*VM_PAGE, 2, VM_READ_WRITE); audit(&f); /* Removed NONE starts zero. */
+    r = lifecycle(&f, RESET, r, 2*VM_PAGE, 2*VM_PAGE).regions[0];
+    commit(&f, r, 2*VM_PAGE, 2, VM_READ_WRITE); audit(&f);
+    struct vm_regions halves = lifecycle(&f, SPLIT, r, 6*VM_PAGE, 0);
+    struct vm_region left = halves.regions[0], right = halves.regions[1];
+    /* Full-interval trim still replaces the token without changing any byte. */
+    left = lifecycle(&f, TRIM, left, 0, left.length).regions[0];
+    right = lifecycle(&f, TRIM, right, VM_PAGE, 4*VM_PAGE).regions[0];
+    struct vm_region hole = reserve_at(&f, VM_PAGE, VM_PAGE, VM_EXACT, halves.regions[1].base);
+    commit(&f, hole, 0, 1, VM_READ_WRITE); paint(&f, hole, 0, 0xa9);
+    struct vm_regions pieces = lifecycle(&f, PUNCH, left, 2*VM_PAGE, 2*VM_PAGE);
+    assert(pieces.count == 2);
+    struct vm_region reclaimed = reserve_at(&f, 2*VM_PAGE, VM_PAGE, VM_EXACT, left.base+2*VM_PAGE);
+    commit(&f, reclaimed, 0, 2, VM_READ_WRITE); audit(&f);
+    pieces.regions[0] = lifecycle(&f, PUNCH, pieces.regions[0], 0, VM_PAGE).regions[0];
+    pieces.regions[1] = lifecycle(&f, PUNCH, pieces.regions[1], VM_PAGE, VM_PAGE).regions[0];
+    assert(lifecycle(&f, PUNCH, pieces.regions[0], 0, VM_PAGE).count == 0);
+    /* Leave only neighboring resident-NONE backing on its original shared path. */
+    release(&f, a); release(&f, right); release(&f, hole); release(&f, reclaimed);
+    release(&f, pieces.regions[1]); audit(&f);
+    assert(f.pool.roles[FRAME_DATA] == 1 && f.pool.roles[FRAME_PT] == 1);
+    protect(&f, b, 0, VM_PAGE, VM_READ_WRITE); audit(&f);
+    release_all(&f);
+    puts("VM_HOST_LIFECYCLE_BYTES_INTERVALS_SHARED_PASS");
+}
+static struct vm_region lifecycle_fixture(void) {
+    start(&f, NORMAL_FRAMES);
+    struct vm_region r = reserve_at(&f, 8*VM_PAGE, VM_PAGE, VM_EXACT, VM_ARENA_START);
+    struct vm_region n = reserve_at(&f, VM_PAGE, VM_PAGE, VM_EXACT, r.base+r.length);
+    commit(&f, r, 0, 8, VM_READ_WRITE); commit(&f, n, 0, 1, VM_READ_WRITE);
+    for (unsigned i = 0; i < 8; ++i) paint(&f, r, (uint64_t)i*VM_PAGE, (unsigned char)(0x61+i));
+    paint(&f, n, 0, 0xeb); protect(&f, r, VM_PAGE, VM_PAGE, VM_READ);
+    protect(&f, r, 3*VM_PAGE, VM_PAGE, VM_NONE); protect(&f, n, 0, VM_PAGE, VM_NONE);
+    return r;
+}
+static void test_lifecycle_metadata_failures(void) {
+    const struct { enum lifecycle_op op; uint64_t off, bytes; unsigned outputs; } cases[] = {
+        {RESET, 2*VM_PAGE, 2*VM_PAGE, 1}, {TRIM, 2*VM_PAGE, 4*VM_PAGE, 1},
+        {SPLIT, 4*VM_PAGE, 0, 2}, {PUNCH, 2*VM_PAGE, 2*VM_PAGE, 2},
+        {PUNCH, 0, 2*VM_PAGE, 1}, {PUNCH, 6*VM_PAGE, 2*VM_PAGE, 1},
+        {PUNCH, 0, 8*VM_PAGE, 0}, {DISCARD, 0, 8*VM_PAGE, 0}
+    };
+    for (unsigned c = 0; c < sizeof(cases)/sizeof(cases[0]); ++c) {
+        for (unsigned nth = 1; nth <= cases[c].outputs; ++nth) {
+            struct vm_region r = lifecycle_fixture();
+            uint64_t epoch = f.pool.generation;
+            OK(vm_fail_metadata_after(&f.space, nth));
+            lifecycle_error(cases[c].op, r.handle, cases[c].off, cases[c].bytes, VM_INJECTED, 0);
+            assert(f.space.metadata_attempt == nth && f.pool.generation == epoch);
+            ++metadata_trials;
+            OK(vm_fail_metadata_after(&f.space, 0));
+            lifecycle(&f, cases[c].op, r, cases[c].off, cases[c].bytes);
+            release_all(&f);
+        }
+        /* One beyond the actual output count must not inject. In particular,
+         * discard and a complete punch select no replacement metadata at all. */
+        struct vm_region r = lifecycle_fixture();
+        OK(vm_fail_metadata_after(&f.space, cases[c].outputs+1));
+        lifecycle(&f, cases[c].op, r, cases[c].off, cases[c].bytes);
+        assert(f.space.metadata_attempt == cases[c].outputs);
+        OK(vm_fail_metadata_after(&f.space, 0)); release_all(&f);
+    }
+    /* Injection is cumulative since configuration, fires once at the selected
+     * output, and its diagnostic counter cannot wrap into a second injection. */
+    struct vm_region r = lifecycle_fixture();
+    OK(vm_fail_metadata_after(&f.space, 2));
+    r = lifecycle(&f, TRIM, r, 0, r.length).regions[0];
+    assert(f.space.metadata_attempt == 1);
+    lifecycle_error(RESET, r.handle, 0, VM_PAGE, VM_INJECTED, 0); ++metadata_trials;
+    assert(f.space.metadata_attempt == 2);
+    r = lifecycle(&f, RESET, r, 0, VM_PAGE).regions[0];
+    assert(f.space.metadata_attempt == 3);
+    lifecycle(&f, SPLIT, r, 4*VM_PAGE, 0); assert(f.space.metadata_attempt == 5);
+    OK(vm_fail_metadata_after(&f.space, 0)); assert(!f.space.metadata_attempt); release_all(&f);
+    r = lifecycle_fixture();
+    OK(vm_fail_metadata_after(&f.space, UINT32_MAX));
+    f.space.metadata_attempt = UINT32_MAX-2; /* Diagnostic-only exhaustion fixture. */
+    r = lifecycle(&f, TRIM, r, 0, r.length).regions[0];
+    assert(f.space.metadata_attempt == UINT32_MAX-1);
+    lifecycle_error(RESET, r.handle, 0, VM_PAGE, VM_INJECTED, 0); ++metadata_trials;
+    assert(f.space.metadata_attempt == UINT32_MAX);
+    r = lifecycle(&f, RESET, r, 0, VM_PAGE).regions[0];
+    assert(f.space.metadata_attempt == UINT32_MAX);
+    lifecycle(&f, SPLIT, r, 4*VM_PAGE, 0); assert(f.space.metadata_attempt == UINT32_MAX);
+    OK(vm_fail_metadata_after(&f.space, 0)); release_all(&f);
+    printf("VM_HOST_LIFECYCLE_METADATA_ATOMIC_PASS trials=%u\n", metadata_trials);
+}
+static void test_lifecycle_slots_and_epochs(void) {
+    for (unsigned terminal = 0; terminal < 2; ++terminal) {
+        start(&f, NORMAL_FRAMES);
+        if (terminal) f.space.regions[0].generation = UINT64_MAX-1;
+        struct vm_region r = reserve_at(&f, 8*VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+        struct vm_region all[VM_MAX_REGIONS-1];
+        for (unsigned i = 0; i < VM_MAX_REGIONS-1; ++i)
+            all[i] = reserve_at(&f, VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+        commit(&f, r, 0, 8, VM_READ_WRITE); paint(&f, r, 0, 0xd1);
+        commit(&f, all[0], 0, 1, VM_READ); paint(&f, all[0], 0, 0x54);
+        commit(&f, all[1], 0, 1, VM_READ_WRITE); paint(&f, all[1], 0, 0x8c);
+        protect(&f, all[1], 0, VM_PAGE, VM_NONE);
+        protect(&f, r, 2*VM_PAGE, VM_PAGE, VM_NONE);
+        lifecycle_error(SPLIT, r.handle, 4*VM_PAGE, 0, VM_LIMIT, 0);
+        lifecycle_error(PUNCH, r.handle, 2*VM_PAGE, 2*VM_PAGE, VM_LIMIT, 0);
+        if (terminal) {
+            lifecycle_error(RESET, r.handle, 0, VM_PAGE, VM_LIMIT, 0);
+            lifecycle_error(TRIM, r.handle, VM_PAGE, 6*VM_PAGE, VM_LIMIT, 0);
+            lifecycle_error(PUNCH, r.handle, 0, VM_PAGE, VM_LIMIT, 0);
+            lifecycle(&f, DISCARD, r, 0, r.length);
+            assert(lifecycle(&f, PUNCH, r, 0, r.length).count == 0);
+        } else {
+            r = lifecycle(&f, RESET, r, VM_PAGE, VM_PAGE).regions[0];
+            r = lifecycle(&f, TRIM, r, 0, r.length).regions[0];
+            r = lifecycle(&f, PUNCH, r, 0, VM_PAGE).regions[0];
+            r = lifecycle(&f, PUNCH, r, r.length-VM_PAGE, VM_PAGE).regions[0];
+            release(&f, all[17]);
+            struct vm_regions two = lifecycle(&f, SPLIT, r, 3*VM_PAGE, 0);
+            lifecycle_error(PUNCH, two.regions[0].handle, VM_PAGE, VM_PAGE, VM_LIMIT, 0);
+            release(&f, all[18]);
+            lifecycle(&f, PUNCH, two.regions[0], VM_PAGE, VM_PAGE);
+        }
+        release_all(&f);
+    }
+    /* Terminal input authority is genuinely issued by reserve, never created by
+     * altering a live generation. Every spare output epoch is preflighted. */
+    for (enum lifecycle_op op = RESET; op <= PUNCH; ++op) {
+        start(&f, NORMAL_FRAMES);
+        for (unsigned i = 0; i < VM_MAX_REGIONS; ++i) f.space.regions[i].generation = UINT64_MAX;
+        f.space.regions[7].generation = UINT64_MAX-1;
+        struct vm_region r = reserve_at(&f, 8*VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+        assert(r.handle.slot == 7 && r.handle.generation == UINT64_MAX);
+        commit(&f, r, 0, 8, VM_READ_WRITE); paint(&f, r, 7*VM_PAGE, 0xc4);
+        uint64_t off = op == SPLIT ? 4*VM_PAGE : 2*VM_PAGE;
+        uint64_t bytes = 2*VM_PAGE;
+        lifecycle_error(op, r.handle, off, bytes, VM_LIMIT, 0);
+        f.space.regions[9].generation = UINT64_MAX-1;
+        if (op == SPLIT || op == PUNCH) {
+            lifecycle_error(op, r.handle, off, bytes, VM_LIMIT, 0);
+            f.space.regions[13].generation = UINT64_MAX-1;
+        }
+        struct vm_regions out = lifecycle(&f, op, r, off, bytes);
+        for (unsigned i = 0; i < out.count; ++i) {
+            assert(out.regions[i].handle.slot != 7 && out.regions[i].handle.generation == UINT64_MAX);
+            lifecycle_error(RESET, out.regions[i].handle, 0, VM_PAGE, VM_LIMIT, 0);
+        }
+        assert(!f.space.regions[7].live && f.space.regions[7].generation == UINT64_MAX);
+        release_all(&f);
+        expect_reserve_error(VM_PAGE, VM_PAGE, VM_ANYWHERE, 0, VM_LIMIT);
+    }
+    start(&f, NORMAL_FRAMES);
+    for (unsigned i = 0; i < VM_MAX_REGIONS; ++i) f.space.regions[i].generation = UINT64_MAX;
+    f.space.regions[7].generation = UINT64_MAX-2; f.space.regions[9].generation = UINT64_MAX-1;
+    struct vm_region r = reserve_at(&f, 2*VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+    assert(r.handle.generation == UINT64_MAX-1);
+    r = lifecycle(&f, RESET, r, 0, VM_PAGE).regions[0];
+    assert(r.handle.slot == 7 && r.handle.generation == UINT64_MAX);
+    r = lifecycle(&f, RESET, r, 0, VM_PAGE).regions[0];
+    assert(r.handle.slot == 9 && r.handle.generation == UINT64_MAX);
+    lifecycle_error(TRIM, r.handle, 0, r.length, VM_LIMIT, 0);
+    lifecycle(&f, PUNCH, r, 0, r.length); release_all(&f);
+    puts("VM_HOST_LIFECYCLE_SLOTS_NONWRAPPING_PASS");
+}
+static void test_lifecycle_giant_and_no_frames(void) {
+    start(&f, NORMAL_FRAMES);
+    struct vm_region r = reserve_at(&f, GIANT, BOUNDARY_2M, VM_EXACT, VM_ARENA_START);
+    struct vm_counts empty_before, empty_after;
+    OK(vm_stats(&f.space, &empty_before));
+    uint64_t empty_epoch = f.pool.generation;
+    unsigned empty_flushes = f.flushes;
+    r = lifecycle(&f, TRIM, r, 0, UINT64_C(0x15800000000)).regions[0];
+    OK(vm_stats(&f.space, &empty_after));
+    assert(!empty_after.data && !empty_after.pt && !empty_after.pd && !empty_after.pdpt);
+    assert(empty_after.free_frames == empty_before.free_frames && f.pool.generation == empty_epoch);
+    assert(f.flushes == empty_flushes && lifecycle_visits < UINT64_C(1000000));
+    release_all(&f);
+    start(&f, NORMAL_FRAMES);
+    r = reserve_at(&f, GIANT, BOUNDARY_2M, VM_EXACT, VM_ARENA_START);
+    commit(&f, r, UINT64_C(0x1000000000), 64, VM_READ_WRITE);
+    paint(&f, r, UINT64_C(0x1000000000), 0x81);
+    uint64_t pool_epoch = f.pool.generation;
+    r = lifecycle(&f, TRIM, r, 0, UINT64_C(0x15800000000)).regions[0];
+    assert(f.pool.generation == pool_epoch);
+    assert(lifecycle_visits < UINT64_C(1000000));
+    commit(&f, r, UINT64_C(0xac00000000), 1, VM_READ_WRITE);
+    commit(&f, r, UINT64_C(0x157fffff000), 1, VM_READ);
+    paint(&f, r, UINT64_C(0xac00000000), 0x93);
+    paint(&f, r, UINT64_C(0x157fffff000), 0xbe); audit(&f);
+    struct vm_counts counts; OK(vm_stats(&f.space, &counts));
+    assert(counts.data == 66 && counts.pt+counts.pd+counts.pdpt == 9);
+    protect(&f, r, UINT64_C(0x1000000000), 64*VM_PAGE, VM_NONE);
+    lifecycle(&f, DISCARD, r, UINT64_C(0x1000000000), 64*VM_PAGE);
+    OK(vm_stats(&f.space, &counts)); assert(counts.data == 2);
+    commit(&f, r, UINT64_C(0x1000000000), 64, VM_READ_WRITE); audit(&f);
+    /* Reset an actual sparse 4 GiB window, with data near each side and its
+     * midpoint. Adjacent outside pages remain part of the renewed interval. */
+    const uint64_t near = UINT64_C(0x1000000000), four_gib = UINT64_C(0x100000000);
+    commit(&f, r, near+four_gib/2, 1, VM_READ);
+    commit(&f, r, near+four_gib-VM_PAGE, 1, VM_READ_WRITE);
+    paint(&f, r, near, 0x47); paint(&f, r, near+four_gib/2, 0x59);
+    paint(&f, r, near+four_gib-VM_PAGE, 0x6b);
+    protect(&f, r, near+four_gib-VM_PAGE, VM_PAGE, VM_NONE);
+    commit(&f, r, near-VM_PAGE, 1, VM_READ); paint(&f, r, near-VM_PAGE, 0x7d);
+    commit(&f, r, near+four_gib, 1, VM_READ_WRITE); paint(&f, r, near+four_gib, 0x8f);
+    protect(&f, r, near+four_gib, VM_PAGE, VM_NONE); audit(&f);
+    r = lifecycle(&f, RESET, r, near, four_gib).regions[0];
+    assert(lifecycle_visits < UINT64_C(1000000));
+    OK(vm_stats(&f.space, &counts)); assert(counts.data == 4);
+    check_query(&f, r, near); check_query(&f, r, near+four_gib/2);
+    check_query(&f, r, near+four_gib-VM_PAGE);
+    commit(&f, r, near, 64, VM_READ_WRITE);
+    commit(&f, r, near+four_gib/2, 1, VM_READ_WRITE);
+    commit(&f, r, near+four_gib-VM_PAGE, 1, VM_READ_WRITE); audit(&f);
+    /* Kept base need only retain page alignment, not the original 2 MiB hint. */
+    r = lifecycle(&f, TRIM, r, VM_PAGE, r.length-2*VM_PAGE).regions[0];
+    assert(r.base == VM_ARENA_START+VM_PAGE && (r.base & (BOUNDARY_2M-1)) == VM_PAGE);
+    assert(lifecycle_visits < UINT64_C(1000000));
+    lifecycle(&f, DISCARD, r, 0, r.length);
+    assert(lifecycle_visits < UINT64_C(1000000));
+    struct vm_regions halves = lifecycle(&f, SPLIT, r, BOUNDARY_512G, 0);
+    lifecycle(&f, PUNCH, halves.regions[1], VM_PAGE, halves.regions[1].length-2*VM_PAGE);
+    assert(lifecycle_visits < UINT64_C(1000000)); release_all(&f);
+    start(&f, 4);
+    r = reserve_at(&f, 4*VM_PAGE, VM_PAGE, VM_ANYWHERE, 0);
+    commit(&f, r, VM_PAGE, 1, VM_READ_WRITE); paint(&f, r, VM_PAGE, 0xca);
+    assert(!f.pool.roles[FRAME_FREE]);
+    r = lifecycle(&f, TRIM, r, 0, 3*VM_PAGE).regions[0];
+    halves = lifecycle(&f, SPLIT, r, VM_PAGE, 0);
+    lifecycle(&f, DISCARD, halves.regions[1], 0, halves.regions[1].length);
+    r = lifecycle(&f, RESET, halves.regions[1], 0, VM_PAGE).regions[0];
+    assert(f.pool.roles[FRAME_FREE] == 4);
+    commit(&f, r, 0, 1, VM_READ_WRITE); audit(&f);
+    lifecycle(&f, PUNCH, r, 0, r.length); release_all(&f);
+    puts("VM_HOST_LIFECYCLE_GIANT_REFERENCE_BOUNDS_NOFRAMES_PASS");
+}
+static void test_lifecycle_fragmented_sequences(void) {
+    const uint32_t seeds[] = {UINT32_C(0xbca98731), UINT32_C(0x671ca543), UINT32_C(0x2b49e8d1)};
+    unsigned operation_counts[LIFECYCLE_OPS] = {0}, steps = 0;
+    for (unsigned seed = 0; seed < sizeof(seeds)/sizeof(seeds[0]); ++seed) {
+        start(&f, 768); random_state = seeds[seed];
+        for (unsigned step = 0; step < 320; ++step) {
+            unsigned live = 0;
+            for (unsigned i = 0; i < VM_MAX_REGIONS; ++i) live += f.regions[i].live;
+            if (!live || (live < 32 && random_next()%5 == 0)) {
+                unsigned block = random_next()%64, overlap = 0;
+                uint64_t base = VM_ARENA_START+(uint64_t)(block/8)*BOUNDARY_512G+
+                                (uint64_t)(block%8)*BOUNDARY_2M;
+                for (unsigned i = 0; i < VM_MAX_REGIONS; ++i) if (f.regions[i].live) {
+                    struct vm_region r = f.regions[i].region;
+                    overlap |= r.base < base+12*VM_PAGE && base < r.base+r.length;
+                }
+                if (!overlap) reserve_at(&f, 12*VM_PAGE, VM_PAGE, VM_EXACT, base);
+            } else {
+                unsigned chosen = random_next()%live, index = 0;
+                for (; index < VM_MAX_REGIONS; ++index)
+                    if (f.regions[index].live && !chosen--) break;
+                assert(index < VM_MAX_REGIONS);
+                struct vm_region r = f.regions[index].region;
+                unsigned pages = (unsigned)(r.length/VM_PAGE), first = random_next()%pages;
+                unsigned number = 1+random_next()%(pages-first), action = random_next()%10;
+                uint64_t off = (uint64_t)first*VM_PAGE, bytes = (uint64_t)number*VM_PAGE;
+                if (action == 0) {
+                    commit(&f, r, off, number, random_next()%2 ? VM_READ : VM_READ_WRITE);
+                    paint(&f, r, off, (unsigned char)(1+step%254));
+                } else if (action == 1) protect(&f, r, off, bytes, VM_NONE);
+                else if (action >= 2 && action <= 6) {
+                    enum lifecycle_op op = (enum lifecycle_op)(action-2);
+                    if (op == SPLIT) {
+                        if (pages == 1) op = DISCARD;
+                        else off = (uint64_t)(1+random_next()%(pages-1))*VM_PAGE;
+                    }
+                    lifecycle(&f, op, r, off, bytes); ++operation_counts[op];
+                } else if (action == 7) release(&f, r);
+                else if (action == 8) decommit(&f, r, off, bytes);
+                else {
+                    unsigned missing = 0;
+                    for (unsigned p = 0; p < number; ++p)
+                        missing |= page_find(&f, r.base+off+(uint64_t)p*VM_PAGE) < 0;
+                    if (missing) {
+                        snapshot(&f);
+                        ERROR(vm_protect(&f.space, r.handle, off, bytes, VM_READ), VM_UNBACKED);
+                        unchanged(&f);
+                    } else protect(&f, r, off, bytes, VM_READ);
+                }
+            }
+            audit(&f); ++steps;
+        }
+        release_all(&f);
+    }
+    for (unsigned op = 0; op < LIFECYCLE_OPS; ++op) assert(operation_counts[op] >= 20);
+    printf("VM_HOST_LIFECYCLE_FRAGMENTED_ORACLE_PASS seeds=0xbca98731,0x671ca543,0x2b49e8d1 operations=%u discard=%u reset=%u trim=%u split=%u punch=%u\n",
+           steps, operation_counts[DISCARD], operation_counts[RESET], operation_counts[TRIM],
+           operation_counts[SPLIT], operation_counts[PUNCH]);
+}
+
 int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     test_arguments_ownership_and_slots();
@@ -653,5 +1197,15 @@ int main(void) {
     test_nonwrapping_and_context();
     printf("VM_HOST_CORE_PASS checkpoints=%u allocation_failure_trials=%u byte_backed_host_only=1\n",
            checkpoints, injection_trials);
+    assert(checkpoints == 1366 && injection_trials == 299);
+    unsigned legacy_checkpoints = checkpoints;
+    test_lifecycle_arguments();
+    test_lifecycle_bytes_and_neighbors();
+    test_lifecycle_metadata_failures();
+    test_lifecycle_slots_and_epochs();
+    test_lifecycle_giant_and_no_frames();
+    test_lifecycle_fragmented_sequences();
+    printf("VM_HOST_LIFECYCLE_CORE_PASS checkpoints=%u lifecycle_trials=%u metadata_failure_trials=%u byte_backed_host_only=1\n",
+           checkpoints-legacy_checkpoints, lifecycle_trials, metadata_trials);
     return 0;
 }

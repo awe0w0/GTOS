@@ -106,6 +106,8 @@ python3 arch/x86_64/tests/frame_qemu.py --output /tmp/gtos-x64-frames-new
 A separately enabled [sparse VM core](arch/x86_64/SPARSE_VM.md) now reserves
 large virtual intervals without proportional backing, commits zeroed pages,
 protects R/RW/NONE, and decommits/releases with checked ownership and rollback.
+Lifecycle operations now include deterministic discard, owned reset, exact trim,
+split and punch with explicit lifetime and unchanged-neighbor guarantees.
 Its tests reserve roughly 1.35 TiB while backing only selected pages; this is
 virtual space, not physical RAM. Run the full guest gate with:
 
@@ -114,9 +116,9 @@ python3 arch/x86_64/tests/vm_qemu.py --output /tmp/gtos-x64-vm-new
 ```
 
 This remains a BSP-only supervisor service with fixed metadata and commit limits.
-It has no user ABI, desktop, threads, executable/JIT mappings or browser. Discard,
-reset, trim, split and punch are not yet implemented. The working i386 desktop
-and its test suite remain maintained.
+It has no user ABI, desktop, threads, executable/JIT mappings or browser.
+[Private x64 userspace gates](docs/x64-user-runtime.md) are the next architecture
+work; the working i386 desktop and its test suite remain maintained.
 
 ## Verification
 

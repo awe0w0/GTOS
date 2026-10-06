@@ -109,7 +109,7 @@ does not assume that the Linux binary can execute unchanged in GTOS.
    NX/write protection, exception stacks and actual protection-fault tests
 2. Sparse VM ownership: reserve aligned virtual ranges without allocating a
    physical frame or page table per reserved page; commit zeroed pages, protect,
-   decommit and release with rollback and exact resource-accounting tests
+   decommit/release and owned lifecycle changes with rollback and exact accounting
 3. Native x64 process entry and checked calls, then user threads with private
    stacks, FP/TLS ownership, blocking/wakeup and safe join/handle lifetime
 4. Runtime/loader, filesystem, IPC, networking and userland graphics contracts
@@ -127,8 +127,11 @@ implements kernel-only reserve/commit/protect/decommit/release with actual
 page-table backing, hardware fault tests and transactional failure cleanup.
 It proves the roughly 1.35 TiB reservation using bounded sparse metadata, not
 that amount of RAM. This is still supervisor-only, NX-only and BSP-only, with
-one bound pool/root and a 256-page commit limit. Discard/reset/trim/split/punch,
-user address spaces, threads and the browser-facing wire ABI remain open.
+one bound pool/root and a 256-page commit limit. Discard/reset/trim/split/punch
+now have distinct implemented contracts and real guest acceptance, including the
+exact reference suffix trim and sparse 4 GiB reset. These remain trusted kernel
+operations. [Private x64 userspace](x64-user-runtime.md), threads and the
+browser-facing wire ABI remain open.
 
 ## Staged browser proof
 

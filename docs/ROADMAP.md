@@ -176,10 +176,15 @@ capabilities before binding browser-side code to kernel internals.
 
 The [bounded x64 kernel service](../arch/x86_64/SPARSE_VM.md) now implements
 aligned/exact reserve, zeroed commit, content-preserving R/RW/NONE protection,
-decommit and release. Huge unbacked reservations use no proportional frame or
-page-table allocation. Real guest tests cover distant and true outer-end pages,
-14 exact hardware faults, allocation failure at every staged point, shared table
-paths, stale/foreign handles, and complete reclamation. No untrusted-user or SMP
+decommit/release, discard, reset, trim, split and punch. Huge unbacked
+reservations use no proportional frame or page-table allocation. Real guest tests
+cover distant and true outer-end pages,
+36 exact hardware faults (including the original 14), allocation failure at
+every staged point, atomic metadata failure, shared table paths, stale/foreign
+handles, and complete reclamation. No untrusted-user or SMP
 claim follows: the service owns one supervisor root/pool and never maps executable
-pages. Lifecycle additions (discard/reset/trim/split/punch), private x64 processes,
+pages. The exact giant suffix trim, 64 GiB-offset commit, inaccessible-backing
+discard and sparse 4 GiB owned reset now have guest proof. Accessible discard
+eagerly zeroes while preserving R/RW; it does not pretend to provide lazy paging.
+[Private x64 processes and their prerequisite refactors](x64-user-runtime.md),
 thread/TLS/FP support and a versioned userspace ABI remain subsequent gates.

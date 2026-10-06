@@ -53,6 +53,42 @@ def verify(core, guest):
     leaf = compact(body(core, 'leaf_value'))
     assert leaf == 'returnr->permission==VM_NONE?0:r->id.physical|(1UL<<63)|1|(r->permission==VM_READ_WRITE?2:0);'
     assert '(e&~0x20UL)!=(r->id.physical|(1UL<<63)|3)' in compact(body(core, 'hierarchy'))
+    # Lifecycle publication must follow complete bounded metadata staging.
+    staged = compact(body(core, 'stage_regions'))
+    require_order(staged, 'zero(plan,sizeof(*plan));', 'r->generation==',
+                  'if(!used)', 'if(chosen==64u)returnVM_LIMIT;',
+                  's->regions[chosen].generation+1', '++plan->count;',
+                  's->metadata_attempt!=(4294967295U)', '++s->metadata_attempt;',
+                  's->metadata_attempt==s->metadata_fail_nth')
+    assert 'r->generation==(18446744073709551615UL)' in staged
+    assert 's->regions[chosen].generation+1' in staged
+    assert 'plan->regions[j].handle.slot==i' in staged
+    assert not re.search(r's->regions\[[^]]+\]\.[a-z_]+\s*=(?!=)', body(core, 'stage_regions'))
+    for fn in ('vm_reset', 'vm_trim', 'vm_split', 'vm_punch'):
+        operation = compact(body(core, fn))
+        require_order(operation, 'if(!out)returnVM_ARGUMENT;', 'enter(s)',
+                      'handle(s,h,&r)', 'stage_regions(', 'if(e)returnleave(s,e);',
+                      'publish_regions(s,h,&plan);', '*out=')
+        # Check the exact failure edge associated with staging, not an earlier
+        # handle/range check containing the same text.
+        assert re.search(r'e=stage_regions\([^;]+;if\(e\)returnleave\(s,e\);', operation)
+        publication = operation[operation.index('publish_regions('):]
+        assert 'stage_regions(' not in publication and 'remove_backing(' not in publication
+        if fn != 'vm_split':
+            require_order(operation[operation.index('stage_regions('):],
+                          'if(e)returnleave(s,e);', 'remove_backing(', 'publish_regions(')
+    publication = compact(body(core, 'publish_regions'))
+    require_order(publication, 'input->live=0;', 's->regions[r->handle.slot]=',
+                  'd->slot!=old.slot||d->generation!=old.generation',
+                  'if(n==plan->count)corrupt();',
+                  'd->slot=plan->regions[n].handle.slot;',
+                  'd->generation=plan->regions[n].handle.generation;', 'if(!stable(s))corrupt();')
+    discard = compact(body(core, 'vm_discard'))
+    require_order(discard, 'handle(s,h,&r)', 'range(r,offset,bytes)',
+                  'if(d->permission==VM_NONE)', '++result.released_pages;continue;',
+                  'for(unsignedj=0;j<4096;++j)p[j]=0;', '++result.zeroed_pages;',
+                  'if(result.released_pages)remove_backing(s,start,end,1);', '*out=result;')
+    assert '(!none_only||d->permission==VM_NONE)' in remove
 
 
 def main():
@@ -69,6 +105,21 @@ def main():
         ('guest', 'vm.ready && (vm.root!=pml4 || !vm_owned_hierarchy_valid(&vm))', '0', 'disabled dynamic hierarchy audit'),
         ('guest', 'i && pdpt[i]', '0', 'lost borrowed hierarchy protection'),
         ('guest', '"mov %0,%%cr3"', '""', 'missing CR3 instruction'),
+        ('core', 'p[j]=0;', '(void)0;', 'discard loses eager zeroing'),
+        ('core', 'remove_backing(s,start,end,1)', 'remove_backing(s,start,end,0)', 'discard destroys accessible backing'),
+        ('core', '(!none_only || d->permission==VM_NONE)', '1', 'discard ignores NONE filter'),
+        ('core', 'd->slot=plan->regions[n].handle.slot;', '(void)0;', 'split loses backing slot ownership'),
+        ('core', 'd->generation=plan->regions[n].handle.generation;', '(void)0;', 'reset loses backing generation'),
+        ('core', 'plan->regions[j].handle.slot==i', '0', 'output slots collide'),
+        ('core', 'r->generation==(18446744073709551615UL)', '0', 'replacement generation wraps'),
+        ('core', 's->metadata_attempt!=(4294967295U)', '1', 'metadata diagnostic wraps and rearms'),
+        ('core', 'if(chosen==64u)return VM_LIMIT;', '(void)0;', 'metadata capacity check omitted'),
+        ('core', 'e=stage_regions(s,h,1,bases,lengths,&plan);if(e)return leave(s,e);',
+         'e=stage_regions(s,h,1,bases,lengths,&plan);', 'unary staging error ignored'),
+        ('core', 'e=stage_regions(s,h,2,bases,lengths,&plan);if(e)return leave(s,e);',
+         'e=stage_regions(s,h,2,bases,lengths,&plan);', 'split staging error ignored'),
+        ('core', 'e=stage_regions(s,h,count,bases,lengths,&plan);if(e)return leave(s,e);',
+         'e=stage_regions(s,h,count,bases,lengths,&plan);', 'punch staging error ignored'),
     ]
     # The shared pool source gate already pins the complete real CR3 binding.
     # VM callback also must retain that exact instruction.

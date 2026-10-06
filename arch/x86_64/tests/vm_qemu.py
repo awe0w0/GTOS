@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Real sparse-VM guest acceptance, isolated BIOS ISO, no host disks/network.
 
-Slice scope is reserve/commit/protect/decommit/release. Discard/reset/trim/split/
-punch and user/SMP/JIT support are explicitly not conformance claims here.
+Scope: owned reserve/commit/protect/discard/decommit/reset/trim/split/punch/
+release. Supervisor NX-only, BSP-only; no user/SMP/JIT or demand-paging claim.
 """
 import argparse
 import hashlib
@@ -22,6 +22,49 @@ VM_PROBES = ['outside-left', 'after-first-run', 'before-middle', 'after-middle',
              'after-last', 'outside-right', 'read-only-write', 'none-read',
              'none-write', 'nx-execution', 'decommitted-read', 'released-read',
              'stale-va-read', 'stale-va-write']
+LIFECYCLE_PROBES = [
+    'discard-retained-R-write', 'discard-released-NONE-read', 'discard-unbacked-write',
+    'trim-giant-suffix-read', 'trim-giant-outer-write',
+    'trace-NONE-discard-read', 'reset-owned-4GiB-read', 'reset-owned-4GiB-write',
+    'reset-owned-4GiB-sparse-middle-read', 'reset-owned-4GiB-sparse-last-write',
+    'trim-alignment-prefix-read', 'trim-alignment-suffix-write',
+    'punch-interior-accessible-read', 'punch-interior-NONE-write', 'split-punch-retained-R-write',
+    'punch-stale-after-physical-reuse-read', 'punch-stale-after-physical-reuse-write',
+    'punch-prefix-read', 'punch-suffix-write', 'punch-full-NONE-read', 'punch-full-R-read',
+    'terminal-full-punch-read',
+]
+LIFECYCLE_FAULTS = [(14, n) for n in (3, 0, 2, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 2, 3, 0, 2, 0, 2, 0, 0, 0)]
+LIFECYCLE = [
+    'lifecycle mixed discard R RW NONE absent exact zero release permissions',
+    'lifecycle unbacked giant suffix trim zero data tables physical delta',
+    'lifecycle giant trim 00000158fffff000 to 0000015800000000 distant-MID=000000ac00000000 pages=64',
+    'lifecycle reference 64GiB commit NONE discard sparse 4GiB reset outside R NONE zero recommit',
+    'lifecycle alignment reserve=134279168 prefix=45056 suffix=16384 retained=134217728 align=65536',
+    'lifecycle split interior edge full punch holes stale foreign neighbor authority shared table reclaim',
+    'lifecycle metadata staging rollback=8 outputs bytes permissions tables exact recovery',
+    'lifecycle invalid zero alignment overflow empty split and null outputs atomic',
+    'lifecycle metadata quota terminal migration no generation wrap full punch zero outputs',
+]
+ARENA = 0xffff900000000000
+PAGE = 4096
+GIANT = 0x158fffff000
+KEPT = 0x15800000000
+MID = 0xac00000000
+TRACE = 0x1000000000
+PARTITION = ARENA + 0x50000000000 + (1 << 21) - 2 * PAGE
+ALIGNMENT = ARENA + 0x40000000000 + 0x5000
+VM_ADDRESSES = [ARENA - PAGE, ARENA + 64 * PAGE, ARENA + MID - PAGE,
+                ARENA + MID + PAGE, ARENA + 0x157fffff000 + PAGE, ARENA + GIANT,
+                *([ARENA] * 6), *([ARENA + 0x20000000000] * 2)]
+LIFECYCLE_ADDRESSES = [ARENA + 0x30000000000 + n * PAGE for n in (0, 2, 3)] + [
+    ARENA + KEPT, ARENA + GIANT - PAGE, ARENA + TRACE, ARENA + TRACE, ARENA + TRACE + 63 * PAGE,
+    ARENA + TRACE + (1 << 31), ARENA + TRACE + (1 << 32) - PAGE,
+    ALIGNMENT, ALIGNMENT + 45056 + 134217728,
+    *[PARTITION + n * PAGE for n in (1, 2, 0, 1, 2, 4, 7, 5, 6)],
+    ARENA + 0x70000000000,
+]
+assert len(VM_FAULTS) == len(VM_PROBES) == len(VM_ADDRESSES) == 14
+assert len(LIFECYCLE_FAULTS) == len(LIFECYCLE_PROBES) == len(LIFECYCLE_ADDRESSES) == 22
 NORMAL = [
     'giant exact reservation bytes=00000158fffff000 data=0 tables=0',
     'distant real zero isolation data=66 pt=3 pd=3 pdpt=3',
@@ -52,7 +95,10 @@ def main():
     ap.add_argument('--output', type=Path, default=ROOT / 'obj/x64-vm-evidence')
     ap.add_argument('--runtime', type=Path, default=ROOT.parent / 'gtos-runtime')
     ap.add_argument('--smoke', action='store_true', help='One O2 normal case only; not full acceptance')
+    ap.add_argument('--skip-host', action='store_true', help='Development smoke only: omit separate host prerequisites')
     args = ap.parse_args()
+    if args.skip_host and not args.smoke:
+        raise SystemExit('--skip-host is allowed only for --smoke; full acceptance always runs host prerequisites')
     output = args.output.resolve()
     if output.exists():
         raise SystemExit('Use a fresh output directory; existing evidence is never overwritten')
@@ -70,7 +116,7 @@ def main():
         grub = str(runtime / 'bin/grub-mkrescue')
     if not qemu or not grub:
         raise SystemExit('QEMU x86_64 and BIOS GRUB tools are required')
-    commands, results = [], []
+    commands, results, symbols = [], [], {}
 
     def command(cmd, log):
         commands.append(cmd)
@@ -94,7 +140,10 @@ def main():
     command(['gcc', '--version'], 'gcc-version.txt')
     command(['ld', '--version'], 'ld-version.txt')
     command([grub, '--version'], 'grub-version.txt')
-    command(['make', '-f', 'arch/x86_64/Makefile', 'test-host', f'BUILD={output / "host"}'], 'host-tests.log')
+    if not args.skip_host:
+        command(['make', '-f', 'arch/x86_64/Makefile', 'test-host', f'BUILD={output / "host"}'], 'host-tests.log')
+    else:
+        (output / 'host-tests-SKIPPED.txt').write_text('DEVELOPMENT SMOKE ONLY: host prerequisites intentionally omitted.\n')
 
     def build(label, opt='-O2', injection=0, small=False):
         path = output / ('build-' + label)
@@ -119,6 +168,9 @@ def main():
         if loads != 3:
             raise RuntimeError('Unexpected load-segment count')
         command(['readelf', '-ahl', str(path / 'kernel.elf')], label + '-elf.txt')
+        symbol_output = command(['nm', '-n', str(path / 'kernel.elf')], label + '-symbols.txt')
+        symbols[path] = {name: int(address, 16) for address, name in re.findall(
+            r'^([0-9a-f]+) [A-Za-z] (\S+)$', symbol_output, re.M)}
         return path
 
     def run(name, path, cpu='max', memory='64M', smp='1', machine='pc', reject=None, small=False):
@@ -153,23 +205,39 @@ def main():
             if reject not in log or 'X64 VM SERVICE PASS' in log:
                 raise RuntimeError(f'{name}: missing rejection or false VM success\n{log}')
         else:
-            expected = (['reduced real pool seven frames exact OOM recovery', NORMAL[-1]] if small else NORMAL)
-            if any(log.count('X64 VM PASS ' + m + '\n') != 1 for m in expected) or 'FAIL' in log:
+            expected = (['reduced real pool seven frames exact OOM recovery', NORMAL[-1]] if small else NORMAL[:-1] + LIFECYCLE + NORMAL[-1:])
+            if re.findall(r'^X64 VM PASS (.+)$', log, re.M) != expected or 'FAIL' in log:
                 raise RuntimeError(f'{name}: missing/duplicate/failed VM markers\n{log}')
             faults = [(int(a, 16), int(b, 16)) for a, b in re.findall(
                 r'^X64 VM EXPECTED vector=([0-9a-f]+) error=([0-9a-f]+)', log, re.M)]
             probes = re.findall(r'^X64 VM PROBE (.+)$', log, re.M)
-            if faults != ([] if small else VM_FAULTS) or probes != ([] if small else VM_PROBES):
+            if faults != ([] if small else VM_FAULTS + LIFECYCLE_FAULTS) or probes != ([] if small else VM_PROBES + LIFECYCLE_PROBES):
                 raise RuntimeError(f'{name}: exact VM fault sequence changed: {faults}, {probes}')
+            # The guest also checks CR2, RIP, CS/SS, IF, RSP and IST. Independently
+            # bind each logged address and instruction to this exact ELF here.
+            exact_faults = [tuple(int(n, 16) for n in groups) for groups in re.findall(
+                r'^X64 VM EXPECTED vector=([0-9a-f]+) error=([0-9a-f]+) rip=([0-9a-f]+) address=([0-9a-f]+)$', log, re.M)]
+            expected_exact = []
+            if not small:
+                for label, (vector, error), address in zip(VM_PROBES + LIFECYCLE_PROBES,
+                        VM_FAULTS + LIFECYCLE_FAULTS, VM_ADDRESSES + LIFECYCLE_ADDRESSES):
+                    rip = address if label == 'nx-execution' else symbols[path][
+                        'probe_write_ip' if 'write' in label else 'probe_read_ip']
+                    expected_exact.append((vector, error, rip, address))
+            if exact_faults != expected_exact:
+                raise RuntimeError(f'{name}: exact ELF RIP/CR2 fault proof changed: {exact_faults}')
             end = re.findall(r'^X64 VM SERVICE PASS BSP-only data=0 tables=0 live=0 faults=([0-9a-f]+) rollback=([0-9a-f]+) managed=([0-9a-f]+)$', log, re.M)
-            expected_end = (0, 0, 7) if small else (14, 284, 2048)
+            if not small and log.count('X64 VM ORIGINAL PASS faults=14 rollback=284\n') != 1:
+                raise RuntimeError(f'{name}: original slice evidence not separately preserved')
+            expected_end = (0, 0, 7) if small else (len(VM_FAULTS) + len(LIFECYCLE_FAULTS), 284, 2048)
             if len(end) != 1 or tuple(int(n, 16) for n in end[0]) != expected_end:
                 raise RuntimeError(f'{name}: final exact accounting wrong')
-            if log.count('X64 VM LIMITS supervisor NX-only discard reset trim split punch deferred\n') != 1:
+            if log.count('X64 VM LIMITS supervisor NX-only user SMP JIT demand-paging deferred\n') != 1:
                 raise RuntimeError(f'{name}: scope declaration missing')
         results.append({'name': name, 'command': cmd, 'cpu': cpu, 'memory': memory, 'smp': smp,
                         'machine': machine, 'expected_exit': 35 if reject else 33, 'actual_exit': r.returncode,
-                        'expected_vm_faults': 0 if small else (None if reject else 14),
+                        'expected_vm_faults': 0 if small else (None if reject else len(VM_FAULTS) + len(LIFECYCLE_FAULTS)),
+                        'expected_metadata_rollback_cases': 0 if small else (None if reject else 8),
                         'expected_rollback_cases': 0 if small else (None if reject else 284),
                         'elapsed_seconds': round(time.monotonic() - start, 3),
                         'elf_sha256': digest(path / 'kernel.elf'), 'iso_sha256': digest(iso),

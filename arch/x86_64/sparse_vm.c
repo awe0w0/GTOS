@@ -278,11 +278,11 @@ enum vm_error vm_protect(struct vm_space *s,struct vm_handle h,uint64_t offset,u
     if(count)flush(s);
     return leave(s,VM_OK);
 }
-static void remove_backing(struct vm_space *s,uint64_t start,uint64_t end) {
+static void remove_backing(struct vm_space *s,uint64_t start,uint64_t end,unsigned none_only) {
     uint32_t count=0;
     for(uint32_t i=0;i<s->pool->selection.managed_count;++i) {
         struct vm_backing *d=&s->backing[i];++s->operation_visits;
-        if(d->kind==FRAME_DATA && d->va>=start && d->va<end) {
+        if(d->kind==FRAME_DATA && d->va>=start && d->va<end && (!none_only || d->permission==VM_NONE)) {
 #if VM_TEST_INJECT != 1
             *leaf(s,d->va)=0;
 #endif
@@ -313,20 +313,139 @@ static void remove_backing(struct vm_space *s,uint64_t start,uint64_t end) {
         uint32_t released=0;
         if(frame_pool_reclaim(s->pool,&released)!=FRAME_OK || released!=count)corrupt();
         if(s->flush_epoch==UINT64_MAX)corrupt();
-    ++s->flush_epoch;
+        ++s->flush_epoch;
     }
     for(uint32_t i=0;i<s->pool->selection.managed_count;++i)if(s->backing[i].retiring)zero(&s->backing[i],sizeof(s->backing[i]));
 }
 enum vm_error vm_decommit(struct vm_space *s,struct vm_handle h,uint64_t offset,uint64_t bytes) {
     enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
     e=handle(s,h,&r);if(e)return leave(s,e);e=range(r,offset,bytes);if(e)return leave(s,e);
-    remove_backing(s,r->base+offset,r->base+offset+bytes);if(!stable(s))corrupt();
+    remove_backing(s,r->base+offset,r->base+offset+bytes,0);if(!stable(s))corrupt();
     return leave(s,VM_OK);
+}
+/* A bounded, private metadata transaction. Select distinct reusable slots and
+ * compute every fresh authority before changing leaves, bytes, or live slots.
+ * Reusing the input slot consumes a generation just like any other output.
+ * Terminal generations can migrate to spare slots but can never wrap. */
+static enum vm_error stage_regions(struct vm_space *s,struct vm_handle h,unsigned count,
+    const uint64_t bases[2],const uint64_t lengths[2],struct vm_regions *plan) {
+    zero(plan,sizeof(*plan));
+    if(count>2)corrupt();
+    for(unsigned n=0;n<count;++n) {
+        unsigned chosen=VM_MAX_REGIONS;
+        /* Prefer recycling the input slot, keeping full-slot unary operations
+         * possible. A second output necessarily needs another reusable slot. */
+        for(unsigned pass=0;pass<=VM_MAX_REGIONS;++pass) {
+            unsigned i=pass?pass-1:h.slot;
+            struct vm_slot *r=&s->regions[i];++s->operation_visits;
+            if((r->live && i!=h.slot) || r->generation==UINT64_MAX)continue;
+            unsigned used=0;
+            for(unsigned j=0;j<n;++j)if(plan->regions[j].handle.slot==i)used=1;
+            if(!used) { chosen=i;break; }
+        }
+        if(chosen==VM_MAX_REGIONS)return VM_LIMIT;
+        plan->regions[n]=(struct vm_region){{s->space_id,s->regions[chosen].generation+1,chosen},bases[n],lengths[n]};
+        ++plan->count;
+        /* Injection is on real output staging, before any live publication. */
+        if(s->metadata_fail_nth && s->metadata_attempt!=UINT32_MAX) {
+            ++s->metadata_attempt;
+            if(s->metadata_attempt==s->metadata_fail_nth)return VM_INJECTED;
+        }
+    }
+    return VM_OK;
+}
+static void publish_regions(struct vm_space *s,struct vm_handle old,const struct vm_regions *plan) {
+    struct vm_slot *input=&s->regions[old.slot];
+    input->live=0;input->base=input->length=0;
+    for(unsigned n=0;n<plan->count;++n) {
+        const struct vm_region *r=&plan->regions[n];
+        s->regions[r->handle.slot]=(struct vm_slot){r->base,r->length,r->handle.generation,1};
+    }
+    for(uint32_t i=0;i<s->pool->selection.managed_count;++i) {
+        struct vm_backing *d=&s->backing[i];++s->operation_visits;
+        if(d->kind!=FRAME_DATA || d->slot!=old.slot || d->generation!=old.generation)continue;
+        unsigned n=0;
+        while(n<plan->count && (d->va<plan->regions[n].base || d->va-plan->regions[n].base>=plan->regions[n].length))++n;
+        if(n==plan->count)corrupt();
+        d->slot=plan->regions[n].handle.slot;d->generation=plan->regions[n].handle.generation;
+    }
+    if(!stable(s))corrupt();
+}
+enum vm_error vm_discard(struct vm_space *s,struct vm_handle h,uint64_t offset,uint64_t bytes,
+    struct vm_disposition *out) {
+    if(!out)return VM_ARGUMENT;
+    enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
+    e=handle(s,h,&r);if(e)return leave(s,e);e=range(r,offset,bytes);if(e)return leave(s,e);
+    uint64_t start=r->base+offset,end=start+bytes;
+    struct vm_disposition result={0};
+    /* Whole-call validation is complete. Eager zeroing cannot fail, and never
+     * changes permissions. The permanent privileged alias permits zeroing R. */
+    for(uint32_t i=0;i<s->pool->selection.managed_count;++i) {
+        struct vm_backing *d=&s->backing[i];++s->operation_visits;
+        if(d->kind!=FRAME_DATA || d->va<start || d->va>=end)continue;
+        if(d->permission==VM_NONE) { ++result.released_pages;continue; }
+        volatile unsigned char *p=(volatile unsigned char *)d->alias;
+        for(unsigned j=0;j<4096;++j)p[j]=0;
+        ++result.zeroed_pages;
+    }
+    __asm__ volatile("":::"memory");
+    if(result.released_pages)remove_backing(s,start,end,1);
+    if(!stable(s))corrupt();
+    *out=result;return leave(s,VM_OK);
+}
+enum vm_error vm_reset(struct vm_space *s,struct vm_handle h,uint64_t offset,uint64_t bytes,
+    struct vm_region *out) {
+    if(!out)return VM_ARGUMENT;
+    enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
+    e=handle(s,h,&r);if(e)return leave(s,e);e=range(r,offset,bytes);if(e)return leave(s,e);
+    uint64_t bases[2]={r->base,0},lengths[2]={r->length,0},start=r->base+offset;
+    struct vm_regions plan;e=stage_regions(s,h,1,bases,lengths,&plan);if(e)return leave(s,e);
+    remove_backing(s,start,start+bytes,0);
+    publish_regions(s,h,&plan);*out=plan.regions[0];return leave(s,VM_OK);
+}
+enum vm_error vm_trim(struct vm_space *s,struct vm_handle h,uint64_t offset,uint64_t bytes,
+    struct vm_region *out) {
+    if(!out)return VM_ARGUMENT;
+    enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
+    e=handle(s,h,&r);if(e)return leave(s,e);e=range(r,offset,bytes);if(e)return leave(s,e);
+    uint64_t old_start=r->base,old_end=r->base+r->length;
+    uint64_t bases[2]={r->base+offset,0},lengths[2]={bytes,0};
+    struct vm_regions plan;e=stage_regions(s,h,1,bases,lengths,&plan);if(e)return leave(s,e);
+    if(offset)remove_backing(s,old_start,bases[0],0);
+    if(bases[0]+bytes<old_end)remove_backing(s,bases[0]+bytes,old_end,0);
+    publish_regions(s,h,&plan);*out=plan.regions[0];return leave(s,VM_OK);
+}
+enum vm_error vm_split(struct vm_space *s,struct vm_handle h,uint64_t offset,struct vm_regions *out) {
+    if(!out)return VM_ARGUMENT;
+    enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
+    e=handle(s,h,&r);if(e)return leave(s,e);
+    if(!offset)return leave(s,VM_ARGUMENT);
+    if(offset&4095)return leave(s,VM_ALIGNMENT);
+    if(offset>=r->length)return leave(s,VM_RANGE);
+    uint64_t bases[2]={r->base,r->base+offset},lengths[2]={offset,r->length-offset};
+    struct vm_regions plan;e=stage_regions(s,h,2,bases,lengths,&plan);if(e)return leave(s,e);
+    publish_regions(s,h,&plan);*out=plan;return leave(s,VM_OK);
+}
+enum vm_error vm_punch(struct vm_space *s,struct vm_handle h,uint64_t offset,uint64_t bytes,
+    struct vm_regions *out) {
+    if(!out)return VM_ARGUMENT;
+    enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
+    e=handle(s,h,&r);if(e)return leave(s,e);e=range(r,offset,bytes);if(e)return leave(s,e);
+    uint64_t start=r->base+offset,end=start+bytes,bases[2]={0},lengths[2]={0};unsigned count=0;
+    if(offset) { bases[count]=r->base;lengths[count++]=offset; }
+    if(bytes<r->length-offset) { bases[count]=end;lengths[count++]=r->length-offset-bytes; }
+    struct vm_regions plan;e=stage_regions(s,h,count,bases,lengths,&plan);if(e)return leave(s,e);
+    remove_backing(s,start,end,0);
+    publish_regions(s,h,&plan);*out=plan;return leave(s,VM_OK);
+}
+enum vm_error vm_fail_metadata_after(struct vm_space *s,uint32_t nth) {
+    enum vm_error e=enter(s);if(e)return e;
+    s->metadata_fail_nth=nth;s->metadata_attempt=0;return leave(s,VM_OK);
 }
 enum vm_error vm_release(struct vm_space *s,struct vm_handle h) {
     enum vm_error e=enter(s);if(e)return e;struct vm_slot *r;
     e=handle(s,h,&r);if(e)return leave(s,e);
-    remove_backing(s,r->base,r->base+r->length);r->live=0;r->base=r->length=0;
+    remove_backing(s,r->base,r->base+r->length,0);r->live=0;r->base=r->length=0;
     if(!stable(s))corrupt();
     return leave(s,VM_OK);
 }

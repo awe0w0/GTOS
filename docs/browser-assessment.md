@@ -127,9 +127,10 @@ The deliberate architecture track now has a separate [x86-64 boot foundation](..
 with real long-mode/protection acceptance on QEMU 8.2 and 10, followed by
 a bounded boot-map-derived physical frame service and
 [kernel-only sparse VM](../arch/x86_64/SPARSE_VM.md). Reserve/commit/protect/
-decommit/release now have actual guest conformance, including large unbacked
-regions and exact rollback. Private x64 user processes, additional region
-lifecycle operations, per-thread FP/TLS and wait/wake lifetime remain open.
+decommit/release and distinct discard/reset/trim/split/punch contracts now have
+actual guest conformance, including large unbacked regions, exact reference
+trim/reset sequences and atomic failures. [Private x64 user processes](x64-user-runtime.md),
+per-thread FP/TLS and wait/wake lifetime remain open.
 The existing i386 desktop target and its tests remain maintained. This follows
 both the measured address-space requirement and V8's explicit 64-bit sandbox
 requirement. It does not promise unchanged Linux binary compatibility.
