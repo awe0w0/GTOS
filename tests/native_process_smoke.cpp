@@ -2,6 +2,7 @@
 #include <process/elf32.h>
 #include <hardwarecommunication/interrupts.h>
 #include <syscalls.h>
+#include "native_process_probe_expectations.h"
 using namespace gtos;
 using namespace gtos::memory;
 using namespace gtos::process;
@@ -131,10 +132,11 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         "stack preparation rejects mismatched allocator before mutation");
     Require(runtime.PrepareStacks(paging, frames), "retained guard stacks before sharing");
     Require(paging.enable() && paging.sealForSharedProcessors(), "enable and seal template");
-    if (osfxsr) {
-        uint32_t cr4; asm volatile("mov %%cr4,%0" : "=r"(cr4));
-        cr4 |= 0x200; asm volatile("mov %0,%%cr4" : : "r"(cr4) : "memory");
-    }
+    uint32_t cr4; asm volatile("mov %%cr4,%0" : "=r"(cr4));
+    cr4 = osfxsr ? (cr4 | 0x200U) : (cr4 & ~0x200U);
+    asm volatile("mov %0,%%cr4" : : "r"(cr4) : "memory");
+    asm volatile("mov %%cr4,%0" : "=r"(cr4));
+    Require(((cr4 & 0x200U) != 0) == osfxsr, "explicit OSFXSR test state verified");
     SeedFastEntry();
     Require(!requireSce || haveSyscall, "SCE feature case actually advertises SYSCALL"); // Deliberately unsafe inherited state must be closed by Activate.
     Require(runtime.Activate(tasks, gdt, paging, frames), "activate CPL3 runtime");
@@ -142,10 +144,12 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         uint32_t low, high; asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(msr));
         Require(!low && !high, "inherited SYSENTER CS/ESP/EIP closed");
     }
+    bool sceDisabled = false;
     if (haveSyscall) {
         uint32_t low, high; asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(0xC0000080U));
         Require(low == (originalEferLow & ~1U) && high == originalEferHigh,
             "inherited EFER SCE closed preserving other bits");
+        sceDisabled = !(low & 1);
     }
     printf((char*)"FAST ENTRY CLOSED SEP="); printfHex32(haveSysenter);
     printf((char*)" SCE="); printfHex32(haveSyscall); printf((char*)"\n");
@@ -200,19 +204,63 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     }
     printf((char*)"NATIVE USER FAULT CONTAINMENT PASS\n");
     for (uint32_t mode = 12; mode <= 27; ++mode) {
+        Require(runtime.ReadMemory(first, NativeRuntime::DataAddress, one, sizeof(one)),
+            "read survivor before adversarial probe");
+        const uint32_t beforePeer = one[3], beforeKernel = ring0Progress;
+        const uint32_t beforeBoot = tasks.BootTicks(), beforeTick = tasks.Ticks();
         uint32_t id = Create(runtime, 0xAA55AA55, mode);
         NativeStatus result = WaitStopped(runtime, tasks, id);
+        Require(result.id == id && result.observedCs == gdt.UserCodeSegmentSelector()
+            && result.observedCr3 == result.directory
+            && result.directory != paging.getStatistics().directoryAddress,
+            "adversarial probe stopped in its private CPL3 context");
         const bool normal = mode == 16 || mode == 17 || mode == 18 || mode == 20 || mode == 21;
-        if (normal) Require(result.exitCode == 0, "NT/TF/segment/ESP adversarial syscall resumes safely");
+        const bool legacyDebug = native_process_tests::LegacyMovSsDebug(mode, result,
+            paging.getStatistics().directoryAddress);
+        if (normal) {
+            Require(result.exitCode == 0 || legacyDebug,
+                "normal probe resumes or MOV-SS probe has verified user-only debug containment");
+            if (legacyDebug) {
+                printf((char*)"NATIVE MOV-SS USER DEBUG CONTAINED cs="); printfHex32(result.observedCs);
+                printf((char*)" cr3="); printfHex32(result.observedCr3);
+                printf((char*)" flags="); printfHex32(result.observedEflags);
+                printf((char*)" calls="); printfHex32(result.systemCalls); printf((char*)"\n");
+            }
+        }
         else {
             const uint32_t vector = mode == 12 ? (osfxsr ? 7 : 6)
                 : mode <= 15 ? 7 : mode == 24 ? 10 : mode == 25 ? (haveSysenter ? 13 : 6)
                 : mode == 26 ? 6 : mode == 27 ? (haveSyscall ? 13 : 6) : 13;
-            Require(result.exitCode == (0x80000000U | vector) && result.faultVector == vector,
-                "FP/MMX/SSE/save/wait/SS/far-return/IO adversarial fault isolated");
+            const bool legacySse = native_process_tests::LegacySsePriority(mode, osfxsr, result,
+                paging.getStatistics().directoryAddress);
+            const bool legacySysret = native_process_tests::LegacySysretPriority(mode, haveSyscall,
+                sceDisabled, result, paging.getStatistics().directoryAddress);
+            Require((result.exitCode == (0x80000000U | vector) && result.faultVector == vector)
+                    || legacySse || legacySysret,
+                "exact protection fault or narrowly verified exception-priority alternative");
+            if (legacySysret) {
+                uint32_t low, high; asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(0xC0000080U));
+                Require(low == (originalEferLow & ~1U) && high == originalEferHigh,
+                    "SYSRET alternate requires unchanged disabled-SCE state");
+                printf((char*)"NATIVE SYSRET USER UD CONTAINED cs="); printfHex32(result.observedCs);
+                printf((char*)" cr3="); printfHex32(result.observedCr3);
+                printf((char*)" efer="); printfHex32(low); printf((char*)"\n");
+            }
+            if (legacySse) {
+                printf((char*)"NATIVE SSE USER NM CONTAINED cs="); printfHex32(result.observedCs);
+                printf((char*)" cr3="); printfHex32(result.observedCr3);
+                printf((char*)" flags="); printfHex32(result.observedEflags);
+                printf((char*)" calls="); printfHex32(result.systemCalls); printf((char*)"\n");
+            }
         }
         Require(runtime.Reap() == 1 && frames.getStatistics().freeFrames == survivorBaseline,
             "adversarial probe exact reap restoration");
+        WaitTicks(tasks, 6);
+        Require(runtime.ReadMemory(first, NativeRuntime::DataAddress, one, sizeof(one))
+            && one[0] == 0x11223344 && one[3] != beforePeer
+            && ring0Progress != beforeKernel && tasks.BootTicks() > beforeBoot
+            && (uint32_t)(tasks.Ticks() - beforeTick) >= 6,
+            "peer, kernel task, boot and PIT progress after each adversarial probe");
     }
     printf((char*)"NATIVE FP SIMD NT TF SELECTOR ESP PROTECTION PASS\n");
     for (uint32_t iteration = 0; iteration < 8; ++iteration) {

@@ -270,6 +270,9 @@ probe_16:
 probe_17:
     movl $SYS_ABI,%eax; pushfl; orl $0x100,(%esp); popfl; int $0x80; jmp probe_ok
     jmp fail
+# QEMU 8.2 reports a user #DB after MOV SS here; newer QEMU suppresses
+# that TF trap before INT clears TF. The smoke permits only that exact
+# contained outcome (mode18), never an unexpected/kernel-origin fault.
 probe_18:
     movl $SYS_ABI,%eax; movw $0x2b,%dx; pushfl; orl $0x100,(%esp); popfl; movw %dx,%ss; int $0x80; jmp probe_ok
     jmp fail

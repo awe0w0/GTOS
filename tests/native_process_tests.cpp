@@ -4,6 +4,7 @@
 #undef private
 #include <process/abi.h>
 #include <process/fault_policy.h>
+#include "native_process_probe_expectations.h"
 using namespace gtos;
 uint16_t GlobalDescriptorTable::CodeSegmentSelector() { return 0x10; }
 namespace {
@@ -60,7 +61,102 @@ extern "C" int NativeTestsMain() {
         Check(process::RecoverableUserFault(fault) == ((error & 4) && !(error & 8)),
             "PF reserved-bit and implicit supervisor-access errors remain fatal");
     }
-    if (!failures) Print("PASS: native trap layout, segment bootstrap, timer-only ticks, deferred removal and fail-closed exception classification\n");
+    process::NativeStatus legacy = {};
+    legacy.id = 0x13; legacy.exitCode = 0x80000001U; legacy.faultVector = 1;
+    legacy.observedCs = 0x23; legacy.observedCr3 = legacy.directory = 0x2000;
+    legacy.observedEflags = 0x302; legacy.systemCalls = 1;
+    Check(native_process_tests::LegacyMovSsDebug(18, legacy, 0x1000), "known user MOV-SS #DB outcome accepted");
+    for (uint32_t mode = 0; mode < 32; ++mode)
+        Check(native_process_tests::LegacyMovSsDebug(mode, legacy, 0x1000) == (mode == 18),
+            "debug compatibility exception scoped exclusively to MOV-SS fixture");
+    for (uint32_t mutation = 0; mutation < 15; ++mutation) {
+        process::NativeStatus bad = legacy;
+        switch (mutation) {
+        case 0: bad.observedCs = 0x10; break;
+        case 1: bad.observedCs = 0x13; break;
+        case 2: bad.observedCr3 = 0x1000; break;
+        case 3: bad.observedCr3 = 0x3000; break;
+        case 4: bad.directory = bad.observedCr3 = 0; break;
+        case 5: bad.faultVector = 13; break;
+        case 6: bad.faultError = 1; break;
+        case 7: bad.exitCode = 99; break;
+        case 8: bad.observedEflags &= ~0x100U; break;
+        case 9: bad.observedEflags |= 0x3000U; break;
+        case 10: bad.systemCalls = 2; break;
+        case 11: bad.live = true; break;
+        case 12: bad.reaped = true; break;
+        case 13: bad.faultAddress = 0x40000000U; break;
+        case 14: bad.id = 0; break;
+        }
+        Check(!native_process_tests::LegacyMovSsDebug(18, bad, 0x1000),
+            "debug compatibility cannot admit wrong origin, CR3, flags, lifecycle or fault");
+    }
+    process::NativeStatus sse = legacy;
+    sse.exitCode = 0x80000007U; sse.faultVector = 7; sse.observedEflags = 0x202;
+    Check(native_process_tests::LegacySsePriority(12, false, sse, 0x1000),
+        "known OSFXSR-off SSE #NM priority accepted");
+    for (uint32_t mode = 0; mode < 32; ++mode) {
+        Check(native_process_tests::LegacySsePriority(mode, false, sse, 0x1000) == (mode == 12),
+            "SSE priority compatibility scoped exclusively to SSE fixture");
+        Check(!native_process_tests::LegacySsePriority(mode, true, sse, 0x1000),
+            "SSE priority alternate excludes OSFXSR-on state");
+    }
+    for (uint32_t mutation = 0; mutation < 15; ++mutation) {
+        process::NativeStatus bad = sse;
+        switch (mutation) {
+        case 0: bad.observedCs = 0x10; break;
+        case 1: bad.observedCs = 0x13; break;
+        case 2: bad.observedCr3 = 0x1000; break;
+        case 3: bad.observedCr3 = 0x3000; break;
+        case 4: bad.directory = bad.observedCr3 = 0; break;
+        case 5: bad.faultVector = 6; break;
+        case 6: bad.faultError = 1; break;
+        case 7: bad.exitCode = 99; break;
+        case 8: bad.observedEflags |= 0x100U; break;
+        case 9: bad.observedEflags |= 0x3000U; break;
+        case 10: bad.systemCalls = 2; break;
+        case 11: bad.live = true; break;
+        case 12: bad.reaped = true; break;
+        case 13: bad.faultAddress = 0x40000000U; break;
+        case 14: bad.id = 0; break;
+        }
+        Check(!native_process_tests::LegacySsePriority(12, false, bad, 0x1000),
+            "SSE priority alternate rejects wrong origin, CR3, flags, lifecycle or fault");
+    }
+    process::NativeStatus sysret = sse;
+    sysret.exitCode = 0x80000006U; sysret.faultVector = 6;
+    Check(native_process_tests::LegacySysretPriority(27, true, true, sysret, 0x1000),
+        "known disabled-SCE SYSRET #UD priority accepted");
+    for (uint32_t mode = 0; mode < 32; ++mode) {
+        Check(native_process_tests::LegacySysretPriority(mode, true, true, sysret, 0x1000) == (mode == 27),
+            "SYSRET priority compatibility scoped exclusively to SYSRET fixture");
+        Check(!native_process_tests::LegacySysretPriority(mode, false, true, sysret, 0x1000)
+            && !native_process_tests::LegacySysretPriority(mode, true, false, sysret, 0x1000),
+            "SYSRET alternate requires supported and verified-disabled SCE");
+    }
+    for (uint32_t mutation = 0; mutation < 15; ++mutation) {
+        process::NativeStatus bad = sysret;
+        switch (mutation) {
+        case 0: bad.observedCs = 0x10; break;
+        case 1: bad.observedCs = 0x13; break;
+        case 2: bad.observedCr3 = 0x1000; break;
+        case 3: bad.observedCr3 = 0x3000; break;
+        case 4: bad.directory = bad.observedCr3 = 0; break;
+        case 5: bad.faultVector = 13; break;
+        case 6: bad.faultError = 1; break;
+        case 7: bad.exitCode = 99; break;
+        case 8: bad.observedEflags |= 0x100U; break;
+        case 9: bad.observedEflags |= 0x3000U; break;
+        case 10: bad.systemCalls = 2; break;
+        case 11: bad.live = true; break;
+        case 12: bad.reaped = true; break;
+        case 13: bad.faultAddress = 0x40000000U; break;
+        case 14: bad.id = 0; break;
+        }
+        Check(!native_process_tests::LegacySysretPriority(27, true, true, bad, 0x1000),
+            "SYSRET alternate rejects wrong origin, CR3, flags, lifecycle or fault");
+    }
+    if (!failures) Print("PASS: native trap layout, segment bootstrap, timer-only ticks, deferred removal, fault policy and bounded emulator compatibility\n");
     return failures ? 1 : 0;
 }
 asm(".global _start\n_start:\n andl $-16, %esp\n call NativeTestsMain\n movl %eax, %ebx\n movl $1, %eax\n int $0x80\n");

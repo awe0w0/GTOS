@@ -266,6 +266,52 @@ integration must separately retain the established AP workload and interactive
 GUI regressions. A log-only boot tick is not evidence of actual desktop input,
 rendering, settings persistence or successful Chromium execution.
 
+### MOV-SS debug-shadow compatibility
+
+Fixture mode18 deliberately sets TF, loads SS, then executes `int 0x80`.
+Intel documents that loading SS suppresses the immediate TF single-step trap;
+software interrupt entry clears TF ([Intel SDM, §18.3.1.4](https://cdrdv2-public.intel.com/671427/253669-sdm-vol-3b.pdf#page=154)).
+QEMU8.2.2 nevertheless emits a single-step exception at the MOV-SS block ending
+([versioned source](https://github.com/qemu/qemu/blob/v8.2.2/target/i386/tcg/translate.c#L2609-L2629));
+QEMU10 excludes that inhibited block
+([versioned source](https://github.com/qemu/qemu/blob/v10.0.0/target/i386/tcg/translate.c#L2099-L2125)).
+This is an older-emulator compatibility case, not a second architectural promise.
+
+Only mode18 may pass with either normal exit or precisely verified CPL3 #DB:
+its private CR3, error/address zero, exit0x80000001, saved TF/IF with IOPL0,
+one prior syscall, and terminated-but-not-reaped state. Every other normal probe,
+including mode17, still requires normal exit. Negative source tests reject
+mismatched origins, directories, flags, lifecycle and fault records. Every
+adversarial probe must restore its frames and leave the user peer, ring-0 task,
+boot context and PIT advancing. Kernel exceptions retain the unchanged fatal
+policy; the compatibility allowance exists only in test expectations.
+
+### SSE fault-priority compatibility
+
+The harness explicitly sets and reads back CR4.OSFXSR for both variants.
+With TS set and OSFXSR clear, QEMU4.2.1 checks TS first and raises #NM for the
+SSE PXOR fixture ([versioned source](https://github.com/qemu/qemu/blob/v4.2.1/target/i386/translate.c#L3073-L3087)).
+Newer QEMU checks missing OSFXSR first and raises #UD
+([versioned source](https://github.com/qemu/qemu/blob/v8.2.2/target/i386/tcg/decode-new.c.inc#L1440-L1505)).
+Only mode12 with verified OSFXSR off may accept that older #NM priority:
+CPL3/private CR3, error/address zero, exit0x80000007, IF set with TF/IOPL clear,
+one prior syscall, and unreaped termination. Other modes and the OSFXSR-on
+expectations stay strict. Negative source tests enforce this scope; the same
+peer/kernel/timer/frame-restoration checks still run. Both outcomes reject the
+SSE instruction before FP state becomes available; runtime fault policy is unchanged.
+
+### Disabled-SCE SYSRET compatibility
+
+For mode27 on a CPU advertising SYSCALL, QEMU4.2.1 checks disabled EFER.SCE
+before the CPL0 requirement and raises #UD
+([versioned source](https://github.com/qemu/qemu/blob/v4.2.1/target/i386/seg_helper.c#L1037-L1047)).
+QEMU10 checks CPL0 in its decoder first and raises #GP
+([versioned source](https://github.com/qemu/qemu/blob/v10.0.0/target/i386/tcg/decode-new.c.inc#L1051-L1058)).
+The older #UD is allowed only for mode27 with supported, read-back-disabled SCE
+and the same strict private-CPL3/first-syscall/fault/lifecycle checks; SCE is read
+again after that outcome. Normal exit, another fault, changed SCE, or a kernel
+exception still fails. Dedicated negative source tests protect this boundary.
+
 Set `GTOS_NATIVE_TEST_OUTPUT` to retain per-boot logs. Tools honor the existing
 `GTOS_QEMU_SYSTEM_I386`, `GTOS_QEMU_SYSTEM_X86_64`, `GTOS_QEMU_DATA_DIR`, `GTOS_GRUB_MKRESCUE` and
 `GTOS_QEMU_I386` overrides/rootless local runtime conventions.
