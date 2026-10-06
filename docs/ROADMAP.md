@@ -1,8 +1,8 @@
 # GTOS engineering roadmap
 
 GTOS currently provides a tested educational 32-bit x86 operating system, with
-a separate x86-64 browser-foundation target beginning development. This roadmap separates verified
-capabilities from development targets. Work is reviewed and committed to `dev`;
+a separately tested x86-64 boot/protection foundation for later browser work.
+This roadmap separates verified capabilities from development targets. Work is reviewed and committed to `dev`;
 `main` is not changed automatically. No prototype is described as production-ready.
 
 ## Acceptance rules for every module
@@ -150,3 +150,11 @@ desktop/language/game and native-isolation suite throughout the transition.
 
 A successful Linux control, standalone x64 kernel boot, or JavaScript-engine
 bring-up does not close the browser rendering/navigation/security gates.
+
+The first x64 boot/protection gate is implemented in
+[`arch/x86_64`](../arch/x86_64/README.md), built only by its separate Makefile.
+Both QEMU 8.2 and 10 pass 33 strict cases, including actual NX/WP/stack-guard
+faults, rejected malformed handoffs/control states and a real double fault on
+its dedicated emergency stack. Its parser is sanitizer-tested. It remains
+BSP-only with no timer service, allocator, userspace or desktop; the sparse-VM
+service and subsequent browser contracts are the next executable milestones.

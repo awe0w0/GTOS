@@ -44,6 +44,9 @@ jobs:
         run: /usr/bin/python3 tests/native_desktop_qemu.py --output /tmp/gtos-qemu-native-desktop
       - name: Verify Chinese input and persistent language preferences
         run: /usr/bin/python3 tests/desktop_language_qemu.py --output /tmp/gtos-qemu-language
+      - name: Verify separate x64 long-mode protection foundation
+        # Experimental BSP-only target; does not replace the i386 desktop.
+        run: /usr/bin/python3 arch/x86_64/tests/boot_qemu.py --output "$RUNNER_TEMP/gtos-x64"
       - name: Run strict host sanitizers
         run: |
           GTOS_DESKTOP_SANITIZERS=1 ./tests/desktop_test.sh

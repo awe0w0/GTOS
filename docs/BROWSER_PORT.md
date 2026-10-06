@@ -99,9 +99,12 @@ does not assume that the Linux binary can execute unchanged in GTOS.
 4. Runtime/loader, filesystem, IPC, networking and userland graphics contracts
    tested by real independently built components before browser integration
 
-These are implementation gates, not claims that the new x64 services already
-exist. The first target is deliberately BSP-only; i386 AP workers and their
-tests continue on the existing target.
+The first gate now has a separately built, reviewed [x64 boot target](../arch/x86_64/README.md):
+33 real-guest positive/negative cases pass under both QEMU 8.2 and 10. It proves
+long mode and strict protection/exception behavior, not a port of the desktop,
+x64 userspace or sparse reservation APIs. The target is deliberately BSP-only;
+i386 AP workers and their tests continue on the existing target. The remaining
+service gates above are implementation targets, not existing capabilities.
 
 ## Staged browser proof
 
