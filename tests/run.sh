@@ -11,4 +11,5 @@ cd "$(dirname "$0")/.."
 python3 -m unittest discover -s tests -p 'package*_test.py'
 python3 -m unittest discover -s tests -p 'storage_tool_test.py'
 ./tests/storage_test.sh
+./tests/storage_recovery_test.sh
 echo "All deterministic module tests passed"

@@ -74,8 +74,9 @@ bool AppStore::Mount() {
     if (valid[0]&&valid[1]) {
         uint32_t g0=Read32(dirs[0]+8),g1=Read32(dirs[1]+8);
         // Serial-number arithmetic also handles generation wrap-around.
-        active=(int32_t)(g1-g0)>0?1:0;
-        if (g0==g1&&!Equal(dirs[0],dirs[1],512)) return Fail(Corrupt);
+        uint32_t delta=g1-g0;
+        if (delta==0x80000000U || (g0==g1&&!Equal(dirs[0],dirs[1],512))) return Fail(Corrupt);
+        active=delta&&delta<0x80000000U?1:0;
     } else active=valid[0]?0:1;
     DecodeDirectory(); mounted=true; status=OK; return true;
 }
@@ -90,6 +91,10 @@ bool AppStore::Commit(const AppInfo* next,uint32_t nextCount) {
     }
     Write32(sector+508,CRC32(sector,508));
     uint32_t target=1-active;
+    // A remount may read a valid newer directory still only in the device's
+    // volatile cache after an earlier failed flush. Make that recovered head
+    // durable before reclaiming its companion, including metadata-only removal.
+    if (!disk->Flush()) { mounted=false; return Fail(IOFailure); }
     // Only publish after all package sectors have already been flushed.
     if (!disk->WriteSector(target+1,sector)||!disk->Flush()||!disk->ReadSector(target+1,verify)
         ||!Equal(sector,verify,512)) {

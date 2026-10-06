@@ -111,3 +111,18 @@ fallback, invalid geometry, absent disks and 34 interrupted/torn-install cases.
 Host-image tests independently cover CLI safety and Python-format behavior.
 Real ATA/QEMU end-to-end checks are reported separately; these unit tests alone
 do not prove correctness on physical hardware.
+
+## Recovery durability barrier
+
+A successful remount can read a complete directory that is still only in a
+device's volatile cache after an earlier failed flush. Before replacing its
+companion directory, both kernel Commit and the offline tool now require a
+successful flush of the recovered head. This also protects metadata-only
+uninstalls, which have no preceding payload flush. A barrier failure prevents
+the directory write and requires kernel remount. Exact half-range generation
+differences are rejected as ambiguous by both implementations.
+
+`tests/storage_recovery_test.sh` exercises 1,026 same/fresh-instance cached-remount
+tears, failed recovery barriers and half-range rejection against cached/durable
+media. Python tests verify matching offline generation and flush-before-write
+behavior. No general filesystem or cross-writer transaction isolation is implied.

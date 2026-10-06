@@ -117,6 +117,44 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(disk.StoreError):
             disk.Image(blank, True)
 
+    def test_half_range_generations_are_rejected(self):
+        raw = bytearray(self.path.read_bytes())
+        raw[512:1024] = disk.directory(0)
+        raw[1024:1536] = disk.directory(0x80000000)
+        self.path.write_bytes(raw)
+        with self.assertRaisesRegex(disk.StoreError, 'ambiguous'):
+            disk.Image(self.path, True)
+
+    def test_commit_flushes_recovered_head_before_reuse(self):
+        image = disk.Image(self.path, True)
+        events = []
+        sync, write = image.sync, image.write_sector
+        def barrier():
+            events.append('flush')
+            sync()
+        def sector(index, data):
+            events.append('write')
+            write(index, data)
+        image.sync, image.write_sector = barrier, sector
+        try:
+            image.commit([])
+            self.assertEqual(events, ['flush', 'write', 'flush'])
+        finally:
+            image.close()
+
+    def test_failed_recovery_flush_never_writes_directory(self):
+        before = self.path.read_bytes()
+        image = disk.Image(self.path, True)
+        def failed_barrier():
+            raise OSError('injected fsync failure')
+        image.sync = failed_barrier
+        try:
+            with self.assertRaises(OSError):
+                image.commit([])
+        finally:
+            image.close()
+        self.assertEqual(before, self.path.read_bytes())
+
     def test_mutating_cli_requires_offline_acknowledgment(self):
         import contextlib
         import io

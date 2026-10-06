@@ -124,7 +124,7 @@ class Image:
                 raise StoreError('both directory snapshots are corrupt')
             if self.decoded[0] and self.decoded[1]:
                 g0, g1 = self.decoded[0][0], self.decoded[1][0]
-                if g0 == g1 and self.dirs[0] != self.dirs[1]:
+                if ((g1-g0) & 0xffffffff) == 0x80000000 or (g0 == g1 and self.dirs[0] != self.dirs[1]):
                     raise StoreError('ambiguous directory generations')
                 self.active = int(0 < ((g1-g0) & 0xffffffff) < 0x80000000)
             else:
@@ -161,6 +161,9 @@ class Image:
         os.fsync(self.stream.fileno())
 
     def commit(self, entries):
+        # Readback after a failed fsync is not proof of durability. Preserve the
+        # recovered head before reusing its companion directory sector.
+        self.sync()
         target = 1 - self.active
         data = directory(self.generation + 1, entries)
         self.write_sector(target + 1, data)
