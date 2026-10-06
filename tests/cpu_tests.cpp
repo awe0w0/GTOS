@@ -16,7 +16,7 @@ namespace {
     void Print(const char* text) {
         uint32_t length = 0;
         while (text[length]) ++length;
-        asm volatile("int $0x80" : : "a"(4), "b"(1), "c"(text), "d"(length) : "memory");
+        { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4), "b"(1), "c"(text), "d"(length)  : "memory", "cc"); }
     }
     void Check(bool passed, const char* name) {
         ++checks;

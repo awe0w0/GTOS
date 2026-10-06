@@ -11,7 +11,7 @@ namespace {
     KernelPaging paging;
     void print(const char* text) {
         uint32_t n = 0; while (text[n]) ++n;
-        asm volatile("int $0x80" : : "a"(4), "b"(1), "c"(text), "d"(n) : "memory");
+        { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4), "b"(1), "c"(text), "d"(n)  : "memory", "cc"); }
     }
     void number(uint32_t value) {
         char digits[11]; uint32_t i = 10; digits[i] = 0;

@@ -2,7 +2,7 @@
 #include <memory/bootstrap.h>
 using namespace gtos::memory;
 static uint32_t checks=0, failures=0;
-static void print(const char* text){uint32_t length=0;while(text[length])++length;asm volatile("int $0x80"::"a"(4),"b"(1),"c"(text),"d"(length):"memory");}
+static void print(const char* text){uint32_t length=0;while(text[length])++length;{ uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4),"b"(1),"c"(text),"d"(length) : "memory", "cc"); }}
 static void number(uint32_t value){char digits[11];uint32_t at=10;digits[at]=0;do{digits[--at]='0'+value%10;value/=10;}while(value);print(digits+at);}
 static void check(bool ok,uint32_t line){++checks;if(!ok){++failures;print("FAIL low bootstrap line ");number(line);print("\n");}}
 #define CHECK(x) check((x),__LINE__)

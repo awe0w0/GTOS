@@ -9,7 +9,7 @@ static uint32_t checks = 0;
 static void print(const char* message) {
     uint32_t length = 0;
     while (message[length]) ++length;
-    asm volatile("int $0x80" : : "a"(4), "b"(1), "c"(message), "d"(length) : "memory");
+    { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4), "b"(1), "c"(message), "d"(length)  : "memory", "cc"); }
 }
 static void number(uint32_t value) {
     char digits[11];

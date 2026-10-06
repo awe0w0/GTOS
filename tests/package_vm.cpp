@@ -21,7 +21,7 @@ static void Print(const char* message) {
     asm volatile("syscall" : "=a"(result) : "a"(1), "D"(2), "S"(message), "d"(size)
                  : "rcx", "r11", "memory");
 #else
-    asm volatile("int $0x80" : : "a"(4), "b"(2), "c"(message), "d"(size) : "memory");
+    { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4), "b"(2), "c"(message), "d"(size)  : "memory", "cc"); }
 #endif
 }
 static void Exit(uint32_t status) {

@@ -23,7 +23,7 @@ extern "C" int Main() {
     Ignore(m,0xFA);Ignore(m,0xFE);Ignore(m,0x85);
     const char* text=failures?"FAIL keyboard identity tests\n":"PASS stable keyboard make/break identity and modifiers\n";
     uint32_t n=0;while(text[n])++n;
-    asm volatile("int $0x80"::"a"(4),"b"(1),"c"(text),"d"(n):"memory");
+    { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4),"b"(1),"c"(text),"d"(n) : "memory", "cc"); }
     return failures?1:0;
 }
 asm(".global _start\n_start:\n andl $-16,%esp\n call Main\n movl %eax,%ebx\n movl $1,%eax\n int $0x80\n");

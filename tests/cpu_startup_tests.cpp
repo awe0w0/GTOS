@@ -5,7 +5,7 @@ namespace {
     int failures = 0;
     void Print(const char* text) {
         uint32_t n = 0; while (text[n]) ++n;
-        asm volatile("int $0x80" : : "a"(4), "b"(1), "c"(text), "d"(n) : "memory");
+        { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4), "b"(1), "c"(text), "d"(n)  : "memory", "cc"); }
     }
     void Check(bool value, const char* name) {
         if (!value) { ++failures; Print("FAIL: "); Print(name); Print("\n"); }

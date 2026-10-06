@@ -9,8 +9,8 @@ extern "C" int puts(const char* text) {
     asm volatile("syscall":"=a"(result):"a"(1),"D"(1),"S"(text),"d"(length):"rcx","r11","memory");
     asm volatile("syscall":"=a"(result):"a"(1),"D"(1),"S"(&newline),"d"(1):"rcx","r11","memory");
 #else
-    asm volatile("int $0x80"::"a"(4),"b"(1),"c"(text),"d"(length):"memory");
-    asm volatile("int $0x80"::"a"(4),"b"(1),"c"(&newline),"d"(1):"memory");
+    { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4),"b"(1),"c"(text),"d"(length) : "memory", "cc"); }
+    { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4),"b"(1),"c"(&newline),"d"(1) : "memory", "cc"); }
 #endif
     return 0;
 }
