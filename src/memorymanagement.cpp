@@ -1,108 +1,157 @@
 #include <memorymanagement.h>
+#include <memory/criticalsection.h>
 
 using namespace gtos;
-
-void printf(char*);
-
-MemoryManager::MemoryManager(size_t start, size_t size) {
-
-    activeMemoryManager = this;
-
-    if (size < sizeof(MemoryChunk)) {
-        first = 0;
-    } else {
-        first = (MemoryChunk*)start;
-        first->allocated = false;
-        first->next = 0;
-        first->prev = 0;
-        first->size = size - sizeof(MemoryChunk);
-    }
-
+using gtos::memory::InterruptGuard;
+namespace {
+    const uint32_t ChunkMagic = 0x47544F53;
+    const uint64_t AddressLimit = 0x100000000ULL;
 }
-
-MemoryManager::~MemoryManager() {
-    if (activeMemoryManager == this) {
-        activeMemoryManager = 0;
-    }
-}
-
 MemoryManager* MemoryManager::activeMemoryManager = 0;
 
+MemoryManager::MemoryManager(size_t start, size_t size, bool activate)
+    : first(0), arenaStart(0), arenaSize(0), failedAllocations(0), invalidFrees(0) {
+    InterruptGuard guard;
+    const uint64_t end = (uint64_t)start + size;
+    const uint64_t aligned = ((uint64_t)start + Alignment - 1) & ~(uint64_t)(Alignment - 1);
+    if (start && end <= AddressLimit && aligned < end) {
+        const uint64_t bytes = (end - aligned) & ~(uint64_t)(Alignment - 1);
+        if (bytes >= sizeof(MemoryChunk) + Alignment) {
+            arenaStart = (size_t)aligned;
+            arenaSize = (size_t)bytes;
+            first = (MemoryChunk*)arenaStart;
+            first->allocated = false;
+            first->next = 0;
+            first->prev = 0;
+            first->size = arenaSize - sizeof(MemoryChunk);
+            first->magic = ChunkMagic;
+        }
+    }
+    if (activate) activeMemoryManager = this;
+}
+MemoryManager::~MemoryManager() {
+    InterruptGuard guard;
+    if (activeMemoryManager == this) activeMemoryManager = 0;
+}
+bool MemoryManager::validateUnlocked() const {
+    if (!first || !arenaSize || (size_t)first != arenaStart) return false;
+    uint64_t expected = arenaStart;
+    const uint64_t end = (uint64_t)arenaStart + arenaSize;
+    const MemoryChunk* previous = 0;
+    const MemoryChunk* chunk = first;
+    // Contiguous strictly advancing blocks bound traversal even if links corrupt.
+    while (chunk) {
+        if ((uint64_t)(size_t)chunk != expected || expected + sizeof(MemoryChunk) > end)
+            return false;
+        if (((const uint8_t*)chunk)[__builtin_offsetof(MemoryChunk, allocated)] > 1
+            || chunk->magic != ChunkMagic || chunk->prev != previous
+            || chunk->size < Alignment || (chunk->size & (Alignment - 1)))
+            return false;
+        if (previous && !previous->allocated && !chunk->allocated) return false;
+        expected += sizeof(MemoryChunk) + (uint64_t)chunk->size;
+        if (expected > end) return false;
+        if (expected == end) return chunk->next == 0;
+        if (!chunk->next || (uint64_t)(size_t)chunk->next != expected) return false;
+        previous = chunk;
+        chunk = chunk->next;
+    }
+    return false;
+}
+bool MemoryManager::validate() const {
+    InterruptGuard guard;
+    return validateUnlocked();
+}
 void* MemoryManager::malloc(size_t size) {
-    MemoryChunk* result = 0;
-    for (MemoryChunk* chunk = first; chunk != 0 && result == 0;chunk = chunk->next)
-        //如果找到的段大小大于要分配的大小并且这个段未被占用
-        if (chunk->size > size && !chunk->allocated) result = chunk;
-    //没找到
-    if (result == 0) return 0;
-
-    
-     if (result->size >= size + sizeof(MemoryChunk) + 1) {
-        //如果内存中有分配不均的一段
-        //把多出的一段打包挂在result的下一个节点，并标记为已分配
-        MemoryChunk* temp = (MemoryChunk*)((size_t)result + sizeof(MemoryChunk) + size);
-        temp->allocated = false;
-        temp->size = result->size - size - sizeof(MemoryChunk);
-        temp->prev = result;
-        temp->next = result->next;
-        if (temp->next != 0) temp->next->prev = temp;
-
-        result->size - size;
-        result->next = temp;
+    InterruptGuard guard;
+    if (!size || size > 0xFFFFFFFFu - (Alignment - 1) || !validateUnlocked()) {
+        ++failedAllocations;
+        return 0;
     }
-    result->allocated = true;
-    return (void*)(((size_t)result) + sizeof(MemoryChunk));
+    size = (size + Alignment - 1) & ~(Alignment - 1);
+    for (MemoryChunk* chunk = first; chunk; chunk = chunk->next) {
+        if (chunk->allocated || chunk->size < size) continue;
+        const size_t remainder = chunk->size - size;
+        if (remainder >= sizeof(MemoryChunk) + Alignment) {
+            MemoryChunk* next = (MemoryChunk*)((size_t)chunk + sizeof(MemoryChunk) + size);
+            next->allocated = false;
+            next->size = remainder - sizeof(MemoryChunk);
+            next->prev = chunk;
+            next->next = chunk->next;
+            next->magic = ChunkMagic;
+            if (next->next) next->next->prev = next;
+            chunk->next = next;
+            chunk->size = size;
+        }
+        chunk->allocated = true;
+        return (void*)((size_t)chunk + sizeof(MemoryChunk));
+    }
+    ++failedAllocations;
+    return 0;
 }
-
-void MemoryManager::free(void* ptr) {
-    MemoryChunk* chunk = (MemoryChunk*)((size_t)ptr - sizeof(MemoryChunk));
-
+bool MemoryManager::tryFree(void* ptr) {
+    InterruptGuard guard;
+    if (!ptr) return true;
+    const size_t address = (size_t)ptr;
+    if ((address & (Alignment - 1)) || address < arenaStart
+        || (uint64_t)address >= (uint64_t)arenaStart + arenaSize || !validateUnlocked()) {
+        ++invalidFrees;
+        return false;
+    }
+    // Search real block starts; never trust metadata before an arbitrary pointer.
+    MemoryChunk* chunk = first;
+    while (chunk && (size_t)chunk + sizeof(MemoryChunk) != address) chunk = chunk->next;
+    if (!chunk || !chunk->allocated) {
+        ++invalidFrees;
+        return false;
+    }
     chunk->allocated = false;
-
-    //与上一段合并
-    if (chunk->prev != 0 && !chunk->prev->allocated) {
-        chunk->prev->next = chunk->next;
-        chunk->prev->size += chunk->size + sizeof(MemoryChunk);
-        if (chunk->next != 0) chunk->next->prev = chunk->prev;
-
-        chunk = chunk->prev;
+    if (chunk->prev && !chunk->prev->allocated) {
+        MemoryChunk* previous = chunk->prev;
+        previous->size += sizeof(MemoryChunk) + chunk->size;
+        previous->next = chunk->next;
+        if (chunk->next) chunk->next->prev = previous;
+        chunk->magic = 0;
+        chunk = previous;
     }
-
-    //如果下一段没被使用且存在，把下一段并入
-    if (chunk->next != 0 && !chunk->next->allocated) {
-        chunk->size += chunk->next->size +sizeof(MemoryChunk);
-        chunk->next = chunk->next->next;
-        if (chunk->next != 0) chunk->next->prev = chunk;
+    if (chunk->next && !chunk->next->allocated) {
+        MemoryChunk* next = chunk->next;
+        chunk->size += sizeof(MemoryChunk) + next->size;
+        chunk->next = next->next;
+        if (chunk->next) chunk->next->prev = chunk;
+        next->magic = 0;
     }
-
-
+    return true;
 }
-
-void* operator new(unsigned size) {
-    if (gtos::MemoryManager::activeMemoryManager == 0) return 0;
-    return gtos::MemoryManager::activeMemoryManager->malloc(size);
+void MemoryManager::free(void* ptr) { (void)tryFree(ptr); }
+HeapStatistics MemoryManager::getStatistics() const {
+    InterruptGuard guard;
+    HeapStatistics result = {};
+    result.totalBytes = arenaSize;
+    result.failedAllocations = failedAllocations;
+    result.invalidFrees = invalidFrees;
+    result.valid = validateUnlocked();
+    if (!result.valid) return result;
+    for (MemoryChunk* chunk = first; chunk; chunk = chunk->next) {
+        if (chunk->allocated) {
+            result.usedBytes += chunk->size;
+            ++result.allocatedBlocks;
+        } else {
+            result.freeBytes += chunk->size;
+            ++result.freeBlocks;
+            if (chunk->size > result.largestFreeBlock) result.largestFreeBlock = chunk->size;
+        }
+    }
+    return result;
 }
-
-void* operator new[](unsigned size){
-    if (gtos::MemoryManager::activeMemoryManager == 0) return 0;
-    return gtos::MemoryManager::activeMemoryManager->malloc(size);
+void* operator new(unsigned size) noexcept {
+    return MemoryManager::activeMemoryManager ? MemoryManager::activeMemoryManager->malloc(size) : 0;
 }
-
-void* operator new(unsigned size, void* ptr) {
-    return ptr;
+void* operator new[](unsigned size) noexcept { return ::operator new(size); }
+void* operator new(unsigned, void* ptr) noexcept { return ptr; }
+void* operator new[](unsigned, void* ptr) noexcept { return ptr; }
+void operator delete(void* ptr) noexcept {
+    if (MemoryManager::activeMemoryManager) MemoryManager::activeMemoryManager->free(ptr);
 }
-
-void* operator new[](unsigned size, void* ptr){
-    return ptr;
-}
-
-
-void operator delete(void* ptr) {
-    if (gtos::MemoryManager::activeMemoryManager != 0) 
-        gtos::MemoryManager::activeMemoryManager->free(ptr);
-}
-
-void operator delete[](void* ptr) {
-    if (gtos::MemoryManager::activeMemoryManager != 0) 
-        gtos::MemoryManager::activeMemoryManager->free(ptr);
-}
+void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
+void operator delete(void* ptr, unsigned) noexcept { ::operator delete(ptr); }
+void operator delete[](void* ptr, unsigned) noexcept { ::operator delete(ptr); }
