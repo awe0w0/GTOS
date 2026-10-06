@@ -13,11 +13,16 @@
 .global loader
 
 loader:
+    cli
+    cld
     mov $kernel_stack, %esp
+    andl $-16, %esp
+    subl $8, %esp
+    xorl %ebp, %ebp
 
-    call callConstructors
     push %eax
     push %ebx
+    call callConstructors
     call kernelMain
 
 _stop:
@@ -28,3 +33,4 @@ _stop:
 .section .bss
 .space 4 * 1024 * 1024 #4MB
 kernel_stack:
+.section .note.GNU-stack,"",@progbits

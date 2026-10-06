@@ -8,7 +8,7 @@ void printfHex(uint8_t);
 void printfHex32(uint32_t);
 
 InterruptHandler::InterruptHandler(InterruptsManager* interruptsManager, uint8_t InterruptNumber) {
-    this->interruptNumber = interruptNumber;
+    this->interruptNumber = InterruptNumber;
     this->interruptManager = interruptsManager;
     interruptsManager->handlers[interruptNumber] = this;
 }
@@ -59,7 +59,7 @@ InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDes
     picSlaveData(0xA1)
 {
     //挂载在中断管理上时，中断管理的构造函数赋不了值
-    this->taskManager = taskManager;
+    this->taskManager = taskmanager;
 
     
     this->hardwareInterruptOffset = hardwareInterruptOffset;
@@ -127,13 +127,14 @@ InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDes
     picMasterData.Write(0x01);
     picSlaveData.Write(0x01);
 
-    picMasterData.Write(0x00);
-    picSlaveData.Write(0x00);
+    // Timer, keyboard, cascade and mouse only; ATA uses polling with nIEN.
+    picMasterData.Write(0xF8);
+    picSlaveData.Write(0xEF);
 
     InterruptDescriptorTablePointer idt_pointer;
     idt_pointer.size  = 256*sizeof(GateDescriptor) - 1;
     idt_pointer.base  = (uint32_t)interruptDescriptorTable;
-    asm volatile("lidt %0" : : "m" (idt_pointer));
+    asm volatile("lidt %0" : : "m" (idt_pointer) : "memory");
 }
 
 InterruptsManager::~InterruptsManager() {
@@ -150,13 +151,13 @@ void InterruptsManager::Activate() {
     if (ActivateInterruptsManager != 0)
         ActivateInterruptsManager->Deactivate();
     ActivateInterruptsManager = this;
-    asm("sti");
+    asm volatile("sti" ::: "memory");
 }
 
 void InterruptsManager::Deactivate() {
     if (ActivateInterruptsManager == this) {
+        asm volatile("cli" ::: "memory");
         ActivateInterruptsManager = 0;
-        asm("cli");
     }
 }
 
@@ -170,7 +171,15 @@ uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t es
 }
 
 uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
-    //if (interruptNumber == 0x29) printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    if (interruptNumber < 0x20) {
+        CPUState* state = (CPUState*)esp;
+        printf("\nPANIC EXCEPTION vector="); printfHex(interruptNumber);
+        printf(" error="); printfHex32(state->error);
+        printf(" eip="); printfHex32(state->eip);
+        uint32_t cr2; asm volatile("mov %%cr2,%0" : "=r"(cr2));
+        printf(" cr2="); printfHex32(cr2); printf("\n");
+        for (;;) asm volatile("cli; hlt");
+    }
     if (handlers[interruptNumber] != 0) {
         esp = handlers[interruptNumber]->HandlerInterrupt(esp);
         
@@ -180,16 +189,14 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
         printfHex(interruptNumber);
     }
     
-    if (interruptNumber == hardwareInterruptOffset) {
+    if (interruptNumber == hardwareInterruptOffset && taskManager != 0) {
         esp = (uint32_t)taskManager->Schedule((CPUState*)esp);
         
     }
 
     if (hardwareInterruptOffset <= interruptNumber && interruptNumber < hardwareInterruptOffset + 16) {
+        if (hardwareInterruptOffset + 8 <= interruptNumber) picSlaveCommand.Write(0x20);
         picMasterCommand.Write(0x20);
-        if (hardwareInterruptOffset + 8 <= interruptNumber) {
-            picSlaveCommand.Write(0x20);
-        }
     }
     return esp;
 }

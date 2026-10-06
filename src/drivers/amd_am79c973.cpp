@@ -105,7 +105,7 @@ amd_am79c973::~amd_am79c973() {
 }
 
 void amd_am79c973::Activate() {
-    interruptManager->Load(this, 0x29);
+    interruptManager->Load(this, interruptNumber);
     //enable interrupts
     registerAddressPort.Write(0);
     registerDataPort.Write(0x41);

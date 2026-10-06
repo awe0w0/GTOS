@@ -7,8 +7,7 @@ void printf(char*);
 void printfHex32(uint32_t);
 
 SyscallHandler::SyscallHandler(InterruptsManager* interruptManager, uint8_t InterruptNumber) 
-: InterruptHandler(interruptManager, interruptNumber + interruptManager->HardwareInterruptOffset()){
-    interruptManager->Load(this,0x80 + interruptManager->HardwareInterruptOffset());
+: InterruptHandler(interruptManager, InterruptNumber){
 }
 
 SyscallHandler::~SyscallHandler() {

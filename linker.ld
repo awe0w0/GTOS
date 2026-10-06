@@ -5,12 +5,13 @@ OUTPUT_ARCH(i386:i386)
 SECTIONS
 {
     . = 0X0100000;
+    kernel_start = .;
 
     .text :
     {
         *(.multiboot)
         *(.text*)
-        *(.rodata)
+        *(.rodata*)
     }
 
     .data :
@@ -20,13 +21,16 @@ SECTIONS
         KEEP(*(SORT_BY_INIT_PRIORITY( .init_array.*)));
         end_ctors = .;
 
-        *(.data)
+        *(.data*)
     }
 
     .bss :
     {
-        *(.bss)
+        *(.bss*)
+        *(COMMON)
     }
+
+    kernel_end = ALIGN(4096);
 
     /DISCARD/ :
     {

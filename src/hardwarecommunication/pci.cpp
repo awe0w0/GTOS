@@ -151,6 +151,9 @@ Driver* PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
             switch (dev.device_id) {
                 case 0x2000: //am79c973
                     printf("AMD am79c973");
+                    // Enable I/O decoding and DMA bus mastering for the PCnet adapter.
+                    Write(dev.bus, dev.device, dev.function, 0x04,
+                          (Read(dev.bus, dev.device, dev.function, 0x04) & 0xFFFF) | 0x05);
                     driver = (Driver*)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
                     if (driver != 0) 
                         new (driver)amd_am79c973(&dev, interrupts);
