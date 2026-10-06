@@ -12,6 +12,7 @@ python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
 python3 -m unittest discover -s tests -p 'native_fp_qmp_test.py'
 ./tests/elf32_test.sh
 ./tests/browser_probe_test.sh
+./tests/skia_alpha_probe_test.sh
 python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/keymap_test.sh
 ./tests/cpu_test.sh

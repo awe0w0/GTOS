@@ -1,0 +1,31 @@
+{
+  "scope": "Two verbatim Skia integer alpha helpers and a real bounded BGRA-to-premultiplied-RGBA component; not full Skia or a submitted surface",
+  "skia_revision": "00987348988a7355d6437a917fa153dde9ce6c82",
+  "files": [
+    {
+      "source": "include/private/SkMath.h",
+      "file": "SkMath.original.h",
+      "sha256": "b27297f80ea13e15ade6c8416ad58701496ce958ad767759f445824e18c82086"
+    },
+    {
+      "source": "include/private/SkCPUTypes.h",
+      "file": "SkCPUTypes.original.h",
+      "sha256": "3b4b118465517b61823aac8495909c1e2738f76aba9dba9a51f2caac35a3c92b"
+    },
+    {
+      "source": "LICENSE",
+      "file": "LICENSE",
+      "sha256": "5f787c1dee3c56547f09ccc2906ab5f5293c4d8dd6c8654e573216c38e908dbd"
+    }
+  ],
+  "fragment_source": "include/private/SkMath.h",
+  "fragment_start_line": 57,
+  "fragment_sha256": "96e13ec52165fb6233fee4bcef1aa1e2a08a1ef3f5e00178bbac8f4630f86257",
+  "function_bodies_modified": false,
+  "context_adaptation": "Only real basic unsigned types and active host/native fatal assertion handlers; no Linux target SDK or empty OS functions",
+  "prepared": true,
+  "build_pass": false,
+  "guest_pass": false,
+  "new_browser_graph": false,
+  "timestamp_utc": "2026-10-06T22:35:52.311160+00:00"
+}
