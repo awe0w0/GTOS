@@ -13,14 +13,16 @@ else
     QEMU=${QEMU:-qemu-system-i386}
     BIOS=
 fi
-make -C "$REPO" GTOS.iso
+ISO=GTOS.iso
+if [ "${GTOS_LEGACY:-0}" = 1 ]; then ISO=GTOS-legacy.iso; fi
+make -C "$REPO" "$ISO"
 mkdir -p "$REPO/data"
 DISK=${GTOS_DISK:-$REPO/data/apps.img}
 if [ ! -e "$DISK" ]; then
     python3 "$REPO/tools/disk.py" create "$DISK" --size-mib 8
 fi
 exec "$QEMU" $BIOS -machine pc -accel tcg -m "${GTOS_MEMORY:-64M}" \
-    -smp "${GTOS_CPUS:-4}" -cdrom "$REPO/GTOS.iso" -boot d \
+    -smp "${GTOS_CPUS:-4}" -cdrom "$REPO/$ISO" -boot d \
     -drive "file=$DISK,format=raw,if=ide,index=0" -nic none \
     -display "${QEMU_DISPLAY:-gtk}" -qmp stdio \
     -debugcon "file:$REPO/obj/debug.log" -global isa-debugcon.iobase=0xe9 "$@"

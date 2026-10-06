@@ -5,30 +5,34 @@
 #include <hardwarecommunication/interrupts.h>
 #include <hardwarecommunication/port.h>
 #include <drivers/driver.h>
+#include <drivers/keymap.h>
 
 namespace gtos {
-    namespace drivers {
+namespace drivers {
 
-        class KeyboardEventHandler {
-            public:
-                KeyboardEventHandler();
+class KeyboardEventHandler {
+  public:
+    KeyboardEventHandler();
 
-                virtual void OnKeyDown(char);
-                virtual void OnKeyUp(char);
-        };
+    virtual void OnKeyDown(char);
+    virtual void OnKeyUp(char);
+};
 
-        class KeyboardDriver : public gtos::hardwarecommunication::InterruptHandler , public Driver {
-            gtos::hardwarecommunication::Port8Bit dataport;
-            gtos::hardwarecommunication::Port8Bit commandport;
+class KeyboardDriver : public gtos::hardwarecommunication::InterruptHandler, public Driver {
+    gtos::hardwarecommunication::Port8Bit dataport;
+    gtos::hardwarecommunication::Port8Bit commandport;
 
-            KeyboardEventHandler* handler;
-        public:
-            KeyboardDriver(gtos::hardwarecommunication::InterruptsManager* manager, KeyboardEventHandler* handler );
-            ~KeyboardDriver();
-            virtual uint32_t HandlerInterrupt(uint32_t esp);
-            virtual void Activate();
-        };
-    }
-}
+    KeyboardEventHandler *handler;
+    Set1Keymap keymap;
+
+  public:
+    KeyboardDriver(gtos::hardwarecommunication::InterruptsManager *manager,
+                   KeyboardEventHandler *handler);
+    ~KeyboardDriver();
+    virtual uint32_t HandlerInterrupt(uint32_t esp);
+    virtual void Activate();
+};
+} // namespace drivers
+} // namespace gtos
 
 #endif

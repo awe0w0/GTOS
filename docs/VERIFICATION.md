@@ -71,3 +71,13 @@ without changing CR0/CR3, retry after clearing PAE, and support compatible PSE/P
 bits. Host tests exercise mapping bounds, borrowed-frame ownership, pinned boot
 mappings and failure cleanup. These protections are supervisor-only; they do not
 create isolated userspace processes or NX permissions.
+
+## High-resolution desktop extension
+
+Actual GRUB/QEMU runs validate the 800×600 RGB desktop, titlebar movement, resize,
+maximize/restore, minimize/taskbar restore, launcher search/no-result dismissal,
+light/dark pixel changes, external game input/restart, cancellation/confirmation
+of uninstall, and installation persistence at 32/64/128 MiB. A separate legacy
+ISO verifies that disabling Bochs/QEMU VBE restores the VGA fallback correctly.
+The framebuffer ABI is guarded by a byte-encoded GRUB fixture: its aligned color
+union starts at112, with a120-byte Multiboot information structure.

@@ -1,13 +1,14 @@
 # GTOS
 
 A 32-bit x86 educational operating system, developed on the `dev` branch.
-The current foundation milestone includes a real VGA desktop, hardware monitor,
+The current foundation milestone includes a real 800×600 windowed desktop, hardware monitor,
 validated memory allocators, page-level kernel protection, a timer-driven scheduler, safe dedicated ATA app
 storage, and an externally packaged playable Catch game.
 
-This is an evolving OS, not a production operating system. The current desktop is
-a 320×200 foundation interface. Process isolation, AP scheduling, a general
-filesystem and a modern multi-window compositor remain explicit roadmap work.
+This is an evolving OS, not a production operating system. The current desktop supports movable/resizable windows, launcher search,
+minimize/restore, appearance settings and installable apps. A legacy 320×200
+fallback is retained. Process isolation, general AP scheduling, a full filesystem,
+persistent sessions and richer desktop services remain explicit roadmap work.
 See [the engineering roadmap](docs/ROADMAP.md).
 
 ## Build and run
@@ -40,17 +41,18 @@ QMP is available on standard input. Example commands after the initial greeting:
 {"execute":"quit"}
 ```
 
-The script supports `GTOS_MEMORY=32M`, `GTOS_CPUS=4`, `GTOS_DISK=/path/to/image`,
+The script supports `GTOS_LEGACY=1` for the VGA fallback, `GTOS_MEMORY=32M`, `GTOS_CPUS=4`, `GTOS_DISK=/path/to/image`,
 and an optional sibling `gtos-runtime` rootless toolchain. The ISO boot is required;
 QEMU direct `-kernel` is not the supported Multiboot launch path.
 
 ## Desktop and game
 
-- Mouse selects the Home, Hardware and Apps views
-- `1`/`H`: Home; `2`/`M`: hardware monitor; `3`/`A`: applications
+- Mouse focuses windows; drag titlebars, resize lower-right corners, or use title controls
+- `1`/`H`: Home; `2`/`M`: hardware monitor; `3`: applications; `4`: appearance
+- `L`: searchable launcher; `Tab`: cycle windows; `[` minimizes, `]` maximizes/restores
 - `I`: install the external Catch package from the boot ISO
 - `Up`/`Down`: select an installed app; `Enter`/`G`: launch
-- `U`: remove the selected app from the dedicated image
+- `U`: ask to remove the selected app; Enter confirms, Esc cancels
 - In Catch: arrows or `A`/`D` move the paddle; catch falling blocks for points
 - `R` or `Space`: restart the game; `Esc` or the window close button: return to apps
 
@@ -62,7 +64,9 @@ kernel. See [the app protocol](docs/apps.md) and [storage format](docs/storage.m
 
 ```sh
 make test
-python3 tests/qemu_smoke.py --output /tmp/gtos-acceptance-new
+python3 tests/desktop_qemu.py --output /tmp/gtos-modern-new
+make GTOS-legacy.iso
+python3 tests/qemu_smoke.py --iso GTOS-legacy.iso --output /tmp/gtos-legacy-new
 ```
 
 The deterministic suite tests the actual i386 allocator/scheduler/VM/store code.
@@ -84,4 +88,4 @@ The BSP now enables real non-PAE paging: page zero is absent, kernel text/rodata
 are read-only with CR0.WP, and device mappings are explicit. This does not yet
 provide ring-3 process isolation or NX protection.
 
-More details: [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).
+More details: [desktop](docs/desktop.md), [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).

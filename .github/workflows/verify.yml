@@ -17,12 +17,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y g++ binutils grub-pc-bin grub-common xorriso mtools qemu-system-x86 qemu-user python3-pil
       - name: Build GRUB boot image
-        run: make -j2 GTOS.iso
+        run: make -j2 GTOS.iso GTOS-legacy.iso
       - name: Test actual allocator, scheduler, storage and VM code
         run: make test
       - name: Verify AP startup and bounded error paths
         run: ./tests/cpu_startup_smoke.sh
       - name: Verify page protections with actual CPU faults
         run: ./tests/paging_smoke.sh
-      - name: Boot and interact with the desktop under QEMU
-        run: /usr/bin/python3 tests/qemu_smoke.py --output /tmp/gtos-qemu-acceptance
+      - name: Verify legacy VGA fallback after GRUB video setup
+        run: /usr/bin/python3 tests/qemu_smoke.py --iso GTOS-legacy.iso --output /tmp/gtos-qemu-legacy
+      - name: Boot and interact with the high-resolution desktop
+        run: /usr/bin/python3 tests/desktop_qemu.py --output /tmp/gtos-qemu-desktop

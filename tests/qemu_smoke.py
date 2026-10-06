@@ -4,6 +4,7 @@ Writes only newly-created temporary app-store images. Uses QMP stdio, no sockets
 """
 import argparse, json, os, pathlib, select, shutil, subprocess, sys, time
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+BOOT_ISO=ROOT/'GTOS.iso'
 sys.path.insert(0,str(ROOT/'tools'))
 import disk as disktool
 
@@ -22,7 +23,7 @@ class Guest:
             env['QEMU_MODULE_DIR']=str(runtime/'root/usr/lib/x86_64-linux-gnu/qemu')
             bios=['-L',str(runtime/'root/usr/share/qemu')]
         if not qemu: raise RuntimeError('qemu-system-i386 is required')
-        cmd=[qemu]+bios+['-machine','pc','-accel','tcg','-m',str(memory)+'M','-smp',str(cpus),'-cdrom',str(ROOT/'GTOS.iso'),'-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-qmp','stdio','-no-reboot','-no-shutdown','-debugcon','file:'+str(self.log),'-global','isa-debugcon.iobase=0xe9']
+        cmd=[qemu]+bios+['-machine','pc','-accel','tcg','-m',str(memory)+'M','-smp',str(cpus),'-cdrom',str(BOOT_ISO),'-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-qmp','stdio','-no-reboot','-no-shutdown','-debugcon','file:'+str(self.log),'-global','isa-debugcon.iobase=0xe9']
         self.err=open(out/'qemu.log','w');self.p=subprocess.Popen(cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.err,env=env,bufsize=0)
         self.buffer=b'';self.line(10);self.call('qmp_capabilities');self.wait('SCHEDULER RUNTIME PASS',15)
     def line(self,timeout):
@@ -95,7 +96,8 @@ def paddle(im):
     pts=[x for y in range(142,161) for x in range(24,296) if im.getpixel((x,y))[0]>150 and im.getpixel((x,y))[1]>210 and im.getpixel((x,y))[2]<140]
     return sum(pts)/len(pts) if pts else None
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--output',default=str(ROOT/'obj/qemu-tests'));args=ap.parse_args()
+    global BOOT_ISO
+    ap=argparse.ArgumentParser();ap.add_argument('--output',default=str(ROOT/'obj/qemu-tests'));ap.add_argument('--iso',default=str(BOOT_ISO));args=ap.parse_args();BOOT_ISO=pathlib.Path(args.iso).resolve()
     out=pathlib.Path(args.output).resolve();out.mkdir(parents=True,exist_ok=True)
     image=out/'apps.img'
     if image.exists():raise RuntimeError('Use a new output directory; never overwrite an existing test image')

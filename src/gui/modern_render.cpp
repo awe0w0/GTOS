@@ -1,0 +1,356 @@
+#include <gui/modern_desktop.h>
+using namespace gtos::gui;
+static const char *titles[] = {"Welcome", "Applications", "System monitor", "Appearance", "Catch"};
+static const char *dockTitles[] = {"Home", "Apps", "Monitor", "Settings", "Catch"};
+static const uint32_t gamePalette[] = {0x101923, 0x182633, 0x243744, 0x354D5A, 0x517080, 0x809BA9,
+                                       0xBCD1D5, 0xEAF1ED, 0xEEDF83, 0x81CB9B, 0x86C5D5, 0xB7B1DA,
+                                       0xEDAA79, 0xDD8290, 0xCF9CBB, 0xFFFFFF};
+void ModernDesktop::Button(int32_t x, int32_t y, int32_t w, const char *t, bool primary,
+                           bool danger) {
+    Theme c = Colors();
+    paint.Rounded(x, y, w, 34, 6, danger ? 0x803D4D : (primary ? c.accent : c.raised));
+    paint.Text(x + (w - paint.TextWidth(t)) / 2, y + 8, t,
+               danger ? 0xFFFFFF : (primary ? c.accentText : c.text));
+}
+void ModernDesktop::Draw() {
+    Theme c = Colors();
+    fb.ResetClip();
+    int32_t width = fb.Width(), height = fb.Height();
+    // Procedural wallpaper: no opaque image asset and no pretend live widgets.
+    for (int32_t y = 0; y < height; ++y) {
+        uint32_t t = (uint32_t)y * 60 / height;
+        uint32_t color = lightTheme ? ((160 + t / 2) << 16) | ((188 + t / 3) << 8) | (204 + t / 3)
+                                    : ((12 + t / 7) << 16) | ((27 + t / 3) << 8) | (42 + t / 2);
+        fb.Rect(0, y, width, 1, color);
+        int32_t start = width * 3 / 5 - y / 2, end = start + width / 3;
+        if (start < 0)
+            start = 0;
+        if (end > width)
+            end = width;
+        uint32_t band = lightTheme ? 0xAFCED0 : 0x173F49;
+        fb.Rect(start, y, end - start, 1, band);
+    }
+    paint.Text(width - 213, height - 154, "GTOS", lightTheme ? 0x52757F : 0x43636E, 3);
+    paint.Text(width - 210, height - 95, "Built one layer at a time",
+               lightTheme ? 0x52757F : 0x6E8F99);
+    fb.Rect(0, 0, width, 30, lightTheme ? 0xDBE8EC : 0x11202A);
+    paint.Icon(14, 7, 0, c.accent);
+    paint.Text(43, 6, "GTOS", c.text);
+    paint.Text(99, 6, "Workspace", c.muted);
+    paint.Text(width - 206, 6, "Up", c.muted);
+    uint32_t seconds = state.ticks / 100;
+    paint.Number(width - 179, 6, seconds / 60, c.text);
+    paint.Text(width - 136, 6, "min", c.muted);
+    paint.Text(width - 83, 6, "BSP", c.muted);
+    paint.Number(width - 46, 6, state.onlineCPUs, c.accent);
+    for (uint32_t z = 0; z < ModernWindowCount; ++z) {
+        ModernWindowKind k = wm.At(z);
+        if (wm.Window(k).open && !wm.Window(k).minimized)
+            DrawWindow(k);
+    }
+    fb.ResetClip();
+    int32_t dy = height - ModernWindowManager::Bottom;
+    fb.Rect(0, dy, width, 52, c.panel);
+    fb.Rect(0, dy, width, 1, c.line);
+    paint.Rounded(10, dy + 8, 42, 36, 8, launcher ? c.accent : c.raised);
+    paint.Icon(23, dy + 18, 0, launcher ? c.accentText : c.text);
+    for (uint32_t i = 0; i < ModernWindowCount; ++i) {
+        int32_t x = 68 + i * 118;
+        bool focused = wm.Focused() == (int32_t)i && !launcher;
+        if (focused)
+            paint.Rounded(x, dy + 8, 110, 36, 7, c.raised);
+        paint.Icon(x + 9, dy + 17, i, focused ? c.accent : c.muted);
+        paint.Text(x + 35, dy + 17, dockTitles[i], focused ? c.text : c.muted);
+        if (wm.Window((ModernWindowKind)i).open)
+            fb.Rect(x + 46, dy + 46, 18, 2,
+                    wm.Window((ModernWindowKind)i).minimized ? c.muted : c.accent);
+    }
+    if (width >= 800) {
+        fb.Rect(width - 125, dy + 15, 1, 22, c.line);
+        paint.Text(width - 112, dy + 18, "Experimental", c.muted);
+    }
+    if (notice && state.ticks - noticeAt < 450) {
+        int32_t nw = paint.TextWidth(notice) + 26;
+        if (nw > width - 32)
+            nw = width - 32;
+        paint.Rounded((width - nw) / 2, dy - 35, nw, 27, 7, c.raised);
+        fb.SetClip((width - nw) / 2 + 8, dy - 34, nw - 16, 25);
+        paint.Text((width - nw) / 2 + 13, dy - 30, notice, c.text);
+        fb.ResetClip();
+    }
+    if (launcher)
+        DrawLauncher();
+    if (confirmRemove)
+        DrawModal();
+    int32_t mx = mouseX, my = mouseY;
+    for (int32_t y = 0; y < 17; ++y)
+        for (int32_t x = 0; x <= y / 2; ++x)
+            fb.Pixel(mx + x, my + y, (x == 0 || x == y / 2 || y == 16) ? 0x081119 : 0xFAFCFE);
+    fb.Rect(mx + 5, my + 13, 3, 7, 0x081119);
+    fb.Rect(mx + 6, my + 13, 1, 6, 0xFAFCFE);
+    fb.Present();
+}
+void ModernDesktop::DrawWindow(ModernWindowKind k) {
+    Theme c = Colors();
+    const ModernWindow &window = wm.Window(k);
+    ModernRect r = window.bounds;
+    bool focus = wm.Focused() == k && !launcher;
+    fb.ResetClip();
+    paint.Rounded(r.x + 4, r.y + 7, r.w, r.h, 9, lightTheme ? 0x6B8895 : 0x08121B);
+    paint.Rounded(r.x, r.y, r.w, r.h, 9, c.panel);
+    paint.Rounded(r.x, r.y, r.w, 42, 8, focus ? c.raised : c.panel);
+    fb.Rect(r.x, r.y + 30, r.w, 8, focus ? c.raised : c.panel);
+    fb.Rect(r.x, r.y + 38, r.w, 1, c.line);
+    paint.Icon(r.x + 14, r.y + 11, k, focus ? c.accent : c.muted);
+    paint.Text(r.x + 42, r.y + 11, k == ModernGame ? vm.Info().title : titles[k],
+               focus ? c.text : c.muted);
+    int32_t bx = r.x + r.w - 98;
+    fb.Rect(bx, r.y + 21, 11, 2, c.muted);
+    paint.Outline(bx + 36, r.y + 14, 10, 10, c.muted);
+    for (int32_t i = 0; i < 10; ++i) {
+        fb.Pixel(bx + 71 + i, r.y + 14 + i, c.muted);
+        fb.Pixel(bx + 80 - i, r.y + 14 + i, c.muted);
+    }
+    fb.SetClip(r.x + 1, r.y + 39, r.w - 2, r.h - 40);
+    if (k == ModernWelcome)
+        DrawWelcome(r);
+    else if (k == ModernApplications)
+        DrawApplications(r);
+    else if (k == ModernMonitor)
+        DrawMonitor(r);
+    else if (k == ModernSettings)
+        DrawSettings(r);
+    else
+        DrawGame(r);
+    fb.ResetClip();
+    if (focus) {
+        fb.Rect(r.x + 9, r.y, r.w - 18, 1, c.accent);
+        if (!window.maximized)
+            for (int32_t i = 0; i < 3; ++i)
+                fb.Rect(r.x + r.w - 6 - i * 4, r.y + r.h - 5 - i * 4, 2, 2, c.muted);
+    }
+}
+void ModernDesktop::DrawWelcome(const ModernRect &r) {
+    Theme c = Colors();
+    int32_t x = r.x + 28, y = r.y + 60;
+    paint.Text(x, y, "YOUR DESKTOP, TAKING SHAPE", c.accent);
+    paint.Text(x, y + 34, "A quieter place", c.text, 2);
+    paint.Text(x, y + 72, "to build.", c.text, 2);
+    paint.Text(x, y + 128, "A real kernel. A working app store. Room to grow.", c.muted);
+    paint.Text(x, y + 151, "Explore your hardware, install Catch, and make it yours.", c.muted);
+    if (r.h >= 390) {
+        int32_t sy = r.y + r.h - 127;
+        paint.Rounded(x, sy, r.w - 56, 32, 6, c.raised);
+        fb.Rect(x + 12, sy + 12, 6, 6, state.memoryOK ? c.accent : 0xE89696);
+        paint.Text(x + 27, sy + 7, state.memoryOK ? "Memory checked" : "Memory needs attention",
+                   c.text);
+        paint.Text(x + r.w - 222, sy + 7, "32-bit x86  /  GTOS", c.muted);
+    }
+    Button(x, r.y + r.h - 78, 170, "Open applications", true);
+    Button(x + 183, r.y + r.h - 78, 166, "View hardware");
+    paint.Text(x, r.y + r.h - 30, "1 Home    2 Monitor    3 Apps    4 Settings    L Launcher",
+               c.muted);
+}
+void ModernDesktop::DrawApplications(const ModernRect &r) {
+    Theme c = Colors();
+    int32_t x = r.x + 22;
+    paint.Text(x, r.y + 58, "Your applications", c.text);
+    paint.Text(x, r.y + 80,
+               store && store->Mounted()
+                   ? "Installed packages are saved on your dedicated app disk."
+                   : "App disk unavailable. Nothing will be formatted automatically.",
+               c.muted);
+    uint32_t count = store ? store->Count() : 0, visible = (r.h - 193) / 42;
+    if (!visible)
+        visible = 1;
+    uint32_t first = selected >= visible ? selected - visible + 1 : 0;
+    if (!count) {
+        paint.Rounded(x, r.y + 114, r.w - 44, r.h - 222, 8, c.raised);
+        paint.Icon(x + 19, r.y + 135, 4, c.accent, 2);
+        paint.Text(x + 72, r.y + 129, "Start with a little play", c.text);
+        paint.Text(x + 72, r.y + 154, "Install the Catch package from your boot media.", c.muted);
+    } else
+        for (uint32_t row = 0; row < visible; ++row) {
+            uint32_t i = first + row;
+            const gtos::storage::AppInfo *a = store->Get(i);
+            if (!a)
+                break;
+            int32_t y = r.y + 105 + row * 42;
+            paint.Rounded(x, y, r.w - 44, 38, 5, i == selected ? c.raised : c.panel);
+            if (i == selected)
+                fb.Rect(x, y + 7, 3, 24, c.accent);
+            paint.Icon(x + 13, y + 11, 4, c.accent);
+            fb.SetClip(x + 46, y + 2, r.w - 216, 35);
+            paint.Text(x + 46, y + 4, a->title, c.text);
+            paint.Text(x + 46, y + 21, a->id, c.muted);
+            fb.SetClip(r.x + 1, r.y + 39, r.w - 2, r.h - 40);
+            paint.Number(r.x + r.w - 136, y + 12, a->length, c.muted);
+            paint.Text(r.x + r.w - 84, y + 12, "bytes", c.muted);
+        }
+    if (count > visible) {
+        paint.Text(r.x + r.w - 124, r.y + r.h - 90, "More: Up / Down", c.muted);
+    }
+    int32_t by = r.y + r.h - 68;
+    Button(x, by, 126, "Open  /  Enter", true);
+    Button(r.x + 158, by, 146, "Install package");
+    Button(r.x + r.w - 140, by, 120, "Remove", false, true);
+    paint.Text(x, r.y + r.h - 24, "I Install    U Remove    Up / Down Select", c.muted);
+}
+void ModernDesktop::DrawMonitor(const ModernRect &r) {
+    Theme c = Colors();
+    int32_t x = r.x + 24, y = r.y + 56;
+    paint.Text(x, y, "Hardware & kernel", c.text);
+    paint.Text(r.x + r.w - 96, y, "LIVE", c.accent);
+    int32_t half = (r.w - 60) / 2;
+    paint.Rounded(x, y + 32, half, 84, 8, c.raised);
+    paint.Rounded(x + half + 12, y + 32, half, 84, 8, c.raised);
+    paint.Text(x + 14, y + 42, "PHYSICAL MEMORY", c.muted);
+    paint.Number(x + 14, y + 65, state.ramMiB, c.text, 2);
+    paint.Text(x + 109, y + 81, "MiB", c.muted);
+    paint.Text(x + half + 26, y + 42, "PROCESSORS", c.muted);
+    paint.Number(x + half + 26, y + 65, state.logicalCPUs, c.text, 2);
+    paint.Text(x + half + 68, y + 81, "detected", c.muted);
+    int32_t row = y + 132;
+    paint.Text(x, row, "Free physical pages", c.muted);
+    paint.Number(x + 192, row, state.freePages, c.text);
+    paint.Text(x, row + 25, "Heap used / KiB", c.muted);
+    paint.Number(x + 192, row + 25, state.heapUsedKiB, c.text);
+    paint.Text(x + 244, row + 25, "/", c.muted);
+    paint.Number(x + 260, row + 25, state.heapKiB, c.text);
+    uint32_t used =
+        state.heapKiB ? (state.heapUsedKiB > state.heapKiB ? state.heapKiB : state.heapUsedKiB) : 0;
+    fb.Rect(x, row + 50, r.w - 48, 5, c.raised);
+    if (state.heapKiB) {
+        uint64_t remaining = (uint64_t)(r.w - 48) * used;
+        uint32_t length = 0;
+        while (remaining >= state.heapKiB) {
+            remaining -= state.heapKiB;
+            ++length;
+        }
+        fb.Rect(x, row + 50, length, 5, c.accent);
+    }
+    paint.Text(x, row + 68, "CPU vendor", c.muted);
+    paint.Text(x + 192, row + 68, state.vendor, c.text);
+    paint.Text(x, row + 91, "Scheduling CPUs", c.muted);
+    paint.Number(x + 192, row + 91, state.onlineCPUs, c.text);
+    paint.Text(x + 226, row + 91, "APs started / parked", c.muted);
+    paint.Number(x + 404, row + 91, state.parkedAPs, c.accent);
+    paint.Text(x, row + 114, "Tasks / switches", c.muted);
+    paint.Number(x + 192, row + 114, state.taskCount, c.text);
+    paint.Text(x + 223, row + 114, "/", c.muted);
+    paint.Number(x + 240, row + 114, state.contextSwitches, c.text);
+    paint.Text(x, row + 137, "App disk / MiB", c.muted);
+    paint.Number(x + 192, row + 137, state.diskSectors / 2048, c.text);
+    paint.Text(x + 240, row + 137, store && store->Mounted() ? "Mounted" : "Unavailable",
+               store && store->Mounted() ? c.accent : 0xEAA2A2);
+    fb.Rect(x, r.y + r.h - 50, r.w - 48, 1, c.line);
+    paint.Text(x, r.y + r.h - 35, state.memoryOK ? "Heap OK" : "Heap FAIL",
+               state.memoryOK ? c.accent : 0xF29B9B);
+    paint.Text(x + 105, r.y + r.h - 35, state.schedulerOK ? "Scheduler OK" : "Scheduler FAIL",
+               state.schedulerOK ? c.accent : 0xF29B9B);
+    paint.Text(x + 262, r.y + r.h - 35,
+               state.pagingEnabled ? (state.writeProtectEnabled ? "Paging + WP" : "Paging on")
+                                   : "Paging off",
+               c.muted);
+}
+void ModernDesktop::DrawSettings(const ModernRect &r) {
+    Theme c = Colors();
+    int32_t x = r.x + 24;
+    paint.Text(x, r.y + 58, "Make this space yours", c.text);
+    paint.Text(x, r.y + 83, "Choose an appearance. Changes apply immediately.", c.muted);
+    uint32_t backgrounds[] = {0x172B39, 0xB4D2DA}, surfaces[] = {0x243541, 0xF5F7F9};
+    for (uint32_t i = 0; i < 2; ++i) {
+        int32_t px = x + i * 210;
+        paint.Rounded(px, r.y + 112, 196, 84, 8, backgrounds[i]);
+        paint.Rounded(px + 16, r.y + 128, 122, 50, 5, surfaces[i]);
+        fb.Rect(px + 27, r.y + 142, 66, 4, i ? 0x7D98A7 : 0x6EDFC0);
+        fb.Rect(px + 27, r.y + 153, 85, 3, i ? 0xBBC9D0 : 0x516877);
+        if (lightTheme == (i == 1))
+            paint.Outline(px - 2, r.y + 110, 200, 88, c.accent);
+        paint.Text(px, r.y + 207, i ? "Light" : "Dark", c.text);
+    }
+    paint.Text(x, r.y + 248, "T Toggle theme    [ Minimize    ] Maximize / restore", c.muted);
+    paint.Text(x, r.y + 272, "Tab Switch windows    Esc Close the focused window", c.muted);
+    paint.Text(x, r.y + r.h - 30, "Appearance is session-only. Saved settings are coming later.",
+               c.muted);
+}
+void ModernDesktop::DrawGame(const ModernRect &r) {
+    Theme c = Colors();
+    paint.Text(r.x + 24, r.y + 54, "Arrows / A D move    R restart    Esc close", c.muted);
+    Button(r.x + r.w - 114, r.y + 48, 90, "Restart");
+    int32_t scale = (r.w - 48) / 272, sy = (r.h - 124) / 128;
+    if (sy < scale)
+        scale = sy;
+    if (scale < 1)
+        scale = 1;
+    if (scale > 4)
+        scale = 4;
+    int32_t gx = r.x + (r.w - 272 * scale) / 2, gy = r.y + 89 + (r.h - 124 - 128 * scale) / 2;
+    paint.Outline(gx - 2, gy - 2, 272 * scale + 4, 128 * scale + 4, c.line);
+    for (int32_t y = 0; y < 128; ++y) {
+        for (int32_t x = 0; x < 272;) {
+            uint8_t color = game[y * 272 + x];
+            int32_t end = x + 1;
+            while (end < 272 && game[y * 272 + end] == color)
+                ++end;
+            fb.Rect(gx + x * scale, gy + y * scale, (end - x) * scale, scale,
+                    gamePalette[color & 15]);
+            x = end;
+        }
+    }
+    paint.Text(r.x + 24, r.y + r.h - 27,
+               "External bytecode app  /  scaled framebuffer  /  one VM host", c.muted);
+    if (!vm.Running()) {
+        paint.Rounded(gx + 14, gy + 24, 272 * scale - 28, 90, 8, c.panel);
+        paint.Text(gx + 30, gy + 38, "Application stopped", 0xECA0A0);
+        paint.Text(gx + 30, gy + 62, vm.Fault(), c.text);
+        paint.Text(gx + 30, gy + 88, "Press R to restart or Esc to close", c.muted);
+    }
+}
+void ModernDesktop::DrawLauncher() {
+    Theme c = Colors();
+    int32_t x = 14, y = fb.Height() - ModernWindowManager::Bottom - 368;
+    paint.Rounded(x + 4, y + 6, 330, 354, 9, 0x08131A);
+    paint.Rounded(x, y, 330, 354, 9, c.panel);
+    paint.Rounded(x + 12, y + 13, 306, 37, 6, c.raised);
+    const char *visibleQuery = query;
+    while (*visibleQuery && paint.TextWidth(visibleQuery) > 280)
+        ++visibleQuery;
+    fb.SetClip(x + 22, y + 18, 288, 27);
+    paint.Text(x + 24, y + 23, queryLength ? visibleQuery : "Type to find an app...",
+               queryLength ? c.text : c.muted);
+    fb.ResetClip();
+    uint8_t items[12];
+    uint32_t count = LauncherItems(items);
+    int32_t first = launcherSelected >= 6 ? launcherSelected - 5 : 0;
+    if (!count)
+        paint.Text(x + 24, y + 84, "No matching applications", c.muted);
+    for (uint32_t row = 0; row < 6; ++row) {
+        uint32_t index = first + row;
+        if (index >= count)
+            break;
+        uint8_t item = items[index];
+        int32_t ry = y + 62 + row * 42;
+        if (index == (uint32_t)launcherSelected)
+            paint.Rounded(x + 10, ry, 310, 38, 5, c.raised);
+        paint.Icon(x + 22, ry + 11, item < 4 ? item : 4, c.accent);
+        const char *title = item < 4 ? titles[item] : store->Get(item - 4)->title;
+        fb.SetClip(x + 57, ry + 4, 251, 31);
+        paint.Text(x + 57, ry + 9, title, c.text);
+        fb.ResetClip();
+    }
+    fb.Rect(x + 14, y + 322, 302, 1, c.line);
+    paint.Text(x + 20, y + 330, "Up / Down to choose    Enter to open", c.muted);
+}
+void ModernDesktop::DrawModal() {
+    Theme c = Colors();
+    int32_t x = ((int32_t)fb.Width() - 430) / 2, y = ((int32_t)fb.Height() - 190) / 2;
+    paint.Rounded(x + 5, y + 7, 430, 190, 9, 0x080F15);
+    paint.Rounded(x, y, 430, 190, 9, c.panel);
+    paint.Text(x + 24, y + 23, "Remove this application?", c.text);
+    const gtos::storage::AppInfo *a = store ? store->Get(selected) : 0;
+    paint.Text(x + 24, y + 58, a ? a->title : "Application", c.accent);
+    paint.Text(x + 24, y + 84, "This removes the installed package from your app disk.", c.muted);
+    Button(x + 150, y + 132, 114, "Cancel / Esc");
+    Button(x + 278, y + 132, 126, "Remove / Enter", false, true);
+}

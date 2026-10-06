@@ -78,3 +78,14 @@ No user/kernel isolation, full filesystem, general ELF application ABI or modern
 compositor is claimed by phase 1. The tiny VM restricts application operations but
 is not equivalent to hardware-enforced process isolation. ATA PIO support does not
 imply AHCI/NVMe support. Firmware-reported processors are not automatically online.
+
+## Language milestone (requested 2026-10-06, in progress)
+
+- Versioned English/Simplified Chinese string catalogs and persisted preference
+- Strict UTF-8 decoding and codepoint-aware editing, clipping and search
+- Licensed Chinese glyph coverage for every localized label and bundled game prompt
+- Bounded pinyin composition/candidates with explicit supported vocabulary
+- Reboot persistence, malformed-input and actual Chinese-pixel/keyboard acceptance
+
+This stage does not claim a complete system IME, unrestricted CJK typography or
+translation of arbitrary third-party applications before those are implemented.

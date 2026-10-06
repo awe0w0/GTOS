@@ -78,6 +78,14 @@ bool VideoGraphicsArray::SetMode(uint32_t width, uint32_t height, uint32_t color
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
         0x0F, 0x41, 0x00, 0x0F, 0x00, 0x00};
 
+    // Bochs/QEMU VBE must be disabled before legacy VGA registers take effect.
+    gtos::hardwarecommunication::Port16Bit vbeIndex(0x1CE), vbeData(0x1CF);
+    vbeIndex.Write(0);
+    uint16_t vbeId = vbeData.Read();
+    if (vbeId >= 0xB0C0 && vbeId <= 0xB0C5) {
+        vbeIndex.Write(4);
+        vbeData.Write(0);
+    }
     WriteRegisters(g_320x200x256);
     // Fixed desktop palette. The guest owns all VGA registers in mode 13h.
     const uint8_t colors[16][3] = {

@@ -32,55 +32,13 @@ void KeyboardDriver::Activate() {
         dataport.Read();
 }
 uint32_t KeyboardDriver::HandlerInterrupt(uint32_t esp) {
-    const uint8_t raw = dataport.Read();
-    static bool extended = false, leftShift = false, rightShift = false, caps = false;
-    if (raw == 0xE0) {
-        extended = true;
-        return esp;
-    }
-    if (raw == 0xFA || raw == 0xFE)
-        return esp;
-    bool release = raw & 0x80;
-    uint8_t scan = raw & 0x7F;
-    uint8_t key = 0;
-    if (scan == 0x2A && !extended) {
-        leftShift = !release;
-        return esp;
-    }
-    if (scan == 0x36 && !extended) {
-        rightShift = !release;
-        return esp;
-    }
-    if (scan == 0x3A && !release && !extended) {
-        caps = !caps;
-        return esp;
-    }
-    bool shifted = leftShift || rightShift;
-    static const char normal[] =
-        "\0\0331234567890-=\b\tqwertyuiop[]\n\0asdfghjkl;'`\0\\zxcvbnm,./\0*\0 ";
-    static const char upper[] =
-        "\0\033!@#$%^&*()_+\b\tQWERTYUIOP{}\n\0ASDFGHJKL:\"~\0|ZXCVBNM<>?\0*\0 ";
-    if (scan == 0x48)
-        key = 0x83;
-    else if (scan == 0x50)
-        key = 0x84;
-    else if (scan == 0x4B)
-        key = 0x81;
-    else if (scan == 0x4D)
-        key = 0x82;
-    else if (scan < sizeof(normal) - 1) {
-        key = shifted ? upper[scan] : normal[scan];
-        if (caps && key >= 'a' && key <= 'z')
-            key -= 32;
-        else if (caps && key >= 'A' && key <= 'Z')
-            key += 32;
-    }
-    extended = false;
-    if (handler && key) {
-        if (release)
-            handler->OnKeyUp((char)key);
-        else
+    uint8_t key;
+    bool down;
+    if (keymap.Feed(dataport.Read(), key, down) && handler) {
+        if (down)
             handler->OnKeyDown((char)key);
+        else
+            handler->OnKeyUp((char)key);
     }
     return esp;
 }

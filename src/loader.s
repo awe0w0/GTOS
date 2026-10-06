@@ -1,11 +1,15 @@
 .set MAGIC, 0x1badb002
-.set FLAGS, (1 << 0 | 1 << 1)
+.set FLAGS, (1 << 0 | 1 << 1 | 1 << 2)
 .set CHECKSUM, -(MAGIC + FLAGS)
 
 .section .multiboot
     .long MAGIC
     .long FLAGS
     .long CHECKSUM
+    # Address fields occupy their specified slots even without a.out flag16.
+    .long 0, 0, 0, 0, 0
+    # Multiboot v1 preferred linear RGB framebuffer: graphics,800x600x32.
+    .long 0, 800, 600, 32
 
 .section .text
 .extern kernelMain

@@ -12,7 +12,9 @@
 #include <drivers/mouse.h>
 #include <drivers/ata.h>
 #include <drivers/vga.h>
+#include <drivers/framebuffer.h>
 #include <gui/shell.h>
+#include <gui/modern_desktop.h>
 #include <multitasking.h>
 #include <syscalls.h>
 using namespace gtos;
@@ -102,8 +104,23 @@ static void Yielder() {
     printf("TASK YIELD RETURN OK\n");
     asm volatile("int $0x80" ::"a"(4), "b"("SYSCALL ABI PASS\n") : "memory", "cc");
 }
+static bool BootOption(const memory::MultibootInfo *info, const char *option) {
+    if (!(info->flags & 4) || !info->commandLine)
+        return false;
+    const char *line = (const char *)info->commandLine;
+    for (uint32_t i = 0; i < 256 && line[i]; ++i) {
+        if (i && line[i - 1] != ' ')
+            continue;
+        uint32_t n = 0;
+        while (i + n < 256 && option[n] && line[i + n] == option[n])
+            ++n;
+        if (!option[n] && i + n < 256 && (!line[i + n] || line[i + n] == ' '))
+            return true;
+    }
+    return false;
+}
 extern "C" void kernelMain(void *multiboot, uint32_t magic) {
-    printf("GTOS 0.2 FOUNDATION BOOT\n");
+    printf("GTOS 0.3 PROTECTED DESKTOP BOOT\n");
     GlobalDescriptorTable gdt;
     if (!frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end))
         Panic("INVALID MEMORY MAP");
@@ -155,29 +172,70 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     LogValue("APP STORE COUNT ", store.Count());
     LogValue("APP STORE GENERATION ", store.Generation());
     gui::DesktopShell desktop(&store);
+    LogValue("MB FLAGS ", mbi->flags);
+    LogValue("FB ADDRESS ", (uint32_t)mbi->framebufferAddress);
+    LogValue("FB PITCH ", mbi->framebufferPitch);
+    LogValue("FB WIDTH ", mbi->framebufferWidth);
+    LogValue("FB HEIGHT ", mbi->framebufferHeight);
+    LogValue("FB FORMAT ", mbi->framebufferBitsPerPixel | ((uint32_t)mbi->framebufferType << 8));
+    printf("FB COLOR INFO ");
+    for (uint32_t i = 0; i < 6; ++i)
+        printfHex(mbi->framebufferColorInfo[i]);
+    printf("\n");
+    Framebuffer framebuffer;
+    FramebufferMode mode;
+    gui::ModernDesktop *modern = 0;
+    uint32_t backbuffer = 0, backbufferPages = 0;
+    if (!BootOption(mbi, "legacy") && Framebuffer::ReadMode(mbi, mode) && mode.width >= 640 &&
+        mode.height >= 480) {
+        backbufferPages = (mode.width * mode.height * 4 + 4095) / 4096;
+        if (frames.allocateContiguous(backbufferPages, backbuffer) &&
+            framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
+            printf("FB CONFIGURED\n");
+            modern = new gui::ModernDesktop(&framebuffer, &store);
+        }
+        if (!modern && backbuffer)
+            frames.freeContiguous(backbuffer, backbufferPages);
+    }
+    printf(modern ? "DESKTOP MODE FRAMEBUFFER\n" : "DESKTOP MODE LEGACY\n");
     if ((mbi->flags & (1 << 3)) && mbi->moduleCount) {
         const memory::MultibootModule *m = (const memory::MultibootModule *)mbi->modules;
         if (m[0].end > m[0].start && m[0].end - m[0].start <= apps::PackageLimit) {
             desktop.SetInstaller((const uint8_t *)m[0].start, m[0].end - m[0].start);
+            if (modern)
+                modern->SetInstaller((const uint8_t *)m[0].start, m[0].end - m[0].start);
             printf("APP INSTALLER MODULE READY\n");
         }
     }
-    KeyboardDriver keyboard(&interrupts, &desktop);
-    MouseDriver mouse(&interrupts, &desktop);
+    KeyboardEventHandler *keyEvents = modern ? (KeyboardEventHandler *)modern : &desktop;
+    MouseEventHandler *mouseEvents = modern ? (MouseEventHandler *)modern : &desktop;
+    KeyboardDriver keyboard(&interrupts, keyEvents);
+    MouseDriver mouse(&interrupts, mouseEvents);
     keyboard.Activate();
     mouse.Activate();
     VideoGraphicsArray vga;
-    if (!vga.SetMode(320, 200, 8))
+    if (!modern && !vga.SetMode(320, 200, 8))
         Panic("VGA MODE");
     graphicsActive = true;
-    const memory::PagingDeviceRange devices[] = {{0xA0000, 0x20000}};
+    memory::PagingDeviceRange devices[2] = {{0xA0000, 0x20000}, {0, 0}};
+    uint32_t deviceCount = 1;
+    if (modern) {
+        uint64_t begin = mbi->framebufferAddress & ~4095ULL;
+        uint64_t end =
+            (mbi->framebufferAddress + (uint64_t)mode.pitch * mode.height + 4095) & ~4095ULL;
+        if (end > 0x100000000ULL || end <= begin || end - begin > 0xFFFFFFFFULL)
+            Panic("FRAMEBUFFER MAPPING RANGE");
+        devices[1].address = (uint32_t)begin;
+        devices[1].length = (uint32_t)(end - begin);
+        deviceCount = 2;
+    }
     const memory::PagingConfig pagingConfig = {(uint32_t)&kernel_start,
                                                (uint32_t)&kernel_end,
                                                (uint32_t)&kernel_readonly_start,
                                                (uint32_t)&kernel_readonly_end,
                                                mbi,
                                                devices,
-                                               sizeof(devices) / sizeof(devices[0])};
+                                               deviceCount};
     if (!paging.prepareIdentity(frames, pagingConfig) || !paging.enable())
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()));
     uint32_t cr0;
@@ -233,7 +291,10 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         snapshot.diskOK = diskOK;
         for (uint32_t i = 0; i < 13; ++i)
             snapshot.vendor[i] = cpu.GetInfo().vendor[i];
-        desktop.Update(snapshot);
+        if (modern)
+            modern->Update(snapshot);
+        else
+            desktop.Update(snapshot);
         asm volatile("sti; hlt");
     }
 }

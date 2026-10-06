@@ -43,10 +43,16 @@ namespace gtos { namespace memory {
         uint32_t framebufferHeight;
         uint8_t framebufferBitsPerPixel;
         uint8_t framebufferType;
+        // GRUB's Multiboot v1 color union is 4-byte aligned because the indexed
+        // alternative contains a uint32 palette address. RGB starts at112.
+        // https://raw.githubusercontent.com/rhboot/grub2/master/include/multiboot.h
+        uint16_t framebufferReserved;
         uint8_t framebufferColorInfo[6];
+        uint16_t framebufferColorPadding;
     } __attribute__((packed));
-    static_assert(sizeof(MultibootInfo) == 116, "Multiboot v1 layout");
+    static_assert(sizeof(MultibootInfo) == 120, "Multiboot v1 layout");
     static_assert(__builtin_offsetof(MultibootInfo, memoryMap) == 48, "Multiboot mmap offset");
     static_assert(__builtin_offsetof(MultibootInfo, framebufferAddress) == 88, "Multiboot framebuffer offset");
+    static_assert(__builtin_offsetof(MultibootInfo, framebufferColorInfo) == 112, "GRUB color union offset");
 } }
 #endif
