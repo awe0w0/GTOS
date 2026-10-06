@@ -114,3 +114,10 @@ scheduler CPU, distinct APIC result identities, and periodic job completion.
 The monitor displays worker-ready/busy/failure/job counters in both languages.
 No AP callback, native application, device I/O or shared allocator execution is
 permitted by the bounded worker API. See [its limitations](cpu-work-pool.md).
+
+Supplementary full-desktop boots pass with one CPU/32 MiB and eight CPUs/128 MiB,
+including app install/game input and independently verified periodic work on all
+seven APs. Incompatible AP memory-type state on QEMU `-cpu max` is rejected while
+the BSP GUI remains responsive. No-APIC uniprocessor also passes; APIC-disabled
+four-CPU timer/input delivery stalls on both this and the previous Chinese build.
+See the [explicit emulator limitation](cpu-work-pool.md#known-emulator-interrupt-limitation).

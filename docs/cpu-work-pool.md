@@ -173,3 +173,18 @@ these tests. The root task separately validates the live desktop integration.
 
 - [Intel SDM Volume 3A](https://cdrdv2-public.intel.com/812386/253668-sdm-vol-3a.pdf), cache control, multiprocessor memory-type consistency, APIC/IPI behavior and paging
 - [ACPI processor inventory specification](https://uefi.org/specs/ACPI/6.6/05_ACPI_Software_Programming_Model.html)
+
+## Known emulator interrupt limitation
+
+An explicit `-cpu qemu32,apic=off -smp 4` desktop configuration reaches the
+GUI but does not advance PIT-driven tasks or process input in the tested QEMU
+10.0.13 setup. This was reproduced on both the integrated worker checkpoint
+and the preceding Chinese desktop commit `24a5a881cbb3eb0e9069c573e7ea58e344d4e4fc`.
+IRQ diagnostics showed generated PIT/keyboard interrupts while the BSP remained
+halted with IF set. This is a pre-existing configuration limitation; its exact
+firmware/emulator routing cause has not been established.
+
+The no-APIC **uniprocessor** configuration does remain responsive. For multiple
+virtual CPUs, retain the normal local APIC. Early startup rejection tests prove
+that no AP is started when APIC support is absent; they do not imply that every
+APIC-disabled SMP emulator configuration has usable legacy interrupt delivery.
