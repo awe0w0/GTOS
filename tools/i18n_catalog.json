@@ -768,5 +768,35 @@
     "id": "SettingsLoaded",
     "en": "Settings loaded",
     "zh-CN": "设置已加载"
+  },
+  {
+    "id": "KernelWorkers",
+    "en": "Kernel workers",
+    "zh-CN": "工作核"
+  },
+  {
+    "id": "BusyFailed",
+    "en": "Busy / failed",
+    "zh-CN": "运行 / 错误"
+  },
+  {
+    "id": "ParkedAPs",
+    "en": "Parked APs",
+    "zh-CN": "已停放核心"
+  },
+  {
+    "id": "CompletedJobs",
+    "en": "Completed jobs",
+    "zh-CN": "已完成任务"
+  },
+  {
+    "id": "WorkersOK",
+    "en": "Workers OK",
+    "zh-CN": "工作正常"
+  },
+  {
+    "id": "CheckWorkers",
+    "en": "Check workers",
+    "zh-CN": "检查工作核"
   }
 ]

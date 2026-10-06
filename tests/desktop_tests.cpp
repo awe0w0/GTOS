@@ -376,8 +376,12 @@ class DesktopDisk : public storage::BlockDevice {
             apps::Write32(data[s] + 508, apps::CRC32(data[s], 508));
         }
     }
-    virtual bool Identify() { return true; }
-    virtual uint32_t SectorCount() const { return storage::SettingsStore::RequiredSectors; }
+    virtual bool Identify() {
+        return true;
+    }
+    virtual uint32_t SectorCount() const {
+        return storage::SettingsStore::RequiredSectors;
+    }
     virtual bool ReadSector(uint32_t sector, uint8_t *out) {
         if (failReads || sector >= SectorCount())
             return false;
@@ -392,7 +396,9 @@ class DesktopDisk : public storage::BlockDevice {
             data[sector][i] = in[i];
         return true;
     }
-    virtual bool Flush() { return true; }
+    virtual bool Flush() {
+        return true;
+    }
 };
 static int32_t pointerX, pointerY;
 static void MoveTo(ModernDesktop &d, int32_t x, int32_t y) {
@@ -776,12 +782,57 @@ static void LocalizationTests() {
     Check(restored.CurrentLocale() == i18n::SimplifiedChinese && restored.LightTheme(),
           "locale and theme restore after remount");
 }
+static void MinimumMonitorTests() {
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(640, 480, 2560), (uint8_t *)display, surface, 640 * 480),
+          "minimum desktop framebuffer");
+    ModernDesktop d(&fb, 0);
+    pointerX = 610;
+    pointerY = 16;
+    snapshot.workerCPUs = 3;
+    snapshot.onlineCPUs = 1;
+    snapshot.workPoolOK = true;
+    static uint32_t footer[640 * 49];
+    for (uint32_t language = 0; language < 2; ++language) {
+        if (language) {
+            Key(d, '4');
+            Key(d, 'c');
+        }
+        Key(d, '2');
+        ModernRect r = d.Windows().Window(ModernMonitor).bounds;
+        MoveTo(d, r.x + r.w - 7, r.y + r.h - 7);
+        d.OnMouseDown(1);
+        Pump(d);
+        MoveTo(d, pointerX - 100, pointerY - 100);
+        d.OnMouseUp(1);
+        Pump(d);
+        MoveTo(d, 610, 16);
+        r = d.Windows().Window(ModernMonitor).bounds;
+        Check(r.h == 398 && r.w == 540, "monitor respects its existing minimum size");
+        snapshot.completedJobs = 0;
+        snapshot.ticks += 100;
+        Pump(d);
+        uint32_t count = 0;
+        for (int32_t y = r.y + r.h - 49; y < r.y + r.h; ++y)
+            for (int32_t x = r.x + 24; x < r.x + r.w - 24; ++x)
+                footer[count++] = display[y * 640 + x];
+        snapshot.completedJobs = 0xFFFFFFFFU;
+        snapshot.ticks += 100;
+        Pump(d);
+        count = 0;
+        for (int32_t y = r.y + r.h - 49; y < r.y + r.h; ++y)
+            for (int32_t x = r.x + 24; x < r.x + r.w - 24; ++x)
+                Check(footer[count++] == display[y * 640 + x],
+                      "live worker count never overlaps minimum-height footer in either locale");
+    }
+}
 static void RunTests() {
     FramebufferTests();
     GeometryTests();
     DesktopTests();
     ApplicationTests();
     LocalizationTests();
+    MinimumMonitorTests();
     Output("Desktop/framebuffer safety and interaction tests passed\n");
 }
 #ifdef GTOS_DESKTOP_SANITIZE

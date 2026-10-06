@@ -29,6 +29,7 @@ class DesktopGuest(Guest):
             check('DESKTOP MODE FRAMEBUFFER' in self.text(), 'kernel selected the modern framebuffer renderer')
             check(im.size == (800, 600), 'real RGB framebuffer is 800x600')
             check('PANIC' not in self.text(), 'boot has no kernel panic')
+            self.verify_workers(cpus)
         except Exception:
             self.close()
             raise
@@ -165,6 +166,7 @@ def main():
         a, b = paddle(before), paddle(after)
         check(a is not None and b is not None and b > a + 10,
               'installed Catch VM paddle responds to real keyboard input')
+        g.verify_workers(4, periodic=True)
         g.key('r')
         g.wait('APP RESTART OK')
         g.screenshot('catch-restarted')

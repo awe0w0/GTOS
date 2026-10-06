@@ -14,7 +14,7 @@ capabilities from development targets. Work is reviewed and committed to `dev`;
 6. Self-review the diff, run independent review where practical, then commit to dev.
 7. Verify the remote commit after pushing; only report CI that actually ran.
 
-## Phase 1: safe and observable foundation (in progress)
+## Phase 1: safe and observable foundation (accepted checkpoint)
 
 - Correct early boot ABI/GDT/IRQ handling and keyboard/mouse event routing
 - Bounded physical frame allocator from firmware memory map; validated heap
@@ -79,7 +79,7 @@ compositor is claimed by phase 1. The tiny VM restricts application operations b
 is not equivalent to hardware-enforced process isolation. ATA PIO support does not
 imply AHCI/NVMe support. Firmware-reported processors are not automatically online.
 
-## Language milestone (requested 2026-10-06, in progress)
+## Language milestone (requested 2026-10-06, accepted bounded implementation)
 
 - Versioned English/Simplified Chinese string catalogs and persisted preference
 - Strict UTF-8 decoding and codepoint-aware editing, clipping and search
@@ -95,3 +95,17 @@ translation of arbitrary third-party applications before those are implemented.
 After the active kernel/desktop/Chinese phase gates, assess a real native Chromium
 port and required GTOS APIs. See [browser prerequisites and proof gates](BROWSER_PORT.md).
 No browser source download/build starts before the current phase completes.
+
+## Current phase checkpoint: kernel workers and localized desktop
+
+The foundation, kernel paging, modern desktop and bounded language implementation
+are tested together. APs now perform bounded queued integer work with verified
+results, rather than merely being discovered or parked. Per-worker private IDTs,
+shared sealed page tables and wake IPIs are implemented. One failed worker can be
+contained; this is not isolation for arbitrary native applications.
+
+This checkpoint does **not** close phases 2–5. General AP scheduling, ring-3
+processes, a filesystem, terminal/file manager, session restoration, broader
+hardware support and browser-facing services remain open. The queued browser
+assessment must turn those dependencies into executable milestones rather than
+assuming a desktop screenshot means a browser platform is already available.

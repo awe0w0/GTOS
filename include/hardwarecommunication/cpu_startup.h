@@ -9,14 +9,14 @@ namespace gtos { namespace hardwarecommunication {
         CpuStartupUnattempted, CpuStartupBootstrap, CpuStartupUnsupportedId,
         CpuStartupNoStack, CpuStartupStarting, CpuStartupEntered,
         CpuStartupSelfTestFailed, CpuStartupParked, CpuStartupTimedOut,
-        CpuStartupDeliveryFailed
+        CpuStartupDeliveryFailed, CpuStartupHandedOff
     };
     enum CpuStartupError {
         CpuStartupOk, CpuStartupAlreadyRun, CpuStartupInterruptsEnabled,
         CpuStartupPagingEnabled, CpuStartupNoFirmware, CpuStartupInvalidFirmware,
         CpuStartupNoLocalApic, CpuStartupX2ApicUnsupported, CpuStartupBadApicBase,
         CpuStartupNoTrampoline, CpuStartupBadTrampoline, CpuStartupNoSharedMemory,
-        CpuStartupTimerUnavailable, CpuStartupPartialFailure
+        CpuStartupTimerUnavailable, CpuStartupPartialFailure, CpuStartupNotPrepared
     };
     struct CpuStartupProcessorInfo {
         uint32_t apicId;
@@ -32,6 +32,7 @@ namespace gtos { namespace hardwarecommunication {
         uint32_t detectedProcessors;
         uint32_t attemptedAps;
         uint32_t acknowledgedAps;
+        uint32_t initializedAps;
         uint32_t parkedAps;
         uint32_t failedAps;
         uint32_t schedulerOnlineProcessors;
@@ -39,6 +40,7 @@ namespace gtos { namespace hardwarecommunication {
         uint32_t localApicAddress;
     };
     struct CpuStartupShared;
+    typedef void (*CpuStartupContinuation)(uint32_t apicId, void* context);
 
     // One-shot boot-time xAPIC startup. APs execute an isolated integer/stack/
     // identity self-test, publish an acknowledgment and park with IF clear.
@@ -47,6 +49,8 @@ namespace gtos { namespace hardwarecommunication {
         CpuStartupShared* shared;
         CpuStartupReport report;
         bool used;
+        bool prepared;
+        bool started;
         bool InitializeTrampoline(uint32_t address);
         bool SendIpi(uint32_t apicId, uint32_t command);
         bool WaitDelivery();
@@ -61,6 +65,16 @@ namespace gtos { namespace hardwarecommunication {
         // a late AP must never enter freed/reused stack or trampoline storage.
         bool Start(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames,
                    uint32_t accessiblePhysicalBytes);
+        // Optional two-phase boot: allocate/validate before page tables are
+        // prepared, then start APs after a shared CR3 exists. The default path
+        // remains Start(), which calls both phases and parks every AP.
+        bool Prepare(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames,
+                     uint32_t accessiblePhysicalBytes);
+        // A trusted kernel continuation must never return. It owns subsequent
+        // AP IDT/paging/worker setup; handoff does not mean scheduler-online.
+        bool StartPrepared(CpuStartupContinuation continuation = 0, void* context = 0);
+        bool ReadyToStart() const;
+        bool GetSharedMemoryRange(uint32_t& address, uint32_t& bytes) const;
         CpuStartupReport GetReport() const;
         bool GetProcessor(uint32_t index, CpuStartupProcessorInfo& result) const;
         static const char* ErrorName(CpuStartupError error);

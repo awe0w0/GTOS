@@ -6,7 +6,8 @@
 
 A 32-bit x86 educational operating system, developed on the `dev` branch.
 The current foundation milestone includes a real 800×600 windowed desktop, hardware monitor,
-validated memory allocators, page-level kernel protection, a timer-driven scheduler, safe dedicated ATA app
+validated memory allocators, page-level kernel protection, bounded multicore kernel workers,
+a timer-driven BSP scheduler, safe dedicated ATA app
 storage, and an externally packaged playable Catch game.
 
 This is an evolving OS, not a production operating system. The current desktop supports movable/resizable windows, launcher search,
@@ -84,9 +85,12 @@ and actual paddle-motion assertions. Use a fresh output directory each run.
 Acceptance covers 32/64/128 MiB, one/four firmware CPUs, boot allocator checks,
 real scheduler sleep/yield/return, GUI keyboard input, app install/launch/restart,
 actual game paddle movement, and install/removal/reinstall across fresh VM boots.
-The debug log distinguishes detected CPUs, APs actually started/self-tested/parked,
-and BSP-only scheduling. Safe AP startup is tested on one/two/four/eight CPUs;
-missing-AP timeouts and no-APIC rejection are tested too.
+The debug log and monitor distinguish detected CPUs, ready/busy/failed AP workers,
+completed jobs and BSP-only general scheduling. Each ready AP repeatedly executes
+a bounded integer job whose result and hardware APIC identity the BSP verifies. Safe AP startup is tested on one/two/four/eight CPUs;
+missing-AP timeouts and no-APIC rejection are tested too. The worker pool additionally
+verifies shared paging, cache compatibility, per-worker faults and continued BSP
+timers. See [the worker contract](docs/cpu-work-pool.md).
 
 The default build uses -O2. Use `make OPTIMIZATION=-O0` for an unoptimized build
 after `make clean`. App data under `data/` survives build cleanup.

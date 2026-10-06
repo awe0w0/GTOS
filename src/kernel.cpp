@@ -4,9 +4,11 @@
 #include <memory/physical.h>
 #include <memory/selftest.h>
 #include <memory/paging.h>
+#include <memory/criticalsection.h>
 #include <hardwarecommunication/interrupts.h>
 #include <hardwarecommunication/cpu.h>
 #include <hardwarecommunication/cpu_startup.h>
+#include <hardwarecommunication/cpu_work_pool.h>
 #include <hardwarecommunication/port.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
@@ -120,6 +122,124 @@ static bool BootOption(const memory::MultibootInfo *info, const char *option) {
     }
     return false;
 }
+// The demonstration is a non-blocking BSP client, not an AP scheduler. Four
+// rotating slots are serviced per desktop iteration, with one bounded job per
+// worker per second and at most one live ticket for each worker.
+struct WorkerDemoSlot {
+    CpuWorkTicket ticket;
+    uint32_t apicId, seed, nextTick, submittedTick, completions;
+    bool pending, active, verified, kicked, disabled, failureReported;
+};
+static WorkerDemoSlot workerDemo[256];
+static uint32_t workerDemoCount = 0, workerDemoCursor = 0;
+static uint32_t verifiedWorkerJobs = 0, verifiedWorkerCPUs = 0, workerDemoFailures = 0;
+static bool workerRuntimeReported = false, workerPeriodicReported = false;
+static uint32_t periodicWorkerCPUs = 0;
+static void WorkerEvent(const char *message, uint32_t apicId) {
+    // Keep each debug marker intact if a PIT switch would print from another
+    // BSP task. This small diagnostic critical section never waits for an AP.
+    memory::InterruptGuard guard;
+    LogValue(message, apicId);
+}
+static void WorkerDemoFailure(WorkerDemoSlot &slot, const char *message) {
+    slot.disabled = true;
+    if (!slot.failureReported) {
+        slot.failureReported = true;
+        ++workerDemoFailures;
+        WorkerEvent(message, slot.apicId);
+    }
+}
+static void InitializeWorkerDemo(CpuWorkPool &workers) {
+    workerDemoCount = workers.GetReport().configuredWorkers;
+    if (workerDemoCount > 256)
+        workerDemoCount = 256;
+    for (uint32_t index = 0; index < workerDemoCount; ++index) {
+        CpuWorkerSnapshot worker;
+        if (workers.GetWorker(index, worker))
+            workerDemo[index].apicId = worker.apicId;
+    }
+}
+static void ServiceWorkerDemo(CpuWorkPool &workers, uint32_t now) {
+    if (!workerDemoCount)
+        return;
+    uint32_t visits = workerDemoCount < 4 ? workerDemoCount : 4;
+    while (visits--) {
+        uint32_t index = workerDemoCursor++;
+        if (workerDemoCursor == workerDemoCount)
+            workerDemoCursor = 0;
+        WorkerDemoSlot &slot = workerDemo[index];
+        CpuWorkerSnapshot worker;
+        if (!workers.GetWorker(index, worker))
+            continue;
+        bool ready = worker.state == CpuWorkerIdle || worker.state == CpuWorkerBusy;
+        if (ready)
+            slot.active = true;
+        if (slot.pending) {
+            WorkResult result;
+            CpuWorkCollectStatus status = workers.Collect(slot.ticket, result);
+            if (status == CpuWorkComplete) {
+                slot.pending = false;
+                slot.nextTick = now + 100;
+                if (result.executingApicId != slot.apicId || result.value != slot.seed + 8390656U) {
+                    WorkerDemoFailure(slot, "WORKER RUNTIME FAIL RESULT APIC ");
+                } else {
+                    ++verifiedWorkerJobs;
+                    if (++slot.completions == 2)
+                        ++periodicWorkerCPUs;
+                    if (!slot.verified) {
+                        slot.verified = true;
+                        ++verifiedWorkerCPUs;
+                        WorkerEvent("WORKER JOB VERIFIED APIC ", slot.apicId);
+                    }
+                }
+            } else if (status == CpuWorkPending) {
+                uint32_t elapsed = now - slot.submittedTick;
+                if (elapsed >= 10 && !slot.kicked) {
+                    slot.kicked = true;
+                    workers.Kick(slot.apicId); // Same ticket; never duplicate work.
+                }
+                if (elapsed >= 200)
+                    WorkerDemoFailure(slot, "WORKER RUNTIME FAIL STALLED APIC ");
+            } else {
+                slot.pending = false;
+                WorkerDemoFailure(slot, "WORKER RUNTIME FAIL TICKET APIC ");
+            }
+        }
+        if (slot.active && worker.state == CpuWorkerFaulted)
+            WorkerDemoFailure(slot, "WORKER RUNTIME FAIL FAULT APIC ");
+        if (!ready || slot.pending || slot.disabled || (int32_t)(now - slot.nextTick) < 0)
+            continue;
+        slot.seed = now ^ (slot.apicId * 0x9E3779B9U);
+        CpuWorkSubmitStatus submitted = workers.Submit(
+            slot.apicId, WorkRequest(WorkModularSum, 4096, slot.seed), slot.ticket);
+        if (submitted == CpuWorkAccepted || submitted == CpuWorkAcceptedWakeFailed) {
+            slot.pending = true;
+            slot.submittedTick = now;
+            slot.kicked = false;
+            if (submitted == CpuWorkAcceptedWakeFailed)
+                WorkerEvent("WORKER WAKE LIMITED APIC ", slot.apicId);
+        } else if (submitted == CpuWorkFull || submitted == CpuWorkOffline) {
+            slot.nextTick = now + 10;
+        } else {
+            WorkerDemoFailure(slot, "WORKER RUNTIME FAIL SUBMIT APIC ");
+        }
+    }
+    CpuWorkPoolReport report = workers.GetReport();
+    if (!workerRuntimeReported && report.readyWorkers &&
+        verifiedWorkerCPUs >= report.readyWorkers && !workerDemoFailures) {
+        workerRuntimeReported = true;
+        memory::InterruptGuard guard;
+        printf("WORKER RUNTIME PASS\n");
+        LogValue("WORKER VERIFIED CPUS ", verifiedWorkerCPUs);
+    }
+    if (!workerPeriodicReported && report.readyWorkers &&
+        periodicWorkerCPUs >= report.readyWorkers && !workerDemoFailures) {
+        workerPeriodicReported = true;
+        memory::InterruptGuard guard;
+        printf("WORKER PERIODIC PASS\n");
+        LogValue("WORKER VERIFIED JOBS ", verifiedWorkerJobs);
+    }
+}
 extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     printf("GTOS 0.3 PROTECTED DESKTOP BOOT\n");
     GlobalDescriptorTable gdt;
@@ -150,14 +270,6 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     printf("\n");
     LogValue("CPU DETECTED ", cpu.DetectedLogicalProcessors());
     LogValue("CPU ONLINE ", cpu.OnlineProcessors());
-    CpuStartup cpuStartup;
-    bool apsStarted = cpuStartup.Start(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
-    CpuStartupReport apReport = cpuStartup.GetReport();
-    printf(apsStarted ? "AP STARTUP PASS\n" : "AP STARTUP LIMITED\n");
-    printf((char *)CpuStartup::ErrorName(apReport.error));
-    printf("\n");
-    LogValue("AP PARKED ", apReport.parkedAps);
-    LogValue("AP FAILED ", apReport.failedAps);
     TaskManager tasks;
     activeTasks = &tasks;
     bool schedulerOK = TaskManager::RunSelfTests(&gdt);
@@ -166,6 +278,13 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         Panic("SCHEDULER SELFTEST");
     InterruptsManager interrupts(0x20, &gdt, &tasks);
     SyscallHandler syscalls(&interrupts, 0x80);
+    // Prepare resources before identity mappings are built. BSP GDT/IDT already
+    // exist, while interrupts and paging remain disabled.
+    CpuStartup cpuStartup;
+    bool apsPrepared = cpuStartup.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+    CpuWorkPool workers;
+    bool workersPrepared = apsPrepared && workers.Prepare(cpuStartup, frames);
+    CpuStartupReport apReport = cpuStartup.GetReport();
     AdvancedTechnologyAttachment disk(0x1F0, true);
     storage::AppStore store(&disk);
     bool diskOK = store.Mount();
@@ -223,7 +342,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     if (!modern && !vga.SetMode(320, 200, 8))
         Panic("VGA MODE");
     graphicsActive = true;
-    memory::PagingDeviceRange devices[2] = {{0xA0000, 0x20000}, {0, 0}};
+    memory::PagingDeviceRange devices[3] = {{0xA0000, 0x20000}, {0, 0}, {0, 0}};
     uint32_t deviceCount = 1;
     if (modern) {
         uint64_t begin = mbi->framebufferAddress & ~4095ULL;
@@ -231,9 +350,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             (mbi->framebufferAddress + (uint64_t)mode.pitch * mode.height + 4095) & ~4095ULL;
         if (end > 0x100000000ULL || end <= begin || end - begin > 0xFFFFFFFFULL)
             Panic("FRAMEBUFFER MAPPING RANGE");
-        devices[1].address = (uint32_t)begin;
-        devices[1].length = (uint32_t)(end - begin);
-        deviceCount = 2;
+        devices[deviceCount].address = (uint32_t)begin;
+        devices[deviceCount++].length = (uint32_t)(end - begin);
+    }
+    // Never guess a LAPIC address: Prepare validated this page against the
+    // executing BSP's APIC-base MSR, firmware inventory and hardware identity.
+    if (apsPrepared && apReport.localApicAddress) {
+        devices[deviceCount].address = apReport.localApicAddress;
+        devices[deviceCount++].length = 4096;
     }
     const memory::PagingConfig pagingConfig = {(uint32_t)&kernel_start,
                                                (uint32_t)&kernel_end,
@@ -242,7 +366,39 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                                                mbi,
                                                devices,
                                                deviceCount};
-    if (!paging.prepareIdentity(frames, pagingConfig) || !paging.enable())
+    if (!paging.prepareIdentity(frames, pagingConfig))
+        Panic(memory::KernelPaging::ErrorName(paging.getLastError()));
+    bool workersStarted = workersPrepared && workers.Start(paging);
+    // Only a pre-handoff failure may use the original parked path. Once an AP
+    // has been handed off (even if it times out), never resend INIT/SIPI.
+    if (!workersStarted && apsPrepared && cpuStartup.ReadyToStart()) {
+        printf("WORKER PARKED FALLBACK\n");
+        cpuStartup.StartPrepared();
+    }
+    apReport = cpuStartup.GetReport();
+    printf(apReport.error == CpuStartupOk ? "AP STARTUP PASS\n" : "AP STARTUP LIMITED\n");
+    printf(CpuStartup::ErrorName(apReport.error));
+    printf("\n");
+    LogValue("AP INITIALIZED ", apReport.initializedAps);
+    LogValue("AP PARKED ", apReport.parkedAps);
+    LogValue("AP FAILED ", apReport.failedAps);
+    CpuWorkPoolReport workerReport = workers.GetReport();
+    printf(workersStarted ? "WORKER POOL READY\n" : "WORKER POOL LIMITED\n");
+    if (apsPrepared) {
+        printf(CpuWorkPool::ErrorName(workerReport.error));
+        printf("\n");
+    }
+    LogValue("WORKER CONFIGURED ", workerReport.configuredWorkers);
+    LogValue("WORKER READY ", workerReport.readyWorkers);
+    LogValue("WORKER FAILED ", workerReport.faultedWorkers);
+    for (uint32_t index = 0; index < workerReport.configuredWorkers; ++index) {
+        CpuWorkerSnapshot worker;
+        if (workers.GetWorker(index, worker) && worker.state == CpuWorkerFaulted) {
+            LogValue("WORKER LIMITED APIC ", worker.apicId);
+            LogValue("WORKER FAILURE REASON ", (uint32_t)worker.failure);
+        }
+    }
+    if (!paging.enable())
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()));
     uint32_t cr0;
     asm volatile("mov %%cr0,%0" : "=r"(cr0));
@@ -266,7 +422,9 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     interrupts.Activate();
     printf("DESKTOP READY\n");
     bool runtimeChecked = false;
+    InitializeWorkerDemo(workers);
     for (;;) {
+        ServiceWorkerDemo(workers, tasks.Ticks());
         if (!runtimeChecked && sleeper.State() == TaskTerminated &&
             yielder.State() == TaskTerminated) {
             runtimeChecked = true;
@@ -286,6 +444,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         snapshot.logicalCPUs = cpu.DetectedLogicalProcessors();
         snapshot.onlineCPUs = cpu.OnlineProcessors();
         snapshot.parkedAPs = apReport.parkedAps;
+        workerReport = workers.GetReport();
+        snapshot.workerCPUs = workerReport.readyWorkers;
+        snapshot.busyWorkers = workerReport.busyWorkers;
+        snapshot.workerFailures = workerReport.faultedWorkers;
+        snapshot.completedJobs = workerReport.completedJobs;
+        snapshot.verifiedJobs = verifiedWorkerJobs;
+        snapshot.workerDemoFailures = workerDemoFailures;
+        snapshot.workPoolOK = workersStarted && !workerReport.faultedWorkers && !workerDemoFailures;
         snapshot.pagingEnabled = paging.getStatistics().enabled;
         snapshot.writeProtectEnabled = (cr0 & 0x10000U) != 0;
         snapshot.ticks = tasks.Ticks();

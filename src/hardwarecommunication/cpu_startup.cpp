@@ -15,6 +15,9 @@ namespace {
     const uint32_t StackPages = 4;
     const uint32_t MaximumProcessors = 256;
     bool anyStartupAttempted = false;
+#ifdef GTOS_CPU_WORK_POOL_TEST
+    uint32_t corruptedChecksumApicId = 0xFFFFFFFFU;
+#endif
     struct ApRecord {
         uint32_t apicId;
         volatile uint32_t state;
@@ -24,7 +27,8 @@ namespace {
         volatile uint32_t observedStackPointer;
         volatile uint32_t checksum;
         uint32_t expectedChecksum; // BSP-owned, immutable before any IPI.
-        uint32_t reserved[8];
+        uint32_t continuation, continuationContext;
+        uint32_t reserved[6];
     } __attribute__((aligned(64)));
     struct ApParameters {
         uint32_t entry;
@@ -92,11 +96,11 @@ namespace {
     }
     bool IdentityPublished(uint32_t state) {
         return state == CpuStartupEntered || state == CpuStartupParked
-            || state == CpuStartupSelfTestFailed;
+            || state == CpuStartupSelfTestFailed || state == CpuStartupHandedOff;
     }
     uint32_t VerifiedState(const ApRecord& record) {
         uint32_t state = LoadState(record);
-        if (state != CpuStartupParked) return state;
+        if (state != CpuStartupParked && state != CpuStartupHandedOff) return state;
         // Recheck every terminal observation, including an AP arriving after
         // Start() timed out. AP-published Parked alone is not BSP verification.
         uint32_t observedSp = LoadObservation(record.observedStackPointer);
@@ -141,7 +145,7 @@ namespace gtos { namespace hardwarecommunication {
     };
 } }
 
-CpuStartup::CpuStartup() : shared(0), used(false) {
+CpuStartup::CpuStartup() : shared(0), used(false), prepared(false), started(false) {
     Zero(&report, sizeof(report));
     report.schedulerOnlineProcessors = 1;
 }
@@ -228,15 +232,23 @@ void CpuStartup::ApplicationProcessorEntry(void* opaque) {
     StoreObservation(record.observedApicId, identity);
     StoreObservation(record.observedStackPointer, sp);
     StoreState(record, CpuStartupEntered); // Publishes identity and stack observation.
-    StoreObservation(record.checksum, SelfTestChecksum(identity));
-    bool passed = identity == record.apicId
+    uint32_t checksum = SelfTestChecksum(identity);
+    StoreObservation(record.checksum, checksum);
+    bool passed = checksum == record.expectedChecksum && identity == record.apicId
         && sp >= record.stackBase && sp < record.stackBase + record.stackPages * 4096
         && !(Flags() & 0x200) && (Control0() & 0x80000001U) == 1;
-    StoreState(record, passed ? CpuStartupParked : CpuStartupSelfTestFailed);
+    if (passed && record.continuation) {
+        StoreState(record, CpuStartupHandedOff);
+        ((CpuStartupContinuation)record.continuation)(record.apicId, (void*)record.continuationContext);
+        StoreState(record, CpuStartupSelfTestFailed); // Returning violates the handoff contract.
+    } else StoreState(record, passed ? CpuStartupParked : CpuStartupSelfTestFailed);
     for (;;) asm volatile("cli; hlt" : : : "memory");
 }
 
 bool CpuStartup::Start(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames, uint32_t limit) {
+    return Prepare(cpu, frames, limit) && StartPrepared();
+}
+bool CpuStartup::Prepare(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames, uint32_t limit) {
     if (used || anyStartupAttempted) { report.error = CpuStartupAlreadyRun; return false; }
     used = true;
     if (Flags() & 0x200) { report.error = CpuStartupInterruptsEnabled; return false; }
@@ -247,7 +259,7 @@ bool CpuStartup::Start(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames
         report.error = CpuStartupInvalidFirmware; return false;
     }
     report.detectedProcessors = count;
-    if (count <= 1) { report.error = CpuStartupOk; return true; }
+    if (count <= 1) { report.error = CpuStartupOk; prepared = true; return true; }
     if (!cpu.cpuidAvailable || (cpu.featureEdx & ((1U << 5) | (1U << 9))) != ((1U << 5) | (1U << 9))) {
         report.error = CpuStartupNoLocalApic; return false;
     }
@@ -307,7 +319,29 @@ bool CpuStartup::Start(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames
         frames.freeContiguous(sharedAddress, sharedPages); shared = 0;
         return false;
     }
+    prepared = true;
+    return true;
+}
+
+bool CpuStartup::StartPrepared(CpuStartupContinuation continuation, void* context) {
+    if (!prepared) { report.error = CpuStartupNotPrepared; return false; }
+    if (started || anyStartupAttempted) { report.error = CpuStartupAlreadyRun; return false; }
+    if (Flags() & 0x200) { report.error = CpuStartupInterruptsEnabled; return false; }
+    if (Control0() & 0x80000000U) { report.error = CpuStartupPagingEnabled; return false; }
+    started = true;
+    report.error = CpuStartupOk;
+    uint32_t count = report.detectedProcessors;
+    if (count <= 1) return true;
+    for (uint32_t i = 0; i < count; ++i) {
+#ifdef GTOS_CPU_WORK_POOL_TEST
+        if (shared->processors[i].apicId == corruptedChecksumApicId)
+            shared->processors[i].expectedChecksum ^= 1U;
+#endif
+        shared->processors[i].continuation = (uint32_t)continuation;
+        shared->processors[i].continuationContext = (uint32_t)context;
+    }
     anyStartupAttempted = true;
+    volatile uint32_t* lapic = (volatile uint32_t*)report.localApicAddress;
     const uint32_t savedSvr = lapic[0xF0 / 4];
     lapic[0xF0 / 4] = (savedSvr & ~0xFFU) | 0x1FFU;
     (void)lapic[0x20 / 4];
@@ -330,29 +364,38 @@ bool CpuStartup::Start(const CpuInfo& cpu, memory::PhysicalMemoryManager& frames
         bool timerOk = true;
         for (uint32_t wait = 0; wait < 1000; ++wait) {
             uint32_t state = LoadState(record);
-            if (state == CpuStartupParked || state == CpuStartupSelfTestFailed) break;
+            if (state == CpuStartupParked || state == CpuStartupHandedOff || state == CpuStartupSelfTestFailed) break;
             if (!DelayMicroseconds(100)) { timerOk = false; break; }
         }
         uint32_t state = LoadState(record);
-        if (state != CpuStartupParked && state != CpuStartupSelfTestFailed) {
+        if (state != CpuStartupParked && state != CpuStartupHandedOff && state != CpuStartupSelfTestFailed) {
             // CAS avoids overwriting a simultaneously published successful ACK.
             uint32_t expected = state;
             __atomic_compare_exchange_n(&record.state, &expected, (uint32_t)CpuStartupTimedOut,
                                          false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
         }
         if (!timerOk) report.error = CpuStartupTimerUnavailable;
-        if (LoadState(record) == CpuStartupParked && VerifiedState(record) != CpuStartupParked)
+        if ((LoadState(record) == CpuStartupParked || LoadState(record) == CpuStartupHandedOff)
+            && VerifiedState(record) == CpuStartupSelfTestFailed)
             StoreState(record, CpuStartupSelfTestFailed);
     }
     lapic[0xF0 / 4] = savedSvr; (void)lapic[0x20 / 4];
     CpuStartupReport final = GetReport();
-    if (report.error == CpuStartupOk && final.parkedAps != count - 1) report.error = CpuStartupPartialFailure;
+    if (report.error == CpuStartupOk && final.initializedAps != count - 1) report.error = CpuStartupPartialFailure;
     return report.error == CpuStartupOk;
 }
 
+bool CpuStartup::ReadyToStart() const { return prepared && !started; }
+bool CpuStartup::GetSharedMemoryRange(uint32_t& address, uint32_t& bytes) const {
+    address = 0; bytes = 0;
+    if (!shared) return false;
+    address = (uint32_t)shared;
+    bytes = (sizeof(CpuStartupShared) + 4095) & ~4095U;
+    return true;
+}
 CpuStartupReport CpuStartup::GetReport() const {
     CpuStartupReport result = report;
-    result.acknowledgedAps = result.parkedAps = result.failedAps = 0;
+    result.acknowledgedAps = result.initializedAps = result.parkedAps = result.failedAps = 0;
     if (!shared) return result;
     for (uint32_t i = 0; i < report.detectedProcessors; ++i) {
         const ApRecord& record = shared->processors[i];
@@ -360,7 +403,9 @@ CpuStartupReport CpuStartup::GetReport() const {
         if (state == CpuStartupBootstrap) continue;
         if (IdentityPublished(state) && LoadObservation(record.observedApicId) == record.apicId)
             ++result.acknowledgedAps;
+        if (state == CpuStartupParked || state == CpuStartupHandedOff) ++result.initializedAps;
         if (state == CpuStartupParked) ++result.parkedAps;
+        else if (state == CpuStartupHandedOff) continue;
         else if (state != CpuStartupUnattempted && state != CpuStartupStarting && state != CpuStartupEntered)
             ++result.failedAps;
     }
@@ -376,13 +421,14 @@ bool CpuStartup::GetProcessor(uint32_t index, CpuStartupProcessorInfo& result) c
     bool published = IdentityPublished(result.state);
     result.observedApicId = published ? LoadObservation(record.observedApicId) : 0xFFFFFFFFU;
     result.observedStackPointer = published ? LoadObservation(record.observedStackPointer) : 0;
-    result.selfTestChecksum = result.state == CpuStartupParked || result.state == CpuStartupSelfTestFailed
+    result.selfTestChecksum = result.state == CpuStartupParked || result.state == CpuStartupHandedOff || result.state == CpuStartupSelfTestFailed
         ? LoadObservation(record.checksum) : 0;
     return true;
 }
 const char* CpuStartup::ErrorName(CpuStartupError error) {
     switch (error) {
         case CpuStartupOk: return "AP startup/self-test complete";
+        case CpuStartupNotPrepared: return "AP startup resources not prepared";
         case CpuStartupAlreadyRun: return "AP startup already attempted";
         case CpuStartupInterruptsEnabled: return "AP startup requires interrupts disabled";
         case CpuStartupPagingEnabled: return "AP startup requires pre-paging identity access";
@@ -425,5 +471,13 @@ extern "C" bool GtosApObservationSelfTest() {
     StoreObservation(record.observedStackPointer, 0xFFFFEFE0U);
     StoreObservation(record.observedApicId, 8);
     return VerifiedState(record) == CpuStartupSelfTestFailed;
+}
+#endif
+
+#ifdef GTOS_CPU_WORK_POOL_TEST
+extern "C" bool GtosCpuCorruptChecksum(uint32_t apicId) {
+    if (anyStartupAttempted) return false;
+    corruptedChecksumApicId = apicId;
+    return true;
 }
 #endif

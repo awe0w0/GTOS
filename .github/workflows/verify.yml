@@ -22,6 +22,8 @@ jobs:
         run: make test
       - name: Verify AP startup and bounded error paths
         run: ./tests/cpu_startup_smoke.sh
+      - name: Verify isolated AP workers and per-worker fault containment
+        run: ./tests/cpu_work_pool_smoke.sh
       - name: Verify page protections with actual CPU faults
         run: ./tests/paging_smoke.sh
       - name: Verify legacy VGA fallback after GRUB video setup

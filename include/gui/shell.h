@@ -10,6 +10,9 @@ namespace gui {
 struct SystemSnapshot {
     uint32_t ramMiB, freePages, heapKiB, heapUsedKiB, logicalCPUs, onlineCPUs;
     uint32_t ticks, taskCount, contextSwitches, diskSectors, parkedAPs;
+    uint32_t workerCPUs, busyWorkers, workerFailures, completedJobs;
+    uint32_t verifiedJobs, workerDemoFailures;
+    bool workPoolOK;
     bool pagingEnabled, writeProtectEnabled;
     bool memoryOK, schedulerOK, diskOK;
     char vendor[13];

@@ -47,7 +47,7 @@ edge-triggered install/remove commands and repeated mouse-close behavior.
 
 ## Deliberate limitations
 
-No paging, process/ring-3 isolation, general filesystem, modern compositor,
+No process/ring-3 isolation, general filesystem, production compositor,
 AHCI/NVMe or AP scheduler is claimed. The VM permits only its bounded instruction
 set, but it does not replace hardware-enforced userspace isolation. ATA support
 is the tested legacy IDE PIO path. Hardware outside QEMU remains unverified.
@@ -58,7 +58,8 @@ The optimized AP module additionally passed QEMU one/two/four/eight-CPU boots,
 a deliberately nonexistent AP timeout, and a pre-IPI no-APIC rejection case.
 APs execute on independent retained stacks, publish identity/stack/checksum
 observations atomically and park with interrupts disabled. They are not scheduled.
-The integrated desktop acceptance matrix passes with the expected parked counts.
+The standalone parked-startup path remains tested. The integrated desktop now
+hands supported APs to the work pool described below instead of parking them.
 Low-bootstrap allocation adds 486 assertions at each optimization level.
 
 ## Paging protection extension
@@ -90,8 +91,26 @@ localized playable 接球, and language/theme persistence across a full reboot.
 Unowned media permits only session-local choices and remains byte-for-byte intact.
 
 Strict UTF-8/catalog/composer/font tests pass i386, native x86-64 and fail-fast
-ASan/UBSan. All 154 catalog entries and 359 candidate phrases have verified
+ASan/UBSan. All 160 catalog entries and 359 candidate phrases have verified
 coverage in the licensed 440-glyph atlas. Settings tests cover 2,052 torn-update
 cases and dirty-cache recovery without a power cycle. App-store recovery adds
 1,026 cases, with a flush barrier before reusing the older durable directory and
 matching half-range ambiguity checks in the offline tool.
+
+## Bounded AP work-pool extension
+
+Production queue tests execute 16,384 concurrently submitted jobs across shared
+memory, in addition to bounds, ticket exhaustion/staleness and publication cases.
+Memory-type validation has 970 assertions. The privileged QEMU matrix runs at
+both O0 and O2 with one/two/four/eight CPUs, sparse APIC IDs, missing optional
+PAT/MTRR capabilities, bad self-test checksums and memory-type mismatch rejection.
+A deliberate worker page fault stops that worker and fails pending work while
+other workers and BSP PIT interrupts continue.
+
+The actual desktop boot prepares all AP resources before building page tables,
+seals the shared directory before handoff, and enables BSP paging afterward.
+Real application/input tests also check separately ready workers, one general
+scheduler CPU, distinct APIC result identities, and periodic job completion.
+The monitor displays worker-ready/busy/failure/job counters in both languages.
+No AP callback, native application, device I/O or shared allocator execution is
+permitted by the bounded worker API. See [its limitations](cpu-work-pool.md).

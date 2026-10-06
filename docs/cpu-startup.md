@@ -1,9 +1,15 @@
 # AP startup and parked-core validation
 
 This module adds **real application-processor execution** after CPU discovery.
-It is deliberately separate from parallel task scheduling. On a four-vCPU QEMU
+The default path is deliberately separate from parallel task scheduling. On a four-vCPU QEMU
 machine, the BSP starts APs 1, 2 and 3, each AP executes a private-stack self-test,
 and all three park. The scheduler still reports **one online CPU**.
+
+The optional `Prepare` / `StartPrepared` split supports the separately verified
+[bounded kernel work pool](cpu-work-pool.md). Its trusted continuation runs only
+after the AP self-test passes; initialized/handed-off AP counts remain distinct
+from both parked APs and worker readiness. `Start` keeps the original parked
+behavior for callers that do not request a continuation.
 
 ## Boot integration
 
@@ -54,7 +60,8 @@ its validated MMIO base is exposed for a future explicit device mapping.
 The AP emergency IDT halts the affected AP on an exception/NMI. It does not touch
 BSP interrupt globals or attempt to return through a damaged frame. An exception
 before successful acknowledgment is reported as a bounded startup failure by the
-BSP. The APs do not enable maskable interrupts.
+BSP. The default parked APs do not enable maskable interrupts. A work-pool continuation
+installs and enables its own reviewed interrupt context.
 
 ## Startup sequence and evidence
 

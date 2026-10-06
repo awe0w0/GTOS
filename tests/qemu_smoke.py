@@ -55,6 +55,19 @@ class Guest:
             if needle in text:return
             time.sleep(.03)
         raise TimeoutError(needle+'\n'+self.text())
+    def verify_workers(self, cpus, periodic=False):
+        text = self.text()
+        check("CPU ONLINE 00000001" in text, "general scheduler remains BSP-only")
+        check(f"WORKER READY {cpus-1:08X}" in text, "each secondary processor is a ready kernel worker")
+        check("WORKER FAILED 00000000" in text, "no kernel worker failed startup")
+        check("AP PARKED 00000000" in text, "worker handoff is not reported as parked")
+        if cpus > 1:
+            self.wait("WORKER PERIODIC PASS" if periodic else "WORKER RUNTIME PASS", 10)
+            ids = [line.rsplit(" ", 1)[1] for line in self.text().splitlines()
+                   if line.startswith("WORKER JOB VERIFIED APIC ")]
+            check(len(ids) == cpus-1 and len(set(ids)) == cpus-1,
+                  "distinct APIC IDs execute and return independently verified work")
+        check("WORKER RUNTIME FAIL" not in self.text(), "bounded worker client has no runtime failure")
     def key(self,key,hold=80):
         self.call('human-monitor-command',{'command-line':f'sendkey {key} {hold}'})
         time.sleep(hold/1000+.12)
@@ -87,7 +100,7 @@ def boot(out,image,memory=64,cpus=4):
     check('HEAP SELFTEST PASS' in g.text(),'heap boot self-test')
     check(f'CPU DETECTED {cpus:08X}' in g.text(),f'{cpus} firmware CPUs detected')
     check('CPU ONLINE 00000001' in g.text(),'BSP-only scheduling reported honestly')
-    check(f'AP PARKED {cpus-1:08X}' in g.text(),'secondary CPUs acknowledged, self-tested and safely parked')
+    g.verify_workers(cpus, periodic=True)
     check('SCHEDULER RUNTIME PASS' in g.text(),'real task sleep/yield/return and GUI coexist')
     check('SYSCALL ABI PASS' in g.text(),'software interrupt 0x80 reaches handler')
     return g

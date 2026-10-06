@@ -262,11 +262,11 @@ void DesktopShell::DrawHardware() {
     canvas.Rect(98, 94, 204, 1, 3);
     canvas.Text(98, 102, "CPU", 5);
     canvas.Text(123, 102, state.vendor, 7);
-    canvas.Text(212, 102, "PARKED", 5);
-    canvas.Number(259, 102, state.parkedAPs, 9);
+    canvas.Text(206, 102, "WORKERS", 5);
+    canvas.Number(259, 102, state.workerCPUs, 9);
     canvas.Text(98, 114, "DETECTED", 6);
     canvas.Number(160, 114, state.logicalCPUs, 7);
-    canvas.Text(188, 114, "ONLINE", 6);
+    canvas.Text(188, 114, "SCHED", 6);
     canvas.Number(236, 114, state.onlineCPUs, 8);
     canvas.Text(98, 127, "TASKS", 6);
     canvas.Number(138, 127, state.taskCount, 7);

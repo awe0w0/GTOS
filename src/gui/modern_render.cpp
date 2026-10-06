@@ -216,16 +216,17 @@ void ModernDesktop::DrawMonitor(const ModernRect &r) {
     paint.Text(x + half + 26, y + 42, Label("PROCESSORS"), c.muted);
     paint.Number(x + half + 26, y + 65, state.logicalCPUs, c.text, 2);
     paint.Text(x + half + 68, y + 81, Label("detected"), c.muted);
+    paint.Text(x + half + 80 + paint.TextWidth(Label("detected")), y + 81, state.vendor, c.muted);
     int32_t row = y + 132;
     paint.Text(x, row, Label("Free physical pages"), c.muted);
     paint.Number(x + 192, row, state.freePages, c.text);
-    paint.Text(x, row + 25, Label("Heap used / KiB"), c.muted);
-    paint.Number(x + 192, row + 25, state.heapUsedKiB, c.text);
-    paint.Text(x + 244, row + 25, "/", c.muted);
-    paint.Number(x + 260, row + 25, state.heapKiB, c.text);
+    paint.Text(x, row + 23, Label("Heap used / KiB"), c.muted);
+    paint.Number(x + 192, row + 23, state.heapUsedKiB, c.text);
+    paint.Text(x + 244, row + 23, "/", c.muted);
+    paint.Number(x + 260, row + 23, state.heapKiB, c.text);
     uint32_t used =
         state.heapKiB ? (state.heapUsedKiB > state.heapKiB ? state.heapKiB : state.heapUsedKiB) : 0;
-    fb.Rect(x, row + 50, r.w - 48, 5, c.raised);
+    fb.Rect(x, row + 45, r.w - 48, 5, c.raised);
     if (state.heapKiB) {
         uint64_t remaining = (uint64_t)(r.w - 48) * used;
         uint32_t length = 0;
@@ -233,23 +234,31 @@ void ModernDesktop::DrawMonitor(const ModernRect &r) {
             remaining -= state.heapKiB;
             ++length;
         }
-        fb.Rect(x, row + 50, length, 5, c.accent);
+        fb.Rect(x, row + 45, length, 5, c.accent);
     }
-    paint.Text(x, row + 68, Label("CPU vendor"), c.muted);
-    paint.Text(x + 192, row + 68, state.vendor, c.text);
-    paint.Text(x, row + 91, Label("Scheduling CPUs"), c.muted);
-    paint.Number(x + 192, row + 91, state.onlineCPUs, c.text);
-    paint.Text(x + 226, row + 91, Label("APs started / parked"), c.muted);
-    paint.Number(x + 404, row + 91, state.parkedAPs, c.accent);
-    paint.Text(x, row + 114, Label("Tasks / switches"), c.muted);
-    paint.Number(x + 192, row + 114, state.taskCount, c.text);
-    paint.Text(x + 223, row + 114, "/", c.muted);
-    paint.Number(x + 240, row + 114, state.contextSwitches, c.text);
-    paint.Text(x, row + 137, Label("App disk / MiB"), c.muted);
-    paint.Number(x + 192, row + 137, state.diskSectors / 2048, c.text);
-    paint.Text(x + 240, row + 137,
+    paint.Text(x, row + 60, Label("Kernel workers"), c.muted);
+    paint.Number(x + 192, row + 60, state.workerCPUs, c.text);
+    paint.Text(x + 226, row + 60, Label("Busy / failed"), c.muted);
+    paint.Number(x + 404, row + 60, state.busyWorkers, c.accent);
+    paint.Text(x + 432, row + 60, "/", c.muted);
+    paint.Number(x + 447, row + 60, state.workerFailures, state.workerFailures ? 0xF29B9B : c.text);
+    paint.Text(x, row + 80, Label("Scheduling CPUs"), c.muted);
+    paint.Number(x + 192, row + 80, state.onlineCPUs, c.text);
+    paint.Text(x + 226, row + 80, Label("Parked APs"), c.muted);
+    paint.Number(x + 404, row + 80, state.parkedAPs, c.accent);
+    paint.Text(x, row + 100, Label("Tasks / switches"), c.muted);
+    paint.Number(x + 192, row + 100, state.taskCount, c.text);
+    paint.Text(x + 223, row + 100, "/", c.muted);
+    paint.Number(x + 240, row + 100, state.contextSwitches, c.text);
+    paint.Text(x, row + 120, Label("App disk / MiB"), c.muted);
+    paint.Number(x + 192, row + 120, state.diskSectors / 2048, c.text);
+    paint.Text(x + 240, row + 120,
                store && store->Mounted() ? Label("Mounted") : Label("Unavailable"),
                store && store->Mounted() ? c.accent : 0xEAA2A2);
+    paint.Text(x, row + 140, Label("Completed jobs"), c.muted);
+    paint.Number(x + 192, row + 140, state.completedJobs, c.text);
+    paint.Text(x + 338, row + 140, state.workPoolOK ? Label("Workers OK") : Label("Check workers"),
+               state.workPoolOK ? c.accent : c.muted);
     fb.Rect(x, r.y + r.h - 50, r.w - 48, 1, c.line);
     paint.Text(x, r.y + r.h - 35, state.memoryOK ? Label("Heap OK") : Label("Heap FAIL"),
                state.memoryOK ? c.accent : 0xF29B9B);
