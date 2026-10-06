@@ -40,6 +40,22 @@ def record():
 def run(name,command):
     with (out/(name+'.log')).open('w') as log:
         subprocess.run([str(x) for x in command],stdout=log,stderr=subprocess.STDOUT,check=True,timeout=240)
+def paddle_position(path):
+    with path.open('rb') as image:
+        assert image.readline().strip()==b'P6'
+        assert image.readline().strip()==b'800 600'
+        assert image.readline().strip()==b'255'
+        pixels=image.read();assert len(pixels)==800*600*3
+    # Match the published desktop acceptance's 320x200 paddle region/colors.
+    # Sample directly from QEMU's PPM without an optional image library.
+    xs=[]
+    for y in range(142,161):
+        for x in range(24,296):
+            at=(int((y+.5)*3)*800+int((x+.5)*2.5))*3
+            red,green,blue=pixels[at:at+3]
+            if red>150 and green>210 and blue<140:xs.append(x)
+    assert xs,'Visible game paddle is required for input acceptance'
+    return sum(xs)/len(xs)
 record()
 try:
     host_io=out/'host-io.o';validator=out/'actual-elf32-validator'
@@ -72,16 +88,18 @@ try:
         assert 'NATIVE REAPED 00000003' in guest.text()
         guest.verify_workers(cpus,periodic=True)
         guest.key('3');guest.key('i');guest.wait('APP INSTALL OK',10)
-        guest.key('ret');guest.wait('APP LAUNCH OK',10);guest.key('right',200)
+        guest.key('ret');guest.wait('APP LAUNCH OK',10)
+        before_ppm=case/'native-gtos-game-before.ppm'
+        guest.call('screendump',{'filename':str(before_ppm)})
+        before_x=paddle_position(before_ppm)
+        guest.key('right',350)
         ppm=case/'native-gtos-game.ppm';guest.call('screendump',{'filename':str(ppm)})
-        with ppm.open('rb') as image:
-            assert image.readline().strip()==b'P6'
-            assert image.readline().strip()==b'800 600'
-            assert image.readline().strip()==b'255'
-            assert len(image.read())==800*600*3
+        after_x=paddle_position(ppm)
+        assert after_x>before_x+10,'Actual right-arrow input must move the visible paddle'
         guest.close();guest=None
         state['cases'].append(dict(memory_mib=memory,vcpus=cpus,guest_pass=True,native_exit_code=0,
-            native_reaped=3,mutations=2000,desktop_game_input_pass=True,ap_worker_jobs_pass=True,
+            native_reaped=3,mutations=2000,desktop_game_input_pass=True,
+            game_paddle_before_x=before_x,game_paddle_after_x=after_x,ap_worker_jobs_pass=True,
             seconds=time.monotonic()-begin));record()
     assert before==sources(),'Tracked GTOS source changed during qualification'
     state.update(stage='passed',guest_pass=True,completed_cases=3,tracked_source_hashes_unchanged=True)
