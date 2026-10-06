@@ -48,7 +48,9 @@ extern "C" int NativeFpTestsMain() {
             && (NativeFpCr4(old) & ~0x600U) == (old & ~0x600U), "all unrelated high control bits preserved");
     }
     Check(NativeFpMxcsrMask(0) == 0xFFBF && NativeFpMxcsrMask(0xFFFF) == 0xFFFF
-        && NativeFpMxcsrMask(0xFFFFFFFF) == 0xFFFF, "MXCSR fallback/reported/reserved masks");
+        && NativeFpMxcsrMask(0x2FFFF) == 0x2FFFF, "MXCSR fallback and AMD MM capability mask");
+    for (uint32_t bit = 0; bit < 32; ++bit)
+        Check(NativeFpMxcsrMask(1U << bit) == (1U << bit), "every reported MXCSR capability bit preserved");
     uint8_t environment[28];
     for (uint32_t i = 0; i < 28; ++i) environment[i] = 0xA5;
     NativeFpContext clean;
@@ -62,6 +64,12 @@ extern "C" int NativeFpTestsMain() {
         NativeFpPut32(clean.fx + 24, 1U << bit);
         Check(NativeFpValidImage(clean, 0xFFBF) == ((0xFFBFU & (1U << bit)) != 0), "reserved MXCSR refusal");
     }
+    NativeFpPut32(clean.fx + 24, 0x21F80);
+    Check(NativeFpValidImage(clean, NativeFpMxcsrMask(0x2FFFF)), "legal AMD MM survives saved-image validation");
+    Check(!NativeFpValidImage(clean, NativeFpMxcsrMask(0xFFFF))
+        && !NativeFpValidImage(clean, NativeFpMxcsrMask(0)), "unadvertised MM remains rejected");
+    NativeFpPut32(clean.fx + 24, 0x80021F80);
+    Check(!NativeFpValidImage(clean, NativeFpMxcsrMask(0x2FFFF)), "unadvertised high reserved bit still rejected");
     NativeFpPut32(clean.fx + 24, 0x1F80);
     NativeFpPut32(clean.env + 12, 0x44332211); NativeFpPut16(clean.env + 16, 0x23);
     NativeFpPut16(clean.env + 18, 0xB7E5); NativeFpPut32(clean.env + 20, 0xABCD1234);

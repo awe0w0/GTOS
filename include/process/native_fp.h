@@ -55,7 +55,9 @@ namespace gtos { namespace memory { class KernelPaging; } namespace process {
     }
     inline uint32_t NativeFpKernelCr0(uint32_t value) { return (value | 0x2AU) & ~4U; }
     inline uint32_t NativeFpCr4(uint32_t value) { return value | 0x600U; }
-    inline uint32_t NativeFpMxcsrMask(uint32_t reported) { return reported ? reported & 0xFFFFU : 0xFFBFU; }
+    // MXCSR_MASK is a 32-bit hardware capability field. AMD MisAlignSse uses
+    // bit17; clipping to 16 bits can reject legal saved user state on return.
+    inline uint32_t NativeFpMxcsrMask(uint32_t reported) { return reported ? reported : 0xFFBFU; }
     inline uint16_t NativeFpGet16(const uint8_t* p) { return (uint16_t)(p[0] | ((uint16_t)p[1] << 8)); }
     inline uint32_t NativeFpGet32(const uint8_t* p) { return NativeFpGet16(p) | ((uint32_t)NativeFpGet16(p + 2) << 16); }
     inline void NativeFpPut16(uint8_t* p, uint16_t n) { p[0] = (uint8_t)n; p[1] = (uint8_t)(n >> 8); }

@@ -157,6 +157,9 @@ namespace {
             && ((U16(seeded+2) >> 11) & 7) == ((seed & 1) ? 2U : 1U)
             && seeded[4] == ((seed & 1) ? 0xDF : 0xBF),
             "independent FCW precision/rounding, TOP and tag shapes actually seeded");
+        const uint32_t reportedMask = U32(observation+64+28);
+        Require(U32(seeded+24) == (((seed & 1) ? 0x5FA1U : 0x3F84U) | (reportedMask & 0x20000U)),
+            "independent MXCSR seed includes hardware-advertised AMD MM bit");
         for (uint32_t i = 0; i < 32; ++i)
             Require(U32(seeded+160+i*4) == seed * 0x1020304U + i * 0x01010101U,
                 "every XMM lane actually seeded with independent pattern");
@@ -281,6 +284,10 @@ extern "C" void NativeFpSmoke(void* multiboot, uint32_t magic) {
             "diagnostic waiver justified by independent FLDENV pointer self-test in both peers");
         printf((char*)"EMULATOR LIMITATION: user FLDENV ignores FIP/FCS/FDP/FDS; kernel pointer fidelity UNPROVEN\n");
     }
+    Read(runtime, first);
+    printf((char*)"NATIVE FP HARDWARE MXCSR_MASK="); printfHex32(U32(observation+64+28));
+    printf((char*)" MM_BIT17_TESTED="); printfHex32((U32(observation+64+28) >> 17) & 1);
+    printf((char*)"\n");
     printf((char*)"NATIVE FP PAYLOADS CONTROLS TIMER SYSCALL YIELD MMX IRQ PASS\n");
     printf((char*)"CPL3 IRQ keyboard="); printfHex32(keyboard.user); printf((char*)" mouse="); printfHex32(mouse.user); printf((char*)"\n");
     const uint32_t peerBaseline = frames.getStatistics().freeFrames;

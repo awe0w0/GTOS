@@ -51,7 +51,9 @@ Initial images are integer-zeroed, then FCW=0x037F, empty tags, TOP/status=0,
 MXCSR=0x1F80 and zero pointers/opcode are set. All x87/MMX payload bytes and all
 XMM payload bytes are zero, including empty physical registers. The processor's
 MXCSR mask is obtained from a separate zeroed probe and falls back to 0xFFBF
-when reported as zero. A clean FNINIT/FNSTENV supplies reserved full-environment
+when reported as zero. Preserve every reported mask bit: AMD MisAlignSse uses
+MXCSR.MM bit17, so a 16-bit truncation is incorrect. A clean FNINIT/FNSTENV
+supplies reserved full-environment
 encodings only; inherited hardware payloads never become a new process image.
 Activation restores/captures the canonical state and compares its defined fields
 before admitting a process, then scrubs its scratch buffer.
@@ -213,3 +215,36 @@ The full strict Bochs architectural matrix is separately reproduced and recorded
 in [the verification report](native-fp-verification.md). A green ordinary CI run
 must not be presented as a strict QEMU pointer/#XM/invalid-MXCSR result or physical
 hardware proof.
+
+## AMD MXCSR control-mask portability
+
+The full hardware-reported 32-bit MXCSR_MASK is authoritative. AMD documents
+Misaligned Exception Mask at bit17 when CPUID.80000001:ECX.MisAlignSse is set;
+its MXCSR_MASK bit17 is then set independently of the current control value.
+See AMD APM Volume1, publication24592 Rev3.24, §4.2.2, and Volume2 §11.5.10
+([official indexed manual](https://docs.amd.com/api/khub/documents/68GKiN0gMEd6bMddsmhPwg/content)).
+The indexed vendor text was checked; direct download availability was not
+verified during this review.
+
+Earlier code clipped the reported mask to16 bits. In the opt-in profile this
+could reject legal saved MM state as an ownership invariant on return. The
+correction retains all reported bits while preserving the standard zero-mask
+fallback and rejection of genuinely unadvertised bits. Default activation is
+still Disabled.
+
+Pure tests cover all32 mask bits, legal `0x21F80` with mask `0x2FFFF`, and refusal
+under a mask that does not advertise MM. Strict guest peers now seed MM when
+the actual first-entry FXSAVE mask supports it and independently check the seed
+and every subsequent state comparison. Logs explicitly report whether bit17
+was exercised; a zero result is no claim of guest MM coverage. A no-call host
+instruction probe on an AMD-reporting x86-64 host (hypervisor bit set) also
+observed `0x21F80` through LDMXCSR, STMXCSR, non-REX FXSAVE in long mode and
+FXSAVE64 with mask `0x2FFFF`. Both FXRSTOR encodings restored that value at
+O0/O2. This supports the diagnosis but is not a GTOS/i386 or bare-metal run.
+
+The corrected guest fixture passes under strict Bochs at O0/O2 for Intel and
+AMD SSE3 models plus the SSE3-rejection case. AMD guests report mask `0x2FFFF`
+and `MM_BIT17_TESTED=1`; Intel guests report `0xFFFF` and `MM_BIT17_TESTED=0`.
+The same legal-MM peer fixture reproduces a return-invariant panic with the
+pre-fix helper. The full deterministic suite and qualified modern desktop/AP
+diagnostic also pass; default native activation remains Disabled.

@@ -235,7 +235,11 @@ native_fp_seed:
     ffree %st(3)
     jmp 4f
 3:  ffree %st(5)
-4:  ldmxcsr MXCSR
+4:  # Exercise AMD MM only when the CPU's own FXSAVE mask advertises it.
+    movl INITIAL+28,%eax
+    andl $0x20000,%eax
+    orl %eax,MXCSR
+    ldmxcsr MXCSR
     movdqu XMM_PATTERN+0,%xmm0
     movdqu XMM_PATTERN+16,%xmm1
     movdqu XMM_PATTERN+32,%xmm2
