@@ -1,4 +1,5 @@
 #include "handoff.h"
+extern void frame_guest_tests(const void *, size_t, uint64_t);
 #define NX (1ull<<63)
 #define PAGE 4096ull
 extern unsigned char __kernel_start[],__kernel_end[],__text_start[],__text_end[];
@@ -181,5 +182,6 @@ void kernel_main(void) {
     probe_ud(); /* Unarmed exception must fail closed. */
 #endif
     puts64("X64 FOUNDATION PASS BSP-only tests=7\n");
+    frame_guest_tests(boot_copy,boot_size,boot_info);
     stop(1);
 }

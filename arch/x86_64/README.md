@@ -4,6 +4,11 @@ This is a **separate, explicitly invoked experimental kernel**, not a port of th
 i386 desktop, an x64 userspace runtime, or Chromium. It does not link any `src/`
 files and changes neither the default Makefile nor existing emulator disks.
 
+The executable now also includes the separately documented [bounded physical-frame
+ownership slice](FRAME_POOL.md), after these seven foundation probes. The memory
+layout and no-allocator statements below describe the foundation baseline before
+that slice initializes; its permanent pool aliases are the documented extension.
+
 ## Build and test
 
 Run from the repository root:

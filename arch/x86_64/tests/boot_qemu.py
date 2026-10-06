@@ -3,13 +3,14 @@
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'tools'))
+from qemu_runtime import qemu_environment
 
 
 def main():
@@ -21,7 +22,7 @@ def main():
     if output.exists():
         raise SystemExit('Use a new output directory; existing evidence is never overwritten')
     output.mkdir(parents=True)
-    env = os.environ.copy()
+    env = qemu_environment()
     runtime = args.runtime.resolve()
     rootless = runtime / 'root'
     qemu = shutil.which('qemu-system-x86_64')
@@ -29,8 +30,7 @@ def main():
     extra = []
     if (rootless / 'usr/bin/qemu-system-x86_64').exists():
         qemu = str(rootless / 'usr/bin/qemu-system-x86_64')
-        env['LD_LIBRARY_PATH'] = str(rootless / 'usr/lib/x86_64-linux-gnu')
-        env['QEMU_MODULE_DIR'] = str(rootless / 'usr/lib/x86_64-linux-gnu/qemu')
+        env = qemu_environment(rootless, env)
         extra = ['-L', str(rootless / 'usr/share/qemu')]
     if (runtime / 'bin/grub-mkrescue').exists():
         grub = str(runtime / 'bin/grub-mkrescue')
@@ -47,8 +47,9 @@ def main():
     command(['gcc', '--version'], 'gcc-version.txt')
     command(['ld', '--version'], 'ld-version.txt')
     def sources():
+        paths = list((ROOT / 'arch/x86_64').rglob('*')) + [ROOT / 'tools/qemu_runtime.py']
         return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
-                for p in sorted((ROOT / 'arch/x86_64').rglob('*'))
+                for p in sorted(paths)
                 if p.is_file() and '__pycache__' not in p.parts}
     manifest = sources()
     (output / 'source-sha256.json').write_text(json.dumps(manifest, indent=2) + '\n')

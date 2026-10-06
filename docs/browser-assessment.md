@@ -124,8 +124,9 @@ entire range. The trace is workload evidence, not an exhaustive browser API
 specification, and Linux call names need not be copied verbatim into GTOS.
 
 The deliberate architecture track now has a separate [x86-64 boot foundation](../arch/x86_64/README.md)
-with real long-mode/protection acceptance on QEMU 8.2 and 10. It does not yet
-provide an allocator or user processes. Next come sparse VM reservation/commit/
+with real long-mode/protection acceptance on QEMU 8.2 and 10, now followed by
+a bounded boot-map-derived physical frame service. It does not yet provide
+user processes or sparse virtual regions. Next come VM reservation/commit/
 protection/decommit/release and then per-thread FP/TLS and wait/wake lifetime.
 The existing i386 desktop target and its tests remain maintained. This follows
 both the measured address-space requirement and V8's explicit 64-bit sandbox

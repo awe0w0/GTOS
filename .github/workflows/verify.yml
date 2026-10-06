@@ -47,6 +47,8 @@ jobs:
       - name: Verify separate x64 long-mode protection foundation
         # Experimental BSP-only target; does not replace the i386 desktop.
         run: /usr/bin/python3 arch/x86_64/tests/boot_qemu.py --output "$RUNNER_TEMP/gtos-x64"
+      - name: Verify x64 physical frame ownership and reclamation
+        run: /usr/bin/python3 arch/x86_64/tests/frame_qemu.py --output "$RUNNER_TEMP/gtos-x64-frames"
       - name: Run strict host sanitizers
         run: |
           GTOS_DESKTOP_SANITIZERS=1 ./tests/desktop_test.sh

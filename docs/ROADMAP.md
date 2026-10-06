@@ -156,5 +156,10 @@ The first x64 boot/protection gate is implemented in
 Both QEMU 8.2 and 10 pass 33 strict cases, including actual NX/WP/stack-guard
 faults, rejected malformed handoffs/control states and a real double fault on
 its dedicated emergency stack. Its parser is sanitizer-tested. It remains
-BSP-only with no timer service, allocator, userspace or desktop; the sparse-VM
-service and subsequent browser contracts are the next executable milestones.
+BSP-only with no timer service, userspace or desktop. A subsequent
+[bounded physical frame service](../arch/x86_64/FRAME_POOL.md) now derives real
+owned RAM from the validated boot map, excludes live boot allocations, and
+proves zeroing, exhaustion/reuse and flush-before-free. It manages at most
+2,048 frames (8 MiB) below64 MiB, with privileged RW/NX aliases. This is not
+giant virtual reservation or an SMP/userspace allocator. The sparse-VM service
+and subsequent browser contracts are the next executable milestones.

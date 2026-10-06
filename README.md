@@ -80,12 +80,31 @@ back to the exact free-frame baseline before reporting
 `NATIVE RUNTIME PASS`. The intentional `NATIVE USER FAULT` diagnostic is part of
 this acceptance test, not an unexpected kernel crash.
 
-This is an experimental integer-only ABI with four process slots, bounded image
-sizes, checked console writes, ticks, yield and exit. Non-PAE paging has no NX;
-FP/SIMD, TLS, dynamic linking, general files/threads and a browser runtime are not
-provided by this proof. Native ELF installation through the bytecode app store
+The default is an experimental integer-only ABI with four process slots, bounded
+image sizes, checked console writes, ticks, yield and exit. An optional
+[legacy FP ownership profile](docs/native-fp.md) is separately tested and remains
+disabled by default. Non-PAE paging has no NX; TLS, dynamic linking, general
+files/threads and a browser runtime are not provided by this proof. Native ELF installation through the bytecode app store
 is not claimed. See [process contract](docs/native-processes.md),
 [process memory](docs/process-memory.md), and [ELF validation](docs/elf32-loader.md).
+
+## Separate x86-64 foundation
+
+An explicitly built [x64 target](arch/x86_64/README.md) now proves BIOS/GRUB
+long-mode entry, four-level supervisor W^X mappings, NX/WP and guarded exception
+stacks. Its [physical frame pool](arch/x86_64/FRAME_POOL.md) selects real available
+RAM from validated boot information, excludes live allocations, zeroes frames,
+and tests exact ownership/reuse and reclamation. The initial pool manages at most
+8 MiB below64 MiB; this is a bounded service proof, not all available machine RAM.
+
+```sh
+make -f arch/x86_64/Makefile
+python3 arch/x86_64/tests/boot_qemu.py --output /tmp/gtos-x64-boot-new
+python3 arch/x86_64/tests/frame_qemu.py --output /tmp/gtos-x64-frames-new
+```
+
+This separate BSP-only target has no userspace, desktop, general sparse VM,
+threads or browser. It preserves the working i386 desktop and its test suite.
 
 ## Verification
 
@@ -116,13 +135,15 @@ The default build uses -O2. Use `make OPTIMIZATION=-O0` for an unoptimized build
 after `make clean`. App data under `data/` survives build cleanup.
 
 The BSP now enables real non-PAE paging: page zero is absent, kernel text/rodata
-are read-only with CR0.WP, and device mappings are explicit. This does not yet
-provide ring-3 process isolation or NX protection.
+are read-only with CR0.WP, and device mappings are explicit. The bounded native
+process layer adds separate user address spaces on top of that shared template;
+the i386 non-PAE target still has no NX protection.
 
 The Chinese atlas covers every localized interface/candidate string; arbitrary
 Unicode/CJK coverage and a general-purpose IME remain future work.
 
 More details: [language/input](docs/desktop-localization.md), [settings](docs/settings.md), [desktop](docs/desktop.md), [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).
 
-The [native Chromium port](docs/BROWSER_PORT.md) is queued after the current
-phase, beginning with a verified upstream/resource/API assessment.
+The [native Chromium project](docs/BROWSER_PORT.md) is progressing through
+verified kernel/API prerequisites and a separate Linux reference build. Chromium
+and webpage rendering have not yet run inside GTOS.

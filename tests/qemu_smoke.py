@@ -7,6 +7,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 BOOT_ISO=ROOT/'GTOS.iso'
 sys.path.insert(0,str(ROOT/'tools'))
 import disk as disktool
+from qemu_runtime import qemu_environment
 
 def check(value, text):
     if not value: raise AssertionError(text)
@@ -14,13 +15,12 @@ def check(value, text):
 class Guest:
     def __init__(self, out, image, memory=64, cpus=4, wait_ready=True, trace_interrupts=False):
         self.out=out; self.log=out/'debug.log'; self.sequence=0
-        runtime=ROOT.parent/'gtos-runtime'; env=os.environ.copy()
+        runtime=ROOT.parent/'gtos-runtime'; env=qemu_environment()
         qemu=shutil.which('qemu-system-i386'); bios=[]
         if env.get('GTOS_QEMU_DATA_DIR'): bios=['-L',env['GTOS_QEMU_DATA_DIR']]
         if (runtime/'root/usr/bin/qemu-system-i386').exists():
             qemu=str(runtime/'root/usr/bin/qemu-system-i386')
-            env['LD_LIBRARY_PATH']=str(runtime/'root/usr/lib/x86_64-linux-gnu')
-            env['QEMU_MODULE_DIR']=str(runtime/'root/usr/lib/x86_64-linux-gnu/qemu')
+            env=qemu_environment(runtime/'root',env)
             bios=['-L',str(runtime/'root/usr/share/qemu')]
         if not qemu: raise RuntimeError('qemu-system-i386 is required')
         cmd=[qemu]+bios+['-machine','pc','-accel','tcg','-m',str(memory)+'M','-smp',str(cpus),'-cdrom',str(BOOT_ISO),'-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-qmp','stdio','-no-reboot','-no-shutdown','-debugcon','file:'+str(self.log),'-global','isa-debugcon.iobase=0xe9']

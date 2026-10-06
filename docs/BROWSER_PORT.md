@@ -103,8 +103,11 @@ The first gate now has a separately built, reviewed [x64 boot target](../arch/x8
 33 real-guest positive/negative cases pass under both QEMU 8.2 and 10. It proves
 long mode and strict protection/exception behavior, not a port of the desktop,
 x64 userspace or sparse reservation APIs. The target is deliberately BSP-only;
-i386 AP workers and their tests continue on the existing target. The remaining
-service gates above are implementation targets, not existing capabilities.
+i386 AP workers and their tests continue on the existing target. Its subsequent
+[physical frame-pool slice](../arch/x86_64/FRAME_POOL.md) now owns a bounded real
+boot-map-derived RAM pool with exact exclusions, zeroing, generation/role checks
+and reclamation tests. The large sparse reservation layer and user-facing
+services above remain implementation targets, not existing capabilities.
 
 ## Staged browser proof
 
