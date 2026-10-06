@@ -92,6 +92,7 @@ extern "C" uint8_t kernel_start, kernel_end, kernel_readonly_start, kernel_reado
 static memory::PhysicalMemoryManager frames;
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
+static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
 static volatile uint32_t sleeperWakes = 0, yielderRuns = 0;
 static void Sleeper() {
     for (uint32_t i = 0; i < 3; ++i) {
@@ -422,6 +423,8 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     bool workersPrepared = apsPrepared && workers.Prepare(cpuStartup, frames);
     CpuStartupReport apReport = cpuStartup.GetReport();
     AdvancedTechnologyAttachment disk(0x1F0, true);
+    // PIT below is 100 Hz. IF-clear boot uses finite polling; runtime gets 5 s.
+    if (!disk.ConfigureWaitClock(DiskWaitTicks,500U)) Panic("ATA WAIT CLOCK");
     storage::AppStore store(&disk);
     bool diskOK = store.Mount();
     printf(diskOK ? "APP STORE MOUNT OK\n" : "APP STORE UNAVAILABLE\n");

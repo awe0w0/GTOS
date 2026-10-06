@@ -2,6 +2,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
+./tests/ata_wait_test.sh
 ./tests/kernel_integer_test.sh
 ./tests/memory_test.sh
 ./tests/paging_test.sh

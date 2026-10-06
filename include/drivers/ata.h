@@ -3,6 +3,7 @@
 #include <common/types.h>
 #include <hardwarecommunication/port.h>
 #include <storage/blockdevice.h>
+#include <drivers/ata_wait.h>
 namespace gtos { namespace drivers {
 // Polling ATA PIO, LBA28, 512-byte sectors. Every hardware wait is bounded.
 class AdvancedTechnologyAttachment : public storage::BlockDevice {
@@ -20,6 +21,8 @@ public:
     enum Error { None, NoDevice, Timeout, DeviceError, Unsupported, BadArgument };
 private:
     Error lastError;
+    AtaWaitBudget::Clock waitClock;
+    uint32_t waitTimeoutTicks;
 public:
     AdvancedTechnologyAttachment(uint16_t portBase, bool master);
     ~AdvancedTechnologyAttachment();
@@ -33,6 +36,11 @@ public:
     virtual uint32_t SectorCount() const { return sectors; }
     const char* Model() const { return model; }
     Error LastError() const { return lastError; }
+    // Clock is read-only, BSP-owned, and must outlive the driver. No IRQ changes.
+    bool ConfigureWaitClock(AtaWaitBudget::Clock source, uint32_t timeoutTicks) {
+        if (!source || !timeoutTicks || timeoutTicks>0x7FFFFFFFU) return false;
+        waitClock=source;waitTimeoutTicks=timeoutTicks;return true;
+    }
 };
 } }
 #endif

@@ -3,7 +3,7 @@ using namespace gtos::drivers;
 AdvancedTechnologyAttachment::AdvancedTechnologyAttachment(uint16_t base, bool isMaster)
 : dataPort(base), errorPort(base+1), sectorCountPort(base+2), lbaLowPort(base+3),
   lbaMidPort(base+4), lbaHiPort(base+5), devicePort(base+6), commandPort(base+7),
-  controlPort(base+0x206), master(isMaster), present(false), sectors(0), lastError(None) {
+  controlPort(base+0x206), master(isMaster), present(false), sectors(0), lastError(None), waitClock(0), waitTimeoutTicks(0) {
     model[0] = 0;
 }
 AdvancedTechnologyAttachment::~AdvancedTechnologyAttachment() {}
@@ -11,14 +11,15 @@ void AdvancedTechnologyAttachment::Delay() {
     for (uint32_t i=0;i<4;i++) controlPort.Read();
 }
 bool AdvancedTechnologyAttachment::Wait(bool drq) {
-    for (uint32_t i=0;i<1000000;i++) {
-        uint8_t s=commandPort.Read();
-        if (s==0 || s==0xFF) { lastError=NoDevice; return false; }
-        if (s&0x80) continue;
-        if (s&0x21) { lastError=DeviceError; return false; }
-        if (!drq || (s&8)) { lastError=None; return true; }
+    uint32_t flags; asm volatile("pushfl; popl %0" : "=r"(flags));
+    AtaWaitBudget budget(waitClock,waitTimeoutTicks,(flags&0x200U)!=0);
+    switch (PollAta(commandPort,drq,budget)) {
+        case AtaReady:lastError=None;return true;
+        case AtaMissing:lastError=NoDevice;return false;
+        case AtaDeviceError:lastError=DeviceError;return false;
+        case AtaTimedOut:lastError=Timeout;return false;
     }
-    lastError=Timeout; return false;
+    lastError=Timeout;return false;
 }
 bool AdvancedTechnologyAttachment::Identify() {
     present=false; sectors=0; model[0]=0;
