@@ -66,6 +66,8 @@ namespace gtos { namespace memory {
         bool protectOwnedPage(uint32_t virtualAddress, bool writable);
         // Byte-address query. False clears the result, including on null/holes.
         bool query(uint32_t virtualAddress, PagingMapping& result) const;
+        // Identity check for consumers borrowing this allocator-owned template.
+        bool usesAllocator(const PhysicalMemoryManager& allocator) const;
         PagingStatistics getStatistics() const;
         PagingError getLastError() const;
         static const char* ErrorName(PagingError value);

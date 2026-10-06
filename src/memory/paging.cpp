@@ -260,6 +260,10 @@ bool KernelPaging::sealForSharedProcessors() {
     error = PagingOk;
     return true;
 }
+bool KernelPaging::usesAllocator(const PhysicalMemoryManager& allocator) const {
+    InterruptGuard guard;
+    return prepared && frames == &allocator;
+}
 PagingStatistics KernelPaging::getStatistics() const {
     InterruptGuard guard;
     PagingStatistics result = {mappedCount, tableCount, directory, prepared, active, sharedSealed};
