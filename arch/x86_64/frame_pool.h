@@ -36,6 +36,8 @@ struct frame_pool {
     struct frame_record records[BOOT_MEMORY_MAX_FRAMES];
     struct frame_platform platform;
     uint64_t generation;
+    const void *service_owner; /* Optional exclusive VM binding; no allocator callbacks. */
+    volatile uint64_t *service_root; /* Platform-bound actual CR3 root; set before vm_init. */
     uint32_t roles[FRAME_ROLE_COUNT];
     uint32_t ready, busy, fail_nth, allocation_attempt;
 };

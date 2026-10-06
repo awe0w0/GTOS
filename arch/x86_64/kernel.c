@@ -1,4 +1,5 @@
 #include "handoff.h"
+#include "fault_probe.h"
 extern void frame_guest_tests(const void *, size_t, uint64_t);
 #define NX (1ull<<63)
 #define PAGE 4096ull
@@ -74,6 +75,7 @@ static volatile struct {
     uint64_t armed,vector,error,address,rip,resume,stack;
 } expected;
 static volatile unsigned faults;
+static unsigned vm_fault_scope;
 void handle_trap(struct frame *f) {
     uint64_t address; __asm__ volatile("mov %%cr2,%0":"=r"(address));
     int good = expected.armed==1 && f->vector==expected.vector && f->error==expected.error &&
@@ -92,7 +94,7 @@ void handle_trap(struct frame *f) {
     }
     f->rip=expected.resume;
     ++faults;
-    puts64("X64 EXPECTED vector=");hex(f->vector);puts64(" error=");hex(f->error);
+    puts64(vm_fault_scope ? "X64 VM EXPECTED vector=" : "X64 EXPECTED vector=");hex(f->vector);puts64(" error=");hex(f->error);
     puts64(" rip=");hex(expected.rip);puts64(" address=");hex(expected.address);puts64("\n");
 }
 static void arm(uint64_t vector,uint64_t error,uint64_t addr,void *rip,void *resume,uint64_t stack) {
@@ -104,6 +106,29 @@ static void arm(uint64_t vector,uint64_t error,uint64_t addr,void *rip,void *res
 static void complete(const char *name,unsigned count) {
     if (expected.armed || faults!=count) fail("fault probe did not trap");
     puts64("X64 PASS ");puts64(name);puts64("\n");
+}
+/* Shared exact-probe interface: all traps retain the original vector, error,
+ * CR2, RIP, selectors, IF, saved RSP and dedicated-IST checks above. */
+void fault_probe_scope_vm(void) {
+    if (expected.armed) fail("probe still armed");
+    vm_fault_scope=1;
+}
+unsigned fault_probe_count(void) { return faults; }
+void fault_probe_arm(uint64_t vector,uint64_t error,uint64_t addr,void *rip,void *resume,uint64_t stack) {
+    arm(vector,error,addr,rip,resume,stack);
+}
+void fault_probe_check(unsigned count) {
+    if (expected.armed || faults!=count) fail("fault probe did not trap");
+}
+void fault_probe_corrupt(unsigned choice) {
+    if (!vm_fault_scope || !expected.armed) fail("unarmed VM probe corruption");
+    if (choice==11) expected.vector=13;
+    else if (choice==12) expected.error^=1;
+    else if (choice==13) ++expected.address;
+    else if (choice==14) ++expected.rip;
+    else if (choice==15) expected.resume=(uint64_t)probe_ud_ip;
+    else if (choice==16) expected.stack=1;
+    else fail("bad VM probe corruption");
 }
 static int guard(uint64_t a) {
     return a==(uint64_t)stack_guard || a==(uint64_t)fault_guard || a==(uint64_t)df_guard ||

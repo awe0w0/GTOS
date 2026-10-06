@@ -9,7 +9,8 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Expanded x64 host/model gates run alongside the retained desktop suite.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Install official build and emulation tools
@@ -54,3 +55,17 @@ jobs:
           GTOS_DESKTOP_SANITIZERS=1 ./tests/desktop_test.sh
           GTOS_I18N_SANITIZERS=1 ./tests/i18n_test.sh
           ./tests/settings_sanitizer_test.sh
+
+  verify_sparse_vm:
+    # Keep the full sparse-VM matrix separate from the desktop job's budget.
+    # This is an internal supervisor-only x64 service, not browser execution.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install official x64 build and emulation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc binutils grub-pc-bin grub-common xorriso mtools qemu-system-x86 python3
+      - name: Verify full sparse VM ownership, faults and rollback
+        run: /usr/bin/python3 arch/x86_64/tests/vm_qemu.py --output "$RUNNER_TEMP/gtos-x64-vm"

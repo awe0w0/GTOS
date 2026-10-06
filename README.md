@@ -103,8 +103,20 @@ python3 arch/x86_64/tests/boot_qemu.py --output /tmp/gtos-x64-boot-new
 python3 arch/x86_64/tests/frame_qemu.py --output /tmp/gtos-x64-frames-new
 ```
 
-This separate BSP-only target has no userspace, desktop, general sparse VM,
-threads or browser. It preserves the working i386 desktop and its test suite.
+A separately enabled [sparse VM core](arch/x86_64/SPARSE_VM.md) now reserves
+large virtual intervals without proportional backing, commits zeroed pages,
+protects R/RW/NONE, and decommits/releases with checked ownership and rollback.
+Its tests reserve roughly 1.35 TiB while backing only selected pages; this is
+virtual space, not physical RAM. Run the full guest gate with:
+
+```sh
+python3 arch/x86_64/tests/vm_qemu.py --output /tmp/gtos-x64-vm-new
+```
+
+This remains a BSP-only supervisor service with fixed metadata and commit limits.
+It has no user ABI, desktop, threads, executable/JIT mappings or browser. Discard,
+reset, trim, split and punch are not yet implemented. The working i386 desktop
+and its test suite remain maintained.
 
 ## Verification
 

@@ -81,6 +81,22 @@ Remaining work includes:
 - Enforced browser sandbox policy and security boundaries. Passing native probes
   or an unsandboxed bring-up build does not establish safe public-web browsing
 
+## Independent GTOS platform identity
+
+The requested Chromium adaptation must have its own GTOS target and platform
+identity. It may reuse suitable Linux/POSIX implementation pieces through real,
+equivalent GTOS services, but must not identify GTOS as Linux merely to select
+code paths. Missing operations must remain explicit build/capability failures,
+not stubs returning success. Keep the unchanged Linux reference target available
+for comparison, and distinguish its results from every GTOS guest test.
+
+Existing native ABI1 is an i386 contract. The experimental x64 kernel-memory
+interfaces are not a published syscall or userspace ABI. Browser-side code must
+wait for a versioned, guest-tested wire contract rather than guess entry numbers
+or pass internal supervisor pointers across the future user boundary. Separate
+Chromium-fork publication still requires an agreed destination; current remote
+publication remains reviewed GTOS modules on `dev`.
+
 ## Next architecture and service gates
 
 The selected next kernel target is a separate x86-64 bring-up, preserving the
@@ -106,8 +122,13 @@ x64 userspace or sparse reservation APIs. The target is deliberately BSP-only;
 i386 AP workers and their tests continue on the existing target. Its subsequent
 [physical frame-pool slice](../arch/x86_64/FRAME_POOL.md) now owns a bounded real
 boot-map-derived RAM pool with exact exclusions, zeroing, generation/role checks
-and reclamation tests. The large sparse reservation layer and user-facing
-services above remain implementation targets, not existing capabilities.
+and reclamation tests. The next [sparse VM core](../arch/x86_64/SPARSE_VM.md)
+implements kernel-only reserve/commit/protect/decommit/release with actual
+page-table backing, hardware fault tests and transactional failure cleanup.
+It proves the roughly 1.35 TiB reservation using bounded sparse metadata, not
+that amount of RAM. This is still supervisor-only, NX-only and BSP-only, with
+one bound pool/root and a 256-page commit limit. Discard/reset/trim/split/punch,
+user address spaces, threads and the browser-facing wire ABI remain open.
 
 ## Staged browser proof
 

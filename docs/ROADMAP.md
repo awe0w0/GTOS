@@ -161,5 +161,25 @@ BSP-only with no timer service, userspace or desktop. A subsequent
 owned RAM from the validated boot map, excludes live boot allocations, and
 proves zeroing, exhaustion/reuse and flush-before-free. It manages at most
 2,048 frames (8 MiB) below64 MiB, with privileged RW/NX aliases. This is not
-giant virtual reservation or an SMP/userspace allocator. The sparse-VM service
-and subsequent browser contracts are the next executable milestones.
+giant virtual reservation or an SMP/userspace allocator. The sparse-VM core below
+and subsequent browser contracts build on this service.
+
+## Chromium platform identity requirement
+
+Chromium must gain an independent GTOS target/platform, even where audited
+Linux/POSIX code can be reused through equivalent implemented services. Preserve
+the Linux reference; do not disguise GTOS as Linux, invent syscall success, or
+present a host control as guest execution. Stabilize actual x64 user ABI and
+capabilities before binding browser-side code to kernel internals.
+
+## Sparse VM core checkpoint
+
+The [bounded x64 kernel service](../arch/x86_64/SPARSE_VM.md) now implements
+aligned/exact reserve, zeroed commit, content-preserving R/RW/NONE protection,
+decommit and release. Huge unbacked reservations use no proportional frame or
+page-table allocation. Real guest tests cover distant and true outer-end pages,
+14 exact hardware faults, allocation failure at every staged point, shared table
+paths, stale/foreign handles, and complete reclamation. No untrusted-user or SMP
+claim follows: the service owns one supervisor root/pool and never maps executable
+pages. Lifecycle additions (discard/reset/trim/split/punch), private x64 processes,
+thread/TLS/FP support and a versioned userspace ABI remain subsequent gates.

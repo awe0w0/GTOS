@@ -1,5 +1,10 @@
 #include "frame_pool.h"
 #include "frame_boot_tests.h"
+#if VM_TEST
+#include "sparse_vm.h"
+static struct vm_space vm;
+extern void vm_guest_tests(struct vm_space *);
+#endif
 extern uint64_t pml4[],pdpt[],pd[],pt[];
 extern unsigned char stack_bottom[],stack_top[],__kernel_start[],__kernel_end[];
 static struct frame_pool pool;
@@ -29,9 +34,17 @@ static int context(void *opaque) {
     if ((pml4[0]&~0x20ull)!=((uint64_t)pdpt|3) ||
         (pdpt[0]&~0x20ull)!=((uint64_t)pd|3)) return 0;
     for (unsigned i=0;i<512;++i) {
-        if (i && (pml4[i] || pdpt[i])) return 0;
+        if (i && pdpt[i]) return 0;
+#if VM_TEST
+        if (i && !vm.ready && pml4[i]) return 0;
+#else
+        if (i && pml4[i]) return 0;
+#endif
         if ((pd[i]&~0x20ull)!=(i<32 ? (uint64_t)&pt[i*512]|3 : 0)) return 0;
     }
+#if VM_TEST
+    if (vm.ready && (vm.root!=pml4 || !vm_owned_hierarchy_valid(&vm))) return 0;
+#endif
     return 1;
 }
 static uint64_t leaf(void *opaque,uint64_t a) { (void)opaque;return pt[a/4096]; }
@@ -202,4 +215,11 @@ void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
     stats_free(count);whole_map_audit();
     say("X64 FRAME PASS failures exact accounting preserved boot mappings\n");
     say("X64 FRAME POOL PASS BSP-only managed=");hex(count);say("\n");
+#if VM_TEST
+    pool.service_root=pml4;
+    need(vm_init(&vm,&pool,alternate_root)==VM_STATE && !vm.ready && !pool.service_owner,"VM root identity");
+    need(vm_init(&vm,&pool,pml4)==VM_OK,"VM initialization");
+    vm_guest_tests(&vm);
+    stats_free(count);whole_map_audit();
+#endif
 }

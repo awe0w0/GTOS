@@ -140,7 +140,7 @@ def verify(core, guest, memory):
                   '(msr(0xc0000080)&0xd00)!=0xd00', '!(msr(0x1b)&0x100)',
                   '(pml4[0]&~0x20ull)!=((uint64_t)pdpt|3)',
                   '(pdpt[0]&~0x20ull)!=((uint64_t)pd|3)',
-                  '(i&&(pml4[i]||pdpt[i]))',
+                  '(i&&pdpt[i])', '(i&&pml4[i])',
                   '(pd[i]&~0x20ull)!=(i<32?(uint64_t)&pt[i*512]|3:0)'):
         assert check in context, f'missing architecture restriction: {check}'
 
