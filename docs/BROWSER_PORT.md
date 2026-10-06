@@ -133,6 +133,11 @@ exact reference suffix trim and sparse 4 GiB reset. These remain trusted kernel
 operations. [Private x64 userspace](x64-user-runtime.md), threads and the
 browser-facing wire ABI remain open.
 
+The real frame backend is now separated from guest test code with atomic,
+fixed-root initialization and an invariant-checked published binding. This is
+the behavior-preserving prerequisite for a registered ownership manager; it
+does not yet permit multiple private roots or user-mode service calls.
+
 ## Staged browser proof
 
 Each stage must run real guest code and have a reviewable acceptance result:

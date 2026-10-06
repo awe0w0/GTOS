@@ -46,7 +46,7 @@ def require_order(source, *pieces):
         cursor = found + len(needle)
 
 
-def verify(core, guest, memory):
+def verify(core, backend, memory):
     # No allocator caller may supply synthetic physical candidates or a raw free
     # list. The real parser supplies this pool's immutable physical selection.
     init = compact(body(core, 'frame_pool_init'))
@@ -121,17 +121,17 @@ def verify(core, guest, memory):
         r'\(physical\|\(1(?:UL|ULL)<<63\)\|3\);', valid), 'exact RW/NX supervisor alias policy'
     # Following the real binding matters: a mock flush-count increment does not
     # establish the presence of the privileged invalidate instruction.
-    binding = re.search(r'static\s+const\s+struct\s+frame_platform\s+platform\s*=\s*([^;]+);', guest)
+    binding = re.search(r'const\s+struct\s+frame_platform\s+x64_frame_platform\s*=\s*([^;]+);', backend)
     assert binding and compact(binding.group(1)) == '{context,leaf,write_leaf,flush,alias,0}'
-    assert compact(body(guest, 'flush')) == compact('''
+    assert compact(body(backend, 'flush')) == compact('''
         (void)opaque;
         __asm__ volatile("mov %0,%%cr3"::"r"(pml4):"memory");
         ++flushes;
     '''), 'production flush must reload the actual bootstrap CR3 with memory clobber'
-    assert compact(body(guest, 'leaf')) == '(void)opaque;returnpt[a/4096];'
-    assert compact(body(guest, 'write_leaf')) == '(void)opaque;pt[a/4096]=v;'
-    assert compact(body(guest, 'alias')) == '(void)opaque;return(volatileunsignedchar*)a;'
-    context = compact(body(guest, 'context'))
+    assert compact(body(backend, 'leaf')) == '(void)opaque;returnpt[a/4096];'
+    assert compact(body(backend, 'write_leaf')) == '(void)opaque;pt[a/4096]=v;'
+    assert compact(body(backend, 'alias')) == '(void)opaque;return(volatileunsignedchar*)a;'
+    context = compact(body(backend, 'context'))
     for token in ('mov%%cr0', 'mov%%cr3', 'mov%%cr4', 'pushfq', 'mov%%rsp', 'mov%%cs'):
         assert token in context, f'context must read real CPU state: {token}'
     for check in ('cs!=24', 'flags&(1ull<<9)', 'sp<(uint64_t)stack_bottom',
@@ -152,7 +152,7 @@ def preprocessed(path, cc):
                           stderr=subprocess.PIPE, text=True).stdout
 
 
-def mutation_checks(core, guest, memory):
+def mutation_checks(core, backend, memory):
     # Source gate self-checks: every weakened version must fail for the expected
     # class of source change, even if an emulator happens not to cache a stale VA.
     mutations = [
@@ -163,16 +163,16 @@ def mutation_checks(core, guest, memory):
         ('core', 'physical|(1UL << 63)|3', 'physical|3', 'executable pool alias'),
         ('core', 'physical|(1UL << 63)|3', 'physical|(1UL << 63)|7', 'user-accessible pool alias'),
         ('core', 'for (uint32_t j=0;j<4096;++j) address[j]=0;', '(void)address;', 'missing zeroing'),
-        ('guest', '"mov %0,%%cr3"', '""', 'missing real CR3 write'),
-        ('guest', ':"memory"', ':"cc"', 'missing architecture memory clobber'),
-        ('guest', '{context,leaf,write_leaf,flush,alias,0}', '{context,leaf,write_leaf,leaf,alias,0}', 'wrong backend binding'),
-        ('guest', 'c4!=0x20', '0', 'missing CR4 restriction'),
-        ('guest', 'c3!=(uint64_t)pml4', '0', 'missing CR3 identity'),
-        ('guest', '!(msr(0x1b)&0x100)', '0', 'missing BSP restriction'),
+        ('backend', '"mov %0,%%cr3"', '""', 'missing real CR3 write'),
+        ('backend', ':"memory"', ':"cc"', 'missing architecture memory clobber'),
+        ('backend', '{context,leaf,write_leaf,flush,alias,0}', '{context,leaf,write_leaf,leaf,alias,0}', 'wrong backend binding'),
+        ('backend', 'c4!=0x20', '0', 'missing CR4 restriction'),
+        ('backend', 'c3!=(uint64_t)pml4', '0', 'missing CR3 identity'),
+        ('backend', '!(msr(0x1b)&0x100)', '0', 'missing BSP restriction'),
         ('memory', 'if (range.type==1)', 'if (1)', 'reserved memory reclamation'),
         ('memory', 'mark(bitmap,request->kernel_start,request->kernel_end,0);', '(void)0;', 'borrowed table reclamation'),
     ]
-    sources = {'core': core, 'guest': guest, 'memory': memory}
+    sources = {'core': core, 'backend': backend, 'memory': memory}
     count = 0
     for source, old, new, label in mutations:
         assert old in sources[source], f'mutation fixture no longer matches: {label}'
@@ -194,7 +194,7 @@ def mutation_checks(core, guest, memory):
     changed_reclaim = reclaim.replace(flush, '')
     changed_reclaim = changed_reclaim.replace('*released=count;', flush + '\n*released=count;')
     try:
-        verify(core.replace(reclaim, changed_reclaim), guest, memory)
+        verify(core.replace(reclaim, changed_reclaim), backend, memory)
     except AssertionError:
         count += 1
     else:
@@ -207,10 +207,10 @@ def main():
     parser.add_argument('--cc', default=os.environ.get('CC', 'gcc'))
     args = parser.parse_args()
     core = preprocessed(ARCH / 'frame_pool.c', args.cc)
-    guest = preprocessed(ARCH / 'frame_guest.c', args.cc)
+    backend = preprocessed(ARCH / 'frame_platform.c', args.cc)
     memory = preprocessed(ARCH / 'boot_memory.c', args.cc)
-    verify(core, guest, memory)
-    count = mutation_checks(core, guest, memory)
+    verify(core, backend, memory)
+    count = mutation_checks(core, backend, memory)
     print(f'x64 frame source tests: PASS (real CR3 binding, invalidate-before-free, supervisor NX, boot exclusions, {count} rejected mutations)')
 
 

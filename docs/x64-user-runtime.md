@@ -11,6 +11,12 @@ contained user faults and deferred reclamation. Entering CPL3 alone does not
 complete this target. Maintain the i386 desktop, Chinese input, application
 storage, game and native-process regressions throughout this work.
 
+The [production frame-platform extraction](../arch/x86_64/FRAME_POOL.md#fixed-real-x64-backend)
+is now implemented and tested. Its fixed-root VM initialization publishes a
+binding only after success and enforces that initialized identity thereafter,
+including an empty hierarchy. Registered multiple-owner spaces and every CPL3
+gate below remain future implementation; extraction alone adds no user runtime.
+
 ## Implementation order
 
 1. Extract the existing real frame platform from guest tests without broadening

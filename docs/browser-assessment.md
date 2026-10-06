@@ -136,6 +136,49 @@ both the measured address-space requirement and V8's explicit 64-bit sandbox
 requirement. It does not promise unchanged Linux binary compatibility.
 [V8 sandbox design](https://v8.dev/blog/sandbox)
 
+A separate coordinated Linux V8 workload touched and checked every page of a
+16 MiB TypedArray and recorded peak RSS of 50,339,840 bytes (about 48 MiB).
+These are resident-memory observations from that control, not GTOS measurements
+or a complete browser sizing target. The buffer alone needs 4,096 data frames;
+the current GTOS pool has only 2,048 total frames including tables. Larger RW
+virtual mappings in the trace, including thread stacks, must not be counted as
+fully resident merely from their reservation size.
+
+Capacity is a separate gate after ownership: derive a larger real RAM pool from
+validated boot data, account for tables/stacks/metadata and test real touched
+memory, exhaustion and reuse. The current 256-page commit limit cannot be hidden
+by an adapter loop claiming whole-request atomicity. Failure in a newly reserved
+large allocation must reclaim every partial chunk; changes to existing ranges
+need a reviewed staging/rollback or explicit partial-result contract. Raising
+quotas without implementing this backing and lifetime behavior is not a port.
+
+### PageAllocator contract names are not interchangeable
+
+An additional coordinated Linux control at the same V8 revision exercised the
+actual public PageAllocator/libbase implementation, including seven faulting
+child-process probes and zero-after-decommit restoration, with neighboring data
+preserved. This is Linux reference evidence, not a GTOS V8 run. Its control ELF
+SHA256 is `3eff52dd8d81824f98e55815cc03c3f004726fa9546ee338b8140ead8a997122`.
+
+The pinned interface distinguishes discarded pages, recommitted with original
+permissions, from decommitted inaccessible storage, made accessible again through
+permission changes with zeroed contents. Discard is advisory.
+[Public contract](https://github.com/v8/v8/blob/be042d4462bee463c9b785701b8c6ee4576ee0a3/include/v8-platform.h#L659-L693)
+
+On this Linux implementation, RecommitPages does not restore permissions;
+SetPermissions(NONE) additionally attempts advisory discard. An initial misuse
+of RecommitPages after decommit really faulted in the reference test and was
+corrected, not counted as a pass.
+[Pinned implementation](https://github.com/v8/v8/blob/be042d4462bee463c9b785701b8c6ee4576ee0a3/src/base/platform/platform-posix.cc#L553-L687)
+
+The future GTOS adapter must preserve these distinctions. Current `vm_protect`
+retains contents and rejects R/RW over missing backing; `vm_commit` supplies
+zeroed missing pages while preserving resident contents. Accessible GTOS discard
+eagerly zeros without changing R/RW. Thus decommit restoration needs a commit
+path, not a blindly name-matched protect/recommit call. Any no-change recommit
+must still validate ownership, range and retained permissions. The user-facing
+adapter, executable/JIT permissions and native V8 remain unimplemented.
+
 ## Later browser acceptance
 
 After prerequisites and sufficient build resources: pin a maintained revision,

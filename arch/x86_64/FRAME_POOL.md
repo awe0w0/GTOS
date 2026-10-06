@@ -138,3 +138,38 @@ The separate original 33-case foundation gate must still pass. Final evidence
 records source before/after manifests, exact commands, compiler/emulator versions,
 ELF/ISO/log SHA256, exit results and complete guest logs. Physical hardware,
 UEFI, AP use, and userspace isolation remain unqualified.
+
+## Fixed real x64 backend
+
+`frame_platform.c` owns the production `x64_frame_platform`, the boot-root
+accessor, and the count of actual CR3 reloads. Its hardware context, low PT
+read/write, identity alias and flush operations are the original backend moved
+out of `frame_guest.c`. BSP, IF-clear, the normal boot stack, exact boot CR3,
+CR4=PAE, WP/NXE and every static low-tree restriction remain unchanged. VM_TEST=0
+still rejects every nonzero upper root entry. No alternate stack/root, user mode,
+FP or SMP capability is added.
+
+The optional VM_TEST build has one one-shot `x64_frame_vm_init(pool, space)`
+operation. It accepts only a ready, idle, audited, entirely free pool using the
+exact production backend and an unready, idle VM, with no prior service owner or
+root. It initializes those resident kernel objects using unchanged `vm_init`
+and binds them to the fixed boot PML4. There is no root parameter, callback
+registration, reset or replacement. The temporary root required by the core is
+restored to zero on any initialization error; the private binding is published
+only after core initialization succeeds. Success therefore returns a ready VM,
+with no externally exposed pre-ready binding. Core alternate-root rejection and
+ownership semantics remain unchanged. Context directly checks the bound pool,
+fixed root, exact VM and pool ready==1 states, service owner and original non-recursive
+owned-hierarchy audit. A published binding always requires all those identities,
+even when its dynamic tree is empty; clearing ready or owner never downgrades
+it to an unbound platform.
+
+The guest harness retains priming, snapshots, negative injections and unchanged
+acceptance markers. It checks null/state/backend/context rejections, corrupt and
+nonempty pool rollback after temporary-root publication, existing core
+alternate-root rejection, successful initialized fixed-root binding, duplicate
+initialization rejection, cleared VM ready/owner independently and together, cleared pool readiness, and
+restoration after deliberately corrupted pool/VM-root/service-root/owner fields. Source gates retain all original rejected mutations and add
+focused gates for initialization/binding publication, rollback, immutable root
+selection and backend consumption. These are extraction and regression tests,
+not user-runtime evidence.

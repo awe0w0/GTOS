@@ -1,17 +1,15 @@
-#include "frame_pool.h"
+#include "frame_platform.h"
 #include "frame_boot_tests.h"
 #if VM_TEST
 #include "sparse_vm.h"
 static struct vm_space vm;
 extern void vm_guest_tests(struct vm_space *);
 #endif
-extern uint64_t pml4[],pdpt[],pd[],pt[];
-extern unsigned char stack_bottom[],stack_top[],__kernel_start[],__kernel_end[];
+extern unsigned char __kernel_start[],__kernel_end[];
 static struct frame_pool pool;
 static struct frame_id ids[BOOT_MEMORY_MAX_FRAMES];
 static uint64_t baseline[BOOTINFO_CEILING/4096];
 static uint64_t alternate_root[512] __attribute__((aligned(4096)));
-static uint32_t flushes;
 static inline void out(uint16_t p,uint8_t v) { __asm__ volatile("outb %0,%1"::"a"(v),"Nd"(p)); }
 static void say(const char *s) { while (*s) out(0xe9,(unsigned char)*s++); }
 static void hex(uint64_t n) { for (int i=60;i>=0;i-=4) out(0xe9,"0123456789abcdef"[(n>>i)&15]); }
@@ -21,41 +19,6 @@ __attribute__((noreturn)) static void die(const char *s) {
     for (;;) __asm__ volatile("cli; hlt");
 }
 static void need(int ok,const char *s) { if (!ok) die(s); }
-static uint64_t msr(uint32_t n) { uint32_t a,d;__asm__ volatile("rdmsr":"=a"(a),"=d"(d):"c"(n));return a|((uint64_t)d<<32); }
-static int context(void *opaque) {
-    (void)opaque;
-    uint64_t c0,c3,c4,flags,sp;uint16_t cs;
-    __asm__ volatile("mov %%cr0,%0; mov %%cr3,%1; mov %%cr4,%2; pushfq; pop %3; mov %%rsp,%4; mov %%cs,%5"
-        :"=r"(c0),"=r"(c3),"=r"(c4),"=r"(flags),"=r"(sp),"=r"(cs));
-    if (cs!=24 || flags&(1ull<<9) || sp<(uint64_t)stack_bottom || sp>=(uint64_t)stack_top ||
-        (c0&0x8001000d)!=0x8001000d || c3!=(uint64_t)pml4 || c4!=0x20 ||
-        (msr(0xc0000080)&0xd00)!=0xd00 || !(msr(0x1b)&0x100)) return 0;
-    /* Every borrowed intermediate is still the exact boot-owned supervisor tree. */
-    if ((pml4[0]&~0x20ull)!=((uint64_t)pdpt|3) ||
-        (pdpt[0]&~0x20ull)!=((uint64_t)pd|3)) return 0;
-    for (unsigned i=0;i<512;++i) {
-        if (i && pdpt[i]) return 0;
-#if VM_TEST
-        if (i && !vm.ready && pml4[i]) return 0;
-#else
-        if (i && pml4[i]) return 0;
-#endif
-        if ((pd[i]&~0x20ull)!=(i<32 ? (uint64_t)&pt[i*512]|3 : 0)) return 0;
-    }
-#if VM_TEST
-    if (vm.ready && (vm.root!=pml4 || !vm_owned_hierarchy_valid(&vm))) return 0;
-#endif
-    return 1;
-}
-static uint64_t leaf(void *opaque,uint64_t a) { (void)opaque;return pt[a/4096]; }
-static void write_leaf(void *opaque,uint64_t a,uint64_t v) { (void)opaque;pt[a/4096]=v; }
-static void flush(void *opaque) {
-    (void)opaque;
-    __asm__ volatile("mov %0,%%cr3"::"r"(pml4):"memory");
-    ++flushes;
-}
-static volatile unsigned char *alias(void *opaque,uint64_t a) { (void)opaque;return (volatile unsigned char *)a; }
-static const struct frame_platform platform={context,leaf,write_leaf,flush,alias,0};
 static int same_id(struct frame_id a,struct frame_id b) { return a.physical==b.physical && a.generation==b.generation; }
 static void stats_free(uint32_t count) {
     struct frame_stats s;
@@ -70,7 +33,7 @@ static void whole_map_audit(void) {
         if (next<pool.selection.managed_count && a==pool.selection.frames[next]) {
             need(!expected,"alias overwrote baseline leaf");expected=a|FRAME_POOL_NX|3;++next;
         }
-        need((pt[a/4096]&~0x60ull)==expected,"whole map delta");
+        need((x64_frame_platform.read_leaf(x64_frame_platform.opaque,a)&~0x60ull)==expected,"whole map delta");
     }
     need(next==pool.selection.managed_count,"alias count");
     need(frame_pool_audit(&pool)==FRAME_OK,"pool audit");
@@ -100,7 +63,13 @@ static void source_audit(const void *bytes,size_t size,const struct boot_memory_
     say(" last=");hex(pool.selection.frames[selected-1]);say("\n");
 }
 void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
-    frame_boot_tests(private_copy,size,original,&platform);
+    const struct frame_platform *platform=&x64_frame_platform;
+    volatile uint64_t *root=x64_frame_boot_root();
+#if VM_TEST
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root,
+         "platform rejects uninitialized pool binding");
+#endif
+    frame_boot_tests(private_copy,size,original,platform);
     struct boot_memory_request request={
         .kernel_start=(uint64_t)__kernel_start,.kernel_end=(uint64_t)__kernel_end,
         .original_info_start=original,.original_info_size=size,
@@ -108,9 +77,9 @@ void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
         .min_frames=1,.max_frames=7,
 #endif
     };
-    for (uint32_t i=0;i<BOOTINFO_CEILING/4096;++i) baseline[i]=pt[i]&~0x60ull;
+    for (uint32_t i=0;i<BOOTINFO_CEILING/4096;++i) baseline[i]=platform->read_leaf(platform->opaque,(uint64_t)i*4096)&~0x60ull;
     const char *why=0;
-    enum frame_error error=frame_pool_init(&pool,private_copy,size,&request,&platform,&why);
+    enum frame_error error=frame_pool_init(&pool,private_copy,size,&request,platform,&why);
     if (error) { say("X64 FRAME INIT error=");hex(error);say(" reason=");say(why?why:"platform");say("\n");die("initialization"); }
     uint32_t count=pool.selection.managed_count;
     stats_free(count);whole_map_audit();source_audit(private_copy,size,&request);
@@ -131,10 +100,10 @@ void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
     error=frame_pool_allocate(&pool,FRAME_STAGED_DATA,1,&result);
     __asm__ volatile("mov $0x20,%%rax; mov %%rax,%%cr4":::"rax","memory");
     need(error==FRAME_BAD_CONTEXT && same_id(result,untouched),"CR4 context");
-    for (unsigned i=0;i<512;++i) alternate_root[i]=pml4[i];
+    for (unsigned i=0;i<512;++i) alternate_root[i]=root[i];
     __asm__ volatile("mov %0,%%cr3"::"r"(alternate_root):"memory");
     error=frame_pool_allocate(&pool,FRAME_STAGED_DATA,1,&result);
-    flush(0);need(error==FRAME_BAD_CONTEXT && same_id(result,untouched),"CR3 context");
+    platform->flush(platform->opaque);need(error==FRAME_BAD_CONTEXT && same_id(result,untouched),"CR3 context");
     out(0x21,0xff);out(0xa1,0xff);
     __asm__ volatile("sti; nop":::"memory");
     error=frame_pool_allocate(&pool,FRAME_STAGED_DATA,1,&result);
@@ -165,7 +134,7 @@ void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
     need(frame_pool_cancel(&pool,ids[0],100)==FRAME_WRONG_ROLE,"live cancellation");
     need(frame_pool_retire(&pool,ids[0],999,FRAME_DATA)==FRAME_WRONG_OWNER,"wrong owner");
     need(frame_pool_retire(&pool,ids[0],100,FRAME_PT)==FRAME_WRONG_ROLE,"wrong role");
-    need(frame_pool_cancel(&pool,(struct frame_id){(uint64_t)pml4,1},100)==FRAME_FOREIGN,"borrowed root free");
+    need(frame_pool_cancel(&pool,(struct frame_id){(uint64_t)root,1},100)==FRAME_FOREIGN,"borrowed root free");
     need(frame_pool_cancel(&pool,(struct frame_id){original&~4095ull,1},100)==FRAME_FOREIGN,"reserved boot info free");
     need(frame_pool_cancel(&pool,(struct frame_id){0x100000,1},100)==FRAME_FOREIGN,"reserved kernel free");
     need(frame_pool_cancel(&pool,(struct frame_id){BOOTINFO_CEILING,1},100)==FRAME_FOREIGN,"foreign frame free");
@@ -175,8 +144,8 @@ void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
     volatile unsigned char *blocked=(volatile unsigned char *)0x123;
     need(frame_pool_alias(&pool,ids[0],100,&blocked)==FRAME_WRONG_ROLE && (uint64_t)blocked==0x123,"retiring inaccessible API");
     need(frame_pool_allocate(&pool,FRAME_STAGED_DATA,7,&result)==FRAME_EXHAUSTED,"retiring not reusable");
-    uint32_t before=flushes,released=0;
-    need(frame_pool_reclaim(&pool,&released)==FRAME_OK && released==count && flushes==before+1,"flush before reclaim");
+    uint32_t before=x64_frame_flush_count(),released=0;
+    need(frame_pool_reclaim(&pool,&released)==FRAME_OK && released==count && x64_frame_flush_count()==before+1,"flush before reclaim");
     stats_free(count);
     need(frame_pool_cancel(&pool,ids[0],100)==FRAME_STALE,"double free");
     struct frame_id old=ids[0];
@@ -208,17 +177,100 @@ void frame_guest_tests(const void *private_copy,size_t size,uint64_t original) {
 #if FRAME_TEST_INJECT == 2
     ++pool.roles[FRAME_FREE];
 #elif FRAME_TEST_INJECT == 3
-    pt[pool.selection.frames[0]/4096]&=~FRAME_POOL_NX;
+    platform->write_leaf(platform->opaque,pool.selection.frames[0],
+        platform->read_leaf(platform->opaque,pool.selection.frames[0])&~FRAME_POOL_NX);
 #elif FRAME_TEST_INJECT == 4
-    pt[pool.selection.frames[0]/4096]|=4;
+    platform->write_leaf(platform->opaque,pool.selection.frames[0],
+        platform->read_leaf(platform->opaque,pool.selection.frames[0])|4);
 #endif
     stats_free(count);whole_map_audit();
     say("X64 FRAME PASS failures exact accounting preserved boot mappings\n");
     say("X64 FRAME POOL PASS BSP-only managed=");hex(count);say("\n");
 #if VM_TEST
-    pool.service_root=pml4;
+    before=x64_frame_flush_count();
+    need(x64_frame_vm_init(0,&vm)==VM_ARGUMENT &&
+         x64_frame_vm_init(&pool,0)==VM_ARGUMENT && !pool.service_root,
+         "platform null initialization inputs");
+    pool.busy=1;
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root,"platform busy pool binding");
+    pool.busy=0;vm.busy=1;
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root,"platform busy VM binding");
+    vm.busy=0;vm.ready=1;
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root,"platform live VM binding");
+    vm.ready=0;pool.service_owner=&vm;
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root,"platform owned pool binding");
+    pool.service_owner=0;pool.service_root=alternate_root;
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && pool.service_root==alternate_root,
+         "platform cannot replace supplied root");
+    pool.service_root=0;
+    struct frame_platform original_platform=pool.platform;
+    for (unsigned i=0;i<6;++i) {
+        if (i==0) pool.platform.context_ok=0;
+        if (i==1) pool.platform.read_leaf=0;
+        if (i==2) pool.platform.write_leaf=0;
+        if (i==3) pool.platform.flush=0;
+        if (i==4) pool.platform.alias=0;
+        if (i==5) pool.platform.opaque=&pool;
+        need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root,
+             "platform rejects substituted backend");
+        pool.platform=original_platform;
+    }
+    __asm__ volatile("mov %%cr4,%%rax; or $0x80,%%rax; mov %%rax,%%cr4":::"rax","memory");
+    enum vm_error init_error=x64_frame_vm_init(&pool,&vm);
+    __asm__ volatile("mov $0x20,%%rax; mov %%rax,%%cr4":::"rax","memory");
+    need(init_error==VM_STATE && !pool.service_root && !pool.busy,"platform initialization actual context");
+    /* Exercise core-init failure after the wrapper temporarily sets its root. */
+    ++pool.roles[FRAME_FREE];
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root && !pool.service_owner &&
+         !vm.ready && !pool.busy,"platform corrupt pool initialization rollback");
+    --pool.roles[FRAME_FREE];
+    need(frame_pool_allocate(&pool,FRAME_STAGED_DATA,77,&result)==FRAME_OK,"platform occupied pool fixture");
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && !pool.service_root && !pool.service_owner &&
+         !vm.ready && !pool.busy,"platform nonempty pool initialization rollback");
+    need(frame_pool_cancel(&pool,result,77)==FRAME_OK,"platform occupied pool cleanup");
+    /* Preserve the core API's existing wrong-root rejection, as a negative
+     * injection only. Normal initialization belongs entirely to the platform. */
+    pool.service_root=root;
     need(vm_init(&vm,&pool,alternate_root)==VM_STATE && !vm.ready && !pool.service_owner,"VM root identity");
-    need(vm_init(&vm,&pool,pml4)==VM_OK,"VM initialization");
+    pool.service_root=0;
+    for (size_t i=0;i<sizeof(vm);++i)
+        need(!((const unsigned char *)&vm)[i],"platform failures leave VM bytes unpublished");
+    need(x64_frame_vm_init(&pool,&vm)==VM_OK && pool.service_root==root &&
+         pool.service_owner==&vm && vm.ready==1 && vm.root==root && vm.pool==&pool &&
+         x64_frame_flush_count()==before,"platform fixed root initialized binding");
+    uint64_t space_id=vm.space_id;
+    need(x64_frame_vm_init(&pool,&vm)==VM_STATE && pool.service_root==root &&
+         pool.service_owner==&vm && vm.ready==1 && vm.space_id==space_id &&
+         x64_frame_flush_count()==before,"platform cannot reinitialize or rebind active VM");
+    /* Published binding means ready+owner+pool+root must always agree,
+     * including when its dynamic hierarchy is completely empty. */
+    vm.ready=0;
+    need(!platform->context_ok(platform->opaque) && frame_pool_audit(&pool)==FRAME_BAD_CONTEXT,
+         "platform rejects cleared bound readiness");
+    pool.service_owner=0;
+    need(!platform->context_ok(platform->opaque) && frame_pool_audit(&pool)==FRAME_BAD_CONTEXT,
+         "platform rejects cleared bound readiness and owner");
+    vm.ready=1;
+    need(!platform->context_ok(platform->opaque) && frame_pool_audit(&pool)==FRAME_BAD_CONTEXT,
+         "platform rejects cleared bound owner");
+    pool.service_owner=&vm;
+    vm.pool=0;
+    need(!platform->context_ok(platform->opaque),"platform rejects cleared bound pool");
+    vm.pool=&pool;pool.ready=0;
+    need(!platform->context_ok(platform->opaque) && frame_pool_audit(&pool)==FRAME_BAD_STATE,
+         "platform rejects cleared bound pool readiness");
+    pool.ready=1;vm.root=alternate_root;
+    need(!platform->context_ok(platform->opaque),"platform rejects changed bound VM root");
+    vm.root=root;
+    need(platform->context_ok(platform->opaque),"platform restored initialized binding");
+    pool.service_owner=&pool;
+    need(!platform->context_ok(platform->opaque) && frame_pool_audit(&pool)==FRAME_BAD_CONTEXT,
+         "platform rejects foreign service owner");
+    pool.service_owner=&vm;
+    pool.service_root=alternate_root;
+    need(!platform->context_ok(platform->opaque),"platform immutable root binding");
+    pool.service_root=root;
+    need(platform->context_ok(platform->opaque),"platform restored bound hierarchy");
     vm_guest_tests(&vm);
     stats_free(count);whole_map_audit();
 #endif

@@ -14,16 +14,16 @@ def source(name):
                           stdout=subprocess.PIPE, text=True).stdout
 
 
-def verify(core, guest):
+def verify(core, backend):
     own = compact(body(core, 'owned'))
     require_order(own, 'index_of(s->pool,entry&', 'if(i<0)return0;',
                   'f->owner!=s->space_id', 's->pool->platform.alias(', 'returnr;')
     for fn in ('owned', 'hierarchy', 'vm_owned_hierarchy_valid'):
         assert not re.search(r'\bframe_pool_[a-z]+\s*\(', body(core, fn)), 'recursive pool audit callback'
     assert 's->pool->service_owner!=s' in compact(body(core, 'vm_owned_hierarchy_valid'))
-    context = compact(body(guest, 'context'))
-    for check in ('if(i&&pdpt[i])return0;', 'if(i&&!vm.ready&&pml4[i])return0;',
-                  'if(vm.ready&&(vm.root!=pml4||!vm_owned_hierarchy_valid(&vm)))return0;',
+    context = compact(body(backend, 'context'))
+    for check in ('if(i&&pdpt[i])return0;', 'if(i&&!bound_vm&&pml4[i])return0;',
+                  'if(bound_vm&&!vm_owned_hierarchy_valid(bound_vm))return0;',
                   '(pd[i]&~0x20ull)!=(i<32?(uint64_t)&pt[i*512]|3:0)',
                   '(pml4[0]&~0x20ull)!=((uint64_t)pdpt|3)',
                   '(pdpt[0]&~0x20ull)!=((uint64_t)pd|3)', 'c4!=0x20', 'c3!=(uint64_t)pml4'):
@@ -92,7 +92,7 @@ def verify(core, guest):
 
 
 def main():
-    core, guest = source('sparse_vm.c'), source('frame_guest.c')
+    core, backend = source('sparse_vm.c'), source('frame_platform.c')
     # These mutations must be rejected without relying on incidental QEMU TLB eviction.
     mutations = [
         ('core', '*leaf(s,d->va)=0;', '(void)0;', 'missing leaf unlink'),
@@ -102,9 +102,9 @@ def main():
         ('core', 'r->generation!=h.generation', '0', 'missing generation authority'),
         ('core', 'f->owner!=s->space_id', '0', 'foreign physical ownership'),
         ('core', 'r->id.physical|(1UL << 63)|1', 'r->id.physical|1', 'executable service leaf'),
-        ('guest', 'vm.ready && (vm.root!=pml4 || !vm_owned_hierarchy_valid(&vm))', '0', 'disabled dynamic hierarchy audit'),
-        ('guest', 'i && pdpt[i]', '0', 'lost borrowed hierarchy protection'),
-        ('guest', '"mov %0,%%cr3"', '""', 'missing CR3 instruction'),
+        ('backend', 'bound_vm && !vm_owned_hierarchy_valid(bound_vm)', '0', 'disabled dynamic hierarchy audit'),
+        ('backend', 'i && pdpt[i]', '0', 'lost borrowed hierarchy protection'),
+        ('backend', '"mov %0,%%cr3"', '""', 'missing CR3 instruction'),
         ('core', 'p[j]=0;', '(void)0;', 'discard loses eager zeroing'),
         ('core', 'remove_backing(s,start,end,1)', 'remove_backing(s,start,end,0)', 'discard destroys accessible backing'),
         ('core', '(!none_only || d->permission==VM_NONE)', '1', 'discard ignores NONE filter'),
@@ -127,11 +127,11 @@ def main():
         # Macro expansion is compiler evidence, never a policy weakening.
         verify(c, g)
         assert '"mov %0,%%cr3"' in body(g, 'flush')
-    gate(core, guest)
+    gate(core, backend)
     for which, old, new, label in mutations:
-        original = core if which == 'core' else guest
+        original = core if which == 'core' else backend
         assert old in original, 'stale mutation fixture: ' + label
-        c, g = (core.replace(old,new), guest) if which == 'core' else (core, guest.replace(old,new))
+        c, g = (core.replace(old,new), backend) if which == 'core' else (core, backend.replace(old,new))
         try:
             gate(c, g)
         except AssertionError:

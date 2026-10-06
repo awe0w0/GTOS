@@ -11,7 +11,7 @@ FRAME_TEST_SMALL ?= 0
 VM_TEST ?= 0
 VM_TEST_INJECT ?= 0
 CFLAGS := $(OPT) -std=c11 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-pie -fno-stack-protector -fno-asynchronous-unwind-tables -fno-unwind-tables -m64 -mno-red-zone -mgeneral-regs-only -DTEST_INJECT=$(TEST_INJECT) -DFRAME_TEST_INJECT=$(FRAME_TEST_INJECT) -DFRAME_TEST_SMALL=$(FRAME_TEST_SMALL) -DVM_TEST=$(VM_TEST) -DVM_TEST_INJECT=$(VM_TEST_INJECT) -Iarch/x86_64
-OBJECTS := $(BUILD)/boot.o $(BUILD)/traps.o $(BUILD)/kernel.o $(BUILD)/handoff.o $(BUILD)/boot_memory.o $(BUILD)/frame_pool.o $(BUILD)/frame_guest.o $(BUILD)/frame_boot_tests.o
+OBJECTS := $(BUILD)/boot.o $(BUILD)/traps.o $(BUILD)/kernel.o $(BUILD)/handoff.o $(BUILD)/boot_memory.o $(BUILD)/frame_pool.o $(BUILD)/frame_platform.o $(BUILD)/frame_guest.o $(BUILD)/frame_boot_tests.o
 ifeq ($(VM_TEST),1)
 OBJECTS += $(BUILD)/sparse_vm.o $(BUILD)/vm_tests.o
 endif
@@ -48,6 +48,7 @@ test-host: | $(BUILD)
 	done
 	$(PYTHON) arch/x86_64/tests/frame_source_test.py
 	$(PYTHON) arch/x86_64/tests/vm_source_test.py
+	$(PYTHON) arch/x86_64/tests/frame_platform_source_test.py
 test: test-host
 	$(PYTHON) arch/x86_64/tests/boot_qemu.py
 	$(PYTHON) arch/x86_64/tests/frame_qemu.py
