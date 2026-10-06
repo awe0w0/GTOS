@@ -4,6 +4,12 @@ using namespace gtos::hardwarecommunication;
 
 namespace {
     uint16_t Read16(const uint8_t* p) { return p[0] | ((uint16_t)p[1] << 8); }
+    uint16_t ReadBios16(uint32_t address) {
+        // A physical firmware read, not a dereference of a C++ object near null.
+        uint16_t value;
+        asm volatile("movw (%1), %0" : "=r"(value) : "r"(address) : "memory");
+        return value;
+    }
     uint32_t Read32(const uint8_t* p) {
         return p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16)
             | ((uint32_t)p[3] << 24);
@@ -219,7 +225,7 @@ bool CpuManager::TryRsdp(uint32_t address, uint32_t limit) {
 }
 bool CpuManager::DetectAcpi(uint32_t limit) {
     if (Range(0x40E, 2, limit)) {
-        uint32_t ebda = (uint32_t)Read16((const uint8_t*)0x40E) << 4;
+        uint32_t ebda = (uint32_t)ReadBios16(0x40E) << 4;
         if (ebda >= 0x80000 && ebda <= 0x9FC00 && Range(ebda, 1024, limit))
             for (uint32_t offset = 0; offset < 1024; offset += 16)
                 if (TryRsdp(ebda + offset, limit)) return true;
@@ -246,11 +252,11 @@ bool CpuManager::TryMpPointer(uint32_t address, uint32_t limit) {
 }
 bool CpuManager::DetectMp(uint32_t limit) {
     if (Range(0x40E, 7, limit)) {
-        uint32_t ebda = (uint32_t)Read16((const uint8_t*)0x40E) << 4;
+        uint32_t ebda = (uint32_t)ReadBios16(0x40E) << 4;
         if (ebda >= 0x80000 && ebda <= 0x9FC00 && Range(ebda, 1024, limit))
             for (uint32_t offset = 0; offset < 1024; offset += 16)
                 if (TryMpPointer(ebda + offset, limit)) return true;
-        uint32_t baseMemory = (uint32_t)Read16((const uint8_t*)0x413) * 1024;
+        uint32_t baseMemory = (uint32_t)ReadBios16(0x413) * 1024;
         if (baseMemory >= 0x80000 && baseMemory <= 0xA0000 && Range(baseMemory - 1024, 1024, limit))
             for (uint32_t address = baseMemory - 1024; address < baseMemory; address += 16)
                 if (TryMpPointer(address, limit)) return true;

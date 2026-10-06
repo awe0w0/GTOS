@@ -8,7 +8,8 @@
 namespace gtos { namespace gui {
 struct SystemSnapshot {
     uint32_t ramMiB,freePages,heapKiB,heapUsedKiB,logicalCPUs,onlineCPUs;
-    uint32_t ticks,taskCount,contextSwitches,diskSectors;
+    uint32_t ticks,taskCount,contextSwitches,diskSectors,parkedAPs;
+    bool pagingEnabled,writeProtectEnabled;
     bool memoryOK,schedulerOK,diskOK;
     char vendor[13];
 };

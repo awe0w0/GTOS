@@ -9,6 +9,17 @@ namespace {
     bool accessibleBuffer(uint32_t address, uint64_t length) {
         return !length || (address && length <= Limit - address);
     }
+    uint16_t readBiosWord(uint32_t address) {
+#ifdef GTOS_MEMORY_TEST
+        // The host harness has no BIOS mapping. Policy tests exercise arbitrary
+        // firmware bounds separately; real BIOS reads are verified in QEMU boot.
+        return address == 0x413 ? 640 : 0x9FC0;
+#else
+        uint16_t value;
+        asm volatile("movw (%1), %0" : "=r"(value) : "r"(address) : "memory");
+        return value;
+#endif
+    }
     uint32_t read32(const uint8_t* bytes) {
         return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8)
              | ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
@@ -18,6 +29,7 @@ PhysicalMemoryManager::PhysicalMemoryManager()
     : frameCount(0), freeCount(0), allocatedCount(0), failures(0), ready(false),
       mapUsed(false), error(PhysicalMemoryNoMap) {}
 void PhysicalMemoryManager::clear() {
+    bootstrap.clear();
     for (uint32_t i = 0; i < MaximumFrames / 32; ++i) {
         eligible[i] = 0;
         allocated[i] = 0;
@@ -38,6 +50,7 @@ void PhysicalMemoryManager::set(uint32_t* bitmap, uint32_t frame, bool value) {
     else bitmap[frame >> 5] &= ~(1u << (frame & 31));
 }
 void PhysicalMemoryManager::markAvailable(uint64_t address, uint64_t length) {
+    bootstrap.addAvailable(address, length);
     if (!length || address >= Limit) return;
     uint64_t end = address + length;
     if (end > Limit) end = Limit;
@@ -46,7 +59,8 @@ void PhysicalMemoryManager::markAvailable(uint64_t address, uint64_t length) {
     for (uint32_t frame = beginFrame; frame < endFrame; ++frame) set(eligible, frame, true);
     if (endFrame > frameCount) frameCount = endFrame;
 }
-void PhysicalMemoryManager::markReserved(uint64_t address, uint64_t length) {
+void PhysicalMemoryManager::markReserved(uint64_t address, uint64_t length, bool includeBootstrap) {
+    if (includeBootstrap) bootstrap.reserve(address, length);
     if (!length || address >= Limit) return;
     uint64_t end = address + length;
     if (end > Limit) end = Limit;
@@ -124,7 +138,7 @@ bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic
                                        const PhysicalRange* extraReservations, uint32_t extraCount) {
     InterruptGuard guard;
     // Never forget ownership of live pages if called accidentally after boot.
-    if (ready && allocatedCount) { error = PhysicalMemoryAlreadyInUse; return false; }
+    if (ready && (allocatedCount || bootstrap.claimedPages())) { error = PhysicalMemoryAlreadyInUse; return false; }
     clear();
     if (magic != MultibootBootMagic) return fail(PhysicalMemoryBadMagic);
     if (!accessibleBuffer((uint32_t)multibootInfo, sizeof(MultibootInfo))
@@ -155,7 +169,9 @@ bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic
         // mem_upper is KiB above 1 MiB, not an absolute top-of-RAM address.
         markAvailable(0x100000, (uint64_t)info.memUpper << 10);
     } else return fail(PhysicalMemoryNoMap);
-    markReserved(0, 0x100000); // BIOS, real-mode data, VGA/MMIO and the null frame.
+    // Low RAM is unavailable to the normal allocator; only the validated SIPI
+    // pool can ever claim it. All actual boot/firmware reservations affect both.
+    markReserved(0, 0x100000, false);
     markReserved(kernelStart, (uint64_t)kernelEnd - kernelStart);
     markReserved((uint32_t)this, sizeof(*this));
     if (!reserveBootData(info, (uint32_t)multibootInfo)) return fail(PhysicalMemoryBadReservation);
@@ -164,11 +180,25 @@ bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic
             return fail(PhysicalMemoryBadReservation);
         markReserved(extraReservations[i].address, extraReservations[i].length);
     }
+    if (mapUsed) {
+        if ((info.flags & 1) && !info.memLower) bootstrap.reserve(0, 0x100000);
+        bootstrap.restrictFirmware(readBiosWord(0x413), (uint32_t)readBiosWord(0x40E) << 4,
+                                   (info.flags & 1) ? info.memLower : 0);
+    }
     for (uint32_t frame = 0; frame < frameCount; ++frame) if (bit(eligible, frame)) ++freeCount;
     if (!freeCount) return fail(PhysicalMemoryNoUsableRam);
     ready = true;
     error = PhysicalMemoryOk;
     return true;
+}
+bool PhysicalMemoryManager::claimLowBootstrapPage(uint32_t& address) {
+    InterruptGuard guard;
+    address = 0;
+    return ready && bootstrap.claim(address);
+}
+bool PhysicalMemoryManager::isBootstrapPage(uint32_t address) const {
+    InterruptGuard guard;
+    return ready && bootstrap.isClaimed(address);
 }
 bool PhysicalMemoryManager::allocate(uint32_t& address) { return allocateContiguous(1, address); }
 bool PhysicalMemoryManager::allocateContiguous(uint32_t pages, uint32_t& address,
@@ -215,7 +245,7 @@ bool PhysicalMemoryManager::freeContiguous(uint32_t address, uint32_t pages) {
 }
 bool PhysicalMemoryManager::reserveRegion(uint64_t address, uint64_t length) {
     InterruptGuard guard;
-    if (!ready || !checkedRange(address, length)) return false;
+    if (!ready || !checkedRange(address, length) || bootstrap.intersectsClaimed(address, length)) return false;
     if (!length || address >= Limit) return true;
     uint64_t end = address + length;
     if (end > Limit) end = Limit;
@@ -226,6 +256,7 @@ bool PhysicalMemoryManager::reserveRegion(uint64_t address, uint64_t length) {
     for (uint32_t frame = start; frame < limit; ++frame) {
         if (bit(eligible, frame)) { set(eligible, frame, false); --freeCount; }
     }
+    bootstrap.reserve(address, length);
     return true;
 }
 bool PhysicalMemoryManager::isFree(uint32_t address) const {
@@ -248,6 +279,8 @@ PhysicalMemoryStatistics PhysicalMemoryManager::getStatistics() const {
     result.usableFrames = freeCount + allocatedCount;
     result.reservedFrames = frameCount - result.usableFrames;
     result.failedAllocations = failures;
+    result.bootstrapFrames = bootstrap.claimedPages();
+    result.bootstrapFreeFrames = bootstrap.freePages();
     result.usedMemoryMap = mapUsed;
     result.initialized = ready;
     return result;

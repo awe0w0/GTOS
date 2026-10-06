@@ -79,7 +79,7 @@ void DesktopShell::DrawHardware(){
     canvas.Text(98,69,"FREE PAGES",6);canvas.Number(174,69,state.freePages,7);
     canvas.Text(98,80,"HEAP KIB",6);canvas.Number(174,80,state.heapUsedKiB,7);canvas.Text(198,80,"/",5);canvas.Number(211,80,state.heapKiB,7);
     canvas.Rect(98,94,204,1,3);
-    canvas.Text(98,102,"CPU",5);canvas.Text(135,102,state.vendor,7);
+    canvas.Text(98,102,"CPU",5);canvas.Text(123,102,state.vendor,7);canvas.Text(212,102,"PARKED",5);canvas.Number(259,102,state.parkedAPs,9);
     canvas.Text(98,114,"DETECTED",6);canvas.Number(160,114,state.logicalCPUs,7);
     canvas.Text(188,114,"ONLINE",6);canvas.Number(236,114,state.onlineCPUs,8);
     canvas.Text(98,127,"TASKS",6);canvas.Number(138,127,state.taskCount,7);canvas.Text(174,127,"SWITCHES",6);canvas.Number(234,127,state.contextSwitches,7);

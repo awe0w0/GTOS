@@ -14,7 +14,8 @@ else
     BIOS=
 fi
 make -C "$REPO" GTOS.iso
-DISK=${GTOS_DISK:-$REPO/obj/apps.img}
+mkdir -p "$REPO/data"
+DISK=${GTOS_DISK:-$REPO/data/apps.img}
 if [ ! -e "$DISK" ]; then
     python3 "$REPO/tools/disk.py" create "$DISK" --size-mib 8
 fi

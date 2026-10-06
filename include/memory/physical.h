@@ -2,6 +2,7 @@
 #define __GTOS__MEMORY__PHYSICAL_H
 #include <common/types.h>
 #include <memory/multiboot.h>
+#include <memory/bootstrap.h>
 namespace gtos { namespace memory {
     struct PhysicalRange { uint64_t address; uint64_t length; };
     struct PhysicalMemoryStatistics {
@@ -11,6 +12,8 @@ namespace gtos { namespace memory {
         uint32_t allocatedFrames;
         uint32_t reservedFrames;    // Includes holes, firmware, boot data and kernel.
         uint32_t failedAllocations;
+        uint32_t bootstrapFrames;     // Permanently claimed SIPI pages, also reserved above.
+        uint32_t bootstrapFreeFrames; // Boot-only pool; excluded from normal freeFrames.
         bool usedMemoryMap;
         bool initialized;
     };
@@ -30,6 +33,7 @@ namespace gtos { namespace memory {
         static const uint32_t MaximumFrames = 1048576;
     private:
         // Separate eligibility and ownership prevent freeing firmware/kernel pages.
+        LowBootstrapPool bootstrap;
         uint32_t eligible[MaximumFrames / 32];
         uint32_t allocated[MaximumFrames / 32];
         uint32_t frameCount;
@@ -42,7 +46,7 @@ namespace gtos { namespace memory {
         void clear();
         bool fail(PhysicalMemoryError reason);
         void markAvailable(uint64_t address, uint64_t length);
-        void markReserved(uint64_t address, uint64_t length);
+        void markReserved(uint64_t address, uint64_t length, bool includeBootstrap = true);
         bool reserveBootData(const MultibootInfo& info, uint32_t infoAddress);
         bool reserveBuffer(uint32_t address, uint64_t length);
         bool reserveString(uint32_t address);
@@ -57,6 +61,10 @@ namespace gtos { namespace memory {
         bool initialize(const void* multibootInfo, uint32_t magic,
                         uint32_t kernelStart, uint32_t kernelEnd,
                         const PhysicalRange* extraReservations = 0, uint32_t extraCount = 0);
+        // Permanently claim one E820/firmware-validated SIPI page below 1 MiB.
+        // No matching free: another processor may still execute this trampoline.
+        bool claimLowBootstrapPage(uint32_t& address);
+        bool isBootstrapPage(uint32_t address) const;
         bool allocate(uint32_t& address);
         // maxAddress is inclusive; alignmentPages must be a nonzero power of two.
         bool allocateContiguous(uint32_t pages, uint32_t& address,

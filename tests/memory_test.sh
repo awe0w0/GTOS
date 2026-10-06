@@ -11,10 +11,12 @@ for optimization in 0 2; do
         -fno-threadsafe-statics -fcheck-new -Wall -Wextra -Werror \
         -DGTOS_MEMORY_TEST -Iinclude -Wl,-e,_start -Wl,--build-id=none \
         tests/memory_test.cpp src/memorymanagement.cpp src/memory/physical.cpp \
-        src/memory/selftest.cpp -o "$build/memory_test_O$optimization"
+        src/memory/selftest.cpp src/memory/bootstrap.cpp -o "$build/memory_test_O$optimization"
     if command -v qemu-i386 >/dev/null 2>&1; then
         qemu-i386 "$build/memory_test_O$optimization"
     else
         "$build/memory_test_O$optimization"
     fi
 done
+
+./tests/memory_bootstrap_test.sh

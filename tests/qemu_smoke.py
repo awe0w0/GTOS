@@ -15,6 +15,7 @@ class Guest:
         self.out=out; self.log=out/'debug.log'; self.sequence=0
         runtime=ROOT.parent/'gtos-runtime'; env=os.environ.copy()
         qemu=shutil.which('qemu-system-i386'); bios=[]
+        if env.get('GTOS_QEMU_DATA_DIR'): bios=['-L',env['GTOS_QEMU_DATA_DIR']]
         if (runtime/'root/usr/bin/qemu-system-i386').exists():
             qemu=str(runtime/'root/usr/bin/qemu-system-i386')
             env['LD_LIBRARY_PATH']=str(runtime/'root/usr/lib/x86_64-linux-gnu')
@@ -84,6 +85,7 @@ def boot(out,image,memory=64,cpus=4):
     check('HEAP SELFTEST PASS' in g.text(),'heap boot self-test')
     check(f'CPU DETECTED {cpus:08X}' in g.text(),f'{cpus} firmware CPUs detected')
     check('CPU ONLINE 00000001' in g.text(),'BSP-only scheduling reported honestly')
+    check(f'AP PARKED {cpus-1:08X}' in g.text(),'secondary CPUs acknowledged, self-tested and safely parked')
     check('SCHEDULER RUNTIME PASS' in g.text(),'real task sleep/yield/return and GUI coexist')
     check('SYSCALL ABI PASS' in g.text(),'software interrupt 0x80 reaches handler')
     return g

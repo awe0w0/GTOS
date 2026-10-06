@@ -5,6 +5,7 @@
 #include <memory/selftest.h>
 #include <hardwarecommunication/interrupts.h>
 #include <hardwarecommunication/cpu.h>
+#include <hardwarecommunication/cpu_startup.h>
 #include <hardwarecommunication/port.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
@@ -56,6 +57,13 @@ extern "C" void kernelMain(void* multiboot,uint32_t magic){
     CpuManager cpu;cpu.Detect(ramMiB*1024*1024);
     printf("CPU VENDOR ");printf((char*)cpu.GetInfo().vendor);printf(" SOURCE ");printf((char*)cpu.EnumerationSourceName());printf("\n");
     LogValue("CPU DETECTED ",cpu.DetectedLogicalProcessors());LogValue("CPU ONLINE ",cpu.OnlineProcessors());
+    CpuStartup cpuStartup;
+    bool apsStarted = cpuStartup.Start(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+    CpuStartupReport apReport = cpuStartup.GetReport();
+    printf(apsStarted ? "AP STARTUP PASS\n" : "AP STARTUP LIMITED\n");
+    printf((char*)CpuStartup::ErrorName(apReport.error)); printf("\n");
+    LogValue("AP PARKED ", apReport.parkedAps);
+    LogValue("AP FAILED ", apReport.failedAps);
     TaskManager tasks;activeTasks=&tasks;
     bool schedulerOK=TaskManager::RunSelfTests(&gdt);
     printf(schedulerOK?"SCHEDULER SELFTEST PASS\n":"SCHEDULER SELFTEST FAIL\n");
@@ -80,7 +88,7 @@ extern "C" void kernelMain(void* multiboot,uint32_t magic){
         printf(schedulerOK?"SCHEDULER RUNTIME PASS\n":"SCHEDULER RUNTIME FAIL\n");tasks.RemoveTask(&sleeper);tasks.RemoveTask(&yielder);}
       gui::SystemSnapshot snapshot;physical=frames.getStatistics();HeapStatistics hs=heap.getStatistics();
       snapshot.ramMiB=ramMiB;snapshot.freePages=physical.freeFrames;snapshot.heapKiB=hs.totalBytes/1024;snapshot.heapUsedKiB=hs.usedBytes/1024;
-      snapshot.logicalCPUs=cpu.DetectedLogicalProcessors();snapshot.onlineCPUs=cpu.OnlineProcessors();snapshot.ticks=tasks.Ticks();snapshot.taskCount=tasks.TaskCount()+1;snapshot.contextSwitches=tasks.ContextSwitches();snapshot.diskSectors=disk.SectorCount();
+      snapshot.logicalCPUs=cpu.DetectedLogicalProcessors();snapshot.onlineCPUs=cpu.OnlineProcessors();snapshot.parkedAPs=apReport.parkedAps;snapshot.pagingEnabled=false;snapshot.writeProtectEnabled=false;snapshot.ticks=tasks.Ticks();snapshot.taskCount=tasks.TaskCount()+1;snapshot.contextSwitches=tasks.ContextSwitches();snapshot.diskSectors=disk.SectorCount();
       snapshot.memoryOK=memoryOK&&hs.valid;snapshot.schedulerOK=schedulerOK;snapshot.diskOK=diskOK;for(uint32_t i=0;i<13;++i)snapshot.vendor[i]=cpu.GetInfo().vendor[i];
       desktop.Update(snapshot);asm volatile("sti; hlt");
     }

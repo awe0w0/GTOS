@@ -2,7 +2,8 @@ CXX ?= g++
 AS ?= as
 LD ?= ld
 PYTHON ?= python3
-CXXFLAGS := -m32 -std=c++11 -Iinclude -ffreestanding -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fno-stack-protector -fno-pie -fcheck-new -Wno-write-strings -MMD -MP
+OPTIMIZATION ?= -O2
+CXXFLAGS := $(OPTIMIZATION) -m32 -std=c++11 -Iinclude -ffreestanding -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fno-stack-protector -fno-pie -fno-asynchronous-unwind-tables -fcheck-new -Wno-write-strings -MMD -MP
 ASFLAGS := --32
 LDFLAGS := -melf_i386
 CPP_SOURCES := $(shell find src -name '*.cpp' | sort)

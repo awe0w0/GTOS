@@ -20,8 +20,8 @@ make GTOS.iso
 ./tools/run-qemu.sh
 ```
 
-The runner creates a NEW dedicated 8 MiB app-store image at `obj/apps.img` if it
-does not exist, then keeps it across runs. It never attaches a host block device.
+The runner creates a NEW dedicated 8 MiB app-store image at `data/apps.img` if it
+does not exist, then keeps it across runs and build cleanup. It never attaches a host block device.
 The kernel refuses to format arbitrary media. This experimental disk format is
 not FAT/ext4 and must not be pointed at a valuable image or physical disk.
 
@@ -73,6 +73,11 @@ and actual paddle-motion assertions. Use a fresh output directory each run.
 Acceptance covers 32/64/128 MiB, one/four firmware CPUs, boot allocator checks,
 real scheduler sleep/yield/return, GUI keyboard input, app install/launch/restart,
 actual game paddle movement, and install/removal/reinstall across fresh VM boots.
-The debug log explicitly distinguishes detected CPUs from BSP-only scheduling.
+The debug log distinguishes detected CPUs, APs actually started/self-tested/parked,
+and BSP-only scheduling. Safe AP startup is tested on one/two/four/eight CPUs;
+missing-AP timeouts and no-APIC rejection are tested too.
+
+The default build uses -O2. Use `make OPTIMIZATION=-O0` for an unoptimized build
+after `make clean`. App data under `data/` survives build cleanup.
 
 More details: [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).

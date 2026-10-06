@@ -51,3 +51,12 @@ No paging, process/ring-3 isolation, general filesystem, modern compositor,
 AHCI/NVMe or AP scheduler is claimed. The VM permits only its bounded instruction
 set, but it does not replace hardware-enforced userspace isolation. ATA support
 is the tested legacy IDE PIO path. Hardware outside QEMU remains unverified.
+
+## AP startup extension
+
+The optimized AP module additionally passed QEMU one/two/four/eight-CPU boots,
+a deliberately nonexistent AP timeout, and a pre-IPI no-APIC rejection case.
+APs execute on independent retained stacks, publish identity/stack/checksum
+observations atomically and park with interrupts disabled. They are not scheduled.
+The integrated desktop acceptance matrix passes with the expected parked counts.
+Low-bootstrap allocation adds 486 assertions at each optimization level.

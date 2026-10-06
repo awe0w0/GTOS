@@ -129,7 +129,11 @@ checks their counters, confirms both return through the task trampoline, and
 then reaps them while the desktop boot loop continues. The deterministic tests
 are not a substitute for this QEMU runtime test.
 
-## Concrete next SMP milestone
+## SMP progression
+
+The first three stages below are now implemented by the separate
+[AP startup module](cpu-startup.md), with real 1/2/4/8-vCPU QEMU tests and explicit
+parked-state reporting. They do not make the scheduler parallel.
 
 1. Retain a validated APIC-ID inventory with per-CPU startup state. Reserve a
    low-memory real-mode trampoline page and independently allocated AP stacks

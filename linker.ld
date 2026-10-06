@@ -6,6 +6,7 @@ SECTIONS
 {
     . = 0X0100000;
     kernel_start = .;
+    kernel_readonly_start = .;
 
     .text :
     {
@@ -13,6 +14,9 @@ SECTIONS
         *(.text*)
         *(.rodata*)
     }
+
+    . = ALIGN(4096);
+    kernel_readonly_end = .;
 
     .data :
     {
