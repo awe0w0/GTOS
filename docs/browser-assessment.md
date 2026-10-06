@@ -1,21 +1,22 @@
 # Native Chromium: platform assessment and next proof
 
-Assessment date: 2026-10-06. The kernel/desktop/Chinese checkpoint is complete at
-`29f60022a381cbb11257f03fb3a61ef1f3273fac`; its exact CI run passed. That cloud
-checkpoint contains no Chromium build. Preparation of a separately authorized
-larger build workspace is now underway; native GTOS browser execution remains
-a future acceptance result, not a capability of this checkpoint.
+Assessment and status date: 2026-10-06. Kernel/desktop/Chinese checkpoint
+`29f60022a381cbb11257f03fb3a61ef1f3273fac` and bounded ELF32/CPL3 checkpoint
+`b36d0c22f1b5b3c3bc54aef82733ca584b8c568d` have passed their exact-head CI.
+A separately authorized larger workspace has completed a Linux x86-64 V8
+reference build and workload. Native Chromium and webpage rendering inside GTOS
+remain future acceptance results.
 
-## Build resources: an actual blocker
+## Build resources: split kernel and reference environments
 
 The current cloud executor reports an x86-64 host, nine logical CPUs, approximately
 9.7 GiB RAM, and only 28 GiB free on a 32 GiB workspace filesystem. Official
 Chromium Linux instructions require at least 8 GB RAM (strongly recommend more
 than 16 GB) and at least 100 GB free disk. The full documented checkout/build is
-therefore storage-blocked here. A larger authorized persistent build environment
-is required; removing the few existing project files cannot meet that floor.
-Kernel/API development and small QEMU conformance programs continue here while
-the larger workspace establishes its toolchain and reference-build prerequisites.
+therefore storage-blocked here. Removing the few existing project files cannot meet that floor. Kernel/API
+development and small guest conformance programs therefore remain here. The
+separately authorized larger environment now handles the upstream checkout and
+reference builds without making its Linux services part of the GTOS guest.
 [Official Linux build instructions](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/linux/build_instructions.md)
 
 ## Target architecture: do not confuse host and guest
@@ -71,7 +72,7 @@ NIC or controlled HTTP fixture, but must not fetch/render pages for GTOS.
 [Socket implementation](https://chromium.googlesource.com/chromium/src/+/HEAD/net/socket/socket_posix.cc),
 [TLS client](https://chromium.googlesource.com/chromium/src/+/HEAD/net/socket/ssl_client_socket_impl.cc)
 
-## Immediate implementation gate: real native user processes
+## Completed first implementation gate: real native user processes
 
 1. Separate private process page directories borrow only immutable supervisor
    kernel mappings. Never reopen the AP workers' sealed directory. Reject a user
@@ -93,10 +94,42 @@ NIC or controlled HTTP fixture, but must not fetch/render pages for GTOS.
    its peer, GUI input/game and AP workers continue. Repeat create/exit/reap and
    run all existing i386 desktop/language/legacy regressions
 
-This milestone is not POSIX, a stable application ABI or browser execution.
-Subsequent work includes architecture selection, FPU/SIMD ownership, complete
-native loading/runtime, dynamic VM, user threads, VFS/files, IPC, networking and
-userland graphics. Each needs an executable conformance gate.
+The seven checks above are now exercised by the published bounded native
+milestone, including a separately compiled external Clang ELF with verified
+byte identity. See [native processes](native-processes.md) for exact contracts,
+tests and cross-emulator exception expectations. This milestone is not POSIX, a
+stable application ABI or browser execution.
+The optional i386 legacy FP module now supplies bounded BSP ownership with
+[explicit multi-engine verification limits](native-fp-verification.md), while
+the normal desktop profile stays integer-only. Subsequent work includes the
+separate x64 foundation and its FP/thread state, complete native loading/runtime,
+dynamic VM, user threads, VFS/files, IPC, networking and userland graphics. Each needs an executable conformance gate.
+
+## Measured Linux reference and next target
+
+The separately built sandbox-enabled V8 `d8` reference executes JavaScript,
+16 MiB typed arrays, floating point, Chinese Intl/ICU, Wasm, garbage collection
+and microtasks on Linux x86-64. Its 54,831,144-byte ELF64 ET_DYN contains
+PT_INTERP, PT_DYNAMIC and PT_TLS, with SHA-256
+`29f81ab63e01632d3554c158011abafc701ba94f5fcf87f58cf467ab066de91f`.
+This records a control artifact, not an executable accepted by GTOS's static
+ELF32 loader or a completed Chromium browser build.
+
+The traced workload observes anonymous mapping/protection/unmapping/advice,
+thread creation and synchronization, randomness, file opens and architecture
+TLS setup. Its largest successful PROT_NONE/MAP_NORESERVE call reserves
+1,481,763,713,024 bytes of virtual space, including guards/alignment. This is
+not a RAM requirement or a reason to eagerly allocate page tables for that
+entire range. The trace is workload evidence, not an exhaustive browser API
+specification, and Linux call names need not be copied verbatim into GTOS.
+
+The deliberate next target is a separate x86-64 kernel foundation with real
+long-mode/protection acceptance, followed by sparse VM reservation/commit/
+protection/decommit/release and then per-thread FP/TLS and wait/wake lifetime.
+The existing i386 desktop target and its tests remain maintained. This follows
+both the measured address-space requirement and V8's explicit 64-bit sandbox
+requirement. It does not promise unchanged Linux binary compatibility.
+[V8 sandbox design](https://v8.dev/blog/sandbox)
 
 ## Later browser acceptance
 

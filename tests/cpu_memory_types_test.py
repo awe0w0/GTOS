@@ -312,7 +312,7 @@ int main() {
 if "asm volatile" in source:
     raise SystemExit("Unsubstituted assembly remains; review the privileged backend")
 compiler = shlex.split(args.cxx)
-common = ["-O2", "-std=c++11", "-Wall", "-Wextra", "-Werror"]
+common = (root / "tools/kernel-cxxflags").read_text().split() + ["-O2", "-std=c++11", "-Wall", "-Wextra", "-Werror"]
 include_flags = [flag for path in includes for flag in ["-I", str(path.resolve())]]
 with tempfile.TemporaryDirectory(prefix="gtos-memory-types-") as directory:
     build = Path(directory)

@@ -97,14 +97,32 @@ int_bottom:
     movw %ax, %fs
     movw %ax, %gs
     cld
-    movl %esp, %edx
-    movl 44(%edx), %eax
+    # Save/neutralize BEFORE ordinary C++, including no-switch syscalls.
+    movl %esp, %ebx
     andl $-16, %esp
+    subl $12, %esp
+    pushl %ebx
+    call native_fp_enter_trap
+    addl $16, %esp
     subl $8, %esp
-    pushl %edx
-    pushl %eax
+    pushl %ebx
+    pushl 44(%ebx)
     call _ZN4gtos21hardwarecommunication17InterruptsManager15handleInterruptEhj
-    movl %eax, %esp
+    # Prepare using the selected frame/CR3, still with kernel selectors and TS.
+    movl %eax, %ebx
+    addl $16, %esp
+    subl $12, %esp
+    pushl %ebx
+    call native_fp_prepare_return
+    addl $16, %esp
+    testl %eax, %eax
+    jz 1f
+    subl $12, %esp
+    pushl %eax
+    call native_fp_restore_asm
+    # NO C++ follows restoration or publication of UserLive.
+1:
+    movl %ebx, %esp
     popl %gs
     popl %fs
     popl %es

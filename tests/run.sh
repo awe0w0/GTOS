@@ -1,10 +1,13 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+./tests/kernel_integer_test.sh
 ./tests/memory_test.sh
 ./tests/paging_test.sh
 ./tests/process_memory_test.sh
 ./tests/native_process_test.sh
+./tests/native_fp_test.sh
+python3 -m unittest discover -s tests -p 'native_fp_qmp_test.py'
 ./tests/elf32_test.sh
 ./tests/browser_probe_test.sh
 python3 -m unittest discover -s tests -p 'browser_artifact_test.py'

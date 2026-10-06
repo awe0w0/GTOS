@@ -2,6 +2,7 @@
 # Independent Multiboot/GRUB boots, including real supervisor page faults.
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 runtime="$(pwd)/../gtos-runtime"
@@ -20,14 +21,15 @@ command -v "$qemu" >/dev/null 2>&1 || { echo 'qemu-system-i386 is required' >&2;
 command -v "$grub" >/dev/null 2>&1 || { echo 'grub-mkrescue is required' >&2; exit 77; }
 for source in src/gdt.cpp src/memory/paging.cpp src/memory/physical.cpp \
     src/memory/bootstrap.cpp tests/paging_smoke.cpp; do
-    ${CXX:-g++} -m32 -std=c++11 -O2 -ffreestanding -nostdlib -fno-builtin \
+    ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O2 -ffreestanding -nostdlib -fno-builtin \
         -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie \
         -fno-threadsafe-statics -fno-use-cxa-atexit -fno-asynchronous-unwind-tables \
         -Iinclude -Wall -Wextra -Werror -c "$source" \
         -o "$work/$(basename "$source" .cpp).o"
 done
 as --32 tests/paging_smoke_loader.s -o "$work/loader.o"
-ld -melf_i386 -T tests/paging_smoke.ld -o "$work/paging.bin" "$work"/*.o
+ld -melf_i386 -T tests/paging_smoke.ld -Map "$work/paging.bin.map" -o "$work/paging.bin" "$work"/*.o
+python3 tools/audit-kernel-instructions.py --map "$work/paging.bin.map" "$work/paging.bin"
 mkdir -p "$work/iso/boot/grub"
 cp "$work/paging.bin" "$work/iso/boot/paging.bin"
 printf 'GTOS paging module test\n' > "$work/iso/boot/payload"

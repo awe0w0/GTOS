@@ -1,9 +1,10 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-settings-sanitizers.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
-"${CXX:-g++}" -std=c++11 -O1 -g -Iinclude -fno-exceptions -fno-rtti \
+"${CXX:-g++}" $kernel_flags -std=c++11 -O1 -g -Iinclude -fno-exceptions -fno-rtti \
     -fno-builtin -fno-omit-frame-pointer -fno-pie -no-pie \
     -Wall -Wextra -Werror -fsanitize=address,undefined \
     tests/settings_test.cpp src/storage/settings.cpp src/storage/appstore.cpp \

@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-elf32.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 "${AS:-as}" --32 tests/elf32_fixture.s -o "$build/fixture.o"
@@ -16,7 +17,7 @@ for target in host i386; do
     machine=
     if [ "$target" = i386 ]; then machine=-m32; fi
     for optimization in 0 2; do
-        "${CXX:-g++}" $machine -std=c++11 -O"$optimization" -ffreestanding -nostdlib \
+        "${CXX:-g++}" $kernel_flags $machine -std=c++11 -O"$optimization" -ffreestanding -nostdlib \
             -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie -no-pie \
             -fno-threadsafe-statics -Wall -Wextra -Werror -Iinclude -I"$build" \
             -Wl,-e,_start -Wl,--build-id=none tests/elf32_tests.cpp src/process/elf32.cpp \
@@ -35,7 +36,7 @@ done
 # Required by default. Set ELF32_SANITIZERS=0 only for toolchains without runtimes;
 # the explicit message keeps that run from being mistaken for sanitizer coverage.
 if [ "${ELF32_SANITIZERS:-1}" = 1 ]; then
-    "${CXX:-g++}" -std=c++11 -O1 -g -fno-builtin -fno-exceptions -fno-rtti \
+    "${CXX:-g++}" $kernel_flags -std=c++11 -O1 -g -fno-builtin -fno-exceptions -fno-rtti \
         -fno-omit-frame-pointer -fno-pie -no-pie -Wall -Wextra -Werror \
         -fsanitize=address,undefined -DELF32_HOSTED -DELF32_SANITIZED \
         -Iinclude -I"$build" tests/elf32_tests.cpp src/process/elf32.cpp -o "$build/sanitized"

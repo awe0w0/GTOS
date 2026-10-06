@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 qemu=${GTOS_QEMU_SYSTEM_I386:-qemu-system-i386}
@@ -11,7 +12,7 @@ fi
 for source in src/gdt.cpp src/hardwarecommunication/cpu.cpp \
     src/hardwarecommunication/cpu_startup.cpp src/memory/physical.cpp \
     src/memory/bootstrap.cpp tests/cpu_startup_smoke.cpp; do
-    ${CXX:-g++} -m32 -std=c++11 -O2 -ffreestanding -nostdlib -fno-builtin \
+    ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O2 -ffreestanding -nostdlib -fno-builtin \
         -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie \
         -fno-threadsafe-statics -fno-use-cxa-atexit -fno-asynchronous-unwind-tables \
         -Iinclude -Wall -Wextra -Werror -c "$source" \
@@ -19,7 +20,8 @@ for source in src/gdt.cpp src/hardwarecommunication/cpu.cpp \
 done
 as --32 src/hardwarecommunication/cpu_startup_trampoline.s -o "$work/trampoline.o"
 as --32 tests/cpu_startup_loader.s -o "$work/loader.o"
-ld -melf_i386 -T linker.ld -o "$work/ap-smoke.bin" "$work"/*.o
+ld -melf_i386 -T linker.ld -Map "$work/ap-smoke.bin.map" -o "$work/ap-smoke.bin" "$work"/*.o
+python3 tools/audit-kernel-instructions.py --map "$work/ap-smoke.bin.map" "$work/ap-smoke.bin"
 run() {
     name=$1; cpus=$2; memory=$3; arguments=$4; model=${5:-qemu32}
     set +e

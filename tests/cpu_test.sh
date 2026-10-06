@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 for optimization in 0 2; do
-    ${CXX:-g++} -m32 -std=c++11 -O"$optimization" -DGTOS_CPU_TEST -Iinclude -Wall -Wextra -Werror \
+    ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O"$optimization" -DGTOS_CPU_TEST -Iinclude -Wall -Wextra -Werror \
         -fno-pie -no-pie -nostdlib -static -fno-stack-protector -fno-builtin \
         -fno-exceptions -fno-rtti -fno-use-cxa-atexit \
         tests/cpu_tests.cpp src/multitasking.cpp src/hardwarecommunication/cpu.cpp \

@@ -1,11 +1,12 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-i18n.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 python3 tools/i18n_generate.py --check
 compile() {
-    "${CXX:-g++}" "$1" -std=c++11 -O2 -Iinclude -mstackrealign -ffreestanding \
+    "${CXX:-g++}" $kernel_flags "$1" -std=c++11 -O2 -Iinclude -mstackrealign -ffreestanding \
       -fno-exceptions -fno-rtti -fno-builtin -fno-stack-protector -fno-pie -no-pie \
       -nostdlib -static -Wall -Wextra -Werror -Wl,-e,_start \
       tests/i18n_tests.cpp src/i18n/*.cpp -o "$2"
@@ -22,7 +23,7 @@ fi
 compile -m64 "$build/test64"
 "$build/test64"
 if [ "${GTOS_I18N_SANITIZERS:-0}" = 1 ]; then
-    "${CXX:-g++}" -m64 -std=c++11 -O1 -g -Iinclude -DGTOS_I18N_SANITIZE \
+    "${CXX:-g++}" $kernel_flags -m64 -std=c++11 -O1 -g -Iinclude -DGTOS_I18N_SANITIZE \
       -fno-exceptions -fno-rtti -fno-builtin -fno-pie -no-pie -Wall -Wextra -Werror \
       -fsanitize=address,undefined -fno-omit-frame-pointer tests/i18n_tests.cpp \
       src/i18n/*.cpp -o "$build/sanitized"

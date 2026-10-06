@@ -26,6 +26,14 @@ jobs:
         run: ./tests/cpu_work_pool_smoke.sh
       - name: Verify real native userspace and recoverable process faults
         run: ./tests/native_process_smoke.sh
+      - name: Diagnose enabled FP users with modern desktop and AP workers
+        # Supplementary pointer-qualified QEMU evidence, not strict FP acceptance.
+        # The strict x87 pointer/#MF/#XM/reserved-MXCSR matrix is run with Bochs.
+        env:
+          GTOS_FP_DESKTOP_OUTPUT: /tmp/gtos-qemu-fp-diagnostic
+          GTOS_FP_OPTIMIZATIONS: '0 2'
+          GTOS_BUILD_JOBS: '2'
+        run: ./tests/native_fp_desktop_diagnostic.sh
       - name: Verify page protections with actual CPU faults
         run: ./tests/paging_smoke.sh
       - name: Verify legacy VGA fallback after GRUB video setup

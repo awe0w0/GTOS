@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-storage.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 compile() {
-    "${CXX:-g++}" "$1" -std=c++11 -O2 -Iinclude -fno-exceptions -fno-rtti \
+    "${CXX:-g++}" $kernel_flags "$1" -std=c++11 -O2 -Iinclude -fno-exceptions -fno-rtti \
         -fno-builtin -fno-stack-protector -fno-pie -no-pie -nostdlib -static \
         -Wall -Wextra -Werror -Wl,-e,_start \
         tests/storage_test.cpp tests/storage_runtime.cpp \

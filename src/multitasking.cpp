@@ -75,7 +75,7 @@ uint32_t Task::AffinityMask() const { return affinityMask; }
 bool Task::UserMode() const { return userMode; }
 
 TaskManager::TaskManager() : numTasks(0), currentTask(-1), bootContext(0),
-    ticks(0), bootTicks(0), switches(0), nativeGdt(0), kernelDirectory(0), kernelCr0(0) {
+    ticks(0), bootTicks(0), switches(0), nativeGdt(0), kernelDirectory(0), kernelCr0(0), nativeFpEnabled(false) {
     for (int i = 0; i < 256; ++i) tasks[i] = 0;
 }
 TaskManager::~TaskManager() {}
@@ -176,9 +176,12 @@ CPUState* TaskManager::SelectContext(Task* task, CPUState* frame) {
         }
         uint32_t current; asm volatile("mov %%cr3,%0" : "=r"(current));
         if (current != directory) asm volatile("mov %0,%%cr3" : : "r"(directory) : "memory");
-        // No FP ownership exists yet. TS traps x87/MMX/SSE in user tasks.
-        const uint32_t cr0 = user ? (kernelCr0 | 0xAU) : kernelCr0;
-        asm volatile("mov %0,%%cr0" : : "r"(cr0) : "memory");
+        // Enabled ownership keeps TS guarded throughout C++ and restores only
+        // in the final assembly epilogue. Preserve the old disabled policy.
+        if (!nativeFpEnabled) {
+            const uint32_t cr0 = user ? (kernelCr0 | 0xAU) : kernelCr0;
+            asm volatile("mov %0,%%cr0" : : "r"(cr0) : "memory");
+        }
     }
 #else
     (void)task;

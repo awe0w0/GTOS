@@ -249,10 +249,39 @@ struct NativeProbeData {
 static uint32_t nativeFaultId = 0, nativePeerId = 0, nativeBrowserId = 0, nativeFrameBaseline = 0,
                 nativeBeginTick = 0;
 static bool nativeDemoReady = false, nativeDemoReported = false, nativePeerAfterFault = false;
+static bool nativeFpDemo = false, nativeFpDiagnostic = false;
+#if defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
+extern "C" bool native_fp_desktop_qualify_pointer_gap();
+#endif
 static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
                             const memory::MultibootInfo *boot) {
-    if (!paging.sealForSharedProcessors() || !nativeRuntime.Activate(tasks, gdt, paging, frames))
+    // Enabled only by the dedicated acceptance ISO. Ordinary boots preserve
+    // the existing ABI1 integer-only default and all FP-denial expectations.
+    nativeFpDemo = BootOption(boot, "native-fp-test");
+    nativeFpDiagnostic = BootOption(boot, "native-fp-diagnostic");
+    if (nativeFpDiagnostic && !nativeFpDemo) return false;
+#if !defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
+    if (nativeFpDiagnostic) {
+        printf("NATIVE FP DIAGNOSTIC REQUIRES DEDICATED TEST KERNEL\n");
         return false;
+    }
+#endif
+    if (nativeFpDemo) {
+        uint32_t cr0; asm volatile("mov %%cr0,%0" : "=r"(cr0));
+        LogValue("NATIVE FP INHERITED CR0 ", cr0); // Read-only firmware/cache diagnostic.
+    }
+    const process::NativeFpPolicy fpPolicy = nativeFpDemo ? process::NativeFpSse2 : process::NativeFpDisabled;
+    if (!paging.sealForSharedProcessors() || !nativeRuntime.Activate(tasks, gdt, paging, frames, fpPolicy))
+        return false;
+#if defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
+    if (nativeFpDiagnostic) {
+        memory::InterruptGuard guard;
+        const process::NativeFpStatistics stats = nativeRuntime.FpStatistics();
+        if (!nativeRuntime.FpEnabled() || stats.initialized || stats.saves || stats.restores
+            || !native_fp_desktop_qualify_pointer_gap()) return false;
+        printf("NATIVE FP DIRECT IF-CLEAR POINTER OMISSION QUALIFIED\n");
+    }
+#endif
     nativeFrameBaseline = frames.getStatistics().freeFrames;
     if (!(boot->flags & (1u << 3)) || boot->moduleCount < 4)
         return false;
@@ -277,6 +306,7 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
         return false;
     }
     nativeBeginTick = tasks.Ticks();
+    if (nativeFpDemo) printf("NATIVE FP DESKTOP TWO USERS READY\n");
     printf("NATIVE ELF PROCESSES READY\n");
     return true;
 }
@@ -324,6 +354,19 @@ static void ServiceNativeDemo(TaskManager &tasks) {
     valid = valid && reaped == 3 && counts.created == 3 && counts.faulted == 1 &&
             counts.exited == 2 && counts.reaped == 3 &&
             frames.getStatistics().freeFrames == nativeFrameBaseline;
+    if (nativeFpDemo) {
+        process::NativeFpStatistics fp = nativeRuntime.FpStatistics();
+        valid = valid && fp.saves > 100 && fp.restores == fp.saves && fp.initialized == 3
+            && fp.invalidated == 3 && fp.invariantFailures == 0
+            && fp.userKeyboardInterrupts && fp.userMouseInterrupts;
+        LogValue("NATIVE FP CPL3 KEYBOARD IRQS ", fp.userKeyboardInterrupts);
+        LogValue("NATIVE FP CPL3 MOUSE IRQS ", fp.userMouseInterrupts);
+        if (nativeFpDiagnostic)
+            printf(valid ? "NATIVE FP DESKTOP DIAGNOSTIC PASS (POINTER GAPS REMAIN)\n"
+                         : "NATIVE FP DESKTOP DIAGNOSTIC FAIL\n");
+        else
+            printf(valid ? "NATIVE FP DESKTOP ISOLATION PASS\n" : "NATIVE FP DESKTOP ISOLATION FAIL\n");
+    }
     nativeDemoReported = true;
     memory::InterruptGuard guard;
     LogValue("NATIVE FAULT PROCESS CR3 ", fault.observedCr3);

@@ -72,6 +72,7 @@ NativeRuntime::NativeRuntime() : paging(0), frames(0), scheduler(0), gdt(0),
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
+        NativeFpScrub(&slots[i].fp, sizeof(slots[i].fp));
         Zero(slots[i].stackFrames, sizeof(slots[i].stackFrames));
     }
 }
@@ -112,15 +113,19 @@ rollback:
     return false;
 }
 bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descriptors,
-                             KernelPaging& kernel, PhysicalMemoryManager& allocator) {
+                             KernelPaging& kernel, PhysicalMemoryManager& allocator, NativeFpPolicy policy) {
     uint32_t flags; asm volatile("pushfl; popl %0" : "=r"(flags));
     PagingStatistics info = kernel.getStatistics();
     if (!BootstrapProcessor() || (flags & 0x200) || active || enabled || !stacksPrepared || paging != &kernel
         || frames != &allocator || !kernel.usesAllocator(allocator) || !info.enabled || !info.sealedForSharing
         || Cr3() != info.directoryAddress || tasks.CurrentTask()) return false;
     if (!DisableFastEntry()) return false;
+    NativeFpRecord* records[MaximumProcesses];
+    for (uint32_t i = 0; i < MaximumProcesses; ++i) records[i] = &slots[i].fp;
+    if (!fp.PrepareBsp(policy, kernel, records, MaximumProcesses)) return false;
     scheduler = &tasks; gdt = &descriptors;
     tasks.nativeGdt = gdt; tasks.kernelDirectory = info.directoryAddress;
+    tasks.nativeFpEnabled = fp.Enabled();
     asm volatile("mov %%cr0,%0" : "=r"(tasks.kernelCr0));
     descriptors.LoadTaskState(StackTop(0));
     enabled = true; active = this;
@@ -151,7 +156,8 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     cpu.esp = UserStackTop - 16; cpu.eflags = 0x202; // IF=1, IOPL=NT=VM=0.
     slot.task.userMode = true; slot.task.directoryAddress = slot.space.DirectoryAddress();
     slot.task.kernelStackTop = top;
-    if (!scheduler->AddTask(&slot.task)) return false;
+    if (!fp.Initialize(slot.fp, nextId)) return false;
+    if (!scheduler->AddTask(&slot.task)) { fp.Invalidate(slot.fp); return false; }
     Zero(&slot.status, sizeof(slot.status));
     id = slot.status.id = nextId++; slot.status.directory = slot.space.DirectoryAddress();
     slot.status.live = slot.occupied = true; ++statistics.created;
@@ -290,6 +296,8 @@ uint32_t NativeRuntime::Reap() {
         if (!slot.occupied || slot.status.live || slot.task.State() != TaskTerminated) continue;
         slot.status.statistics = slot.task.Statistics();
         if (slot.task.owner && !scheduler->RemoveTask(&slot.task)) continue;
+        // Check hardware ownership and scrub BEFORE any victim frame is freed.
+        fp.Invalidate(slot.fp);
         if (!slot.space.Destroy()) continue;
         slot.occupied = false; slot.status.reaped = true;
         ++statistics.reaped; ++reaped;
@@ -328,4 +336,48 @@ bool NativeRuntime::RequestExit(uint32_t id, uint32_t code) {
         }
     }
     return false;
+}
+
+void NativeRuntime::EnterTrap(CPUState* cpu) {
+    if (!fp.Enabled()) return;
+    if (!BootstrapProcessor() || !cpu) fp.Panic("entry CPU/frame");
+    const bool user = (cpu->cs & 3) == 3;
+    Slot* slot = user ? Current() : 0;
+    if (user) {
+        if (!slot || !slot->status.live) fp.Panic("entry current slot");
+        const uint32_t top = slot->task.kernelStackTop, address = (uint32_t)cpu;
+        if (address < top - KernelStackPages * 4096 || address > top - sizeof(CPUState))
+            fp.Panic("entry frame range");
+    }
+    fp.EnterKernel(slot ? &slot->fp : 0, slot ? slot->status.id : 0, user, cpu->vector);
+}
+NativeFpTransition* NativeRuntime::PrepareTrapReturn(CPUState* cpu) {
+    if (!fp.Enabled()) return 0;
+    if (!BootstrapProcessor() || !cpu) fp.Panic("return CPU/frame");
+    const bool user = (cpu->cs & 3) == 3;
+    Slot* slot = user ? Current() : 0;
+    if (user) {
+        if (!slot || !slot->status.live || slot->task.State() != TaskRunning)
+            fp.Panic("return current slot");
+        const uint32_t top = slot->task.kernelStackTop, address = (uint32_t)cpu;
+        if (address < top - KernelStackPages * 4096 || address > top - sizeof(CPUState)
+            || cpu->cs != gdt->UserCodeSegmentSelector() || cpu->ss != gdt->UserDataSegmentSelector())
+            fp.Panic("return frame range/selectors");
+    }
+    if (!user && ((scheduler->CurrentTask() && scheduler->CurrentTask()->UserMode())
+        || Cr3() != paging->getStatistics().directoryAddress))
+        fp.Panic("kernel return task/CR3");
+    return fp.PrepareReturn(slot ? &slot->fp : 0, slot ? slot->status.id : 0, user);
+}
+extern "C" void native_fp_enter_trap(CPUState* cpu) {
+    NativeRuntime* runtime = NativeRuntime::Active();
+    if (runtime) runtime->EnterTrap(cpu);
+}
+extern "C" NativeFpTransition* native_fp_prepare_return(CPUState* cpu) {
+    NativeRuntime* runtime = NativeRuntime::Active();
+    return runtime ? runtime->PrepareTrapReturn(cpu) : 0;
+}
+
+NativeFpStatistics NativeRuntime::FpStatistics() const {
+    InterruptGuard guard; return fp.Statistics();
 }

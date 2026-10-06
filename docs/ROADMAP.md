@@ -1,6 +1,7 @@
 # GTOS engineering roadmap
 
-GTOS is an educational 32-bit x86 operating system. This roadmap separates verified
+GTOS currently provides a tested educational 32-bit x86 operating system, with
+a separate x86-64 browser-foundation target beginning development. This roadmap separates verified
 capabilities from development targets. Work is reviewed and committed to `dev`;
 `main` is not changed automatically. No prototype is described as production-ready.
 
@@ -97,8 +98,9 @@ translation of arbitrary third-party applications before those are implemented.
 After the active kernel/desktop/Chinese phase gates, assess a real native Chromium
 port and required GTOS APIs. See [browser prerequisites and proof gates](BROWSER_PORT.md).
 The current checkpoint is complete. The [assessment](browser-assessment.md)
-records the full-build storage blocker, architecture tradeoffs, and immediate
-CPL3 process/isolation proof. Chromium itself has not yet been built or run.
+records the cloud full-build storage limit, separately built Linux V8 control,
+architecture decision, and completed bounded CPL3 process/isolation proof.
+Chromium itself has not yet run in GTOS.
 
 ## Current phase checkpoint: kernel workers and localized desktop
 
@@ -108,9 +110,9 @@ results, rather than merely being discovered or parked. Per-worker private IDTs,
 shared sealed page tables and wake IPIs are implemented. One failed worker can be
 contained; this is not isolation for arbitrary native applications.
 
-This checkpoint does **not** close phases 2–5. General AP scheduling, ring-3
-processes, a filesystem, terminal/file manager, session restoration, broader
-hardware support and browser-facing services remain open. The queued browser
+This checkpoint does **not** close phases 2–5. Subsequent bounded ring-3 support
+is described below. General AP scheduling, a filesystem, terminal/file manager,
+session restoration, broader hardware support and browser-facing services remain open. The queued browser
 assessment must turn those dependencies into executable milestones rather than
 assuming a desktop screenshot means a browser platform is already available.
 
@@ -124,7 +126,27 @@ kernel-write fault, surviving peer execution, and exact deferred reclamation
 while the existing desktop and AP workers continue. This milestone preserves the
 existing i386 build; it does not settle the final browser target architecture.
 
-Remaining immediate native-runtime work includes FP/SIMD ownership, richer VM and
-syscalls, threads/TLS, files/IPC, and userland surfaces. The current non-PAE scheme
+Optional BSP legacy x87/MMX/SSE ownership has a separately documented
+[multi-engine acceptance](native-fp-verification.md) and remains disabled by
+default. Remaining native-runtime work includes browser-target FP/extended-state
+ownership, richer VM and syscalls, threads/TLS, files/IPC, and userland surfaces. The current non-PAE scheme
 has no NX protection; fixed layout and four bounded process slots are explicit
 limits rather than a general-purpose browser platform.
+
+## Separate x86-64 browser-foundation track
+
+The measured sandbox-enabled Linux V8 control reserves roughly 1.35 TiB of
+virtual space. This motivates a separate x86-64 target rather than promising a
+maintained browser within the current i386 arena. Keep the working i386 build,
+desktop/language/game and native-isolation suite throughout the transition.
+
+- First gate: validated real long-mode boot, four-level mappings, NX/WP, own
+  descriptor/exception stacks and strict actual protection-fault tests
+- Next gate: sparse aligned reservation without proportional RAM/page-table
+  allocation; zeroed commit, permission changes, decommit/release, rollback,
+  stale-access faults and resource-lifetime conformance
+- Then: real x64 native loading/entry, per-thread FP/TLS, scheduler wait/wake,
+  join/handles and cross-process ownership before component-runtime integration
+
+A successful Linux control, standalone x64 kernel boot, or JavaScript-engine
+bring-up does not close the browser rendering/navigation/security gates.

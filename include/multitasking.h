@@ -82,6 +82,7 @@ namespace gtos {
             uint32_t switches;
             GlobalDescriptorTable* nativeGdt;
             uint32_t kernelDirectory, kernelCr0;
+            bool nativeFpEnabled;
             CPUState* Dispatch(CPUState* cpustate, bool timer);
             CPUState* SelectContext(Task* task, CPUState* state);
             int IndexOf(Task* task) const;

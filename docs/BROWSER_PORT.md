@@ -4,11 +4,13 @@ The requested outcome is Chromium executing inside GTOS and rendering real web
 pages through GTOS services. A host browser, remote browser session, screenshot
 proxy, or set of unimplemented API stubs does not satisfy that outcome.
 
-The current foundation gates below are complete at `29f6002`, with exact-head
-CI passing. See the [official-upstream and resource assessment](browser-assessment.md).
-Native process/isolation prerequisites are now being implemented; a full Chromium
-checkout/build remains blocked in this cloud workspace by its capacity. A larger
-authorized workspace is being prepared separately for browser-side work.
+The kernel/desktop/language gates below completed at `29f6002`. Bounded native
+ELF32 execution and process isolation subsequently completed at `b36d0c2`, with
+exact-head CI passing. See the [official-upstream and resource assessment](browser-assessment.md).
+The small cloud workspace continues kernel development. A separately authorized
+larger workspace now builds browser-side reference components; its successful
+Linux x86-64 V8 control is not a GTOS execution result. Chromium webpage rendering
+in GTOS remains an open acceptance gate.
 
 ## Finish the current phase first
 
@@ -21,9 +23,9 @@ authorized workspace is being prepared separately for browser-side work.
 These gates define this phase. They do not imply a production-grade kernel or
 that all browser prerequisites below are already present.
 
-## First browser milestone: verify feasibility and resources
+## Assessment and architecture decision
 
-Before choosing an upstream revision or implementing a platform port:
+The initial assessment established the following continuing requirements:
 
 1. Inspect current official Chromium architecture, supported target/toolchain
    configurations, dependency requirements and maintained source revision
@@ -35,29 +37,73 @@ Before choosing an upstream revision or implementing a platform port:
 5. Clarify ownership/publication before creating a separate Chromium fork;
    current project publication is limited to reviewed GTOS `dev` work
 
-## Known GTOS gaps from the current implementation
+## Verified native foundation, and remaining browser gaps
 
-The current system has a bounded bytecode app host and trusted kernel workers.
-It does not yet provide native browser processes or a POSIX-compatible userspace.
+Published checkpoint `b36d0c2` now supplies bounded static ELF32 loading, four
+BSP-scheduled CPL3 process slots, private page directories, checked user copies,
+validated console/tick/yield/exit calls, guarded kernel stacks, and recoverable
+user faults. External ELF probes prove distinct same-address data, preemption,
+peer survival and exact deferred reclamation while the desktop and AP workers
+continue. The separately compiled application-side ABI probe also executes and
+exits successfully. See [native processes](native-processes.md),
+[process memory](process-memory.md), and [ELF validation](elf32-loader.md).
 
-- Native executable loading, an ABI and a practical libc/C++ runtime/toolchain
-- Hardware-enforced user/kernel and process isolation, safe fault termination,
-  user stacks, syscall argument validation and per-process resource ownership
-- General threads, preemption, synchronization, TLS, timers and signal/event APIs
-- Virtual-memory mapping/protection, shared memory and appropriate allocation
-  behavior beyond the present supervisor identity-map foundation
-- A general filesystem, file descriptors, directories, random-access I/O,
-  persistent browser profiles and crash-safe storage behavior
-- Network interfaces, sockets, DNS, reliable TCP, entropy, clock accuracy,
-  certificate trust and TLS. The old demo network sources are not sufficient
-- Process creation and IPC, shared buffers, event dispatch and browser service
-  boundaries appropriate to the selected upstream architecture
-- A browser-facing window/surface/input API, text/clipboard services, robust font
-  coverage and a tested rendering path. The current compositor is kernel-side
-- Platform sandboxing/security boundaries; a successful test build alone is not
-  evidence that browsing untrusted internet content is safe
+Those results are genuine userspace progress, but do not yet provide a native
+browser runtime or a POSIX-compatible application environment. The default
+profile is integer-only, non-PAE, fixed-layout and deliberately resource-bounded.
+It has no hardware NX and is not a completed internet-browsing sandbox. Optional
+BSP legacy x87/MMX/SSE ownership is now implemented with strict Bochs state
+acceptance and separately qualified QEMU desktop/AP diagnostics; it remains
+disabled by default. See [FP ownership and limits](native-fp.md).
 
-## Staged proof, after the assessment
+Remaining work includes:
+
+- Deliberate final target architecture, toolchain, C/C++ runtime/libc and Rust
+  support. ELF64, dynamic loading, relocations, TLS and a stable general ABI are
+  not provided by the bounded ELF32 loader
+- Broader process lifecycle, wait/handles/resource ownership and native user
+  threads; the current scheduler is BSP-only and AP workers execute only bounded
+  trusted integer operations, not general user threads
+- Browser-target FP/extended-state ownership, user-thread TLS, synchronization,
+  clocks, blocking/wakeup,
+  event and signal semantics suitable for the chosen browser platform
+- Dynamic virtual-memory reservation/commit/unmap/protection and shared memory,
+  including safe executable-page/JIT policy beyond immutable first-process images
+- A general filesystem, descriptors, directories, random-access I/O, executable
+  and asset lookup, persistent profiles and crash-safe file operations. The
+  private bytecode application store is not that filesystem
+- Network interfaces, sockets, DNS, reliable TCP, entropy, time, certificate trust
+  and TLS. The old demonstration network sources are not browser-ready services
+- Transferable handles and process IPC with backpressure, cancellation, peer-death
+  handling and service boundaries appropriate to the selected upstream design
+- A userland window/surface/input API, text/clipboard/composition services and
+  robust font coverage. Current GUI and bounded pinyin input are kernel-side
+- Enforced browser sandbox policy and security boundaries. Passing native probes
+  or an unsandboxed bring-up build does not establish safe public-web browsing
+
+## Next architecture and service gates
+
+The selected next kernel target is a separate x86-64 bring-up, preserving the
+existing i386 desktop and its regression suite. This follows the maintained V8
+sandbox design and the measured reference workload's roughly 1.35 TiB virtual
+reservation. Reservation size is not physical-memory consumption. This choice
+does not assume that the Linux binary can execute unchanged in GTOS.
+
+1. A bounded real long-mode boot with validated handoff, four-level tables,
+   NX/write protection, exception stacks and actual protection-fault tests
+2. Sparse VM ownership: reserve aligned virtual ranges without allocating a
+   physical frame or page table per reserved page; commit zeroed pages, protect,
+   decommit and release with rollback and exact resource-accounting tests
+3. Native x64 process entry and checked calls, then user threads with private
+   stacks, FP/TLS ownership, blocking/wakeup and safe join/handle lifetime
+4. Runtime/loader, filesystem, IPC, networking and userland graphics contracts
+   tested by real independently built components before browser integration
+
+These are implementation gates, not claims that the new x64 services already
+exist. The first target is deliberately BSP-only; i386 AP workers and their
+tests continue on the existing target.
+
+## Staged browser proof
 
 Each stage must run real guest code and have a reviewable acceptance result:
 

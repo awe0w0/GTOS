@@ -3,6 +3,7 @@
 #include <memory/process_address_space.h>
 #include <multitasking.h>
 #include <process/abi.h>
+#include <process/native_fp.h>
 namespace gtos { namespace process {
     // A bounded kernel-provided isolation fixture. This is NOT an ELF loader.
     struct NativeImage {
@@ -22,7 +23,8 @@ namespace gtos { namespace process {
         uint32_t created, exited, faulted, reaped, writtenBytes;
     };
     // BSP-only bounded prototype. The runtime, GDT, physical allocator and
-    // template must all outlive every process. Kernel stack slots are retained.
+    // template must remain alive after activation (there is no deactivation API).
+    // Kernel stack slots and shared mappings are retained for the kernel lifetime.
     class NativeRuntime {
     public:
         static const uint32_t MaximumProcesses = 4;
@@ -37,6 +39,7 @@ namespace gtos { namespace process {
             Task task;
             memory::ProcessAddressSpace space;
             NativeStatus status;
+            NativeFpRecord fp;
             uint32_t stackFrames[KernelStackPages];
             bool occupied;
             Slot() : task((uint16_t)0, 0), occupied(false) {}
@@ -49,6 +52,7 @@ namespace gtos { namespace process {
         bool stacksPrepared, enabled;
         uint32_t nextId;
         NativeStatistics statistics;
+        NativeFp fp;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
         static NativeRuntime* active;
         Slot* Current();
@@ -67,7 +71,7 @@ namespace gtos { namespace process {
         bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&);
         // Call after enable + sealForSharedProcessors, on BSP kernel CR3, IF=0.
         bool Activate(TaskManager&, GlobalDescriptorTable&, memory::KernelPaging&,
-                      memory::PhysicalMemoryManager&);
+                      memory::PhysicalMemoryManager&, NativeFpPolicy = NativeFpDisabled);
         bool Create(const NativeImage&, uint32_t& id);
         // Validated static ET_EXEC only. The trusted source is consumed/copied
         // synchronously and is not retained. Stack+guards cannot overlap loads.
@@ -79,6 +83,12 @@ namespace gtos { namespace process {
         bool ReadMemory(uint32_t id, uint32_t address, void* out, uint32_t bytes) const;
         NativeStatistics Statistics() const;
         static NativeRuntime* Active();
+        NativeFpError FpError() const { return fp.Error(); }
+        NativeFpStatistics FpStatistics() const;
+        bool FpEnabled() const { return fp.Enabled(); }
+        // Internal assembly boundary hooks; caller holds IF=0.
+        void EnterTrap(CPUState*);
+        NativeFpTransition* PrepareTrapReturn(CPUState*);
         CPUState* HandleSyscall(CPUState*);
         // Null means not a supported verified user-origin fault: caller panics.
         CPUState* HandleFault(CPUState*, uint32_t address);

@@ -2,7 +2,8 @@
 
 This module adds real BSP-scheduled CPL3 execution to the existing 32-bit kernel.
 It does not implement a general browser platform, Linux ABI, POSIX process model,
-dynamic executable service, FPU state ownership, or an internet-safe browser sandbox.
+dynamic executable service or an internet-safe browser sandbox. Optional legacy
+FP ownership is described in `docs/native-fp.md` and remains disabled by default.
 The trusted desktop and existing ring-0 tasks remain round-robin participants.
 APs continue to use only the sealed kernel directory and their existing bounded
 worker queues; no native task runs on an AP.
@@ -156,13 +157,15 @@ are wholly kernel-constructed. User code cannot install arbitrary privileged
 selectors. A bad user EIP/ESP or user-selected inaccessible data address faults
 in CPL3 and is contained by the native fault path.
 
-There is no FPU/SIMD context save or restore. Native dispatch sets CR0.TS|MP;
+Under the default `NativeFpDisabled` profile there is no FPU/SIMD save or restore.
+Native dispatch sets CR0.TS|MP;
 rejected x87/MMX/SSE instructions cause a user #NM (or #UD when the CPU/OS does
 not enable the extension). The kernel baseline CR0 is restored for kernel-task
 and boot dispatch. Kernel handlers and programs in this prototype must use
 integer instructions only. The runtime does not clear TS in a #NM handler and
-does not let one task observe another task's FP registers. FP/TLS/extended-state
-support requires a separate tested ownership implementation.
+does not let one task observe another task's FP registers. The optional `NativeFpSse2`/`NativeFpSse3` profile adds eager legacy-state
+ownership at every trap boundary; see `docs/native-fp.md` for its exact current
+verification limits. TLS and extended-state support remain out of scope.
 
 ## Syscall ABI
 

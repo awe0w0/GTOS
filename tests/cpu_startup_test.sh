@@ -1,11 +1,12 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 as --32 src/hardwarecommunication/cpu_startup_trampoline.s -o "$work/trampoline.o"
 for optimization in 0 2; do
-    ${CXX:-g++} -m32 -std=c++11 -O"$optimization" -DGTOS_MEMORY_TEST -DGTOS_CPU_STARTUP_TEST \
+    ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O"$optimization" -DGTOS_MEMORY_TEST -DGTOS_CPU_STARTUP_TEST \
         -Iinclude -Wall -Wextra -Werror -fno-pie -no-pie -ffreestanding \
         -nostdlib -static -fno-stack-protector -fno-builtin -fno-exceptions \
         -fno-rtti -fno-use-cxa-atexit -fno-threadsafe-statics \

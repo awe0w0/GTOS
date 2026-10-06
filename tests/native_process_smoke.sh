@@ -2,6 +2,7 @@
 # Real CPL3/CR3/IRQ/syscall isolation boots, at O0 and O2.
 set -eu
 cd "$(dirname "$0")/.."
+kernel_flags=$(cat tools/kernel-cxxflags)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 runtime="$(pwd)/../gtos-runtime"
@@ -26,9 +27,9 @@ command -v "$grub" >/dev/null 2>&1 || { echo 'grub-mkrescue is required' >&2; ex
 as --32 tests/native_process_elf.s -o "$work/elf-fixture.tmp"
 ld -melf_i386 -T tests/native_process_elf.ld -o "$work/fixture.elf" "$work/elf-fixture.tmp"
 for optimization in 0 2; do
-for source in src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecommunication/interrupts.cpp src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/elf32.cpp src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp \
+for source in src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecommunication/interrupts.cpp src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/native_fp.cpp src/process/elf32.cpp src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp \
     src/memory/bootstrap.cpp tests/native_process_smoke.cpp; do
-    ${CXX:-g++} -m32 -std=c++11 -O"$optimization" -ffreestanding -nostdlib -fno-builtin \
+    ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O"$optimization" -ffreestanding -nostdlib -fno-builtin \
         -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie \
         -fno-threadsafe-statics -fno-use-cxa-atexit -fno-asynchronous-unwind-tables \
         -Iinclude -Wno-write-strings -Wall -Wextra -Werror -c "$source" \
@@ -36,8 +37,11 @@ for source in src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecomm
 done
 as --32 tests/native_process_loader.s -o "$work/loader.o"
 as --32 tests/native_process_user.s -o "$work/user.o"
+as --32 src/process/native_fp.s -o "$work/native_fp.asm.o"
 as --32 src/hardwarecommunication/interruptstubs.s -o "$work/stubs.o"
-ld -melf_i386 -T tests/native_process_smoke.ld -o "$work/native.bin" "$work"/*.o
+ld -melf_i386 -T tests/native_process_smoke.ld -Map "$work/native.bin.map" -o "$work/native.bin" "$work"/*.o
+python3 tools/audit-kernel-instructions.py --map "$work/native.bin.map" \
+    --allow-user-range native_user_start:native_user_end "$work/native.bin"
 mkdir -p "$work/iso/boot/grub"
 cp "$work/native.bin" "$work/iso/boot/native.bin"
 cp "$work/fixture.elf" "$work/iso/boot/payload"

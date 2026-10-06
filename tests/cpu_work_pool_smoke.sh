@@ -6,6 +6,7 @@ stage=${GTOS_CPU_WORK_POOL_STAGE:-$root}
 pool_source="$stage/src/hardwarecommunication"
 if [ ! -f "$pool_source/cpu_work_pool.cpp" ]; then pool_source="$stage/src"; fi
 cd "$repo"
+kernel_flags=$(cat "$root/tools/kernel-cxxflags")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 qemu=${GTOS_QEMU_SYSTEM_I386:-qemu-system-i386}
@@ -15,7 +16,7 @@ for optimization in ${GTOS_CPU_WORK_POOL_OPTIMIZATIONS:-0 2}; do
         "$pool_source/cpu_startup.cpp" "$pool_source/cpu_work_pool.cpp" \
         "$pool_source/cpu_work_queue.cpp" "$pool_source/cpu_memory_types.cpp" \
         "$stage/tests/cpu_work_pool_smoke.cpp"; do
-        ${CXX:-g++} -m32 -std=c++11 -O"$optimization" -DGTOS_CPU_WORK_POOL_TEST \
+        ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O"$optimization" -DGTOS_CPU_WORK_POOL_TEST \
             -ffreestanding -nostdlib -fno-builtin -fno-exceptions -fno-rtti \
             -fno-stack-protector -fno-pie -fno-use-cxa-atexit -fno-threadsafe-statics \
             -fno-asynchronous-unwind-tables -I"$stage/include" -Iinclude \
@@ -24,7 +25,8 @@ for optimization in ${GTOS_CPU_WORK_POOL_OPTIMIZATIONS:-0 2}; do
     as --32 src/hardwarecommunication/cpu_startup_trampoline.s -o "$work/trampoline.o"
     as --32 "$pool_source/cpu_work_interrupts.s" -o "$work/interrupts.o"
     as --32 "$stage/tests/cpu_work_pool_loader.s" -o "$work/loader.o"
-    ld -melf_i386 -T "$stage/tests/cpu_work_pool_smoke.ld" -o "$work/work-smoke.bin" "$work"/*.o
+    ld -melf_i386 -T "$stage/tests/cpu_work_pool_smoke.ld" -Map "$work/work-smoke.bin.map" -o "$work/work-smoke.bin" "$work"/*.o
+    python3 tools/audit-kernel-instructions.py --map "$work/work-smoke.bin.map" "$work/work-smoke.bin"
     run() {
         name=$1; cpus=$2; memory=$3; arguments=$4; model=${5:-qemu32}
         set +e
