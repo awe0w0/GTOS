@@ -6,8 +6,28 @@ extern void printf(char *);
 static void Trace(const char *t) {
     printf((char *)t);
 }
+static void TraceImage(const char *format, const uint32_t *values) {
+    char record[320];
+    uint32_t at = 0, field = 0;
+    for (uint32_t i = 0; format[i] && at + 11 < sizeof(record); ++i) {
+        if (format[i] != '?') {
+            record[at++] = format[i];
+            continue;
+        }
+        char digits[10];
+        uint32_t count = 0, value = values[field++];
+        do {
+            digits[count++] = '0' + value % 10;
+            value /= 10;
+        } while (value);
+        while (count)
+            record[at++] = digits[--count];
+    }
+    record[at] = 0;
+    Trace(record);
+}
 static const char *windowTitles[] = {"Welcome", "Applications", "System monitor", "Appearance",
-                                     "Catch"};
+                                     "Catch", "Native image"};
 static bool EqualText(const char *a, const char *b) {
     if (!a || !b)
         return false;
@@ -24,8 +44,12 @@ static bool BundledCatch(const gtos::storage::AppInfo *app) {
     return app && app->length == 824 && app->checksum == 0x733AF7F5u && EqualText(app->id, "catch");
 }
 ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppStore *s,
-                             gtos::storage::SettingsStore *settings, bool live)
-    : fb(*f), paint(*f), wm(f->Width(), f->Height()), store(s), vm(this), preferences(settings),
+                             gtos::storage::SettingsStore *settings, bool live,
+                             const NativeImageProvider *source)
+    : fb(*f), paint(*f), wm(f->Width(), f->Height()), imageProvider(source), image(), pendingImage(),
+      imageTraceBounds(), imageSeenGeneration(0), imageTraceGeneration(0), imageX(0), imageY(0), imageScale(0),
+      imageTraceX(0), imageTraceY(0), imageTraceScale(0), imageTraceVisible(false),
+      store(s), vm(this), preferences(settings),
       locale(gtos::i18n::English), pinyinInput(false), preferencesPersisted(false),
       settingsConfirmed(false), bundledGame(false), liveSession(live), installer(0), installerSize(0), eventRead(0),
       eventWrite(0), overflow(false), mouseX(f->Width() - 30), mouseY(16), leftDown(false),
@@ -205,6 +229,10 @@ void ModernDesktop::CancelCapture() {
     resizing = false;
 }
 void ModernDesktop::Open(ModernWindowKind k) {
+    if (k == ModernImage && !image.generation) {
+        Notice("Native image unavailable");
+        return;
+    }
     CancelCapture();
     CancelComposition();
     wm.Open(k);
@@ -226,6 +254,10 @@ void ModernDesktop::Close(ModernWindowKind k) {
         Trace("APP CLOSE OK\n");
     }
     wm.Close(k);
+    if (k == ModernImage) {
+        const uint32_t values[] = {image.generation};
+        TraceImage("GTOS NATIVE IMAGE CLOSED V1 generation=?\n", values);
+    }
     dragKind = -1;
     leftDown = false;
     Notice("Window closed");
@@ -499,6 +531,10 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         Close((ModernWindowKind)wm.Focused());
         return;
     }
+    if (k == '5') {
+        Open(ModernImage);
+        return;
+    }
     if (wm.Focused() == ModernGame) {
         if (k == 'r') {
             Clear(0);
@@ -598,7 +634,8 @@ void ModernDesktop::Pointer(const Input &e) {
             return;
         }
         int32_t index = (x - 68) / 118;
-        if (x >= 68 && index >= 0 && index < ModernWindowCount && (x - 68) % 118 < 110 &&
+        if (x >= 68 && index >= 0 && index < ModernWindowManager::DockCount &&
+            (x - 68) % 118 < 110 &&
             y >= (int32_t)fb.Height() - 44 && y < (int32_t)fb.Height() - 8) {
             CancelComposition();
             launcher = false;
@@ -753,6 +790,28 @@ void ModernDesktop::Pointer(const Input &e) {
 }
 void ModernDesktop::Update(const SystemSnapshot &s) {
     state = s;
+    // The provider serializes the copy; no user address is retained. Fixed
+    // candidate storage keeps large snapshots off the kernel stack and rejects
+    // bad frames without discarding the desktop's last valid image.
+    if (imageProvider && imageProvider->CopyLatest(imageSeenGeneration, pendingImage) &&
+        pendingImage.generation && pendingImage.generation != imageSeenGeneration) {
+        imageSeenGeneration = pendingImage.generation;
+        bool valid = pendingImage.width && pendingImage.width <= 32 &&
+                     pendingImage.height && pendingImage.height <= 32;
+        if (valid)
+            for (uint32_t at = 0; at < pendingImage.width * pendingImage.height * 4; at += 4)
+                if (pendingImage.rgba[at] > pendingImage.rgba[at + 3] ||
+                    pendingImage.rgba[at + 1] > pendingImage.rgba[at + 3] ||
+                    pendingImage.rgba[at + 2] > pendingImage.rgba[at + 3]) {
+                    valid = false;
+                    break;
+                }
+        if (valid) {
+            image = pendingImage;
+            Open(ModernImage);
+        } else
+            Notice("Native image unavailable");
+    }
     while (eventRead != eventWrite) {
 #ifndef GTOS_DESKTOP_HOST_TEST
         uint32_t flags;
@@ -878,4 +937,32 @@ void ModernDesktop::Number(int32_t x, int32_t y, int32_t v, uint8_t c) {
         out[k++] = rev[--n];
     out[k] = 0;
     Text(x, y, out, c);
+}
+
+void ModernDesktop::ReportNativeImagePresented() {
+    const ModernWindow &window = wm.Window(ModernImage);
+    const bool visible = image.generation && imageScale > 0 && window.open &&
+                         !window.minimized && wm.Focused() == ModernImage &&
+                         !launcher && !confirmRemove;
+    if (!visible) {
+        imageTraceVisible = false;
+        return;
+    }
+    const ModernRect &r = window.bounds;
+    if (imageTraceVisible && imageTraceGeneration == image.generation &&
+        imageTraceX == imageX && imageTraceY == imageY && imageTraceScale == imageScale &&
+        imageTraceBounds.x == r.x && imageTraceBounds.y == r.y &&
+        imageTraceBounds.w == r.w && imageTraceBounds.h == r.h)
+        return;
+    imageTraceVisible = true;
+    imageTraceGeneration = image.generation;
+    imageTraceX = imageX;
+    imageTraceY = imageY;
+    imageTraceScale = imageScale;
+    imageTraceBounds = r;
+    const uint32_t values[] = {image.generation, image.width, image.height,
+                              (uint32_t)imageX, (uint32_t)imageY, (uint32_t)imageScale,
+                              (uint32_t)r.x, (uint32_t)r.y, (uint32_t)r.w, (uint32_t)r.h};
+    // Emit only after framebuffer Present, so submission alone is no receipt.
+    TraceImage("GTOS NATIVE IMAGE PRESENTED V1 generation=? width=? height=? x=? y=? scale=? window_x=? window_y=? window_w=? window_h=?\n", values);
 }

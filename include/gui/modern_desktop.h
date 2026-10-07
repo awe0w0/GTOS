@@ -1,6 +1,7 @@
 #ifndef GTOS_GUI_MODERN_DESKTOP_H
 #define GTOS_GUI_MODERN_DESKTOP_H
 #include <gui/modern_geometry.h>
+#include <gui/native_image.h>
 #include <gui/modern_painter.h>
 #include <gui/shell.h>
 #include <i18n/catalog.h>
@@ -21,6 +22,12 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     drivers::Framebuffer &fb;
     ModernPainter paint;
     ModernWindowManager wm;
+    const NativeImageProvider *imageProvider;
+    NativeImageSnapshot image, pendingImage;
+    ModernRect imageTraceBounds;
+    uint32_t imageSeenGeneration, imageTraceGeneration;
+    int32_t imageX, imageY, imageScale, imageTraceX, imageTraceY, imageTraceScale;
+    bool imageTraceVisible;
     storage::AppStore *store;
     apps::VirtualMachine vm;
     storage::SettingsStore *preferences;
@@ -80,6 +87,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     uint32_t BootLogRows() const;
     void DrawSettings(const ModernRect &r);
     void DrawGame(const ModernRect &r);
+    void DrawNativeImage(const ModernRect &r);
+    void ReportNativeImagePresented();
     void DrawLauncher();
     void DrawModal();
     void Button(int32_t x, int32_t y, int32_t w, const char *text, bool primary = false,
@@ -88,7 +97,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
 
   public:
     ModernDesktop(drivers::Framebuffer *framebuffer, storage::AppStore *store,
-                  storage::SettingsStore *settings = 0, bool live = false);
+                  storage::SettingsStore *settings = 0, bool live = false,
+                  const NativeImageProvider *imageProvider = 0);
     void SetInstaller(const uint8_t *data, uint32_t length);
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);

@@ -893,5 +893,25 @@
     "id": "BootLogShortcut",
     "en": "B Boot log",
     "zh-CN": "B 启动记录"
+  },
+  {
+    "id": "NativeImageTitle",
+    "en": "Native image",
+    "zh-CN": "原生 PNG"
+  },
+  {
+    "id": "NativeImageSource",
+    "en": "Image from native application",
+    "zh-CN": "原生应用的 PNG"
+  },
+  {
+    "id": "NativeImageShortcuts",
+    "en": "5 reopens this image / Esc closes",
+    "zh-CN": "5 打开 PNG / Esc 关闭"
+  },
+  {
+    "id": "NativeImageUnavailable",
+    "en": "Native image unavailable",
+    "zh-CN": "原生 PNG 不可用"
   }
 ]

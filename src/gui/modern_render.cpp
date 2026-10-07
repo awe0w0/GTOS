@@ -1,7 +1,8 @@
 #include <common/boot_log.h>
 #include <gui/modern_desktop.h>
 using namespace gtos::gui;
-static const char *titles[] = {"Welcome", "Applications", "System monitor", "Appearance", "Catch"};
+static const char *titles[] = {"Welcome", "Applications", "System monitor", "Appearance",
+                               "Catch", "Native image"};
 static const char *dockTitles[] = {"Home", "Apps", "Monitor", "Settings", "Catch"};
 static const uint32_t gamePalette[] = {0x101923, 0x182633, 0x243744, 0x354D5A, 0x517080, 0x809BA9,
                                        0xBCD1D5, 0xEAF1ED, 0xEEDF83, 0x81CB9B, 0x86C5D5, 0xB7B1DA,
@@ -15,6 +16,7 @@ void ModernDesktop::Button(int32_t x, int32_t y, int32_t w, const char *t, bool 
 }
 void ModernDesktop::Draw() {
     Theme c = Colors();
+    imageScale = 0;
     fb.ResetClip();
     int32_t width = fb.Width(), height = fb.Height();
     // Procedural wallpaper: no opaque image asset and no pretend live widgets.
@@ -55,7 +57,7 @@ void ModernDesktop::Draw() {
     fb.Rect(0, dy, width, 1, c.line);
     paint.Rounded(10, dy + 8, 42, 36, 8, launcher ? c.accent : c.raised);
     paint.Icon(23, dy + 18, 0, launcher ? c.accentText : c.text);
-    for (uint32_t i = 0; i < ModernWindowCount; ++i) {
+    for (uint32_t i = 0; i < ModernWindowManager::DockCount; ++i) {
         int32_t x = 68 + i * 118;
         bool focused = wm.Focused() == (int32_t)i && !launcher;
         if (focused)
@@ -93,6 +95,7 @@ void ModernDesktop::Draw() {
     fb.Rect(mx + 5, my + 13, 3, 7, 0x081119);
     fb.Rect(mx + 6, my + 13, 1, 6, 0xFAFCFE);
     fb.Present();
+    ReportNativeImagePresented();
 }
 void ModernDesktop::DrawWindow(ModernWindowKind k) {
     Theme c = Colors();
@@ -124,8 +127,10 @@ void ModernDesktop::DrawWindow(ModernWindowKind k) {
         DrawMonitor(r);
     else if (k == ModernSettings)
         DrawSettings(r);
-    else
+    else if (k == ModernGame)
         DrawGame(r);
+    else if (k == ModernImage)
+        DrawNativeImage(r);
     fb.ResetClip();
     if (focus) {
         fb.Rect(r.x + 9, r.y, r.w - 18, 1, c.accent);
@@ -392,6 +397,44 @@ void ModernDesktop::DrawGame(const ModernRect &r) {
         paint.Text(gx + 30, gy + 62, Label(vm.Fault()), c.text);
         paint.Text(gx + 30, gy + 88, Label("Press R to restart or Esc to close"), c.muted);
     }
+}
+void ModernDesktop::DrawNativeImage(const ModernRect &r) {
+    if (!image.generation || !image.width || image.width > 32 ||
+        !image.height || image.height > 32)
+        return;
+    Theme c = Colors();
+    paint.Text(r.x + 24, r.y + 54, Label("Image from native application"), c.muted);
+    const int32_t availableWidth = r.w - 48, availableHeight = r.h - 124;
+    int32_t scale = availableWidth / (int32_t)image.width;
+    const int32_t verticalScale = availableHeight / (int32_t)image.height;
+    if (verticalScale < scale)
+        scale = verticalScale;
+    if (scale > 6)
+        scale = 6;
+    if (scale <= 0)
+        return;
+    const int32_t width = image.width * scale, height = image.height * scale;
+    imageX = r.x + (r.w - width) / 2;
+    imageY = r.y + 82 + (availableHeight - height) / 2;
+    imageScale = scale;
+    paint.Outline(imageX - 2, imageY - 2, width + 4, height + 4, c.line);
+    // Source-space checker tiles expose alpha. Source RGB is premultiplied8;
+    // Framebuffer::Blend uses alpha4, so retain all eight alpha bits here.
+    for (uint32_t y = 0; y < image.height; ++y)
+        for (uint32_t x = 0; x < image.width; ++x) {
+            const uint32_t background = ((x / 4 + y / 4) & 1) ? 0xA7B5C2 : 0xDDE5EC;
+            const uint8_t *pixel = image.rgba + (y * image.width + x) * 4;
+            const uint32_t inverseAlpha = 255 - pixel[3];
+            uint32_t color = 0;
+            for (uint32_t channel = 0; channel < 3; ++channel) {
+                const uint32_t shift = 16 - channel * 8;
+                const uint32_t result = pixel[channel] +
+                    (((background >> shift) & 255) * inverseAlpha + 127) / 255;
+                color |= result << shift;
+            }
+            fb.Rect(imageX + x * scale, imageY + y * scale, scale, scale, color);
+        }
+    paint.Text(r.x + 24, r.y + r.h - 27, Label("5 reopens this image / Esc closes"), c.muted);
 }
 void ModernDesktop::DrawLauncher() {
     Theme c = Colors();

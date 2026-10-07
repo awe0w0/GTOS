@@ -17,14 +17,17 @@ parser.add_argument('--dependency-cache',required=True,type=pathlib.Path)
 parser.add_argument('--clang',required=True,type=pathlib.Path)
 parser.add_argument('--host-cc',required=True,type=pathlib.Path)
 parser.add_argument('--host-cxx',required=True,type=pathlib.Path)
+parser.add_argument('--surface',action='store_true',help='Build the native PNG desktop surface consumer')
 args=parser.parse_args()
 repo=pathlib.Path(__file__).resolve().parents[1]
-app=repo/'apps/png_resource_probe';png=repo/'apps/png_image_codec'
+resource_app=repo/'apps/png_resource_probe'
+app=repo/('apps/png_surface_probe' if args.surface else 'apps/png_resource_probe');png=repo/'apps/png_image_codec'
 reference=args.qualified_png.resolve();cache=args.dependency_cache.resolve()
 out=args.output.resolve();assert not out.exists(),'Choose a fresh output directory'
 out.mkdir(parents=True)
 checks=[]
 state=dict(scope='Versioned immutable public PNG read -> unchanged real Wuffs/Skia decode; no presentation',
+    surface_consumer=args.surface,
     source_base=subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     native_build_pass=False,boot_file_admission_pass=False,guest_pass=False,
     stack_call_chain_qualified=False,qualification_complete=False,
@@ -127,8 +130,8 @@ def scalar_audit(elf,map_path,owners):
 
 try:
     run('resource-generated-stable',['python3',repo/'tools/generate-native-png-resource.py','--check'])
-    resource=json.loads((app/'resource_manifest.json').read_text())
-    assert resource['png_bytes']==1108 and sha(app/'resource.png')==resource['png_sha256']
+    resource=json.loads((resource_app/'resource_manifest.json').read_text())
+    assert resource['png_bytes']==1108 and sha(resource_app/'resource.png')==resource['png_sha256']
     state['resource']=resource
     state.update(resource_version=resource['resource_version'],resource_id=resource['resource_id'],
                  png_sha256=resource['png_sha256'],png_bytes=resource['png_bytes'],
@@ -180,6 +183,10 @@ try:
                  consumer_host_execution=False)
     paths=set(proven['source_sha256'])
     paths.update(str(p.relative_to(repo)) for p in app.iterdir() if p.is_file())
+    paths.update(str(p.relative_to(repo)) for p in resource_app.iterdir() if p.is_file())
+    if args.surface:
+        paths.update(('include/process/surface_abi.h','include/process/native_surface.h',
+            'src/process/native_surface.cpp','include/gui/native_image.h'))
     paths.update(('tools/build-png-resource-probe.py','tools/generate-native-png-resource.py',
                   'include/process/abi.h','include/process/resource_abi.h','include/process/resources.h',
                   'src/process/resources.cpp','src/process/resources_png.inc',
@@ -194,13 +201,13 @@ try:
         '-fno-builtin','-fno-pic','-fno-pie','-fno-stack-protector','-fno-unwind-tables',
         '-fno-asynchronous-unwind-tables','-mno-mmx','-mno-sse','-mno-sse2',
         '-ffunction-sections','-fdata-sections','-fstack-usage','-DGTOS_NATIVE_COMPONENT=1',
-        '-I'+str(repo/'include'),'-I'+str(app),'-I'+str(png),
+        '-I'+str(repo/'include'),'-I'+str(app),'-I'+str(resource_app),'-I'+str(png),
         '-I'+str(repo/'apps/wuffs_gif_probe/freestanding')]
     run('native-main',[clang,'-std=c++11','-fno-exceptions','-fno-rtti',
         '-fno-threadsafe-statics',*common,'-c',app/'native_main.cc','-o',out/'main.o'])
     run('native-start',[clang,'--target=i686-unknown-none-elf','-c',png/'start.s','-o',out/'start.o'])
     run('native-register-probe',[clang,'--target=i686-unknown-none-elf','-c',
-        app/'register_probe.s','-o',out/'register-probe.o'])
+        resource_app/'register_probe.s','-o',out/'register-probe.o'])
     # Include the unchanged qualified linker geometry. The extra absolute symbol
     # is solely a diagnostic description of our own final mapping boundary.
     script=out/'resource-linker.ld'
@@ -255,6 +262,8 @@ try:
         maximum_function_stack_bytes=max(x['bytes'] for x in stack),
         consumer_object_sha256={name:sha(out/name) for name in ('main.o','start.o','register-probe.o')})
     assert state['boot_file_admission_pass'],'Existing external ELF file cap exceeded'
+    if args.surface:
+        state['scope']='Native immutable PNG read -> real Wuffs/Skia decode -> bounded desktop surface v1'
 except Exception as error:
     state.update(stage='failed',error=repr(error));raise
 finally:

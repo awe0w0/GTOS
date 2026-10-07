@@ -16,6 +16,7 @@ enum ModernWindowKind {
     ModernMonitor,
     ModernSettings,
     ModernGame,
+    ModernImage,
     ModernWindowCount
 };
 struct ModernWindow {
@@ -30,7 +31,8 @@ class ModernWindowManager {
     void Refocus();
 
   public:
-    enum { Top = 30, Bottom = 52, Title = 38, MinWidth = 430, MinHeight = 300 };
+    // Keep the existing five dock cells and their hit targets.
+    enum { DockCount = 5, Top = 30, Bottom = 52, Title = 38, MinWidth = 430, MinHeight = 300 };
     ModernWindowManager(int32_t width, int32_t height);
     void Open(ModernWindowKind kind);
     void Close(ModernWindowKind kind);

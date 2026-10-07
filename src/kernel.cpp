@@ -24,6 +24,7 @@
 #include <multitasking.h>
 #include <syscalls.h>
 #include <process/native_runtime.h>
+#include <process/native_surface.h>
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
@@ -548,11 +549,35 @@ static void ServiceNativeDemo(TaskManager &tasks) {
             (browser.observedCs & 3) == 3 && browser.observedCr3 == browser.directory &&
             browser.directory != fault.directory && browser.directory != peer.directory &&
             browser.directory != paging.getStatistics().directoryAddress;
+    // The PNG consumer leaves an unfinished second draft on EXIT. Verify
+    // Stop has already scrubbed it BEFORE Reap can supply a cleanup fallback.
+    static gui::NativeImageSnapshot imageProof, imageAfter;
+    process::NativeSurfaceBank& surfaces = process::NativeSurfaceBank::Instance();
+    const bool imagePublished = surfaces.CopyLatest(0, imageProof);
+    bool imageReclaimed = false;
+    if (imagePublished) {
+        const GtosSurfaceBeginRequest begin = {GTOS_SURFACE_ABI_VERSION, 1, 1, 4,
+                                               GTOS_SURFACE_FORMAT_RGBA8_PREMULTIPLIED};
+        const int handle = surfaces.Begin(nativeBrowserId, begin, sizeof(begin));
+        GtosSurfaceControlRequest control = {GTOS_SURFACE_ABI_VERSION, (unsigned)handle};
+        imageReclaimed = handle > 0 && (unsigned)handle > imageProof.generation
+            && surfaces.Abort(nativeBrowserId, control, sizeof(control)) == 0;
+    }
     uint32_t reaped = nativeRuntime.Reap();
     process::NativeStatistics counts = nativeRuntime.Statistics();
     valid = valid && reaped == 3 && counts.created == 3 && counts.faulted == 1 &&
             counts.exited == 2 && counts.reaped == 3 &&
             frames.getStatistics().freeFrames == nativeFrameBaseline;
+    if (imagePublished) {
+        imageReclaimed = imageReclaimed && surfaces.CopyLatest(0, imageAfter)
+            && imageAfter.generation == imageProof.generation
+            && imageAfter.width == imageProof.width && imageAfter.height == imageProof.height;
+        for (uint32_t i = 0; i < gui::NativeImageMaximumBytes && imageReclaimed; ++i)
+            imageReclaimed = imageAfter.rgba[i] == imageProof.rgba[i];
+        valid = valid && imageReclaimed;
+        printf(imageReclaimed ? "GTOS NATIVE SURFACE RECLAIM PASS V1\n"
+                              : "GTOS NATIVE SURFACE RECLAIM FAIL V1\n");
+    }
     if (nativeFpDemo) {
         process::NativeFpStatistics fp = nativeRuntime.FpStatistics();
         valid = valid && fp.saves > 100 && fp.restores == fp.saves && fp.initialized == 3
@@ -712,11 +737,13 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         if (frames.allocateContiguous(backbufferPages, backbuffer) &&
             framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
             printf("FB CONFIGURED\n");
-            modern = new gui::ModernDesktop(&framebuffer, &store, &settings, liveBoot);
+            modern = new gui::ModernDesktop(&framebuffer, &store, &settings, liveBoot,
+                                            &process::NativeSurfaceBank::Instance());
         }
         if (!modern && backbuffer)
             frames.freeContiguous(backbuffer, backbufferPages);
     }
+    process::NativeSurfaceBank::Instance().SetAvailable(modern != 0);
     if (uefiBoot && !modern) Panic("UEFI GOP FRAMEBUFFER UNAVAILABLE", "E09");
     printf(modern ? "DESKTOP MODE FRAMEBUFFER\n" : "DESKTOP MODE LEGACY\n");
     if ((mbi->flags & (1 << 3)) && mbi->moduleCount) {

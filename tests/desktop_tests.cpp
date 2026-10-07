@@ -37,7 +37,19 @@ static void Check(bool ok, const char *label) {
     }
 }
 // Test-only platform stubs: production desktop, painter, store, and VM stay real.
-void printf(char *) {}
+static uint32_t imagePresented, imageClosed;
+static bool TraceStarts(const char *text, const char *prefix) {
+    for (uint32_t i = 0; prefix[i]; ++i)
+        if (text[i] != prefix[i])
+            return false;
+    return true;
+}
+void printf(char *text) {
+    if (TraceStarts(text, "GTOS NATIVE IMAGE PRESENTED V1 "))
+        ++imagePresented;
+    if (TraceStarts(text, "GTOS NATIVE IMAGE CLOSED V1 "))
+        ++imageClosed;
+}
 gtos::drivers::KeyboardEventHandler::KeyboardEventHandler() {}
 void gtos::drivers::KeyboardEventHandler::OnKeyDown(char) {}
 void gtos::drivers::KeyboardEventHandler::OnKeyUp(char) {}
@@ -247,7 +259,7 @@ static void GeometryTests() {
     uint32_t random = 0x12345678;
     for (uint32_t n = 0; n < 4000; ++n) {
         random = random * 1664525u + 1013904223u;
-        ModernWindowKind k = (ModernWindowKind)(random % 5);
+        ModernWindowKind k = (ModernWindowKind)(random % ModernWindowCount);
         wm.Open(k);
         wm.Move(k, (int32_t)random, (int32_t)(random ^ 0xBCDEABCD));
         wm.Resize(k, (int32_t)(random >> 1), (int32_t)(random ^ 0x12345));
@@ -907,6 +919,216 @@ static void DiskReloadTests() {
     Check(Same(i18n::Translate(i18n::SimplifiedChinese, "Reload disk"), "读取磁盘"),
           "reload button has Chinese text");
 }
+
+class DesktopImageSource : public NativeImageProvider {
+  public:
+    NativeImageSnapshot frame;
+    bool available, repeat;
+    mutable uint32_t known;
+    DesktopImageSource() : frame(), available(false), repeat(false), known(0) {}
+    void Publish(uint32_t generation, uint32_t width = 32, uint32_t height = 32) {
+        frame.generation = generation;
+        frame.width = width;
+        frame.height = height;
+        for (uint32_t i = 0; i < NativeImageMaximumBytes / 4; ++i) {
+            uint8_t alpha = i & 255;
+            frame.rgba[i * 4] = alpha;
+            frame.rgba[i * 4 + 1] = alpha / 2;
+            frame.rgba[i * 4 + 2] = 0;
+            frame.rgba[i * 4 + 3] = alpha;
+        }
+        available = true;
+    }
+    virtual bool CopyLatest(unsigned int generation, NativeImageSnapshot &out) const {
+        known = generation;
+        if (!available || (!repeat && generation == frame.generation))
+            return false;
+        out = frame;
+        return true;
+    }
+};
+static void CheckImagePixels(const ModernDesktop &d, const NativeImageSnapshot &image,
+                             uint32_t stride = 800) {
+    ModernRect r = d.Windows().Window(ModernImage).bounds;
+    int32_t scale = (r.w - 48) / image.width, vertical = (r.h - 124) / image.height;
+    if (vertical < scale)
+        scale = vertical;
+    if (scale > 6)
+        scale = 6;
+    int32_t gx = r.x + (r.w - (int32_t)image.width * scale) / 2,
+            gy = r.y + 82 + (r.h - 124 - (int32_t)image.height * scale) / 2;
+    for (uint32_t y = 0; y < image.height; ++y)
+        for (uint32_t x = 0; x < image.width; ++x) {
+            const uint32_t background = ((x / 4 + y / 4) & 1) ? 0xA7B5C2 : 0xDDE5EC;
+            const uint8_t *pixel = image.rgba + (y * image.width + x) * 4;
+            uint32_t expected = 0;
+            for (uint32_t channel = 0; channel < 3; ++channel) {
+                uint32_t shift = 16 - channel * 8;
+                expected |= ((pixel[channel] * 255 + ((background >> shift) & 255) *
+                            (255 - pixel[3]) + 127) / 255) << shift;
+            }
+            for (int32_t dy = 0; dy < scale; ++dy)
+                for (int32_t dx = 0; dx < scale; ++dx) {
+                    uint32_t at = (gy + y * scale + dy) * stride + gx + x * scale + dx;
+                    Check(display[at] == expected && surface[at] == expected,
+                          "native RGBA8 alpha and canonical RGB framebuffer pixels are exact");
+                }
+        }
+}
+static void NativeImageTests() {
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "native image framebuffer");
+    DesktopImageSource source;
+    ModernDesktop d(&fb, 0, 0, true, &source);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    Key(d, '5');
+    Check(!d.Windows().Window(ModernImage).open && d.Windows().Focused() == ModernWelcome,
+          "image shortcut without a published frame leaves desktop usable");
+    source.Publish(1, 0, 32);
+    Pump(d);
+    Key(d, '5');
+    Check(!d.Windows().Window(ModernImage).open && source.known == 1,
+          "invalid first frame is rejected and its generation is consumed");
+    uint32_t receipts = imagePresented, closures = imageClosed;
+    source.Publish(2);
+    d.Update(snapshot);
+    Check(imagePresented == receipts,
+          "a copied image is not reported as presented before framebuffer redraw");
+    Pump(d);
+    Check(imagePresented == receipts + 1,
+          "native image presentation receipt follows actual framebuffer redraw");
+    Check(d.Windows().Window(ModernImage).open && d.Windows().Focused() == ModernImage,
+          "new valid provider snapshot opens native image window");
+    NativeImageSnapshot saved = source.frame;
+    CheckImagePixels(d, saved);
+    source.available = false;
+    for (uint32_t i = 0; i < sizeof(source.frame.rgba); ++i)
+        source.frame.rgba[i] = 0;
+    Key(d, ']');
+    CheckImagePixels(d, saved);
+    Key(d, ']');
+    CheckImagePixels(d, saved);
+    Check(d.Windows().Window(ModernImage).open,
+          "desktop snapshot survives producer release and source buffer overwrite");
+    source.available = source.repeat = true;
+    Key(d, '2');
+    Pump(d);
+    Check(d.Windows().Focused() == ModernMonitor,
+          "unchanged generation never steals focus even if provider repeats it");
+    Key(d, '5');
+    CheckImagePixels(d, saved);
+    Key(d, '[');
+    for (uint32_t i = 0; i < 8; ++i)
+        Pump(d);
+    Check(d.Windows().Window(ModernImage).minimized && d.Windows().Focused() != ModernImage,
+          "unchanged generation never restores minimized image");
+    Key(d, '5');
+    Check(!d.Windows().Window(ModernImage).minimized && d.Windows().Focused() == ModernImage,
+          "5 explicitly restores minimized native image");
+    Key(d, 27);
+    receipts = imagePresented;
+    for (uint32_t i = 0; i < 8; ++i)
+        Pump(d);
+    Check(!d.Windows().Window(ModernImage).open && imagePresented == receipts &&
+              imageClosed == closures + 1,
+          "Esc closes image and repeated generation cannot reopen or report it");
+    int32_t focus = d.Windows().Focused();
+    Click(d, 68 + 5 * 118 + 50, 574);
+    Check(!d.Windows().Window(ModernImage).open && d.Windows().Focused() == focus,
+          "sixth window creates no extra dock hit target");
+    Key(d, '5');
+    CheckImagePixels(d, saved);
+    ModernRect r = d.Windows().Window(ModernImage).bounds;
+    Click(d, r.x + r.w - 22, r.y + 18);
+    Pump(d);
+    Check(!d.Windows().Window(ModernImage).open && imageClosed == closures + 2,
+          "titlebar image close persists for unchanged generation");
+    source.Publish(3, 1, 1);
+    source.frame.rgba[0] = 0x34;
+    source.frame.rgba[1] = 0x56;
+    source.frame.rgba[2] = 0x78;
+    source.frame.rgba[3] = 255;
+    Pump(d);
+    saved = source.frame;
+    Check(d.Windows().Focused() == ModernImage,
+          "a newly published generation reopens a previously closed image");
+    CheckImagePixels(d, saved);
+    const uint32_t badWidths[] = {0, 33, 32, 32, 0xFFFFFFFFu, 1},
+                   badHeights[] = {1, 1, 0, 33, 0xFFFFFFFFu, 0xFFFFFFFFu};
+    for (uint32_t i = 0; i < 6; ++i) {
+        source.Publish(4 + i, badWidths[i], badHeights[i]);
+        Pump(d);
+        CheckImagePixels(d, saved);
+        Check(source.known == 3 + i,
+              "provider polling uses the previous observed generation");
+        Pump(d);
+        Check(source.known == 4 + i,
+              "invalid dimensions consume only one generation without retrying forever");
+    }
+    for (uint32_t channel = 0; channel < 3; ++channel) {
+        source.Publish(10 + channel, 1, 1);
+        source.frame.rgba[channel] = 1; // alpha is zero at the first pixel.
+        Pump(d);
+        CheckImagePixels(d, saved);
+    }
+    Key(d, 27);
+    source.Publish(13, 33, 33);
+    Pump(d);
+    Check(!d.Windows().Window(ModernImage).open,
+          "invalid new frame cannot reopen a closed valid image");
+    Key(d, '5');
+    CheckImagePixels(d, saved);
+    Key(d, '4');
+    Key(d, 'c');
+    Key(d, '5');
+    Check(d.CurrentLocale() == i18n::SimplifiedChinese,
+          "native image keeps live desktop language selection");
+    Check(Same(i18n::Translate(i18n::SimplifiedChinese, "Native image"), "原生 PNG") &&
+          Same(i18n::Translate(i18n::SimplifiedChinese, "Image from native application"),
+               "原生应用的 PNG"), "native image text has Chinese catalog mappings");
+    CheckImagePixels(d, saved);
+    i18n::Glyph glyph = {};
+    Check(i18n::LookupGlyph(0x539F, 1, glyph), "native image Chinese glyph is covered");
+    r = d.Windows().Window(ModernImage).bounds;
+    for (uint32_t y = 0; y < glyph.height; ++y)
+        for (uint32_t x = 0; x < glyph.advance; ++x) {
+            uint32_t at = y * glyph.width + x;
+            uint32_t alpha = at & 1 ? glyph.pixels[at / 2] & 15 : glyph.pixels[at / 2] >> 4;
+            uint32_t expected = 0;
+            for (uint32_t shift = 0; shift <= 16; shift += 8)
+                expected |= ((((0xA3B6C8u >> shift) & 255) * alpha +
+                              ((0x18232Fu >> shift) & 255) * (15 - alpha) + 7) / 15) << shift;
+            Check(display[(r.y + 54 + y) * 800 + r.x + 24 + x] == expected,
+                  "Chinese native image header draws its real atlas glyph");
+        }
+    // The minimum desktop must also keep the full maximum source inside its window.
+    drivers::Framebuffer minimum;
+    Check(minimum.Bind(Mode(640, 480, 2560), (uint8_t *)display, surface, 640 * 480),
+          "minimum native image framebuffer");
+    DesktopImageSource smallSource;
+    smallSource.Publish(1);
+    ModernDesktop small(&minimum, 0, 0, false, &smallSource);
+    pointerX = 610;
+    pointerY = 16;
+    Pump(small);
+    CheckImagePixels(small, smallSource.frame, 640);
+    MoveTo(small, small.Windows().Window(ModernImage).bounds.x + 353,
+                  small.Windows().Window(ModernImage).bounds.y + 293);
+    small.OnMouseDown(1);
+    Pump(small);
+    MoveTo(small, pointerX - 100, pointerY - 100);
+    small.OnMouseUp(1);
+    Pump(small);
+    MoveTo(small, 610, 16);
+    r = small.Windows().Window(ModernImage).bounds;
+    Check(r.w == 320 && r.h == 240, "native image window honors minimum dimensions");
+    CheckImagePixels(small, smallSource.frame, 640);
+    Output("Native image snapshot, alpha8, close/reopen and bilingual glyph tests passed\n");
+}
+
 static void RunTests() {
     FramebufferTests();
     GeometryTests();
@@ -915,6 +1137,7 @@ static void RunTests() {
     DiskReloadTests();
     LocalizationTests();
     MinimumMonitorTests();
+    NativeImageTests();
     Output("Desktop/framebuffer safety and interaction tests passed\n");
 }
 #ifdef GTOS_DESKTOP_SANITIZE

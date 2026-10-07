@@ -1,5 +1,6 @@
 #include <process/native_runtime.h>
 #include <process/resources.h>
+#include <process/native_surface.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -242,6 +243,7 @@ void NativeRuntime::Observe(Slot& slot, const CPUState& cpu) {
     slot.status.observedEflags = cpu.eflags;
 }
 CPUState* NativeRuntime::Stop(Slot& slot, CPUState* cpu, uint32_t code) {
+    NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
     slot.status.live = false; slot.status.exitCode = code;
     scheduler->TerminateTask(&slot.task);
     return scheduler->Reschedule(cpu);
@@ -305,6 +307,53 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         else cpu->eax = (uint32_t)result;
         break;
     }
+    case GTOS_SYS_SURFACE_BEGIN: {
+        if (cpu->ecx != GTOS_SURFACE_BEGIN_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_SIZE;
+            break;
+        }
+        GtosSurfaceBeginRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request)))
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_ADDRESS;
+        else cpu->eax = (uint32_t)NativeSurfaceBank::Instance().Begin(slot->status.id, request, cpu->ecx);
+        break;
+    }
+    case GTOS_SYS_SURFACE_WRITE: {
+        if (cpu->ecx != GTOS_SURFACE_WRITE_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_SIZE;
+            break;
+        }
+        GtosSurfaceWriteRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_ADDRESS;
+            break;
+        }
+        NativeSurfaceBank& surfaces = NativeSurfaceBank::Instance();
+        const int result = surfaces.ValidateWrite(slot->status.id, request, cpu->ecx);
+        static_assert(GTOS_SURFACE_WRITE_LIMIT <= GTOS_NATIVE_WRITE_LIMIT, "Surface bounce capacity");
+        if (result < 0) cpu->eax = (uint32_t)result;
+        else if (!slot->space.CopyFromUser(bounce, request.source, request.length))
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_ADDRESS;
+        // Recheck owner/state and validate the WHOLE copied chunk before any
+        // mutation. No user pointer survives this synchronous call.
+        else cpu->eax = (uint32_t)surfaces.Write(slot->status.id, request, cpu->ecx, bounce);
+        break;
+    }
+    case GTOS_SYS_SURFACE_PRESENT:
+    case GTOS_SYS_SURFACE_ABORT: {
+        const bool present = cpu->eax == GTOS_SYS_SURFACE_PRESENT;
+        if (cpu->ecx != GTOS_SURFACE_CONTROL_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_SIZE;
+            break;
+        }
+        GtosSurfaceControlRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request)))
+            cpu->eax = (uint32_t)GTOS_SURFACE_ERR_BAD_ADDRESS;
+        else if (present)
+            cpu->eax = (uint32_t)NativeSurfaceBank::Instance().Present(slot->status.id, request, cpu->ecx);
+        else cpu->eax = (uint32_t)NativeSurfaceBank::Instance().Abort(slot->status.id, request, cpu->ecx);
+        break;
+    }
     default: cpu->eax = (uint32_t)GTOS_ERR_UNSUPPORTED; break;
     }
     return cpu;
@@ -329,6 +378,7 @@ uint32_t NativeRuntime::Reap() {
         slot.status.statistics = slot.task.Statistics();
         if (slot.task.owner && !scheduler->RemoveTask(&slot.task)) continue;
         // Check hardware ownership and scrub BEFORE any victim frame is freed.
+        NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
         fp.Invalidate(slot.fp);
         if (!slot.space.Destroy()) continue;
         slot.occupied = false; slot.status.reaped = true;
@@ -362,6 +412,7 @@ bool NativeRuntime::RequestExit(uint32_t id, uint32_t code) {
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Slot& slot = slots[i];
         if (id && slot.occupied && slot.status.id == id && slot.status.live) {
+            NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
             slot.status.live = false; slot.status.exitCode = code;
             ++statistics.exited;
             return scheduler->TerminateTask(&slot.task);
