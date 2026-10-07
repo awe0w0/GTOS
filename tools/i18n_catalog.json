@@ -808,5 +808,90 @@
     "id": "AppDiskReloaded",
     "en": "App disk reloaded",
     "zh-CN": "应用磁盘已读取"
+  },
+  {
+    "id": "LiveSettingsInRAM",
+    "en": "Live settings stay in RAM until reboot",
+    "zh-CN": "本次设置保存在内存中，重启后清除"
+  },
+  {
+    "id": "LiveRAMAppsReloaded",
+    "en": "Live RAM apps reloaded",
+    "zh-CN": "内存应用已读取"
+  },
+  {
+    "id": "LiveInstalledInRAM",
+    "en": "Installed in RAM for this session. Enter to play.",
+    "zh-CN": "已安装到内存，按 Enter 开始"
+  },
+  {
+    "id": "LiveApplicationRemoved",
+    "en": "Application removed from live RAM",
+    "zh-CN": "应用已从内存中移除"
+  },
+  {
+    "id": "LiveSessionInRAM",
+    "en": "LIVE SESSION: apps and settings stay in RAM.",
+    "zh-CN": "本次会话：应用和设置保存在内存中。"
+  },
+  {
+    "id": "ReloadRAM",
+    "en": "Reload RAM",
+    "zh-CN": "读取内存"
+  },
+  {
+    "id": "LiveRAMAppsReset",
+    "en": "Live RAM apps reset at reboot. Internal disks are untouched.",
+    "zh-CN": "重启后清除内存应用，不改动内部磁盘。"
+  },
+  {
+    "id": "LiveRAMKiB",
+    "en": "Live RAM / KiB",
+    "zh-CN": "内存存储 / KiB"
+  },
+  {
+    "id": "LiveRemovePackagePrompt",
+    "en": "This removes the package from live RAM for this session.",
+    "zh-CN": "此操作会从内存中移除应用包。"
+  },
+  {
+    "id": "BootLogInRAM",
+    "en": "BOOT LOG / IN RAM",
+    "zh-CN": "启动记录 / 内存"
+  },
+  {
+    "id": "BootLogLines",
+    "en": "Lines",
+    "zh-CN": "行数"
+  },
+  {
+    "id": "BootLogBytes",
+    "en": "Bytes",
+    "zh-CN": "字节"
+  },
+  {
+    "id": "BootLogDropped",
+    "en": "Dropped",
+    "zh-CN": "已移除"
+  },
+  {
+    "id": "BootLogFirstLine",
+    "en": "Line",
+    "zh-CN": "起始行"
+  },
+  {
+    "id": "BootLogRAMNotice",
+    "en": "RAM logs; no log disk writes. Reboot clears.",
+    "zh-CN": "记录在内存中，不写磁盘，重启后清除。"
+  },
+  {
+    "id": "BootLogShortcuts",
+    "en": "Up/Down scroll  B/Esc monitor",
+    "zh-CN": "上下键查看  B/Esc 回监控"
+  },
+  {
+    "id": "BootLogShortcut",
+    "en": "B Boot log",
+    "zh-CN": "B 启动记录"
   }
 ]

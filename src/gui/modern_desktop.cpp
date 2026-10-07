@@ -59,29 +59,6 @@ ModernDesktop::Theme ModernDesktop::Colors() const {
     return lightTheme ? light : dark;
 }
 const char *ModernDesktop::Label(const char *english) const {
-    if (liveSession) {
-        // Only these fixed live-session labels may use an English fallback.
-        // Keep the catalog's UnknownStatus policy for every other message.
-        static const char *const liveLabels[] = {
-            "Live settings stay in RAM until reboot",
-            "Live RAM apps reloaded",
-            "Installed in RAM for this session. Enter to play.",
-            "Application removed from live RAM",
-            "LIVE SESSION: apps and settings stay in RAM.",
-            "Reload RAM",
-            "Live RAM apps reset at reboot. Internal disks are untouched.",
-            "Live RAM / KiB",
-            "This removes the package from live RAM for this session.",
-        };
-        for (uint32_t i = 0; i < sizeof(liveLabels) / sizeof(liveLabels[0]); ++i) {
-            if (EqualText(english, liveLabels[i])) {
-                gtos::i18n::StringId id;
-                if (!gtos::i18n::FindStringId(english, id))
-                    return liveLabels[i];
-                break;
-            }
-        }
-    }
     return gtos::i18n::Translate(locale, english);
 }
 const char *ModernDesktop::AppTitle(const gtos::storage::AppInfo *app) const {

@@ -185,16 +185,16 @@ errors, phase display, RAM viewer and E99 reason. The automated raw log result
 retains its pending-visual-review flag; a separate SHA-bound review overlay
 records the completed visual acceptance without altering that raw evidence.
 
-Evidence: `uefi-bootlog-qualification-20261007T142152Z/` contains
+Evidence: `uefi-bootlog-i18n-qualification-20261007T145044Z-cd1b400e/` contains
 `normal-eight-boots/results.json`, `boot-logs/results.json`,
 `uefi-media-usb/results.json` and `visible-log-review.json`.
 Build input/source hashes remained unchanged throughout these checks.
 The bounded log host tests passed O0/O2 ASan/UBSan with 541,146 checks each;
 the unchanged RAM/ATA implementation retains its qualified host-test hashes.
 
-Final kernel SHA256: `8934e1fc83ffc07b75af42b6313171def508eafada4dd69c80d66d4204cd3728`.
-Final normal ISO SHA256: `bcb67b2db0549da52565b6a72265c15aa6b47b044b1932e5e3f6d140f8e2c9e3`.
-Final `BOOTX64.EFI` SHA256: `e9106cfe5c077e1eb6e41786c903d059e89564c9e295f117fc302b9a226ef0b5`.
+Final kernel SHA256: `0b94bd04093b368cc59b4b9959ec53d58df0fbf3adafcacd061053b05489a459`.
+Final normal ISO SHA256: `08fd3c4aa43a66783b86b63480ed1e9db61e8af4d3492c676bcb6a9aaf68f185`.
+Final `BOOTX64.EFI` SHA256: `7b7f31c7777404a6ca7a7151a11c2c257e438549335e6c913d8b52bd656683ae`.
 The exact published source tree and automatic CI result are recorded in the
 delivery metadata after the reviewed source commit is published to `dev`.
 

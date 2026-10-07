@@ -219,11 +219,11 @@ void ModernDesktop::DrawBootLog(const ModernRect &r) {
     uint32_t last = total > rows ? total - rows : 0;
     if (bootLogFirst > last)
         bootLogFirst = last;
-    // These diagnostics are fixed ASCII, independent of the selected locale.
-    paint.Text(x, y, "BOOT LOG / IN RAM", c.accent);
-    paint.Text(r.x + r.w - 144, y, "Lines", c.muted);
+    // Fixed controls use the catalog; kernel log lines retain their original text.
+    paint.Text(x, y, Label("BOOT LOG / IN RAM"), c.accent);
+    paint.Text(r.x + r.w - 144, y, Label("Lines"), c.muted);
     paint.Number(r.x + r.w - 88, y, total, c.text);
-    paint.Text(x, y + 24, "RAM logs; no log disk writes. Reboot clears.", c.muted);
+    paint.Text(x, y + 24, Label("RAM logs; no log disk writes. Reboot clears."), c.muted);
     paint.Rounded(x, r.y + 106, r.w - 48, r.h - 174, 5, c.raised);
     char line[96];
     for (uint32_t row = 0; row < rows && bootLogFirst + row < total; ++row) {
@@ -249,13 +249,13 @@ void ModernDesktop::DrawBootLog(const ModernRect &r) {
         fb.SetClip(r.x + 1, r.y + 39, r.w - 2, r.h - 40);
     }
     int32_t statusY = r.y + r.h - 58;
-    paint.Text(x, statusY, "Bytes", c.muted);
+    paint.Text(x, statusY, Label("Bytes"), c.muted);
     paint.Number(x + 48, statusY, gtos::common::BootLog::Bytes(), c.text);
-    paint.Text(x + 130, statusY, "Dropped", c.muted);
+    paint.Text(x + 130, statusY, Label("Dropped"), c.muted);
     paint.Number(x + 206, statusY, gtos::common::BootLog::Dropped(), c.text);
-    paint.Text(r.x + r.w - 144, statusY, "Line", c.muted);
+    paint.Text(r.x + r.w - 144, statusY, Label("Line"), c.muted);
     paint.Number(r.x + r.w - 88, statusY, total ? bootLogFirst + 1 : 0, c.text);
-    paint.Text(x, r.y + r.h - 29, "Up/Down scroll  B/Esc monitor", c.muted);
+    paint.Text(x, r.y + r.h - 29, Label("Up/Down scroll  B/Esc monitor"), c.muted);
 }
 void ModernDesktop::DrawMonitor(const ModernRect &r) {
     if (bootLogView) {
@@ -265,7 +265,7 @@ void ModernDesktop::DrawMonitor(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 24, y = r.y + 56;
     paint.Text(x, y, Label("Hardware & kernel"), c.text);
-    paint.Text(r.x + r.w - 144, y, "B Boot log", c.accent);
+    paint.Text(r.x + r.w - 144, y, Label("B Boot log"), c.accent);
     int32_t half = (r.w - 60) / 2;
     paint.Rounded(x, y + 32, half, 84, 8, c.raised);
     paint.Rounded(x + half + 12, y + 32, half, 84, 8, c.raised);
