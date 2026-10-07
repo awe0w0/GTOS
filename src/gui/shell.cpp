@@ -4,10 +4,10 @@ extern void printf(char *);
 static void Trace(const char *text) {
     printf((char *)text);
 }
-DesktopShell::DesktopShell(storage::AppStore *s)
+DesktopShell::DesktopShell(storage::AppStore *s, bool live)
     : store(s), vm(this), installer(0), installerSize(0), readEvent(0), writeEvent(0), mouseX(305),
       mouseY(12), heldKeys(0), page(0), selected(0), lastFrame(0), needsDraw(true), gameOpen(false),
-      notice("READY") {
+      liveSession(live), notice(live ? "LIVE RAM SESSION - RESETS AT REBOOT" : "READY") {
     inputOverflow = false;
     for (uint32_t i = 0; i < 256; ++i)
         keyDown[i] = false;
@@ -62,7 +62,7 @@ void DesktopShell::Install() {
         return;
     }
     if (store->Install(installer, installerSize)) {
-        notice = "INSTALLED - PRESS ENTER TO PLAY";
+        notice = liveSession ? "INSTALLED IN RAM - ENTER TO PLAY" : "INSTALLED - PRESS ENTER TO PLAY";
         apps::PackageInfo installed;
         selected = 0;
         if (apps::ValidatePackage(installer, installerSize, &installed) == apps::PackageOK)
@@ -91,7 +91,7 @@ void DesktopShell::Remove() {
         return;
     }
     if (store->Uninstall(info->id)) {
-        notice = "APP REMOVED";
+        notice = liveSession ? "REMOVED FROM LIVE RAM" : "APP REMOVED";
         selected = 0;
         Trace("APP REMOVE OK\n");
     } else
@@ -273,8 +273,8 @@ void DesktopShell::DrawHardware() {
     canvas.Text(174, 127, "SWITCHES", 6);
     canvas.Number(234, 127, state.contextSwitches, 7);
     canvas.Rect(98, 139, 204, 1, 3);
-    canvas.Text(98, 147, "DISK MIB", 6);
-    canvas.Number(160, 147, state.diskSectors / 2048, 7);
+    canvas.Text(98, 147, liveSession ? "RAM KIB" : "DISK MIB", 6);
+    canvas.Number(160, 147, liveSession ? 261 / 2 : state.diskSectors / 2048, 7);
     canvas.Text(208, 147, store->Mounted() ? "MOUNTED" : "OFFLINE", store->Mounted() ? 9 : 13);
     canvas.Text(98, 161, state.pagingEnabled ? "PAGE" : "HEAP", 5);
     canvas.Text(129, 161, state.memoryOK ? "PASS" : "FAIL", state.memoryOK ? 9 : 13);

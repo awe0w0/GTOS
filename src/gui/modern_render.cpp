@@ -1,3 +1,4 @@
+#include <common/boot_log.h>
 #include <gui/modern_desktop.h>
 using namespace gtos::gui;
 static const char *titles[] = {"Welcome", "Applications", "System monitor", "Appearance", "Catch"};
@@ -139,7 +140,9 @@ void ModernDesktop::DrawWelcome(const ModernRect &r) {
     paint.Text(x, y, Label("YOUR DESKTOP, TAKING SHAPE"), c.accent);
     paint.Text(x, y + 34, Label("A quieter place"), c.text, 2);
     paint.Text(x, y + 72, Label("to build."), c.text, 2);
-    paint.Text(x, y + 128, Label("A real kernel. A working app store. Room to grow."), c.muted);
+    paint.Text(x, y + 128,
+               Label(liveSession ? "LIVE SESSION: apps and settings stay in RAM."
+                                 : "A real kernel. A working app store. Room to grow."), c.muted);
     paint.Text(x, y + 151, Label("Explore your hardware, install Catch, and make it yours."),
                c.muted);
     if (r.h >= 390) {
@@ -160,11 +163,12 @@ void ModernDesktop::DrawApplications(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 22;
     paint.Text(x, r.y + 58, Label("Your applications"), c.text);
-    Button(r.x + r.w - 142, r.y + 44, 120, Label("Reload disk"));
+    Button(r.x + r.w - 142, r.y + 44, 120, Label(liveSession ? "Reload RAM" : "Reload disk"));
     paint.Text(x, r.y + 80,
-               store && store->Mounted()
-                   ? Label("Installed packages are saved on your dedicated app disk.")
-                   : Label("App disk unavailable. Nothing will be formatted automatically."),
+               liveSession ? Label("Live RAM apps reset at reboot. Internal disks are untouched.")
+                   : (store && store->Mounted()
+                          ? Label("Installed packages are saved on your dedicated app disk.")
+                          : Label("App disk unavailable. Nothing will be formatted automatically.")),
                c.muted);
     uint32_t count = store ? store->Count() : 0, visible = (r.h - 193) / 42;
     if (!visible)
@@ -203,11 +207,65 @@ void ModernDesktop::DrawApplications(const ModernRect &r) {
     Button(r.x + r.w - 140, by, 120, Label("Remove"), false, true);
     paint.Text(x, r.y + r.h - 24, Label("I Install  U Remove  R Reload  Up / Down Select"), c.muted);
 }
+uint32_t ModernDesktop::BootLogRows() const {
+    int32_t available = wm.Window(ModernMonitor).bounds.h - 174;
+    uint32_t rows = available > 20 ? (uint32_t)available / 20 : 1;
+    return rows > 30 ? 30 : rows;
+}
+void ModernDesktop::DrawBootLog(const ModernRect &r) {
+    Theme c = Colors();
+    int32_t x = r.x + 24, y = r.y + 56;
+    uint32_t total = gtos::common::BootLog::Lines(), rows = BootLogRows();
+    uint32_t last = total > rows ? total - rows : 0;
+    if (bootLogFirst > last)
+        bootLogFirst = last;
+    // These diagnostics are fixed ASCII, independent of the selected locale.
+    paint.Text(x, y, "BOOT LOG / IN RAM", c.accent);
+    paint.Text(r.x + r.w - 144, y, "Lines", c.muted);
+    paint.Number(r.x + r.w - 88, y, total, c.text);
+    paint.Text(x, y + 24, "RAM logs; no log disk writes. Reboot clears.", c.muted);
+    paint.Rounded(x, r.y + 106, r.w - 48, r.h - 174, 5, c.raised);
+    char line[96];
+    for (uint32_t row = 0; row < rows && bootLogFirst + row < total; ++row) {
+        if (!gtos::common::BootLog::ReadLine(bootLogFirst + row, line, sizeof(line)))
+            break;
+        uint32_t length = 0;
+        while (length + 1 < sizeof(line) && line[length])
+            ++length;
+        bool shortened = false;
+        while (length && paint.TextWidth(line) > r.w - 112) {
+            line[--length] = 0;
+            shortened = true;
+        }
+        if (shortened && length >= 3) {
+            line[length - 3] = '.';
+            line[length - 2] = '.';
+            line[length - 1] = '.';
+        }
+        int32_t ly = r.y + 108 + (int32_t)row * 20;
+        paint.Number(x + 8, ly, bootLogFirst + row + 1, c.muted);
+        fb.SetClip(x + 54, ly, r.w - 106, 20);
+        paint.Text(x + 54, ly, line, c.text);
+        fb.SetClip(r.x + 1, r.y + 39, r.w - 2, r.h - 40);
+    }
+    int32_t statusY = r.y + r.h - 58;
+    paint.Text(x, statusY, "Bytes", c.muted);
+    paint.Number(x + 48, statusY, gtos::common::BootLog::Bytes(), c.text);
+    paint.Text(x + 130, statusY, "Dropped", c.muted);
+    paint.Number(x + 206, statusY, gtos::common::BootLog::Dropped(), c.text);
+    paint.Text(r.x + r.w - 144, statusY, "Line", c.muted);
+    paint.Number(r.x + r.w - 88, statusY, total ? bootLogFirst + 1 : 0, c.text);
+    paint.Text(x, r.y + r.h - 29, "Up/Down scroll  B/Esc monitor", c.muted);
+}
 void ModernDesktop::DrawMonitor(const ModernRect &r) {
+    if (bootLogView) {
+        DrawBootLog(r);
+        return;
+    }
     Theme c = Colors();
     int32_t x = r.x + 24, y = r.y + 56;
     paint.Text(x, y, Label("Hardware & kernel"), c.text);
-    paint.Text(r.x + r.w - 96, y, Label("LIVE"), c.accent);
+    paint.Text(r.x + r.w - 144, y, "B Boot log", c.accent);
     int32_t half = (r.w - 60) / 2;
     paint.Rounded(x, y + 32, half, 84, 8, c.raised);
     paint.Rounded(x + half + 12, y + 32, half, 84, 8, c.raised);
@@ -251,8 +309,8 @@ void ModernDesktop::DrawMonitor(const ModernRect &r) {
     paint.Number(x + 192, row + 100, state.taskCount, c.text);
     paint.Text(x + 223, row + 100, "/", c.muted);
     paint.Number(x + 240, row + 100, state.contextSwitches, c.text);
-    paint.Text(x, row + 120, Label("App disk / MiB"), c.muted);
-    paint.Number(x + 192, row + 120, state.diskSectors / 2048, c.text);
+    paint.Text(x, row + 120, Label(liveSession ? "Live RAM / KiB" : "App disk / MiB"), c.muted);
+    paint.Number(x + 192, row + 120, liveSession ? 261 / 2 : state.diskSectors / 2048, c.text);
     paint.Text(x + 240, row + 120,
                store && store->Mounted() ? Label("Mounted") : Label("Unavailable"),
                store && store->Mounted() ? c.accent : 0xEAA2A2);
@@ -295,7 +353,7 @@ void ModernDesktop::DrawSettings(const ModernRect &r) {
     }
     paint.Text(x, r.y + 302, Label("C Language    T Theme"), c.muted);
     paint.Text(x, r.y + 326, Label("Tab Switch windows    [ Minimize    ] Maximize"), c.muted);
-    const char *status =
+    const char *status = liveSession ? "Live settings stay in RAM until reboot" :
         preferencesPersisted
             ? (settingsConfirmed ? "Settings saved" : "Settings loaded")
             : (preferences && preferences->Writable() ? "Using default settings"
@@ -423,7 +481,9 @@ void ModernDesktop::DrawModal() {
     paint.Text(x + 24, y + 23, Label("Remove this application?"), c.text);
     const gtos::storage::AppInfo *a = store ? store->Get(selected) : 0;
     paint.Text(x + 24, y + 58, AppTitle(a), c.accent);
-    paint.Text(x + 24, y + 84, Label("This removes the installed package from your app disk."),
+    paint.Text(x + 24, y + 84,
+               Label(liveSession ? "This removes the package from live RAM for this session."
+                                 : "This removes the installed package from your app disk."),
                c.muted);
     Button(x + 150, y + 132, 114, Label("Cancel / Esc"));
     Button(x + 278, y + 132, 126, Label("Remove / Enter"), false, true);

@@ -37,6 +37,7 @@ class DesktopShell : public drivers::KeyboardEventHandler,
     volatile int32_t mouseX, mouseY;
     uint32_t heldKeys, page, selected, lastFrame;
     bool needsDraw, gameOpen;
+    const bool liveSession;
     const char *notice;
     SystemSnapshot state;
     void Queue(uint8_t type, uint8_t code);
@@ -52,7 +53,7 @@ class DesktopShell : public drivers::KeyboardEventHandler,
     void Launch();
 
   public:
-    explicit DesktopShell(storage::AppStore *store);
+    explicit DesktopShell(storage::AppStore *store, bool live = false);
     void SetInstaller(const uint8_t *data, uint32_t length);
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);

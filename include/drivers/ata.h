@@ -18,14 +18,19 @@ protected:
     void Delay();
     bool Select(uint32_t sector);
 public:
-    enum Error { None, NoDevice, Timeout, DeviceError, Unsupported, BadArgument };
+    enum Error { None, NoDevice, Timeout, DeviceError, Unsupported, BadArgument, WriteProtected };
 private:
     Error lastError;
+    static bool liveWritesDisabled;
     AtaWaitBudget::Clock waitClock;
     uint32_t waitTimeoutTicks;
 public:
     AdvancedTechnologyAttachment(uint16_t portBase, bool master);
     ~AdvancedTechnologyAttachment();
+    // BSP boot policy: call before any disk access. One-way for this boot,
+    // shared by every ATA instance, and never reset by Identify or remount.
+    static void DisableWritesForLiveBoot() { liveWritesDisabled=true; }
+    static bool WritesDisabledForLiveBoot() { return liveWritesDisabled; }
     virtual bool Identify();
     bool Read28(uint32_t sector, uint8_t* data, int count = 512);
     bool Write28(uint32_t sector, const uint8_t* data, int count = 512);

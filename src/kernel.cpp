@@ -1,4 +1,6 @@
 #include <common/types.h>
+#include <common/boot_log.h>
+#include <gui/modern_painter.h>
 #include <gdt.h>
 #include <memorymanagement.h>
 #include <memory/physical.h>
@@ -14,6 +16,7 @@
 #include <drivers/mouse.h>
 #include <drivers/ata.h>
 #include <storage/settings.h>
+#include <storage/liveblockdevice.h>
 #include <drivers/vga.h>
 #include <drivers/framebuffer.h>
 #include <gui/shell.h>
@@ -24,15 +27,197 @@
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
-static bool graphicsActive = false;
+static bool graphicsActive = true; // No assumed VGA text access before boot metadata is validated.
 static process::NativeRuntime nativeRuntime;
+// Early diagnostics bind only a validated 32-bit RGB GOP range. They never
+// allocate or depend on the desktop backbuffer, interrupt dispatcher or heap.
+namespace {
+FramebufferMode bootScreenMode;
+volatile uint8_t* bootScreenVideo = 0;
+uint32_t bootColumn = 0, bootRow = 0;
+bool bootScreenReady = false, bootScreenEnabled = false, bootRendering = false;
+bool bootEmergencyShown = false, serialEnabled = false, panicInProgress = false;
+const char* bootPhase = "B01";
+uint32_t BootColor(uint32_t color) {
+    return ((((color >> 16) & 255) >> (8 - bootScreenMode.redSize)) << bootScreenMode.redPosition) |
+           ((((color >> 8) & 255) >> (8 - bootScreenMode.greenSize)) << bootScreenMode.greenPosition) |
+           (((color & 255) >> (8 - bootScreenMode.blueSize)) << bootScreenMode.bluePosition);
+}
+void BootPixel(uint32_t x, uint32_t y, uint32_t color) {
+    if (x < bootScreenMode.width && y < bootScreenMode.height)
+        ((volatile uint32_t*)(bootScreenVideo + y * bootScreenMode.pitch))[x] = color;
+}
+void BootClear() {
+    uint32_t background = BootColor(0x10202E);
+    for (uint32_t y = 0; y < bootScreenMode.height; ++y)
+        for (uint32_t x = 0; x < bootScreenMode.width; ++x)
+            BootPixel(x, y, background);
+    bootColumn = bootRow = 0;
+}
+void BootScroll() {
+    const uint32_t step = 10;
+    if ((bootRow + 1) * step <= bootScreenMode.height) return;
+    for (uint32_t y = 0; y + step < bootScreenMode.height; ++y) {
+        volatile uint32_t* to = (volatile uint32_t*)(bootScreenVideo + y * bootScreenMode.pitch);
+        volatile uint32_t* from = (volatile uint32_t*)(bootScreenVideo + (y + step) * bootScreenMode.pitch);
+        for (uint32_t x = 0; x < bootScreenMode.width; ++x) to[x] = from[x];
+    }
+    uint32_t background = BootColor(0x10202E);
+    for (uint32_t y = bootScreenMode.height - step; y < bootScreenMode.height; ++y)
+        for (uint32_t x = 0; x < bootScreenMode.width; ++x) BootPixel(x, y, background);
+    bootRow = bootScreenMode.height / step - 1;
+}
+void BootCharacter(char character) {
+    if (character == '\r') return;
+    if (character == '\n') {
+        bootColumn = 0; ++bootRow; BootScroll(); return;
+    }
+    if ((bootColumn + 1) * 6 > bootScreenMode.width) {
+        bootColumn = 0; ++bootRow; BootScroll();
+    }
+    uint32_t foreground = BootColor(bootEmergencyShown ? 0xFFD7B8 : 0xEBF7FF);
+    uint32_t background = BootColor(0x10202E);
+    const uint8_t* glyph = gui::ModernGameGlyph(character);
+    if (!glyph && character != ' ') glyph = gui::ModernGameGlyph('?');
+    for (uint32_t y = 0; y < 10; ++y)
+        for (uint32_t x = 0; x < 6; ++x)
+            BootPixel(bootColumn * 6 + x, bootRow * 10 + y,
+                      glyph && y < 7 && x < 5 && (glyph[y] & (1 << (4 - x)))
+                          ? foreground : background);
+    ++bootColumn;
+}
+void BootText(const char* text) {
+    for (uint32_t i = 0; text && text[i]; ++i) BootCharacter(text[i]);
+}
+void BootTail(uint32_t rows) {
+    const uint32_t lines = common::BootLog::Lines();
+    const uint32_t first = lines > rows ? lines - rows : 0;
+    char line[321]; // Largest supported width is 1920 / 6 columns.
+    uint32_t capacity = bootScreenMode.width / 6 + 1;
+    for (uint32_t i = first; i < lines; ++i) {
+        if (common::BootLog::ReadLine(i, line, capacity)) {
+            BootText(line); BootCharacter('\n');
+        }
+    }
+}
+void BootScreenPut(char character) {
+    // If writing the diagnostic device faults, the fatal observer must not
+    // recurse into that same device. The ring and optional UART remain separate.
+    if (!bootScreenReady || !bootScreenEnabled || bootRendering) return;
+    bootRendering = true;
+    BootCharacter(character);
+    bootRendering = false;
+}
+void RegisterBootScreen(const memory::MultibootInfo* info, bool visible) {
+    if (!Framebuffer::ReadMode(info, bootScreenMode) || bootScreenMode.width < 640 ||
+        bootScreenMode.height < 480) return;
+    bootScreenVideo = (volatile uint8_t*)(uint32_t)info->framebufferAddress;
+    bootScreenReady = true;
+    if (visible) {
+        bootRendering = true;
+        bootScreenEnabled = true;
+        BootClear();
+        BootText("GTOS KERNEL BOOT LOG - RAM ONLY\n");
+        BootTail(bootScreenMode.height / 10 - 2);
+        bootRendering = false;
+    }
+}
+uint8_t SerialRead(uint16_t port) {
+    uint8_t value; asm volatile("inb %1,%0" : "=a"(value) : "Nd"(port)); return value;
+}
+void SerialWrite(uint16_t port, uint8_t value) {
+    asm volatile("outb %0,%1" :: "a"(value), "Nd"(port));
+}
+bool StartBootSerial() {
+    // Only an explicit serial token performs any UART IO. 16550 scratch proves
+    // the configured legacy COM1 port before changing its baud/interrupt state.
+    if (SerialRead(0x3FD) == 0xFF) return false;
+    uint8_t scratch = SerialRead(0x3FF);
+    SerialWrite(0x3FF, 0x5A);
+    bool present = SerialRead(0x3FF) == 0x5A;
+    SerialWrite(0x3FF, scratch);
+    if (!present) return false;
+    SerialWrite(0x3F9, 0); // UART interrupts stay disabled.
+    SerialWrite(0x3FB, 0x80);
+    SerialWrite(0x3F8, 1); SerialWrite(0x3F9, 0); // 115200 baud divisor.
+    SerialWrite(0x3FB, 3); // 8 data bits, no parity, one stop bit.
+    SerialWrite(0x3FA, 0xC7);
+    SerialWrite(0x3FC, 3); // DTR/RTS; no IRQ enable.
+    return true;
+}
+void BootSerialByte(char character) {
+    // An absent/stalled receiver never causes an infinite boot or panic wait.
+    for (uint32_t polls = 0; polls < 4096; ++polls) {
+        if (SerialRead(0x3FD) & 0x20) {
+            SerialWrite(0x3F8, (uint8_t)character); return;
+        }
+        asm volatile("pause");
+    }
+}
+void BootSerialPut(char character) {
+    if (!serialEnabled) return;
+    if (character == '\n') BootSerialByte('\r');
+    BootSerialByte(character);
+}
+void ReplayBootSerial() {
+    char line[321];
+    uint32_t count = common::BootLog::Lines();
+    for (uint32_t i = 0; i < count; ++i) {
+        if (!common::BootLog::ReadLine(i, line, sizeof(line))) continue;
+        for (uint32_t j = 0; line[j]; ++j) BootSerialPut(line[j]);
+        BootSerialPut('\n');
+    }
+}
+// The diagnostic menu keeps the real GOP log visible until a real PS/2 key.
+// That key is consumed; it cannot accidentally launch or edit an application.
+class BootDiagnosticKeyboard : public KeyboardEventHandler {
+    KeyboardEventHandler* target;
+    volatile bool waiting;
+    bool consumeRelease;
+    char resumeKey;
+  public:
+    BootDiagnosticKeyboard(KeyboardEventHandler* next, bool hold)
+        : target(next), waiting(hold), consumeRelease(false), resumeKey(0) {}
+    bool Waiting() const { return waiting; }
+    void OnKeyDown(char key) {
+        if (waiting) {
+            resumeKey = key; consumeRelease = true; waiting = false; return;
+        }
+        if (consumeRelease && key == resumeKey) return; // Typematic repeats.
+        if (target) target->OnKeyDown(key);
+    }
+    void OnKeyUp(char key) {
+        if (consumeRelease && key == resumeKey) { consumeRelease = false; return; }
+        if (!waiting && target) target->OnKeyUp(key);
+    }
+};
+}
+// Weakly observed by the existing fatal exception path. This observer neither
+// parses logged text nor changes the handled native-fault scheduling contract.
+extern "C" void bootLogEmergencyScreen() {
+    asm volatile("cli" ::: "memory");
+    if (!bootScreenReady || bootRendering || bootEmergencyShown) return;
+    bootRendering = true;
+    bootEmergencyShown = bootScreenEnabled = true;
+    BootClear();
+    BootText("GTOS KERNEL FAILURE - PHOTO THIS SCREEN\n");
+    BootText("LAST PHASE "); BootText(bootPhase); BootCharacter('\n');
+    BootText("RAM LOG LOST ON RESET - NO DISK LOG WRITE\n");
+    BootTail(bootScreenMode.height / 10 - 4);
+    bootRendering = false;
+}
+
 void printf(char *text) {
     memory::InterruptGuard guard; // BSP console messages remain atomic across task switches.
     static uint32_t x = 0, y = 0;
     volatile uint16_t *video = (volatile uint16_t *)0xB8000;
     for (uint32_t i = 0; text && text[i]; ++i) {
         char c = text[i];
+        common::BootLog::Put(c);
+        // E9 is an emulator debug sink, not a physical-machine log device.
         asm volatile("outb %0,$0xe9" ::"a"((uint8_t)c));
+        BootSerialPut(c);
+        BootScreenPut(c);
         if (graphicsActive)
             continue;
         if (c == '\n') {
@@ -75,12 +260,25 @@ static void LogValue(const char *label, uint32_t v) {
     printfHex32(v);
     printf("\n");
 }
-static void Panic(const char *message) {
-    printf("PANIC ");
-    printf((char *)message);
-    printf("\n");
-    for (;;)
-        asm volatile("cli; hlt");
+static void BootStage(const char* phase, const char* description) {
+    memory::InterruptGuard guard;
+    bootPhase = phase;
+    printf("BOOT "); printf(phase); printf(" "); printf(description); printf("\n");
+}
+static void Panic(const char *message, const char* code = "E00") {
+    asm volatile("cli" ::: "memory");
+    if (panicInProgress) {
+        // Never recurse through a failing renderer, allocator or UART.
+        const char marker[] = "PANIC RECURSIVE HALT\n";
+        for (uint32_t i = 0; marker[i]; ++i)
+            asm volatile("outb %0,$0xe9" :: "a"((uint8_t)marker[i]));
+        for (;;) asm volatile("cli; hlt");
+    }
+    panicInProgress = true;
+    printf("PANIC "); printf(code); printf(" PHASE "); printf(bootPhase); printf(" ");
+    printf(message); printf("\n");
+    bootLogEmergencyScreen();
+    for (;;) asm volatile("cli; hlt");
 }
 typedef void (*constructor)();
 extern "C" constructor start_ctors, end_ctors;
@@ -378,10 +576,37 @@ static void ServiceNativeDemo(TaskManager &tasks) {
     printf(valid ? "NATIVE RUNTIME PASS\n" : "NATIVE RUNTIME FAIL ISOLATION OR REAP\n");
 }
 extern "C" void kernelMain(void *multiboot, uint32_t magic) {
+    common::BootLog::Reset();
+    BootStage("B01", "HANDOFF");
     printf("GTOS 0.3 PROTECTED DESKTOP BOOT\n");
-    GlobalDescriptorTable gdt;
+    BootStage("B02", "MEMORY");
     if (!frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end))
-        Panic("INVALID MEMORY MAP");
+        Panic("INVALID MEMORY MAP", "E01");
+    const memory::MultibootInfo *mbi = (const memory::MultibootInfo *)multiboot;
+    const bool liveBoot = BootOption(mbi, "live");
+    const bool uefiBoot = BootOption(mbi, "uefi");
+    const bool diagnosticBoot = BootOption(mbi, "bootlog") || BootOption(mbi, "verbose");
+    graphicsActive = uefiBoot;
+    if (!BootOption(mbi, "legacy")) RegisterBootScreen(mbi, diagnosticBoot);
+    if (BootOption(mbi, "serial")) {
+        serialEnabled = StartBootSerial();
+        if (serialEnabled) ReplayBootSerial();
+        printf(serialEnabled ? "BOOT SERIAL COM1 115200 8N1\n" : "BOOT SERIAL COM1 UNAVAILABLE\n");
+    }
+    if (diagnosticBoot)
+        printf(bootScreenReady ? "BOOT GOP DIAGNOSTIC READY\n"
+                              : "BOOT GOP DIAGNOSTIC UNAVAILABLE - SERIAL OR EMULATOR E9 ONLY\n");
+    if (uefiBoot) {
+        graphicsActive = true; // EFI has no guaranteed legacy text framebuffer.
+        printf("BOOT FIRMWARE UEFI X64\n");
+    }
+    if (liveBoot) {
+        AdvancedTechnologyAttachment::DisableWritesForLiveBoot();
+        printf("LIVE ATA WRITES DISABLED\n");
+    }
+    // The sole deliberate failure token is absent from normal delivery menus.
+    // No storage initialization or runtime workload occurs on this test path.
+    if (BootOption(mbi, "bootlog-fail")) Panic("SAFE DIAGNOSTIC FAILURE", "E99");
     memory::PhysicalMemoryStatistics physical = frames.getStatistics();
     LogValue("MEMORY FREE FRAMES ", physical.freeFrames);
     bool physicalOK = memory::RunPhysicalMemorySelfTest(frames);
@@ -389,15 +614,16 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     uint32_t heapAddress = 0;
     const uint32_t heapPages = 1024;
     if (!frames.allocateContiguous(heapPages, heapAddress))
-        Panic("NO HEAP RAM");
+        Panic("NO HEAP RAM", "E02");
     MemoryManager heap(heapAddress, heapPages * 4096);
     bool memoryOK = physicalOK && memory::RunHeapSelfTest() && heap.validate();
     printf(memoryOK ? "HEAP SELFTEST PASS\n" : "HEAP SELFTEST FAIL\n");
     if (!memoryOK)
-        Panic("MEMORY SELFTEST");
-    const memory::MultibootInfo *mbi = (const memory::MultibootInfo *)multiboot;
+        Panic("MEMORY SELFTEST", "E03");
     uint32_t ramMiB =
         (mbi->flags & 1) ? (mbi->memUpper + 2047) / 1024 : physical.addressableFrames / 256;
+    BootStage("B03", "GDT IDT SCHEDULER");
+    GlobalDescriptorTable gdt;
     CpuManager cpu;
     cpu.Detect(ramMiB * 1024 * 1024);
     printf("CPU VENDOR ");
@@ -412,7 +638,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     bool schedulerOK = TaskManager::RunSelfTests(&gdt);
     printf(schedulerOK ? "SCHEDULER SELFTEST PASS\n" : "SCHEDULER SELFTEST FAIL\n");
     if (!schedulerOK)
-        Panic("SCHEDULER SELFTEST");
+        Panic("SCHEDULER SELFTEST", "E04");
     InterruptsManager interrupts(0x20, &gdt, &tasks);
     SyscallHandler syscalls(&interrupts, 0x80);
     // Prepare resources before identity mappings are built. BSP GDT/IDT already
@@ -422,20 +648,50 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     CpuWorkPool workers;
     bool workersPrepared = apsPrepared && workers.Prepare(cpuStartup, frames);
     CpuStartupReport apReport = cpuStartup.GetReport();
+    BootStage("B04", liveBoot ? "RAM STORAGE" : "STORAGE");
     AdvancedTechnologyAttachment disk(0x1F0, true);
     // PIT below is 100 Hz. IF-clear boot uses finite polling; runtime gets 5 s.
-    if (!disk.ConfigureWaitClock(DiskWaitTicks,500U)) Panic("ATA WAIT CLOCK");
-    storage::AppStore store(&disk);
+    if (!disk.ConfigureWaitClock(DiskWaitTicks,500U)) Panic("ATA WAIT CLOCK", "E05");
+    storage::BlockDevice *dataDisk = &disk;
+    if (liveBoot) {
+        // No Identify, read, or write is issued to any internal ATA disk.
+        storage::LiveBlockDevice *ramDisk = new storage::LiveBlockDevice;
+        if (!ramDisk) Panic("LIVE RAM STORAGE ALLOCATION", "E06");
+        dataDisk = ramDisk;
+    }
+    storage::AppStore store(dataDisk);
     bool diskOK = store.Mount();
+    if (liveBoot && !diskOK) Panic("LIVE RAM STORAGE FORMAT", "E07");
     printf(diskOK ? "APP STORE MOUNT OK\n" : "APP STORE UNAVAILABLE\n");
+    if (liveBoot) {
+        printf("LIVE RAM STORAGE READY\n");
+        bool installed = false;
+        if ((mbi->flags & (1 << 3)) && mbi->moduleCount) {
+            const memory::MultibootModule *modules =
+                (const memory::MultibootModule *)mbi->modules;
+            if (modules[0].end > modules[0].start &&
+                modules[0].end - modules[0].start <= apps::PackageLimit) {
+                const uint8_t *package = (const uint8_t *)modules[0].start;
+                const uint32_t length = modules[0].end - modules[0].start;
+                if (apps::ValidatePackage(package, length) == apps::PackageOK) {
+                    if (!store.Install(package, length)) Panic("LIVE BOOT PACKAGE INSTALL", "E08");
+                    installed = true;
+                }
+            }
+        }
+        printf(installed ? "LIVE BOOT PACKAGE INSTALLED\n"
+                         : "LIVE BOOT PACKAGE UNAVAILABLE\n");
+    }
     LogValue("APP STORE COUNT ", store.Count());
     LogValue("APP STORE GENERATION ", store.Generation());
-    storage::SettingsStore settings(&disk);
+    storage::SettingsStore settings(dataDisk);
     bool settingsWritable = settings.Load();
-    printf(settingsWritable ? "SETTINGS READY\n" : "SETTINGS SESSION ONLY\n");
+    printf(liveBoot ? "SETTINGS RAM SESSION ONLY\n"
+                    : (settingsWritable ? "SETTINGS READY\n" : "SETTINGS SESSION ONLY\n"));
     LogValue("SETTINGS LOCALE ", (uint32_t)settings.Current().locale);
     LogValue("SETTINGS THEME ", (uint32_t)settings.Current().theme);
-    gui::DesktopShell desktop(&store);
+    BootStage("B05", "GRAPHICS");
+    gui::DesktopShell desktop(&store, liveBoot);
     LogValue("MB FLAGS ", mbi->flags);
     LogValue("FB ADDRESS ", (uint32_t)mbi->framebufferAddress);
     LogValue("FB PITCH ", mbi->framebufferPitch);
@@ -456,11 +712,12 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         if (frames.allocateContiguous(backbufferPages, backbuffer) &&
             framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
             printf("FB CONFIGURED\n");
-            modern = new gui::ModernDesktop(&framebuffer, &store, &settings);
+            modern = new gui::ModernDesktop(&framebuffer, &store, &settings, liveBoot);
         }
         if (!modern && backbuffer)
             frames.freeContiguous(backbuffer, backbufferPages);
     }
+    if (uefiBoot && !modern) Panic("UEFI GOP FRAMEBUFFER UNAVAILABLE", "E09");
     printf(modern ? "DESKTOP MODE FRAMEBUFFER\n" : "DESKTOP MODE LEGACY\n");
     if ((mbi->flags & (1 << 3)) && mbi->moduleCount) {
         const memory::MultibootModule *m = (const memory::MultibootModule *)mbi->modules;
@@ -473,14 +730,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     }
     KeyboardEventHandler *keyEvents = modern ? (KeyboardEventHandler *)modern : &desktop;
     MouseEventHandler *mouseEvents = modern ? (MouseEventHandler *)modern : &desktop;
-    KeyboardDriver keyboard(&interrupts, keyEvents);
+    BootDiagnosticKeyboard bootKeys(keyEvents, diagnosticBoot && bootScreenReady && modern);
+    KeyboardDriver keyboard(&interrupts, &bootKeys);
     MouseDriver mouse(&interrupts, mouseEvents);
-    keyboard.Activate();
-    mouse.Activate();
     VideoGraphicsArray vga;
     if (!modern && !vga.SetMode(320, 200, 8))
-        Panic("VGA MODE");
+        Panic("VGA MODE", "E10");
     graphicsActive = true;
+    BootStage("B06", "PAGING");
     memory::PagingDeviceRange devices[3] = {{0xA0000, 0x20000}, {0, 0}, {0, 0}};
     uint32_t deviceCount = 1;
     if (modern) {
@@ -488,7 +745,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         uint64_t end =
             (mbi->framebufferAddress + (uint64_t)mode.pitch * mode.height + 4095) & ~4095ULL;
         if (end > 0x100000000ULL || end <= begin || end - begin > 0xFFFFFFFFULL)
-            Panic("FRAMEBUFFER MAPPING RANGE");
+            Panic("FRAMEBUFFER MAPPING RANGE", "E11");
         devices[deviceCount].address = (uint32_t)begin;
         devices[deviceCount++].length = (uint32_t)(end - begin);
     }
@@ -506,7 +763,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                                                devices,
                                                deviceCount};
     if (!paging.prepareIdentity(frames, pagingConfig))
-        Panic(memory::KernelPaging::ErrorName(paging.getLastError()));
+        Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
     bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames);
     bool workersStarted = workersPrepared && workers.Start(paging);
     // Only a pre-handoff failure may use the original parked path. Once an AP
@@ -539,7 +796,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         }
     }
     if (!paging.enable())
-        Panic(memory::KernelPaging::ErrorName(paging.getLastError()));
+        Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E13");
     uint32_t cr0;
     asm volatile("mov %%cr0,%0" : "=r"(cr0));
     memory::PagingMapping mapping;
@@ -547,7 +804,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                     paging.query((uint32_t)&kernel_readonly_start, mapping) && !mapping.writable &&
                     paging.query(heapAddress, mapping) && mapping.writable;
     if (!pagingOK)
-        Panic("PAGING PROTECTION SELFTEST");
+        Panic("PAGING PROTECTION SELFTEST", "E14");
     printf("PAGING PG WP NULL RO PASS\n");
     LogValue("PAGING CR3 ", paging.getStatistics().directoryAddress);
     Task sleeper(&gdt, Sleeper), yielder(&gdt, Yielder);
@@ -556,6 +813,9 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);
     if (!nativeDemoReady)
         printf("NATIVE RUNTIME LIMITED\n");
+    BootStage("B07", "PS2 PIT IRQ");
+    keyboard.Activate();
+    mouse.Activate();
     // Explicit 100 Hz PIT, so VM/game timing is independent of loop throughput.
     Port8Bit pitControl(0x43), pitData(0x40);
     uint16_t divisor = 1193182 / 100;
@@ -563,6 +823,13 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     pitData.Write(divisor & 255);
     pitData.Write(divisor >> 8);
     interrupts.Activate();
+    BootStage("B08", "DESKTOP");
+    if (diagnosticBoot && bootScreenReady && modern) {
+        printf("BOOT LOG PAUSED - PRESS ANY KEY FOR DESKTOP\n");
+        while (bootKeys.Waiting()) asm volatile("sti; hlt");
+        printf("BOOT LOG RESUME\n");
+    }
+    bootScreenEnabled = false;
     printf("DESKTOP READY\n");
     bool runtimeChecked = false;
     InitializeWorkerDemo(workers);

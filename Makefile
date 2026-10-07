@@ -153,3 +153,8 @@ test-kernel-integer:
 -include $(wildcard obj/native-fp-desktop/*.d)
 
 -include $(wildcard $(FP_DIAGNOSTIC_OBJDIR)/*.d)
+# Explicit opt-in live image: original BIOS recipes and runtime wrapper stay intact.
+# UEFI_LIVE_BUILD_ARGS accepts helper/module paths for an extracted toolchain.
+UEFI_LIVE_BUILD_ARGS ?=
+GTOS-live.iso: GTOS.bin apps/catch.gtapp obj/native/fault.elf obj/native/peer.elf obj/browser-probe/browser-probe.elf docs/desktop-font-license.txt apps/fonts/OFL.txt apps/fonts/README.md apps/fonts/han_manifest.json tools/build-uefi-live.py Makefile
+	$(PYTHON) tools/build-uefi-live.py --output "$(abspath $@)" $(UEFI_LIVE_BUILD_ARGS)

@@ -7,6 +7,8 @@ using namespace gtos::hardwarecommunication;
 void printf(char* str);
 void printfHex(uint8_t);
 void printfHex32(uint32_t);
+// Optional kernel diagnostic observer; host models may leave it unbound.
+extern "C" void bootLogEmergencyScreen() __attribute__((weak));
 
 InterruptHandler::InterruptHandler(InterruptsManager* interruptsManager, uint8_t InterruptNumber) {
     this->interruptNumber = InterruptNumber;
@@ -195,6 +197,7 @@ uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t 
         printf(" error="); printfHex32(state->error);
         printf(" eip="); printfHex32(state->eip);
         printf(" cr2="); printfHex32(cr2); printf("\n");
+        if (bootLogEmergencyScreen) bootLogEmergencyScreen();
         for (;;) asm volatile("cli; hlt");
     }
     if (handlers[interruptNumber] != 0) {

@@ -27,6 +27,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     i18n::Locale locale;
     i18n::PinyinComposer composer;
     bool pinyinInput, preferencesPersisted, settingsConfirmed, bundledGame;
+    const bool liveSession;
     SystemSnapshot state;
     const uint8_t *installer;
     uint32_t installerSize;
@@ -36,10 +37,10 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     volatile uint32_t eventRead, eventWrite;
     volatile bool overflow;
     volatile int32_t mouseX, mouseY;
-    bool keys[256], leftDown, needsDraw, lightTheme, launcher, confirmRemove;
+    bool keys[256], leftDown, needsDraw, lightTheme, launcher, confirmRemove, bootLogView;
     int32_t dragKind, dragX, dragY, dragWidth, dragHeight;
     bool resizing;
-    uint32_t selected, lastFrame, lastStep, lastMonitor, noticeAt, lastTitleClick;
+    uint32_t selected, lastFrame, lastStep, lastMonitor, noticeAt, lastTitleClick, bootLogFirst;
     int32_t titleClickKind, launcherSelected;
     char query[128];
     uint32_t queryLength, queryCursor;
@@ -75,6 +76,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void DrawWelcome(const ModernRect &r);
     void DrawApplications(const ModernRect &r);
     void DrawMonitor(const ModernRect &r);
+    void DrawBootLog(const ModernRect &r);
+    uint32_t BootLogRows() const;
     void DrawSettings(const ModernRect &r);
     void DrawGame(const ModernRect &r);
     void DrawLauncher();
@@ -85,7 +88,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
 
   public:
     ModernDesktop(drivers::Framebuffer *framebuffer, storage::AppStore *store,
-                  storage::SettingsStore *settings = 0);
+                  storage::SettingsStore *settings = 0, bool live = false);
     void SetInstaller(const uint8_t *data, uint32_t length);
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);
@@ -100,6 +103,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     // Read-only state supports deterministic window/input regression tests.
     const ModernWindowManager &Windows() const { return wm; }
     bool LauncherOpen() const { return launcher; }
+    bool BootLogVisible() const { return bootLogView && wm.Focused() == ModernMonitor; }
+    uint32_t BootLogFirstLine() const { return bootLogFirst; }
     bool RemovalPending() const { return confirmRemove; }
     bool LightTheme() const { return lightTheme; }
     i18n::Locale CurrentLocale() const { return locale; }

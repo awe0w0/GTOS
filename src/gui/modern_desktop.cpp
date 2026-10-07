@@ -1,3 +1,4 @@
+#include <common/boot_log.h>
 #include <gui/modern_desktop.h>
 #include <i18n/font.h>
 using namespace gtos::gui;
@@ -23,14 +24,15 @@ static bool BundledCatch(const gtos::storage::AppInfo *app) {
     return app && app->length == 824 && app->checksum == 0x733AF7F5u && EqualText(app->id, "catch");
 }
 ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppStore *s,
-                             gtos::storage::SettingsStore *settings)
+                             gtos::storage::SettingsStore *settings, bool live)
     : fb(*f), paint(*f), wm(f->Width(), f->Height()), store(s), vm(this), preferences(settings),
       locale(gtos::i18n::English), pinyinInput(false), preferencesPersisted(false),
-      settingsConfirmed(false), bundledGame(false), installer(0), installerSize(0), eventRead(0),
+      settingsConfirmed(false), bundledGame(false), liveSession(live), installer(0), installerSize(0), eventRead(0),
       eventWrite(0), overflow(false), mouseX(f->Width() - 30), mouseY(16), leftDown(false),
-      needsDraw(true), lightTheme(false), launcher(false), confirmRemove(false), dragKind(-1),
+      needsDraw(true), lightTheme(false), launcher(false), confirmRemove(false), bootLogView(false),
+      dragKind(-1),
       dragX(0), dragY(0), dragWidth(0), dragHeight(0), resizing(false), selected(0), lastFrame(0),
-      lastStep(0), lastMonitor(0), noticeAt(0), lastTitleClick(0), titleClickKind(-1),
+      lastStep(0), lastMonitor(0), noticeAt(0), lastTitleClick(0), bootLogFirst(0), titleClickKind(-1),
       launcherSelected(0), queryLength(0), queryCursor(0), notice("Welcome to GTOS") {
     for (uint32_t i = 0; i < 256; ++i)
         keys[i] = false;
@@ -43,7 +45,7 @@ ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppSt
                      ? gtos::i18n::SimplifiedChinese
                      : gtos::i18n::English;
         lightTheme = preferences->Current().theme == gtos::storage::Light;
-        preferencesPersisted = preferences->HasPersistedSettings();
+        preferencesPersisted = !liveSession && preferences->HasPersistedSettings();
     }
     pinyinInput = locale == gtos::i18n::SimplifiedChinese;
     Clear(0);
@@ -57,6 +59,29 @@ ModernDesktop::Theme ModernDesktop::Colors() const {
     return lightTheme ? light : dark;
 }
 const char *ModernDesktop::Label(const char *english) const {
+    if (liveSession) {
+        // Only these fixed live-session labels may use an English fallback.
+        // Keep the catalog's UnknownStatus policy for every other message.
+        static const char *const liveLabels[] = {
+            "Live settings stay in RAM until reboot",
+            "Live RAM apps reloaded",
+            "Installed in RAM for this session. Enter to play.",
+            "Application removed from live RAM",
+            "LIVE SESSION: apps and settings stay in RAM.",
+            "Reload RAM",
+            "Live RAM apps reset at reboot. Internal disks are untouched.",
+            "Live RAM / KiB",
+            "This removes the package from live RAM for this session.",
+        };
+        for (uint32_t i = 0; i < sizeof(liveLabels) / sizeof(liveLabels[0]); ++i) {
+            if (EqualText(english, liveLabels[i])) {
+                gtos::i18n::StringId id;
+                if (!gtos::i18n::FindStringId(english, id))
+                    return liveLabels[i];
+                break;
+            }
+        }
+    }
     return gtos::i18n::Translate(locale, english);
 }
 const char *ModernDesktop::AppTitle(const gtos::storage::AppInfo *app) const {
@@ -80,10 +105,11 @@ void ModernDesktop::SavePreferences() {
                                           : gtos::storage::English,
                                       lightTheme ? gtos::storage::Light : gtos::storage::Dark};
     bool saved = preferences && preferences->Writable() && preferences->Save(values);
-    preferencesPersisted = saved && preferences->HasPersistedSettings();
+    preferencesPersisted = !liveSession && saved && preferences->HasPersistedSettings();
     settingsConfirmed = saved;
-    Notice(saved ? (preferencesPersisted ? "Settings saved" : "Using default settings")
-                 : "Changes apply to this session only");
+    Notice(liveSession ? "Live settings stay in RAM until reboot"
+                       : (saved ? (preferencesPersisted ? "Settings saved" : "Using default settings")
+                                : "Changes apply to this session only"));
 }
 void ModernDesktop::ApplyLocale(gtos::i18n::Locale next) {
     if (locale == next)
@@ -207,13 +233,17 @@ void ModernDesktop::Open(ModernWindowKind k) {
     wm.Open(k);
     launcher = false;
     Notice(windowTitles[k]);
-    if (k == ModernMonitor)
+    if (k == ModernMonitor) {
+        bootLogView = false;
         Trace("UI HARDWARE\n");
+    }
     if (k == ModernApplications)
         Trace("UI APPS\n");
 }
 void ModernDesktop::Close(ModernWindowKind k) {
     CancelComposition();
+    if (k == ModernMonitor)
+        bootLogView = false;
     if (k == ModernGame) {
         vm.Stop();
         Trace("APP CLOSE OK\n");
@@ -247,7 +277,7 @@ void ModernDesktop::ReloadDisk() {
     for (uint32_t i = 0; i < store->Count(); ++i)
         if (EqualText(previous, store->Get(i)->id))
             selected = i;
-    Notice("App disk reloaded");
+    Notice(liveSession ? "Live RAM apps reloaded" : "App disk reloaded");
     Trace("APP DISK RELOAD OK\n");
 }
 void ModernDesktop::Install() {
@@ -279,7 +309,8 @@ void ModernDesktop::Install() {
                 }
             }
         }
-        Notice("Installed on disk. Select the app and press Enter to play.");
+        Notice(liveSession ? "Installed in RAM for this session. Enter to play."
+                           : "Installed on disk. Select the app and press Enter to play.");
         Trace("APP INSTALL OK\n");
     } else {
         Notice(store->StatusText());
@@ -294,7 +325,7 @@ void ModernDesktop::Remove() {
     }
     if (store->Uninstall(a->id)) {
         selected = 0;
-        Notice("Application removed from disk");
+        Notice(liveSession ? "Application removed from live RAM" : "Application removed from disk");
         Trace("APP REMOVE OK\n");
     } else
         Notice(store->StatusText());
@@ -439,8 +470,38 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         }
         return;
     }
+    // Keep launcher/game/modal handling ahead of Monitor-only log controls.
+    // Arrow repeats scroll, while B/Esc must remain one action per press.
+    if (wm.Focused() == ModernMonitor && bootLogView) {
+        if (k == 'b' || k == 27) {
+            if (!repeat) {
+                bootLogView = false;
+                Trace("UI BOOT LOG CLOSE\n");
+            }
+            return;
+        }
+        if (k == 0x83 || k == 0x84) {
+            uint32_t total = gtos::common::BootLog::Lines(), rows = BootLogRows();
+            uint32_t last = total > rows ? total - rows : 0;
+            if (bootLogFirst > last)
+                bootLogFirst = last;
+            if (k == 0x83 && bootLogFirst)
+                --bootLogFirst;
+            else if (k == 0x84 && bootLogFirst < last)
+                ++bootLogFirst;
+            // Reading/scrolling never appends to the ring it is inspecting.
+            return;
+        }
+    }
     if (repeat)
         return;
+    if (k == 'b' && wm.Focused() == ModernMonitor) {
+        CancelCapture();
+        bootLogView = true;
+        bootLogFirst = 0;
+        Trace("UI BOOT LOG OPEN\n");
+        return;
+    }
     if (k == '\t') {
         CancelComposition();
         CancelCapture();

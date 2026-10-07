@@ -1,5 +1,6 @@
 #include <drivers/ata.h>
 using namespace gtos::drivers;
+bool AdvancedTechnologyAttachment::liveWritesDisabled=false;
 AdvancedTechnologyAttachment::AdvancedTechnologyAttachment(uint16_t base, bool isMaster)
 : dataPort(base), errorPort(base+1), sectorCountPort(base+2), lbaLowPort(base+3),
   lbaMidPort(base+4), lbaHiPort(base+5), devicePort(base+6), commandPort(base+7),
@@ -66,6 +67,8 @@ bool AdvancedTechnologyAttachment::Read28(uint32_t sector, uint8_t* data, int co
     Delay(); return Wait(false);
 }
 bool AdvancedTechnologyAttachment::Write28(uint32_t sector, const uint8_t* data, int count) {
+    // Reject before argument access, device selection, or any hardware I/O.
+    if (liveWritesDisabled) { lastError=WriteProtected; return false; }
     if (!data || count<1 || count>512) { lastError=BadArgument; return false; }
     if (!Select(sector)) return false;
     commandPort.Write(0x30); Delay();
@@ -78,6 +81,8 @@ bool AdvancedTechnologyAttachment::Write28(uint32_t sector, const uint8_t* data,
     Delay(); return Wait(false);
 }
 bool AdvancedTechnologyAttachment::Flush() {
+    // Even flushing an existing device cache is forbidden in a live boot.
+    if (liveWritesDisabled) { lastError=WriteProtected; return false; }
     if (!present) { lastError=NoDevice; return false; }
     devicePort.Write(master?0xE0:0xF0); Delay();
     if (!Wait(false)) return false;
