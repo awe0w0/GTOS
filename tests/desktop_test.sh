@@ -6,7 +6,7 @@ python3 tests/desktop_catalog_test.py
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-desktop.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 compile() {
-    "${CXX:-g++}" $kernel_flags "$1" -std=c++11 -O2 -Iinclude -DGTOS_DESKTOP_HOST_TEST \
+    "${CXX:-g++}" $kernel_flags "$1" -std=c++11 -O2 -Iinclude -DGTOS_DESKTOP_HOST_TEST -DGTOS_MEMORY_TEST \
       -mstackrealign -ffreestanding -fno-exceptions -fno-rtti -fno-builtin -fno-stack-protector \
       -fno-pie -no-pie -nostdlib -static -Wall -Wextra \
       -Werror -Wl,-e,_start tests/desktop_tests.cpp src/drivers/framebuffer.cpp \
@@ -34,7 +34,7 @@ compile -m64 "$build/test64"
 "$build/test64"
 if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
     "${CXX:-g++}" $kernel_flags -m64 -std=c++11 -O1 -g -Iinclude \
-      -DGTOS_DESKTOP_HOST_TEST -DGTOS_DESKTOP_SANITIZE -fno-exceptions -fno-rtti \
+      -DGTOS_DESKTOP_HOST_TEST -DGTOS_MEMORY_TEST -DGTOS_DESKTOP_SANITIZE -fno-exceptions -fno-rtti \
       -fno-builtin -fno-pie -no-pie -Wall -Wextra -Werror \
       -fsanitize=address,undefined -fno-omit-frame-pointer \
       tests/desktop_tests.cpp src/drivers/framebuffer.cpp src/gui/modern_geometry.cpp \
