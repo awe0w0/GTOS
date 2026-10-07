@@ -223,6 +223,33 @@ void ModernDesktop::Close(ModernWindowKind k) {
     leftDown = false;
     Notice("Window closed");
 }
+void ModernDesktop::ReloadDisk() {
+    CancelCapture();
+    CancelComposition();
+    // Mount replaces the directory cache. Copy the selection before it does so.
+    char previous[24] = {};
+    const gtos::storage::AppInfo *app = store && store->Mounted() ? store->Get(selected) : 0;
+    if (app)
+        for (uint32_t i = 0; i < sizeof(previous); ++i)
+            previous[i] = app->id[i];
+    selected = 0;
+    if (!store) {
+        Notice("No application store");
+        Trace("APP DISK RELOAD FAILED\n");
+        return;
+    }
+    // Read only: no format, payload write, commit, or durability acknowledgement.
+    if (!store->Mount()) {
+        Notice(store->StatusText());
+        Trace("APP DISK RELOAD FAILED\n");
+        return;
+    }
+    for (uint32_t i = 0; i < store->Count(); ++i)
+        if (EqualText(previous, store->Get(i)->id))
+            selected = i;
+    Notice("App disk reloaded");
+    Trace("APP DISK RELOAD OK\n");
+}
 void ModernDesktop::Install() {
     CancelCapture();
     CancelComposition();
@@ -460,6 +487,8 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         Open(ModernApplications);
     else if (k == '4')
         Open(ModernSettings);
+    else if (k == 'r' && wm.Focused() == ModernApplications)
+        ReloadDisk();
     else if (k == 'i')
         Install();
     else if (k == 't' && wm.Focused() == ModernSettings) {
@@ -643,7 +672,10 @@ void ModernDesktop::Pointer(const Input &e) {
             Open(ModernMonitor);
     } else if (k == ModernApplications) {
         int32_t by = r.y + r.h - 68;
-        if (y >= by && y < by + 34) {
+        ModernRect reload = {r.x + r.w - 142, r.y + 44, 120, 34};
+        if (reload.Contains(x, y))
+            ReloadDisk();
+        else if (y >= by && y < by + 34) {
             if (x >= r.x + 22 && x < r.x + 148)
                 Launch();
             else if (x >= r.x + 158 && x < r.x + 304)

@@ -160,6 +160,7 @@ void ModernDesktop::DrawApplications(const ModernRect &r) {
     Theme c = Colors();
     int32_t x = r.x + 22;
     paint.Text(x, r.y + 58, Label("Your applications"), c.text);
+    Button(r.x + r.w - 142, r.y + 44, 120, Label("Reload disk"));
     paint.Text(x, r.y + 80,
                store && store->Mounted()
                    ? Label("Installed packages are saved on your dedicated app disk.")
@@ -200,7 +201,7 @@ void ModernDesktop::DrawApplications(const ModernRect &r) {
     Button(x, by, 126, Label("Open  /  Enter"), true);
     Button(r.x + 158, by, 146, Label("Install package"));
     Button(r.x + r.w - 140, by, 120, Label("Remove"), false, true);
-    paint.Text(x, r.y + r.h - 24, Label("I Install    U Remove    Up / Down Select"), c.muted);
+    paint.Text(x, r.y + r.h - 24, Label("I Install  U Remove  R Reload  Up / Down Select"), c.muted);
 }
 void ModernDesktop::DrawMonitor(const ModernRect &r) {
     Theme c = Colors();

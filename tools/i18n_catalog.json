@@ -251,8 +251,8 @@
   },
   {
     "id": "ApplicationShortcuts",
-    "en": "I Install    U Remove    Up / Down Select",
-    "zh-CN": "I 安装    U 移除    上 / 下 选择"
+    "en": "I Install  U Remove  R Reload  Up / Down Select",
+    "zh-CN": "I 安装  U 移除  R 读取  上 / 下 选择"
   },
   {
     "id": "HardwareKernel",
@@ -798,5 +798,15 @@
     "id": "CheckWorkers",
     "en": "Check workers",
     "zh-CN": "检查工作核"
+  },
+  {
+    "id": "ReloadDisk",
+    "en": "Reload disk",
+    "zh-CN": "读取磁盘"
+  },
+  {
+    "id": "AppDiskReloaded",
+    "en": "App disk reloaded",
+    "zh-CN": "应用磁盘已读取"
   }
 ]

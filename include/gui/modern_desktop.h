@@ -63,6 +63,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void Pointer(const Input &input);
     void Open(ModernWindowKind kind);
     void Close(ModernWindowKind kind);
+    void ReloadDisk();
     void Install();
     void Remove();
     void Launch();

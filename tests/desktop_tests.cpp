@@ -311,6 +311,7 @@ static void DesktopTests() {
     Key(d, '\n');
     Check(!d.LauncherOpen() && d.Windows().Focused() == ModernApplications,
           "launcher query and activate");
+    Key(d, 'r');
     Key(d, 'i');
     Key(d, 'u');
     Check(!d.RemovalPending(), "missing store errors are nonfatal");
@@ -354,8 +355,10 @@ class DesktopDisk : public storage::BlockDevice {
     uint8_t data[storage::SettingsStore::RequiredSectors][512];
 
   public:
-    bool failWrites, failReads;
-    DesktopDisk() : failWrites(false), failReads(false) {
+    bool failWrites, failReads, failIdentify;
+    uint32_t reads, writes, flushes;
+    DesktopDisk() : failWrites(false), failReads(false), failIdentify(false),
+                    reads(0), writes(0), flushes(0) {
         for (uint32_t i = 0; i < sizeof(data); ++i)
             ((uint8_t *)data)[i] = 0;
         const char *magic = "GTSTOR1";
@@ -377,12 +380,13 @@ class DesktopDisk : public storage::BlockDevice {
         }
     }
     virtual bool Identify() {
-        return true;
+        return !failIdentify;
     }
     virtual uint32_t SectorCount() const {
         return storage::SettingsStore::RequiredSectors;
     }
     virtual bool ReadSector(uint32_t sector, uint8_t *out) {
+        ++reads;
         if (failReads || sector >= SectorCount())
             return false;
         for (uint32_t i = 0; i < 512; ++i)
@@ -390,6 +394,7 @@ class DesktopDisk : public storage::BlockDevice {
         return true;
     }
     virtual bool WriteSector(uint32_t sector, const uint8_t *in) {
+        ++writes;
         if (failWrites || sector >= SectorCount())
             return false;
         for (uint32_t i = 0; i < 512; ++i)
@@ -397,8 +402,10 @@ class DesktopDisk : public storage::BlockDevice {
         return true;
     }
     virtual bool Flush() {
+        ++flushes;
         return true;
     }
+    void CorruptHeader(bool corrupt) { data[0][0] = corrupt ? 'X' : 'G'; }
 };
 static int32_t pointerX, pointerY;
 static void MoveTo(ModernDesktop &d, int32_t x, int32_t y) {
@@ -570,6 +577,12 @@ static void ApplicationTests() {
     Check(d.ActiveApplicationID() && d.ActiveApplicationID()[0] == '6' &&
               d.ActiveApplicationID()[1] == 'a',
           "eighth app selection loads its exact package, not the first row");
+    Key(d, 27);
+    Key(d, '3');
+    Key(d, 'r');
+    Key(d, '\n');
+    Check(d.ActiveApplicationID() && d.ActiveApplicationID()[0] == '6',
+          "reload preserves eighth application selection by ID");
     Key(d, 27);
     Key(d, 'l');
     Key(d, 'w');
@@ -826,11 +839,80 @@ static void MinimumMonitorTests() {
                       "live worker count never overlaps minimum-height footer in either locale");
     }
 }
+static void DiskReloadTests() {
+    DesktopDisk disk;
+    storage::AppStore store(&disk);
+    Check(store.Mount(), "reload seed disk mounted");
+    Check(store.Install(desktop_catch_start, desktop_catch_end - desktop_catch_start),
+          "reload seed real package installed");
+    drivers::Framebuffer f;
+    Check(f.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "reload framebuffer bound");
+    ModernDesktop d(&f, &store);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    Key(d, '3');
+    uint32_t writes = disk.writes, flushes = disk.flushes, generation = store.Generation();
+    disk.failReads = true;
+    Key(d, 'r');
+    Check(!store.Mounted() && !store.Count() && store.Status() == storage::AppStore::IOFailure,
+          "desktop reload exposes I/O failure and removes stale listing");
+    disk.failReads = false;
+    ModernRect r = d.Windows().Window(ModernApplications).bounds;
+    Click(d, r.x + r.w - 82, r.y + 61);
+    Check(store.Mounted() && store.Count() == 1 && store.Generation() == generation,
+          "mouse reload recovers original directory without restart");
+    Key(d, '\n');
+    Check(d.ActiveApplicationID() && Same(d.ActiveApplicationID(), "catch"),
+          "recovered disk package launches through real VM");
+    uint32_t reads = disk.reads;
+    Key(d, 'r');
+    Check(disk.reads == reads, "game R remains restart and never remounts disk");
+    Key(d, 27);
+    Key(d, '3');
+    Key(d, 'u');
+    Check(d.RemovalPending(), "reload modal guard seed");
+    Key(d, 'r');
+    Check(d.RemovalPending() && disk.reads == reads, "removal modal consumes R without disk access");
+    Key(d, 27);
+    Key(d, 'l');
+    Key(d, 'r');
+    Check(d.LauncherOpen() && Same(d.SearchQuery(), "r") && disk.reads == reads,
+          "launcher R stays search input");
+    Key(d, 27);
+    disk.failIdentify = true;
+    Key(d, 'r');
+    Check(!store.Mounted() && store.Status() == storage::AppStore::NoDisk, "reload reports missing disk");
+    disk.failIdentify = false;
+    disk.CorruptHeader(true);
+    Key(d, 'r');
+    Check(!store.Mounted() && store.Status() == storage::AppStore::NotFormatted,
+          "reload refuses foreign media without formatting");
+    disk.CorruptHeader(false);
+    Key(d, 'r');
+    Check(store.Mounted() && store.Count() == 1, "read-only recovery preserves acknowledged package");
+    Check(disk.writes == writes && disk.flushes == flushes && store.Generation() == generation,
+          "all reload paths perform zero writes, flushes or generation updates");
+    // R outside the Applications window must not initiate disk I/O.
+    reads = disk.reads;
+    Key(d, '4');
+    Key(d, 'r');
+    Check(disk.reads == reads, "settings R does not reload disk");
+    Key(d, 'c');
+    Key(d, '3');
+    Click(d, r.x + r.w - 82, r.y + 61);
+    Check(d.CurrentLocale() == i18n::SimplifiedChinese && store.Mounted(),
+          "Chinese mouse reload uses the same real disk path");
+    Check(Same(i18n::Translate(i18n::SimplifiedChinese, "Reload disk"), "读取磁盘"),
+          "reload button has Chinese text");
+}
 static void RunTests() {
     FramebufferTests();
     GeometryTests();
     DesktopTests();
     ApplicationTests();
+    DiskReloadTests();
     LocalizationTests();
     MinimumMonitorTests();
     Output("Desktop/framebuffer safety and interaction tests passed\n");
