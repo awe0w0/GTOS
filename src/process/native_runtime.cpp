@@ -1,6 +1,7 @@
 #include <process/native_runtime.h>
 #include <process/resources.h>
 #include <process/native_surface.h>
+#include <process/vm_abi.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -10,6 +11,18 @@ using namespace gtos::process;
 void printf(char*);
 void printfHex32(uint32_t);
 namespace {
+    int VmError(ProcessMemoryError error) {
+        switch (error) {
+        case ProcessMemoryNoMemory: return GTOS_VM_ERR_NO_MEMORY;
+        case ProcessMemoryLimit:
+        case ProcessMemoryRegionLimit: return GTOS_VM_ERR_LIMIT;
+        case ProcessMemoryHandleExhausted: return GTOS_VM_ERR_HANDLE_EXHAUSTED;
+        case ProcessMemoryBadRange: return GTOS_VM_ERR_RANGE;
+        case ProcessMemoryConflict: return GTOS_VM_ERR_CONFLICT;
+        case ProcessMemoryPermission: return GTOS_VM_ERR_PERMISSION;
+        default: return GTOS_VM_ERR_BAD_STATE;
+        }
+    }
     bool BootstrapProcessor() {
         uint32_t before, after;
         asm volatile("pushfl; popl %0; movl %0,%1; xorl $0x200000,%1;"
@@ -352,6 +365,107 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         else if (present)
             cpu->eax = (uint32_t)NativeSurfaceBank::Instance().Present(slot->status.id, request, cpu->ecx);
         else cpu->eax = (uint32_t)NativeSurfaceBank::Instance().Abort(slot->status.id, request, cpu->ecx);
+        break;
+    }
+    case GTOS_SYS_VM_RESERVE: {
+        if (cpu->ecx != GTOS_VM_RESERVE_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
+        }
+        GtosVmReserveRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_VM_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_UNSUPPORTED_VERSION; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result, GTOS_VM_RESERVE_RESULT_BYTES, true)) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
+        }
+        uint32_t base = 0, handle = 0;
+        if (!slot->space.Reserve(request.length, request.alignment, request.hint, base, handle))
+            cpu->eax = (uint32_t)VmError(slot->space.GetLastError());
+        else {
+            const GtosVmReserveResult result = {GTOS_VM_ABI_VERSION, handle, base,
+                request.length, GTOS_VM_PAGE_BYTES};
+            // Reserve changes only region metadata. With IF clear the fully
+            // validated output mappings remain unchanged throughout this copy.
+            if (slot->space.CopyToUser(request.result, &result, sizeof(result))) cpu->eax = 0;
+            else {
+                slot->space.Release(handle);
+                cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS;
+            }
+        }
+        break;
+    }
+    case GTOS_SYS_VM_SET_PERMISSIONS:
+    case GTOS_SYS_VM_DECOMMIT:
+    case GTOS_SYS_VM_DISCARD: {
+        const uint32_t call = cpu->eax;
+        if (cpu->ecx != GTOS_VM_RANGE_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
+        }
+        GtosVmRangeRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_VM_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_UNSUPPORTED_VERSION; break;
+        }
+        if (call != GTOS_SYS_VM_SET_PERMISSIONS && request.protection) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_STATE; break;
+        }
+        const bool ok = call == GTOS_SYS_VM_SET_PERMISSIONS
+            ? slot->space.SetPermissions(request.handle, request.offset, request.length, request.protection)
+            : call == GTOS_SYS_VM_DECOMMIT
+            ? slot->space.Decommit(request.handle, request.offset, request.length)
+            : slot->space.Discard(request.handle, request.offset, request.length);
+        cpu->eax = ok ? 0 : (uint32_t)VmError(slot->space.GetLastError());
+        break;
+    }
+    case GTOS_SYS_VM_RELEASE:
+    case GTOS_SYS_VM_TRIM: {
+        const bool release = cpu->eax == GTOS_SYS_VM_RELEASE;
+        if (cpu->ecx != GTOS_VM_CONTROL_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
+        }
+        GtosVmControlRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_VM_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_UNSUPPORTED_VERSION; break;
+        }
+        if (release && request.length) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_STATE; break;
+        }
+        const bool ok = release ? slot->space.Release(request.handle)
+            : slot->space.Trim(request.handle, request.length);
+        cpu->eax = ok ? 0 : (uint32_t)VmError(slot->space.GetLastError());
+        break;
+    }
+    case GTOS_SYS_VM_QUERY: {
+        if (cpu->ecx != GTOS_VM_QUERY_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
+        }
+        GtosVmQueryRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_VM_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_UNSUPPORTED_VERSION; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result, GTOS_VM_REGION_INFO_BYTES, true)) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
+        }
+        ProcessMemoryRegionInfo info;
+        if (!slot->space.QueryRegion(request.handle, info))
+            cpu->eax = (uint32_t)VmError(slot->space.GetLastError());
+        else {
+            const GtosVmRegionInfo result = {GTOS_VM_ABI_VERSION, request.handle,
+                info.base, info.bytes, info.residentPages};
+            cpu->eax = slot->space.CopyToUser(request.result, &result, sizeof(result))
+                ? 0 : (uint32_t)GTOS_VM_ERR_BAD_ADDRESS;
+        }
         break;
     }
     default: cpu->eax = (uint32_t)GTOS_ERR_UNSUPPORTED; break;

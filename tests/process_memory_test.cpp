@@ -6,6 +6,13 @@ extern "C" {
     uint32_t gtos_process_memory_test_cr3 = 0;
     uint32_t gtos_process_memory_test_cr4 = 0;
     bool gtos_process_memory_test_bsp = true;
+    uint32_t gtos_process_memory_test_invalidations = 0;
+    uint32_t gtos_process_memory_test_invalidated[512];
+    void gtos_process_memory_test_invalidate(uint32_t address) {
+        if (gtos_process_memory_test_invalidations < 512)
+            gtos_process_memory_test_invalidated[gtos_process_memory_test_invalidations] = address;
+        ++gtos_process_memory_test_invalidations;
+    }
 }
 namespace {
     const uint32_t Arena = 0x10000000, ArenaBytes = 16 * 1024 * 1024;
@@ -385,6 +392,265 @@ namespace {
         CHECK(all((uint8_t*)physical(first, UserBase), 4096, 0));
         CHECK(first.Destroy()); CHECK(used() == baseline);
     }
+    const uint32_t DynamicBase = ProcessAddressSpace::DynamicBase;
+    const uint32_t DynamicLimit = ProcessAddressSpace::DynamicLimit;
+    uint32_t processHash(ProcessAddressSpace& process) {
+        uint32_t hash = 0x811C9DC5u;
+        const uint32_t* root = directory(process);
+        for (uint32_t i = 0; i < 1024; ++i) {
+            hash = (hash ^ root[i]) * 0x01000193u;
+            if (i >= UserBase >> 22 && i < UserLimit >> 22 && (root[i] & 1)) {
+                const uint32_t* entries = (const uint32_t*)(root[i] & ~4095u);
+                for (uint32_t j = 0; j < 1024; ++j) hash = (hash ^ entries[j]) * 0x01000193u;
+            }
+        }
+        return hash;
+    }
+    ProcessMemoryRegionInfo region(ProcessAddressSpace& process, uint32_t handle) {
+        ProcessMemoryRegionInfo info = {};
+        CHECK(process.QueryRegion(handle, info)); return info;
+    }
+    void sameRegion(ProcessAddressSpace& process, uint32_t handle, const ProcessMemoryRegionInfo& before) {
+        const ProcessMemoryRegionInfo after = region(process, handle);
+        CHECK(after.base == before.base && after.bytes == before.bytes && after.residentPages == before.residentPages);
+    }
+    void reserveError(uint32_t bytes, uint32_t alignment, uint32_t hint, ProcessMemoryError error) {
+        const uint32_t count = used(), hash = processHash(first), invalidations = gtos_process_memory_test_invalidations;
+        uint32_t base = 0xA55A5AA5u, handle = 0x5AA5A55Au;
+        CHECK(!first.Reserve(bytes, alignment, hint, base, handle)); CHECK(first.GetLastError() == error);
+        CHECK(base == 0xA55A5AA5u && handle == 0x5AA5A55Au);
+        CHECK(used() == count && processHash(first) == hash);
+        CHECK(gtos_process_memory_test_invalidations == invalidations);
+    }
+    void invalidHandle(ProcessAddressSpace& process, uint32_t handle) {
+        ProcessMemoryRegionInfo out; fill((uint8_t*)&out, sizeof(out), 0xA5);
+        const ProcessMemoryRegionInfo before = out;
+        const uint32_t count = used(), hash = processHash(process);
+        CHECK(!process.QueryRegion(handle, out)); CHECK(process.GetLastError() == ProcessMemoryBadState);
+        CHECK(equal((const uint8_t*)&out, (const uint8_t*)&before, sizeof(out)));
+        CHECK(!process.SetPermissions(handle, 0, 4096, ProcessMemoryReadWrite));
+        CHECK(!process.Decommit(handle, 0, 4096)); CHECK(!process.Discard(handle, 0, 4096));
+        CHECK(!process.Trim(handle, 4096)); CHECK(!process.Release(handle));
+        CHECK(used() == count && processHash(process) == hash);
+    }
+    void dynamicRegionsAndPermissions() {
+        const uint32_t shared = templateHash();
+        CHECK(first.Prepare(kernel, frames)); CHECK(first.MapNewPage(UserBase, true));
+        CHECK(first.MapNewPage(DynamicBase + 4096, true));
+        uint32_t base = 123, handle = 456;
+        CHECK(!first.Reserve(4096, 4096, 0, base, handle)); CHECK(base == 123 && handle == 456);
+        CHECK(first.Seal()); const uint32_t initial = used();
+        const uint32_t badSizes[] = {0, 1, 4095, 4097, 0x80000000u, 0xFFFFFFFFu};
+        for (uint32_t i = 0; i < sizeof(badSizes) / sizeof(badSizes[0]); ++i)
+            reserveError(badSizes[i], 4096, 0, ProcessMemoryBadRange);
+        const uint32_t badAlignments[] = {0, 1, 4095, 8193, 12288, 0x80000001u, 0xFFFFFFFFu};
+        for (uint32_t i = 0; i < sizeof(badAlignments) / sizeof(badAlignments[0]); ++i)
+            reserveError(4096, badAlignments[i], 0, ProcessMemoryBadRange);
+        const uint32_t badHints[] = {UserBase, DynamicBase + 1, DynamicLimit, UserLimit - 4096, 0xFFFFF000u};
+        for (uint32_t i = 0; i < sizeof(badHints) / sizeof(badHints[0]); ++i)
+            reserveError(4096, 4096, badHints[i], ProcessMemoryBadRange);
+        reserveError(8192, 4096, DynamicLimit - 4096, ProcessMemoryBadRange);
+        reserveError(4096, 65536, DynamicBase + 4096, ProcessMemoryBadRange);
+        reserveError(3 * 4096, 4096, DynamicBase, ProcessMemoryConflict); // Static page, not just another region.
+        CHECK(first.Reserve(16 * 1024 * 1024, 65536, 0x81000000u, base, handle));
+        CHECK(base == 0x81000000u && handle && handle <= 0x7FFFFFFFu && used() == initial);
+        ProcessMemoryRegionInfo info = region(first, handle);
+        CHECK(info.base == base && info.bytes == 16 * 1024 * 1024 && !info.residentPages);
+        reserveError(4096, 4096, base + 4096, ProcessMemoryConflict); sameRegion(first, handle, info);
+        uint32_t aligned = 0, otherHandle = 0;
+        CHECK(first.Reserve(4096, 65536, 0, aligned, otherHandle));
+        CHECK(!(aligned & 65535) && aligned >= DynamicBase && aligned < DynamicLimit);
+        CHECK(otherHandle > handle && used() == initial); CHECK(first.Release(otherHandle));
+        CHECK(first.SetPermissions(handle, 0, 3 * 4096, ProcessMemoryReadWrite));
+        CHECK(used() == initial + 4); info = region(first, handle); CHECK(info.residentPages == 3);
+        CHECK(!first.ValidateUserRange(base + 3 * 4096, 1, false));
+        const uint32_t one = physical(first, base), two = physical(first, base + 4096), three = physical(first, base + 8192);
+        fill((uint8_t*)one, 4096, 0x41); fill((uint8_t*)two, 4096, 0x42); fill((uint8_t*)three, 4096, 0x43);
+        CHECK(first.SetPermissions(handle, 0, 16 * 1024 * 1024, ProcessMemoryNone));
+        CHECK(used() == initial + 4 && region(first, handle).residentPages == 3);
+        CHECK(!first.ValidateUserRange(base, 1, false) && !first.ValidateUserRange(base + 8192, 1, false));
+        CHECK(first.SetPermissions(handle, 0, 3 * 4096, ProcessMemoryReadWrite));
+        CHECK(physical(first, base) == one && physical(first, base + 4096) == two && physical(first, base + 8192) == three);
+        CHECK(all((uint8_t*)one, 4096, 0x41) && all((uint8_t*)two, 4096, 0x42) && all((uint8_t*)three, 4096, 0x43));
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryRead));
+        CHECK(first.CopyFromUser(output, base, 4096) && all(output, 4096, 0x41));
+        CHECK(!first.CopyToUser(base, input, 1)); CHECK(all((uint8_t*)one, 4096, 0x41));
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryNone));
+        CHECK(!first.ValidateUserRange(base, 1, false)); fill(output, sizeof(output), 0x77);
+        CHECK(!first.CopyFromUser(output, base, 4096) && all(output, sizeof(output), 0x77));
+        CHECK(frames.isAllocated(one) && used() == initial + 4 && all((uint8_t*)one, 4096, 0x41));
+        CHECK(first.SetPermissions(handle, 3 * 4096, 4096, ProcessMemoryNone)); CHECK(used() == initial + 4);
+        CHECK(region(first, handle).residentPages == 3);
+        CHECK(first.Discard(handle, 0, 4096)); CHECK(all((uint8_t*)one, 4096, 0));
+        CHECK(!first.ValidateUserRange(base, 1, false) && frames.isAllocated(one));
+        CHECK(all((uint8_t*)two, 4096, 0x42) && all((uint8_t*)three, 4096, 0x43));
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryReadWrite));
+        CHECK(physical(first, base) == one && all((uint8_t*)one, 4096, 0)); fill((uint8_t*)one, 4096, 0x44);
+        const uint32_t beforeFailure = used(), beforeHash = processHash(first);
+        CHECK(!first.Discard(handle, 0, 4 * 4096)); CHECK(first.GetLastError() == ProcessMemoryNotMapped);
+        CHECK(all((uint8_t*)one, 4096, 0x44) && all((uint8_t*)two, 4096, 0x42) && all((uint8_t*)three, 4096, 0x43));
+        CHECK(used() == beforeFailure && processHash(first) == beforeHash); sameRegion(first, handle, info);
+        const uint32_t badOffsets[] = {1, 4095, 16 * 1024 * 1024, 0xFFFFF000u, 0xFFFFFFFFu};
+        for (uint32_t i = 0; i < sizeof(badOffsets) / sizeof(badOffsets[0]); ++i) {
+            CHECK(!first.SetPermissions(handle, badOffsets[i], 4096, ProcessMemoryReadWrite));
+            CHECK(!first.Decommit(handle, badOffsets[i], 4096)); CHECK(!first.Discard(handle, badOffsets[i], 4096));
+        }
+        const uint32_t badLengths[] = {0, 1, 4095, 4097, 0xFFFFF000u, 0xFFFFFFFFu};
+        for (uint32_t i = 0; i < sizeof(badLengths) / sizeof(badLengths[0]); ++i) {
+            CHECK(!first.SetPermissions(handle, 0, badLengths[i], ProcessMemoryRead));
+            CHECK(!first.Decommit(handle, 0, badLengths[i])); CHECK(!first.Discard(handle, 0, badLengths[i]));
+        }
+        const uint32_t permissions[] = {2, 4, 5, 7, 0xFFFFFFFFu};
+        for (uint32_t i = 0; i < sizeof(permissions) / sizeof(permissions[0]); ++i) {
+            CHECK(!first.SetPermissions(handle, 0, 4096, permissions[i])); CHECK(first.GetLastError() == ProcessMemoryPermission);
+        }
+        CHECK(used() == beforeFailure && processHash(first) == beforeHash); sameRegion(first, handle, info);
+        CHECK(first.Decommit(handle, 4096, 4096)); CHECK(!frames.isAllocated(two) && used() == initial + 3);
+        CHECK(!first.ValidateUserRange(base + 4096, 1, false)); CHECK(region(first, handle).residentPages == 2);
+        CHECK(all((uint8_t*)one, 4096, 0x44) && all((uint8_t*)three, 4096, 0x43));
+        CHECK(first.Decommit(handle, 4096, 4096)); CHECK(used() == initial + 3); // Holes are idempotent.
+        CHECK(first.SetPermissions(handle, 4096, 4096, ProcessMemoryRead));
+        CHECK(used() == initial + 4 && all((uint8_t*)physical(first, base + 4096), 4096, 0));
+        CHECK(!first.CopyToUser(base + 4096, input, 1));
+        CHECK(first.Trim(handle, 2 * 4096)); CHECK(!frames.isAllocated(three) && used() == initial + 3);
+        info = region(first, handle); CHECK(info.bytes == 8192 && info.residentPages == 2);
+        CHECK(!first.SetPermissions(handle, 8192, 4096, ProcessMemoryReadWrite));
+        CHECK(!first.Trim(handle, 0)); CHECK(!first.Trim(handle, 4095)); CHECK(!first.Trim(handle, 3 * 4096));
+        sameRegion(first, handle, info); CHECK(!first.MapNewPage(UserBase + 4096, true));
+        CHECK(!first.ProtectPage(UserBase, false)); CHECK(!first.UnmapPage(UserBase));
+        CHECK(first.GetLastError() == ProcessMemorySealed);
+        CHECK(first.Release(handle)); CHECK(used() == initial); invalidHandle(first, handle);
+        uint32_t nextBase = 0, nextHandle = 0;
+        CHECK(first.Reserve(4096, 4096, base, nextBase, nextHandle)); CHECK(nextBase == base && nextHandle > otherHandle);
+        CHECK(first.SetPermissions(nextHandle, 0, 4096, ProcessMemoryReadWrite));
+        CHECK(first.SetPermissions(nextHandle, 0, 4096, ProcessMemoryNone));
+        CHECK(first.Destroy()); CHECK(used() == baseline && templateHash() == shared);
+        CHECK(first.Prepare(kernel, frames)); CHECK(first.Seal());
+        CHECK(first.Reserve(4096, 4096, base, nextBase, otherHandle)); CHECK(otherHandle > nextHandle);
+        CHECK(first.Destroy()); CHECK(used() == baseline);
+    }
+    void dynamicQuotaAndOwnership() {
+        CHECK(first.Prepare(kernel, frames)); CHECK(first.MapNewPage(UserBase, true)); CHECK(first.Seal());
+        uint32_t base = 0, handle = 0; CHECK(first.Reserve(256 * 4096, 4096, 0, base, handle));
+        CHECK(first.SetPermissions(handle, 0, 255 * 4096, ProcessMemoryReadWrite));
+        const uint32_t count = used(), hash = processHash(first);
+        CHECK(region(first, handle).residentPages == 255);
+        CHECK(!first.SetPermissions(handle, 255 * 4096, 4096, ProcessMemoryReadWrite)); CHECK(first.GetLastError() == ProcessMemoryLimit);
+        CHECK(used() == count && processHash(first) == hash && region(first, handle).residentPages == 255);
+        CHECK(first.SetPermissions(handle, 0, 255 * 4096, ProcessMemoryNone)); CHECK(used() == count);
+        CHECK(!first.SetPermissions(handle, 255 * 4096, 4096, ProcessMemoryRead)); CHECK(first.GetLastError() == ProcessMemoryLimit);
+        CHECK(first.Decommit(handle, 0, 4096)); CHECK(first.SetPermissions(handle, 255 * 4096, 4096, ProcessMemoryReadWrite));
+        CHECK(region(first, handle).residentPages == 255);
+        CHECK(first.Release(handle)); CHECK(first.Destroy()); CHECK(used() == baseline);
+        CHECK(first.Prepare(kernel, frames)); CHECK(first.Seal());
+        uint32_t handles[ProcessAddressSpace::MaximumRegions], bases[ProcessAddressSpace::MaximumRegions];
+        const uint32_t empty = used();
+        for (uint32_t i = 0; i < ProcessAddressSpace::MaximumRegions; ++i) {
+            CHECK(first.Reserve(4096, 4096, 0, bases[i], handles[i])); CHECK(used() == empty);
+            for (uint32_t j = 0; j < i; ++j) CHECK(bases[i] != bases[j] && handles[i] > handles[j]);
+        }
+        reserveError(4096, 4096, 0, ProcessMemoryRegionLimit);
+        invalidHandle(first, 0); invalidHandle(first, 0xFFFFFFFFu);
+        CHECK(second.Prepare(kernel, frames)); CHECK(second.Seal());
+        uint32_t otherBase = 0, otherHandle = 0; CHECK(second.Reserve(4096, 4096, bases[0], otherBase, otherHandle));
+        CHECK(otherHandle > handles[ProcessAddressSpace::MaximumRegions - 1]); invalidHandle(second, handles[0]); invalidHandle(first, otherHandle);
+        CHECK(first.Release(handles[0])); CHECK(first.Reserve(4096, 4096, bases[0], base, handle));
+        CHECK(base == bases[0] && handle > otherHandle); // Failed Reserve consumed no handle.
+        CHECK(handle == otherHandle + 1);
+        CHECK(!first.SetPermissions(handles[1], 0, 8192, ProcessMemoryReadWrite)); // Cannot cross into its neighbor region.
+        CHECK(!first.Decommit(handles[1], 0, 8192)); CHECK(!first.Discard(handles[1], 0, 8192));
+        CHECK(first.Destroy()); CHECK(second.Destroy()); CHECK(used() == baseline);
+    }
+    void dynamicInvalidationsAndContext() {
+        CHECK(first.Prepare(kernel, frames)); CHECK(first.Seal());
+        uint32_t base = 0, handle = 0; CHECK(first.Reserve(4 * 4096, 4096, 0, base, handle));
+        gtos_process_memory_test_invalidations = 0;
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryReadWrite));
+        CHECK(gtos_process_memory_test_invalidations == 0); // Kernel CR3 is test-only mutation context.
+        gtos_process_memory_test_cr3 = first.DirectoryAddress();
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryRead));
+        CHECK(gtos_process_memory_test_invalidations == 1 && gtos_process_memory_test_invalidated[0] == base);
+        gtos_process_memory_test_invalidations = 0; CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryNone));
+        CHECK(gtos_process_memory_test_invalidations == 1 && gtos_process_memory_test_invalidated[0] == base);
+        gtos_process_memory_test_invalidations = 0; CHECK(first.SetPermissions(handle, 4096, 4096, ProcessMemoryNone));
+        CHECK(gtos_process_memory_test_invalidations == 0);
+        CHECK(first.Discard(handle, 0, 4096)); CHECK(gtos_process_memory_test_invalidations == 0);
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryReadWrite)); CHECK(gtos_process_memory_test_invalidations == 1);
+        gtos_process_memory_test_invalidations = 0; CHECK(first.Decommit(handle, 0, 4096));
+        CHECK(gtos_process_memory_test_invalidations == 1 && gtos_process_memory_test_invalidated[0] == base);
+        gtos_process_memory_test_invalidations = 0; CHECK(first.Decommit(handle, 0, 4096)); CHECK(gtos_process_memory_test_invalidations == 0);
+        CHECK(first.SetPermissions(handle, 0, 3 * 4096, ProcessMemoryReadWrite)); CHECK(gtos_process_memory_test_invalidations == 3);
+        for (uint32_t i = 0; i < 3; ++i) CHECK(gtos_process_memory_test_invalidated[i] == base + i * 4096);
+        gtos_process_memory_test_invalidations = 0; CHECK(first.Trim(handle, 8192));
+        CHECK(gtos_process_memory_test_invalidations == 1 && gtos_process_memory_test_invalidated[0] == base + 8192);
+        const uint32_t count = used(), hash = processHash(first);
+        gtos_process_memory_test_invalidations = 0;
+        gtos_process_memory_test_bsp = false; CHECK(!first.SetPermissions(handle, 0, 4096, ProcessMemoryRead));
+        CHECK(!first.Release(handle)); gtos_process_memory_test_bsp = true;
+        gtos_process_memory_test_cr0 &= ~0x10000u; CHECK(!first.Decommit(handle, 0, 4096)); gtos_process_memory_test_cr0 |= 0x10000u;
+        gtos_process_memory_test_cr4 = 1u << 5; CHECK(!first.Discard(handle, 0, 4096)); gtos_process_memory_test_cr4 = 0;
+        CHECK(used() == count && processHash(first) == hash && !gtos_process_memory_test_invalidations);
+        gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
+        CHECK(second.Prepare(kernel, frames)); CHECK(second.Seal());
+        gtos_process_memory_test_cr3 = second.DirectoryAddress();
+        uint32_t outBase = 77, outHandle = 88; CHECK(!first.Reserve(4096, 4096, 0, outBase, outHandle));
+        CHECK(outBase == 77 && outHandle == 88); CHECK(!first.SetPermissions(handle, 0, 4096, ProcessMemoryRead));
+        CHECK(!first.Decommit(handle, 0, 4096)); CHECK(!first.Discard(handle, 0, 4096));
+        CHECK(!first.Trim(handle, 4096)); CHECK(!first.Release(handle));
+        ProcessMemoryRegionInfo out; fill((uint8_t*)&out, sizeof(out), 0x75); const ProcessMemoryRegionInfo sentinel = out;
+        CHECK(!first.QueryRegion(handle, out)); CHECK(equal((uint8_t*)&out, (uint8_t*)&sentinel, sizeof(out)));
+        CHECK(used() == count + 1 && processHash(first) == hash && !gtos_process_memory_test_invalidations);
+        gtos_process_memory_test_cr3 = first.DirectoryAddress(); CHECK(first.Release(handle));
+        CHECK(gtos_process_memory_test_invalidations == 2);
+        CHECK(gtos_process_memory_test_invalidated[0] == base && gtos_process_memory_test_invalidated[1] == base + 4096);
+        CHECK(!first.Destroy()); CHECK(first.GetLastError() == ProcessMemoryActive);
+        gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
+        CHECK(first.Destroy()); CHECK(second.Destroy()); CHECK(used() == baseline);
+    }
+    void dynamicAllocationRollback(bool existingTable, bool twoNewTables = false) {
+        CHECK(first.Prepare(kernel, frames)); CHECK(first.Seal());
+        uint32_t base = 0, handle = 0;
+        CHECK(first.Reserve(3 * 4096, 4096, (existingTable || twoNewTables) ? 0x813FF000u : 0x81000000u, base, handle));
+        uint32_t saved = 0;
+        if (existingTable) {
+            CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryRead)); saved = physical(first, base);
+            fill((uint8_t*)saved, 4096, 0x6B);
+        }
+        const ProcessMemoryRegionInfo before = region(first, handle);
+        const uint32_t original = used(), hash = processHash(first);
+        uint32_t held = 0, frame = 0;
+        while (frames.allocate(frame)) retained[held++] = frame;
+        const uint32_t required = existingTable ? 3 : (twoNewTables ? 5 : 4); // Data plus actual missing table frames.
+        gtos_process_memory_test_cr3 = first.DirectoryAddress();
+        for (uint32_t freePages = 0; freePages < required; ++freePages) {
+            const uint32_t count = used(); gtos_process_memory_test_invalidations = 0;
+            CHECK(!first.SetPermissions(handle, 0, 3 * 4096, ProcessMemoryReadWrite));
+            CHECK(first.GetLastError() == ProcessMemoryNoMemory);
+            CHECK(used() == count && processHash(first) == hash && !gtos_process_memory_test_invalidations);
+            CHECK(frames.getStatistics().freeFrames == freePages); sameRegion(first, handle, before);
+            if (existingTable) {
+                CHECK(physical(first, base) == saved && all((uint8_t*)saved, 4096, 0x6B));
+                CHECK(first.ValidateUserRange(base, 4096, false) && !first.ValidateUserRange(base, 1, true));
+            }
+            CHECK(held && frames.free(retained[--held]));
+        }
+        CHECK(first.SetPermissions(handle, 0, 3 * 4096, ProcessMemoryReadWrite));
+        CHECK(region(first, handle).residentPages == 3 && !frames.getStatistics().freeFrames);
+        CHECK(gtos_process_memory_test_invalidations == 3);
+        for (uint32_t i = 0; i < 3; ++i) CHECK(gtos_process_memory_test_invalidated[i] == base + i * 4096);
+        const uint32_t start = existingTable ? 1 : 0;
+        for (uint32_t i = start; i < 3; ++i) CHECK(all((uint8_t*)physical(first, base + i * 4096), 4096, 0));
+        if (existingTable) CHECK(all((uint8_t*)saved, 4096, 0x6B));
+        CHECK(first.Release(handle));
+        while (held) CHECK(frames.free(retained[--held]));
+        CHECK(used() == original - (existingTable ? 2u : 0u));
+        gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
+        CHECK(first.Destroy()); CHECK(used() == baseline);
+    }
+    void dynamicVirtualMemory() {
+        dynamicRegionsAndPermissions(); dynamicQuotaAndOwnership(); dynamicInvalidationsAndContext();
+        dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
+    }
 }
 extern "C" int processMemoryTests() {
     uint32_t args[] = {Arena, ArenaBytes, 3, 0x32, 0xFFFFFFFF, 0};
@@ -396,6 +662,7 @@ extern "C" int processMemoryTests() {
     if (address != BufferAlias) { print("FAIL: mmap kernel buffer alias\n"); return 1; }
     diagnostics(); initialize(); preparationAndHardware(); allocatorIdentity(); templateRejections(); isolationAndCopies();
     corruptedMappings(); exhaustionAndAliases(); lifetimeAndLimits();
+    dynamicVirtualMemory();
     print("Process memory tests: "); number(checks); print(" checks, "); number(failures); print(" failures\n");
     return failures ? 1 : 0;
 }
