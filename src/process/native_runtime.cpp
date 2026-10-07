@@ -1,4 +1,5 @@
 #include <process/native_runtime.h>
+#include <process/resources.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -271,6 +272,37 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             statistics.writtenBytes += bytes; cpu->eax = bytes;
         }
         slot->status.lastWriteResult = cpu->eax;
+        break;
+    }
+    case GTOS_SYS_RESOURCE_INFO: {
+        GtosResourceInfo info;
+        const int result = ResourceInfo(cpu->ebx, info);
+        if (result < 0) cpu->eax = (uint32_t)result;
+        else if (!slot->space.CopyToUser(cpu->ecx, &info, sizeof(info)))
+            cpu->eax = (uint32_t)GTOS_RESOURCE_ERR_BAD_ADDRESS;
+        else cpu->eax = 0;
+        break;
+    }
+    case GTOS_SYS_RESOURCE_READ: {
+        // Check the wire size before reading any user request byte. Snapshot
+        // once, so an output overlapping the request cannot alter this call.
+        if (cpu->ecx != GTOS_RESOURCE_READ_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_RESOURCE_ERR_BAD_SIZE;
+            break;
+        }
+        GtosResourceReadRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_RESOURCE_ERR_BAD_ADDRESS;
+            break;
+        }
+        ResourceReadPlan plan;
+        const int result = ResourcePlan(request, cpu->ecx, plan);
+        if (result < 0) cpu->eax = (uint32_t)result;
+        // Also copy a zero-byte plan: checked-copy retains the existing arena
+        // requirement for empty output and validates the whole actual range.
+        else if (!slot->space.CopyToUser(request.destination, plan.source, plan.bytes))
+            cpu->eax = (uint32_t)GTOS_RESOURCE_ERR_BAD_ADDRESS;
+        else cpu->eax = (uint32_t)result;
         break;
     }
     default: cpu->eax = (uint32_t)GTOS_ERR_UNSUPPORTED; break;

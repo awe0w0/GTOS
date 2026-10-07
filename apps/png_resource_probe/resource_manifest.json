@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "resource_version": 1,
+  "resource_id": 1,
+  "type": "static PNG",
+  "flags": [
+    "readonly",
+    "public"
+  ],
+  "png_bytes": 1108,
+  "width": 16,
+  "height": 16,
+  "bit_depth": 8,
+  "color_type": 6,
+  "interlace": 0,
+  "compression": "one stored DEFLATE block; 16 filter-zero scanlines",
+  "png_sha256": "87fe7012f8bc06650f725dd7f584793abf1457e490a52d6ae1de3477a2d2aaf8",
+  "png_crc32": "1d02607d",
+  "source_pixels_sha256": "f064663edd9ca6e2dfa4c2f9807de35863ac359bb31d699310559196fc60fb66",
+  "straight_rgba_sha256": "2dfbf506fe553173fc65e37e5ff5bc6b4779a01bc86799e0d7c58a97e8f7d270",
+  "bgra_sha256": "6bb6b0857c5e0fb5f04fe9e924198b9eaf39da46274362669b75de4d5a3bfbfe",
+  "premul_rgba_sha256": "e7f2b68572dd3d4ba3e25beacda3ce0a7c717534dd1c83f364962073ef17e675",
+  "oracle_header_sha256": "ce5ed05ef340348d30f0aa63b88579affd10ec9627b2a793507c4d91ad634eaa",
+  "kernel_include_sha256": "8b13fbadb31313bb8cab2567e75ea7942fb8e9a9885abe559c233e1bc540f61c",
+  "oracle_method": "Source pixels -> BGRA permutation; nearest(channel*alpha/255) by (channel*alpha+127)//255",
+  "trust": "Fixed compiled kernel rodata catalog; manifest hashes are reproducibility evidence, not authentication",
+  "origin": "New deterministic GTOS application resource; no external image or existing PNG fixture reused"
+}
