@@ -1,0 +1,49 @@
+--- a/src/base/platform/time.cc
++++ b/src/base/platform/time.cc
+@@ -39,10 +39,16 @@
+ 
+ #include "src/base/lazy-instance.h"
+ #endif
++#if !V8_OS_GTOS
+ #include "src/base/cpu/cpu.h"
++#endif
+ #include "src/base/logging.h"
++#if V8_OS_GTOS
++#include "gtos_clock_bridge.h"
++#else
+ #include "src/base/platform/mutex.h"
+ #include "src/base/platform/platform.h"
++#endif
+ 
+ #if V8_OS_STARBOARD
+ #include "starboard/common/time.h"
+@@ -752,6 +758,9 @@
+   ticks = ClockNow(CLOCK_MONOTONIC);
+ #elif V8_OS_STARBOARD
+   ticks = starboard::CurrentMonotonicTime();
++#elif V8_OS_GTOS
++  // Checked uint64 ABI conversion; the existing +1 below excludes null.
++  ticks = gtos_v8_clock_read_microseconds();
+ #else
+ #error platform does not implement TimeTicks::Now.
+ #endif  // V8_OS_DARWIN
+@@ -768,6 +777,8 @@
+ #elif V8_OS_POSIX
+   static const bool is_high_resolution = IsHighResolutionTimer(CLOCK_MONOTONIC);
+   return is_high_resolution;
++#elif V8_OS_GTOS
++  return false;  // Delivered PIT IRQ accounting has coarse resolution.
+ #else
+   return true;
+ #endif
+@@ -777,7 +788,9 @@
+ 
+ 
+ bool ThreadTicks::IsSupported() {
+-#if V8_OS_STARBOARD
++#if V8_OS_GTOS
++  return false;  // No thread CPU-time service is supplied.
++#elif V8_OS_STARBOARD
+   return starboard::CurrentMonotonicThreadTime() != 0;
+ #elif defined(__PASE__)
+   // Thread CPU time accounting is unavailable in PASE

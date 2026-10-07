@@ -26,6 +26,7 @@ namespace gtos { namespace process {
     // template must remain alive after activation (there is no deactivation API).
     // Kernel stack slots and shared mappings are retained for the kernel lifetime.
     class NativeRuntime {
+        friend struct ::gtos::NativeClockFixture;
     public:
         static const uint32_t MaximumProcesses = 4;
         static const uint32_t CodeAddress = 0x40000000U;

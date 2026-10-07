@@ -3,6 +3,7 @@
 
 #include <common/types.h>
 #include <gdt.h>
+#include <process/native_clock.h>
 
 namespace gtos {
     namespace process { class NativeRuntime; }
@@ -72,12 +73,14 @@ namespace gtos {
     class TaskManager {
         friend class Task;
         friend class process::NativeRuntime;
+        friend struct NativeClockFixture;
         private:
             Task* tasks[256];
             int numTasks;
             int currentTask;
             CPUState* bootContext;
             volatile uint32_t ticks;
+            process::NativeClockCounter clock;
             uint32_t bootTicks;
             uint32_t switches;
             GlobalDescriptorTable* nativeGdt;
@@ -108,6 +111,8 @@ namespace gtos {
             // Used by bounded syscall/fault handlers with IF clear; no fake tick.
             CPUState* Reschedule(CPUState* cpustate);
             uint32_t Ticks() const;
+            // BSP-only, preserves entering IF. Returns 0, BAD_STATE or OVERFLOW.
+            int ReadClock(GtosClockReadResult& result) const;
             uint32_t BootTicks() const;
             uint32_t ContextSwitches() const;
             int TaskCount() const;

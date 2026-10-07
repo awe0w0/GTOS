@@ -2,6 +2,7 @@
 #include <process/resources.h>
 #include <process/native_surface.h>
 #include <process/vm_abi.h>
+#include <process/clock_abi.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -269,6 +270,35 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     switch (cpu->eax) {
     case GTOS_SYS_ABI: cpu->eax = GTOS_NATIVE_ABI_VERSION; break;
     case GTOS_SYS_TICKS: cpu->eax = scheduler->Ticks(); break;
+    case GTOS_SYS_CLOCK_READ: {
+        if (cpu->ecx != GTOS_CLOCK_READ_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_CLOCK_ERR_BAD_SIZE; break;
+        }
+        GtosClockReadRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_CLOCK_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_CLOCK_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_CLOCK_ERR_UNSUPPORTED; break;
+        }
+        if (request.flags || request.result_bytes != GTOS_CLOCK_READ_RESULT_BYTES) {
+            cpu->eax = (uint32_t)GTOS_CLOCK_ERR_BAD_SIZE; break;
+        }
+        if (request.clock_id != GTOS_CLOCK_ID_MONOTONIC) {
+            cpu->eax = (uint32_t)GTOS_CLOCK_ERR_UNSUPPORTED; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosClockReadResult), true)) {
+            cpu->eax = (uint32_t)GTOS_CLOCK_ERR_BAD_ADDRESS; break;
+        }
+        GtosClockReadResult result;
+        const int status = scheduler->ReadClock(result);
+        if (status < 0) cpu->eax = (uint32_t)status;
+        // With IF clear on BSP, the fully validated output mappings cannot
+        // change. No output byte is written until request/snapshot succeed.
+        else cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
+            ? 0 : (uint32_t)GTOS_CLOCK_ERR_BAD_ADDRESS;
+        break;
+    }
     case GTOS_SYS_YIELD:
         cpu->eax = 0; ++slot->task.statistics.yields;
         return scheduler->Reschedule(cpu);

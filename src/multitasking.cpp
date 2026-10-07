@@ -32,6 +32,24 @@ namespace {
         InterruptGuard() : flags(DisableInterrupts()) {}
         ~InterruptGuard() { RestoreInterrupts(flags); }
     };
+    bool ClockBootstrapProcessor() {
+#ifdef GTOS_CPU_TEST
+        return true;
+#else
+        uint32_t before, after;
+        asm volatile("pushfl; popl %0; movl %0,%1; xorl $0x200000,%1;"
+                     "pushl %1; popfl; pushfl; popl %1; pushl %0; popfl"
+                     : "=&r"(before), "=&r"(after) : : "cc", "memory");
+        if (!((before ^ after) & 0x200000)) return false;
+        uint32_t a, b, c, d;
+        asm volatile("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(0), "c"(0));
+        if (a < 1) return false;
+        asm volatile("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(1), "c"(0));
+        if ((d & 0x220) != 0x220) return false; // APIC/MSR permit BSP identity.
+        asm volatile("rdmsr" : "=a"(a), "=d"(d) : "c"(0x1B));
+        return (a & 0x100) != 0;
+#endif
+    }
     void SelfTestEntry() {}
 }
 
@@ -75,7 +93,7 @@ uint32_t Task::AffinityMask() const { return affinityMask; }
 bool Task::UserMode() const { return userMode; }
 
 TaskManager::TaskManager() : numTasks(0), currentTask(-1), bootContext(0),
-    ticks(0), bootTicks(0), switches(0), nativeGdt(0), kernelDirectory(0), kernelCr0(0), nativeFpEnabled(false) {
+    ticks(0), clock(), bootTicks(0), switches(0), nativeGdt(0), kernelDirectory(0), kernelCr0(0), nativeFpEnabled(false) {
     for (int i = 0; i < 256; ++i) tasks[i] = 0;
 }
 TaskManager::~TaskManager() {}
@@ -191,7 +209,7 @@ CPUState* TaskManager::SelectContext(Task* task, CPUState* frame) {
 CPUState* TaskManager::Dispatch(CPUState* cpustate, bool timer) {
     // Called with IF clear on BSP. Only real PIT dispatch advances time.
     if (!cpustate) return cpustate;
-    if (timer) ++ticks;
+    if (timer) { ++ticks; clock.Advance(); }
     int previous = currentTask;
     if (currentTask >= 0) {
         Task* task = tasks[currentTask];
@@ -228,6 +246,11 @@ CPUState* TaskManager::Dispatch(CPUState* cpustate, bool timer) {
     return bootContext; // The boot slot above guarantees this is unreachable.
 }
 uint32_t TaskManager::Ticks() const { return ticks; }
+int TaskManager::ReadClock(GtosClockReadResult& result) const {
+    InterruptGuard guard;
+    if (!ClockBootstrapProcessor()) return GTOS_CLOCK_ERR_BAD_STATE;
+    return clock.Read(result);
+}
 uint32_t TaskManager::BootTicks() const { return bootTicks; }
 uint32_t TaskManager::ContextSwitches() const { return switches; }
 int TaskManager::TaskCount() const { return numTasks; }

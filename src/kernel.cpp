@@ -25,6 +25,7 @@
 #include <syscalls.h>
 #include <process/native_runtime.h>
 #include <process/native_surface.h>
+#include <process/clock_abi.h>
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::drivers;
@@ -843,9 +844,9 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     BootStage("B07", "PS2 PIT IRQ");
     keyboard.Activate();
     mouse.Activate();
-    // Explicit 100 Hz PIT, so VM/game timing is independent of loop throughput.
+    // Nominal 100 Hz PIT; the typed clock reports the actual fixed divisor.
     Port8Bit pitControl(0x43), pitData(0x40);
-    uint16_t divisor = 1193182 / 100;
+    uint16_t divisor = GTOS_CLOCK_PIT_DIVISOR;
     pitControl.Write(0x36);
     pitData.Write(divisor & 255);
     pitData.Write(divisor >> 8);
