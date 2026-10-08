@@ -95,10 +95,15 @@ namespace {
     ProcessInfoProbeRecord InfoStage(NativeRuntime& runtime, TaskManager& tasks, uint32_t id) {
         const uint32_t start = tasks.Ticks();
         for (;;) {
-            const ProcessInfoProbeRecord record = InfoRecord(runtime, id);
-            if (record.version == 1 && record.stage) {
-                NativeStatus status = {};
+            ProcessInfoProbeRecord record;
+            NativeStatus status = {};
+            {
+                // Keep the stage and liveness from the same scheduler instant.
+                InterruptGuard guard;
+                record = InfoRecord(runtime, id);
                 InfoRequire(runtime.Status(id, status), "ready caller status present");
+            }
+            if (record.version == 1 && record.stage) {
                 InterruptGuard guard;
                 printf((char*)"INFO READY id="); printfHex32(id); printf((char*)" elapsed=");
                 printfHex32(tasks.Ticks() - start); printf((char*)" queries="); printfHex32(record.raw_query_count);
@@ -107,8 +112,7 @@ namespace {
                 printfHex32(status.statistics.dispatches); printf((char*)"\n");
                 return record;
             }
-            NativeStatus status = {};
-            InfoRequire(runtime.Status(id, status) && status.live, "probe reaches complete stage without early exit");
+            InfoRequire(status.live, "probe reaches complete stage without early exit");
             if ((uint32_t)(tasks.Ticks() - start) >= 2000) {
                 InterruptGuard guard;
                 printf((char*)"INFO TIMEOUT id="); printfHex32(id); printf((char*)" elapsed=");
