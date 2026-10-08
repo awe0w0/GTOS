@@ -18,6 +18,19 @@
       "negative_observer_checks": 21,
       "sha256": "9e32d8034b1f69aa271f4a38a5e868488e97ce80e2e9f2e85007b62a76d94107",
       "victims": 32
+    },
+    "native-v8-utc-bridge-20261009-a": {
+      "bochs_sha256": "2fadf8c8a5e3eadcf74a131a6d2960b525cded321b1df99ee20ff3204b53e8c7",
+      "cold_boots": 16,
+      "exact_reaps": 56,
+      "isa_negative_checks": 5,
+      "monotonic_source_prefix_identical": true,
+      "native_isolate_pass": false,
+      "negative_observer_checks": 24,
+      "qemu_sha256": "8a3491095a92c798cf5ab15aa1494413fb5f7802e2629e2f2c11a6988d4a8bd5",
+      "qualified_bridge_object_sha256": "de1b8d5e5f6bf1db4de220ca0654916c5a5a798240eafb8189f91105c726bffc",
+      "self_review_sha256": "3f08649b162617269ee45ae0657b463f76e2645ff5f6bc8e1280089dd10f0d29",
+      "victims": 40
     }
   },
   "files": {
@@ -417,9 +430,9 @@
       "sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11"
     },
     "include/src/base/platform/gtos-clock-bridge.h": {
-      "origin": "qualified/src/base/platform/gtos-clock-bridge.h",
-      "origin_sha256": "79a999208f2e826fb3c2068c43e5246d1c1ffd3e761a7ffd79807f465b1de4cf",
-      "sha256": "79a999208f2e826fb3c2068c43e5246d1c1ffd3e761a7ffd79807f465b1de4cf"
+      "origin": "qualified-native-v8-utc/gtos-clock-bridge.h",
+      "origin_sha256": "eaf7d2e6087b841833278b788d9c86dcfc8bae538a8cebb64532b429ac29c34a",
+      "sha256": "eaf7d2e6087b841833278b788d9c86dcfc8bae538a8cebb64532b429ac29c34a"
     },
     "include/src/base/platform/gtos-native-api/abi.h": {
       "origin": "GTOS/include/process/abi.h",
@@ -435,6 +448,16 @@
       "origin": "GTOS/include/process/info_abi.h",
       "origin_sha256": "a05c914d9d52e67d1d7c521da2a252e1602dab4236e7fb8b44e23d86b4f33696",
       "sha256": "a05c914d9d52e67d1d7c521da2a252e1602dab4236e7fb8b44e23d86b4f33696"
+    },
+    "include/src/base/platform/gtos-native-api/realtime_abi.h": {
+      "origin": "qualified-native-v8-utc/realtime_abi.h",
+      "origin_sha256": "f3a419e4e5264223e69c3fa5a24820ea39b42d4e30ad7fd5c3b9e3a6629b7bdb",
+      "sha256": "f3a419e4e5264223e69c3fa5a24820ea39b42d4e30ad7fd5c3b9e3a6629b7bdb"
+    },
+    "include/src/base/platform/gtos-native-api/vm_abi.h": {
+      "origin": "qualified-native-v8-utc/vm_abi.h",
+      "origin_sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11",
+      "sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11"
     },
     "include/src/base/platform/gtos-native-services.h": {
       "origin": "qualified/src/base/platform/gtos-native-services.h",
@@ -453,9 +476,9 @@
       "sha256": "7de88b7d456189f1ea232a2b4f8bcf173089495066b45a0719a69dd410bd647e"
     },
     "runtime/gtos-clock-bridge.cc": {
-      "origin": "qualified/src/base/platform/gtos-clock-bridge.cc",
-      "origin_sha256": "c3659f8de09d288b59cc044ec9aced0b5ceb8a9dc5b817af47424100a57786f2",
-      "sha256": "c3659f8de09d288b59cc044ec9aced0b5ceb8a9dc5b817af47424100a57786f2"
+      "origin": "qualified-native-v8-utc/gtos-clock-bridge.cc",
+      "origin_sha256": "14d04b6523daa117d9bcd6d39feb64a94c5cd02724eb619b10d586e85fc04ca3",
+      "sha256": "14d04b6523daa117d9bcd6d39feb64a94c5cd02724eb619b10d586e85fc04ca3"
     },
     "runtime/heap.cc": {
       "origin": "qualified/runtime/heap.cc",
@@ -831,10 +854,13 @@
   "gtos_base": "2cb559b9079f6c9acb71e5cfd311d68aaea70ba0",
   "libcxx_revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
   "llvm_libc_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+  "previous_qualified_export_object_hashes": {
+    "gtos-clock-bridge.cc": "890f286631b31e2aac09e85f22d3eb2a0544ac452787794b20e66091f9d24a60"
+  },
   "qualified_export_object_hashes": {
     "abort.cc": "6c4793c471b6248edc46e8fe917f6d85754535948ad897e317086d74aed0e78e",
     "emutls.cc": "c98eb281017b30f715f6f864283251aab9ffdde5af49f2eb4f479f923da7c578",
-    "gtos-clock-bridge.cc": "890f286631b31e2aac09e85f22d3eb2a0544ac452787794b20e66091f9d24a60",
+    "gtos-clock-bridge.cc": "de1b8d5e5f6bf1db4de220ca0654916c5a5a798240eafb8189f91105c726bffc",
     "heap.cc": "f9d304f63e8f697f4fb4dc342862e2a5a53c22cdd2297c9b158ba5e524bdd324",
     "memory.cc": "b235581acb37fb309880d873c833d08d5b7c388e8e44d90c248bb43f834440a9",
     "operators.cc": "09f12fbe0f31776c6603e5530b6693a32b0102e2512dd57a4d8da45e715c8907",

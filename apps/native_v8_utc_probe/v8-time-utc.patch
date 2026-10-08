@@ -1,0 +1,15 @@
+--- a/src/base/platform/time.cc
++++ b/src/base/platform/time.cc
+@@ -495 +495,11 @@
+-#endif  // V8_OS_POSIX || V8_OS_STARBOARD
++#elif V8_OS_GTOS
++
++Time Time::Now() {
++  return Time(gtos_v8_realtime_read_microseconds());
++}
++
++Time Time::NowFromSystemTime() {
++  return Now();
++}
++
++#endif  // V8_OS_POSIX || V8_OS_STARBOARD || V8_OS_GTOS

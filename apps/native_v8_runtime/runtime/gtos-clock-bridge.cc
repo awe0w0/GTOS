@@ -35,3 +35,29 @@ extern "C" int64_t gtos_v8_clock_read_microseconds() {
   if (call != 0 || !gtos_v8_clock_validate(&value)) gtos_v8_clock_fatal();
   return static_cast<int64_t>(value.microseconds);
 }
+
+// UTC has its own ABI. Keep the original monotonic provider and domain intact.
+extern "C" int gtos_v8_realtime_validate(const GtosRealtimeReadResult* value) {
+  return value && value->version == GTOS_REALTIME_ABI_VERSION &&
+         value->unit == GTOS_REALTIME_UNIT_MICROSECONDS &&
+         value->source == GTOS_REALTIME_SOURCE_CMOS_PIT &&
+         value->capabilities == GTOS_REALTIME_REQUIRED_CAPABILITIES &&
+         value->resolution_us == GTOS_REALTIME_RESOLUTION_US &&
+         value->anchor_uncertainty_us == GTOS_REALTIME_ANCHOR_UNCERTAINTY_US &&
+         value->microseconds <= 0x7ffffffffffffffeULL;
+}
+
+extern "C" int64_t gtos_v8_realtime_read_microseconds() {
+  GtosRealtimeReadResult value = {};
+  GtosRealtimeReadRequest request = {
+      GTOS_REALTIME_ABI_VERSION, 0,
+      static_cast<unsigned>(reinterpret_cast<uintptr_t>(&value)), sizeof(value)};
+  unsigned call = GTOS_SYS_REALTIME_READ;
+  asm volatile("int $0x80"
+               : "+a"(call)
+               : "b"(static_cast<unsigned>(reinterpret_cast<uintptr_t>(&request))),
+                 "c"(sizeof(request))
+               : "memory", "cc");
+  if (call != 0 || !gtos_v8_realtime_validate(&value)) gtos_v8_clock_fatal();
+  return static_cast<int64_t>(value.microseconds);
+}
