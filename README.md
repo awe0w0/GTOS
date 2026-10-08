@@ -4,42 +4,40 @@
 启动器支持按字符编辑 UTF-8 文本和有范围限制的拼音候选词；这还不是通用输入法。
 详见[语言支持范围](docs/desktop-localization.md)。
 
-A 32-bit x86 educational operating system, developed on the `dev` branch.
-The current foundation milestone includes a real 800×600 windowed desktop, hardware monitor,
-validated memory allocators, page-level kernel protection, bounded multicore kernel workers,
-a timer-driven BSP scheduler, safe dedicated ATA app
-storage, and an externally packaged playable Catch game.
+GTOS 是一个在 `dev` 分支开发的 32 位 x86 教学操作系统。
+当前基础阶段已实现真实的 800×600 窗口桌面、硬件监视器、经过验证的内存分配器、
+内核页级保护、有界多核内核工作线程、定时器驱动的 BSP 调度器、安全的专用 ATA
+应用存储，以及独立打包、可以游玩的 Catch 游戏。
 
-This is an evolving OS, not a production operating system. The current desktop supports movable/resizable windows, launcher search,
-minimize/restore, appearance settings and installable apps. A legacy 320×200
-fallback is retained. Bounded native ELF32 processes now have separate CPL3 address
-spaces, checked system calls and recoverable user faults. General AP scheduling,
-a full filesystem/POSIX runtime, persistent sessions and richer desktop services
-remain explicit roadmap work.
-See [the engineering roadmap](docs/ROADMAP.md).
+项目仍在持续开发，尚不适合作为生产操作系统使用。当前桌面支持移动和调整窗口大小、
+搜索启动器、最小化与恢复、外观设置和应用安装，并保留旧版 320×200 显示回退模式。
+有界原生 ELF32 进程现在具有独立的 CPL3 地址空间、经过检查的系统调用和可恢复的
+用户态故障。通用 AP 调度、完整文件系统/POSIX 运行时、持久化会话和更丰富的桌面服务
+仍是路线图中的待办工作。
+详见[工程路线图](docs/ROADMAP.md)。
 
-## Build and run
+## 构建与运行
 
-Requirements: GNU g++/binutils with i386 freestanding support, GRUB i386-pc tools,
-xorriso, mtools, Python 3, and QEMU x86. No C++ standard library or multilib libc is needed.
+需要支持 i386 独立环境的 GNU g++/binutils、GRUB i386-pc 工具、
+xorriso、mtools、Python 3 和 QEMU x86。无需 C++ 标准库或 multilib libc。
 
 ```sh
 make GTOS.iso
 ./tools/run-qemu.sh
 ```
 
-The runner creates a NEW dedicated 8 MiB app-store image at `data/apps.img` if it
-does not exist, then keeps it across runs and build cleanup. It never attaches a host block device.
-The kernel refuses to format arbitrary media. This experimental disk format is
-not FAT/ext4 and must not be pointed at a valuable image or physical disk.
+运行脚本会在 `data/apps.img` 不存在时创建一个新的专用 8 MiB 应用存储镜像，
+并在多次运行和构建清理之间保留它。脚本不会挂载主机块设备。
+内核拒绝格式化任意介质。这个实验性磁盘格式不是 FAT/ext4，
+不可将其指向有价值的镜像或物理磁盘。
 
-For a headless environment:
+在无图形显示的环境中运行：
 
 ```sh
 QEMU_DISPLAY=none ./tools/run-qemu.sh
 ```
 
-QMP is available on standard input. Example commands after the initial greeting:
+可通过标准输入使用 QMP。收到初始欢迎消息后，可发送以下示例命令：
 
 ```json
 {"execute":"qmp_capabilities"}
@@ -48,54 +46,54 @@ QMP is available on standard input. Example commands after the initial greeting:
 {"execute":"quit"}
 ```
 
-The script supports `GTOS_LEGACY=1` for the VGA fallback, `GTOS_MEMORY=32M`, `GTOS_CPUS=4`, `GTOS_DISK=/path/to/image`,
-and an optional sibling `gtos-runtime` rootless toolchain. The ISO boot is required;
-QEMU direct `-kernel` is not the supported Multiboot launch path.
+脚本支持用 `GTOS_LEGACY=1` 启用 VGA 回退模式，也支持 `GTOS_MEMORY=32M`、
+`GTOS_CPUS=4`、`GTOS_DISK=/path/to/image`，
+以及可选的同级目录 `gtos-runtime` 无 root 权限工具链。必须从 ISO 启动；
+不支持用 QEMU 的 `-kernel` 参数直接进行 Multiboot 启动。
 
-## Desktop and game
+## 桌面与游戏
 
-- Mouse focuses windows; drag titlebars, resize lower-right corners, or use title controls
-- `1`/`H`: Home; `2`/`M`: hardware monitor; `3`: applications; `4`: appearance
-- `L`: searchable launcher; `Tab`: cycle windows; `[` minimizes, `]` maximizes/restores
-- In Appearance, choose English/简体中文 or press `C`; language and theme persist
-- Chinese launcher: type pinyin, select1–9 or Space/Enter; backtick toggles direct input
-- `I`: install the external Catch package from the boot ISO
-- `Up`/`Down`: select an installed app; `Enter`/`G`: launch
-- `U`: ask to remove the selected app; Enter confirms, Esc cancels
-- In Catch: arrows or `A`/`D` move the paddle; catch falling blocks for points
-- `R` or `Space`: restart the game; `Esc` or the window close button: return to apps
+- 点击窗口可使其获得焦点；拖动标题栏可移动窗口，拖动右下角可调整大小，也可使用标题栏控件
+- `1`/`H`：主页；`2`/`M`：硬件监视器；`3`：应用；`4`：外观
+- `L`：搜索启动器；`Tab`：切换窗口；`[`：最小化；`]`：最大化或恢复
+- 在外观设置中选择 English/简体中文，或按 `C`；语言和主题会持久保存
+- 中文启动器：输入拼音，按 1–9 或空格/回车选择候选词；反引号切换直接输入
+- `I`：从启动 ISO 安装独立的 Catch 应用包
+- `Up`/`Down`：选择已安装应用；`Enter`/`G`：启动
+- `U`：请求移除所选应用；回车确认，Esc 取消
+- Catch 游戏中使用方向键或 `A`/`D` 移动挡板，接住下落方块得分
+- `R` 或空格：重新开始；`Esc` 或窗口关闭按钮：返回应用列表
 
-Installations and removals survive reboot. The game is bytecode in
-`apps/catch.gtapp`, built from `apps/catch.json`; game logic is not built into the
-kernel. See [the app protocol](docs/apps.md) and [storage format](docs/storage.md).
+应用安装和移除会在重启后保留。游戏逻辑是由 `apps/catch.json` 构建的
+`apps/catch.gtapp` 字节码，并未内置到内核中。
+详见[应用协议](docs/apps.md)和[存储格式](docs/storage.md)。
 
-## Native userspace foundation
+## 原生用户态基础
 
-The boot ISO also carries two independently compiled ELF32 programs from
-`apps/native/` plus the application-side `apps/browser_probe/` ABI fixture. They execute at CPL3 with different page directories and private
-data at the same virtual addresses. One deliberately faults on a kernel-page
-write; the peer continues and exits normally. The kernel checks both results and
-requires the independent ABI fixture to exit0, then reclaims all three processes
-back to the exact free-frame baseline before reporting
-`NATIVE RUNTIME PASS`. The intentional `NATIVE USER FAULT` diagnostic is part of
-this acceptance test, not an unexpected kernel crash.
+启动 ISO 还包含 `apps/native/` 中两个独立编译的 ELF32 程序，
+以及应用侧的 `apps/browser_probe/` ABI 测试程序。它们在 CPL3 下运行，使用不同的
+页目录，在相同虚拟地址上保存各自的私有数据。一个程序会故意写入内核页并触发故障；
+另一个程序继续运行并正常退出。内核检查两者的结果，并要求独立 ABI 测试程序以
+退出码 0 结束，随后回收全部三个进程，恢复到精确的空闲物理页基线，再报告
+`NATIVE RUNTIME PASS`。预期出现的 `NATIVE USER FAULT` 诊断属于验收测试，
+并非意外的内核崩溃。
 
-The default is an experimental integer-only ABI with four process slots, bounded
-image sizes, checked console writes, ticks, yield and exit. An optional
-[legacy FP ownership profile](docs/native-fp.md) is separately tested and remains
-disabled by default. Non-PAE paging has no NX; TLS, dynamic linking, general
-files/threads and a browser runtime are not provided by this proof. Native ELF installation through the bytecode app store
-is not claimed. See [process contract](docs/native-processes.md),
-[process memory](docs/process-memory.md), and [ELF validation](docs/elf32-loader.md).
+默认配置是实验性的纯整数 ABI，具有四个进程槽、有界镜像大小，以及经过检查的
+控制台写入、时钟 tick、yield 和 exit 操作。可选的
+[旧版 FP 所有权配置](docs/native-fp.md)单独进行测试，默认仍关闭。
+非 PAE 分页没有 NX；该证明不提供 TLS、动态链接、通用文件/线程和浏览器运行时。
+目前也不宣称支持通过字节码应用存储安装原生 ELF。
+详见[进程契约](docs/native-processes.md)、
+[进程内存](docs/process-memory.md)和[ELF 验证](docs/elf32-loader.md)。
 
-## Separate x86-64 foundation
+## 独立的 x86-64 基础
 
-An explicitly built [x64 target](arch/x86_64/README.md) now proves BIOS/GRUB
-long-mode entry, four-level supervisor W^X mappings, NX/WP and guarded exception
-stacks. Its [physical frame pool](arch/x86_64/FRAME_POOL.md) selects real available
-RAM from validated boot information, excludes live allocations, zeroes frames,
-and tests exact ownership/reuse and reclamation. The initial pool manages at most
-8 MiB below64 MiB; this is a bounded service proof, not all available machine RAM.
+通过显式构建的 [x64 目标](arch/x86_64/README.md)，已验证 BIOS/GRUB
+长模式入口、四级内核态 W^X 映射、NX/WP 和带 guard 的异常栈。
+其[物理页池](arch/x86_64/FRAME_POOL.md)从经过验证的启动信息中选择真实可用内存，
+排除仍在使用的分配、清零物理页，并测试精确的所有权、复用与回收。
+初始页池最多管理 64 MiB 地址以下的 8 MiB 内存；这是有界服务证明，
+并不涵盖机器上的全部可用内存。
 
 ```sh
 make -f arch/x86_64/Makefile
@@ -103,24 +101,24 @@ python3 arch/x86_64/tests/boot_qemu.py --output /tmp/gtos-x64-boot-new
 python3 arch/x86_64/tests/frame_qemu.py --output /tmp/gtos-x64-frames-new
 ```
 
-A separately enabled [sparse VM core](arch/x86_64/SPARSE_VM.md) now reserves
-large virtual intervals without proportional backing, commits zeroed pages,
-protects R/RW/NONE, and decommits/releases with checked ownership and rollback.
-Lifecycle operations now include deterministic discard, owned reset, exact trim,
-split and punch with explicit lifetime and unchanged-neighbor guarantees.
-Its tests reserve roughly 1.35 TiB while backing only selected pages; this is
-virtual space, not physical RAM. Run the full guest gate with:
+单独启用的[稀疏 VM 核心](arch/x86_64/SPARSE_VM.md)现在可以保留大范围虚拟地址区间，
+无需分配等比例的物理内存；它可提交清零页、设置 R/RW/NONE 保护，
+并在检查所有权的前提下解除提交或释放，失败时进行回滚。
+生命周期操作还包括确定性的 discard、具有所有权约束的 reset、精确 trim、
+split 和 punch，并明确保证生命周期及相邻区域不受影响。
+测试会保留约 1.35 TiB 虚拟空间，但只为选定页提供物理内存；
+这是虚拟地址空间，并非物理 RAM。运行完整 guest 验收：
 
 ```sh
 python3 arch/x86_64/tests/vm_qemu.py --output /tmp/gtos-x64-vm-new
 ```
 
-This remains a BSP-only supervisor service with fixed metadata and commit limits.
-It has no user ABI, desktop, threads, executable/JIT mappings or browser.
-[Private x64 userspace gates](docs/x64-user-runtime.md) are the next architecture
-work; the working i386 desktop and its test suite remain maintained.
+它仍是仅由 BSP 使用的内核态服务，具有固定的元数据和提交上限，
+不提供用户 ABI、桌面、线程、可执行/JIT 映射或浏览器。
+[私有 x64 用户态门禁](docs/x64-user-runtime.md)是后续架构工作；
+现有 i386 桌面及其测试套件继续维护。
 
-## Verification
+## 验证
 
 ```sh
 make test
@@ -130,34 +128,35 @@ make GTOS-legacy.iso
 python3 tests/qemu_smoke.py --iso GTOS-legacy.iso --output /tmp/gtos-legacy-new
 ```
 
-The deterministic suite tests the actual i386 allocator/scheduler/VM/store code.
-If the host cannot execute i386 Linux binaries, install official `qemu-user` and
-make `qemu-i386` available on PATH. QEMU acceptance also uses Pillow for screenshot
-and actual paddle-motion assertions. Use a fresh output directory each run.
+确定性测试套件验证真实的 i386 分配器、调度器、VM 和存储代码。
+如果主机无法执行 i386 Linux 二进制文件，可安装官方 `qemu-user`，
+并将 `qemu-i386` 放到 PATH 中。QEMU 验收还使用 Pillow 检查截图和真实挡板运动。
+每次运行都应使用新的输出目录。
 
-Acceptance covers 32/64/128 MiB, one/four firmware CPUs, boot allocator checks,
-real scheduler sleep/yield/return, GUI keyboard input, app install/launch/restart,
-actual game paddle movement, and install/removal/reinstall across fresh VM boots.
-The debug log and monitor distinguish detected CPUs, ready/busy/failed AP workers,
-completed jobs and BSP-only general scheduling. Each ready AP repeatedly executes
-a bounded integer job whose result and hardware APIC identity the BSP verifies. Safe AP startup is tested on one/two/four/eight CPUs;
-missing-AP timeouts and no-APIC rejection are tested too. The worker pool additionally
-verifies shared paging, cache compatibility, per-worker faults and continued BSP
-timers. See [the worker contract](docs/cpu-work-pool.md).
+验收涵盖 32/64/128 MiB 内存、一个或四个固件 CPU、启动分配器检查、
+真实调度器的 sleep/yield/return、GUI 键盘输入、应用安装/启动/重启、
+真实游戏挡板运动，以及在全新虚拟机启动之间安装、移除和重新安装应用。
+调试日志和监视器会区分已检测 CPU、就绪/忙碌/失败的 AP 工作线程、
+已完成任务和仅由 BSP 执行的通用调度。每个就绪 AP 会反复执行有界整数任务，
+BSP 则验证结果和硬件 APIC 身份。安全 AP 启动已在一、二、四、八个 CPU 上测试，
+还测试了缺失 AP 的超时和无 APIC 时的拒绝行为。
+工作池另外验证了共享分页、缓存兼容性、每个工作线程的故障处理以及 BSP 定时器继续运行。
+详见[工作线程契约](docs/cpu-work-pool.md)。
 
-The default build uses -O2. Use `make OPTIMIZATION=-O0` for an unoptimized build
-after `make clean`. App data under `data/` survives build cleanup.
+默认构建使用 -O2。需要未优化构建时，在 `make clean` 后运行
+`make OPTIMIZATION=-O0`。`data/` 下的应用数据不会被构建清理删除。
 
-The BSP now enables real non-PAE paging: page zero is absent, kernel text/rodata
-are read-only with CR0.WP, and device mappings are explicit. The bounded native
-process layer adds separate user address spaces on top of that shared template;
-the i386 non-PAE target still has no NX protection.
+BSP 现在启用了真实的非 PAE 分页：第零页不存在，
+内核 text/rodata 在 CR0.WP 启用时为只读，设备映射均显式配置。
+有界原生进程层在这一共享模板之上增加了独立用户地址空间；
+i386 非 PAE 目标仍不具备 NX 保护。
 
-The Chinese atlas covers every localized interface/candidate string; arbitrary
-Unicode/CJK coverage and a general-purpose IME remain future work.
+中文字符图集覆盖每条本地化界面和候选词字符串；
+任意 Unicode/CJK 字符覆盖以及通用输入法仍是未来工作。
 
-More details: [language/input](docs/desktop-localization.md), [settings](docs/settings.md), [desktop](docs/desktop.md), [paging](docs/paging.md), [memory](docs/memory-management.md), [CPU/scheduler](docs/cpu-management.md).
+更多内容：[语言与输入](docs/desktop-localization.md)、[设置](docs/settings.md)、
+[桌面](docs/desktop.md)、[分页](docs/paging.md)、[内存](docs/memory-management.md)、
+[CPU 与调度器](docs/cpu-management.md)。
 
-The [native Chromium project](docs/BROWSER_PORT.md) is progressing through
-verified kernel/API prerequisites and a separate Linux reference build. Chromium
-and webpage rendering have not yet run inside GTOS.
+[原生 Chromium 项目](docs/BROWSER_PORT.md)正在通过已验证的内核/API 前置条件和独立
+Linux 参考构建逐步推进。Chromium 和网页渲染尚未在 GTOS 中运行。

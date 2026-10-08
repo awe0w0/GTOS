@@ -3,6 +3,7 @@
 #include <process/native_surface.h>
 #include <process/vm_abi.h>
 #include <process/clock_abi.h>
+#include <process/info_abi.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -297,6 +298,34 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         // change. No output byte is written until request/snapshot succeed.
         else cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
             ? 0 : (uint32_t)GTOS_CLOCK_ERR_BAD_ADDRESS;
+        break;
+    }
+    case GTOS_SYS_PROCESS_INFO: {
+        if (cpu->ecx != GTOS_PROCESS_INFO_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;
+        }
+        GtosProcessInfoRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_PROCESS_INFO_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_UNSUPPORTED; break;
+        }
+        if (request.flags || request.result_bytes != GTOS_PROCESS_INFO_RESULT_BYTES) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosProcessInfoResult), true)) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
+        }
+        const GtosProcessInfoResult result = {GTOS_PROCESS_INFO_ABI_VERSION,
+            slot->status.id, slot->status.id, UserStackBottom, UserStackTop,
+            ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
+            GTOS_VM_PAGE_BYTES, ProcessAddressSpace::MaximumPages,
+            ProcessAddressSpace::MaximumRegions, 1, 1};
+        // The request was consumed before any write. IF is clear on BSP, so
+        // full output validation also covers aliases and mixed-page failures.
+        cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
+            ? 0 : (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS;
         break;
     }
     case GTOS_SYS_YIELD:

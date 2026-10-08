@@ -27,6 +27,8 @@ jobs:
         run: ./tests/native_process_smoke.sh
       - name: Verify owned native data-page VM and process reclamation
         run: ./tests/native_vm_smoke.sh "$RUNNER_TEMP/gtos-native-vm"
+      - name: Verify native caller identity, stack bounds and reclamation
+        run: ./tests/native_process_info_smoke.sh "$RUNNER_TEMP/gtos-native-process-info"
       - name: Diagnose enabled FP users with modern desktop and AP workers
         # Supplementary pointer-qualified QEMU evidence, not strict FP acceptance.
         # The strict x87 pointer/#MF/#XM/reserved-MXCSR matrix is run with Bochs.
