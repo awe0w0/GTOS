@@ -145,6 +145,10 @@ bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descript
     tasks.nativeFpEnabled = fp.Enabled();
     asm volatile("mov %%cr0,%0" : "=r"(tasks.kernelCr0));
     descriptors.LoadTaskState(StackTop(0));
+    GtosClockReadResult clock = {};
+    NativeRtcSnapshot calendar;
+    if (scheduler->ReadClock(clock) == 0 && ReadNativeRtc(calendar))
+        realtime.Initialize(calendar, clock);
     enabled = true; active = this;
     return true;
 }
@@ -298,6 +302,32 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         // change. No output byte is written until request/snapshot succeed.
         else cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
             ? 0 : (uint32_t)GTOS_CLOCK_ERR_BAD_ADDRESS;
+        break;
+    }
+    case GTOS_SYS_REALTIME_READ: {
+        if (cpu->ecx != GTOS_REALTIME_READ_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_REALTIME_ERR_BAD_SIZE; break;
+        }
+        GtosRealtimeReadRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_REALTIME_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_REALTIME_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_REALTIME_ERR_UNSUPPORTED; break;
+        }
+        if (request.flags || request.result_bytes != GTOS_REALTIME_READ_RESULT_BYTES) {
+            cpu->eax = (uint32_t)GTOS_REALTIME_ERR_BAD_SIZE; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosRealtimeReadResult), true)) {
+            cpu->eax = (uint32_t)GTOS_REALTIME_ERR_BAD_ADDRESS; break;
+        }
+        GtosClockReadResult clock;
+        GtosRealtimeReadResult result;
+        const int clockStatus = scheduler->ReadClock(clock);
+        const int status = clockStatus < 0 ? clockStatus : realtime.Read(clock, result);
+        if (status < 0) cpu->eax = (uint32_t)status;
+        else cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
+            ? 0 : (uint32_t)GTOS_REALTIME_ERR_BAD_ADDRESS;
         break;
     }
     case GTOS_SYS_PROCESS_INFO: {

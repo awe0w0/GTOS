@@ -167,3 +167,6 @@ Linux 参考构建逐步推进。Chromium 和网页渲染尚未在 GTOS 中运�
 new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任务锁和线程身份接口。
 来源锁与独立构建工具固定实际已执行对象，必须显式启用私有诊断 ABI。
 完整 V8 Isolate、Chromium 网页浏览、视频播放和 HTML5 仍未在 GTOS 中运行。
+
+原生进程新增[RTC/PIT UTC 只读接口](docs/native-realtime.md)，独立于既有单调 ABI。
+已验证日历格式、实际 CPL3 边界和资源回收；它尚未接入完整 Chromium/V8 浏览器。

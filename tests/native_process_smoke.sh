@@ -27,7 +27,7 @@ command -v "$grub" >/dev/null 2>&1 || { echo 'grub-mkrescue is required' >&2; ex
 as --32 tests/native_process_elf.s -o "$work/elf-fixture.tmp"
 ld -melf_i386 -T tests/native_process_elf.ld -o "$work/fixture.elf" "$work/elf-fixture.tmp"
 for optimization in 0 2; do
-for source in src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecommunication/interrupts.cpp src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/resources.cpp src/process/native_surface.cpp src/process/native_fp.cpp src/process/elf32.cpp src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp \
+for source in src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecommunication/interrupts.cpp src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/native_realtime.cpp src/process/resources.cpp src/process/native_surface.cpp src/process/native_fp.cpp src/process/elf32.cpp src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp \
     src/memory/bootstrap.cpp tests/native_process_smoke.cpp; do
     ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O"$optimization" -ffreestanding -nostdlib -fno-builtin \
         -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie \

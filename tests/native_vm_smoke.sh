@@ -33,7 +33,7 @@ source_manifest() {
         find include -type f -print
         printf '%s\n' src/gdt.cpp src/multitasking.cpp src/syscalls.cpp \
             src/hardwarecommunication/interrupts.cpp src/hardwarecommunication/port.cpp \
-            src/hardwarecommunication/interruptstubs.s src/process/native_runtime.cpp \
+            src/hardwarecommunication/interruptstubs.s src/process/native_runtime.cpp src/process/native_realtime.cpp \
             src/process/resources.cpp src/process/resources_png.inc src/process/native_surface.cpp \
             src/process/native_fp.cpp src/process/native_fp.s src/process/elf32.cpp \
             src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp src/memory/bootstrap.cpp \
@@ -50,7 +50,7 @@ for optimization in 0 2; do
     level="$out/O$optimization"
     mkdir -p "$level/kernel" "$level/probes" "$level/iso/boot/grub"
     sources=(src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecommunication/interrupts.cpp
-        src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/resources.cpp
+        src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/native_realtime.cpp src/process/resources.cpp
         src/process/native_surface.cpp src/process/native_fp.cpp src/process/elf32.cpp
         src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp
         src/memory/bootstrap.cpp tests/native_vm_smoke.cpp)

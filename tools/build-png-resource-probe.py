@@ -190,7 +190,7 @@ try:
     paths.update(('tools/build-png-resource-probe.py','tools/generate-native-png-resource.py',
                   'include/process/abi.h','include/process/resource_abi.h','include/process/resources.h',
                   'src/process/resources.cpp','src/process/resources_png.inc',
-                  'src/process/native_runtime.cpp','src/kernel.cpp','src/process/elf32.cpp',
+                  'src/process/native_runtime.cpp','src/process/native_realtime.cpp','src/kernel.cpp','src/process/elf32.cpp',
                   'apps/wuffs_gif_probe/validation_host.c','apps/wuffs_gif_probe/validation_host.cpp',
                   'tools/audit-kernel-instructions.py','tools/browser_artifact.py'))
     state['source_sha256']={name:sha(repo/name) for name in sorted(paths)}

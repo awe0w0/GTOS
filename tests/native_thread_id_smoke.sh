@@ -101,7 +101,7 @@ for i,arg in enumerate(args):
 emit(out/'actual-input-preflight.json',dict(all_formal_static_bindings_verified=True,qualified_input_count=len(qualified_input_hashes),bindings=bindings))
 emit(out/'qualified-input-hashes.json',qualified_input_hashes)
 (out/'external-inputs.txt').write_text(''.join(str(Path(a).resolve())+'\n' for a in args))
-sources=['src/gdt.cpp','src/multitasking.cpp','src/syscalls.cpp','src/hardwarecommunication/interrupts.cpp','src/hardwarecommunication/port.cpp','src/process/native_runtime.cpp','src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/elf32.cpp','src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp','tests/native_thread_id_smoke.cpp']
+sources=['src/gdt.cpp','src/multitasking.cpp','src/syscalls.cpp','src/hardwarecommunication/interrupts.cpp','src/hardwarecommunication/port.cpp','src/process/native_runtime.cpp','src/process/native_realtime.cpp','src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/elf32.cpp','src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp','tests/native_thread_id_smoke.cpp']
 assembly=['tests/native_process_loader.s','src/process/native_fp.s','src/hardwarecommunication/interruptstubs.s']
 helpers='apps/native_clock_probe/memory.cc'
 inputs={p for p in (repo/'include').rglob('*') if p.is_file()}

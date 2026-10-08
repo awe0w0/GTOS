@@ -90,7 +90,7 @@ def main():
             expected_sources[name] = value
     for name in ('include/process/resource_abi.h', 'include/process/resources.h',
                  'src/process/resources.cpp', 'src/process/resources_png.inc',
-                 'src/process/native_runtime.cpp', 'src/kernel.cpp',
+                 'src/process/native_runtime.cpp','src/process/native_realtime.cpp', 'src/kernel.cpp',
                  'include/process/surface_abi.h', 'include/process/native_surface.h',
                  'src/process/native_surface.cpp', 'include/gui/native_image.h',
                  'include/gui/modern_geometry.h', 'include/gui/modern_desktop.h',

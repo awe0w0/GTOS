@@ -84,7 +84,7 @@ def main():
             expected_sources[name] = value
     for name in ('include/process/resource_abi.h', 'include/process/resources.h',
                  'src/process/resources.cpp', 'src/process/resources_png.inc',
-                 'src/process/native_runtime.cpp', 'apps/png_image_codec/png_decode.c',
+                 'src/process/native_runtime.cpp','src/process/native_realtime.cpp', 'apps/png_image_codec/png_decode.c',
                  'apps/png_image_codec/png_pixel.cc'):
         require(name in expected_sources, 'Required resource/codec source proof missing: ' + name)
     require(any(name.startswith('apps/png_resource_probe/') for name in expected_sources),

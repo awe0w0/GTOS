@@ -213,7 +213,7 @@ try:
     assert re.fullmatch('[0-9a-f]{40}', head)
     sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
                'src/hardwarecommunication/interrupts.cpp', 'src/hardwarecommunication/port.cpp',
-               'src/process/native_runtime.cpp', 'src/process/resources.cpp', 'src/process/native_surface.cpp',
+               'src/process/native_runtime.cpp','src/process/native_realtime.cpp', 'src/process/resources.cpp', 'src/process/native_surface.cpp',
                'src/process/native_fp.cpp', 'src/process/elf32.cpp', 'src/memory/process_address_space.cpp',
                'src/memory/paging.cpp', 'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
                'tests/native_process_info_smoke.cpp']

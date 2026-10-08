@@ -292,7 +292,7 @@ try:
     state['remaining_input_origins']=closure
     state['generated_sdk_and_derived_sha256']=generated_inputs
     source_paths=set(p for p in app.rglob('*') if p.is_file() and '__pycache__' not in p.parts)
-    source_paths.update((repo/'tools/build-v8-page-allocator-probe.py',repo/'include/process/abi.h',repo/'include/process/vm_abi.h',repo/'include/process/native_runtime.h',repo/'include/memory/process_address_space.h',repo/'src/memory/process_address_space.cpp',repo/'src/process/native_runtime.cpp',repo/'src/process/elf32.cpp',repo/'tools/audit-kernel-instructions.py',repo/'tools/browser_artifact.py'))
+    source_paths.update((repo/'tools/build-v8-page-allocator-probe.py',repo/'include/process/abi.h',repo/'include/process/vm_abi.h',repo/'include/process/native_runtime.h',repo/'include/memory/process_address_space.h',repo/'src/memory/process_address_space.cpp',repo/'src/process/native_runtime.cpp',repo/'src/process/native_realtime.cpp',repo/'include/process/native_realtime.h',repo/'include/process/realtime_abi.h',repo/'src/process/elf32.cpp',repo/'tools/audit-kernel-instructions.py',repo/'tools/browser_artifact.py'))
     source_paths={p for p in source_paths if p.exists()}
     state['source_sha256']={str(p.relative_to(repo)):sha(p) for p in sorted(source_paths)}
     state['compiled_input_sha256']={str(p):sha(p) for p in sorted(dependencies)}

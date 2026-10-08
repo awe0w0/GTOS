@@ -146,7 +146,7 @@ def scalar_audit(elf,map_path,owners):
 source_paths=set(p for tree in (app,) for p in tree.rglob('*') if p.is_file() and '__pycache__' not in p.parts)
 source_paths.update(p for p in (repo/'apps/native_heap').rglob('*') if p.is_file())
 source_paths.add(repo/'apps/native_thread_id_probe/record.h')
-source_paths.update((repo/'tools/build-v8-thread-id-probe.py',repo/'include/process/abi.h',repo/'include/multitasking.h',repo/'src/multitasking.cpp',repo/'include/process/vm_abi.h',repo/'include/process/native_runtime.h',repo/'include/memory/process_address_space.h',repo/'src/memory/process_address_space.cpp',repo/'src/process/native_runtime.cpp',repo/'src/process/elf32.cpp',repo/'tools/audit-kernel-instructions.py',repo/'tools/browser_artifact.py'))
+source_paths.update((repo/'tools/build-v8-thread-id-probe.py',repo/'include/process/abi.h',repo/'include/multitasking.h',repo/'src/multitasking.cpp',repo/'include/process/vm_abi.h',repo/'include/process/native_runtime.h',repo/'include/memory/process_address_space.h',repo/'src/memory/process_address_space.cpp',repo/'src/process/native_runtime.cpp',repo/'src/process/native_realtime.cpp',repo/'include/process/native_realtime.h',repo/'include/process/realtime_abi.h',repo/'src/process/elf32.cpp',repo/'tools/audit-kernel-instructions.py',repo/'tools/browser_artifact.py'))
 source_paths={p for p in source_paths if p.exists()}
 initial_source_sha256={p:sha(p) for p in source_paths}
 try:

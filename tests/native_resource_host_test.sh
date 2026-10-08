@@ -20,7 +20,7 @@ compiler="${CXX:-g++}"
 printf 'CXX=%q bash %q %q %q\n' "$compiler" "$repo/tests/native_resource_host_test.sh" "$expected" "${out}-reproduced" > "$out/reproduce.sh"
 sha256sum "$repo/include/process/resource_abi.h" "$repo/include/process/resources.h" \
   "$repo/src/process/resources.cpp" "$repo/src/process/resources_png.inc" \
-  "$repo/src/process/native_runtime.cpp" "$repo/tests/native_resource_host.cpp" \
+  "$repo/src/process/native_runtime.cpp" "$repo/src/process/native_realtime.cpp" "$repo/include/process/native_realtime.h" "$repo/include/process/realtime_abi.h" "$repo/tests/native_resource_host.cpp" \
   "$repo/tests/native_resource_host_test.sh" "$expected" > "$out/source-hashes.txt"
 for level in 0 2; do
   "$compiler" -std=c++11 -O"$level" -g -Wall -Wextra -Werror -pedantic \

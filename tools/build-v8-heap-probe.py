@@ -141,7 +141,7 @@ def scalar_audit(elf,map_path,owners):
         classifier_sha256=sha(repo/'tools/audit-kernel-instructions.py'))
 
 source_paths=set(p for tree in (app,repo/'apps/native_heap') for p in tree.rglob('*') if p.is_file() and '__pycache__' not in p.parts)
-source_paths.update((repo/'tools/build-v8-heap-probe.py',repo/'include/process/abi.h',repo/'include/process/vm_abi.h',repo/'include/process/native_runtime.h',repo/'include/memory/process_address_space.h',repo/'src/memory/process_address_space.cpp',repo/'src/process/native_runtime.cpp',repo/'src/process/elf32.cpp',repo/'tools/audit-kernel-instructions.py',repo/'tools/browser_artifact.py'))
+source_paths.update((repo/'tools/build-v8-heap-probe.py',repo/'include/process/abi.h',repo/'include/process/vm_abi.h',repo/'include/process/native_runtime.h',repo/'include/memory/process_address_space.h',repo/'src/memory/process_address_space.cpp',repo/'src/process/native_runtime.cpp',repo/'src/process/native_realtime.cpp',repo/'include/process/native_realtime.h',repo/'include/process/realtime_abi.h',repo/'src/process/elf32.cpp',repo/'tools/audit-kernel-instructions.py',repo/'tools/browser_artifact.py'))
 source_paths={p for p in source_paths if p.exists()}
 initial_source_sha256={p:sha(p) for p in source_paths}
 try:

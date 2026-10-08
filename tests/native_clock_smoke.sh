@@ -67,7 +67,7 @@ def run(argv,log,timeout=None):
 for tool,name in ((cxx,'gcc'),(qemu,'qemu'),(grub,'grub')):run([tool,'--version'],out/(name+'-version.txt'))
 emit(out/'python-version.json',dict(executable=sys.executable,version=sys.version))
 # Read the worktree metadata only; no Git command, mutation or cleanup.
-gitref=(repo/'.git').read_text().strip()
+gitref=(repo/'.git').read_text().strip() if (repo/'.git').is_file() else ''
 gitdir=Path(gitref.removeprefix('gitdir: ').strip()) if gitref.startswith('gitdir: ') else repo/'.git'
 head=(gitdir/'HEAD').read_text().strip()
 if head.startswith('ref: '):
@@ -88,7 +88,7 @@ for mode,arg in enumerate(args):
     external.append(elf);bindings.append(dict(mode=mode,elf=str(elf),sha256=sha(elf),manifest=str(mfile),manifest_sha256=sha(mfile),whole_stack_status=str(proofpath),whole_stack_status_sha256=sha(proofpath),formal_static_proof_verified=True))
 emit(out/'actual-input-preflight.json',dict(formal_upstream_inputs=bool(external),bindings=bindings))
 (out/'external-inputs.txt').write_text(''.join(str(e)+'\n' for e in external))
-sources=['src/gdt.cpp','src/multitasking.cpp','src/syscalls.cpp','src/hardwarecommunication/interrupts.cpp','src/hardwarecommunication/port.cpp','src/process/native_runtime.cpp','src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/elf32.cpp','src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp','tests/native_clock_smoke.cpp']
+sources=['src/gdt.cpp','src/multitasking.cpp','src/syscalls.cpp','src/hardwarecommunication/interrupts.cpp','src/hardwarecommunication/port.cpp','src/process/native_runtime.cpp','src/process/native_realtime.cpp','src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/elf32.cpp','src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp','tests/native_clock_smoke.cpp']
 asm=['tests/native_process_loader.s','src/process/native_fp.s','src/hardwarecommunication/interruptstubs.s']
 inputs=set((repo/'include').rglob('*'));inputs={p for p in inputs if p.is_file()}
 inputs.update(repo/p for p in sources+asm+['src/process/resources_png.inc','tests/native_process_smoke.cpp','tests/native_process_probe_expectations.h','tests/native_process_smoke.ld','tests/native_clock_smoke.sh','tools/kernel-cxxflags','tools/audit-kernel-instructions.py'])

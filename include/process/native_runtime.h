@@ -4,6 +4,7 @@
 #include <multitasking.h>
 #include <process/abi.h>
 #include <process/native_fp.h>
+#include <process/native_realtime.h>
 namespace gtos { namespace process {
     // A bounded kernel-provided isolation fixture. This is NOT an ELF loader.
     struct NativeImage {
@@ -54,6 +55,7 @@ namespace gtos { namespace process {
         uint32_t nextId;
         NativeStatistics statistics;
         NativeFp fp;
+        NativeRealtimeClock realtime;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
         static NativeRuntime* active;
         Slot* Current();
