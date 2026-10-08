@@ -1,0 +1,68 @@
+#ifndef GTOS_ISOLATE_DIAGNOSTIC_EXTERNAL_THREADING
+#define GTOS_ISOLATE_DIAGNOSTIC_EXTERNAL_THREADING
+
+#include <__chrono/duration.h>
+#include <__config>
+#include <ctime>
+#include <stdint.h>
+
+#if !defined(__GTOS__) || !defined(__i386__) || !defined(GTOS_ISOLATE_COMPILE_DIAGNOSTIC)
+#error These declarations require the private GTOS IA32 compile diagnostic
+#endif
+
+// ABI declarations only. No thread operation, clock or TLS destructor is
+// implemented by this header; every operation must resolve at native link.
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+using __libcpp_timespec_t = ::timespec;
+
+struct __libcpp_mutex_t { uint32_t owner, depth; };
+struct __libcpp_recursive_mutex_t { uint32_t owner, depth; };
+#define _LIBCPP_MUTEX_INITIALIZER {0, 0}
+
+int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t*);
+int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t*);
+
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_lock(__libcpp_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_mutex_trylock(__libcpp_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_unlock(__libcpp_mutex_t*);
+int __libcpp_mutex_destroy(__libcpp_mutex_t*);
+
+struct __libcpp_condvar_t { uint32_t waiters, sequence; };
+#define _LIBCPP_CONDVAR_INITIALIZER {0, 0}
+int __libcpp_condvar_signal(__libcpp_condvar_t*);
+int __libcpp_condvar_broadcast(__libcpp_condvar_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_condvar_wait(__libcpp_condvar_t*, __libcpp_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS
+int __libcpp_condvar_timedwait(__libcpp_condvar_t*, __libcpp_mutex_t*, __libcpp_timespec_t*);
+int __libcpp_condvar_destroy(__libcpp_condvar_t*);
+
+using __libcpp_exec_once_flag = uint32_t;
+#define _LIBCPP_EXEC_ONCE_INITIALIZER 0
+int __libcpp_execute_once(__libcpp_exec_once_flag*, void (*)());
+
+using __libcpp_thread_id = uint32_t;
+using __libcpp_thread_t = uint32_t;
+#define _LIBCPP_NULL_THREAD 0
+bool __libcpp_thread_id_equal(__libcpp_thread_id, __libcpp_thread_id);
+bool __libcpp_thread_id_less(__libcpp_thread_id, __libcpp_thread_id);
+bool __libcpp_thread_isnull(const __libcpp_thread_t*);
+int __libcpp_thread_create(__libcpp_thread_t*, void* (*)(void*), void*);
+__libcpp_thread_id __libcpp_thread_get_current_id();
+__libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t*);
+int __libcpp_thread_join(__libcpp_thread_t*);
+int __libcpp_thread_detach(__libcpp_thread_t*);
+void __libcpp_thread_yield();
+void __libcpp_thread_sleep_for(const chrono::nanoseconds&);
+
+using __libcpp_tls_key = uint32_t;
+#define _LIBCPP_TLS_DESTRUCTOR_CC
+int __libcpp_tls_create(__libcpp_tls_key*, void (*)(void*));
+void* __libcpp_tls_get(__libcpp_tls_key);
+int __libcpp_tls_set(__libcpp_tls_key, void*);
+
+_LIBCPP_END_NAMESPACE_STD
+#endif

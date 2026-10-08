@@ -160,3 +160,10 @@ i386 非 PAE 目标仍不具备 NX 保护。
 
 [原生 Chromium 项目](docs/BROWSER_PORT.md)正在通过已验证的内核/API 前置条件和独立
 Linux 参考构建逐步推进。Chromium 和网页渲染尚未在 GTOS 中运行。
+
+## 32 位 Chromium 原生运行库诊断
+
+已验收的[IA32 运行库子集](apps/native_v8_runtime/README.md)包含 VM-backed heap、
+new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任务锁和线程身份接口。
+来源锁与独立构建工具固定实际已执行对象，必须显式启用私有诊断 ABI。
+完整 V8 Isolate、Chromium 网页浏览、视频播放和 HTML5 仍未在 GTOS 中运行。

@@ -155,3 +155,23 @@ Each stage must run real guest code and have a reviewable acceptance result:
 The assessment must decide ordering and achievable scope using current upstream
 facts. This document records dependencies and proof requirements, not a promise
 that changing platform conditionals is sufficient to produce a working port.
+
+## Current native IA32 runtime diagnostic
+
+The active browser target is native 32-bit Chromium on GTOS. The x64 gates above
+remain separate architecture evidence. The [native runtime diagnostic subset](../apps/native_v8_runtime/README.md)
+now preserves the qualified VM-backed heap, new/delete, emutls, C++ TLS destructor
+registry, monotonic clock bridge and 17 libc++ single-task ABI helpers. Its private
+ABI requires an explicit opt-in; headers for unavailable services do not supply
+implementations.
+
+Two independent QEMU/official Bochs cohorts each completed eight cold boots,
+32 task cases and 40 exact Reap checks. The standalone builder must reproduce
+all eight runtime objects byte-for-byte before reusing that qualification.
+No production kernel capacity or image is changed by this module.
+
+Condition variables, native shared-address-space threads and TLS keys, complete
+libc++ out-of-line services, Abseil OS services and the actual GTOS V8 platform
+remain open. Full V8 Isolate, Chromium navigation, video and HTML5 guest
+acceptance remain false. Full engine memory and stack requirements must be
+measured before changing production capacity.

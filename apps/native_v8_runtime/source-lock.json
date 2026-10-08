@@ -1,0 +1,1053 @@
+{
+  "clang_revision": "62397f8b3c3986f54187ce08f00b3448ea1f8880",
+  "clang_sha256": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7",
+  "compiler_abi_namespace": "__gtos_isolate_diagnostic",
+  "evidence": {
+    "native-cxx-tls-guest-20261008-a": {
+      "cold_boots": 8,
+      "exact_reaps": 40,
+      "native_isolate_pass": false,
+      "negative_observer_checks": 18,
+      "sha256": "cf85280ba898f3c07639a225b3eef7c42d7b8393b9a97afef39b1f78c2fb5099",
+      "victims": 32
+    },
+    "native-thread-core-guest-20261008-a": {
+      "cold_boots": 8,
+      "exact_reaps": 40,
+      "native_isolate_pass": false,
+      "negative_observer_checks": 21,
+      "sha256": "9e32d8034b1f69aa271f4a38a5e868488e97ce80e2e9f2e85007b62a76d94107",
+      "victims": 32
+    }
+  },
+  "files": {
+    "LLVM-LICENSE.txt": {
+      "origin": "LLVM Project license",
+      "origin_sha256": "ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47",
+      "sha256": "ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47"
+    },
+    "c-sdk/__assertion_handler": {
+      "origin": "qualified-c-sdk/__assertion_handler",
+      "origin_sha256": "f898f23fcba22ccc511c7e7c8675abc08cb63f4fdc4c79cadb45a13d8c349129",
+      "sha256": "f898f23fcba22ccc511c7e7c8675abc08cb63f4fdc4c79cadb45a13d8c349129"
+    },
+    "c-sdk/__config_site": {
+      "origin": "qualified-c-sdk/__config_site",
+      "origin_sha256": "01cd530254cd98b77840da78c4b6f133282aa5ff19d523c137445c9078b255bb",
+      "sha256": "01cd530254cd98b77840da78c4b6f133282aa5ff19d523c137445c9078b255bb"
+    },
+    "c-sdk/__llvm-libc-common.h": {
+      "origin": "qualified-c-sdk/__llvm-libc-common.h",
+      "origin_sha256": "ef74d9e5989cd298aa551ace40a565cd3305f36a85f54f9600923a6c878f4433",
+      "sha256": "ef74d9e5989cd298aa551ace40a565cd3305f36a85f54f9600923a6c878f4433"
+    },
+    "c-sdk/assert.h": {
+      "origin": "qualified-c-sdk/assert.h",
+      "origin_sha256": "9032fa434c1c05538aa5b81436ce6d5687e06648d92878b5cf9d651cf96f0471",
+      "sha256": "9032fa434c1c05538aa5b81436ce6d5687e06648d92878b5cf9d651cf96f0471"
+    },
+    "c-sdk/ctype.h": {
+      "origin": "qualified-c-sdk/ctype.h",
+      "origin_sha256": "1c3b54d0622765220436b56e395357e426663fdad0f5b80578b5bdcb313bbf53",
+      "sha256": "1c3b54d0622765220436b56e395357e426663fdad0f5b80578b5bdcb313bbf53"
+    },
+    "c-sdk/errno.h": {
+      "origin": "qualified-c-sdk/errno.h",
+      "origin_sha256": "6ec5f17ad08733e68afb791b0e2d579ec1e4979a49952baca0b6c94ad6b196ef",
+      "sha256": "6ec5f17ad08733e68afb791b0e2d579ec1e4979a49952baca0b6c94ad6b196ef"
+    },
+    "c-sdk/features.h": {
+      "origin": "qualified-c-sdk/features.h",
+      "origin_sha256": "0e20114ca1ce07df43427bdad473c6151f887a379ce1043433dd0cdd9d0fe8b1",
+      "sha256": "0e20114ca1ce07df43427bdad473c6151f887a379ce1043433dd0cdd9d0fe8b1"
+    },
+    "c-sdk/limits.h": {
+      "origin": "qualified-c-sdk/limits.h",
+      "origin_sha256": "0919fe2829094d5fc3c980a78a87601d9b0b64c823f6482ef58047b0882cc8ce",
+      "sha256": "0919fe2829094d5fc3c980a78a87601d9b0b64c823f6482ef58047b0882cc8ce"
+    },
+    "c-sdk/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+      "origin_sha256": "8d95be353833ea14ba652055825a05359adc2c064b81a689c6121c34b6b1c418",
+      "sha256": "8d95be353833ea14ba652055825a05359adc2c064b81a689c6121c34b6b1c418"
+    },
+    "c-sdk/llvm-libc-macros/annex-k-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/annex-k-macros.h",
+      "origin_sha256": "e28e04694e0387ed5fcdfc65de7bbe4ae0d44816efde935f4a5afe6cc8718f4f",
+      "sha256": "e28e04694e0387ed5fcdfc65de7bbe4ae0d44816efde935f4a5afe6cc8718f4f"
+    },
+    "c-sdk/llvm-libc-macros/assert-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/assert-macros.h",
+      "origin_sha256": "81af55f22c4f4b009bdd9bb5f48857f41649d800f52708f160e30910b51cc50e",
+      "sha256": "81af55f22c4f4b009bdd9bb5f48857f41649d800f52708f160e30910b51cc50e"
+    },
+    "c-sdk/llvm-libc-macros/baremetal/time-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/baremetal/time-macros.h",
+      "origin_sha256": "816f5dfea1a83fc4d6b42acd3d5be2a33795a0410736b0766881117bd7492389",
+      "sha256": "816f5dfea1a83fc4d6b42acd3d5be2a33795a0410736b0766881117bd7492389"
+    },
+    "c-sdk/llvm-libc-macros/common-threads-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/common-threads-macros.h",
+      "origin_sha256": "a7819ae4b6de53e3d3da385a72fb7e46e31922a8880594488f00e9050b7dc35c",
+      "sha256": "a7819ae4b6de53e3d3da385a72fb7e46e31922a8880594488f00e9050b7dc35c"
+    },
+    "c-sdk/llvm-libc-macros/file-seek-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/file-seek-macros.h",
+      "origin_sha256": "0f485a5122b80cecd1036cc9f627a299952761674c191fc739ea95422fab7160",
+      "sha256": "0f485a5122b80cecd1036cc9f627a299952761674c191fc739ea95422fab7160"
+    },
+    "c-sdk/llvm-libc-macros/float-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/float-macros.h",
+      "origin_sha256": "2960f7db2c9dccd5295c1ed715cd4e91af481e57aed79e463ac69c7766082051",
+      "sha256": "2960f7db2c9dccd5295c1ed715cd4e91af481e57aed79e463ac69c7766082051"
+    },
+    "c-sdk/llvm-libc-macros/float16-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/float16-macros.h",
+      "origin_sha256": "52a8e314d107eea117bce45c61b42abd0f30ebad80db5e3188fd123e9117cd99",
+      "sha256": "52a8e314d107eea117bce45c61b42abd0f30ebad80db5e3188fd123e9117cd99"
+    },
+    "c-sdk/llvm-libc-macros/generic-error-number-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/generic-error-number-macros.h",
+      "origin_sha256": "fba56c7f8c617cf2977faea9fd05d69730b17e8c30b24d4b957c2d98a945af28",
+      "sha256": "fba56c7f8c617cf2977faea9fd05d69730b17e8c30b24d4b957c2d98a945af28"
+    },
+    "c-sdk/llvm-libc-macros/limits-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/limits-macros.h",
+      "origin_sha256": "e43a383d61514bbf4ab02e1509895c65c4a433b6d59468d7d968c1ef9537cdf4",
+      "sha256": "e43a383d61514bbf4ab02e1509895c65c4a433b6d59468d7d968c1ef9537cdf4"
+    },
+    "c-sdk/llvm-libc-macros/locale-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/locale-macros.h",
+      "origin_sha256": "df8ec4a737fb2ad7332940fd2e3763ac1856464eec9f7396338559bce84f8795",
+      "sha256": "df8ec4a737fb2ad7332940fd2e3763ac1856464eec9f7396338559bce84f8795"
+    },
+    "c-sdk/llvm-libc-macros/math-function-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/math-function-macros.h",
+      "origin_sha256": "f2a263cf0078220b2c4d9141712ab069fde3b9e2aec2e30a7f6188bfa2d2d972",
+      "sha256": "f2a263cf0078220b2c4d9141712ab069fde3b9e2aec2e30a7f6188bfa2d2d972"
+    },
+    "c-sdk/llvm-libc-macros/math-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/math-macros.h",
+      "origin_sha256": "4fa1f601abc5449710a2fe4a10272d100b82d99d1a1f1677ea5cc106790957ee",
+      "sha256": "4fa1f601abc5449710a2fe4a10272d100b82d99d1a1f1677ea5cc106790957ee"
+    },
+    "c-sdk/llvm-libc-macros/null-macro.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/null-macro.h",
+      "origin_sha256": "38e32e903e8c114d501de2cf8e7c6ac46274438c94babeb8fc7d2db35fbd3aae",
+      "sha256": "38e32e903e8c114d501de2cf8e7c6ac46274438c94babeb8fc7d2db35fbd3aae"
+    },
+    "c-sdk/llvm-libc-macros/stdint-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/stdint-macros.h",
+      "origin_sha256": "2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77",
+      "sha256": "2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77"
+    },
+    "c-sdk/llvm-libc-macros/stdio-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/stdio-macros.h",
+      "origin_sha256": "2f54b4ae4692e8201aa34d07f204a2a396f4376495c5c512e41fbb26839d6144",
+      "sha256": "2f54b4ae4692e8201aa34d07f204a2a396f4376495c5c512e41fbb26839d6144"
+    },
+    "c-sdk/llvm-libc-macros/stdlib-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/stdlib-macros.h",
+      "origin_sha256": "85e9be65992cd6d2cd60e9d71261ef9e173936daa22640e6e3f1a7f517b069e5",
+      "sha256": "85e9be65992cd6d2cd60e9d71261ef9e173936daa22640e6e3f1a7f517b069e5"
+    },
+    "c-sdk/llvm-libc-macros/time-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/time-macros.h",
+      "origin_sha256": "76f624302c6e9b126af7e1b31e7946f42f740c226a3ac3424b57018727f6886d",
+      "sha256": "76f624302c6e9b126af7e1b31e7946f42f740c226a3ac3424b57018727f6886d"
+    },
+    "c-sdk/llvm-libc-macros/wchar-macros.h": {
+      "origin": "qualified-c-sdk/llvm-libc-macros/wchar-macros.h",
+      "origin_sha256": "cd6667c8e29fa3a5f9b4fe6ed6b206fb1e6eb70dbf840b14acb1dcbb9ed4a8ab",
+      "sha256": "cd6667c8e29fa3a5f9b4fe6ed6b206fb1e6eb70dbf840b14acb1dcbb9ed4a8ab"
+    },
+    "c-sdk/llvm-libc-types/FILE.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/FILE.h",
+      "origin_sha256": "6b26b98cba34a1536316479522bede9df90954f13060c1a42b7c4f6e9d293f77",
+      "sha256": "6b26b98cba34a1536316479522bede9df90954f13060c1a42b7c4f6e9d293f77"
+    },
+    "c-sdk/llvm-libc-types/__atexithandler_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/__atexithandler_t.h",
+      "origin_sha256": "63b1548bd217f08e8a3f9524f798f6b7a171eff8a4f1c44bebfd3d4a04335fdd",
+      "sha256": "63b1548bd217f08e8a3f9524f798f6b7a171eff8a4f1c44bebfd3d4a04335fdd"
+    },
+    "c-sdk/llvm-libc-types/__qsortcompare_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/__qsortcompare_t.h",
+      "origin_sha256": "145efc5991d2aba907a7588a47a1e46cc19e9c34aa09b8297044b16f9bd3bc05",
+      "sha256": "145efc5991d2aba907a7588a47a1e46cc19e9c34aa09b8297044b16f9bd3bc05"
+    },
+    "c-sdk/llvm-libc-types/__qsortrcompare_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/__qsortrcompare_t.h",
+      "origin_sha256": "3f8f61d067fc9faf82559a4248dfefd11d8bea528554656805b0488bc1322df1",
+      "sha256": "3f8f61d067fc9faf82559a4248dfefd11d8bea528554656805b0488bc1322df1"
+    },
+    "c-sdk/llvm-libc-types/__search_compare_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/__search_compare_t.h",
+      "origin_sha256": "7d482ca549e0b4b4bd5f3524b4ce92e3341fa6be92c9e3fa616d1472442c4a28",
+      "sha256": "7d482ca549e0b4b4bd5f3524b4ce92e3341fa6be92c9e3fa616d1472442c4a28"
+    },
+    "c-sdk/llvm-libc-types/clock_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/clock_t.h",
+      "origin_sha256": "85a51cbdc3bf991db9afb34e05717d0431ac325fd0e5336ca3f14beb0ec3ec34",
+      "sha256": "85a51cbdc3bf991db9afb34e05717d0431ac325fd0e5336ca3f14beb0ec3ec34"
+    },
+    "c-sdk/llvm-libc-types/clockid_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/clockid_t.h",
+      "origin_sha256": "f90832ae822e537bb8a21584c986e34cde6f55ff0131e7e90e24c5423538fbc1",
+      "sha256": "f90832ae822e537bb8a21584c986e34cde6f55ff0131e7e90e24c5423538fbc1"
+    },
+    "c-sdk/llvm-libc-types/constraint_handler_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/constraint_handler_t.h",
+      "origin_sha256": "72dc32e5884b9b6d1501e01f2db1bb769cd12e8f7d70c0c9bb558b6e6b573d97",
+      "sha256": "72dc32e5884b9b6d1501e01f2db1bb769cd12e8f7d70c0c9bb558b6e6b573d97"
+    },
+    "c-sdk/llvm-libc-types/cookie_io_functions_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/cookie_io_functions_t.h",
+      "origin_sha256": "c67f07cacabeff8db1c4ea8eb9ab27fd212c41c312586aeef44a247d8ae314e0",
+      "sha256": "c67f07cacabeff8db1c4ea8eb9ab27fd212c41c312586aeef44a247d8ae314e0"
+    },
+    "c-sdk/llvm-libc-types/div_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/div_t.h",
+      "origin_sha256": "c18582a431a6937227b042b474f90b71185e08e41f5d780fff535d4d693e897c",
+      "sha256": "c18582a431a6937227b042b474f90b71185e08e41f5d780fff535d4d693e897c"
+    },
+    "c-sdk/llvm-libc-types/double_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/double_t.h",
+      "origin_sha256": "b83627e7456defebab375a61ee7fb1626bb542cd56f40e61190942f52c9c52c9",
+      "sha256": "b83627e7456defebab375a61ee7fb1626bb542cd56f40e61190942f52c9c52c9"
+    },
+    "c-sdk/llvm-libc-types/errno_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/errno_t.h",
+      "origin_sha256": "86abe743526faee2e205ef26bf3a6137d3d5860bf5c637b2a3526402bb0301d4",
+      "sha256": "86abe743526faee2e205ef26bf3a6137d3d5860bf5c637b2a3526402bb0301d4"
+    },
+    "c-sdk/llvm-libc-types/float128.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/float128.h",
+      "origin_sha256": "d5874745c8f156687fe02c67fe2f09644822fe92d495d0a5e561a84f90cc113d",
+      "sha256": "d5874745c8f156687fe02c67fe2f09644822fe92d495d0a5e561a84f90cc113d"
+    },
+    "c-sdk/llvm-libc-types/float_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/float_t.h",
+      "origin_sha256": "e267ca53b614c002959401a8478d74c7581488329650c4ddb6fd7d285d866ef7",
+      "sha256": "e267ca53b614c002959401a8478d74c7581488329650c4ddb6fd7d285d866ef7"
+    },
+    "c-sdk/llvm-libc-types/ldiv_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/ldiv_t.h",
+      "origin_sha256": "491737e0c5ac194a7c064a6c5a7f6196d6b3cc61cd767b0577b31a585abf032b",
+      "sha256": "491737e0c5ac194a7c064a6c5a7f6196d6b3cc61cd767b0577b31a585abf032b"
+    },
+    "c-sdk/llvm-libc-types/lldiv_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/lldiv_t.h",
+      "origin_sha256": "e3a4ea548a0109a99185e29a7d4431a304c236342e79fb738bd47e35b027f93e",
+      "sha256": "e3a4ea548a0109a99185e29a7d4431a304c236342e79fb738bd47e35b027f93e"
+    },
+    "c-sdk/llvm-libc-types/locale_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/locale_t.h",
+      "origin_sha256": "d69fa934111cc8ed4b56983be76e401e4dd4152c29186fe1985ad83eb255f058",
+      "sha256": "d69fa934111cc8ed4b56983be76e401e4dd4152c29186fe1985ad83eb255f058"
+    },
+    "c-sdk/llvm-libc-types/mbstate_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/mbstate_t.h",
+      "origin_sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce",
+      "sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce"
+    },
+    "c-sdk/llvm-libc-types/off_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/off_t.h",
+      "origin_sha256": "3799d9adee35408b3847ac09b5d245da811b4475762ce61084f53b8ef2c9da15",
+      "sha256": "3799d9adee35408b3847ac09b5d245da811b4475762ce61084f53b8ef2c9da15"
+    },
+    "c-sdk/llvm-libc-types/pid_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/pid_t.h",
+      "origin_sha256": "e0ee7551ec0c338992fbeb145f5d4b83dc7c1ff6ee06382c8bb5fbbc573546cb",
+      "sha256": "e0ee7551ec0c338992fbeb145f5d4b83dc7c1ff6ee06382c8bb5fbbc573546cb"
+    },
+    "c-sdk/llvm-libc-types/pthread_attr_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/pthread_attr_t.h",
+      "origin_sha256": "c23963bef3ecaaddd2ffb82ca427cbabeef2b724945c1572a654f6e883d2d908",
+      "sha256": "c23963bef3ecaaddd2ffb82ca427cbabeef2b724945c1572a654f6e883d2d908"
+    },
+    "c-sdk/llvm-libc-types/rsize_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/rsize_t.h",
+      "origin_sha256": "90af580b84715166781a394792778214339334a36430cf8ffbd991b51c42b290",
+      "sha256": "90af580b84715166781a394792778214339334a36430cf8ffbd991b51c42b290"
+    },
+    "c-sdk/llvm-libc-types/size_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/size_t.h",
+      "origin_sha256": "5a7a6ed640a5f29f7e63d936980d77e087c1ba60eba572f61dc59d83a71b293f",
+      "sha256": "5a7a6ed640a5f29f7e63d936980d77e087c1ba60eba572f61dc59d83a71b293f"
+    },
+    "c-sdk/llvm-libc-types/ssize_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/ssize_t.h",
+      "origin_sha256": "54e1fdb3adb5bcc9c6f19d8d1442dc9c5f7fa5443d252cbae3527b15f34e11eb",
+      "sha256": "54e1fdb3adb5bcc9c6f19d8d1442dc9c5f7fa5443d252cbae3527b15f34e11eb"
+    },
+    "c-sdk/llvm-libc-types/struct_itimerspec.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_itimerspec.h",
+      "origin_sha256": "c2fe2c32d0fca381e65f4df5d1c47464959a92f061d6e275c07d6f0c09ed583a",
+      "sha256": "c2fe2c32d0fca381e65f4df5d1c47464959a92f061d6e275c07d6f0c09ed583a"
+    },
+    "c-sdk/llvm-libc-types/struct_lconv.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_lconv.h",
+      "origin_sha256": "68c73cadf687a255993f17ceaf5b30859b8b69df4188cae7699bcd948c790339",
+      "sha256": "68c73cadf687a255993f17ceaf5b30859b8b69df4188cae7699bcd948c790339"
+    },
+    "c-sdk/llvm-libc-types/struct_sched_param.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_sched_param.h",
+      "origin_sha256": "1a5e2d37a3b1e46d27008217cf59883f8ff74585af69baddc321e9ce93638c0d",
+      "sha256": "1a5e2d37a3b1e46d27008217cf59883f8ff74585af69baddc321e9ce93638c0d"
+    },
+    "c-sdk/llvm-libc-types/struct_sigevent.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_sigevent.h",
+      "origin_sha256": "9827c91b506fd04cf640bda5cfcc1f3ba0a516b9d16dcd0b78a0b93954503bc0",
+      "sha256": "9827c91b506fd04cf640bda5cfcc1f3ba0a516b9d16dcd0b78a0b93954503bc0"
+    },
+    "c-sdk/llvm-libc-types/struct_timespec.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_timespec.h",
+      "origin_sha256": "6aab3a5b18b354133bccf7e125f05793a0ac61e1799715f74630adc50e39d59a",
+      "sha256": "6aab3a5b18b354133bccf7e125f05793a0ac61e1799715f74630adc50e39d59a"
+    },
+    "c-sdk/llvm-libc-types/struct_timeval.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_timeval.h",
+      "origin_sha256": "21795f5901347cc9430ff9be36ce54ce20897360f35d2ba97978806bcf6b0458",
+      "sha256": "21795f5901347cc9430ff9be36ce54ce20897360f35d2ba97978806bcf6b0458"
+    },
+    "c-sdk/llvm-libc-types/struct_tm.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/struct_tm.h",
+      "origin_sha256": "4c782e640c6d5b15f7af1273156a350b7fd2671b50e651e6c4adb58a7f55a11b",
+      "sha256": "4c782e640c6d5b15f7af1273156a350b7fd2671b50e651e6c4adb58a7f55a11b"
+    },
+    "c-sdk/llvm-libc-types/suseconds_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/suseconds_t.h",
+      "origin_sha256": "8e571a73eca3d0ac9b96d3b181093ff71e719d7c65494ca0fce104cbf11e2a6e",
+      "sha256": "8e571a73eca3d0ac9b96d3b181093ff71e719d7c65494ca0fce104cbf11e2a6e"
+    },
+    "c-sdk/llvm-libc-types/time_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/time_t.h",
+      "origin_sha256": "0e57b5a31e18f81661e86b83d6397147060d66595befffc448725d01caeb8d90",
+      "sha256": "0e57b5a31e18f81661e86b83d6397147060d66595befffc448725d01caeb8d90"
+    },
+    "c-sdk/llvm-libc-types/time_t_64.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/time_t_64.h",
+      "origin_sha256": "1970f466b1e7fc40c54f0c39b21f1aaf29c23cba5df51c7022d24d9a3af48440",
+      "sha256": "1970f466b1e7fc40c54f0c39b21f1aaf29c23cba5df51c7022d24d9a3af48440"
+    },
+    "c-sdk/llvm-libc-types/timer_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/timer_t.h",
+      "origin_sha256": "63cf36bacfc87ae88907bbe5b70002f5fcc40bbd7b39b9cce9e4fb9e3dfee6f4",
+      "sha256": "63cf36bacfc87ae88907bbe5b70002f5fcc40bbd7b39b9cce9e4fb9e3dfee6f4"
+    },
+    "c-sdk/llvm-libc-types/tm_gmtoff_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/tm_gmtoff_t.h",
+      "origin_sha256": "ece853990aace3e0891d6d8d78b833ec37c9d348d034725e51ac26d0ff2c3758",
+      "sha256": "ece853990aace3e0891d6d8d78b833ec37c9d348d034725e51ac26d0ff2c3758"
+    },
+    "c-sdk/llvm-libc-types/union_sigval.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/union_sigval.h",
+      "origin_sha256": "191cc66940a0259981717d4aff5ca6a1cb1bef36ff204429a99a0af527ad3387",
+      "sha256": "191cc66940a0259981717d4aff5ca6a1cb1bef36ff204429a99a0af527ad3387"
+    },
+    "c-sdk/llvm-libc-types/wchar_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/wchar_t.h",
+      "origin_sha256": "016b780f922e595420ce04a2aa43c1a283dd4f8b7a5b2e54d524d0c3b15046dd",
+      "sha256": "016b780f922e595420ce04a2aa43c1a283dd4f8b7a5b2e54d524d0c3b15046dd"
+    },
+    "c-sdk/llvm-libc-types/wctype_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/wctype_t.h",
+      "origin_sha256": "c4a012d9ad0f9313a0fbcaba14b39f5498e602251c182f2b5c55430964ff634d",
+      "sha256": "c4a012d9ad0f9313a0fbcaba14b39f5498e602251c182f2b5c55430964ff634d"
+    },
+    "c-sdk/llvm-libc-types/wint_t.h": {
+      "origin": "qualified-c-sdk/llvm-libc-types/wint_t.h",
+      "origin_sha256": "ee322165336ea6a08ababd87446230b89cf7ed38932267a129c44898593e5e6d",
+      "sha256": "ee322165336ea6a08ababd87446230b89cf7ed38932267a129c44898593e5e6d"
+    },
+    "c-sdk/locale.h": {
+      "origin": "qualified-c-sdk/locale.h",
+      "origin_sha256": "baaa65b3b2165f7f227d1acabe42a4c90147a13278b62ce68a4551dd9cb01d65",
+      "sha256": "baaa65b3b2165f7f227d1acabe42a4c90147a13278b62ce68a4551dd9cb01d65"
+    },
+    "c-sdk/math.h": {
+      "origin": "qualified-c-sdk/math.h",
+      "origin_sha256": "3a2199abb69c8a551bea8bd6c771f5c6c87407f581668c8992badd916fd78285",
+      "sha256": "3a2199abb69c8a551bea8bd6c771f5c6c87407f581668c8992badd916fd78285"
+    },
+    "c-sdk/stdio.h": {
+      "origin": "qualified-c-sdk/stdio.h",
+      "origin_sha256": "0b1306c4d8490c21dc935d7cab99fb1e634f10fc95c121ab80a1e7ccb9ecc6bb",
+      "sha256": "0b1306c4d8490c21dc935d7cab99fb1e634f10fc95c121ab80a1e7ccb9ecc6bb"
+    },
+    "c-sdk/stdlib.h": {
+      "origin": "qualified-c-sdk/stdlib.h",
+      "origin_sha256": "c6106a45a5ce174ac42aaa9128f6908c847bc1f3adfecc784b68b5c2ee4402dc",
+      "sha256": "c6106a45a5ce174ac42aaa9128f6908c847bc1f3adfecc784b68b5c2ee4402dc"
+    },
+    "c-sdk/string.h": {
+      "origin": "qualified-c-sdk/string.h",
+      "origin_sha256": "ae5fa4bf51aa4c4e1d91f57f7c22dc7bff8ca139961b5f980036a757ff3be37d",
+      "sha256": "ae5fa4bf51aa4c4e1d91f57f7c22dc7bff8ca139961b5f980036a757ff3be37d"
+    },
+    "c-sdk/strings.h": {
+      "origin": "qualified-c-sdk/strings.h",
+      "origin_sha256": "4d8b15185de8856883acabc5da1a38c65814298357e68cdf9df08721343167a6",
+      "sha256": "4d8b15185de8856883acabc5da1a38c65814298357e68cdf9df08721343167a6"
+    },
+    "c-sdk/time.h": {
+      "origin": "qualified-c-sdk/time.h",
+      "origin_sha256": "e0a091f4dd12197b5420942e4ba126d3fa3fd37eaa4caae1029312a31b91917e",
+      "sha256": "e0a091f4dd12197b5420942e4ba126d3fa3fd37eaa4caae1029312a31b91917e"
+    },
+    "c-sdk/wchar.h": {
+      "origin": "qualified-c-sdk/wchar.h",
+      "origin_sha256": "851d66814f1ded043fb5ef81a10dc105fd7420c644571fd6529dcc802f62e5d6",
+      "sha256": "851d66814f1ded043fb5ef81a10dc105fd7420c644571fd6529dcc802f62e5d6"
+    },
+    "c-sdk/wctype.h": {
+      "origin": "qualified-c-sdk/wctype.h",
+      "origin_sha256": "86a7a7b7719da9cf4b7b025163a8096682d0ce19976bd987f7b6d0fba7d5827e",
+      "sha256": "86a7a7b7719da9cf4b7b025163a8096682d0ce19976bd987f7b6d0fba7d5827e"
+    },
+    "include/process/abi.h": {
+      "origin": "qualified/runtime/sdk/process/abi.h",
+      "origin_sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055",
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055"
+    },
+    "include/process/vm_abi.h": {
+      "origin": "qualified/runtime/sdk/process/vm_abi.h",
+      "origin_sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11",
+      "sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11"
+    },
+    "include/src/base/platform/gtos-clock-bridge.h": {
+      "origin": "qualified/src/base/platform/gtos-clock-bridge.h",
+      "origin_sha256": "79a999208f2e826fb3c2068c43e5246d1c1ffd3e761a7ffd79807f465b1de4cf",
+      "sha256": "79a999208f2e826fb3c2068c43e5246d1c1ffd3e761a7ffd79807f465b1de4cf"
+    },
+    "include/src/base/platform/gtos-native-api/abi.h": {
+      "origin": "GTOS/include/process/abi.h",
+      "origin_sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055",
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055"
+    },
+    "include/src/base/platform/gtos-native-api/clock_abi.h": {
+      "origin": "GTOS/include/process/clock_abi.h",
+      "origin_sha256": "60bb3beee1560964919ffeaf2a83f55f134c1d8c1609b10d1420a5a37970bb25",
+      "sha256": "60bb3beee1560964919ffeaf2a83f55f134c1d8c1609b10d1420a5a37970bb25"
+    },
+    "include/src/base/platform/gtos-native-api/info_abi.h": {
+      "origin": "GTOS/include/process/info_abi.h",
+      "origin_sha256": "a05c914d9d52e67d1d7c521da2a252e1602dab4236e7fb8b44e23d86b4f33696",
+      "sha256": "a05c914d9d52e67d1d7c521da2a252e1602dab4236e7fb8b44e23d86b4f33696"
+    },
+    "include/src/base/platform/gtos-native-services.h": {
+      "origin": "qualified/src/base/platform/gtos-native-services.h",
+      "origin_sha256": "af6dc0beb442dc46508037910fa6c3cfedca637df2684da9e5670b2b6aca1ac5",
+      "sha256": "af6dc0beb442dc46508037910fa6c3cfedca637df2684da9e5670b2b6aca1ac5"
+    },
+    "runtime/abort.cc": {
+      "origin": "qualified/runtime/abort.cc",
+      "origin_sha256": "696699e47eb964cae22e77a6241a10971b13c1b13c9a09d19f2b23bfc8cc96bd",
+      "sha256": "696699e47eb964cae22e77a6241a10971b13c1b13c9a09d19f2b23bfc8cc96bd"
+    },
+    "runtime/emutls.cc": {
+      "comment_only_update": true,
+      "origin": "qualified/runtime/emutls.cc",
+      "origin_sha256": "b2b06dc7ed6ace75f9e0550e41f794cc5f8428f86b577e14dbf4390b170647aa",
+      "sha256": "7de88b7d456189f1ea232a2b4f8bcf173089495066b45a0719a69dd410bd647e"
+    },
+    "runtime/gtos-clock-bridge.cc": {
+      "origin": "qualified/src/base/platform/gtos-clock-bridge.cc",
+      "origin_sha256": "c3659f8de09d288b59cc044ec9aced0b5ceb8a9dc5b817af47424100a57786f2",
+      "sha256": "c3659f8de09d288b59cc044ec9aced0b5ceb8a9dc5b817af47424100a57786f2"
+    },
+    "runtime/heap.cc": {
+      "origin": "qualified/runtime/heap.cc",
+      "origin_sha256": "3f9369b901d525a82ee321de5399d5782885f44529ed86a889a42878fb2719c7",
+      "sha256": "3f9369b901d525a82ee321de5399d5782885f44529ed86a889a42878fb2719c7"
+    },
+    "runtime/heap.h": {
+      "origin": "qualified/runtime/heap.h",
+      "origin_sha256": "654962e887e43f430f7fe3679ae68277e44a022db541db03b5983962ef83051d",
+      "sha256": "654962e887e43f430f7fe3679ae68277e44a022db541db03b5983962ef83051d"
+    },
+    "runtime/memory.cc": {
+      "origin": "GTOS/apps/native_process_info_probe/memory.cc",
+      "origin_sha256": "feede5e36776bafbdbc04cdac5b88c12d7f6e64f1e759fc46448d26fde4f7fb4",
+      "sha256": "feede5e36776bafbdbc04cdac5b88c12d7f6e64f1e759fc46448d26fde4f7fb4"
+    },
+    "runtime/operators.cc": {
+      "origin": "qualified/runtime/operators.cc",
+      "origin_sha256": "175ac344d551d1a5c8513eeca84be779839bcaf98a78edaeb75559af1c2b2e44",
+      "sha256": "175ac344d551d1a5c8513eeca84be779839bcaf98a78edaeb75559af1c2b2e44"
+    },
+    "runtime/thread-core.cc": {
+      "origin": "qualified/runtime/thread-core.cc",
+      "origin_sha256": "48d499973a855abc0a9804a58ac3131ce90793cca86cbc2b9d691bd1bb749f96",
+      "sha256": "48d499973a855abc0a9804a58ac3131ce90793cca86cbc2b9d691bd1bb749f96"
+    },
+    "runtime/thread-exit.cc": {
+      "origin": "qualified/runtime/thread-exit.cc",
+      "origin_sha256": "6d0f7bc0401568eef79410083022cc9085823ce4573a93ca4ed98cb304411cb4",
+      "sha256": "6d0f7bc0401568eef79410083022cc9085823ce4573a93ca4ed98cb304411cb4"
+    },
+    "runtime/thread-exit.h": {
+      "origin": "qualified/runtime/thread-exit.h",
+      "origin_sha256": "d5446a771fe35237f1729956b771a702ba71535b6b3635c556bf140bde31045f",
+      "sha256": "d5446a771fe35237f1729956b771a702ba71535b6b3635c556bf140bde31045f"
+    },
+    "sdk/__config_site": {
+      "origin": "qualified-sdk/__config_site",
+      "origin_sha256": "b32b2ebb5f2d3023b65b1c8c4e0ef3f00782763c52abe824e5a9815bdca61ddf",
+      "sha256": "b32b2ebb5f2d3023b65b1c8c4e0ef3f00782763c52abe824e5a9815bdca61ddf"
+    },
+    "sdk/__external_threading": {
+      "origin": "qualified-sdk/__external_threading",
+      "origin_sha256": "ad3581974c60408854ab7cba9f6c5b7cc29789eb4e2249fc9136de9b44c990b2",
+      "sha256": "ad3581974c60408854ab7cba9f6c5b7cc29789eb4e2249fc9136de9b44c990b2"
+    },
+    "sdk/__llvm-libc-common.h": {
+      "origin": "qualified-sdk/__llvm-libc-common.h",
+      "origin_sha256": "ef74d9e5989cd298aa551ace40a565cd3305f36a85f54f9600923a6c878f4433",
+      "sha256": "ef74d9e5989cd298aa551ace40a565cd3305f36a85f54f9600923a6c878f4433"
+    },
+    "sdk/fenv.h": {
+      "origin": "qualified-sdk/fenv.h",
+      "origin_sha256": "e2629d4b30bfab357a9185d6daf48e66e053ad3463da56a2247df47ec83874bc",
+      "sha256": "e2629d4b30bfab357a9185d6daf48e66e053ad3463da56a2247df47ec83874bc"
+    },
+    "sdk/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+      "origin_sha256": "8d95be353833ea14ba652055825a05359adc2c064b81a689c6121c34b6b1c418",
+      "sha256": "8d95be353833ea14ba652055825a05359adc2c064b81a689c6121c34b6b1c418"
+    },
+    "sdk/llvm-libc-macros/annex-k-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/annex-k-macros.h",
+      "origin_sha256": "e28e04694e0387ed5fcdfc65de7bbe4ae0d44816efde935f4a5afe6cc8718f4f",
+      "sha256": "e28e04694e0387ed5fcdfc65de7bbe4ae0d44816efde935f4a5afe6cc8718f4f"
+    },
+    "sdk/llvm-libc-macros/assert-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/assert-macros.h",
+      "origin_sha256": "81af55f22c4f4b009bdd9bb5f48857f41649d800f52708f160e30910b51cc50e",
+      "sha256": "81af55f22c4f4b009bdd9bb5f48857f41649d800f52708f160e30910b51cc50e"
+    },
+    "sdk/llvm-libc-macros/baremetal/time-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/baremetal/time-macros.h",
+      "origin_sha256": "816f5dfea1a83fc4d6b42acd3d5be2a33795a0410736b0766881117bd7492389",
+      "sha256": "816f5dfea1a83fc4d6b42acd3d5be2a33795a0410736b0766881117bd7492389"
+    },
+    "sdk/llvm-libc-macros/common-threads-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/common-threads-macros.h",
+      "origin_sha256": "a7819ae4b6de53e3d3da385a72fb7e46e31922a8880594488f00e9050b7dc35c",
+      "sha256": "a7819ae4b6de53e3d3da385a72fb7e46e31922a8880594488f00e9050b7dc35c"
+    },
+    "sdk/llvm-libc-macros/fenv-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/fenv-macros.h",
+      "origin_sha256": "bc5e2cf1cbf1fff334f45eb58b331bf4ef604446d5a5b291c8cf2b7bf8883bf7",
+      "sha256": "bc5e2cf1cbf1fff334f45eb58b331bf4ef604446d5a5b291c8cf2b7bf8883bf7"
+    },
+    "sdk/llvm-libc-macros/file-seek-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/file-seek-macros.h",
+      "origin_sha256": "0f485a5122b80cecd1036cc9f627a299952761674c191fc739ea95422fab7160",
+      "sha256": "0f485a5122b80cecd1036cc9f627a299952761674c191fc739ea95422fab7160"
+    },
+    "sdk/llvm-libc-macros/float-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/float-macros.h",
+      "origin_sha256": "2960f7db2c9dccd5295c1ed715cd4e91af481e57aed79e463ac69c7766082051",
+      "sha256": "2960f7db2c9dccd5295c1ed715cd4e91af481e57aed79e463ac69c7766082051"
+    },
+    "sdk/llvm-libc-macros/float16-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/float16-macros.h",
+      "origin_sha256": "52a8e314d107eea117bce45c61b42abd0f30ebad80db5e3188fd123e9117cd99",
+      "sha256": "52a8e314d107eea117bce45c61b42abd0f30ebad80db5e3188fd123e9117cd99"
+    },
+    "sdk/llvm-libc-macros/generic-error-number-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/generic-error-number-macros.h",
+      "origin_sha256": "fba56c7f8c617cf2977faea9fd05d69730b17e8c30b24d4b957c2d98a945af28",
+      "sha256": "fba56c7f8c617cf2977faea9fd05d69730b17e8c30b24d4b957c2d98a945af28"
+    },
+    "sdk/llvm-libc-macros/limits-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/limits-macros.h",
+      "origin_sha256": "e43a383d61514bbf4ab02e1509895c65c4a433b6d59468d7d968c1ef9537cdf4",
+      "sha256": "e43a383d61514bbf4ab02e1509895c65c4a433b6d59468d7d968c1ef9537cdf4"
+    },
+    "sdk/llvm-libc-macros/locale-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/locale-macros.h",
+      "origin_sha256": "df8ec4a737fb2ad7332940fd2e3763ac1856464eec9f7396338559bce84f8795",
+      "sha256": "df8ec4a737fb2ad7332940fd2e3763ac1856464eec9f7396338559bce84f8795"
+    },
+    "sdk/llvm-libc-macros/math-function-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/math-function-macros.h",
+      "origin_sha256": "f2a263cf0078220b2c4d9141712ab069fde3b9e2aec2e30a7f6188bfa2d2d972",
+      "sha256": "f2a263cf0078220b2c4d9141712ab069fde3b9e2aec2e30a7f6188bfa2d2d972"
+    },
+    "sdk/llvm-libc-macros/math-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/math-macros.h",
+      "origin_sha256": "4fa1f601abc5449710a2fe4a10272d100b82d99d1a1f1677ea5cc106790957ee",
+      "sha256": "4fa1f601abc5449710a2fe4a10272d100b82d99d1a1f1677ea5cc106790957ee"
+    },
+    "sdk/llvm-libc-macros/null-macro.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/null-macro.h",
+      "origin_sha256": "38e32e903e8c114d501de2cf8e7c6ac46274438c94babeb8fc7d2db35fbd3aae",
+      "sha256": "38e32e903e8c114d501de2cf8e7c6ac46274438c94babeb8fc7d2db35fbd3aae"
+    },
+    "sdk/llvm-libc-macros/stdint-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/stdint-macros.h",
+      "origin_sha256": "2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77",
+      "sha256": "2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77"
+    },
+    "sdk/llvm-libc-macros/stdio-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/stdio-macros.h",
+      "origin_sha256": "2f54b4ae4692e8201aa34d07f204a2a396f4376495c5c512e41fbb26839d6144",
+      "sha256": "2f54b4ae4692e8201aa34d07f204a2a396f4376495c5c512e41fbb26839d6144"
+    },
+    "sdk/llvm-libc-macros/stdlib-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/stdlib-macros.h",
+      "origin_sha256": "85e9be65992cd6d2cd60e9d71261ef9e173936daa22640e6e3f1a7f517b069e5",
+      "sha256": "85e9be65992cd6d2cd60e9d71261ef9e173936daa22640e6e3f1a7f517b069e5"
+    },
+    "sdk/llvm-libc-macros/time-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/time-macros.h",
+      "origin_sha256": "76f624302c6e9b126af7e1b31e7946f42f740c226a3ac3424b57018727f6886d",
+      "sha256": "76f624302c6e9b126af7e1b31e7946f42f740c226a3ac3424b57018727f6886d"
+    },
+    "sdk/llvm-libc-macros/wchar-macros.h": {
+      "origin": "qualified-sdk/llvm-libc-macros/wchar-macros.h",
+      "origin_sha256": "cd6667c8e29fa3a5f9b4fe6ed6b206fb1e6eb70dbf840b14acb1dcbb9ed4a8ab",
+      "sha256": "cd6667c8e29fa3a5f9b4fe6ed6b206fb1e6eb70dbf840b14acb1dcbb9ed4a8ab"
+    },
+    "sdk/llvm-libc-types/FILE.h": {
+      "origin": "qualified-sdk/llvm-libc-types/FILE.h",
+      "origin_sha256": "6b26b98cba34a1536316479522bede9df90954f13060c1a42b7c4f6e9d293f77",
+      "sha256": "6b26b98cba34a1536316479522bede9df90954f13060c1a42b7c4f6e9d293f77"
+    },
+    "sdk/llvm-libc-types/__atexithandler_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/__atexithandler_t.h",
+      "origin_sha256": "63b1548bd217f08e8a3f9524f798f6b7a171eff8a4f1c44bebfd3d4a04335fdd",
+      "sha256": "63b1548bd217f08e8a3f9524f798f6b7a171eff8a4f1c44bebfd3d4a04335fdd"
+    },
+    "sdk/llvm-libc-types/__qsortcompare_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/__qsortcompare_t.h",
+      "origin_sha256": "145efc5991d2aba907a7588a47a1e46cc19e9c34aa09b8297044b16f9bd3bc05",
+      "sha256": "145efc5991d2aba907a7588a47a1e46cc19e9c34aa09b8297044b16f9bd3bc05"
+    },
+    "sdk/llvm-libc-types/__qsortrcompare_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/__qsortrcompare_t.h",
+      "origin_sha256": "3f8f61d067fc9faf82559a4248dfefd11d8bea528554656805b0488bc1322df1",
+      "sha256": "3f8f61d067fc9faf82559a4248dfefd11d8bea528554656805b0488bc1322df1"
+    },
+    "sdk/llvm-libc-types/__search_compare_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/__search_compare_t.h",
+      "origin_sha256": "7d482ca549e0b4b4bd5f3524b4ce92e3341fa6be92c9e3fa616d1472442c4a28",
+      "sha256": "7d482ca549e0b4b4bd5f3524b4ce92e3341fa6be92c9e3fa616d1472442c4a28"
+    },
+    "sdk/llvm-libc-types/clock_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/clock_t.h",
+      "origin_sha256": "85a51cbdc3bf991db9afb34e05717d0431ac325fd0e5336ca3f14beb0ec3ec34",
+      "sha256": "85a51cbdc3bf991db9afb34e05717d0431ac325fd0e5336ca3f14beb0ec3ec34"
+    },
+    "sdk/llvm-libc-types/clockid_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/clockid_t.h",
+      "origin_sha256": "f90832ae822e537bb8a21584c986e34cde6f55ff0131e7e90e24c5423538fbc1",
+      "sha256": "f90832ae822e537bb8a21584c986e34cde6f55ff0131e7e90e24c5423538fbc1"
+    },
+    "sdk/llvm-libc-types/constraint_handler_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/constraint_handler_t.h",
+      "origin_sha256": "72dc32e5884b9b6d1501e01f2db1bb769cd12e8f7d70c0c9bb558b6e6b573d97",
+      "sha256": "72dc32e5884b9b6d1501e01f2db1bb769cd12e8f7d70c0c9bb558b6e6b573d97"
+    },
+    "sdk/llvm-libc-types/cookie_io_functions_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/cookie_io_functions_t.h",
+      "origin_sha256": "c67f07cacabeff8db1c4ea8eb9ab27fd212c41c312586aeef44a247d8ae314e0",
+      "sha256": "c67f07cacabeff8db1c4ea8eb9ab27fd212c41c312586aeef44a247d8ae314e0"
+    },
+    "sdk/llvm-libc-types/div_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/div_t.h",
+      "origin_sha256": "c18582a431a6937227b042b474f90b71185e08e41f5d780fff535d4d693e897c",
+      "sha256": "c18582a431a6937227b042b474f90b71185e08e41f5d780fff535d4d693e897c"
+    },
+    "sdk/llvm-libc-types/double_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/double_t.h",
+      "origin_sha256": "b83627e7456defebab375a61ee7fb1626bb542cd56f40e61190942f52c9c52c9",
+      "sha256": "b83627e7456defebab375a61ee7fb1626bb542cd56f40e61190942f52c9c52c9"
+    },
+    "sdk/llvm-libc-types/errno_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/errno_t.h",
+      "origin_sha256": "86abe743526faee2e205ef26bf3a6137d3d5860bf5c637b2a3526402bb0301d4",
+      "sha256": "86abe743526faee2e205ef26bf3a6137d3d5860bf5c637b2a3526402bb0301d4"
+    },
+    "sdk/llvm-libc-types/fenv_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/fenv_t.h",
+      "origin_sha256": "9cbd6d532fcd63f3a08377e4d9fedad9024713f59e95be01a6d0fddb0ff9fb32",
+      "sha256": "9cbd6d532fcd63f3a08377e4d9fedad9024713f59e95be01a6d0fddb0ff9fb32"
+    },
+    "sdk/llvm-libc-types/fexcept_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/fexcept_t.h",
+      "origin_sha256": "d459955dd3ae56c8c2935fa21c51c9f146b65d4662c57ca94dcf0069577a6142",
+      "sha256": "d459955dd3ae56c8c2935fa21c51c9f146b65d4662c57ca94dcf0069577a6142"
+    },
+    "sdk/llvm-libc-types/float128.h": {
+      "origin": "qualified-sdk/llvm-libc-types/float128.h",
+      "origin_sha256": "d5874745c8f156687fe02c67fe2f09644822fe92d495d0a5e561a84f90cc113d",
+      "sha256": "d5874745c8f156687fe02c67fe2f09644822fe92d495d0a5e561a84f90cc113d"
+    },
+    "sdk/llvm-libc-types/float_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/float_t.h",
+      "origin_sha256": "e267ca53b614c002959401a8478d74c7581488329650c4ddb6fd7d285d866ef7",
+      "sha256": "e267ca53b614c002959401a8478d74c7581488329650c4ddb6fd7d285d866ef7"
+    },
+    "sdk/llvm-libc-types/ldiv_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/ldiv_t.h",
+      "origin_sha256": "491737e0c5ac194a7c064a6c5a7f6196d6b3cc61cd767b0577b31a585abf032b",
+      "sha256": "491737e0c5ac194a7c064a6c5a7f6196d6b3cc61cd767b0577b31a585abf032b"
+    },
+    "sdk/llvm-libc-types/lldiv_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/lldiv_t.h",
+      "origin_sha256": "e3a4ea548a0109a99185e29a7d4431a304c236342e79fb738bd47e35b027f93e",
+      "sha256": "e3a4ea548a0109a99185e29a7d4431a304c236342e79fb738bd47e35b027f93e"
+    },
+    "sdk/llvm-libc-types/locale_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/locale_t.h",
+      "origin_sha256": "d69fa934111cc8ed4b56983be76e401e4dd4152c29186fe1985ad83eb255f058",
+      "sha256": "d69fa934111cc8ed4b56983be76e401e4dd4152c29186fe1985ad83eb255f058"
+    },
+    "sdk/llvm-libc-types/mbstate_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/mbstate_t.h",
+      "origin_sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce",
+      "sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce"
+    },
+    "sdk/llvm-libc-types/off_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/off_t.h",
+      "origin_sha256": "3799d9adee35408b3847ac09b5d245da811b4475762ce61084f53b8ef2c9da15",
+      "sha256": "3799d9adee35408b3847ac09b5d245da811b4475762ce61084f53b8ef2c9da15"
+    },
+    "sdk/llvm-libc-types/pid_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/pid_t.h",
+      "origin_sha256": "e0ee7551ec0c338992fbeb145f5d4b83dc7c1ff6ee06382c8bb5fbbc573546cb",
+      "sha256": "e0ee7551ec0c338992fbeb145f5d4b83dc7c1ff6ee06382c8bb5fbbc573546cb"
+    },
+    "sdk/llvm-libc-types/pthread_attr_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/pthread_attr_t.h",
+      "origin_sha256": "c23963bef3ecaaddd2ffb82ca427cbabeef2b724945c1572a654f6e883d2d908",
+      "sha256": "c23963bef3ecaaddd2ffb82ca427cbabeef2b724945c1572a654f6e883d2d908"
+    },
+    "sdk/llvm-libc-types/rsize_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/rsize_t.h",
+      "origin_sha256": "90af580b84715166781a394792778214339334a36430cf8ffbd991b51c42b290",
+      "sha256": "90af580b84715166781a394792778214339334a36430cf8ffbd991b51c42b290"
+    },
+    "sdk/llvm-libc-types/size_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/size_t.h",
+      "origin_sha256": "5a7a6ed640a5f29f7e63d936980d77e087c1ba60eba572f61dc59d83a71b293f",
+      "sha256": "5a7a6ed640a5f29f7e63d936980d77e087c1ba60eba572f61dc59d83a71b293f"
+    },
+    "sdk/llvm-libc-types/ssize_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/ssize_t.h",
+      "origin_sha256": "54e1fdb3adb5bcc9c6f19d8d1442dc9c5f7fa5443d252cbae3527b15f34e11eb",
+      "sha256": "54e1fdb3adb5bcc9c6f19d8d1442dc9c5f7fa5443d252cbae3527b15f34e11eb"
+    },
+    "sdk/llvm-libc-types/struct_itimerspec.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_itimerspec.h",
+      "origin_sha256": "c2fe2c32d0fca381e65f4df5d1c47464959a92f061d6e275c07d6f0c09ed583a",
+      "sha256": "c2fe2c32d0fca381e65f4df5d1c47464959a92f061d6e275c07d6f0c09ed583a"
+    },
+    "sdk/llvm-libc-types/struct_lconv.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_lconv.h",
+      "origin_sha256": "68c73cadf687a255993f17ceaf5b30859b8b69df4188cae7699bcd948c790339",
+      "sha256": "68c73cadf687a255993f17ceaf5b30859b8b69df4188cae7699bcd948c790339"
+    },
+    "sdk/llvm-libc-types/struct_sched_param.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_sched_param.h",
+      "origin_sha256": "1a5e2d37a3b1e46d27008217cf59883f8ff74585af69baddc321e9ce93638c0d",
+      "sha256": "1a5e2d37a3b1e46d27008217cf59883f8ff74585af69baddc321e9ce93638c0d"
+    },
+    "sdk/llvm-libc-types/struct_sigevent.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_sigevent.h",
+      "origin_sha256": "9827c91b506fd04cf640bda5cfcc1f3ba0a516b9d16dcd0b78a0b93954503bc0",
+      "sha256": "9827c91b506fd04cf640bda5cfcc1f3ba0a516b9d16dcd0b78a0b93954503bc0"
+    },
+    "sdk/llvm-libc-types/struct_timespec.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_timespec.h",
+      "origin_sha256": "6aab3a5b18b354133bccf7e125f05793a0ac61e1799715f74630adc50e39d59a",
+      "sha256": "6aab3a5b18b354133bccf7e125f05793a0ac61e1799715f74630adc50e39d59a"
+    },
+    "sdk/llvm-libc-types/struct_timeval.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_timeval.h",
+      "origin_sha256": "21795f5901347cc9430ff9be36ce54ce20897360f35d2ba97978806bcf6b0458",
+      "sha256": "21795f5901347cc9430ff9be36ce54ce20897360f35d2ba97978806bcf6b0458"
+    },
+    "sdk/llvm-libc-types/struct_tm.h": {
+      "origin": "qualified-sdk/llvm-libc-types/struct_tm.h",
+      "origin_sha256": "4c782e640c6d5b15f7af1273156a350b7fd2671b50e651e6c4adb58a7f55a11b",
+      "sha256": "4c782e640c6d5b15f7af1273156a350b7fd2671b50e651e6c4adb58a7f55a11b"
+    },
+    "sdk/llvm-libc-types/suseconds_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/suseconds_t.h",
+      "origin_sha256": "8e571a73eca3d0ac9b96d3b181093ff71e719d7c65494ca0fce104cbf11e2a6e",
+      "sha256": "8e571a73eca3d0ac9b96d3b181093ff71e719d7c65494ca0fce104cbf11e2a6e"
+    },
+    "sdk/llvm-libc-types/time_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/time_t.h",
+      "origin_sha256": "0e57b5a31e18f81661e86b83d6397147060d66595befffc448725d01caeb8d90",
+      "sha256": "0e57b5a31e18f81661e86b83d6397147060d66595befffc448725d01caeb8d90"
+    },
+    "sdk/llvm-libc-types/time_t_64.h": {
+      "origin": "qualified-sdk/llvm-libc-types/time_t_64.h",
+      "origin_sha256": "1970f466b1e7fc40c54f0c39b21f1aaf29c23cba5df51c7022d24d9a3af48440",
+      "sha256": "1970f466b1e7fc40c54f0c39b21f1aaf29c23cba5df51c7022d24d9a3af48440"
+    },
+    "sdk/llvm-libc-types/timer_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/timer_t.h",
+      "origin_sha256": "63cf36bacfc87ae88907bbe5b70002f5fcc40bbd7b39b9cce9e4fb9e3dfee6f4",
+      "sha256": "63cf36bacfc87ae88907bbe5b70002f5fcc40bbd7b39b9cce9e4fb9e3dfee6f4"
+    },
+    "sdk/llvm-libc-types/tm_gmtoff_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/tm_gmtoff_t.h",
+      "origin_sha256": "ece853990aace3e0891d6d8d78b833ec37c9d348d034725e51ac26d0ff2c3758",
+      "sha256": "ece853990aace3e0891d6d8d78b833ec37c9d348d034725e51ac26d0ff2c3758"
+    },
+    "sdk/llvm-libc-types/union_sigval.h": {
+      "origin": "qualified-sdk/llvm-libc-types/union_sigval.h",
+      "origin_sha256": "191cc66940a0259981717d4aff5ca6a1cb1bef36ff204429a99a0af527ad3387",
+      "sha256": "191cc66940a0259981717d4aff5ca6a1cb1bef36ff204429a99a0af527ad3387"
+    },
+    "sdk/llvm-libc-types/wchar_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/wchar_t.h",
+      "origin_sha256": "016b780f922e595420ce04a2aa43c1a283dd4f8b7a5b2e54d524d0c3b15046dd",
+      "sha256": "016b780f922e595420ce04a2aa43c1a283dd4f8b7a5b2e54d524d0c3b15046dd"
+    },
+    "sdk/llvm-libc-types/wctype_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/wctype_t.h",
+      "origin_sha256": "c4a012d9ad0f9313a0fbcaba14b39f5498e602251c182f2b5c55430964ff634d",
+      "sha256": "c4a012d9ad0f9313a0fbcaba14b39f5498e602251c182f2b5c55430964ff634d"
+    },
+    "sdk/llvm-libc-types/wint_t.h": {
+      "origin": "qualified-sdk/llvm-libc-types/wint_t.h",
+      "origin_sha256": "ee322165336ea6a08ababd87446230b89cf7ed38932267a129c44898593e5e6d",
+      "sha256": "ee322165336ea6a08ababd87446230b89cf7ed38932267a129c44898593e5e6d"
+    },
+    "sdk/sys/types.h": {
+      "origin": "qualified-sdk/sys/types.h",
+      "origin_sha256": "4cbd01b1f8e5518014fa5d122971d19ac68aab914c0a095d0782ea74035335d4",
+      "sha256": "4cbd01b1f8e5518014fa5d122971d19ac68aab914c0a095d0782ea74035335d4"
+    }
+  },
+  "gtos_base": "2cb559b9079f6c9acb71e5cfd311d68aaea70ba0",
+  "libcxx_revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+  "llvm_libc_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+  "qualified_export_object_hashes": {
+    "abort.cc": "6c4793c471b6248edc46e8fe917f6d85754535948ad897e317086d74aed0e78e",
+    "emutls.cc": "c98eb281017b30f715f6f864283251aab9ffdde5af49f2eb4f479f923da7c578",
+    "gtos-clock-bridge.cc": "890f286631b31e2aac09e85f22d3eb2a0544ac452787794b20e66091f9d24a60",
+    "heap.cc": "f9d304f63e8f697f4fb4dc342862e2a5a53c22cdd2297c9b158ba5e524bdd324",
+    "memory.cc": "b235581acb37fb309880d873c833d08d5b7c388e8e44d90c248bb43f834440a9",
+    "operators.cc": "09f12fbe0f31776c6603e5530b6693a32b0102e2512dd57a4d8da45e715c8907",
+    "thread-core.cc": "ffbc829ba53e58448704fed727afcc7d2a0aecb08dd88d84525ee2405d72891c",
+    "thread-exit.cc": "7c4675ce7058adb9a84628f3d8b1198a877755972da4ebf3a718404388d7c5f7"
+  },
+  "qualified_gn_object_hashes": {
+    "base.cycleclock.o": "dd0c84ef404f7850757ab9b90248198a4af912bdda57a4a1b7d38745ba7b6794",
+    "base.sysinfo.o": "890f8c9632de5842b609e32153361691d6e2fdb5b1b4e7a83a001e1e826a39b0",
+    "base.thread_identity.o": "8dfb6141cbc1675f2111975b33b938a5a69509d06be0b4e2c42f537243b4ded7",
+    "native_clock_bridge.gtos-clock-bridge.o": "890f286631b31e2aac09e85f22d3eb2a0544ac452787794b20e66091f9d24a60",
+    "native_runtime.abort.o": "6c4793c471b6248edc46e8fe917f6d85754535948ad897e317086d74aed0e78e",
+    "native_runtime.emutls.o": "c98eb281017b30f715f6f864283251aab9ffdde5af49f2eb4f479f923da7c578",
+    "native_runtime.heap.o": "f9d304f63e8f697f4fb4dc342862e2a5a53c22cdd2297c9b158ba5e524bdd324",
+    "native_runtime.operators.o": "09f12fbe0f31776c6603e5530b6693a32b0102e2512dd57a4d8da45e715c8907",
+    "native_runtime.thread-core.o": "ffbc829ba53e58448704fed727afcc7d2a0aecb08dd88d84525ee2405d72891c",
+    "native_runtime.thread-exit.o": "7c4675ce7058adb9a84628f3d8b1198a877755972da4ebf3a718404388d7c5f7",
+    "spinlock_wait.spinlock_wait.o": "5048db2586f35ba1305676272e0e582af932027b34358d67e353581f38c4b90b"
+  },
+  "qualified_memory_flags": [
+    "-m32",
+    "-std=c++11",
+    "-ffreestanding",
+    "-nostdlib",
+    "-nostdinc",
+    "-fno-builtin",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-stack-protector",
+    "-fno-pie",
+    "-fno-threadsafe-statics",
+    "-fno-use-cxa-atexit",
+    "-fno-asynchronous-unwind-tables",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fstack-usage",
+    "-D__GTOS__=1",
+    "-U__linux__",
+    "-U__unix__",
+    "-Ulinux",
+    "-Uunix",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-mgeneral-regs-only",
+    "-mno-sse",
+    "-mno-mmx",
+    "-msoft-float",
+    "-fno-tree-vectorize"
+  ],
+  "qualified_native_flags": [
+    "-x",
+    "c++",
+    "--target=i686-unknown-none-elf",
+    "-ffreestanding",
+    "-fno-stack-protector",
+    "-fno-pic",
+    "-fno-pie",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-mno-mmx",
+    "-msse2",
+    "-mfpmath=sse",
+    "-mno-sse3",
+    "-mno-ssse3",
+    "-mno-sse4",
+    "-mno-avx",
+    "-femulated-tls",
+    "-fstack-usage",
+    "-nostdinc",
+    "-nostdinc++",
+    "-DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-D__STDC_CONSTANT_MACROS",
+    "-D__STDC_FORMAT_MACROS",
+    "-D_FORTIFY_SOURCE=2",
+    "-DCR_CLANG_REVISION=\"llvmorg-24-init-7747-g62397f8b-57\"",
+    "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE",
+    "-D__GTOS__=1",
+    "-DNDEBUG",
+    "-DNVALGRIND",
+    "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+    "-DV8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=64",
+    "-DV8_LOGGING_LEVEL=1",
+    "-DV8_USE_METAGEN_INSTANCE_TYPES=0",
+    "-DBUILTIN_BLOCK_POSITION",
+    "-DV8_USE_HOST_CPU_ARM_FEATURES",
+    "-DV8_ATOMIC_OBJECT_FIELD_WRITES",
+    "-DV8_ENABLE_LAZY_SOURCE_POSITIONS",
+    "-DV8_WIN64_UNWINDING_INFO",
+    "-DV8_ENABLE_REGEXP_INTERPRETER_THREADED_DISPATCH",
+    "-DV8_ENABLE_FUZZTEST",
+    "-DV8_JITLESS",
+    "-DV8_ENABLE_CONTINUATION_PRESERVED_EMBEDDER_DATA",
+    "-DV8_ALLOCATION_FOLDING",
+    "-DV8_ALLOCATION_SITE_TRACKING",
+    "-DV8_ADVANCED_BIGINT_ALGORITHMS",
+    "-DV8_ENABLE_TDZ_HOLE",
+    "-DV8_USE_ZLIB",
+    "-DV8_ENABLE_MAGLEV_GRAPH_PRINTER",
+    "-DV8_ENABLE_EXTENSIBLE_RO_SNAPSHOT",
+    "-DV8_ENABLE_BLACK_ALLOCATED_PAGES",
+    "-DV8_ENABLE_UNDEFINED_DOUBLE",
+    "-DV8_WASM_RANDOM_FUZZERS",
+    "-DV8_ARRAY_BUFFER_INTERNAL_FIELD_COUNT=0",
+    "-DV8_ARRAY_BUFFER_VIEW_INTERNAL_FIELD_COUNT=0",
+    "-DV8_PROMISE_INTERNAL_FIELD_COUNT=0",
+    "-DV8_USE_DEFAULT_HASHER_SECRET=true",
+    "-DV8_DEPRECATION_WARNINGS",
+    "-DV8_DISALLOW_JS_IN_API_INTERRUPTS_IS_CHECKED",
+    "-DV8_IMMINENT_DEPRECATION_WARNINGS",
+    "-DV8_HAVE_TARGET_OS",
+    "-DV8_TARGET_OS_GTOS",
+    "-DCPPGC_SUPPORTS_OBJECT_NAMES",
+    "-DCPPGC_ENABLE_LARGER_CAGE",
+    "-DCPPGC_SLIM_WRITE_BARRIER",
+    "-DV8_TARGET_ARCH_IA32",
+    "-Wall",
+    "-Wextra",
+    "-Wimplicit-fallthrough",
+    "-Wextra-semi",
+    "-Wunreachable-code-aggressive",
+    "-Wgnu",
+    "-Wno-gnu-anonymous-struct",
+    "-Wno-gnu-conditional-omitted-operand",
+    "-Wno-gnu-include-next",
+    "-Wno-gnu-label-as-value",
+    "-Wno-gnu-redeclared-enum",
+    "-Wno-gnu-statement-expression",
+    "-Wno-gnu-zero-variadic-macro-arguments",
+    "-Wno-zero-length-array",
+    "-Wthread-safety",
+    "-Wno-unused-template",
+    "-Wno-missing-field-initializers",
+    "-Wno-unused-parameter",
+    "-Wno-psabi",
+    "-Wno-stringop-overread",
+    "-Wloop-analysis",
+    "-Wno-unneeded-internal-declaration",
+    "-Wno-cast-function-type",
+    "-Wno-thread-safety-reference-return",
+    "-Wno-nontrivial-memcall",
+    "-Wno-uninitialized-const-pointer",
+    "-Wno-unused-but-set-global",
+    "-Wshadow",
+    "-Werror",
+    "-Werror=#pragma-messages",
+    "-fno-delete-null-pointer-checks",
+    "-fno-strict-overflow",
+    "-fno-ident",
+    "-fno-math-errno",
+    "-fno-strict-aliasing",
+    "-fcolor-diagnostics",
+    "-fdiagnostics-show-inlining-chain",
+    "-fmerge-all-constants",
+    "-fcrash-diagnostics-dir=../source/out/clang-crashreports",
+    "-fno-lifetime-dse",
+    "-mllvm",
+    "-instcombine-lower-dbg-declare=0",
+    "-mllvm",
+    "-split-threshold-for-reg-with-hint=0",
+    "-ffp-contract=off",
+    "-Wno-builtin-macro-redefined",
+    "-D__DATE__=",
+    "-D__TIME__=",
+    "-D__TIMESTAMP__=",
+    "-no-canonical-prefixes",
+    "-fomit-frame-pointer",
+    "-g0",
+    "-fsanitize=array-bounds",
+    "-fsanitize-trap=array-bounds",
+    "-fsanitize-ignore-for-ubsan-feature=array-bounds",
+    "-Wno-unsafe-buffer-usage-in-static-sized-array",
+    "-fsanitize=return",
+    "-fsanitize-trap=return",
+    "-fsanitize-ignore-for-ubsan-feature=return",
+    "-fsanitize=unreachable",
+    "-fsanitize-trap=unreachable",
+    "-fsanitize-ignore-for-ubsan-feature=unreachable",
+    "-Wheader-hygiene",
+    "-Wstring-conversion",
+    "-Wtautological-overlap-compare",
+    "-Wunreachable-code",
+    "-Wlifetime-safety-permissive",
+    "-Wno-shadow",
+    "-Wctad-maybe-unsupported",
+    "-Xclang",
+    "-add-plugin",
+    "-Xclang",
+    "blink-gc-plugin",
+    "-Wno-invalid-offsetof",
+    "-Wmissing-field-initializers",
+    "-Wunnecessary-virtual-specifier",
+    "-O2",
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-unique-section-names",
+    "-Wno-invalid-offsetof",
+    "-Wenum-compare-conditional",
+    "-Wno-nullability-completeness",
+    "-std=c++20",
+    "-Wno-trigraphs",
+    "-gsimple-template-names",
+    "-fno-exceptions",
+    "-fno-rtti"
+  ],
+  "schema": 1,
+  "scope": "Qualified native IA32 diagnostic runtime subset; not whole libc++/V8/Chromium",
+  "sdk_include_order": [
+    "sdk",
+    "pinned libc++ include",
+    "c-sdk"
+  ],
+  "target": "i686-unknown-none-elf"
+}
