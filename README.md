@@ -172,3 +172,5 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 已验证日历格式、实际 CPL3 边界和资源回收；它尚未接入完整 Chromium/V8 浏览器。
 
 已验收的 [V8 UTC 探针](apps/native_v8_utc_probe/README.md)把真实 CMOS/PIT UTC 接入 Time::Now、NowFromSystemTime 和 ToJsTime；独立验证正常退出、故障、取消及页面/FP 回收。它仍是完整原生浏览器的前置模块。
+
+已验收的 [C 时钟/TLS errno 组件](apps/native_c_clock/README.md)提供真实 clock_gettime、固定 LLVM thread_local errno 和配套分配器，覆盖跨页写入、失败、取消及精确回收；完整原生浏览器仍待闭合。
