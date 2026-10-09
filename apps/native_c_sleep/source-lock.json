@@ -1,0 +1,90 @@
+{
+  "scope": "Standalone native C nanosleep; true Abseil integration separately witnessed, no complete printf or native browser qualification",
+  "clang_sha256": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7",
+  "c_clock_source_lock_sha256": "8dc56e22b2907634bc90d4628e4d8996006d067b5102690ba57879a83bd7307c",
+  "helper_cases": 298,
+  "helper_oracle": "Python unbounded integer elapsed delta versus duration; volatile actual IA32 helper loads",
+  "files": {
+    "README.md": "b00792d0c879736dd8b7e27c7fb464d653f1e8d320617285d786837b47d41e28",
+    "acceptance.json": "a6c57fc590c510634b9e0b3f6e04845f423d492d7855ee0c832166679b790c8b",
+    "probe/elapsed-cases.h": "acee2f08669c840bc693553d58daf47daf7eabe5bcfed859daa99c4e198ae0be",
+    "probe/kernel.cpp": "d376f970dcf4b1a0f18a0b2c4cc5a9edc2dca56a67a005407a2fdf06a3cdf3bb",
+    "probe/linker.ld": "7e4d2215dc2213b0da24c7e21d68d18622c32ec75dceeefd57d39c6cfd2e71b5",
+    "probe/main.cc": "60057c54e7fe48080e3a0de08143b59f7868465ff4fb427a5e0d50317926eb5b",
+    "probe/observer.py": "955d537ae15aa4087ca095f870690e1bb618ba9c2c3967b7e96fe37e998707e9",
+    "probe/record.h": "7e554365eb9dfd7bb2848fa5e39ffcd518aee2812e3d749b0c93d433c64283b3",
+    "runtime/nanosleep-internal.h": "e3f84e698898bc869ee0ca1fb5976f1be3b31b301209605eaa3e2848fde093e8",
+    "runtime/nanosleep.cc": "8d07e60f31b826092e0c2717c692e66d72882fb983862fb606401f9fc9117b2a"
+  },
+  "abseil_guest_witness": {
+    "status_sha256": "d92d92dd50e3f0790655e7b860bfe6d518fc2ae6e8d439c33fb7155949eb3f6a",
+    "actual_cpl3_victims": 10,
+    "independent_samples": 120,
+    "exact_reap_checks": 12,
+    "full_printf_guest_pass": false,
+    "native_isolate_pass": false
+  },
+  "executed_objects": {
+    "O0-clock-gettime.o": "b05d27ef41280f8451f771412ca974e87b42dee80ae60a0571efa0ed413ed0c1",
+    "O0-heap.o": "a6df718d6574bdd38030b966e88ed01e17f351aceb7ea723677cc7899772ed97",
+    "O0-emutls.o": "6003290dcf7b53aebf4ebeeffca5ac4158c244919fea120579d8730508ffe0e6",
+    "O0-libc_errno.o": "ccab92415688d6e5f6564a3475d4b64296c75635916520a4090d218805666626",
+    "O0-nanosleep.o": "b024be8db8fe2ca43acb7396811446200dd3290364f970447852445c825c712f",
+    "O2-clock-gettime.o": "56b331d6a0b5dfd6e509f6524755f2dc3e4189fe770d5059893ac826c31645a3",
+    "O2-heap.o": "d83567963cd4b7ce0264790df09081dbc24450dcd6456a30f29c151b5f8fd03d",
+    "O2-emutls.o": "c98eb281017b30f715f6f864283251aab9ffdde5af49f2eb4f479f923da7c578",
+    "O2-libc_errno.o": "7180a6bc4761d5b81336e20c9dc8e60ac69594e377be90cb1f82f64c1984fb8f",
+    "O2-nanosleep.o": "7c2387eb06b7f0a0795e15f30a945c45f9c1fec1176d011bf31841513d7f3c1f"
+  },
+  "executed_elfs": {
+    "O0-mode0": {
+      "sha256": "5f2529c3490be1c156ad5dd6e1f659cbc5daa1179b5683d612ebcb48d0463611",
+      "load_pages": 8
+    },
+    "O0-mode1": {
+      "sha256": "d5802a6ab526e919f70d0a7a5d4f60b85cb4e91a4b193fdc5b5676a2125426e0",
+      "load_pages": 8
+    },
+    "O0-mode2": {
+      "sha256": "3d2f47599d46da806fb7b673d3a271f5010d64b6f800806def06f47e4e135c00",
+      "load_pages": 8
+    },
+    "O0-mode3": {
+      "sha256": "b88c99f5f4b6cd405a996a8e6199d67a08b9465a49e2a40edc368e5ba320b23e",
+      "load_pages": 8
+    },
+    "O2-mode0": {
+      "sha256": "d9880a1f325c96eaff1e5ffd0403d2fd537a444098148a7577df38d653e739f5",
+      "load_pages": 7
+    },
+    "O2-mode1": {
+      "sha256": "e726bf198db5f53903aeda6604d69cca49649d596f65e2ea491928475012223d",
+      "load_pages": 7
+    },
+    "O2-mode2": {
+      "sha256": "6e77e79ea5533f9937c01f155d8eab0f4fe0d6294a980551e780c1c9a5e2fb64",
+      "load_pages": 7
+    },
+    "O2-mode3": {
+      "sha256": "1b2f10d54b8cb727e25577f897512956bb9b5a4b31bb14f14c7c8d851a27ab5d",
+      "load_pages": 7
+    }
+  },
+  "executed_loaded_kernels": {
+    "O0": "11ddf532fa52a2746ce138483d820ff049bd2fb1640d5eb6a9f2b3570ec99e51",
+    "O2": "0470386eb740e240ec44d61f9f74d5f650a34a8fc05351aa1ed75f96f68fc573"
+  },
+  "build_driver_sha256": "3680eca7853301c08f9b3e943e9c2df8e2197f552e0dc39ade3eb65dac7f4ff4",
+  "legacy_memory_source_sha256": "feede5e36776bafbdbc04cdac5b88c12d7f6e64f1e759fc46448d26fde4f7fb4",
+  "executed_archives": {
+    "O0": {
+      "archive_sha256": "dfbb2decb39e9090628d92e56612b856869db85171947d0048567b612482f37f",
+      "closure_sha256": "33ec300eb7653f7e9babc816764463976e02b30b09414b5b4a8d694699ea47e2"
+    },
+    "O2": {
+      "archive_sha256": "854c78c6253e0341ed6f859653aeb0b93279b07a38763668c0c6d3c91e3d1a4d",
+      "closure_sha256": "8a59656c512f07e15f85c6f05ab65bcd1d6237a9677872167e3c60a649b72112"
+    }
+  },
+  "qualification_report_sha256": "a6c57fc590c510634b9e0b3f6e04845f423d492d7855ee0c832166679b790c8b"
+}

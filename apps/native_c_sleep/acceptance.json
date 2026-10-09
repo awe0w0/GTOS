@@ -1,0 +1,56 @@
+{
+  "scope": "Standalone native C nanosleep; real pinned Abseil integration separately scoped",
+  "native_c_sleep_guest_pass": true,
+  "full_printf_guest_pass": false,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "native_c": {
+    "optimizations": [
+      0,
+      2
+    ],
+    "memory_mib": [
+      32,
+      64
+    ],
+    "configured_cpus": [
+      1,
+      4
+    ],
+    "cold_boots": 4,
+    "actual_cpl3_victims": 20,
+    "exact_reap_checks": 24,
+    "independently_checked_timing_samples": 240,
+    "helper_vectors": 298,
+    "helper_vector_comparisons": 5960,
+    "runtime_status_sha256": "8deb36744ffbe5c8adc6b368bb1d39d8abdbfd5e36748c092779e1cb5467277d"
+  },
+  "abseil": {
+    "cold_boots": 2,
+    "actual_cpl3_victims": 10,
+    "independently_checked_timing_samples": 120,
+    "exact_reap_checks": 12,
+    "calls": [
+      "actual SleepFor",
+      "GetCurrentTimeNanos normal RTC path",
+      "Now normal RTC path"
+    ],
+    "status_sha256": "d92d92dd50e3f0790655e7b860bfe6d518fc2ae6e8d439c33fb7155949eb3f6a",
+    "complete_library_qualified": false
+  },
+  "self_review": {
+    "status_sha256": "01b13f26c5e2ef4ff7661b200fac845ccb301108fc253bc176b4703eb3253d85",
+    "negative_observers": 76,
+    "isa_negative_controls": 5,
+    "actual_elf_isa_audits": 12,
+    "max_c_stack_bound_O0": 1616,
+    "max_c_stack_bound_O2": 1248,
+    "user_stack_usable": 8176,
+    "actual_gn_nanosleep_sha256": "7c2387eb06b7f0a0795e15f30a945c45f9c1fec1176d011bf31841513d7f3c1f",
+    "gn_and_exported_object_identical": true
+  },
+  "production_image_changed": false,
+  "capacity_changed": false
+}

@@ -174,3 +174,5 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 已验收的 [V8 UTC 探针](apps/native_v8_utc_probe/README.md)把真实 CMOS/PIT UTC 接入 Time::Now、NowFromSystemTime 和 ToJsTime；独立验证正常退出、故障、取消及页面/FP 回收。它仍是完整原生浏览器的前置模块。
 
 已验收的 [C 时钟/TLS errno 组件](apps/native_c_clock/README.md)提供真实 clock_gettime、固定 LLVM thread_local errno 和配套分配器，覆盖跨页写入、失败、取消及精确回收；完整原生浏览器仍待闭合。
+
+已验收的 [C nanosleep 组件](apps/native_c_sleep/README.md)按真实 PIT 单调时间等待，接受完整有符号64位时长，验证零时长、跨页请求、非法参数、故障、取消及精确回收。导出对象与实际 GN 对象逐字一致；真实 Abseil SleepFor/Now 已在独立 CPL3 诊断中执行，完整原生浏览器仍待闭合。
