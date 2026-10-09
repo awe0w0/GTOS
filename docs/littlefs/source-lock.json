@@ -1,0 +1,126 @@
+{
+  "upstream": "https://github.com/littlefs-project/littlefs",
+  "tag": "v2.11.3",
+  "revision": "6cb4e86540eca0d9ba62500a298385c9d863c8be",
+  "license": "BSD-3-Clause",
+  "upstream_algorithm_modified": false,
+  "scope": "Full kernel IA32 FileStore backend, not native file ABI or POSIX qualification",
+  "qualified_cxx_sha256": "863c9bc7126d3b3a2ce9270309d52b36befcf38a721ad8b52f29be2767cb6204",
+  "qualified_flags": {
+    "common_flags": [
+      "-m32",
+      "-ffreestanding",
+      "-nostdlib",
+      "-nostdinc",
+      "-fno-builtin",
+      "-fno-stack-protector",
+      "-fno-pie",
+      "-fno-asynchronous-unwind-tables",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fstack-usage",
+      "-Iinclude",
+      "-Iinclude/storage/littlefs-sdk",
+      "-Iinclude/storage/littlefs",
+      "-Wall",
+      "-Wextra",
+      "-Werror"
+    ],
+    "c_flags": [
+      "-x",
+      "c",
+      "-std=c99",
+      "-DLFS_DEFINES=storage/littlefs_port.h"
+    ],
+    "cpp_flags": [
+      "-std=c++11",
+      "-fno-exceptions",
+      "-fno-rtti",
+      "-fno-threadsafe-statics",
+      "-fno-use-cxa-atexit"
+    ],
+    "mandatory_integer_flags": [
+      "-mgeneral-regs-only",
+      "-mno-sse",
+      "-mno-mmx",
+      "-msoft-float",
+      "-fno-tree-vectorize"
+    ]
+  },
+  "files": {
+    "tools/build-filestore-probe.py": "c4b607b0b434254cca13bb3efc0eeb54c291bc651e6f43ccdf028da1a849ebe0",
+    "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
+    "docs/littlefs/LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d",
+    "include/storage/littlefs/lfs.h": "b1befd7288d08815accc8f9af744c55686c0b9e3ac0061c32ceee38a1b3eb96d",
+    "include/storage/littlefs/lfs_util.h": "548d46aa524dc7449e16739286c1a422a52f9de727ff0be0c2ffc5593f5ca981",
+    "tests/filestore_stock.c": "c90aa15fda264e65ae5a77d081fdcc748d16773f6e611b7ca917536bda20e768",
+    "tests/filestore_loader.s": "e851b0e18fc5c0734daf2c1a6dab63bd6e8968c5ecafc57ad59e5aec9d302de4",
+    "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
+    "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
+    "src/storage/littlefs/lfs.c": "a36d6a095785ddea9571d541d68d3e4ef01d5b255a99d17d3f07fb6ea60ea132",
+    "include/storage/littlefs_port.h": "e8bf60807b430cf261166906fd750c0a46295cc993a452e379ef835b18eff6d8",
+    "include/common/types.h": "08d58b8488576629caff1e4c70ef38e95960ab23892ff79762418a2a801781d9",
+    "include/storage/littlefs-sdk/stdint.h": "dfda6a3f697eb70fd82f8c6b85cf537d7a0e36bd9994e379ded74fa56c7f2207",
+    "include/storage/littlefs-sdk/stdbool.h": "ffd9fb2e6125999f3560c77f886f1efb96266d63de68c4e48d44c2655131ee63",
+    "include/storage/littlefs-sdk/string.h": "c74d83111041107a03b908850ef73b59ba07173eef0ea9bd43e07c1dd0cde858",
+    "include/storage/littlefs-sdk/stddef.h": "8f74d22335c2c68739c0abe794eebb5ba07c5eca224a3ccc939a1b568299277f",
+    "include/storage/littlefs-sdk/inttypes.h": "766373fdafbac75582ff5e3db2665e7cbc2ad783effcfa8fea70d638eb528758",
+    "include/storage/littlefs-sdk/assert.h": "df99bf754f0cec830ab0b0bbaa0ea25de3c4c3e8f2dbcd9c4bde0c04fb81bd75",
+    "src/storage/littlefs/lfs_util.c": "f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec",
+    "src/storage/littlefs_port.cpp": "3bba4f3e303c4e32f3dd39dd092dbde970d934dfc1c9e2dc2b47ddabf1cb00fd",
+    "src/storage/filestore.cpp": "63298c92a0d227f51f570101bea6b029ef2e3af36b95e62eeda5c465112d2cb2",
+    "include/storage/filestore.h": "73cf4f22636dab99dc7a79a6e94e93f3bf8d7fab93031641b1cc98ab1c650a0e",
+    "include/storage/blockdevice.h": "1db8446209b8501907bf87ef9f5d1a41b5b948bddac8b85223d2c81d14189a41",
+    "include/memory/criticalsection.h": "d7d544556e76ebb204b353d81b5d612a02d290f6ec0e416fc640cfa38ce56617",
+    "src/drivers/ata.cpp": "874588677d553c77b59242c38c2153d950463ce28dabc6e6137ba4d13c06102e",
+    "include/drivers/ata.h": "40a4497538313e1f8fd7b70a085bf7c5e534cb7acaf7bdd3c5bbaa5f92bdf9b2",
+    "include/hardwarecommunication/port.h": "6cf32b68c5264a274265e6a02e76cc37d0592c451fa9ae2f6228653d7c235d2f",
+    "include/drivers/ata_wait.h": "3aafe94263327a43757a97719cdcb71b8b29f39d867cdc1a15f414889f830a14",
+    "src/hardwarecommunication/port.cpp": "2ef01a7a8fef916a0e31234c980e9d2b22b6cde3cb588f30f408540674be6422",
+    "tests/filestore_guest.cpp": "39a13f68769a4aaaa9b00346cf3d6c7d9f00c06c5650dab52c18d71b201dced8",
+    "Makefile": "f57820c749a9d42ebef93be2788c40cff943307c756038ab93470d6bda25b92b",
+    ".gitattributes": "7b69ffb156d9caac1bf986f9e21c539845a81b2e45df4cb358a7a15650d2a611"
+  },
+  "executed_objects": {
+    "O0-lfs.o": "5ecb5c2d46dfd9e39957ec4cf6f66cb61be9c337161665efa1f8d0b99ae63702",
+    "O0-lfs_util.o": "3eed62159be4a0cef0db7234cd3da681044ca566eb9123877ad910b084eee680",
+    "O0-littlefs_port.o": "7e96b014512bd9d8ac708b164c694462e022f5517467dbb72eb4f4e48724fcda",
+    "O0-filestore.o": "6d11beb5075046b70577a70928a965f722e4ccfc33b3c2310340095e99942a13",
+    "O0-ata.o": "e43e153c25aed624031ca25807d8f7256599e123fff750dba08b9cde4ae62ee8",
+    "O0-port.o": "a01c4965adffcd690cab049fa8fe97023700b7f738a03058566ad2dc24561163",
+    "O0-filestore_guest.o": "8eb6a7d1180cae15b5d3fd19d3286533200a587bc68eb665ec21d4c2d22a5b4b",
+    "O2-lfs.o": "61a1e6188fc56ac5ee6938234bb134c573fa5d3e800783636cadeea14f1b3c40",
+    "O2-lfs_util.o": "2f6903727f798ea18a836e09e89cc9bf9767909a5e59e2b694cc001cfede9cdb",
+    "O2-littlefs_port.o": "c0e1c9de05f77182ef667fb66ad5ea393c6a1b347390ffb59aa66ff5d84658be",
+    "O2-filestore.o": "ab75dff75c11348e874a764702f77822a9e2be7847a1d46fbef73e36ebfd60f4",
+    "O2-ata.o": "ce891c74a0df49fa0cd726cd652b343153664ddf7cf73c30476e5a6d64441810",
+    "O2-port.o": "51fb903741fe0a47b95611565e9adefa4cabcfc6778ddb951e8ba415d6ac7a7d",
+    "O2-filestore_guest.o": "a7acce3d1c09b77359e4c1dd2eeecc2004aced54693d8c16f65c682dc58ef47a"
+  },
+  "executed_kernels": {
+    "O0": "935a21bf577f2b397ae1d4cfef96fc5fd841f5d7b7072f1c96d30d969b156348",
+    "O2": "8e1373379792616a0845834103df139076ac21e0e951d098c08d3bf0a538e16f"
+  },
+  "upstream_files": {
+    "lfs.c": "a36d6a095785ddea9571d541d68d3e4ef01d5b255a99d17d3f07fb6ea60ea132",
+    "lfs_util.c": "f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec",
+    "lfs.h": "b1befd7288d08815accc8f9af744c55686c0b9e3ac0061c32ceee38a1b3eb96d",
+    "lfs_util.h": "548d46aa524dc7449e16739286c1a422a52f9de727ff0be0c2ffc5593f5ca981",
+    "LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d"
+  },
+  "qualification_status_sha256": "cf870b4d7abcdda1760aa9785aab5e5ad1d0910ea375145189b327893dd13f16",
+  "full_kernel_status_sha256": "bc72e0d9426ee9342261f0bec640b7727469b43a1ded57e4276b69853bd77bdb",
+  "upstream_git_blobs": {
+    "lfs.c": "c83c7e0b086a3a8942f71bfd3d70b0922a1bbbae",
+    "lfs_util.c": "dac72abc3c101dc720727d3379723548d46dae1e",
+    "lfs.h": "8fbd5b479a848bd5001e18891d58061c3b43c858",
+    "lfs_util.h": "c1999fa96ddb445137bda5fa6955c2cbe3a61002",
+    "LICENSE.md": "e6c3a7bac1d8b3ed2ff3160a5bb49abebdd6fe7e"
+  },
+  "vendor_byte_restoration": {
+    "qualified_working_copy": "CRLF Windows checkout",
+    "canonical_vendor_equals_git_blobs": true,
+    "only_crlf_to_lf": true,
+    "require_exact_executed_object_and_kernel_reproduction": true
+  }
+}

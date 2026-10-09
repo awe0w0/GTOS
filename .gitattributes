@@ -1,0 +1,6 @@
+# Preserve exact pinned upstream blobs and their original whitespace.
+include/storage/littlefs/lfs.h -text -whitespace
+include/storage/littlefs/lfs_util.h -text -whitespace
+src/storage/littlefs/lfs.c -text -whitespace
+src/storage/littlefs/lfs_util.c -text -whitespace
+docs/littlefs/LICENSE.md -text -whitespace

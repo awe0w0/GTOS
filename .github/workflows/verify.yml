@@ -77,3 +77,18 @@ jobs:
         run: bash .github/scripts/install-ubuntu-tools.sh gcc binutils grub-pc-bin grub-common xorriso mtools qemu-system-x86 python3
       - name: Verify full sparse VM ownership, faults and rollback
         run: /usr/bin/python3 arch/x86_64/tests/vm_qemu.py --output "$RUNNER_TEMP/gtos-x64-vm"
+
+
+  verify_native_filesystem:
+    # Full ATA backend qualification; not CPL3 or browser execution.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install official filesystem qualification tools
+        run: bash .github/scripts/install-ubuntu-tools.sh g++ gcc binutils grub-pc-bin grub-common xorriso mtools qemu-system-x86 python3
+      - name: Verify full IA32 backend and every completed-sector interruption
+        env:
+          CXX: /usr/bin/g++
+          CC: /usr/bin/gcc
+        run: /usr/bin/python3 tools/build-filestore-probe.py "$RUNNER_TEMP/gtos-filesystem"

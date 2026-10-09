@@ -15,15 +15,19 @@ KERNEL_BINARY ?= GTOS.bin
 ASFLAGS := --32
 LDFLAGS := -melf_i386
 CPP_SOURCES := $(shell find src -name '*.cpp' | sort)
+C_SOURCES := src/storage/littlefs/lfs.c src/storage/littlefs/lfs_util.c
 ASM_SOURCES := $(shell find src -name '*.s' | sort)
-OBJECTS := $(patsubst src/%.cpp,$(KERNEL_OBJDIR)/%.o,$(CPP_SOURCES)) $(patsubst src/%.s,$(KERNEL_OBJDIR)/%.asm.o,$(ASM_SOURCES))
+OBJECTS := $(patsubst src/%.cpp,$(KERNEL_OBJDIR)/%.o,$(CPP_SOURCES)) $(patsubst src/%.s,$(KERNEL_OBJDIR)/%.asm.o,$(ASM_SOURCES)) $(patsubst src/%.c,$(KERNEL_OBJDIR)/%.c.o,$(C_SOURCES))
 # A failed post-link audit must not leave a timestamp-current runnable target.
 .DELETE_ON_ERROR:
 .PHONY: all clean run test test-kernel-integer
 all: GTOS.iso
 $(KERNEL_OBJDIR)/%.o: src/%.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -Iinclude/storage/littlefs-sdk $(KERNEL_INTEGER_FLAGS) -c $< -o $@
+$(KERNEL_OBJDIR)/storage/littlefs/%.c.o: src/storage/littlefs/%.c tools/kernel-cxxflags Makefile
+	mkdir -p $(@D)
+	$(CXX) $(filter-out -std=% -fno-rtti -fno-exceptions -fcheck-new -fno-use-cxa-atexit -Wno-write-strings,$(CXXFLAGS)) -x c -std=c99 -nostdinc -Iinclude/storage/littlefs-sdk -Iinclude/storage/littlefs -DLFS_DEFINES=storage/littlefs_port.h $(KERNEL_INTEGER_FLAGS) -c $< -o $@
 $(KERNEL_OBJDIR)/%.asm.o: src/%.s
 	mkdir -p $(@D)
 	$(AS) $(ASFLAGS) $< -o $@

@@ -1,0 +1,131 @@
+{
+  "module": "IA32 full FileStore kernel backend",
+  "filesystem_backend_pass": true,
+  "native_file_abi_pass": false,
+  "native_isolate_pass": false,
+  "native_browser_pass": false,
+  "physical_power_loss_claim": false,
+  "production_image_changed": false,
+  "existing_capacity_changed": false,
+  "upstream_revision": "6cb4e86540eca0d9ba62500a298385c9d863c8be",
+  "upstream_algorithm_modified": false,
+  "actual_ata_cold_boots": 174,
+  "sector_stop_boundaries": 84,
+  "regular_cases": [
+    {
+      "opt": 0,
+      "phase": "writer",
+      "evidence": {
+        "checks": 33052,
+        "reads": 5492,
+        "writes": 4151,
+        "flushes": 35,
+        "stack_observed": 1996,
+        "open": 0
+      },
+      "disk_before": "69a60212b3b052ad30abd6e1d095679b1e9938fd2400e584f98584d5073d78c6",
+      "disk_after": "5e3a0afaf0708597340bf8ad32d0812a60c48b7d10a0ed58f10860152d020b91",
+      "guest_sha256": "8c932ef96d43722b0f2d721c6dc5fb82fbbedf3648136f0cb12d2556b6b83017"
+    },
+    {
+      "opt": 0,
+      "phase": "reader",
+      "evidence": {
+        "checks": 29769,
+        "reads": 500,
+        "writes": 6,
+        "flushes": 5,
+        "stack_observed": 1500,
+        "open": 0
+      },
+      "disk_before": "b41216cc7768a01819d2c200227e8ace07c995e24b853873e163c4c3676fca63",
+      "disk_after": "c43bb5b19f0502a9b13990e88854cb633fc49dc3478ccd40a4c3bb305134ce0a",
+      "guest_sha256": "2e6d54369a3d893159d6d402b514a1d6b7e1f34de90f25b48dc3b99d93870701"
+    },
+    {
+      "opt": 2,
+      "phase": "writer",
+      "evidence": {
+        "checks": 33052,
+        "reads": 5492,
+        "writes": 4151,
+        "flushes": 35,
+        "stack_observed": 1392,
+        "open": 0
+      },
+      "disk_before": "69a60212b3b052ad30abd6e1d095679b1e9938fd2400e584f98584d5073d78c6",
+      "disk_after": "5e3a0afaf0708597340bf8ad32d0812a60c48b7d10a0ed58f10860152d020b91",
+      "guest_sha256": "21093d0a9ac27c473e77d7ea0ef49ff55c197413b5cb936112e792fbf55316a7"
+    },
+    {
+      "opt": 2,
+      "phase": "reader",
+      "evidence": {
+        "checks": 29769,
+        "reads": 500,
+        "writes": 6,
+        "flushes": 5,
+        "stack_observed": 1408,
+        "open": 0
+      },
+      "disk_before": "b41216cc7768a01819d2c200227e8ace07c995e24b853873e163c4c3676fca63",
+      "disk_after": "c43bb5b19f0502a9b13990e88854cb633fc49dc3478ccd40a4c3bb305134ce0a",
+      "guest_sha256": "563d1782f1ed3404f7600bedd3e1906a749223dee8e7d682aae25cd8748cdad7"
+    }
+  ],
+  "sector_stop_content_counts": {
+    "0": {
+      "old": 41,
+      "new": 1
+    },
+    "2": {
+      "old": 41,
+      "new": 1
+    }
+  },
+  "negative_observer_controls": 582,
+  "prohibited_isa_controls": 10,
+  "exact_reproduction_pass": true,
+  "reproduction_guest_claim": false,
+  "full_kernel_integer_audit_pass": true,
+  "executed_kernel_sha256": {
+    "O0": "935a21bf577f2b397ae1d4cfef96fc5fd841f5d7b7072f1c96d30d969b156348",
+    "O2": "8e1373379792616a0845834103df139076ac21e0e951d098c08d3bf0a538e16f"
+  },
+  "source_lock_sha256": "0a1ef7c8ff72c8d92ed977b4ce1c24079cd63620b50dc4f8883457b4409b177f",
+  "evidence": {
+    "module-build-a/status.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/module-build-a/status.json",
+      "sha256": "cf870b4d7abcdda1760aa9785aab5e5ad1d0910ea375145189b327893dd13f16"
+    },
+    "self-review-a/status.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/self-review-a/status.json",
+      "sha256": "2a28d292e97731bd7968011a1baeb92887503823fb7a3b57a13ce50836d9b87f"
+    },
+    "module-reproduction-a/status.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/module-reproduction-a/status.json",
+      "sha256": "ace29397ab26596a310d84a4fafbccb9441b751d3658846fa33ae26f0b93078f"
+    },
+    "full-kernel-a/status.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/full-kernel-a/status.json",
+      "sha256": "bc72e0d9426ee9342261f0bec640b7727469b43a1ded57e4276b69853bd77bdb"
+    },
+    "vendor-byte-recovery.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/vendor-byte-recovery.json",
+      "sha256": "b2ee341e1fcb6f453e522434ff0ffa41a5734a6141ba876dfa7726c72d10fcca"
+    },
+    "vendor-byte-reproduction-a/status.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/vendor-byte-reproduction-a/status.json",
+      "sha256": "e616047da0a6d8ba2714d03ad6d83c56a57462957083440ba3caec7907bc2f20"
+    },
+    "full-kernel-reproduction-b/status.json": {
+      "workspace_path": "artifacts/native-filesystem-20261009-a/full-kernel-reproduction-b/status.json",
+      "sha256": "e776d7360fe946c8172b684d61aa6d84471896699b270490485a87b326119e4e"
+    }
+  },
+  "timestamp_utc": "2026-10-09T05:50:30.239625+00:00",
+  "vendor_bytes_equal_exact_git_blobs": true,
+  "vendor_line_end_restoration_only": true,
+  "post_vendor_restore_object_and_kernel_bytes_identical": true,
+  "full_kernel_after_vendor_restore_bytes_identical": true
+}
