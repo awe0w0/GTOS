@@ -58,7 +58,9 @@ def main():
         (directory/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native file ABI" {\n multiboot /boot/native.bin '+phase+'\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(len(elfs)))+' boot\n}\n')
         run([bins['grub-mkrescue'],'--output='+str(directory/'native.iso'),directory/'iso'],directory/'grub.log')
         drive=['-drive','file='+str(image)+',format=raw,if=ide,index=0'] if image else []
-        run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg','-cpu','max',
+        # Instruction-counted I/O boundaries let QEMU service asynchronous ATA completion before bounded guest polls expire.
+        run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg,thread=single',
+            '-icount','shift=0,align=off,sleep=off','-cpu','max',
             '-rtc','base=2000-01-01T00:00:00,clock=vm','-m','32' if opt==0 else '64','-smp','1' if opt==0 else '4',
             '-cdrom',directory/'native.iso','-boot','d',*drive,'-nic','none','-display','none','-monitor','none','-serial','none',
             '-debugcon','file:'+str(directory/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],directory/'host.log',33,200)
@@ -71,6 +73,8 @@ def main():
         cxx=pathlib.Path(shutil.which(args.cxx)).resolve();cc=pathlib.Path(shutil.which(args.cc)).resolve()
         bins={n:pathlib.Path(shutil.which(n)).resolve() for n in ['as','ld','nm','objcopy','grub-mkrescue','qemu-system-i386']}
         state['tools']={n:{'path':str(p),'sha256':sha(p)} for n,p in dict(bins,cxx=cxx,cc=cc).items()}
+        state['qemu_version']=subprocess.check_output([bins['qemu-system-i386'],'--version'],text=True).splitlines()[0]
+        state['emulation']={'accelerator':'tcg,thread=single','icount':'shift=0,align=off,sleep=off','cycle_accurate':False,'host_timing_qualification':False}
         state['compiler_version']=subprocess.check_output([cxx,'--version'],text=True).splitlines()[0]
         policy=(repo/'tools/kernel-cxxflags').read_text().split();bind('tools/kernel-cxxflags')
         assert policy==['-mgeneral-regs-only','-mno-sse','-mno-mmx','-msoft-float','-fno-tree-vectorize']

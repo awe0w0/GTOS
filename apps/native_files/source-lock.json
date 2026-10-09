@@ -212,7 +212,7 @@
     "tests/native_process_smoke.cpp": "8b98ffaf3933774a2beb262ddc9c0374686c07bd8190e78eb8fb97f8b4690cf2",
     "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
     "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
-    "tools/build-native-file-probe.py": "ba7c11a7b494b2a76e5bdbc4dd3899860d16876c36b7c4020a3e2326e048c7b3",
+    "tools/build-native-file-probe.py": "319dde7dbb34b85c9287d36fe26af74c1a5b7f7f5f7cbbf1ad1e0b801a0d743a",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "tools/self-review-native-files.py": "cb4f65d824ebc13ec02ce2807a7554eb31ea6d56148a5934d2f20c688c9b493e"
   },

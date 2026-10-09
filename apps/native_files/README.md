@@ -51,6 +51,16 @@ qualified-llvm 配置使用固定 Chromium Clang 和真实默认 LLVM memcpy/mem
 
 新增 HandleInfo 后，完整 FileStore 后端重新执行 174 次 ATA 冷启动和 84 个扇区中断边界。正常内核 O0/O2 全量编译和整数 ISA 审计通过；原有进程、VM、身份及 PNG 显示/关闭/回收另行回归。进程、页、区域、堆及栈容量没有改变。
 
+## QEMU 8 的 CI 复测
+
+018eecd 的新增 CI 作业曾在正常文件操作中失败。使用与 CI 哈希相同的 QEMU 8.2.2，诊断探针捕获真实 ATA Flush 超时（Timeout=2），文件 ABI 正确返回 -5；成功路径断言随后失败。原始失败日志和诊断源码均保留，没有用重试覆盖失败。
+
+测试驱动现使用 `-accel tcg,thread=single -icount shift=0,align=off,sleep=off`，并记录 QEMU 版本和时钟设置。[QEMU 8.2.2 的说明](https://github.com/qemu/qemu/blob/v8.2.2/docs/devel/tcg-icount.rst)描述了计数时钟下 I/O 指令的执行边界；[IDE 实现](https://github.com/qemu/qemu/blob/v8.2.2/hw/ide/core.c)的 Flush 通过异步回调清除 BUSY。这些参数用于固定客体执行与设备调度的测试配置，不代表真实硬件周期或主机延迟验证。
+
+相同内核和用户程序先连续四次写入冷启动通过，随后正式两种配置再次执行全部 16 次冷启动，36 次回收释放 48 个句柄，返回 60 次注入 I/O 错误并记录四次失败 Flush 回收。全部对象、用户 ELF 与加载的内核字节和原验收锁相同；1508 个日志反例及十个真实服务 ISA 注入控制仍被拒绝。ATA 的 1000000 次启动轮询上限、磁盘 Flush、错误断言、进程容量和生产镜像没有改变。
+
+旧 QEMU 4.2.1 在这个配置下仍出现一次客体检查失败，证据单独记录，未计入本次通过矩阵。icount 不保证任意主机负载下的 I/O 延迟；设备未在有限预算内完成时仍返回错误。本次正式复测使用 QEMU 8.2.2，不声明旧版本的新配置已经通过。新增记录位于 acceptance.json 的 `qemu_ci_followup`；原始验收和执行组件锁保留。
+
 ## 复现
 
 使用新的绝对输出目录；旧日志、磁盘、失败记录和缓存均保留。普通配置：
