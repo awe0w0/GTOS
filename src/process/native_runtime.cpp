@@ -4,6 +4,7 @@
 #include <process/vm_abi.h>
 #include <process/clock_abi.h>
 #include <process/info_abi.h>
+#include <process/file_abi.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -85,13 +86,19 @@ namespace {
 }
 NativeRuntime* NativeRuntime::active = 0;
 NativeRuntime::NativeRuntime() : paging(0), frames(0), scheduler(0), gdt(0),
-    stacksPrepared(false), enabled(false), nextId(1) {
+    stacksPrepared(false), enabled(false), nextId(1), files(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
         NativeFpScrub(&slots[i].fp, sizeof(slots[i].fp));
         Zero(slots[i].stackFrames, sizeof(slots[i].stackFrames));
     }
+}
+bool NativeRuntime::AttachFiles(NativeFileEndpoint& endpoint) {
+    InterruptGuard guard;
+    if (enabled || files) return false;
+    files = &endpoint;
+    return true;
 }
 bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& allocator) {
     InterruptGuard guard;
@@ -273,6 +280,25 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     Observe(*slot, *cpu); ++slot->status.systemCalls;
     cpu->eflags = (cpu->eflags & 0xCD5U) | 0x202U;
     switch (cpu->eax) {
+    case GTOS_SYS_FILE_OPEN:
+    case GTOS_SYS_FILE_READ:
+    case GTOS_SYS_FILE_WRITE:
+    case GTOS_SYS_FILE_SEEK:
+    case GTOS_SYS_FILE_CLOSE:
+    case GTOS_SYS_FILE_SYNC:
+    case GTOS_SYS_FILE_TRUNCATE:
+    case GTOS_SYS_FILE_STAT:
+    case GTOS_SYS_FILE_MKDIR:
+    case GTOS_SYS_FILE_REMOVE:
+    case GTOS_SYS_FILE_RENAME:
+    case GTOS_SYS_FILE_DIR_OPEN:
+    case GTOS_SYS_FILE_DIR_READ:
+    case GTOS_SYS_FILE_DIR_REWIND:
+    case GTOS_SYS_FILE_SIZE:
+    case GTOS_SYS_FILE_HANDLE_INFO:
+        cpu->eax = files ? (uint32_t)files->Call(slot->status.id, slot->space, cpu->eax, cpu->ebx, cpu->ecx)
+            : (uint32_t)GTOS_FILE_ERR_UNAVAILABLE;
+        break;
     case GTOS_SYS_ABI: cpu->eax = GTOS_NATIVE_ABI_VERSION; break;
     case GTOS_SYS_TICKS: cpu->eax = scheduler->Ticks(); break;
     case GTOS_SYS_CLOCK_READ: {
@@ -582,6 +608,7 @@ uint32_t NativeRuntime::Reap() {
         if (slot.task.owner && !scheduler->RemoveTask(&slot.task)) continue;
         // Check hardware ownership and scrub BEFORE any victim frame is freed.
         NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
+        if (files) files->ReclaimOwner(slot.status.id);
         fp.Invalidate(slot.fp);
         if (!slot.space.Destroy()) continue;
         slot.occupied = false; slot.status.reaped = true;

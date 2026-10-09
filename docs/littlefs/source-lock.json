@@ -68,8 +68,8 @@
     "include/storage/littlefs-sdk/assert.h": "df99bf754f0cec830ab0b0bbaa0ea25de3c4c3e8f2dbcd9c4bde0c04fb81bd75",
     "src/storage/littlefs/lfs_util.c": "f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec",
     "src/storage/littlefs_port.cpp": "3bba4f3e303c4e32f3dd39dd092dbde970d934dfc1c9e2dc2b47ddabf1cb00fd",
-    "src/storage/filestore.cpp": "63298c92a0d227f51f570101bea6b029ef2e3af36b95e62eeda5c465112d2cb2",
-    "include/storage/filestore.h": "73cf4f22636dab99dc7a79a6e94e93f3bf8d7fab93031641b1cc98ab1c650a0e",
+    "src/storage/filestore.cpp": "32469061116ccf25e4ff1db64ee93d22dd42d48c26f36eaafcb9eb27b26bffe7",
+    "include/storage/filestore.h": "496ff464bc3227b57f185f4a92f77c73f8dec3ae8f354fc94e48a302ddb7ffb3",
     "include/storage/blockdevice.h": "1db8446209b8501907bf87ef9f5d1a41b5b948bddac8b85223d2c81d14189a41",
     "include/memory/criticalsection.h": "d7d544556e76ebb204b353d81b5d612a02d290f6ec0e416fc640cfa38ce56617",
     "src/drivers/ata.cpp": "874588677d553c77b59242c38c2153d950463ce28dabc6e6137ba4d13c06102e",
@@ -85,21 +85,21 @@
     "O0-lfs.o": "5ecb5c2d46dfd9e39957ec4cf6f66cb61be9c337161665efa1f8d0b99ae63702",
     "O0-lfs_util.o": "3eed62159be4a0cef0db7234cd3da681044ca566eb9123877ad910b084eee680",
     "O0-littlefs_port.o": "7e96b014512bd9d8ac708b164c694462e022f5517467dbb72eb4f4e48724fcda",
-    "O0-filestore.o": "6d11beb5075046b70577a70928a965f722e4ccfc33b3c2310340095e99942a13",
+    "O0-filestore.o": "da8715dd6284befdb9b052a0802aea70acee7fe12f24832220e635dc930b61ab",
     "O0-ata.o": "e43e153c25aed624031ca25807d8f7256599e123fff750dba08b9cde4ae62ee8",
     "O0-port.o": "a01c4965adffcd690cab049fa8fe97023700b7f738a03058566ad2dc24561163",
     "O0-filestore_guest.o": "8eb6a7d1180cae15b5d3fd19d3286533200a587bc68eb665ec21d4c2d22a5b4b",
     "O2-lfs.o": "61a1e6188fc56ac5ee6938234bb134c573fa5d3e800783636cadeea14f1b3c40",
     "O2-lfs_util.o": "2f6903727f798ea18a836e09e89cc9bf9767909a5e59e2b694cc001cfede9cdb",
     "O2-littlefs_port.o": "c0e1c9de05f77182ef667fb66ad5ea393c6a1b347390ffb59aa66ff5d84658be",
-    "O2-filestore.o": "ab75dff75c11348e874a764702f77822a9e2be7847a1d46fbef73e36ebfd60f4",
+    "O2-filestore.o": "ebd3fc501700b0decb1ac964fabd42eea40327a62a77bc99e3cec7ccf1992c53",
     "O2-ata.o": "ce891c74a0df49fa0cd726cd652b343153664ddf7cf73c30476e5a6d64441810",
     "O2-port.o": "51fb903741fe0a47b95611565e9adefa4cabcfc6778ddb951e8ba415d6ac7a7d",
     "O2-filestore_guest.o": "a7acce3d1c09b77359e4c1dd2eeecc2004aced54693d8c16f65c682dc58ef47a"
   },
   "executed_kernels": {
-    "O0": "935a21bf577f2b397ae1d4cfef96fc5fd841f5d7b7072f1c96d30d969b156348",
-    "O2": "8e1373379792616a0845834103df139076ac21e0e951d098c08d3bf0a538e16f"
+    "O0": "fab3936a11ded10ce970aa7dc9ef397dfe749a4702c201e33b3e4cd118480e0c",
+    "O2": "ab2294f6075be532b31c48ad5f0b34f2726cfdcb57c16ac6545c7e7eb97a7cfb"
   },
   "upstream_files": {
     "lfs.c": "a36d6a095785ddea9571d541d68d3e4ef01d5b255a99d17d3f07fb6ea60ea132",
@@ -108,8 +108,8 @@
     "lfs_util.h": "548d46aa524dc7449e16739286c1a422a52f9de727ff0be0c2ffc5593f5ca981",
     "LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d"
   },
-  "qualification_status_sha256": "cf870b4d7abcdda1760aa9785aab5e5ad1d0910ea375145189b327893dd13f16",
-  "full_kernel_status_sha256": "bc72e0d9426ee9342261f0bec640b7727469b43a1ded57e4276b69853bd77bdb",
+  "qualification_status_sha256": "02eb5fd9acbcef7c1b2b259d2cbc8e1fee16de216d3c7cf94ed738db1d2c0f51",
+  "full_kernel_status_sha256": "369b5c7f6da4799ffa666a7d6af2694cd5a346a875881fc4dab0051c984673f3",
   "upstream_git_blobs": {
     "lfs.c": "c83c7e0b086a3a8942f71bfd3d70b0922a1bbbae",
     "lfs_util.c": "dac72abc3c101dc720727d3379723548d46dae1e",
@@ -122,5 +122,7 @@
     "canonical_vendor_equals_git_blobs": true,
     "only_crlf_to_lf": true,
     "require_exact_executed_object_and_kernel_reproduction": true
-  }
+  },
+  "previous_full_backend_checkpoint": "be0af59236ff67d7579df6939026adcdf4371867",
+  "latest_backend_change": "Add owner-checked HandleInfo; full original backend rerun on canonical vendor bytes; native ABI qualified separately"
 }

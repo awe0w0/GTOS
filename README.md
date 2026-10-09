@@ -179,4 +179,4 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 
 已验收的 [C 字节/字符串组件](apps/native_c_string/README.md)提供13个默认LLVM原生接口，覆盖对齐、重叠、页尾终止符、非法读写、取消及精确回收；O2对象与实际GN对象逐字一致，完整原生浏览器仍待闭合。
 
-已验收的[通用文件存储后端](docs/littlefs/README.md)保留完整 littlefs 读写算法，覆盖真实 ATA 持久化、文件和目录操作、所有者句柄回收、满盘及中断恢复；原生文件 ABI、stdio/fstream 和完整浏览器仍待接入。
+已验收的[通用文件存储后端](docs/littlefs/README.md)保留完整 littlefs 读写算法，覆盖真实 ATA 持久化、文件和目录操作、所有者句柄回收、满盘及中断恢复；已验收的[原生文件 ABI](apps/native_files/README.md)接入真实 CPL3 用户页检查、文件和目录操作及延迟退出回收；stdio/fstream 和完整浏览器仍待接入。

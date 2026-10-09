@@ -5,6 +5,7 @@
 #include <process/abi.h>
 #include <process/native_fp.h>
 #include <process/native_realtime.h>
+#include <process/native_file_endpoint.h>
 namespace gtos { namespace process {
     // A bounded kernel-provided isolation fixture. This is NOT an ELF loader.
     struct NativeImage {
@@ -56,6 +57,7 @@ namespace gtos { namespace process {
         NativeStatistics statistics;
         NativeFp fp;
         NativeRealtimeClock realtime;
+        NativeFileEndpoint* files;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
         static NativeRuntime* active;
         Slot* Current();
@@ -69,6 +71,8 @@ namespace gtos { namespace process {
         NativeRuntime& operator=(const NativeRuntime&);
     public:
         NativeRuntime();
+        // Non-owning endpoint must outlive activation; attach only once, before Activate.
+        bool AttachFiles(NativeFileEndpoint& endpoint);
         // Call after prepareIdentity, before enable/AP sharing. Guard aliases
         // are retained permanently; no alias changes after sealing.
         bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&);

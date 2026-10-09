@@ -69,6 +69,7 @@ public:
     int32_t ReadDirectory(uint32_t owner,uint32_t handle,Info& info);
     int32_t RewindDirectory(uint32_t owner,uint32_t handle);
     int32_t Stat(const char* path,Info& info);
+    int32_t HandleInfo(uint32_t owner,uint32_t handle,Info& info);
     int32_t MakeDirectory(const char* path);
     int32_t Remove(const char* path);
     int32_t Rename(const char* from,const char* to);

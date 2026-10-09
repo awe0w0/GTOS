@@ -89,43 +89,71 @@
   "reproduction_guest_claim": false,
   "full_kernel_integer_audit_pass": true,
   "executed_kernel_sha256": {
-    "O0": "935a21bf577f2b397ae1d4cfef96fc5fd841f5d7b7072f1c96d30d969b156348",
-    "O2": "8e1373379792616a0845834103df139076ac21e0e951d098c08d3bf0a538e16f"
+    "O0": "fab3936a11ded10ce970aa7dc9ef397dfe749a4702c201e33b3e4cd118480e0c",
+    "O2": "ab2294f6075be532b31c48ad5f0b34f2726cfdcb57c16ac6545c7e7eb97a7cfb"
   },
-  "source_lock_sha256": "0a1ef7c8ff72c8d92ed977b4ce1c24079cd63620b50dc4f8883457b4409b177f",
+  "source_lock_sha256": "42d2f4a190f8adcc1ce5ef7a29db7f798b528f3b7ae45e01a2d11aa92d7b7e0e",
   "evidence": {
-    "module-build-a/status.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/module-build-a/status.json",
-      "sha256": "cf870b4d7abcdda1760aa9785aab5e5ad1d0910ea375145189b327893dd13f16"
+    "backend-regression-a": {
+      "workspace_path": "artifacts/native-files-20261009-a/backend-regression-a/status.json",
+      "sha256": "02eb5fd9acbcef7c1b2b259d2cbc8e1fee16de216d3c7cf94ed738db1d2c0f51"
     },
-    "self-review-a/status.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/self-review-a/status.json",
-      "sha256": "2a28d292e97731bd7968011a1baeb92887503823fb7a3b57a13ce50836d9b87f"
+    "backend-self-review-b": {
+      "workspace_path": "artifacts/native-files-20261009-a/backend-self-review-b/status.json",
+      "sha256": "141533cedc1deae3792e9b6556e5ea4cca52331b371d2ce2334b2c1aef0b0409"
     },
-    "module-reproduction-a/status.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/module-reproduction-a/status.json",
-      "sha256": "ace29397ab26596a310d84a4fafbccb9441b751d3658846fa33ae26f0b93078f"
+    "backend-reproduction-a": {
+      "workspace_path": "artifacts/native-files-20261009-a/backend-reproduction-a/status.json",
+      "sha256": "451ca85ecad7a8a132f4a57c300662f379ba2aac976a79e2b263d9a350f961bf"
     },
-    "full-kernel-a/status.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/full-kernel-a/status.json",
-      "sha256": "bc72e0d9426ee9342261f0bec640b7727469b43a1ded57e4276b69853bd77bdb"
-    },
-    "vendor-byte-recovery.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/vendor-byte-recovery.json",
-      "sha256": "b2ee341e1fcb6f453e522434ff0ffa41a5734a6141ba876dfa7726c72d10fcca"
-    },
-    "vendor-byte-reproduction-a/status.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/vendor-byte-reproduction-a/status.json",
-      "sha256": "e616047da0a6d8ba2714d03ad6d83c56a57462957083440ba3caec7907bc2f20"
-    },
-    "full-kernel-reproduction-b/status.json": {
-      "workspace_path": "artifacts/native-filesystem-20261009-a/full-kernel-reproduction-b/status.json",
-      "sha256": "e776d7360fe946c8172b684d61aa6d84471896699b270490485a87b326119e4e"
+    "full-kernel-a": {
+      "workspace_path": "artifacts/native-files-20261009-a/full-kernel-a/status.json",
+      "sha256": "369b5c7f6da4799ffa666a7d6af2694cd5a346a875881fc4dab0051c984673f3"
     }
   },
-  "timestamp_utc": "2026-10-09T05:50:30.239625+00:00",
+  "timestamp_utc": "2026-10-09T08:11:24.565148+00:00",
   "vendor_bytes_equal_exact_git_blobs": true,
   "vendor_line_end_restoration_only": true,
   "post_vendor_restore_object_and_kernel_bytes_identical": true,
-  "full_kernel_after_vendor_restore_bytes_identical": true
+  "full_kernel_after_vendor_restore_bytes_identical": true,
+  "previous_checkpoint": {
+    "previous_dev": "be0af59236ff67d7579df6939026adcdf4371867",
+    "acceptance_workspace_path": "artifacts/native-files-20261009-a/pre-install/littlefs-acceptance-before.json",
+    "acceptance_sha256": "e12dd96971b2057b4898916099a8a32287c017a917a07df75d80839bb80cecd7",
+    "previous_executed_kernel_sha256": {
+      "O0": "935a21bf577f2b397ae1d4cfef96fc5fd841f5d7b7072f1c96d30d969b156348",
+      "O2": "8e1373379792616a0845834103df139076ac21e0e951d098c08d3bf0a538e16f"
+    },
+    "evidence": {
+      "module-build-a/status.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/module-build-a/status.json",
+        "sha256": "cf870b4d7abcdda1760aa9785aab5e5ad1d0910ea375145189b327893dd13f16"
+      },
+      "self-review-a/status.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/self-review-a/status.json",
+        "sha256": "2a28d292e97731bd7968011a1baeb92887503823fb7a3b57a13ce50836d9b87f"
+      },
+      "module-reproduction-a/status.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/module-reproduction-a/status.json",
+        "sha256": "ace29397ab26596a310d84a4fafbccb9441b751d3658846fa33ae26f0b93078f"
+      },
+      "full-kernel-a/status.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/full-kernel-a/status.json",
+        "sha256": "bc72e0d9426ee9342261f0bec640b7727469b43a1ded57e4276b69853bd77bdb"
+      },
+      "vendor-byte-recovery.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/vendor-byte-recovery.json",
+        "sha256": "b2ee341e1fcb6f453e522434ff0ffa41a5734a6141ba876dfa7726c72d10fcca"
+      },
+      "vendor-byte-reproduction-a/status.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/vendor-byte-reproduction-a/status.json",
+        "sha256": "e616047da0a6d8ba2714d03ad6d83c56a57462957083440ba3caec7907bc2f20"
+      },
+      "full-kernel-reproduction-b/status.json": {
+        "workspace_path": "artifacts/native-filesystem-20261009-a/full-kernel-reproduction-b/status.json",
+        "sha256": "e776d7360fe946c8172b684d61aa6d84471896699b270490485a87b326119e4e"
+      }
+    }
+  },
+  "latest_change": "Owner-checked HandleInfo; full backend and exact reproduction rerun, upstream unchanged"
 }

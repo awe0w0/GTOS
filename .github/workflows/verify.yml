@@ -92,3 +92,19 @@ jobs:
           CXX: /usr/bin/g++
           CC: /usr/bin/gcc
         run: /usr/bin/python3 tools/build-filestore-probe.py "$RUNNER_TEMP/gtos-filesystem"
+
+  verify_native_file_abi:
+    # Actual CPL3 file service with scalar compiler helpers; LLVM stdio remains unqualified.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install official native file qualification tools
+        run: bash .github/scripts/install-ubuntu-tools.sh g++ gcc binutils grub-pc-bin grub-common xorriso mtools qemu-system-x86 python3
+      - name: Verify native file boundaries, real I/O and deferred owner reclamation
+        env:
+          CXX: /usr/bin/g++
+          CC: /usr/bin/gcc
+        run: /usr/bin/python3 tools/build-native-file-probe.py "$RUNNER_TEMP/gtos-native-files"
+      - name: Self-review observer rejection and actual service instruction policy
+        run: /usr/bin/python3 tools/self-review-native-files.py "$RUNNER_TEMP/gtos-native-files-review" "$RUNNER_TEMP/gtos-native-files"

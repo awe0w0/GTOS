@@ -203,3 +203,9 @@ int32_t FileStore::Rename(const char* from,const char* to) {
     if (readOnly) return ReadOnly;
     return lfs_rename(&filesystem,from,to);
 }
+int32_t FileStore::HandleInfo(uint32_t owner,uint32_t handle,Info& info) {
+    InterruptGuard guard;Slot* slot=Find(owner,handle);if (!slot) return LFS_ERR_BADF;
+    const int32_t size=slot->kind==LFS_TYPE_REG?lfs_file_size(&filesystem,&slot->file):0;
+    if (size<0) return size;
+    Info value={};value.type=slot->kind;value.size=size;info=value;return 0;
+}
