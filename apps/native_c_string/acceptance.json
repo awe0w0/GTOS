@@ -1,0 +1,1206 @@
+{
+  "scope": "Standalone default native C byte/string component; full engine remains unqualified",
+  "native_c_string_guest_pass": true,
+  "native_isolate_pass": false,
+  "chromium_native_pass": false,
+  "web_browsing_pass": false,
+  "video_pass": false,
+  "html5_pass": false,
+  "module_cold_boots": 4,
+  "actual_gn_cold_boots": 2,
+  "actual_cpl3_victims": 30,
+  "exact_reap_checks": 36,
+  "cases_per_victim": 99063,
+  "base_checks_per_victim": 10639636,
+  "log_negative_controls": 130,
+  "jump_table_negative_controls": 50,
+  "isa_negative_controls": 5,
+  "stack_audits": [
+    {
+      "scope": "GN-mode0",
+      "bound": 844,
+      "limit": 8176
+    },
+    {
+      "scope": "GN-mode1",
+      "bound": 844,
+      "limit": 8176
+    },
+    {
+      "scope": "GN-mode2",
+      "bound": 828,
+      "limit": 8176
+    },
+    {
+      "scope": "GN-mode3",
+      "bound": 844,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O0-mode0",
+      "bound": 1456,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O0-mode1",
+      "bound": 1460,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O0-mode2",
+      "bound": 1456,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O0-mode3",
+      "bound": 1456,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O2-mode0",
+      "bound": 844,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O2-mode1",
+      "bound": 844,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O2-mode2",
+      "bound": 828,
+      "limit": 8176
+    },
+    {
+      "scope": "C-O2-mode3",
+      "bound": 844,
+      "limit": 8176
+    }
+  ],
+  "isa_audits": [
+    {
+      "scope": "GN-mode0",
+      "objects": 18,
+      "ranges": 24,
+      "instructions": 3426,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "GN-mode1",
+      "objects": 18,
+      "ranges": 24,
+      "instructions": 3432,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "GN-mode2",
+      "objects": 18,
+      "ranges": 23,
+      "instructions": 3430,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "GN-mode3",
+      "objects": 18,
+      "ranges": 24,
+      "instructions": 3430,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "C-O0-mode0",
+      "objects": 18,
+      "ranges": 245,
+      "instructions": 7179,
+      "fp": {
+        "movsd": 2,
+        "movups": 42,
+        "movdqa": 18,
+        "movaps": 28,
+        "xorps": 1
+      }
+    },
+    {
+      "scope": "C-O0-mode1",
+      "objects": 18,
+      "ranges": 245,
+      "instructions": 7185,
+      "fp": {
+        "movsd": 2,
+        "movups": 42,
+        "movdqa": 18,
+        "movaps": 28,
+        "xorps": 1
+      }
+    },
+    {
+      "scope": "C-O0-mode2",
+      "objects": 18,
+      "ranges": 245,
+      "instructions": 7192,
+      "fp": {
+        "movsd": 2,
+        "movups": 42,
+        "movdqa": 18,
+        "movaps": 28,
+        "xorps": 1
+      }
+    },
+    {
+      "scope": "C-O0-mode3",
+      "objects": 18,
+      "ranges": 245,
+      "instructions": 7182,
+      "fp": {
+        "movsd": 2,
+        "movups": 42,
+        "movdqa": 18,
+        "movaps": 28,
+        "xorps": 1
+      }
+    },
+    {
+      "scope": "C-O2-mode0",
+      "objects": 18,
+      "ranges": 24,
+      "instructions": 3426,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "C-O2-mode1",
+      "objects": 18,
+      "ranges": 24,
+      "instructions": 3432,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "C-O2-mode2",
+      "objects": 18,
+      "ranges": 23,
+      "instructions": 3430,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    },
+    {
+      "scope": "C-O2-mode3",
+      "objects": 18,
+      "ranges": 24,
+      "instructions": 3430,
+      "fp": {
+        "xorps": 6,
+        "movaps": 54,
+        "movdqu": 14,
+        "pcmpeqd": 10,
+        "pxor": 2,
+        "movss": 2,
+        "movmskps": 3,
+        "movdqa": 51,
+        "pand": 10,
+        "packuswb": 10,
+        "psubb": 4,
+        "paddd": 15,
+        "movd": 5,
+        "pshufd": 33,
+        "por": 2,
+        "pmuludq": 20,
+        "punpckldq": 10,
+        "psubd": 5,
+        "psrld": 5,
+        "movsd": 16,
+        "movups": 173,
+        "punpcklbw": 1,
+        "pshuflw": 1,
+        "shufps": 4
+      }
+    }
+  ],
+  "jump_tables": [
+    {
+      "scope": "GN-mode0",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749488,
+          "function_end": 1073750166,
+          "compare": 1073749507,
+          "range_branch": 1073749510,
+          "indirect_jump": 1073749512,
+          "table": 1073755656,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749548,
+            1073749519,
+            1073749541,
+            1073749534,
+            1073749527
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750176,
+          "function_end": 1073750875,
+          "compare": 1073750192,
+          "range_branch": 1073750195,
+          "indirect_jump": 1073750197,
+          "table": 1073755676,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750870,
+            1073750204,
+            1073750223,
+            1073750234,
+            1073750214
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750880,
+          "function_end": 1073751269,
+          "compare": 1073750897,
+          "range_branch": 1073750900,
+          "indirect_jump": 1073750902,
+          "table": 1073755696,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751259,
+            1073750909,
+            1073750916,
+            1073750932
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751280,
+          "function_end": 1073752083,
+          "compare": 1073751299,
+          "range_branch": 1073751302,
+          "indirect_jump": 1073751308,
+          "table": 1073755712,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752075,
+            1073751315,
+            1073751358,
+            1073751377,
+            1073751329,
+            1073751480,
+            1073751537,
+            1073751417,
+            1073751611
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752544,
+          "function_end": 1073752893,
+          "compare": 1073752589,
+          "range_branch": 1073752592,
+          "indirect_jump": 1073752594,
+          "table": 1073755748,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752624,
+            1073752601,
+            1073752618,
+            1073752611,
+            1073752605
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "GN-mode1",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749536,
+          "function_end": 1073750214,
+          "compare": 1073749555,
+          "range_branch": 1073749558,
+          "indirect_jump": 1073749560,
+          "table": 1073755704,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749596,
+            1073749567,
+            1073749589,
+            1073749582,
+            1073749575
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750224,
+          "function_end": 1073750923,
+          "compare": 1073750240,
+          "range_branch": 1073750243,
+          "indirect_jump": 1073750245,
+          "table": 1073755724,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750918,
+            1073750252,
+            1073750271,
+            1073750282,
+            1073750262
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750928,
+          "function_end": 1073751317,
+          "compare": 1073750945,
+          "range_branch": 1073750948,
+          "indirect_jump": 1073750950,
+          "table": 1073755744,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751307,
+            1073750957,
+            1073750964,
+            1073750980
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751328,
+          "function_end": 1073752131,
+          "compare": 1073751347,
+          "range_branch": 1073751350,
+          "indirect_jump": 1073751356,
+          "table": 1073755760,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752123,
+            1073751363,
+            1073751406,
+            1073751425,
+            1073751377,
+            1073751528,
+            1073751585,
+            1073751465,
+            1073751659
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752592,
+          "function_end": 1073752941,
+          "compare": 1073752637,
+          "range_branch": 1073752640,
+          "indirect_jump": 1073752642,
+          "table": 1073755796,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752672,
+            1073752649,
+            1073752666,
+            1073752659,
+            1073752653
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "GN-mode2",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749520,
+          "function_end": 1073750198,
+          "compare": 1073749539,
+          "range_branch": 1073749542,
+          "indirect_jump": 1073749544,
+          "table": 1073755688,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749580,
+            1073749551,
+            1073749573,
+            1073749566,
+            1073749559
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750208,
+          "function_end": 1073750907,
+          "compare": 1073750224,
+          "range_branch": 1073750227,
+          "indirect_jump": 1073750229,
+          "table": 1073755708,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750902,
+            1073750236,
+            1073750255,
+            1073750266,
+            1073750246
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750912,
+          "function_end": 1073751301,
+          "compare": 1073750929,
+          "range_branch": 1073750932,
+          "indirect_jump": 1073750934,
+          "table": 1073755728,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751291,
+            1073750941,
+            1073750948,
+            1073750964
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751312,
+          "function_end": 1073752115,
+          "compare": 1073751331,
+          "range_branch": 1073751334,
+          "indirect_jump": 1073751340,
+          "table": 1073755744,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752107,
+            1073751347,
+            1073751390,
+            1073751409,
+            1073751361,
+            1073751512,
+            1073751569,
+            1073751449,
+            1073751643
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752576,
+          "function_end": 1073752925,
+          "compare": 1073752621,
+          "range_branch": 1073752624,
+          "indirect_jump": 1073752626,
+          "table": 1073755780,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752656,
+            1073752633,
+            1073752650,
+            1073752643,
+            1073752637
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "GN-mode3",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749520,
+          "function_end": 1073750198,
+          "compare": 1073749539,
+          "range_branch": 1073749542,
+          "indirect_jump": 1073749544,
+          "table": 1073755688,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749580,
+            1073749551,
+            1073749573,
+            1073749566,
+            1073749559
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750208,
+          "function_end": 1073750907,
+          "compare": 1073750224,
+          "range_branch": 1073750227,
+          "indirect_jump": 1073750229,
+          "table": 1073755708,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750902,
+            1073750236,
+            1073750255,
+            1073750266,
+            1073750246
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750912,
+          "function_end": 1073751301,
+          "compare": 1073750929,
+          "range_branch": 1073750932,
+          "indirect_jump": 1073750934,
+          "table": 1073755728,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751291,
+            1073750941,
+            1073750948,
+            1073750964
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751312,
+          "function_end": 1073752115,
+          "compare": 1073751331,
+          "range_branch": 1073751334,
+          "indirect_jump": 1073751340,
+          "table": 1073755744,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752107,
+            1073751347,
+            1073751390,
+            1073751409,
+            1073751361,
+            1073751512,
+            1073751569,
+            1073751449,
+            1073751643
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752576,
+          "function_end": 1073752925,
+          "compare": 1073752621,
+          "range_branch": 1073752624,
+          "indirect_jump": 1073752626,
+          "table": 1073755780,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752656,
+            1073752633,
+            1073752650,
+            1073752643,
+            1073752637
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "C-O0-mode0",
+      "certificates": []
+    },
+    {
+      "scope": "C-O0-mode1",
+      "certificates": []
+    },
+    {
+      "scope": "C-O0-mode2",
+      "certificates": []
+    },
+    {
+      "scope": "C-O0-mode3",
+      "certificates": []
+    },
+    {
+      "scope": "C-O2-mode0",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749488,
+          "function_end": 1073750166,
+          "compare": 1073749507,
+          "range_branch": 1073749510,
+          "indirect_jump": 1073749512,
+          "table": 1073755656,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749548,
+            1073749519,
+            1073749541,
+            1073749534,
+            1073749527
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750176,
+          "function_end": 1073750875,
+          "compare": 1073750192,
+          "range_branch": 1073750195,
+          "indirect_jump": 1073750197,
+          "table": 1073755676,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750870,
+            1073750204,
+            1073750223,
+            1073750234,
+            1073750214
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750880,
+          "function_end": 1073751269,
+          "compare": 1073750897,
+          "range_branch": 1073750900,
+          "indirect_jump": 1073750902,
+          "table": 1073755696,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751259,
+            1073750909,
+            1073750916,
+            1073750932
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751280,
+          "function_end": 1073752083,
+          "compare": 1073751299,
+          "range_branch": 1073751302,
+          "indirect_jump": 1073751308,
+          "table": 1073755712,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752075,
+            1073751315,
+            1073751358,
+            1073751377,
+            1073751329,
+            1073751480,
+            1073751537,
+            1073751417,
+            1073751611
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752544,
+          "function_end": 1073752893,
+          "compare": 1073752589,
+          "range_branch": 1073752592,
+          "indirect_jump": 1073752594,
+          "table": 1073755748,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752624,
+            1073752601,
+            1073752618,
+            1073752611,
+            1073752605
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "C-O2-mode1",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749536,
+          "function_end": 1073750214,
+          "compare": 1073749555,
+          "range_branch": 1073749558,
+          "indirect_jump": 1073749560,
+          "table": 1073755704,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749596,
+            1073749567,
+            1073749589,
+            1073749582,
+            1073749575
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750224,
+          "function_end": 1073750923,
+          "compare": 1073750240,
+          "range_branch": 1073750243,
+          "indirect_jump": 1073750245,
+          "table": 1073755724,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750918,
+            1073750252,
+            1073750271,
+            1073750282,
+            1073750262
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750928,
+          "function_end": 1073751317,
+          "compare": 1073750945,
+          "range_branch": 1073750948,
+          "indirect_jump": 1073750950,
+          "table": 1073755744,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751307,
+            1073750957,
+            1073750964,
+            1073750980
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751328,
+          "function_end": 1073752131,
+          "compare": 1073751347,
+          "range_branch": 1073751350,
+          "indirect_jump": 1073751356,
+          "table": 1073755760,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752123,
+            1073751363,
+            1073751406,
+            1073751425,
+            1073751377,
+            1073751528,
+            1073751585,
+            1073751465,
+            1073751659
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752592,
+          "function_end": 1073752941,
+          "compare": 1073752637,
+          "range_branch": 1073752640,
+          "indirect_jump": 1073752642,
+          "table": 1073755796,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752672,
+            1073752649,
+            1073752666,
+            1073752659,
+            1073752653
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "C-O2-mode2",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749520,
+          "function_end": 1073750198,
+          "compare": 1073749539,
+          "range_branch": 1073749542,
+          "indirect_jump": 1073749544,
+          "table": 1073755688,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749580,
+            1073749551,
+            1073749573,
+            1073749566,
+            1073749559
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750208,
+          "function_end": 1073750907,
+          "compare": 1073750224,
+          "range_branch": 1073750227,
+          "indirect_jump": 1073750229,
+          "table": 1073755708,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750902,
+            1073750236,
+            1073750255,
+            1073750266,
+            1073750246
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750912,
+          "function_end": 1073751301,
+          "compare": 1073750929,
+          "range_branch": 1073750932,
+          "indirect_jump": 1073750934,
+          "table": 1073755728,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751291,
+            1073750941,
+            1073750948,
+            1073750964
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751312,
+          "function_end": 1073752115,
+          "compare": 1073751331,
+          "range_branch": 1073751334,
+          "indirect_jump": 1073751340,
+          "table": 1073755744,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752107,
+            1073751347,
+            1073751390,
+            1073751409,
+            1073751361,
+            1073751512,
+            1073751569,
+            1073751449,
+            1073751643
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752576,
+          "function_end": 1073752925,
+          "compare": 1073752621,
+          "range_branch": 1073752624,
+          "indirect_jump": 1073752626,
+          "table": 1073755780,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752656,
+            1073752633,
+            1073752650,
+            1073752643,
+            1073752637
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    },
+    {
+      "scope": "C-O2-mode3",
+      "certificates": [
+        {
+          "function": "_ZN14__llvm_libc_cr6memcpyEPvPKvj",
+          "function_start": 1073749520,
+          "function_end": 1073750198,
+          "compare": 1073749539,
+          "range_branch": 1073749542,
+          "indirect_jump": 1073749544,
+          "table": 1073755688,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073749580,
+            1073749551,
+            1073749573,
+            1073749566,
+            1073749559
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr7memmoveEPvPKvj",
+          "function_start": 1073750208,
+          "function_end": 1073750907,
+          "compare": 1073750224,
+          "range_branch": 1073750227,
+          "indirect_jump": 1073750229,
+          "table": 1073755708,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073750902,
+            1073750236,
+            1073750255,
+            1073750266,
+            1073750246
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6memsetEPvij",
+          "function_start": 1073750912,
+          "function_end": 1073751301,
+          "compare": 1073750929,
+          "range_branch": 1073750932,
+          "indirect_jump": 1073750934,
+          "table": 1073755728,
+          "unsigned_maximum": 3,
+          "targets": [
+            1073751291,
+            1073750941,
+            1073750948,
+            1073750964
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr13inline_memcmpEPKvS1_j",
+          "function_start": 1073751312,
+          "function_end": 1073752115,
+          "compare": 1073751331,
+          "range_branch": 1073751334,
+          "indirect_jump": 1073751340,
+          "table": 1073755744,
+          "unsigned_maximum": 8,
+          "targets": [
+            1073752107,
+            1073751347,
+            1073751390,
+            1073751409,
+            1073751361,
+            1073751512,
+            1073751569,
+            1073751449,
+            1073751643
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        },
+        {
+          "function": "_ZN14__llvm_libc_cr6strcpyEPcPKc",
+          "function_start": 1073752576,
+          "function_end": 1073752925,
+          "compare": 1073752621,
+          "range_branch": 1073752624,
+          "indirect_jump": 1073752626,
+          "table": 1073755780,
+          "unsigned_maximum": 4,
+          "targets": [
+            1073752656,
+            1073752633,
+            1073752650,
+            1073752643,
+            1073752637
+          ],
+          "method": "Adjacent unsigned cmp/ja dominates table dispatch; immutable entries all target decoded instructions of the same function and frame"
+        }
+      ]
+    }
+  ],
+  "witnesses": {
+    "artifacts/native-c-string-20261009-a/module-build-b/status.json": "a81c1c374951545f2f5582c2fa1069ccd06a39ed29e2ec1a4daa82460e1e4b8d",
+    "artifacts/native-c-string-20261009-a/guest-a/status.json": "37c59cfc15f76d70f3df901264a34c22c9c5d83f18b12cb827235b99b5d2cd61",
+    "artifacts/native-c-string-20261009-a/self-review-e/status.json": "dfd155e6e99f89b9b54d94450193cc1f62cf86dc28ed8026026eb5fdc69da82f",
+    "artifacts/native-c-string-20261009-a/jump-table-negative-a/status.json": "4d4ecd8a663dbaa9eec7452d4f2ba2c72530b46e581039d1ca6f969b0a6590ad"
+  },
+  "guest_log_sha256": [
+    "c32809ab59d8d854efe34833b6b51cc10d60b21141916fc3fa996236f840c5f5",
+    "2678d61a54595063a54f349a0a5ccb3ad064842bedb6ed624699965fd99e92ca",
+    "f62de36526dc6b1b9578b7d428e818645e78dee01037f833042561dc524fd7f2",
+    "04249b99c6c0039c6be2e035d5dc13c61650e04e81c441842aef3e034f29edae",
+    "349336c00ca94ffe8f60315b4f573a6e939e912fa7d99481b16403dde8a653cf",
+    "7f925b0381b650ccf80f05a270511a48f1430f736f89798f6e008de40290e004"
+  ]
+}
