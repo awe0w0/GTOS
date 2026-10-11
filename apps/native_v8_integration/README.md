@@ -11,7 +11,7 @@ Isolate 已在 GTOS 运行。
 
 ## 输入与来源
 
-`overlay/` 保存 71 个平台覆盖文件，`sdk/` 保存 424 个私有配置及 C++ 头文件，
+`overlay/` 保存 73 个平台覆盖文件，`sdk/` 保存 424 个私有配置及 C++ 头文件，
 `c-sdk/` 保存 438 个 LLVM C SDK 文件。搜索顺序固定为私有覆盖、上游 libc++、
 C SDK、Clang 资源头；合并两层 SDK 会改变 libc++ 的 `include_next` 语义。
 构建在独立目录
@@ -87,9 +87,12 @@ python3 -B tools/build-native-v8-integration.py /path/to/fresh-output \
 GTOS 保留独立平台身份和 ELF32 格式身份。动态 ELF 符号/VDSO 路径不适用于目前
 静态装载模型，平台覆盖将其排除；Linux IA32 对照仍保留原有动态 ELF 能力。
 
-Abseil 日志立即退出接到 GTOS Exit ABI，绕过用户态析构和缓冲刷新；新增调用路径
-的客体行为尚待验收。信号安装分支输出明确错误并触发用户故障，没有假成功返回，
-也未实现 pthread、sigaction、altstack 或 alarm。上述桥保持诊断实验状态。
+Abseil 日志立即退出接到 GTOS Exit ABI；GTOS 日志 ID 使用 uint32，与实际任务 ID
+保持一致。[退出消费者验证](../native_v8_exit_probe/README.md)在 CPL3 验证实际
+FailQuietly、ExitQuietly、NullStreamFatal 跳过析构和缓冲刷新，以及正常返回的
+原生入口清理、同伴存活和精确回收。信号安装明确报错并触发用户故障；这不提供
+信号处理、pthread、sigaction、altstack 或 alarm。其余未调用桥及完整日志格式化
+仍待验收，完整 Isolate 资格状态保持未通过。
 
 每轮从完整目标的新失败取得消费者证据，再实现必要服务和客体边界回归。已有
 C FILE、VM、TLS、时钟及 PNG 桌面成果继续复用。保持内核容量和整数 ISA 门禁，

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-11T10:12:02.466326+00:00",
+  "recorded_utc": "2026-10-11T11:25:01.192862+00:00",
   "scope": "Published pinned complete V8 target and actual cold-output OS failure; guest engine acceptance remains false",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -32,11 +32,11 @@
   "link_pass": false,
   "full_elf_exists": false,
   "first_build_blocker": {
-    "object": "obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o",
-    "file": "third_party/abseil-cpp/absl/log/internal/log_message.cc",
-    "line": 218,
-    "column": 16,
-    "diagnostic": "../source/third_party/abseil-cpp/absl/log/internal/log_message.cc:218:16: error: implicit conversion changes signedness: 'pid_t' (aka 'unsigned int') to 'tid_t' (aka 'int') [-Werror,-Wsign-conversion]",
+    "object": "obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o",
+    "file": "third_party/abseil-cpp/absl/random/internal/seed_material.cc",
+    "line": 17,
+    "column": 10,
+    "diagnostic": "../source/third_party/abseil-cpp/absl/random/internal/seed_material.cc:17:10: fatal error: 'fcntl.h' file not found",
     "compile_argv": [
       "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
       "-x",
@@ -203,16 +203,16 @@
       "-Wbitfield-enum-conversion",
       "-MMD",
       "-MF",
-      "obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o.d",
+      "obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o.d",
       "-c",
-      "../source/third_party/abseil-cpp/absl/log/internal/log_message.cc",
+      "../source/third_party/abseil-cpp/absl/random/internal/seed_material.cc",
       "-o",
-      "obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o"
+      "obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o"
     ],
-    "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/build",
+    "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/build",
     "compile_database": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/actual-compile-database.log",
-      "sha256": "db3e8e1cbb9987ccdd9880c98585dc0cfe6875c2f7a5e5ecef15b7ad74f6e19b"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/actual-compile-database.log",
+      "sha256": "dd15bd0efb4117a436f2abaabbfdb6009dbc795cbe47a7bde670b0f4a277b5e4"
     },
     "dependency_path": [
       "native_embedder",
@@ -221,108 +221,109 @@
       "absl",
       "absl_component_deps"
     ],
-    "analysis": "GTOS sysinfo.h 覆盖将 Abseil pid_t 定义为 uint32_t，日志 tid_t 为 int；先核对实际 ID 范围与转换契约，不以关闭警告或未经边界证明的强转掩盖。立即退出尚未完成客体语义验收。"
+    "analysis": "实际 OS 熵读取消费者进入 POSIX 文件分支；需明确 GTOS 熵来源、失败契约和实际调用路径，不用头文件、固定种子或假成功替代服务。",
+    "contract_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/entropy-next-blocker-review.json",
+      "sha256": "a93c1e7b5bc35d8b7aabedf9321b506f3ff86099b4954c2ba22346d51972197f"
+    }
   },
-  "other_observed_failures": [
-    "FAILED: obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o ",
-    "../source/third_party/abseil-cpp/absl/random/internal/seed_material.cc:17:10: fatal error: 'fcntl.h' file not found"
-  ],
+  "other_observed_failures": [],
   "runs": [
     {
       "name": "gn-native-embedder",
       "argv": [
         "@WORKSPACE@/toolchains/gn/gn",
         "gen",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/build",
-        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
-        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source/isolate-diagnostic.gn",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/build",
+        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
+        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source/isolate-diagnostic.gn",
         "--root-target=//tools/gtos_isolate_diagnostic:native_embedder",
         "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\nclang_base_path=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57\"\ngtos_host_i386_runtime=\"@WORKSPACE@/toolchains/linux-i386-runtime-focal/root\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
         "--fail-on-unused-args"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
       "exit_code": 0,
-      "elapsed_seconds": 2.5782428729999083,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/gn-native-embedder.log",
-      "log_sha256": "b7c605ee1bc9e41471faa42526243b09ef8d63e78c32b9b37bc01843ab9e67ee",
-      "pid": 18690,
-      "pgid": 18690
+      "elapsed_seconds": 2.578524247999667,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/gn-native-embedder.log",
+      "log_sha256": "24d43165014d1ae25a30307d1a65b9b628b70073a41bcd9a697bf4e37a23f448",
+      "pid": 18902,
+      "pgid": 18902
     },
     {
       "name": "gn-complete-dependencies",
       "argv": [
         "@WORKSPACE@/toolchains/gn/gn",
         "desc",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/build",
         "//tools/gtos_isolate_diagnostic:native_embedder",
         "deps",
         "--all",
         "--format=json",
-        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
-        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source/isolate-diagnostic.gn"
+        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
+        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source/isolate-diagnostic.gn"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
       "exit_code": 0,
-      "elapsed_seconds": 2.0765612189989042,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/gn-complete-dependencies.log",
+      "elapsed_seconds": 2.0267194810003275,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/gn-complete-dependencies.log",
       "log_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
-      "pid": 18701,
-      "pgid": 18701
+      "pid": 18913,
+      "pgid": 18913
     },
     {
       "name": "native-executable-commands",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/build",
         "-t",
         "commands",
         "native_embedder"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
       "exit_code": 0,
-      "elapsed_seconds": 6.035687014000359,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/native-executable-commands.log",
+      "elapsed_seconds": 5.88559869799974,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/native-executable-commands.log",
       "log_sha256": "42c7d45fe8709b64a4ac447a6c17213df872b0d9493d0f93b64683c1aab49cce",
-      "pid": 18712,
-      "pgid": 18712
+      "pid": 18924,
+      "pgid": 18924
     },
     {
       "name": "actual-compile-database",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/build",
         "-t",
         "compdb"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
       "exit_code": 0,
-      "elapsed_seconds": 17.510239483999612,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/actual-compile-database.log",
-      "log_sha256": "db3e8e1cbb9987ccdd9880c98585dc0cfe6875c2f7a5e5ecef15b7ad74f6e19b",
-      "pid": 18714,
-      "pgid": 18714
+      "elapsed_seconds": 16.957598676001,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/actual-compile-database.log",
+      "log_sha256": "dd15bd0efb4117a436f2abaabbfdb6009dbc795cbe47a7bde670b0f4a277b5e4",
+      "pid": 18925,
+      "pgid": 18925
     },
     {
       "name": "complete-native-build",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/build",
         "-k",
         "1",
         "-j",
         "8",
         "native_embedder"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/source",
       "exit_code": 1,
-      "elapsed_seconds": 44.712747612000385,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/complete-native-build.log",
-      "log_sha256": "72e9f3b25452bdbc3288c7095ba01c708a7e790d03dd01bebd3d0557a32be017",
-      "pid": 18715,
-      "pgid": 18715
+      "elapsed_seconds": 52.72819690200049,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/complete-native-build.log",
+      "log_sha256": "f358a7ac16a0c0d0475eb388d01b0c2303d81c508198c0620948a30436caa2e5",
+      "pid": 18926,
+      "pgid": 18926
     }
   ],
   "prior_timeout": {
@@ -364,12 +365,12 @@
     "entry": "tools/build-native-v8-integration.py",
     "module": "apps/native_v8_integration",
     "source_lock": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/publication-82c93df/source-lock.json",
-      "sha256": "c642190a7b24796ce672dedd4be8291b80a7325930ff310c66174e82342edd4c"
+      "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/source-lock.json",
+      "sha256": "940a2360d2f6a185e45061237c7cb2671a30e6970cfdf7e9998d3ce9a0650acf"
     },
     "payload_lock": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/publication-82c93df/payload-lock.json",
-      "sha256": "d4f1ecbc772b8a2452fe6c589a981eeefef7d7e6402d76f9a2e8d09cd4f312c8"
+      "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/payload-lock.json",
+      "sha256": "8f28ff1a39d744c44653116fbc09b9fc9e0a1199649e46743c08d6618c17714d"
     },
     "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
     "clean_output_failure_replay_pass": true,
@@ -387,23 +388,23 @@
       "Clang resource headers"
     ],
     "boundary": "Prepared pinned upstream checkout/sysroots and external tools required. No dependency fetch/bootstrap supplied; copied-cache runs are labeled separately.",
-    "published_commit": "82c93df0549a45896d806a9be0e29f194f347f69",
-    "working_tree_matches_publication": false
+    "working_tree_matches_publication": true,
+    "publication_scope": "本提交包括实际日志消费者适配及其客体重放工具；其余完整引擎能力仍未验收。"
   },
   "route_review": {
     "issue_url": "https://github.com/awe0w0/GTOS/issues/9",
     "issue_updated_utc": "2026-10-09T15:37:06Z",
     "issue_comments": 0,
     "latest_verified_ci": {
-      "head": "d9ace67c18f172b48dee5cea4a2d4fd7f006eeb4",
-      "run_id": 38122735830,
-      "url": "https://github.com/awe0w0/GTOS/actions/runs/38122735830",
+      "head": "5aeaba8c366e353069ec715416aaed11084ea43e",
+      "run_id": 38131267697,
+      "url": "https://github.com/awe0w0/GTOS/actions/runs/38131267697",
       "all_four_existing_jobs_pass": true,
       "includes_full_v8_or_browser_guest": false
     },
-    "boundary": "按最新 issue 与工作区证据校准路线；未提交适配保留，完整引擎及浏览器客体验收仍为 false。",
+    "boundary": "首要功能里程碑仍是完整 V8 在 GTOS 执行 JS；退出消费者的客体验收推动当前完整目标到熵读取阻塞。",
     "issue_rechecked_utc": "2026-10-11T10:12:02.466326+00:00",
-    "latest_observed_head": "9ad59b3d5cdc8767e5e7d22d4a9a63b891bb7b6e",
+    "latest_observed_head": "5aeaba8c366e353069ec715416aaed11084ea43e",
     "latest_observed_ci": {
       "run_id": 38130414120,
       "url": "https://github.com/awe0w0/GTOS/actions/runs/38130414120",
@@ -421,29 +422,6 @@
     }
   },
   "previous_complete_attempt": {
-    "name": "portable-cold-03",
-    "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/status.json",
-      "sha256": "a8546eb9306185838e0122110c28a8b89a33dbc5bb33dead6db45322ed98a1ae"
-    },
-    "timestamp_utc": "2026-10-11T09:37:07.384209+00:00",
-    "cold_build": true,
-    "build_exit_code": 1,
-    "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
-    "bound_inputs_unchanged": true,
-    "dependency_graph_changed": false,
-    "original_cache_preserved_during_run": true,
-    "boundary": "Fresh output with prepared pinned DEPS/toolchain inputs; not a fresh-host bootstrap or a successful ELF link",
-    "source_lock": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/module-input-snapshot/source-lock.json",
-      "sha256": "3cf9639e1497397b36b58eceb95568af42cce7d6f9dbc136a83bc1b205a19a5d"
-    },
-    "builder": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/builder-input-snapshot.py",
-      "sha256": "e7d2b75631cb6487970cb1af8b80074043ea00ca2fe649bcc028827a921261d7"
-    }
-  },
-  "latest_complete_attempt": {
     "name": "portable-resume-04",
     "status": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/status.json",
@@ -469,6 +447,33 @@
       "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
     },
     "boundary": "未提交日志适配的完整目标缓存续编；不是发布版本、冷构建、完整链接或客体验收。"
+  },
+  "latest_complete_attempt": {
+    "name": "portable-resume-05",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/status.json",
+      "sha256": "aadf4b58c92c6a6eb9ed9a29232850054f1fc4a0a00c643cb73af43271a506f7"
+    },
+    "timestamp_utc": "2026-10-11T10:24:06.546605+00:00",
+    "cold_build": false,
+    "build_exit_code": 1,
+    "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+    "bound_inputs_unchanged": true,
+    "dependency_graph_changed": false,
+    "original_cache_preserved_during_run": true,
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/module-input-snapshot/source-lock.json",
+      "sha256": "0c5984dfc8bd2961ea69e818a5920ef484b10584ac960c9c4ad379472bb2e9a2"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/module-input-snapshot/payload-lock.json",
+      "sha256": "f0fe7aa962650b97b4009098eba5dde86696c1bc804d7c25582fdfd8ff90917c"
+    },
+    "builder": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/builder-input-snapshot.py",
+      "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
+    },
+    "boundary": "完整目标越过实际日志消费者，当前熵读取仍失败；未生成完整 ELF，未验收客体 Isolate。"
   },
   "platform_adaptation_evidence": {
     "dynamic_elf": {
@@ -540,18 +545,18 @@
       }
     },
     "complete_target_replayed_after_adaptation": true,
-    "guest_exit_semantics_pass": false,
-    "guest_explicit_failure_and_reclamation_pass": false,
+    "guest_exit_semantics_pass": true,
+    "guest_explicit_failure_and_reclamation_pass": true,
     "signal_handlers_supported": false,
     "published_production_implementation": false,
-    "published_diagnostic_implementation": true
+    "published_diagnostic_implementation": true,
+    "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "先解决完整目标 log_message.cc:218 的 GTOS/Abseil ID 契约冲突，再重放同一 native_embedder；不关闭警告、不删除失败依赖。",
-    "以实际日志消费者做必要的正常/立即退出和显式故障对照，证明退出码、跳过用户析构/缓冲刷新、同伴存活与精确回收；复用已有已验收组件，不扩展无关叶子清单。",
-    "按完整目标实际报错逐项处理 seed_material 熵、同步及时间/时区依赖；声明不等于实现，确定性种子不等于系统熵，单任务锁不等于原生线程/futex。",
-    "真实完整 ELF 生成后测量映像、映射、栈与堆，再联动修改承载能力；首要功能验收是客体 Platform/Isolate/Context/Script 和精确回收。",
-    "并行路线仅保留同 revision Content Shell IA32 的可行性证据；其后顺序为本地 HTML/CSS/JS 与输入/DOM、受控 HTTP/HTTPS 和安全、视频与更丰富 HTML5。"
+    "根据完整目标 seed_material.cc:17 的失败核对实际熵消费者、GTOS 熵来源与失败语义，最小正确适配后重放同一完整目标。",
+    "按实际报错处理同步及时间/时区依赖；不伪装 Linux、关闭警告、删除依赖或提供假成功。确定性诊断种子不等于系统熵。",
+    "完整 ELF 生成后记录段、映像、映射、栈与堆需求，联动修改承载能力及回滚/回收，再在 GTOS 验收真实 Platform/Isolate/Context/Script。",
+    "继续追踪同 revision Content Shell IA32 可行性；其后顺序为本地 HTML/CSS/JS 与输入/DOM、受控 HTTP/HTTPS 和安全、视频/HTML5。"
   ],
   "retained_complete_attempts": [
     {
@@ -840,6 +845,18 @@
         "../source/third_party/abseil-cpp/absl/random/internal/seed_material.cc:17:10: fatal error: 'fcntl.h' file not found"
       ],
       "boundary": "未提交日志适配后的完整目标失败；用户态析构、缓冲与回收语义尚未验收。"
+    },
+    {
+      "name": "portable-resume-05",
+      "status": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/status.json",
+        "sha256": "aadf4b58c92c6a6eb9ed9a29232850054f1fc4a0a00c643cb73af43271a506f7"
+      },
+      "first_diagnostics": [
+        "FAILED: obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o ",
+        "../source/third_party/abseil-cpp/absl/random/internal/seed_material.cc:17:10: fatal error: 'fcntl.h' file not found"
+      ],
+      "boundary": "日志立即退出与 ID 契约适配后的完整目标失败；完整引擎验收仍为 false。"
     }
   ],
   "public_entry_review": {
@@ -850,15 +867,74 @@
     "original_cache_and_private_disk_preserved": true,
     "runtime_guest_qualification": false
   },
-  "working_tree_log_adaptation": {
-    "committed": false,
-    "guest_qualified": false,
-    "file": "apps/native_v8_integration/overlay/third_party/abseil-cpp/absl/log/internal/log_message.cc",
-    "source_snapshot": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-04/module-input-snapshot/overlay/third_party/abseil-cpp/absl/log/internal/log_message.cc",
-      "sha256": "cb88de8f5d85707393e919da9cb90b954a53abb01f7b17d442473cf0fe844e09"
+  "log_consumer_qualification": {
+    "module": "apps/native_v8_exit_probe",
+    "entry": "tools/build-native-v8-exit-probe.py",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-exit-guest-02/status.json",
+      "sha256": "aceaf5fdc0ee2e54c7c842cec8ada8b3fdf29739052b1bb416e7d0380c43b293"
     },
-    "first_blocker_before": "log_message.cc:59 unistd.h",
-    "first_blocker_after": "log_message.cc:218 signedness"
+    "prototype_pass": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/exit-guest-02/status.json",
+      "sha256": "893ce740324a62d1c83378e7cc4f46870bef5a2e744dfee057a9d34ab5cfcee5"
+    },
+    "retained_fixture_compile_failure": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/exit-guest-01/status.json",
+      "sha256": "09f1e76e899ac32bc7d411c0c59a9335ecf52f0e7579e455a1aab98f9c699ff0"
+    },
+    "guest_exit_semantics_pass": true,
+    "guest_explicit_signal_failure_pass": true,
+    "native_entry_cleanup_pass": true,
+    "sibling_survival_and_exact_reclamation_pass": true,
+    "signal_handlers_supported": false,
+    "cases_per_guest": 6,
+    "guests": [
+      {
+        "opt": 0,
+        "memory_mib": 32,
+        "evidence": {
+          "cases": 6,
+          "target_reaps": 5,
+          "all_reaped": 6,
+          "frames": 7529,
+          "checks": 977,
+          "max_trap_stack": 3676
+        },
+        "negative_observer_controls": 138,
+        "guest_log_sha256": "bc41905696b1cfa0002745db776a954a28d2f25f6e11d1b54bfa4c85300c2392",
+        "disk_sha256": "f03381157eca43b400961b6351593f6594f62dc65dffdb6cd60584ab175dc206"
+      },
+      {
+        "opt": 2,
+        "memory_mib": 64,
+        "evidence": {
+          "cases": 6,
+          "target_reaps": 5,
+          "all_reaped": 6,
+          "frames": 15741,
+          "checks": 953,
+          "max_trap_stack": 2464
+        },
+        "negative_observer_controls": 138,
+        "guest_log_sha256": "009a925c70d34ff0be8a0603058f0786a39d2f9094e1a155b7b62c9845aad731",
+        "disk_sha256": "f03381157eca43b400961b6351593f6594f62dc65dffdb6cd60584ab175dc206"
+      }
+    ],
+    "full_v8_isolate_pass": false,
+    "boundary": "真实 Abseil 函数与原生入口的消费者夹具；不作为完整 V8、信号支持、通用线程或完整日志格式化验收。",
+    "retained_replay_before_cache_directory_fix": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-exit-guest-01/status.json",
+      "sha256": "035a2b85d5c83e68649d4c894e7195c55aef8656112cb39908e1f83b7469b959"
+    },
+    "ordinary_python_replay_with_preserved_cache_pass": true,
+    "invalid_initial_cache_negative_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/exit-consumer-review-01-validity.json",
+      "sha256": "301bec05f81016b609b17dc79c1ef28344c33c48d1ad24e29a5c1a102a632341"
+    },
+    "review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/exit-consumer-review-02.json",
+      "sha256": "955effb1f6304be4adcf78b4d40169ce75e7bd56d8875e124e348fee7e5f0bc8"
+    },
+    "modified_provider_cache_rejected_before_compile": true
   }
 }

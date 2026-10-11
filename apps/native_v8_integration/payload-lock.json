@@ -192,8 +192,8 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/third_party/abseil-cpp/absl/base/internal/sysinfo.h": {
-      "sha256": "bd553e0eeea99839c4ca1ba2a76317eec7e68a277ca4667313b4938f88c75844",
-      "bytes": 2768,
+      "sha256": "40f8bcf295907bf4464539f435756489c659754fadd4b3ee809eb27634a305f5",
+      "bytes": 2703,
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/third_party/abseil-cpp/absl/base/internal/thread_identity.h": {
@@ -4680,11 +4680,21 @@
       "sha256": "6ab33af8774a0f396ee3aeeb761e3229057682d6f9fa7f572e390c2cb3a6e509",
       "bytes": 3093,
       "origin": "upstream license"
+    },
+    "overlay/third_party/abseil-cpp/absl/log/internal/config.h": {
+      "sha256": "bddfa4acf5ca0746fe9570f7f98efbc31ec34252fd5b6ea246ea548bf6eca042",
+      "bytes": 1314,
+      "origin": "Pinned Abseil log config with native GTOS uint32 task-ID contract"
+    },
+    "overlay/third_party/abseil-cpp/absl/log/internal/log_message.cc": {
+      "sha256": "cb88de8f5d85707393e919da9cb90b954a53abb01f7b17d442473cf0fe844e09",
+      "bytes": 30604,
+      "origin": "Pinned Abseil log_message.cc body plus GTOS immediate-exit ABI branch; actual exit consumer guest-qualified by native_v8_exit_probe; complete V8 unqualified"
     }
   },
-  "overlay_files": 71,
+  "overlay_files": 73,
   "sdk_files": 424,
-  "total_bytes": 1881794,
+  "total_bytes": 1913647,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

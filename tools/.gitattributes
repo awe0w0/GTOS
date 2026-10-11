@@ -1,2 +1,3 @@
 # Preserve the byte hash recorded by the native V8 source lock.
 build-native-v8-integration.py -text
+build-native-v8-exit-probe.py -text

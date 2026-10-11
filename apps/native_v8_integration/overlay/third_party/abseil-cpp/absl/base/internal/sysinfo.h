@@ -53,9 +53,8 @@ int NumCPUs();
 // On Linux, you may send a signal to the resulting ID with kill().  However,
 // it is recommended for portability that you use pthread_kill() instead.
 #if defined(_WIN32) || (defined(__GTOS__) && defined(__i386__))
-// On Windows and native GTOS, process id and thread id are of the same type according to the
-// return types of GetProcessId() and GetThreadId() are both DWORD, an unsigned
-// 32-bit type.
+// Windows uses DWORD for process and thread IDs. Native GTOS uses the full
+// unsigned 32-bit ID from its process-info ABI.
 using pid_t = uint32_t;
 #endif
 pid_t GetTID();

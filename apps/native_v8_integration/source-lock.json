@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Portable pinned complete native IA32 V8 build/failure entry. Guest engine and new exit/fault semantics remain unqualified.",
+  "scope": "Portable pinned complete native IA32 V8 build/failure entry. Actual Abseil exit consumers are separately guest-qualified; complete engine and remaining runtime bridges remain unqualified.",
   "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
   "upstream_revisions": {
     "": "be042d4462bee463c9b785701b8c6ee4576ee0a3",
@@ -20,7 +20,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "d4f1ecbc772b8a2452fe6c589a981eeefef7d7e6402d76f9a2e8d09cd4f312c8",
+  "payload_lock_sha256": "8f28ff1a39d744c44653116fbc09b9fc9e0a1199649e46743c08d6618c17714d",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",

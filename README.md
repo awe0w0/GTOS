@@ -185,3 +185,7 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 已验收的[通用文件存储后端](docs/littlefs/README.md)保留完整 littlefs 读写算法，覆盖真实 ATA 持久化、文件和目录操作、所有者句柄回收、满盘及中断恢复；已验收的[原生文件 ABI](apps/native_files/README.md)接入真实 CPL3 用户页检查、文件和目录操作及延迟退出回收。
 
 已验收的[原生 C 文件流组件](apps/native_c_file/README.md)提供固定 LLVM libc 的 21 个普通文件字节流接口，覆盖实际 ATA 读写、错误/EOF、缓冲失败、进程故障/取消及精确回收。标准流、完整 stdio/libc++ fstream、生产文件服务挂载、磁盘 PNG 到桌面窗口及完整 V8/浏览器仍待集成。
+
+完整 V8 构建驱动的[真实 Abseil 退出验证](apps/native_v8_exit_probe/README.md)已在
+GTOS CPL3 验证正常返回、立即退出、明确拒绝信号安装及精确回收；完整目标越过
+日志消费者后，当前首个阻塞是 OS 熵读取。完整 Isolate/JS 和网页运行仍待验收。

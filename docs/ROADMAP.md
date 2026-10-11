@@ -14,9 +14,9 @@ This roadmap separates verified capabilities from development targets. Work is r
 更丰富的 HTML5。详见[集成主线](chromium-integration-plan.md)。完整原生浏览器仍未运行。
 
 可移植 SDK/平台覆盖及完整目标入口已发布，准备好的 pinned 输入、新输出冷构建
-已到达真实上游服务阻塞。最新未提交日志适配的完整续编首先暴露 GTOS/Abseil ID
-符号性冲突；先核对并修复该契约，再重放完整 embedder，并验证日志退出的必要
-客体语义。随后依实际报错处理熵、同步和时间/时区消费者；完整 ELF 与客体
+已到达真实上游服务阻塞。日志立即退出和 GTOS uint32 日志 ID 适配后，完整续编
+已前进到 seed_material.cc:17 的熵读取缺口；实际 Abseil 退出及原生入口的 O0/O2
+客体对照、同伴存活和精确回收通过。下一步依实际报错处理熵、同步和时间/时区；完整 ELF 与客体
 Isolate 仍未通过，不以新叶子探针数量代替主线进度。
 
 保留既有桌面、i386/x64 和组件回归；近期不扩展无真实消费者驱动的能力。

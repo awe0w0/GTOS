@@ -8,11 +8,11 @@ HTML5。当前交付架构为 IA32；x64 的内核态启动、帧池与稀疏 VM
 
 ## 当前证据与限制
 
-本次路线校准前 dev 与 origin/dev 为 9ad59b3d5cdc8767e5e7d22d4a9a63b891bb7b6e；
+本次日志消费者适配前 dev 与 origin/dev 为 5aeaba8c366e353069ec715416aaed11084ea43e；
 完整构建入口在 82c93df 发布。9ad59b3 修正根 .gitattributes 改动触发的文件系统
 源码锁回归，将 V8 属性限定在模块目录；未修改资格锁或放宽检查。
-最新 [CI](https://github.com/awe0w0/GTOS/actions/runs/38130414120) 观察时文件系统、
-文件 ABI 和 sparse VM 三项通过，verify 仍在运行。此前 d9ace67 的
+5aeaba8 的 [CI](https://github.com/awe0w0/GTOS/actions/runs/38131267697) 与 9ad59b3 的
+[CI](https://github.com/awe0w0/GTOS/actions/runs/38130414120) 四项既有门禁均通过。此前 d9ace67 的
 [CI](https://github.com/awe0w0/GTOS/actions/runs/38122735830) 四项既有门禁通过。
 这些门禁均不包含完整 V8 或浏览器运行。
 Linux 参考引擎运行已完成，GTOS 客体 Isolate、
@@ -29,7 +29,7 @@ JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未
 | 构建主机 / 客体目标 | WSL Ubuntu-20.04 Linux x64 / GTOS i686-unknown-none-elf |
 
 仓库现在提供 [完整目标模块](../apps/native_v8_integration/README.md) 和
-`tools/build-native-v8-integration.py`。71 个平台覆盖、424 个私有/C++ SDK 文件和
+`tools/build-native-v8-integration.py`。73 个平台覆盖、424 个私有/C++ SDK 文件和
 438 个 LLVM C SDK 文件均按内容锁定；原生头搜索顺序为私有覆盖、上游 libc++、
 C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内容核对，构建输出必须
 是新目录。该入口需要准备好的上游 DEPS/sysroot，不负责在空白主机安装依赖。
@@ -39,14 +39,17 @@ C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内�
 链接命令已经生成。修正 SDK 顺序后的冷构建 portable-cold-03 返回 1，首个诊断为
 `third_party/abseil-cpp/absl/log/internal/log_message.cc:59`：`'unistd.h' file not found`。
 缓存续编 portable-resume-02 的首个诊断是 log_message.cc:59 缺少 unistd.h，实际
-消费者是 FailQuietly 的 `_exit(1)`。最新 portable-resume-04 使用保留的 cold-03
-缓存副本，加入尚未提交的日志立即退出适配；完整目标仍返回 1，首个诊断前进到
+消费者是 FailQuietly 的 `_exit(1)`。portable-resume-04 使用保留的 cold-03
+缓存副本，加入当时尚未提交的日志立即退出适配；完整目标仍返回 1，首个诊断前进到
 log_message.cc:218 的 `pid_t`（unsigned int）到日志 `tid_t`（int）的符号性冲突，
 随后报告 seed_material.cc:17 缺少 fcntl.h。已有 GTOS sysinfo.h 覆盖使用无符号
-ID，LLVM C pid_t 与 Abseil 日志类型使用有符号值；下一步须核对实际 ID 范围和
+ID，LLVM C pid_t 与 Abseil 日志类型使用有符号值；这一失败要求核对实际 ID 范围和
 转换契约，不能直接关闭警告或用未经边界证明的强转掩盖。该轮 GN 依赖图未变、
-绑定输入未变；输入快照、准确编译命令和完整失败日志已保留。未提交日志分支尚无
-客体语义验收，不作为已发布或已运行的引擎成果。
+绑定输入未变；输入快照、准确编译命令和完整失败日志已保留。该轮尚无客体语义
+验收，保留为历史失败。随后为 GTOS 选择 Abseil 已支持的 uint32
+日志 ID 类型，保留原生 ABI 的完整 ID 范围及 Linux 原分支；不通过强转或关闭警告
+处理符号性冲突。最新完整续编 portable-resume-05 越过日志消费者，首个失败变为
+`seed_material.cc:17` 缺少 fcntl.h。该轮输入和依赖图仍未变，完整 ELF 仍未生成。
 此前同图 attempt-07 还实际暴露了 seed_material
 熵读取、futex 等待、时区文件读取及 tm_gmtoff/tm_zone 接口缺口。并行编译的首个
 报错次序随缓存变化，保留每轮原始诊断，不将头文件声明当成服务实现。
@@ -58,9 +61,13 @@ ID，LLVM C pid_t 与 Abseil 日志类型使用有符号值；下一步须核对
 
 动态 ELF/VDSO 能力适配保留 __ELF__ 与独立 __GTOS__ 身份，排除目前静态装载
 模型不提供的动态设施；实际 Linux IA32 对照仍保留原能力。日志立即退出的部分
-消费者接到 GTOS Exit ABI，信号安装调用明确报错并触发用户故障；四个原先失败
-对象已编译，完整目标已前进到新的服务消费者。新增立即退出/故障路径尚未完成
-客体语义验收，信号处理仍不支持。机器清单见 chromium-integration-status.json。
+消费者接到 GTOS Exit ABI，信号安装调用明确报错并触发用户故障；完整目标已
+前进到熵读取消费者。[退出验证](../apps/native_v8_exit_probe/README.md) 使用实际
+Abseil 函数和完整目标原生入口，复用哈希一致的 FILE/内核对象。O0/32 MiB/单 vCPU
+与 O2/64 MiB/四 vCPU 均在 CPL3 完成六个任务及精确回收；正常返回执行自动、TLS
+和 fini 析构并刷新缓冲，立即退出/故障跳过；活跃用户同伴、ring0 和启动任务继续
+推进。两组各有 138 个观察器负例，内核仍通过原整数指令审计。信号处理仍不支持，
+完整日志格式化和完整 V8 不由这些消费者夹具验收。机器清单见 chromium-integration-status.json。
 
 真实 V8 heap-profiler.cc 的编译失败指向 output-stream.h:27 的 basic_ofstream 未定义。
 原 SDK 的 _LIBCPP_HAS_FILESYSTEM=0 隐去了文件流定义。独立覆盖配置后，
@@ -85,7 +92,12 @@ fstream-config-diagnostic-01 和 stream-runtime-diagnostic-03 是独立配置/�
 content-shell-linux-ia32-01 与 content-shell-target-evidence-02 分别保留根断言和目标图证据。
 portable-cold-01 保留配置错误，portable-resume-02 保留修正后的续编，
 portable-cold-03 保留新输出的冷构建失败，portable-resume-04 保留未提交日志适配后的
-完整续编失败。公开模块提供重放入口；完整引擎运行仍待验收。
+完整续编失败，portable-resume-05 保留日志适配后新的熵读取阻塞。
+exit-guest-01 保留夹具误用 Reap API 的编译失败；exit-guest-02 保存修正后的客体验收，
+public-exit-guest-01 保存仓库内参数化工具的初次重放。复审发现普通 Python 生成的
+缓存目录被当作文件读取，导致缓存负例提前失败；原复审报告及失效说明保留。
+public-exit-guest-02 使用普通 Python 保留缓存重放，并以准确对象哈希拒绝验证负例。
+公开模块提供重放入口；完整引擎运行仍待验收。
 
 ## 阶段与验收
 
@@ -113,14 +125,12 @@ IA32 后续若遇到目标版本无法合理支持，或地址空间与隔离要
 
 ## 紧接着执行的工作包
 
-1. 先处理完整目标 log_message.cc:218 的 GTOS/Abseil ID 契约冲突，再重放同一
-   native_embedder。保留全部依赖、警告与原始失败；区分发布入口和未提交适配。
-2. 以实际日志消费者进行必要的正常退出、立即退出与显式故障对照，验证退出状态、
-   用户态析构/缓冲刷新跳过、同伴存活和精确回收。复用已有已验收组件，不扩展无关
-   叶子清单；信号处理仍明确失败，不能报告已安装。
-3. 随后按完整目标实际报错处理熵、同步及时间/时区契约，每次必要适配后重放完整
-   目标。依据实际链接符号复用 C FILE/libc++；确定性种子不等于系统熵，诊断单任务
-   锁不等于原生线程或 futex。冷构建和缓存续编分别记录。
+1. 先根据完整目标 seed_material.cc:17 的失败核对实际熵消费者、GTOS 熵来源和
+   失败语义，最小正确适配后重放同一 native_embedder。保留全部依赖、警告和失败日志。
+2. 由新实际报错驱动同步、时间/时区等契约。复用已有已验收组件，不扩展无关叶子
+   清单；已有退出客体证据持续保留，信号处理仍明确失败，不能报告已安装。
+3. 每次必要适配后重放完整目标，依据实际链接符号复用 C FILE/libc++；确定性种子
+   不等于系统熵，诊断单任务锁不等于原生线程或 futex。冷构建和缓存续编分别记录。
 4. 完整 ELF 生成后记录段、映像页、映射、栈与堆需求，再联动处理装载/容量；以
    客体 Platform → Isolate → Context → Script 校验与回收作为首项功能验收。
    Content Shell IA32 可行性保持旁路核对，不能只凭指定根 GN 成功判断。

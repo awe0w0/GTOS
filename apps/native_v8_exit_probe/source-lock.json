@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "scope": "实际 Abseil 日志退出、原生入口和精确回收的消费者夹具；不包括完整 V8",
+  "files": {
+    "apps/native_v8_exit_probe/probe/kernel.cpp": "f708a45b79096236248d4189712c8432a9675659a7bc11129410e0cccd10dacb",
+    "apps/native_v8_exit_probe/probe/kernel_common.h": "b594091f0116dae59d392578674ba32cc50aca97402c15a00045edbc867a4e6f",
+    "apps/native_v8_exit_probe/probe/linker.ld": "24607ddd237a96664e6e725460f1e8ec3c5edd6bf66b490c42d9449fe91a6d65",
+    "apps/native_v8_exit_probe/probe/main.cc": "f5edce7269eaf6e7c1f541051b57e6af1fdabefa3bd0b0e19e74d7b0c1f94a78",
+    "apps/native_v8_exit_probe/probe/observer.py": "00d487b355383159efdb44dc80203e2d0b140438bff1bb693a229eb55005fd47",
+    "apps/native_v8_exit_probe/probe/record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+    "tools/build-native-v8-exit-probe.py": "c72df4f5af020409a7c335c8462f0b7409c83ec594b1e526124343d6dd8575af"
+  },
+  "complete_target": {
+    "name": "portable-resume-05",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/status.json",
+      "sha256": "aadf4b58c92c6a6eb9ed9a29232850054f1fc4a0a00c643cb73af43271a506f7"
+    },
+    "timestamp_utc": "2026-10-11T10:24:06.546605+00:00",
+    "cold_build": false,
+    "build_exit_code": 1,
+    "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+    "bound_inputs_unchanged": true,
+    "dependency_graph_changed": false,
+    "original_cache_preserved_during_run": true,
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/module-input-snapshot/source-lock.json",
+      "sha256": "0c5984dfc8bd2961ea69e818a5920ef484b10584ac960c9c4ad379472bb2e9a2"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/module-input-snapshot/payload-lock.json",
+      "sha256": "f0fe7aa962650b97b4009098eba5dde86696c1bc804d7c25582fdfd8ff90917c"
+    },
+    "builder": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-05/builder-input-snapshot.py",
+      "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
+    },
+    "boundary": "完整目标越过实际日志消费者，当前熵读取仍失败；未生成完整 ELF，未验收客体 Isolate。"
+  },
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-exit-guest-02/status.json",
+    "sha256": "aceaf5fdc0ee2e54c7c842cec8ada8b3fdf29739052b1bb416e7d0380c43b293"
+  },
+  "objects": {
+    "O0-log_message.o": "ee260b639da5a24566a28971d4a4e76d877748ac03d83dade21728ab5a8f1960",
+    "O0-failure_signal_handler.o": "ff0956d804991ca4309c701080acc8abd98b5e2fa536cb978406d52dddb05c0b",
+    "O0-sysinfo.o": "abd4748db0f986646631803530de6813d3141b9f65398a0644dff19c5c1f094c",
+    "O0-thread-exit.o": "a0d115affd714ae1a8f64648965b162cac0d1987f6f93ffb3fd276f36e05dc89",
+    "O0-native-entry.o": "09d03d60038ea60db891247cc110130bc9c8f6a4bb1fa921fdcd126d95be8d43",
+    "O2-log_message.o": "94462da35e192456364e90e8b23677896cd685b06989b95cf5ceea74d1f72abb",
+    "O2-failure_signal_handler.o": "c57197b78338b24458dcf9b553c283dd298ffa28116813f0e488779ad99b568e",
+    "O2-sysinfo.o": "890f8c9632de5842b609e32153361691d6e2fdb5b1b4e7a83a001e1e826a39b0",
+    "O2-thread-exit.o": "7c4675ce7058adb9a84628f3d8b1198a877755972da4ebf3a718404388d7c5f7",
+    "O2-native-entry.o": "96cd6556651bf581eb59bed2232d8057f2c198b87529e8172693453b44ed40cc"
+  },
+  "elfs": {
+    "O0-mode0": {
+      "sha256": "5f908c807e2073b7fb48a080d85a072a36553668923576567ca7f36677eb3288",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O0-mode1": {
+      "sha256": "e7ab08cf743f343d8e40970b035fbdb88f72178a179692bd4f54e8db3febb8e5",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O0-mode2": {
+      "sha256": "2f2851392498766256a01b594b4f4749e6dcc035adcd1a1df3307c3c20bd86ab",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O0-mode3": {
+      "sha256": "184a43bb22400342a06832ca082a251ae13e84073bad155e5c16a62fed90c6d6",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O0-mode4": {
+      "sha256": "278b614af2106ebf879dd6c461cac2e5b3ec8e9c64f32bf255b86808995542ec",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O0-mode5": {
+      "sha256": "9f2e7e1303e711bd95f3669fcf90ec9fe2d71677873bd98348dbc0160b084d0a",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O2-mode0": {
+      "sha256": "958e6304a7e464121800a301dc46efe2964072992993c390a62ba92ef3533db9",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode1": {
+      "sha256": "dd910d4bfce69421b20baeaa28add0901ecbf27b0e2452c44dfbdf5074184621",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode2": {
+      "sha256": "166aca8f113cf307e4a92614ae44420247debcb7e1b539b6b4fd275f26ea45bc",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode3": {
+      "sha256": "6c1160bcf2d143fbdd7c75e80182d139678d229290c934afb98692fb3330cb86",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode4": {
+      "sha256": "c067682ee8ea3c89f42dccd37a16c6dda9b8bd9c2af3062ce6d7178cbdfca964",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode5": {
+      "sha256": "812d14c3e56fd5a5cd5f7e3b744a098934791dcb72c64d7cc08d5e2213bd4b16",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    }
+  },
+  "guest_evidence": [
+    {
+      "opt": 0,
+      "memory_mib": 32,
+      "evidence": {
+        "cases": 6,
+        "target_reaps": 5,
+        "all_reaped": 6,
+        "frames": 7529,
+        "checks": 977,
+        "max_trap_stack": 3676
+      },
+      "negative_observer_controls": 138,
+      "guest_log_sha256": "bc41905696b1cfa0002745db776a954a28d2f25f6e11d1b54bfa4c85300c2392",
+      "disk_sha256": "f03381157eca43b400961b6351593f6594f62dc65dffdb6cd60584ab175dc206"
+    },
+    {
+      "opt": 2,
+      "memory_mib": 64,
+      "evidence": {
+        "cases": 6,
+        "target_reaps": 5,
+        "all_reaped": 6,
+        "frames": 15741,
+        "checks": 953,
+        "max_trap_stack": 2464
+      },
+      "negative_observer_controls": 138,
+      "guest_log_sha256": "009a925c70d34ff0be8a0603058f0786a39d2f9094e1a155b7b62c9845aad731",
+      "disk_sha256": "f03381157eca43b400961b6351593f6594f62dc65dffdb6cd60584ab175dc206"
+    }
+  ],
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "signal_handlers_supported": false,
+  "capacity_changed": false,
+  "production_image_changed": false,
+  "kernels": {
+    "O0": "b7f927370f4a1f55b5a49f44062b1d3d459d44e58bc4322dff28dcdebe0b0d47",
+    "O2": "8ebc4afc72592e1b62ead1f11fa7468106199640931882a0e05e564ee56c99c7"
+  },
+  "kernel_integer_audits": {
+    "O0": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-exit-guest-02/O0/kernel-audit.log",
+      "sha256": "d3130cc0724089f2da398d3ba3d686e51317ad036174f02ebb461d2a63e30183"
+    },
+    "O2": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-exit-guest-02/O2/kernel-audit.log",
+      "sha256": "7fed9e6d3a9365189b4b3b34f103afc363b672f7fdfef34f7b0021268587bda3"
+    }
+  },
+  "retained_replay_before_cache_directory_fix": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-exit-guest-01/status.json",
+    "sha256": "035a2b85d5c83e68649d4c894e7195c55aef8656112cb39908e1f83b7469b959"
+  },
+  "ordinary_python_replay_with_preserved_cache_pass": true,
+  "review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/exit-consumer-review-02.json",
+    "sha256": "955effb1f6304be4adcf78b4d40169ce75e7bd56d8875e124e348fee7e5f0bc8"
+  },
+  "modified_provider_cache_rejected_before_compile": true,
+  "invalid_initial_cache_negative_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/exit-consumer-review-01-validity.json",
+    "sha256": "301bec05f81016b609b17dc79c1ef28344c33c48d1ad24e29a5c1a102a632341"
+  }
+}
