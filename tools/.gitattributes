@@ -2,3 +2,4 @@
 build-native-v8-integration.py -text
 build-native-v8-exit-probe.py -text
 build-native-v8-seed-probe.py -text
+build-native-v8-zlib-probe.py -text

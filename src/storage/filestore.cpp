@@ -109,8 +109,36 @@ int32_t FileStore::OpenDirectory(uint32_t owner,const char* path) {
     error=lfs_dir_open(&filesystem,&slot->directory,path);if (error) return error;
     slot->owner=owner;slot->handle=nextHandle++;slot->kind=LFS_TYPE_DIR;return slot->handle;
 }
+namespace {
+    template<typename Slot> void RefreshReaders(Slot* slots,uint32_t count,const Slot& writer) {
+        const lfs_block_t invalid=(lfs_block_t)-1;
+        if (writer.file.m.pair[0]==invalid||writer.file.m.pair[1]==invalid) return;
+        for (uint32_t i=0;i<count;i++) {
+            Slot& reader=slots[i];
+            if (!reader.handle||reader.kind!=LFS_TYPE_REG||reader.mode!=FileStore::Read
+                ||reader.file.id!=writer.file.id||reader.file.m.pair[0]==invalid
+                ||reader.file.m.pair[1]==invalid) continue;
+            if (reader.file.m.pair[0]!=writer.file.m.pair[0]&&reader.file.m.pair[0]!=writer.file.m.pair[1]
+                &&reader.file.m.pair[1]!=writer.file.m.pair[0]&&reader.file.m.pair[1]!=writer.file.m.pair[1]) continue;
+            // A committed version replaces each read cache, retaining its cursor.
+            reader.file.ctz=writer.file.ctz;
+            reader.file.flags=(reader.file.flags&~(LFS_F_READING|LFS_F_DUSTY|LFS_F_INLINE))
+                |(writer.file.flags&LFS_F_INLINE);
+            reader.file.block=invalid;reader.file.off=0;
+            reader.file.cache.block=invalid;reader.file.cache.off=0;reader.file.cache.size=0;
+            if (reader.file.flags&LFS_F_INLINE) {
+                gtos_lfs_memcpy(reader.file.cache.buffer,writer.file.cache.buffer,writer.file.ctz.size);
+                reader.file.cache.block=(lfs_block_t)-2;
+                reader.file.cache.size=writer.file.ctz.size;
+            }
+        }
+    }
+}
 int32_t FileStore::CloseSlot(Slot& slot) {
+    const bool changed=slot.kind==LFS_TYPE_REG&&slot.mode!=Read
+        &&(slot.file.flags&(LFS_F_DIRTY|LFS_F_WRITING));
     int32_t error=slot.kind==LFS_TYPE_REG?lfs_file_close(&filesystem,&slot.file):lfs_dir_close(&filesystem,&slot.directory);
+    if (!error&&changed) RefreshReaders(slots,MaximumHandles,slot);
     // Upstream close unlinks even after sync failure; always invalidate the handle.
     slot.handle=0;slot.owner=0;slot.kind=0;return error;
 }
@@ -164,7 +192,11 @@ int32_t FileStore::TruncateFile(uint32_t owner,uint32_t handle,uint32_t size) {
 }
 int32_t FileStore::Sync(uint32_t owner,uint32_t handle) {
     InterruptGuard guard;Slot* slot=Find(owner,handle,LFS_TYPE_REG);
-    return slot?lfs_file_sync(&filesystem,&slot->file):LFS_ERR_BADF;
+    if (!slot) return LFS_ERR_BADF;
+    const bool changed=slot->mode!=Read&&(slot->file.flags&(LFS_F_DIRTY|LFS_F_WRITING));
+    int32_t error=lfs_file_sync(&filesystem,&slot->file);
+    if (!error&&changed) RefreshReaders(slots,MaximumHandles,*slot);
+    return error;
 }
 void FileStore::CopyInfo(Info& to,const lfs_info& from) {
     to.type=from.type;to.size=from.size;gtos_lfs_memcpy(to.name,from.name,sizeof(to.name));

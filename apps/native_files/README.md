@@ -80,4 +80,10 @@ python3 tools/build-native-file-probe.py /absolute/new-llvm-output --cxx /path/t
 
 验收记录见 [acceptance.json](acceptance.json)，来源与执行字节见 [source-lock.json](source-lock.json)。其他运行库模块的历史内核锁仍对应各自验收时的提交；本次没有将旧内核验收冒充为新运行时复测。
 
-下一步实现真实 LLVM 文件提供者及 libc++ 文件流，并在明确的启动挂载路径接入原生程序。完整原生浏览器尚未运行。
+## FileStore 提交后的只读缓存刷新
+
+真实 gzip 追加继续解码要求已打开只读句柄看到成功提交后的文件版本。FileStore 现在仅在修改过的写句柄 Sync/Close 成功后刷新同一文件的只读缓存，保留偏移、所有者和句柄；失败提交、未修改的旧写句柄关闭、其他文件及删除后替换路径不刷新。该行为不提供多写句柄的并发一致性，BSP 串行模型、File ABI 和资源容量保持原样。
+
+同一 FileStore 对象重新执行完整存储中断恢复，两种 File ABI 配置各八组客体和 O0/O2 C FILE 客体。C FILE 的每组 41 个运行库对象和两组合计 12 个用户 ELF 与既有验收逐字一致，改变的是执行的内核 FileStore。源码锁的 profiles 记录本次结果，previous_profiles 保留旧执行锁；原 acceptance.json 属于历史资格，不能当作本次新实现的运行记录。
+
+LLVM C FILE 已用于真实 gzip 解码；完整 libc++ 文件流仍未验收。下一步回到完整 V8 的 cctz 时间/时区与文件语义阻塞，完整原生浏览器尚未运行。

@@ -8,7 +8,8 @@
     "third_party/abseil-cpp": "838f15bf6f6fb0d7a3dc37e35f355d9673275138",
     "third_party/libc++/src": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
     "third_party/libc++abi/src": "09351f6ec00c2b65f2d03585ae6da07098b024dc",
-    "third_party/llvm-libc/src": "ebe33e01982dbbf879661e3b6b78450f3020a53f"
+    "third_party/llvm-libc/src": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+    "third_party/zlib": "456ae730017b9b4bd3371927abc82627fd51feef"
   },
   "clang_revision": "llvmorg-24-init-7747-g62397f8b-57",
   "tool_sha256": {
@@ -20,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "f20b0a4bd2956284c827e227a80c46817d43369671641c298ad9eed7540cf128",
+  "payload_lock_sha256": "8751ab0a4920f689b71f097b99c10bbc40d9b415d012147b126e695641e59178",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -393,7 +394,9 @@
     "lib/i386-linux-gnu/libutil.so.1": "afa91ebdb5c350832e5c25f2dd6d881c2a3fce78938396d69b0d5564ce7c29c6"
   },
   "prepared_source_files": {
-    "third_party/cpython3/host/bin/python3": "df4f8d0ae4bace71af48c8630b2cb48789395925c08b56fa8037be9b15f215a7"
+    "third_party/cpython3/host/bin/python3": "df4f8d0ae4bace71af48c8630b2cb48789395925c08b56fa8037be9b15f215a7",
+    "third_party/llvm-libc/src/src/string/strerror.cpp": "d4c3ad00fd9553240a810c880f0f4b24067cf25b775691b82092a53529eb6aa9",
+    "third_party/zlib/gzread.c": "713edfd883f4230199ddb2b0f5dc90adb7fc96348e228fc38c249e4b4a797c5e"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -404,5 +407,15 @@
   "video_guest_pass": false,
   "html5_guest_pass": false,
   "entropy_guest_qualified": true,
-  "synchronization_wait_guest_qualified": false
+  "synchronization_wait_guest_qualified": false,
+  "zlib_guest_qualified": true,
+  "zlib_qualification": {
+    "scope": "真实 zlib 解码与 FileStore 提交后只读缓存刷新工作包；完整 V8/浏览器及成功压缩未验收",
+    "probe_source_lock_sha256": "d1b8f9e57ec58ef4855d2d8d39e307e5a827869e4657741be1d1fe04faffc00f",
+    "self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44",
+    "complete_target_status_sha256": "144ba61b5764f270961f17806f81225f52c722bc2cb41ecaa23d5491e5b8fb6b",
+    "public_replay_status_sha256": "8f48f7d9e3a168ab195bb6ed0fe0b8c1dd7c5c369cda4bd8f455b136e52d8b8a",
+    "cached_replay_status_sha256": "575c9e9a422bec8aee43cb030c2ba112e8160a73f84c7d890ab3127ac5d19adc",
+    "cache_forgery_rejection_review_sha256": "3278d094a6e5c5a11f26b27970f4ae190bd8b95f12bfaf30df8126367ee05865"
+  }
 }

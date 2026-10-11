@@ -202,7 +202,7 @@
     "src/process/native_surface.cpp": "3662ffe3e406346f50ba7842d6a1ba02bdcb5a534a8687479039223e8cf2e386",
     "src/process/resources.cpp": "ecef8dca1019a5f74262b3463a236da0da2a1e00d629283795e953b7f0567d73",
     "src/process/resources_png.inc": "8b13fbadb31313bb8cab2567e75ea7942fb8e9a9885abe559c233e1bc540f61c",
-    "src/storage/filestore.cpp": "32469061116ccf25e4ff1db64ee93d22dd42d48c26f36eaafcb9eb27b26bffe7",
+    "src/storage/filestore.cpp": "f633b40d34f18cf83ae8ad026670e7d964bb4250c30b5e02292d22efd3f814a2",
     "src/storage/littlefs/lfs.c": "a36d6a095785ddea9571d541d68d3e4ef01d5b255a99d17d3f07fb6ea60ea132",
     "src/storage/littlefs/lfs_util.c": "f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec",
     "src/storage/littlefs_port.cpp": "3bba4f3e303c4e32f3dd39dd092dbde970d934dfc1c9e2dc2b47ddabf1cb00fd",
@@ -217,6 +217,309 @@
     "tools/self-review-native-files.py": "cb4f65d824ebc13ec02ce2807a7554eb31ea6d56148a5934d2f20c688c9b493e"
   },
   "profiles": {
+    "scalar-fixture": {
+      "cxx_sha256": "863c9bc7126d3b3a2ce9270309d52b36befcf38a721ad8b52f29be2767cb6204",
+      "objects": {
+        "O0-gdt.o": "e6d0c20aeb028e72e98a5361d7d25ee886fc41d56b4fa8178ee282af50d2833e",
+        "O0-multitasking.o": "fc950ccebfe33b0755c46f61bc6feede10f395445792f03deedbbb87b37dc13d",
+        "O0-syscalls.o": "94b16c150580c36ecdec20fc35ca16b1b4f229ae2ddbd5947a8ff571c31fdd91",
+        "O0-interrupts.o": "762453baad6ca53af0233cce6aa78a599ccc9897acdf11a4bedad4be0b832819",
+        "O0-port.o": "a01c4965adffcd690cab049fa8fe97023700b7f738a03058566ad2dc24561163",
+        "O0-native_runtime.o": "9931f1fc9d96ee40f3b256bd48e901f1a4f6c542afa7ba9538395dc770495255",
+        "O0-native_realtime.o": "37eac350b5f6348a5cff9420386664de522332ad22efe03b5b03a61a77895062",
+        "O0-resources.o": "bca0b749ba29881dd780f6d813de9a5710eb0303a2d33c3d623a6fd974cf307b",
+        "O0-native_surface.o": "77f7312460294c129a63e129cc6f37222dcf767d38b0eb9efaab561cfbbab068",
+        "O0-native_fp.o": "6acc3d994e5d203639287943d97eb83e317801b429ab18b35ea4f4583d16292c",
+        "O0-native_files.o": "9c3dc2ccdfd5741366417ab29b9f1ed55bafbfc2a1d8a8753d898ed6ed95bda2",
+        "O0-elf32.o": "a0c9ae0c079be859ce12af5f12b4af540065319cdff4fc3822ed432c9daa936d",
+        "O0-process_address_space.o": "ba88799ddc2762d59541fd830a002e5e9cf0015e6bbc9b65fb95898ab1edbb31",
+        "O0-paging.o": "f44d82009633dbf4ec7bd272b8d951c630bc5e760ac21e4bc0073f679c2f099b",
+        "O0-physical.o": "acd1e64ccb3091cda4fd8a5732093516cb4dd961b42bfff919e74854a71ef99f",
+        "O0-bootstrap.o": "bd551f9b3445d8483a173d5ded405bb9122151b52dc292ff60710d36616ddd08",
+        "O0-filestore.o": "6607fd2d0ede83447a4bbef2778bdb7b6c07c8742a7071ed2da98ae60cfc31ee",
+        "O0-littlefs_port.o": "7e96b014512bd9d8ac708b164c694462e022f5517467dbb72eb4f4e48724fcda",
+        "O0-lfs.o": "f15c9b08fab348f89a77e59598d473b9723b8fb4963513a946d2136ce8df9a37",
+        "O0-lfs_util.o": "3eed62159be4a0cef0db7234cd3da681044ca566eb9123877ad910b084eee680",
+        "O0-ata.o": "e43e153c25aed624031ca25807d8f7256599e123fff750dba08b9cde4ae62ee8",
+        "O0-byte_helpers.o": "6efc188209e2baefe9750f56d89385c98db27d8d1d303aa33ecd7064ed28f86a",
+        "O0-loader.o": "3826b45b71bcb4910a6d065a034711ce7995fe0b65e0db818a4ee6b3c3d442c0",
+        "O0-native_fp_asm.o": "411e35be3d5c1ec30181e1717e4580f167b9c61a6a65e17ca1ca886f57d69d38",
+        "O0-stubs.o": "dbacc9670f6127c98c70f95af0a97776189fa7ad55e1877e71d3220c5b4ad9ea",
+        "O0-kernel.o": "474aa5f626599f1d8f2a4054e98af90ccce6187ad4271dd407eef667aa472d50",
+        "O0-unavailable_kernel.o": "1aa8b189deac9d899a5871587578b1a8cce7ae871208793155e899010752a928",
+        "O2-gdt.o": "dac20ec2e1533d301e377b6bd29a7411d64b13665c5f48cc016a4b7f03fc07dc",
+        "O2-multitasking.o": "0003a3f13a7117cf89123875dafeeea4a41754628bbc2ece2102d75d1143a5e8",
+        "O2-syscalls.o": "ad6610412955026bf23b3562f640eb7a5ed75114b5965be322f1234d16c50702",
+        "O2-interrupts.o": "fcacf83d42ab9ffe7614bacf0da8fdda8701949b64c6a6279f686e1881cf4a86",
+        "O2-port.o": "51fb903741fe0a47b95611565e9adefa4cabcfc6778ddb951e8ba415d6ac7a7d",
+        "O2-native_runtime.o": "61f89b48ae4e7db385d44a83451d15ae5c302961562f72997b177e167f24ea67",
+        "O2-native_realtime.o": "de8e3e89d898eee7d3d701cb5022128622e183981d9c9fc8dcb309e72e98dac7",
+        "O2-resources.o": "28e3c1daa440fc4d5d842f7138922832bdbcd6b386058b21304096b31a2ce419",
+        "O2-native_surface.o": "3de45ec73f105c340c96aa35bbab0dd2b087573ad8a69fdcd5e4042cb8b9b536",
+        "O2-native_fp.o": "54c853aa87e63a8024eab6b3c42ebb0c6ac347644b8bee22f212b1a75cfff842",
+        "O2-native_files.o": "5aa3a53929eb0dd85c19676c158d5e4eec19b2d3e366ee66416063150699b90d",
+        "O2-elf32.o": "661a6187eb070c7c43a9bac562b67abe100bf3e455dd13177f9333aa0dc81f9e",
+        "O2-process_address_space.o": "a7a73e99fd6e8a8e35e1150c0f355aca137e40419126e02baa739ecad0a38267",
+        "O2-paging.o": "e35b3abffb70aae14b8133931a4fbb7d0304d9b0f2a734783ac21eda29763aa5",
+        "O2-physical.o": "6bf07e889747d1ea313d7a20e0f18ff75ac10159faf2801021b4a806cf7d5d86",
+        "O2-bootstrap.o": "c137da3bcd42a59a3dcdc48af89bda1ebe42c42cd68181396ab629f8796366e1",
+        "O2-filestore.o": "49d510bd19534e1c6452b53400ee89c548a0b6f23f77115360397e058ae0c54c",
+        "O2-littlefs_port.o": "c0e1c9de05f77182ef667fb66ad5ea393c6a1b347390ffb59aa66ff5d84658be",
+        "O2-lfs.o": "3794a5b58064acc1c74a92d87abb7231be8cf7591fd280a8adfbc97c1a598c9f",
+        "O2-lfs_util.o": "2f6903727f798ea18a836e09e89cc9bf9767909a5e59e2b694cc001cfede9cdb",
+        "O2-ata.o": "ce891c74a0df49fa0cd726cd652b343153664ddf7cf73c30476e5a6d64441810",
+        "O2-byte_helpers.o": "b235581acb37fb309880d873c833d08d5b7c388e8e44d90c248bb43f834440a9",
+        "O2-loader.o": "3826b45b71bcb4910a6d065a034711ce7995fe0b65e0db818a4ee6b3c3d442c0",
+        "O2-native_fp_asm.o": "411e35be3d5c1ec30181e1717e4580f167b9c61a6a65e17ca1ca886f57d69d38",
+        "O2-stubs.o": "dbacc9670f6127c98c70f95af0a97776189fa7ad55e1877e71d3220c5b4ad9ea",
+        "O2-kernel.o": "6ebce3a46a4321827c6b1b51961d6bc5dd01d1cc05a480484092cb27b9fe50ca",
+        "O2-unavailable_kernel.o": "f7828bdc38097f3050a5807e93786534039988402d56192dff12405b74ba03e7"
+      },
+      "elfs": {
+        "O0-mode0": {
+          "sha256": "e719bcab320eb4507bb7a39f35e155fd44055abdd9f2d2b0002d9f9e711b5d6a",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O0-mode1": {
+          "sha256": "a958c7934a5d92608c99aeeef7ab5b44c260fd1c80bcb2d8edc506c2b5bf2dc2",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O0-mode2": {
+          "sha256": "d427616c12c3c8055496afe9491d23a6a5e094d050ed552335781f26b37de4d2",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O0-mode3": {
+          "sha256": "7d3b1d944ced64377b65c4bc8d821910a1def47cdcdd0c0ffd53918e239e1df5",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O0-mode4": {
+          "sha256": "61e79cfdc51c4f222d6472b7451c9c3ea578056452de3c3638527b6bdc3719ae",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O0-mode5": {
+          "sha256": "7c80c13c797ef5fcec423c8a08c3bbdc6ece4d57e8f755194bf19cfe29433623",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O0-mode6": {
+          "sha256": "5599c01ee006bfd49cdf73412b0405613ac71b8378f113214927165bc2695e6c",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O2-mode0": {
+          "sha256": "f2b9a551ce093264a41d7f6a4f62736e04ac41e1163ff4cc5a3dddf4a7f8b1da",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O2-mode1": {
+          "sha256": "612f6e5ebac92e8f6ca9785c2ca2207a27bba86381cbde3827cb0514636096ba",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O2-mode2": {
+          "sha256": "96e14286bf6002451515456e5a2d28cac938ab5f222f1cb7054296aaccb436b4",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O2-mode3": {
+          "sha256": "affac6be3502e24d9d29782d47a715562357cb0f3f08db3f4055da496b2ba7b1",
+          "pages": 4,
+          "static_cost": 9
+        },
+        "O2-mode4": {
+          "sha256": "cae2f5528b83776f2eecac2510526e00da90e8248274739571d0fc94746f8272",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O2-mode5": {
+          "sha256": "15997cdc0db9691896be8ca7e94c5340e95ede61c51366bb7c0826db9a6eac60",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O2-mode6": {
+          "sha256": "f137b4a09204f59c082150d7d42840260e2c9e630c8ce99022aa7123a59c9e4e",
+          "pages": 2,
+          "static_cost": 7
+        }
+      },
+      "loaded_kernels": {
+        "O0-kernel": "abe1d8cadea819a33f6dc517e79e277b640f09bb48dd4f241084032dd4755fe5",
+        "O0-unavailable_kernel": "db395db34aab0f679abeb67ef9b69e284acb9d16157069ddb57f8371d6741c1a",
+        "O2-kernel": "2b86dc6cd0a35b742c89e35a5374006e860fb5fd44e76fda3638e0e44a0dec4a",
+        "O2-unavailable_kernel": "65a0634e0a45af2d89d6ac36d7377f24eeb37de54aaeffbd3b03f151e5cc606b"
+      },
+      "raw_kernels": {
+        "O0-kernel": "09ac2c5ab16d48eaa1d28e3be236a256866e4def8a8ce3d8d4aa79a44c2df401",
+        "O0-unavailable_kernel": "d300ca40b7128ae9757257b81ed49b04611830cb38d783877af97cfda0c64ac9",
+        "O2-kernel": "ad6b43ccad8ddca3f30299e2a71a0866189415edf2f2dadcd93361f22acb9d70",
+        "O2-unavailable_kernel": "2f8b19fb90b54a97f70470e4d20b08272b29f69f5ee0d56a154130425dbd2453"
+      },
+      "qualification_workspace_path": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-file-scalar-01",
+      "qualification_status_sha256": "8dd49941f4a0b1c2d50e1748ee7cc78984fb79c3674f911ff7d85aa279ed3e3d",
+      "actual_cpl3_cold_boots": 8,
+      "actual_default_llvm_objects_equal": false
+    },
+    "qualified-llvm": {
+      "cxx_sha256": "863c9bc7126d3b3a2ce9270309d52b36befcf38a721ad8b52f29be2767cb6204",
+      "objects": {
+        "O0-gdt.o": "e6d0c20aeb028e72e98a5361d7d25ee886fc41d56b4fa8178ee282af50d2833e",
+        "O0-multitasking.o": "fc950ccebfe33b0755c46f61bc6feede10f395445792f03deedbbb87b37dc13d",
+        "O0-syscalls.o": "94b16c150580c36ecdec20fc35ca16b1b4f229ae2ddbd5947a8ff571c31fdd91",
+        "O0-interrupts.o": "762453baad6ca53af0233cce6aa78a599ccc9897acdf11a4bedad4be0b832819",
+        "O0-port.o": "a01c4965adffcd690cab049fa8fe97023700b7f738a03058566ad2dc24561163",
+        "O0-native_runtime.o": "9931f1fc9d96ee40f3b256bd48e901f1a4f6c542afa7ba9538395dc770495255",
+        "O0-native_realtime.o": "37eac350b5f6348a5cff9420386664de522332ad22efe03b5b03a61a77895062",
+        "O0-resources.o": "bca0b749ba29881dd780f6d813de9a5710eb0303a2d33c3d623a6fd974cf307b",
+        "O0-native_surface.o": "77f7312460294c129a63e129cc6f37222dcf767d38b0eb9efaab561cfbbab068",
+        "O0-native_fp.o": "6acc3d994e5d203639287943d97eb83e317801b429ab18b35ea4f4583d16292c",
+        "O0-native_files.o": "9c3dc2ccdfd5741366417ab29b9f1ed55bafbfc2a1d8a8753d898ed6ed95bda2",
+        "O0-elf32.o": "a0c9ae0c079be859ce12af5f12b4af540065319cdff4fc3822ed432c9daa936d",
+        "O0-process_address_space.o": "ba88799ddc2762d59541fd830a002e5e9cf0015e6bbc9b65fb95898ab1edbb31",
+        "O0-paging.o": "f44d82009633dbf4ec7bd272b8d951c630bc5e760ac21e4bc0073f679c2f099b",
+        "O0-physical.o": "acd1e64ccb3091cda4fd8a5732093516cb4dd961b42bfff919e74854a71ef99f",
+        "O0-bootstrap.o": "bd551f9b3445d8483a173d5ded405bb9122151b52dc292ff60710d36616ddd08",
+        "O0-filestore.o": "6607fd2d0ede83447a4bbef2778bdb7b6c07c8742a7071ed2da98ae60cfc31ee",
+        "O0-littlefs_port.o": "7e96b014512bd9d8ac708b164c694462e022f5517467dbb72eb4f4e48724fcda",
+        "O0-lfs.o": "60d073ee6f2aba886dc2bc48c1f2e0dc6e0cdd5fbdb7a867d44d89ffa37759c4",
+        "O0-lfs_util.o": "3eed62159be4a0cef0db7234cd3da681044ca566eb9123877ad910b084eee680",
+        "O0-ata.o": "e43e153c25aed624031ca25807d8f7256599e123fff750dba08b9cde4ae62ee8",
+        "O0-byte_helpers.o": "6efc188209e2baefe9750f56d89385c98db27d8d1d303aa33ecd7064ed28f86a",
+        "O0-loader.o": "3826b45b71bcb4910a6d065a034711ce7995fe0b65e0db818a4ee6b3c3d442c0",
+        "O0-native_fp_asm.o": "411e35be3d5c1ec30181e1717e4580f167b9c61a6a65e17ca1ca886f57d69d38",
+        "O0-stubs.o": "dbacc9670f6127c98c70f95af0a97776189fa7ad55e1877e71d3220c5b4ad9ea",
+        "O0-actual-memcpy.o": "24a9682fa0ddb0f7a9a7c1c033deeb16b037f8d1263cb905bb6eb0bd3c53abf8",
+        "O0-actual-memset.o": "bcc9e5b5e1866590a559a5405b7d05a3b8a9f95729e433baf27eaaca285a0667",
+        "O0-kernel.o": "474aa5f626599f1d8f2a4054e98af90ccce6187ad4271dd407eef667aa472d50",
+        "O0-unavailable_kernel.o": "1aa8b189deac9d899a5871587578b1a8cce7ae871208793155e899010752a928",
+        "O2-gdt.o": "dac20ec2e1533d301e377b6bd29a7411d64b13665c5f48cc016a4b7f03fc07dc",
+        "O2-multitasking.o": "0003a3f13a7117cf89123875dafeeea4a41754628bbc2ece2102d75d1143a5e8",
+        "O2-syscalls.o": "ad6610412955026bf23b3562f640eb7a5ed75114b5965be322f1234d16c50702",
+        "O2-interrupts.o": "fcacf83d42ab9ffe7614bacf0da8fdda8701949b64c6a6279f686e1881cf4a86",
+        "O2-port.o": "51fb903741fe0a47b95611565e9adefa4cabcfc6778ddb951e8ba415d6ac7a7d",
+        "O2-native_runtime.o": "61f89b48ae4e7db385d44a83451d15ae5c302961562f72997b177e167f24ea67",
+        "O2-native_realtime.o": "de8e3e89d898eee7d3d701cb5022128622e183981d9c9fc8dcb309e72e98dac7",
+        "O2-resources.o": "28e3c1daa440fc4d5d842f7138922832bdbcd6b386058b21304096b31a2ce419",
+        "O2-native_surface.o": "3de45ec73f105c340c96aa35bbab0dd2b087573ad8a69fdcd5e4042cb8b9b536",
+        "O2-native_fp.o": "54c853aa87e63a8024eab6b3c42ebb0c6ac347644b8bee22f212b1a75cfff842",
+        "O2-native_files.o": "5aa3a53929eb0dd85c19676c158d5e4eec19b2d3e366ee66416063150699b90d",
+        "O2-elf32.o": "661a6187eb070c7c43a9bac562b67abe100bf3e455dd13177f9333aa0dc81f9e",
+        "O2-process_address_space.o": "a7a73e99fd6e8a8e35e1150c0f355aca137e40419126e02baa739ecad0a38267",
+        "O2-paging.o": "e35b3abffb70aae14b8133931a4fbb7d0304d9b0f2a734783ac21eda29763aa5",
+        "O2-physical.o": "6bf07e889747d1ea313d7a20e0f18ff75ac10159faf2801021b4a806cf7d5d86",
+        "O2-bootstrap.o": "c137da3bcd42a59a3dcdc48af89bda1ebe42c42cd68181396ab629f8796366e1",
+        "O2-filestore.o": "49d510bd19534e1c6452b53400ee89c548a0b6f23f77115360397e058ae0c54c",
+        "O2-littlefs_port.o": "c0e1c9de05f77182ef667fb66ad5ea393c6a1b347390ffb59aa66ff5d84658be",
+        "O2-lfs.o": "558ed7a0ab87ce785218300dbbe8a1cf93b062bfccca3799c70d8f0f5d99f9f8",
+        "O2-lfs_util.o": "2f6903727f798ea18a836e09e89cc9bf9767909a5e59e2b694cc001cfede9cdb",
+        "O2-ata.o": "ce891c74a0df49fa0cd726cd652b343153664ddf7cf73c30476e5a6d64441810",
+        "O2-byte_helpers.o": "b235581acb37fb309880d873c833d08d5b7c388e8e44d90c248bb43f834440a9",
+        "O2-loader.o": "3826b45b71bcb4910a6d065a034711ce7995fe0b65e0db818a4ee6b3c3d442c0",
+        "O2-native_fp_asm.o": "411e35be3d5c1ec30181e1717e4580f167b9c61a6a65e17ca1ca886f57d69d38",
+        "O2-stubs.o": "dbacc9670f6127c98c70f95af0a97776189fa7ad55e1877e71d3220c5b4ad9ea",
+        "O2-actual-memcpy.o": "a0c4c43932d2b193dcc1d258f0927da85e8f251fdc52714df98c0188606f4f7c",
+        "O2-actual-memset.o": "5e90ed6c3c0ac19eb9d779df89ab6ca4bcc658509d9559eb77fac52d8b541151",
+        "O2-kernel.o": "6ebce3a46a4321827c6b1b51961d6bc5dd01d1cc05a480484092cb27b9fe50ca",
+        "O2-unavailable_kernel.o": "f7828bdc38097f3050a5807e93786534039988402d56192dff12405b74ba03e7"
+      },
+      "elfs": {
+        "O0-mode0": {
+          "sha256": "4b8375d466c35ae1cf57545b3b46024bf1136e2c21e68478f1853d5bcc418f3b",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O0-mode1": {
+          "sha256": "10d8fbbdc49c11e6ddf608133e2c1f3374768fe57f8fb54b187b0f14ae99e4e6",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O0-mode2": {
+          "sha256": "9a0d7b2969e5abb74b814fb78835449a71f5c2fb9d4bb776e36c96dd3c3eb0ed",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O0-mode3": {
+          "sha256": "db711f7f8f00e9353b4b4d7ff70168d9346494921e5ff0fa6784b855015692eb",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O0-mode4": {
+          "sha256": "99ada41d54066ed45d3ada8a92aa68d14543dbc5f0416b2f486ca0e603a14777",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O0-mode5": {
+          "sha256": "68bc6655fd518813bdc1439a3629d2838238cadffe9868debef4b3309eff6223",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O0-mode6": {
+          "sha256": "73acb13f339f3f16ffa92ace81d1819a8741e4c221d284ae44e64b9408b7a43b",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O2-mode0": {
+          "sha256": "4ae1d9f884e49251d70c671999ee4f3badce15ee0c9de4276fdc8b760992716d",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O2-mode1": {
+          "sha256": "b827a4e364f18b4dd6716589135db3ae5962f9d2a0a76e5fe77b78ca55e2eba5",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O2-mode2": {
+          "sha256": "52bee38ac8d9c5c6a3e1cea7571e885847702f873320ef193e2c5b0fed5c19c0",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O2-mode3": {
+          "sha256": "6d99947c4866eb652c2a4b47d8ba74402028525a01ad99bd60840baf992bcca7",
+          "pages": 6,
+          "static_cost": 11
+        },
+        "O2-mode4": {
+          "sha256": "31e0ad4c29e48e86df06820ed1796207529d4e36c80b0192938adc5fde4d5e4e",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O2-mode5": {
+          "sha256": "604adefb2d3045877c88643befcec7f9c4615a7863126a7ce0c41f199f3e975b",
+          "pages": 2,
+          "static_cost": 7
+        },
+        "O2-mode6": {
+          "sha256": "c3ee068e5680e15d2a2a587812fc1223e1749fbd1e3b05b2a5efb517d9dd7299",
+          "pages": 2,
+          "static_cost": 7
+        }
+      },
+      "loaded_kernels": {
+        "O0-kernel": "8c7b6443fb59851d54ccf08d71cb0cdad74f0ea7d93eacb9b1c657b1ba9514fc",
+        "O0-unavailable_kernel": "7444cacc87092f9db4f8e44a1cb061fe34d3eb5258b66efb2a427899d9d89360",
+        "O2-kernel": "13bcad2287cc930ac5ce5754eb466f4c8888b7f12229c86bcb5435afc5042349",
+        "O2-unavailable_kernel": "ba1cab62b5c5a3f25aa6077e98e0a248edeb42f49d77f051506431e820eb5cda"
+      },
+      "raw_kernels": {
+        "O0-kernel": "101ecbca7866d9b1baf3db28056614f7aa8ad9fc418d194931e2e3106e1f531b",
+        "O0-unavailable_kernel": "d0c347a66409be5a1cc4b67e8aa87894610ce2888a9acf498db9062ad5580049",
+        "O2-kernel": "a658a518aeb4b427f2329d5ee141bfa8e3f986660813aa70eac3635ee3e11460",
+        "O2-unavailable_kernel": "537cfb9558828efd05a11551503b474255c3858dd085e7d38e49463e655f51f3"
+      },
+      "qualification_workspace_path": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-file-llvm-02",
+      "qualification_status_sha256": "9fab76c629c9a06a911cc3d9570eab9571470eca5e603165150307b633e08333",
+      "actual_cpl3_cold_boots": 8,
+      "actual_default_llvm_objects_equal": true,
+      "clang_sha256": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7"
+    }
+  },
+  "self_review_workspace_path": "artifacts/native-file-coherence-20261012-a/native-file-self-review-01/status.json",
+  "self_review_status_sha256": "ffca9b50d0b725f7ea003c7676fb7a72f5351a2bb09432ac900a9a9906cfba94",
+  "previous_profiles": {
     "qualified-llvm": {
       "cxx_sha256": "863c9bc7126d3b3a2ce9270309d52b36befcf38a721ad8b52f29be2767cb6204",
       "objects": {
@@ -517,6 +820,10 @@
       "actual_default_llvm_objects_equal": false
     }
   },
-  "self_review_workspace_path": "artifacts/native-files-20261009-a/module-self-review-b/status.json",
-  "self_review_status_sha256": "7396aa2074bc51acf4478030607866550160baac28bc8dabdfaf460d88420b0c"
+  "coherence_regression_event_sha256": "05386b3adf957b4f17a80687e080b48db334a2007b539f68de7b7e526bf015f7",
+  "previous_self_review": {
+    "self_review_workspace_path": "artifacts/native-files-20261009-a/module-self-review-b/status.json",
+    "self_review_status_sha256": "7396aa2074bc51acf4478030607866550160baac28bc8dabdfaf460d88420b0c"
+  },
+  "coherence_self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44"
 }

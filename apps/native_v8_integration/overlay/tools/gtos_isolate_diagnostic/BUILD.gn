@@ -64,6 +64,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "//third_party/llvm-libc/src/src/string/strchr.cpp",
       "//third_party/llvm-libc/src/src/string/strstr.cpp",
       "//third_party/llvm-libc/src/src/string/strcpy.cpp",
+      "//third_party/llvm-libc/src/src/string/strerror.cpp",
       "//third_party/llvm-libc/src/src/wchar/wmemchr.cpp",
       "//third_party/llvm-libc/src/src/wchar/wcslen.cpp",
     ]

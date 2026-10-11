@@ -11,7 +11,7 @@ Isolate 已在 GTOS 运行。
 
 ## 输入与来源
 
-`overlay/` 保存 77 个平台覆盖文件，`sdk/` 保存 424 个私有配置及 C++ 头文件，
+`overlay/` 保存 84 个平台覆盖文件，`sdk/` 保存 426 个私有配置及 C++ 头文件，
 `c-sdk/` 保存 438 个 LLVM C SDK 文件。搜索顺序固定为私有覆盖、上游 libc++、
 C SDK、Clang 资源头；合并两层 SDK 会改变 libc++ 的 `include_next` 语义。
 构建在独立目录
@@ -30,6 +30,7 @@ C SDK、Clang 资源头；合并两层 SDK 会改变 libc++ 的 `include_next` �
 | libc++ | 97b436da4c33663581d394f4ee0a5977fc38c2f4 |
 | libc++abi | 09351f6ec00c2b65f2d03585ae6da07098b024dc |
 | LLVM libc | ebe33e01982dbbf879661e3b6b78450f3020a53f |
+| zlib | 456ae730017b9b4bd3371927abc82627fd51feef，与 V8 DEPS 一致 |
 
 需要事先准备该 V8 revision 对应的 DEPS 依赖、Linux x64/IA32 sysroot、锁定的宿主
 Python 和官方 Clang/GN/Ninja。工具核对源码 revision 和已跟踪文件修改；sysroot
@@ -103,6 +104,14 @@ FailQuietly、ExitQuietly、NullStreamFatal 跳过析构和缓冲刷新，以及
 已越过这两个对象，首个失败前进到 zlib/zconf.h:505。实际 waiter 预处理选择标准
 C++ 分支；GTOS pthread 排除条件原已存在，此前相反的分析已更正并保留。条件
 等待目前只有 SDK 声明，原生提供者尚缺；本轮不新增等待或线程运行证明。
+
+随后为 GTOS 选择固定 zlib 的完整标量编解码分支，gzip 文件操作连接已有 File ABI。
+zlib-draft-resume-11 的真实完整目标已越过这些对象，当前首个失败为 cctz 的
+time_zone_libc.cc:121；同轮还缺少时区文件接口。完整 ELF 尚未生成。
+[zlib 消费者验证](probe/zlib/README.md)已从公开入口完成冷构建和缓存重放，验证
+gzip 解码、截断 EOF、追加继续解码、错误及资源回收；O2 的 16 个 zlib 对象与完整
+目标逐字一致。实际压缩初始化在现有堆容量下返回 Z_MEM_ERROR，回滚通过；压缩
+成功仍未验收。缓存对象及其自报哈希同时被篡改时，由独立资格锁准确拒绝。
 
 每轮从完整目标的新失败取得消费者证据，再实现必要服务和客体边界回归。已有
 C FILE、VM、TLS、时钟及 PNG 桌面成果继续复用。保持内核容量和整数 ISA 门禁，

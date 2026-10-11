@@ -1,12 +1,71 @@
 # 32 位 Chromium 原生集成主线
 
-2026-10-11 对照 [issue #9](https://github.com/awe0w0/GTOS/issues/9) 与本地构建证据校准。
+2026-10-12 对照 [issue #9](https://github.com/awe0w0/GTOS/issues/9) 与本地构建证据校准。
 本次重新检查最新创建和更新的 issue；#9 仍为最新，更新时间为
 2026-10-09T15:37:06Z，暂无评论。issue 中的 1153b56 是评估基线。
 最终目标是在 GTOS 客体执行真实 Chromium，显示并操作网页，再逐步验收网络、视频和
 HTML5。当前交付架构为 IA32；x64 的内核态启动、帧池与稀疏 VM 是保留的备选证据。
 
 ## 当前证据与限制
+
+本工作包的已提交基线 dev 为 ff537182673747682718ff4e159f4ff78c6c563a，
+[CI](https://github.com/awe0w0/GTOS/actions/runs/38139891840) 四项既有门禁均通过。
+2026-10-12 再次按创建及更新时间核对 #9 和评论，路线要求未变。portable-cold-08
+冷构建越过 zconf.h，暴露 zlib 的 pthread.h 和 gzip 文件接口缺口。随后未提交的
+zlib-platform-draft-03 选择上游完整标量编解码分支，将 gzip 文件操作接到既有
+File ABI，复用已验收 errno 声明及真实 LLVM strerror 提供者。最新完整目标
+zlib-draft-resume-11 已返回 1，绑定输入和 954 个文件的冻结快照一致，越过 zlib 后首个失败为
+cctz/time_zone_libc.cc:121 的 tm_gmtoff 调用不匹配；同轮还报告 tm_zone 与
+time_zone_info.cc:38 缺少 fcntl.h。完整目标最远仍为编译，完整 ELF、链接及客体
+引擎运行尚未通过。该增量的源码和执行资格已收束，随本工作包发布；gzip 客体语义通过的范围见下文。
+
+最新 zlib-guest-17 在 O0/32 MiB/单 vCPU 和 O2/64 MiB/四 vCPU 的 CPL3 读取并解码
+12 KiB，验证校验值、seek、短读写、错误传播和句柄所有权。正常返回执行自动/TLS/fini
+析构；非法访问、立即退出和取消路径跳过它们。两组均完成六个任务、16 个文件句柄
+的精确回收，同伴、ring0 和启动任务继续推进，每组另有 204 个观察器负例。O2 的
+16 个 zlib 对象与完整目标逐字一致，实验 FileStore 对象通过原整数指令审计。
+实际 deflateInit2 的
+小配置仍请求五块共 74164 字节，其中 65536 字节的哈希表分配失败，返回
+Z_MEM_ERROR；已成功分配的四块全部释放，前后最大可分配块均为 53088 字节。
+此前 zlib-guest-07 的压缩成功断言不符合实测容量，属于夹具预期错误；压缩成功
+仍未验收，没有扩容或替换上游编解码。01–16 的失败日志均保留。
+
+此前 mode 1 的截断 gzip 预期 Z_BUF_ERROR，实际 gzerror 为 Z_OK。
+zlib-eof-reference-01 使用同一固定、未修改 zlib 的
+Linux x64 标量代码，对同一缺少末尾四字节的文件，以 1024 和 1025 字节读取也均
+返回 Z_OK、gzclose 为 0；CRC 损坏对照返回 Z_DATA_ERROR。固定 zlib.h 的契约要求
+区分未完成 gzip 流。真实状态表明重复读取清除了错误，随后 EOF 快捷分支未恢复它。
+草稿仅在 __GTOS__ 的两处 EOF 分支保留未完成 GZIP 的 Z_BUF_ERROR；完整流和透明
+文件不进入该条件。zlib-eof-reference-02 验证了重复读取、seek、完整/透明/拼接流
+及补齐尾部后 gzclearerr 的继续解码；Linux 原分支保留。
+
+继续解码的客体负例又暴露 FileStore 已打开只读句柄的版本快照：写句柄成功关闭后，
+旧读句柄仍见 11049 字节，新打开句柄见 11053 字节。FileStore draft-02 仅在确实
+修改过的写句柄 Sync/Close 成功后刷新同一文件的只读缓存，保留读游标和所有权；
+失败提交、未修改的旧写句柄关闭、其他文件及删除后替换的路径均不刷新。
+zlib-guest-17 已验证补齐 gzip 尾部后的原流继续解码。host-02 对真实 FileStore 和
+固定 LittleFS 完成 4201 项逻辑检查，包括 inline/CTZ 转换、游标、失败提交和身份
+边界；这是 Linux x64 单线程逻辑对照。native-filesystem-01 已完成 O0/O2 的 174 次
+实际 ATA 冷启动和 84 个替换写入扇区的中断恢复点，上游 LittleFS 互读、磁盘保护区
+及原整数指令审计均通过；执行的 FileStore 对象与 zlib-guest-17 一致。
+native-file-scalar-01 和 native-file-llvm-02 分别完成 O0/O2 的八组 File ABI 客体回归。
+此前复制仓库的 LLVM 01 在旧 memset 对象哈希检查处停止；逐 ELF 节比较证明差异仅
+为 UBSan 的来源路径字符串，所有可执行节一致。02 保留规范运行库路径，仅显式替换
+实验 FileStore 内核源码，继续要求运行库与旧资格逐字一致，并核对 FileStore 与已执行
+存储回归的对象一致；没有改写旧哈希或剥离对象。native-c-file-02 的 O0/O2 客体也已
+通过，执行的 FileStore 对象与存储回归一致。跨工作区路径的重新构建资格尚未收束。
+public-zlib-guest-01 已从公开草稿入口重新构建 50 个消费者对象，O0/O2 客体均通过；
+public-zlib-guest-02 复用全部 50 个已锁定对象，两组客体和每组 204 个观察器负例也通过。
+public-zlib-cache-negative-01 在编译及客体启动前遇到运行环境错误
+`expected str, bytes or os.PathLike object, not NoneType`，并未到达预期的缓存篡改拒绝，
+不能记录为负例通过。02 使用与已通过重放相同的工具环境，准确拒绝被修改的对象及其
+伪造自报哈希，未编译或运行客体。full-kernel-01 的 O0/O2 正常内核构建及原整数指令
+审计已通过；production-01 的两组 PNG 显示/关闭/重开/回收通过。新镜像已载入并重启
+原 GTK 虚拟机，同一窗口 PID 752，私有磁盘字节不变。自审重新核对 16 份 File ABI
+日志，1508 个观察器负例与十个真实服务 ISA 注入控制均被拒绝。
+这次驱动问题与 cctz 服务缺口分别记录。已有工作包收束后立即返回完整目标，不能据
+两组 gzip 客体通过宣称整个文件系统资格或浏览器完成。复用未改动的既有 FILE/VM/FP
+对象，不扩展无消费者探针。
 
 本次日志消费者适配前 dev 与 origin/dev 为 5aeaba8c366e353069ec715416aaed11084ea43e；
 完整构建入口在 82c93df 发布。9ad59b3 修正根 .gitattributes 改动触发的文件系统
@@ -29,7 +88,7 @@ JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未
 | 构建主机 / 客体目标 | WSL Ubuntu-20.04 Linux x64 / GTOS i686-unknown-none-elf |
 
 仓库现在提供 [完整目标模块](../apps/native_v8_integration/README.md) 和
-`tools/build-native-v8-integration.py`。77 个平台覆盖、424 个私有/C++ SDK 文件和
+`tools/build-native-v8-integration.py`。当前模块的 84 个平台覆盖、426 个私有/C++ SDK 文件和
 438 个 LLVM C SDK 文件均按内容锁定；原生头搜索顺序为私有覆盖、上游 libc++、
 C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内容核对，构建输出必须
 是新目录。该入口需要准备好的上游 DEPS/sysroot，不负责在空白主机安装依赖。
@@ -64,7 +123,9 @@ zlib/zconf.h:505 缺少 unistd.h，同轮仍报告 cctz 的 tm_gmtoff/tm_zone �
 熵读取、futex 等待、时区文件读取及 tm_gmtoff/tm_zone 接口缺口。并行编译的首个
 报错次序随缓存变化，保留每轮原始诊断，不将头文件声明当成服务实现。
 
-上述完整 GN 依赖清单 SHA256 相同，未删失败对象。完整 ELF、链接与客体运行
+上述 portable-resume-02 至 07 的完整 GN 依赖清单 SHA256 相同，未删失败对象。
+后续 zlib 草稿选择上游标量分支，依赖清单随可选加速对象变化；完整编解码和 gzip
+文件对象仍保留，不能继续沿用“依赖图未变”的表述。完整 ELF、链接与客体运行
 仍未通过。初版 portable-cold-01 错误地合并 SDK，将 C 头放在 libc++ 包装头前，
 属于本集成入口的配置错误；失败版本、输入和日志已保留，不算 OS 根因。
 当前已从规定的准备输入和全新输出重放真实阻塞，尚无空白主机 bootstrap 验收。
@@ -98,6 +159,17 @@ GN 链接或验收客体文件流。仅完成底层 FILE 不会自动解决全�
 --root-target=//content/shell:content_shell 可以生成 IA32 目标图与命令，目标是
 linux:clang_x86 下的 testonly executable。指定根绕过了普通根的架构断言，因此只能
 证明该图可生成，不能声明官方维护支持、实际编译/链接通过或 GTOS 平台可用。
+
+content-shell-linux-ia32-compile-04 已对同一固定版本执行真实 ninja content_shell，
+到达 598/45432 个任务后由构建驱动的 1200 秒限时停止（exit 124）。绑定输入未变，
+尚无编译错误诊断或 Content Shell 可执行文件；其中包含宿主工具和 IA32 生成任务，
+不能把计数当成目标对象数或整体完成比例。该结果是超时，不能证明 IA32 不可行，
+也不能证明编译/链接通过。compile-05 已在无硬链接的新缓存副本续编，同参数 GN
+通过，真实 ninja content_shell 仍在执行，实际驱动限时为 10800 秒；本次观察超时
+不等于该进程终止，也不另启相同构建。此前参考
+记录的 args 校验字段过期；实际参数、准确 GN 命令及 args.gn 三者一致，04 已记录
+实际 SHA256 e7e3e0e8298fd8091b30bfac22b71ebaa1512013ba16652bc76bd13be0930a9d，
+原记录保留，不能把旧字段当成新构建输入。
 
 本地日志保存在 GTOS-Chromium 工作区的 artifacts/native-v8-integration-20261011-a：
 attempt-04 保留完整目标超时，attempt-05 保留最初的 ELF 能力错误，
@@ -142,17 +214,34 @@ IA32 后续若遇到目标版本无法合理支持，或地址空间与隔离要
 
 ## 紧接着执行的工作包
 
-1. 根据完整目标 zlib/zconf.h:505 的新失败，绑定与 V8 DEPS 一致的 zlib 输入，
-   核对实际 adler32 消费者及同目标的 gzip 文件后端，再作最小正确 GTOS 适配。
+1. 收束当前 zlib/FileStore 草稿：完整目标已越过 zlib，截断 EOF、追加继续解码、
+   错误传播、指针边界、所有权和故障/取消回收已在两组客体通过；压缩容量失败与
+   回滚已观测，原生文件系统中断恢复、File ABI 两种配置及 C FILE 相关回归已通过。
+   公开冷构建、缓存重放及有效缓存篡改拒绝、交付镜像桌面回归和原虚拟机更新已通过，
+   自审完成；本工作包正常提交 dev。历史失败及旧执行资格保留，
+   不把 gzip 客体通过扩大为整个存储子系统、压缩成功或完整 V8。
    不添加空 POSIX 头、假 fd，不关闭 V8_USE_ZLIB 掩盖缺口；重放同一 native_embedder，
-   保留全部依赖、警告和失败日志。
-2. 由新实际报错驱动同步、时间/时区等契约。复用已有已验收组件，不扩展无关叶子
-   清单；已有退出客体证据持续保留，信号处理仍明确失败，不能报告已安装。
-3. 每次必要适配后重放完整目标，依据实际链接符号复用 C FILE/libc++；确定性种子
+   保留全部依赖、警告和失败日志。原生目标可选择上游已有的完整标量编解码分支，
+   宿主目标保持原配置；文件路径复用已验收 File ABI。gzip 编译依赖与实际 V8
+   adler32 消费分别记录，
+   不据此扩展无实际消费者的文件 API 或宣称浏览器进展。
+2. 依据 zlib-draft-resume-11 的 cctz 报错核对时间、时区和文件消费者的真实语义，
+   作最小正确适配后立即回到完整 native_embedder。条件等待只有声明，按实际
+   链接/执行需求处理；已有退出客体证据保留，信号处理仍明确失败。
+3. 在保留缓存副本续编同一 Chromium revision 的 Content Shell IA32 参考目标，
+   获得实际编译/链接结果与资源观测；超时单独记录，不冒充架构或 OS 失败。捕获
+   第一个真实阻塞后及时校核路线，不能只凭指定根 GN 成功判断可行。若证据要求
+   改架构，提交决策与代价说明，由用户决定；当前仍为 IA32。
+4. 每次必要适配后重放完整目标，依据实际链接符号复用 C FILE/libc++；确定性种子
    不等于系统熵，诊断单任务锁不等于原生线程或 futex。冷构建和缓存续编分别记录。
-4. 完整 ELF 生成后记录段、映像页、映射、栈与堆需求，再联动处理装载/容量；以
+5. 完整 ELF 生成后记录段、映像页、映射、栈与堆需求，再联动处理装载/容量；以
    客体 Platform → Isolate → Context → Script 校验与回收作为首项功能验收。
-   Content Shell IA32 可行性保持旁路核对，不能只凭指定根 GN 成功判断。
+
+每个工作包完成必要适配和相关边界验证后，立即重放完整目标并记录下一阻塞。
+已有 FILE、VM、FP 等组件按源码和对象哈希复用；未改变其实现时不重复建立整套
+独立资格矩阵。编译通过的声明不等于运行服务，条件等待目前无原生提供者，须由
+实际链接或执行需求确定实现工作。Content Shell 的实际编译/链接可行性仍是 P0
+未关闭项，需保留证据并及时重审 IA32 方案；用户的 32 位目标保持有效。
 
 PNG 桌面、文件 ABI 和 C FILE 成果继续复用；生产挂载与磁盘 PNG 接线仍待完成，
 按真实引擎资源需求接入。暂缓无主线消费者的 API 扩展、桌面美化和一般硬件专项。

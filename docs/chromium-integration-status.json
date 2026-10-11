@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-11T12:31:07.411128+00:00",
-  "scope": "Published pinned complete V8 target and actual cold-output OS failure; guest engine acceptance remains false",
+  "recorded_utc": "2026-10-11T18:21:24.962669+00:00",
+  "scope": "固定完整 native_embedder 的最新实际编译阻塞；未提交 zlib/FileStore 草稿的局部客体资格与完整引擎验收分别记录",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -32,13 +32,15 @@
   "link_pass": false,
   "full_elf_exists": false,
   "first_build_blocker": {
-    "object": "obj/third_party/zlib/libchrome_zlib.adler32.o",
-    "file": "third_party/zlib/zconf.h",
-    "line": 505,
-    "column": 14,
-    "diagnostic": "../source/third_party/zlib/zconf.h:505:14: fatal error: 'unistd.h' file not found",
+    "object": "obj/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone.time_zone_libc.o",
+    "file": "third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc",
+    "line": 121,
+    "column": 30,
+    "diagnostic": "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:121:30: error: no matching function for call to 'tm_gmtoff'",
     "compile_argv": [
       "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+      "-x",
+      "c++",
       "--target=i686-unknown-none-elf",
       "-ffreestanding",
       "-fno-stack-protector",
@@ -56,6 +58,7 @@
       "-femulated-tls",
       "-fstack-usage",
       "-nostdinc",
+      "-nostdinc++",
       "-DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1",
       "-isystem",
       "../source/tools/gtos_isolate_diagnostic/sdk",
@@ -65,26 +68,17 @@
       "../source/tools/gtos_isolate_diagnostic/c-sdk",
       "-isystem",
       "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/../lib/clang/24/include",
-      "-isystem",
-      "../source/third_party/libc++/src/include",
-      "-isystem",
-      "../source/tools/gtos_isolate_diagnostic/c-sdk",
-      "-isystem",
-      "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/../lib/clang/24/include",
+      "-fno-exceptions",
+      "-fno-rtti",
       "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE",
       "-D__GTOS__=1",
       "-DNDEBUG",
       "-DNVALGRIND",
       "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
-      "-DZLIB_IMPLEMENTATION",
-      "-DADLER32_SIMD_SSSE3",
-      "-DX86_NOT_WINDOWS",
-      "-DINFLATE_CHUNK_SIMD_SSE2",
-      "-DDEFLATE_SLIDE_HASH_SSE2",
-      "-DCRC32_SIMD_SSE42_PCLMUL",
+      "-DABSL_ALLOCATOR_NOTHROW=1",
       "-I../source",
       "-Igen",
-      "-I../source/third_party/zlib",
+      "-I../source/third_party/abseil-cpp",
       "-fno-delete-null-pointer-checks",
       "-fno-strict-overflow",
       "-fno-ident",
@@ -184,38 +178,46 @@
       "-Werror",
       "-Werror=#pragma-messages",
       "-Wno-exit-time-destructors",
-      "-O3",
-      "-fdata-sections",
-      "-ffunction-sections",
-      "-fno-unique-section-names",
-      "-Wno-incompatible-pointer-types",
-      "-Wunused-variable",
-      "-std=c11",
+      "-Wimplicit-int-conversion",
+      "-Wshorten-64-to-32",
+      "-Wsign-compare",
+      "-Wsign-conversion",
+      "-Wtautological-unsigned-zero-compare",
+      "-std=c++20",
+      "-Wno-trigraphs",
+      "-gsimple-template-names",
+      "-fno-exceptions",
+      "-fno-rtti",
+      "-Wno-invalid-offsetof",
+      "-Wenum-compare-conditional",
+      "-Wno-nullability-completeness",
+      "-Wbool-conversion",
+      "-Wconstant-conversion",
+      "-Wenum-conversion",
+      "-Wint-conversion",
+      "-Wliteral-conversion",
+      "-Wnon-literal-null-conversion",
+      "-Wnull-conversion",
+      "-Wobjc-literal-conversion",
+      "-Wstring-conversion",
+      "-Wbitfield-enum-conversion",
       "-MMD",
       "-MF",
-      "obj/third_party/zlib/libchrome_zlib.adler32.o.d",
+      "obj/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone.time_zone_libc.o.d",
       "-c",
-      "../source/third_party/zlib/adler32.c",
+      "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc",
       "-o",
-      "obj/third_party/zlib/libchrome_zlib.adler32.o"
+      "obj/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone.time_zone_libc.o"
     ],
-    "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
+    "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/build",
     "compile_database": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/actual-compile-database.log",
-      "sha256": "c982d7333c2469352c4d407bbedd582cea5928d542942f7668e5d9191b5c105a"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/actual-compile-database.log",
+      "sha256": "99298a614d774a787b70007782b0e96e93123b10cc692c31602cce17333beafe"
     },
-    "actual_v8_consumer": "src/snapshot/snapshot-utils.cc: adler32",
-    "analysis": "zconf.h 的非 Windows 条件错误推断 unistd.h 能力；目标还包含 gzip 文件后端，须先绑定确切输入并核对其真实契约。",
-    "contract_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-next-blocker-review-01.json",
-      "sha256": "0837dcf965fd288e1808866a615c929de9784479cc5e1cc6ef4f420ba01d2ad7"
-    }
+    "actual_v8_consumer": "完整 native_embedder 实际依赖图中的 Abseil/cctz 时间库；后续按真实调用及链接核对消费范围",
+    "analysis": "std::tm 扩展和真实 C 日历/时区提供者缺失；同轮 time_zone_info.cc 缺少 fcntl.h。须核对 libc: 工厂与 TZIF 文件读取语义，不能用声明或假成功覆盖服务缺口。"
   },
   "other_observed_failures": [
-    "FAILED: obj/third_party/zlib/libchrome_zlib.compress.o ",
-    "../source/third_party/zlib/zconf.h:505:14: fatal error: 'unistd.h' file not found",
-    "FAILED: obj/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone.time_zone_libc.o ",
-    "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:121:30: error: no matching function for call to 'tm_gmtoff'",
     "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:174:11: error: no matching function for call to 'tm_gmtoff'",
     "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:185:15: error: no matching function for call to 'tm_gmtoff'",
     "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:232:32: error: no matching function for call to 'tm_gmtoff'",
@@ -231,96 +233,96 @@
       "argv": [
         "@WORKSPACE@/toolchains/gn/gn",
         "gen",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
-        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
-        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source/isolate-diagnostic.gn",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/build",
+        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
+        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source/isolate-diagnostic.gn",
         "--root-target=//tools/gtos_isolate_diagnostic:native_embedder",
         "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\nclang_base_path=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57\"\ngtos_host_i386_runtime=\"@WORKSPACE@/toolchains/linux-i386-runtime-focal/root\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
         "--fail-on-unused-args"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
       "exit_code": 0,
-      "elapsed_seconds": 2.6777606430005108,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/gn-native-embedder.log",
-      "log_sha256": "2a6ef7549a046112145b37f150a620a5c87249c8dff0704f0fc82ee2f8f5f9ac",
-      "pid": 22768,
-      "pgid": 22768
+      "elapsed_seconds": 2.8300635470004636,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/gn-native-embedder.log",
+      "log_sha256": "5a61a51724ff1e5cd0224bfe37d3ed8ea01c4f0c63826ddef0213a50bd8619c7",
+      "pid": 31467,
+      "pgid": 31467
     },
     {
       "name": "gn-complete-dependencies",
       "argv": [
         "@WORKSPACE@/toolchains/gn/gn",
         "desc",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/build",
         "//tools/gtos_isolate_diagnostic:native_embedder",
         "deps",
         "--all",
         "--format=json",
-        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
-        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source/isolate-diagnostic.gn"
+        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
+        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source/isolate-diagnostic.gn"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
       "exit_code": 0,
-      "elapsed_seconds": 2.1271903609995206,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/gn-complete-dependencies.log",
-      "log_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
-      "pid": 22779,
-      "pgid": 22779
+      "elapsed_seconds": 2.2291769559960812,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/gn-complete-dependencies.log",
+      "log_sha256": "db417fe8c5b66ff9c5c6ca59a6343ad7a4b163fc382126ef601e23db4b1b0280",
+      "pid": 31478,
+      "pgid": 31478
     },
     {
       "name": "native-executable-commands",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/build",
         "-t",
         "commands",
         "native_embedder"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
       "exit_code": 0,
-      "elapsed_seconds": 5.93619641800251,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/native-executable-commands.log",
-      "log_sha256": "42c7d45fe8709b64a4ac447a6c17213df872b0d9493d0f93b64683c1aab49cce",
-      "pid": 22790,
-      "pgid": 22790
+      "elapsed_seconds": 6.489169366999704,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/native-executable-commands.log",
+      "log_sha256": "fbc502c6d494b5cae3e7e184f988156491d49d2def5107cc217a8e97fb4195ae",
+      "pid": 31489,
+      "pgid": 31489
     },
     {
       "name": "actual-compile-database",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/build",
         "-t",
         "compdb"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
       "exit_code": 0,
-      "elapsed_seconds": 17.207731082002283,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/actual-compile-database.log",
-      "log_sha256": "c982d7333c2469352c4d407bbedd582cea5928d542942f7668e5d9191b5c105a",
-      "pid": 22791,
-      "pgid": 22791
+      "elapsed_seconds": 18.110676557997067,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/actual-compile-database.log",
+      "log_sha256": "99298a614d774a787b70007782b0e96e93123b10cc692c31602cce17333beafe",
+      "pid": 31490,
+      "pgid": 31490
     },
     {
       "name": "complete-native-build",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/build",
         "-k",
         "1",
         "-j",
         "8",
         "native_embedder"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/source",
       "exit_code": 1,
-      "elapsed_seconds": 48.071211356000276,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/complete-native-build.log",
-      "log_sha256": "a194fb59a7baece98795a0f9604c5a4a99af086a1d34a014793b7b5407a6834b",
-      "pid": 22792,
-      "pgid": 22792
+      "elapsed_seconds": 50.02079013999901,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/complete-native-build.log",
+      "log_sha256": "0e384c950ba30b02265e479d389ce842dbf9642002a33590e192d714079735e5",
+      "pid": 31492,
+      "pgid": 31492
     }
   ],
   "prior_timeout": {
@@ -347,7 +349,19 @@
     "linux_ia32_normal_root_supported": false,
     "explicit_content_root_gn_pass": true,
     "actual_build_pass": false,
-    "gtos_platform_gn_pass": false
+    "gtos_platform_gn_pass": false,
+    "latest_reference_observation": {
+      "name": "content-shell-linux-ia32-compile-05",
+      "observed_utc": "2026-10-11T18:02:27.083070+00:00",
+      "ninja_pid": 32121,
+      "process_observed_alive": true,
+      "driver_timeout_seconds": 10800,
+      "cache_copied_without_hardlinks": true,
+      "last_observed_task": "[6240/44834] CXX obj/net/net/session_usage.o",
+      "gn_pass": true,
+      "build_terminal_result_observed": false,
+      "boundary": "任务包含宿主工具与目标对象；计数不是完成比例。Linux 参考不作为 GTOS 运行证明；观察超时不重启实际构建。"
+    }
   },
   "native_isolate_pass": false,
   "javascript_guest_pass": false,
@@ -355,7 +369,7 @@
   "video_guest_pass": false,
   "html5_guest_pass": false,
   "capacity_changed": false,
-  "production_image_changed": false,
+  "production_image_changed": true,
   "old_wip_and_cache_preserved": true,
   "reproducer_publication": {
     "portable_entry_published": true,
@@ -363,14 +377,14 @@
     "module": "apps/native_v8_integration",
     "source_lock": {
       "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/source-lock.json",
-      "sha256": "fd075731fa07d64c405d2a6cd7599b548dcf15f24cfe8a74d974ad538df364d9"
+      "sha256": "a7fb32531877d5c8895e52a4aa5e99b5a2543c3ac7b9df70d2e86b15c0de93ed"
     },
     "payload_lock": {
       "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/payload-lock.json",
-      "sha256": "f20b0a4bd2956284c827e227a80c46817d43369671641c298ad9eed7540cf128"
+      "sha256": "8751ab0a4920f689b71f097b99c10bbc40d9b415d012147b126e695641e59178"
     },
     "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-    "clean_output_failure_replay_pass": true,
+    "clean_output_failure_replay_pass": false,
     "final_driver_prepare": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/tool-review-05/positive-prepare/output/status.json",
       "sha256": "d3fa887b3824e3a09003e49e4ce61f0cacfc3bda9956c7d14ceba3a4c100a3df"
@@ -384,68 +398,50 @@
       "LLVM C SDK",
       "Clang resource headers"
     ],
-    "boundary": "Prepared pinned upstream checkout/sysroots and external tools required. No dependency fetch/bootstrap supplied; copied-cache runs are labeled separately.",
-    "working_tree_matches_publication": true,
-    "publication_scope": "本提交修复实际完整目标的两处未用 POSIX 头条件并更正同步能力分析；不新增等待提供者或宣称完整引擎客体验收。"
+    "boundary": "当前 payload 的完整目标由保留缓存副本续编，尚无当前 payload 的完整冷构建成功；消费者入口冷构建及缓存重放通过。需准备 pinned 上游、sysroot 和工具，不宣称空白主机 bootstrap。",
+    "publication_scope": "完整目标的标量 zlib/真实 File ABI 适配、截断 EOF 与 FileStore 成功提交后的只读缓存刷新；相关客体与桌面回归通过，完整目标仍失败于 cctz。",
+    "published_head": "ff537182673747682718ff4e159f4ff78c6c563a",
+    "working_tree_matches_locked_payload": true
   },
   "route_review": {
     "issue_url": "https://github.com/awe0w0/GTOS/issues/9",
     "issue_updated_utc": "2026-10-09T15:37:06Z",
     "issue_comments": 0,
     "latest_verified_ci": {
-      "head": "229c61e1378d089cdf4df384d6f800deff6c53e5",
-      "run_id": 38138137097,
-      "url": "https://github.com/awe0w0/GTOS/actions/runs/38138137097",
+      "head": "ff537182673747682718ff4e159f4ff78c6c563a",
+      "run_id": 38139891840,
+      "url": "https://github.com/awe0w0/GTOS/actions/runs/38139891840",
       "all_four_existing_jobs_pass": true,
-      "includes_full_v8_or_browser_guest": false
+      "includes_full_v8_or_browser_guest": false,
+      "evidence": {
+        "path": "@WORKSPACE@/logs/issue-route-calibration-20261012-b-ci.json",
+        "sha256": "2da328287ca59ac241adf148dd3a4cc6994e3756c1d1bc3e2bacfaaa755553a3"
+      }
     },
-    "boundary": "首要功能里程碑仍是完整 V8 在 GTOS 执行 JS；实际熵消费者的客体验收推动完整目标到同步依赖阻塞。",
-    "issue_rechecked_utc": "2026-10-11T10:12:02.466326+00:00",
-    "latest_observed_head": "229c61e1378d089cdf4df384d6f800deff6c53e5",
+    "boundary": "32 位 GTOS 真实 V8 执行 JS 为下一功能里程碑；收束现有 zlib/FileStore 工作包后立即返回完整目标的 cctz 阻塞，不新增无消费者叶子清单。",
+    "issue_rechecked_utc": "2026-10-11T18:02:27.083070+00:00",
+    "latest_observed_head": "ff537182673747682718ff4e159f4ff78c6c563a",
     "latest_observed_ci": {
-      "run_id": 38138137097,
-      "url": "https://github.com/awe0w0/GTOS/actions/runs/38138137097",
-      "observed_utc": "2026-10-11T12:31:07.411098+00:00",
+      "run_id": 38139891840,
+      "url": "https://github.com/awe0w0/GTOS/actions/runs/38139891840",
+      "observed_utc": "2026-10-11T18:02:27.083070+00:00",
       "status": "completed",
       "conclusion": "success",
       "passed_jobs": [
+        "verify_native_filesystem",
         "verify_native_file_abi",
         "verify_sparse_vm",
-        "verify_native_filesystem",
         "verify"
       ],
       "pending_jobs": [],
       "includes_full_v8_or_browser_guest": false
+    },
+    "latest_issue_evidence": {
+      "path": "@WORKSPACE@/logs/issue-route-calibration-20261012-b.json",
+      "sha256": "a83e1dbb45129ef08a3b916b86270cf2d2cec1d0bdd6374d0885093f1d3da846"
     }
   },
   "previous_complete_attempt": {
-    "name": "portable-resume-06",
-    "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/status.json",
-      "sha256": "695e47a3a41531cbcc96ef3351131f8fcde12e4855d99714697611d03cd40778"
-    },
-    "timestamp_utc": "2026-10-11T11:43:30.327804+00:00",
-    "cold_build": false,
-    "build_exit_code": 1,
-    "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
-    "bound_inputs_unchanged": true,
-    "dependency_graph_changed": false,
-    "original_cache_preserved_during_run": true,
-    "source_lock": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/module-input-snapshot/source-lock.json",
-      "sha256": "5b50ad7a01eb38ddf9c9454b1f0587680892c76e3f9f323e523b3194cf050403"
-    },
-    "payload_lock": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/module-input-snapshot/payload-lock.json",
-      "sha256": "41f9dd6a15eeaaca0524f46328aab0c3a1096e8e046143df5bf30fa5620ad470"
-    },
-    "builder": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/builder-input-snapshot.py",
-      "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
-    },
-    "boundary": "完整目标越过实际熵消费者，当前同步依赖失败；未生成完整 ELF，未验收客体 Isolate。"
-  },
-  "latest_complete_attempt": {
     "name": "portable-resume-07",
     "status": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/status.json",
@@ -471,6 +467,33 @@
       "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
     },
     "boundary": "同步头条件修复后，同一完整目标越过 futex waiter/mutex，首个失败前进到 zlib；未生成完整 ELF，未验收客体等待或 Isolate。"
+  },
+  "latest_complete_attempt": {
+    "name": "zlib-draft-resume-11",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/status.json",
+      "sha256": "144ba61b5764f270961f17806f81225f52c722bc2cb41ecaa23d5491e5b8fb6b"
+    },
+    "timestamp_utc": "2026-10-11T15:57:29.933887+00:00",
+    "cold_build": false,
+    "build_exit_code": 1,
+    "bound_inputs_unchanged": true,
+    "dependency_graph_sha256": "db417fe8c5b66ff9c5c6ca59a6343ad7a4b163fc382126ef601e23db4b1b0280",
+    "dependency_graph_changed": true,
+    "original_cache_preserved_during_run": true,
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/module-input-snapshot/source-lock.json",
+      "sha256": "eaf063dab4de3df27a03adad083bd736ffb916d3a29bb6db01e7fed2322758fb"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/module-input-snapshot/payload-lock.json",
+      "sha256": "8751ab0a4920f689b71f097b99c10bbc40d9b415d012147b126e695641e59178"
+    },
+    "build_log": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/complete-native-build.log",
+      "sha256": "0e384c950ba30b02265e479d389ce842dbf9642002a33590e192d714079735e5"
+    },
+    "boundary": "草稿选择固定上游完整标量 zlib，保留 gzip 文件对象，实际完整目标越过 zlib 后失败于 cctz；未生成完整 ELF，未运行 Isolate。"
   },
   "platform_adaptation_evidence": {
     "dynamic_elf": {
@@ -550,10 +573,10 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "按 portable-resume-07 的 zconf.h:505 首个失败，绑定与 V8 DEPS 一致的 zlib 源码输入并核对 adler32 及同目标 gz 文件后端；修正真实平台契约后重放完整目标，不添加空 POSIX 头或假成功。",
-    "处理同轮 cctz tm_gmtoff/tm_zone、时区文件读取及后续实际链接依赖；条件等待当前无原生提供者，不能用 SDK 声明或单任务锁冒充线程。",
-    "完整 ELF 生成后记录段、映像、映射、栈和堆需求，联动处理承载、失败回滚及精确回收，验收真实 guest Platform/Isolate/Context/Script。",
-    "继续核对同 revision Content Shell IA32；随后本地 HTML/CSS/JS、输入/DOM、HTTP(S)/安全、视频和 HTML5。"
+    "依据 zlib-draft-resume-11 的 cctz 时间/时区与 TZIF 文件语义缺口作最小正确适配，立即重放完整 native_embedder，记录首个真实阻塞；不新增无消费者叶子清单。",
+    "继续同 revision Content Shell IA32 实际参考编译，取得终态及资源证据后校核架构；当前交付为 IA32，改变架构须用户决策。",
+    "完整 ELF 后实测段、映像、映射、栈和堆，联动补足装载/容量/回滚及回收，验收真实 GTOS Platform/Isolate/Context/Script。",
+    "真实 V8 JS 后推进 Content 本地 HTML/CSS 首帧、输入/DOM，再受控 HTTP/HTTPS 与安全边界，随后视频和 HTML5。"
   ],
   "retained_complete_attempts": [
     {
@@ -868,6 +891,33 @@
         "../source/third_party/abseil-cpp/absl/synchronization/mutex.cc:65:10: fatal error: 'fcntl.h' file not found"
       ],
       "boundary": "熵适配后的同图完整目标失败，首个阻塞为同步依赖；完整引擎验收仍为 false。"
+    },
+    {
+      "name": "portable-resume-07",
+      "status": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/status.json",
+        "sha256": "e51ee40f5b0cfdf4596705278828f599c64704eb3c7e37be33cca011fbba6c90"
+      },
+      "timestamp_utc": "2026-10-11T12:24:47.036951+00:00",
+      "cold_build": false,
+      "build_exit_code": 1,
+      "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+      "bound_inputs_unchanged": true,
+      "dependency_graph_changed": false,
+      "original_cache_preserved_during_run": true,
+      "source_lock": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/module-input-snapshot/source-lock.json",
+        "sha256": "fd075731fa07d64c405d2a6cd7599b548dcf15f24cfe8a74d974ad538df364d9"
+      },
+      "payload_lock": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/module-input-snapshot/payload-lock.json",
+        "sha256": "f20b0a4bd2956284c827e227a80c46817d43369671641c298ad9eed7540cf128"
+      },
+      "builder": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/builder-input-snapshot.py",
+        "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
+      },
+      "boundary": "同步头条件修复后，同一完整目标越过 futex waiter/mutex，首个失败前进到 zlib；未生成完整 ELF，未验收客体等待或 Isolate。"
     }
   ],
   "public_entry_review": {
@@ -1057,5 +1107,364 @@
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/next-sync-root-review-v2-validity.json",
       "sha256": "ff1594bf604c1b024a8b547e0bdc1a037c1f4069a9d50ee47e0e84318d08521d"
     }
+  },
+  "previous_first_build_blocker": {
+    "record": {
+      "path": "@WORKSPACE@/logs/issue-route-calibration-20261012-b-status-before.json",
+      "sha256": "eee02ae5e456471333af6a9966e1d6dcbdc0dfd41f442e8557231639233f86ef"
+    },
+    "blocker": {
+      "object": "obj/third_party/zlib/libchrome_zlib.adler32.o",
+      "file": "third_party/zlib/zconf.h",
+      "line": 505,
+      "column": 14,
+      "diagnostic": "../source/third_party/zlib/zconf.h:505:14: fatal error: 'unistd.h' file not found",
+      "compile_argv": [
+        "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+        "--target=i686-unknown-none-elf",
+        "-ffreestanding",
+        "-fno-stack-protector",
+        "-fno-pic",
+        "-fno-pie",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-mno-mmx",
+        "-msse2",
+        "-mfpmath=sse",
+        "-mno-sse3",
+        "-mno-ssse3",
+        "-mno-sse4",
+        "-mno-avx",
+        "-femulated-tls",
+        "-fstack-usage",
+        "-nostdinc",
+        "-DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1",
+        "-isystem",
+        "../source/tools/gtos_isolate_diagnostic/sdk",
+        "-isystem",
+        "../source/third_party/libc++/src/include",
+        "-isystem",
+        "../source/tools/gtos_isolate_diagnostic/c-sdk",
+        "-isystem",
+        "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/../lib/clang/24/include",
+        "-isystem",
+        "../source/third_party/libc++/src/include",
+        "-isystem",
+        "../source/tools/gtos_isolate_diagnostic/c-sdk",
+        "-isystem",
+        "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/../lib/clang/24/include",
+        "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE",
+        "-D__GTOS__=1",
+        "-DNDEBUG",
+        "-DNVALGRIND",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+        "-DZLIB_IMPLEMENTATION",
+        "-DADLER32_SIMD_SSSE3",
+        "-DX86_NOT_WINDOWS",
+        "-DINFLATE_CHUNK_SIMD_SSE2",
+        "-DDEFLATE_SLIDE_HASH_SSE2",
+        "-DCRC32_SIMD_SSE42_PCLMUL",
+        "-I../source",
+        "-Igen",
+        "-I../source/third_party/zlib",
+        "-fno-delete-null-pointer-checks",
+        "-fno-strict-overflow",
+        "-fno-ident",
+        "-fno-math-errno",
+        "-fno-strict-aliasing",
+        "-fcolor-diagnostics",
+        "-fdiagnostics-show-inlining-chain",
+        "-fmerge-all-constants",
+        "-fcrash-diagnostics-dir=../source/out/clang-crashreports",
+        "-fno-lifetime-dse",
+        "-mllvm",
+        "-instcombine-lower-dbg-declare=0",
+        "-mllvm",
+        "-split-threshold-for-reg-with-hint=0",
+        "-ffp-contract=off",
+        "-Wno-builtin-macro-redefined",
+        "-D__DATE__=",
+        "-D__TIME__=",
+        "-D__TIMESTAMP__=",
+        "-no-canonical-prefixes",
+        "-ftrivial-auto-var-init=pattern",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fno-unique-section-names",
+        "-fomit-frame-pointer",
+        "-g0",
+        "-fsanitize=array-bounds",
+        "-fsanitize-trap=array-bounds",
+        "-fsanitize-ignore-for-ubsan-feature=array-bounds",
+        "-Wno-unsafe-buffer-usage-in-static-sized-array",
+        "-fsanitize=return",
+        "-fsanitize-trap=return",
+        "-fsanitize-ignore-for-ubsan-feature=return",
+        "-fsanitize=unreachable",
+        "-fsanitize-trap=unreachable",
+        "-fsanitize-ignore-for-ubsan-feature=unreachable",
+        "-Wheader-hygiene",
+        "-Wstring-conversion",
+        "-Wtautological-overlap-compare",
+        "-Xclang",
+        "-add-plugin",
+        "-Xclang",
+        "find-bad-constructs",
+        "-Xclang",
+        "-plugin-arg-find-bad-constructs",
+        "-Xclang",
+        "check-stack-allocated",
+        "-Xclang",
+        "-plugin-arg-find-bad-constructs",
+        "-Xclang",
+        "relax-ctor-checks-for-aggregates",
+        "-Xclang",
+        "-add-plugin",
+        "-Xclang",
+        "raw-ptr-plugin",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "check-raw-ptr-to-stack-allocated",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "disable-check-raw-ptr-to-stack-allocated-error",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "raw-ptr-exclude-path=../source/third_party/dawn/",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "raw-ptr-exclude-path=../source/build/config/clang/chrome/test/fuzzing/webidl_fuzzing/",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "no-special-treatment-for-oilpanized-paths",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "check-raw-ptr-in-blink",
+        "-Wall",
+        "-Wno-unused-variable",
+        "-Wno-unused-template",
+        "-Wno-c++11-narrowing",
+        "-Wno-unused-but-set-variable",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-Wno-psabi",
+        "-Wno-stringop-overread",
+        "-Wloop-analysis",
+        "-Wno-unneeded-internal-declaration",
+        "-Wno-cast-function-type",
+        "-Wno-thread-safety-reference-return",
+        "-Wno-nontrivial-memcall",
+        "-Wno-uninitialized-const-pointer",
+        "-Wno-unused-but-set-global",
+        "-Werror",
+        "-Werror=#pragma-messages",
+        "-Wno-exit-time-destructors",
+        "-O3",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fno-unique-section-names",
+        "-Wno-incompatible-pointer-types",
+        "-Wunused-variable",
+        "-std=c11",
+        "-MMD",
+        "-MF",
+        "obj/third_party/zlib/libchrome_zlib.adler32.o.d",
+        "-c",
+        "../source/third_party/zlib/adler32.c",
+        "-o",
+        "obj/third_party/zlib/libchrome_zlib.adler32.o"
+      ],
+      "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/build",
+      "compile_database": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/actual-compile-database.log",
+        "sha256": "c982d7333c2469352c4d407bbedd582cea5928d542942f7668e5d9191b5c105a"
+      },
+      "actual_v8_consumer": "src/snapshot/snapshot-utils.cc: adler32",
+      "analysis": "zconf.h 的非 Windows 条件错误推断 unistd.h 能力；目标还包含 gzip 文件后端，须先绑定确切输入并核对其真实契约。",
+      "contract_review": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-next-blocker-review-01.json",
+        "sha256": "0837dcf965fd288e1808866a615c929de9784479cc5e1cc6ef4f420ba01d2ad7"
+      }
+    }
+  },
+  "zlib_filestore_qualification": {
+    "canonical_filestore_adopted": true,
+    "public_replays": [
+      {
+        "name": "public-zlib-guest-01",
+        "status": {
+          "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-zlib-guest-01/status.json",
+          "sha256": "8f48f7d9e3a168ab195bb6ed0fe0b8c1dd7c5c369cda4bd8f455b136e52d8b8a"
+        },
+        "object_count": 50,
+        "reused_object_count": 0,
+        "all_required_checks_pass": true,
+        "source_before_after_identical": true,
+        "guests": [
+          {
+            "opt": 0,
+            "rdrand_enabled": true,
+            "memory_mib": 32,
+            "evidence": {
+              "cases": 6,
+              "target_reaps": 5,
+              "all_reaped": 6,
+              "frames": 7099,
+              "checks": 5606,
+              "max_trap_stack": 3724
+            },
+            "negative_observer_controls": 204,
+            "guest_log_sha256": "513f8ea3fc740113a6b17602dd35fd8f6b5861d75cbf24099ff18c1c157425ef",
+            "disk_sha256": "1f7f679563ced6ad14e0edcf719cd3a322984823266b93bca7794eabe9185e7b"
+          },
+          {
+            "opt": 2,
+            "rdrand_enabled": true,
+            "memory_mib": 64,
+            "evidence": {
+              "cases": 6,
+              "target_reaps": 5,
+              "all_reaped": 6,
+              "frames": 15428,
+              "checks": 4208,
+              "max_trap_stack": 2464
+            },
+            "negative_observer_controls": 204,
+            "guest_log_sha256": "57d18d299b8036e3d719c88aa3481ba6427dc538e85533765783442435130d69",
+            "disk_sha256": "1f7f679563ced6ad14e0edcf719cd3a322984823266b93bca7794eabe9185e7b"
+          }
+        ]
+      },
+      {
+        "name": "public-zlib-guest-02",
+        "status": {
+          "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-zlib-guest-02/status.json",
+          "sha256": "575c9e9a422bec8aee43cb030c2ba112e8160a73f84c7d890ab3127ac5d19adc"
+        },
+        "object_count": 50,
+        "reused_object_count": 50,
+        "all_required_checks_pass": true,
+        "source_before_after_identical": true,
+        "guests": [
+          {
+            "opt": 0,
+            "rdrand_enabled": true,
+            "memory_mib": 32,
+            "evidence": {
+              "cases": 6,
+              "target_reaps": 5,
+              "all_reaped": 6,
+              "frames": 7099,
+              "checks": 5570,
+              "max_trap_stack": 3724
+            },
+            "negative_observer_controls": 204,
+            "guest_log_sha256": "5f6bf5eddc9627a3df7635a5efa80058a5082eeab461fcb31d68ccd3867320fa",
+            "disk_sha256": "1f7f679563ced6ad14e0edcf719cd3a322984823266b93bca7794eabe9185e7b"
+          },
+          {
+            "opt": 2,
+            "rdrand_enabled": true,
+            "memory_mib": 64,
+            "evidence": {
+              "cases": 6,
+              "target_reaps": 5,
+              "all_reaped": 6,
+              "frames": 15428,
+              "checks": 4211,
+              "max_trap_stack": 2464
+            },
+            "negative_observer_controls": 204,
+            "guest_log_sha256": "efd130b2477038678ba5f6eeced959d062fb4ebc6e271e2394d71b424d58b02a",
+            "disk_sha256": "1f7f679563ced6ad14e0edcf719cd3a322984823266b93bca7794eabe9185e7b"
+          }
+        ]
+      }
+    ],
+    "subsystem_regression_completion": {
+      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v8-regression-completion.json",
+      "sha256": "05386b3adf957b4f17a80687e080b48db334a2007b539f68de7b7e526bf015f7"
+    },
+    "actual_ata_cold_boots": 174,
+    "sector_cut_count": 84,
+    "full_kernel_build": {
+      "path": "@WORKSPACE@/artifacts/native-file-coherence-20261012-a/full-kernel-01/status.json",
+      "sha256": "cad39e3b4b75e15f9360f4a8ea010cbc9d67fcec1397660d93dfad8201d56f19"
+    },
+    "full_kernel_build_pass": true,
+    "production_image_changed": true,
+    "visible_vm_refresh_pending": false,
+    "self_review_complete": true,
+    "successful_compression_guest_qualified": false,
+    "boundary": "真实 gzip 解码、FileStore 只读缓存提交后刷新、资源及错误回收的局部资格；不验收完整压缩、并发存储或 V8/浏览器。",
+    "invalid_initial_cache_negative_attempt": {
+      "status": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-zlib-cache-negative-01/status.json",
+        "sha256": "e9aec03fcda56bf0569ce56e211ae78303771b8487300c98ac283567c9df0d1e"
+      },
+      "valid_rejection_pass": false,
+      "failure": "expected str, bytes or os.PathLike object, not NoneType",
+      "no_compile_or_guest_executed": true
+    },
+    "cache_forgery_rejection": {
+      "review": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-zlib-cache-negative-review-02.json",
+        "sha256": "3278d094a6e5c5a11f26b27970f4ae190bd8b95f12bfaf30df8126367ee05865"
+      },
+      "valid_rejection_pass": true,
+      "no_compile_or_guest_executed": true
+    },
+    "self_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-public-self-review-01.json",
+      "sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44"
+    },
+    "production": {
+      "path": "@WORKSPACE@/artifacts/native-file-coherence-20261012-a/production-01/status.json",
+      "sha256": "a50699b57caad4eb3cdb4d9752ab7080d65713c0ed16a0b29d545cd342af7f65"
+    },
+    "visible_refresh": {
+      "path": "@WORKSPACE@/artifacts/native-file-coherence-20261012-a/visible-refresh-01/status.json",
+      "sha256": "a69df66eed075af98d39df67cea51646b9b47a5d0efbea93f9493bd06d410a4a"
+    },
+    "publication_binding": "当前源码内容、资格锁与 Git 提交历史绑定；不在源码中自引用尚未生成的提交号"
+  },
+  "previous_published_reproducer": {
+    "portable_entry_published": true,
+    "entry": "tools/build-native-v8-integration.py",
+    "module": "apps/native_v8_integration",
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/module-input-snapshot/source-lock.json",
+      "sha256": "fd075731fa07d64c405d2a6cd7599b548dcf15f24cfe8a74d974ad538df364d9"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/module-input-snapshot/payload-lock.json",
+      "sha256": "f20b0a4bd2956284c827e227a80c46817d43369671641c298ad9eed7540cf128"
+    },
+    "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
+    "clean_output_failure_replay_pass": true,
+    "final_driver_prepare": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/tool-review-05/positive-prepare/output/status.json",
+      "sha256": "d3fa887b3824e3a09003e49e4ce61f0cacfc3bda9956c7d14ceba3a4c100a3df"
+    },
+    "final_driver_difference_from_cold_replay": "Only added the tested hash guard for the host clang++ alias; runtime payload and build commands unchanged",
+    "fresh_host_bootstrap_pass": false,
+    "clean_complete_build_pass": false,
+    "sdk_search_order": [
+      "private overrides",
+      "upstream libc++",
+      "LLVM C SDK",
+      "Clang resource headers"
+    ],
+    "boundary": "Prepared pinned upstream checkout/sysroots and external tools required. No dependency fetch/bootstrap supplied; copied-cache runs are labeled separately. 已提交入口的锁定内容以保留的快照引用；当前工作树有未提交草稿，公开重放通过不等于已发布。",
+    "working_tree_matches_publication": false,
+    "publication_scope": "本提交修复实际完整目标的两处未用 POSIX 头条件并更正同步能力分析；不新增等待提供者或宣称完整引擎客体验收。",
+    "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   }
 }

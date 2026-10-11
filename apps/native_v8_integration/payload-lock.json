@@ -262,9 +262,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "2ad7921c6f298c2a3a6771e4bd69a2f92a693914245e22b221d5e7523cadbdab",
-      "bytes": 4871,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "sha256": "bbc4c04e99861619321e1a27dd8c819e97a149972d93d75d68ae915971ef868b",
+      "bytes": 4932,
+      "origin": "Pinned integration GN plus actual LLVM strerror provider consumed by gzip error paths"
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
@@ -4710,11 +4710,61 @@
       "sha256": "95c994599137698af2108dd8c7a6db227f96a4cc0ba2ffb8588888ce86a0e654",
       "bytes": 119030,
       "origin": "Pinned Abseil body; GTOS excludes unavailable unused POSIX headers. Compile-only platform selection, no wait provider added."
+    },
+    "overlay/third_party/zlib/zconf.h": {
+      "sha256": "143cc091461a6f25b5efd39d7b0beab7e9e76fabcbc4eb8cc43cc4c947912e94",
+      "bytes": 17451,
+      "origin": "Pinned Chromium zlib; GTOS does not claim unavailable unistd.h. No gzip file provider implemented by this header."
+    },
+    "overlay/third_party/zlib/gzguts.h": {
+      "sha256": "d16c44a6c479d7159e024a4e42923ef72a982573b9367df2544c0c1b17ee6a82",
+      "bytes": 7406,
+      "origin": "Pinned zlib body; GTOS-only native file backend header/mappings, guest validation pending"
+    },
+    "overlay/third_party/zlib/gzlib.c": {
+      "sha256": "06fd255fc09d1f2b0b9911d9155ce5ba095ad0cbb9f3822d74ce98167549d3b9",
+      "bytes": 17924,
+      "origin": "Pinned zlib body; GTOS native open/seek and explicit unsupported mode failure, guest validation pending"
+    },
+    "overlay/third_party/zlib/BUILD.gn": {
+      "sha256": "07267988578d96532151dfa26a438972c281868abde4dde6d62410a60efe4e4f",
+      "bytes": 13230,
+      "origin": "Pinned zlib GN; native GTOS uses the existing complete scalar codec, host/Linux optimization unchanged"
+    },
+    "overlay/third_party/zlib/zutil.h": {
+      "sha256": "409be5fc6b45482507f46a9f96a8f22242b96834daa4ccca9bfe3ab218a6eaeb",
+      "bytes": 9196,
+      "origin": "Pinned zlib body; GTOS emits unknown OS gzip tag, not Unix identity"
+    },
+    "overlay/third_party/zlib/gtos-file.h": {
+      "sha256": "34bbe40a8640d91c68632b0081ead07bb4b626c3dfcf13513ed74a491fcdbc32",
+      "bytes": 4992,
+      "origin": "GTOS File ABI v1 short-transfer/seek/error bridge; no Linux descriptor layer, guest validation pending"
+    },
+    "sdk/process/file_abi.h": {
+      "sha256": "07b0aa8d2999ac00b0a00925a54c0928774268392e2cc2601bdf8ed3379d756e",
+      "bytes": 4205,
+      "origin": "Exact canonical already qualified native File ABI declarations"
+    },
+    "licenses/zlib-LICENSE": {
+      "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2",
+      "bytes": 1002,
+      "origin": "Pinned Chromium zlib license"
+    },
+    "sdk/errno.h": {
+      "sha256": "c507574b2a26f3e7753b4734c7349663b6b9a7a9f863887bebaec63245720866",
+      "bytes": 266,
+      "origin": "Exact already guest-qualified native C FILE errno extension; no new error numbering"
+    },
+    "overlay/third_party/zlib/gzread.c": {
+      "sha256": "916869c2b1dd201b6e2f82179a5de343058771bc949e1cad2977efd4a539cf4a",
+      "bytes": 23336,
+      "origin": "Pinned zlib body; GTOS incomplete gzip EOF guard in read/skip; non-GTOS statements unchanged; guest regression pending"
     }
   },
-  "overlay_files": 77,
-  "sdk_files": 424,
-  "total_bytes": 2047700,
+  "overlay_files": 84,
+  "sdk_files": 426,
+  "total_bytes": 2146769,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

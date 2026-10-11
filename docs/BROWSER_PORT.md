@@ -4,7 +4,7 @@ The requested outcome is Chromium executing inside GTOS and rendering real web
 pages through GTOS services. A host browser, remote browser session, screenshot
 proxy, or set of unimplemented API stubs does not satisfy that outcome.
 
-## 当前交付路线（2026-10-11 校准）
+## 当前交付路线（2026-10-12 校准）
 
 按 [issue #9](https://github.com/awe0w0/GTOS/issues/9) 收束主线，当前唯一交付目标为
 GTOS 原生 IA32；x64 保留为备选基础。下一项功能验收是客体中的真实 V8
@@ -21,7 +21,12 @@ seed_material.cc:17。实际熵消费者接到受检查的 CPUID/RDRAND 源后�
 portable-resume-06 越过该对象，当时首个失败为 futex.h:31。修复两处未用 POSIX
 头条件后，portable-resume-07 越过 futex waiter/mutex，首个失败前进到
 zlib/zconf.h:505 缺少 unistd.h。实际 waiter 选择标准 C++ 分支，pthread 原已
-排除；此前分析已更正。条件等待仍无原生提供者，下一步核对 zlib 和时区实际契约。
+排除；此前分析已更正。条件等待仍无原生提供者。随后完整标量 zlib 与原生文件后端
+适配使 zlib-draft-resume-11 越过 zlib，当前首个失败为 cctz 的 tm_gmtoff/tm_zone 与
+时区文件接口。真实 gzip 解码、截断 EOF、追加继续解码和资源回收已在公开冷构建
+及缓存重放的 O0/O2 客体通过；关联 FileStore 只读缓存更新重新执行存储中断恢复、
+两种 File ABI 配置和 C FILE 回归。压缩初始化的低内存失败回滚通过，压缩成功仍
+未验收。下一步立即核对并适配 cctz 真实语义后回到同一完整目标。
 SDK 合并顺序错误的失败版本单独保留，不算 OS 根因。
 实际 Abseil 退出和原生入口已完成 O0/O2 CPL3 对照，同伴存活与精确回收通过；
 详见[退出消费者验证](../apps/native_v8_exit_probe/README.md)。信号处理仍不支持。完整 ELF、链接及引擎客体运行

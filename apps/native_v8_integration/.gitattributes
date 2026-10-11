@@ -2,6 +2,8 @@
 overlay/** -text -whitespace
 sdk/** -text -whitespace
 c-sdk/** -text -whitespace
+probe/** -text -whitespace
+licenses/** -text -whitespace
 *-LICENSE.txt -text -whitespace
 source-lock.json -text
 payload-lock.json -text
