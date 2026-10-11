@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-11T07:47:58.825092+00:00",
-  "scope": "Latest complete upstream V8 executable build failure, retained earlier failure, and compiler-only platform experiments; no guest engine acceptance",
+  "recorded_utc": "2026-10-11T09:39:17.334579+00:00",
+  "scope": "Published pinned complete V8 target and actual cold-output OS failure; guest engine acceptance remains false",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -24,18 +24,19 @@
   "target_cpu": "x86",
   "host": "WSL Ubuntu-20.04 Linux x64",
   "profile": "Explicit single-threaded JIT-less diagnostic; no Wasm/ICU/sandbox",
-  "args_gn": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
-  "args_sha256": "18b2b0abaf7c12ac99b38e740218c2a935be8fa2a45f1b4a61b0bd8dad53bfd2",
+  "args_gn": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\nclang_base_path=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57\"\ngtos_host_i386_runtime=\"@WORKSPACE@/toolchains/linux-i386-runtime-focal/root\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
+  "args_sha256": "ee1e3670706d126d17c6036024557718fa213961545bb9e03e16f078f5a6ac6d",
   "furthest_complete_target_stage": "GN graph plus actual final ELF link command; partial compilation, no ELF",
   "gn_pass": true,
   "complete_build_pass": false,
   "link_pass": false,
   "full_elf_exists": false,
   "first_build_blocker": {
-    "object": "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o",
-    "file": "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
-    "line": 37,
-    "diagnostic": "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc:37:10: fatal error: 'pthread.h' file not found",
+    "object": "obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o",
+    "file": "third_party/abseil-cpp/absl/log/internal/log_message.cc",
+    "line": 59,
+    "column": 10,
+    "diagnostic": "../source/third_party/abseil-cpp/absl/log/internal/log_message.cc:59:10: fatal error: 'unistd.h' file not found",
     "compile_argv": [
       "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
       "-x",
@@ -60,16 +61,15 @@
       "-nostdinc++",
       "-DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1",
       "-isystem",
-      "@WORKSPACE@/artifacts/native-v8-isolate-closure-20261008-a/source/tools/gtos_isolate_diagnostic/sdk",
+      "../source/tools/gtos_isolate_diagnostic/sdk",
       "-isystem",
-      "@WORKSPACE@/sources/chromium-full/src/third_party/libc++/src/include",
+      "../source/third_party/libc++/src/include",
       "-isystem",
-      "@WORKSPACE@/artifacts/native-v8-isolate-closure-20261008-a/sdk",
+      "../source/tools/gtos_isolate_diagnostic/c-sdk",
       "-isystem",
-      "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include",
+      "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/../lib/clang/24/include",
       "-fno-exceptions",
       "-fno-rtti",
-      "-DCR_CLANG_REVISION=\"llvmorg-24-init-7747-g62397f8b-57\"",
       "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE",
       "-D__GTOS__=1",
       "-DNDEBUG",
@@ -203,114 +203,119 @@
       "-Wbitfield-enum-conversion",
       "-MMD",
       "-MF",
-      "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o.d",
+      "obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o.d",
       "-c",
-      "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+      "../source/third_party/abseil-cpp/absl/log/internal/log_message.cc",
       "-o",
-      "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o"
+      "obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o"
     ],
-    "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+    "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/build",
     "dependency_path": [
       "native_embedder",
       "v8",
       "v8_abseil",
       "absl",
-      "absl_component_deps",
-      "failure_signal_handler"
+      "absl_component_deps"
     ],
-    "analysis": "The latest complete target selects POSIX failure-signal handling on GTOS, which lacks that service. Log immediate-exit calls and an unused POSIX include also fail. Subsequent object-only adaptations need full-target replay and guest qualification; unsupported signal calls explicitly fail and are not implemented signal support."
+    "analysis": "Actual unmodified upstream Abseil OS-service consumer. Resolve its required semantics, preserve all target dependencies and verify guest behavior; missing headers alone do not prove an implemented service."
   },
-  "other_observed_failures": [
-    "FAILED: obj/third_party/abseil-cpp/absl/debugging/internal/examine_stack.examine_stack.o ",
-    "../source/third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc:32:10: fatal error: 'unistd.h' file not found",
-    "FAILED: obj/third_party/abseil-cpp/absl/log/die_if_null.die_if_null.o ",
-    "../source/third_party/abseil-cpp/absl/log/internal/conditions.h:38:10: fatal error: 'unistd.h' file not found",
-    "FAILED: obj/third_party/abseil-cpp/absl/log/internal/check_op.check_op.o ",
-    "../source/third_party/abseil-cpp/absl/log/internal/nullstream.h:37:10: fatal error: 'unistd.h' file not found"
-  ],
+  "other_observed_failures": [],
   "runs": [
     {
       "name": "gn-native-embedder",
       "argv": [
         "@WORKSPACE@/toolchains/gn/gn",
         "gen",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
-        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
-        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source/isolate-diagnostic.gn",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/build",
+        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
+        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source/isolate-diagnostic.gn",
         "--root-target=//tools/gtos_isolate_diagnostic:native_embedder",
-        "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
+        "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\nclang_base_path=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57\"\ngtos_host_i386_runtime=\"@WORKSPACE@/toolchains/linux-i386-runtime-focal/root\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
         "--fail-on-unused-args"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/gn-native-embedder.log",
-      "log_sha256": "708e6424f8b983d1872a926f38f759b6ce563e6aacb4582071bbb50e85204fcb"
+      "elapsed_seconds": 3.42900090799958,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/gn-native-embedder.log",
+      "log_sha256": "a788f66de3d76b6f17cfb867e3904377c73f1132451ce1945454b4123fcb9759",
+      "pid": 13481,
+      "pgid": 13481
     },
     {
       "name": "gn-complete-dependencies",
       "argv": [
         "@WORKSPACE@/toolchains/gn/gn",
         "desc",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/build",
         "//tools/gtos_isolate_diagnostic:native_embedder",
         "deps",
         "--all",
         "--format=json",
-        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
-        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source/isolate-diagnostic.gn"
+        "--root=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
+        "--dotfile=@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source/isolate-diagnostic.gn"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/gn-complete-dependencies.log",
-      "log_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be"
+      "elapsed_seconds": 2.127076536000459,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/gn-complete-dependencies.log",
+      "log_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+      "pid": 13492,
+      "pgid": 13492
     },
     {
       "name": "native-executable-commands",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/build",
         "-t",
         "commands",
         "native_embedder"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/native-executable-commands.log",
-      "log_sha256": "b03d3ce6c0d10fc88537392345b90d72ee5f834411bdb20bc0fae846743b1207"
+      "elapsed_seconds": 6.186518448999777,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/native-executable-commands.log",
+      "log_sha256": "42c7d45fe8709b64a4ac447a6c17213df872b0d9493d0f93b64683c1aab49cce",
+      "pid": 13503,
+      "pgid": 13503
     },
     {
       "name": "actual-compile-database",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/build",
         "-t",
-        "compdb",
-        "cc",
-        "cxx"
+        "compdb"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/actual-compile-database.log",
-      "log_sha256": "200472a0861fdb80b8f6a6c17f396246ac31f5c813522a8a3fabb74b5a414088"
+      "elapsed_seconds": 17.810471075999885,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/actual-compile-database.log",
+      "log_sha256": "57261506d04e62882f1d614dcea89b28a9c0e2dcc0fed38290ed40aacea4d6b8",
+      "pid": 13505,
+      "pgid": 13505
     },
     {
       "name": "complete-native-build",
       "argv": [
         "@WORKSPACE@/sources/v8-reference/v8/third_party/ninja/ninja",
         "-C",
-        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+        "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/build",
         "-k",
         "1",
         "-j",
         "8",
         "native_embedder"
       ],
-      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
+      "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/source",
       "exit_code": 1,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/complete-native-build.log",
-      "log_sha256": "f37491404dae859e703514090dd88de70727d271fb38354aea4a0a25d22d2060"
+      "elapsed_seconds": 2118.797070961,
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/complete-native-build.log",
+      "log_sha256": "8aa878b5d2a953bcd3855b57e589a105ba98cfd2401690fd38604802c9f4bcc4",
+      "pid": 13506,
+      "pgid": 13506
     }
   ],
   "prior_timeout": {
@@ -348,18 +353,46 @@
   "production_image_changed": false,
   "old_wip_and_cache_preserved": true,
   "reproducer_publication": {
-    "portable_clean_checkout_entry_available": false,
-    "boundary": "Commands and hashes describe retained local workspace; portable SDK/overlay and clean full-target failure replay remain P0 work."
+    "portable_entry_published": true,
+    "entry": "tools/build-native-v8-integration.py",
+    "module": "apps/native_v8_integration",
+    "source_lock": {
+      "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/source-lock.json",
+      "sha256": "c642190a7b24796ce672dedd4be8291b80a7325930ff310c66174e82342edd4c"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/payload-lock.json",
+      "sha256": "d4f1ecbc772b8a2452fe6c589a981eeefef7d7e6402d76f9a2e8d09cd4f312c8"
+    },
+    "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
+    "clean_output_failure_replay_pass": true,
+    "final_driver_prepare": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/tool-review-05/positive-prepare/output/status.json",
+      "sha256": "d3fa887b3824e3a09003e49e4ce61f0cacfc3bda9956c7d14ceba3a4c100a3df"
+    },
+    "final_driver_difference_from_cold_replay": "Only added the tested hash guard for the host clang++ alias; runtime payload and build commands unchanged",
+    "fresh_host_bootstrap_pass": false,
+    "clean_complete_build_pass": false,
+    "sdk_search_order": [
+      "private overrides",
+      "upstream libc++",
+      "LLVM C SDK",
+      "Clang resource headers"
+    ],
+    "boundary": "Prepared pinned upstream checkout/sysroots and external tools required. No dependency fetch/bootstrap supplied; copied-cache runs are labeled separately."
   },
   "route_review": {
-    "issue": "https://github.com/awe0w0/GTOS/issues/9",
+    "issue_url": "https://github.com/awe0w0/GTOS/issues/9",
     "issue_updated_utc": "2026-10-09T15:37:06Z",
     "issue_comments": 0,
-    "latest_created_and_updated_issue_checked": true,
-    "review_baseline_dev": "2be7c31132bcd5bc3a9f70fc2cb616b638d2e5d5",
-    "delivery_architecture": "IA32 GTOS; architecture change requires measured evidence and an explicit user decision",
-    "next_functional_gate": "Real V8 Isolate/Context/Script execution and reclamation in the GTOS guest",
-    "review_changed_runtime_or_image": false
+    "latest_verified_ci": {
+      "head": "d9ace67c18f172b48dee5cea4a2d4fd7f006eeb4",
+      "run_id": 38122735830,
+      "url": "https://github.com/awe0w0/GTOS/actions/runs/38122735830",
+      "all_four_existing_jobs_pass": true,
+      "includes_full_v8_or_browser_guest": false
+    },
+    "boundary": "This publication is a complete-target replay milestone. No production kernel/ISO change or new guest engine pass."
   },
   "previous_complete_attempt": {
     "name": "attempt-05",
@@ -557,17 +590,27 @@
     "boundary": "Historical first failure before dynamic ELF/VDSO capability correction"
   },
   "latest_complete_attempt": {
-    "name": "attempt-06",
+    "name": "portable-cold-03",
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/build-status.json",
-      "sha256": "1a4ae07e132e10664c9d0c521497785f0763401c535d827b2ea259692d82f448"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/status.json",
+      "sha256": "a8546eb9306185838e0122110c28a8b89a33dbc5bb33dead6db45322ed98a1ae"
     },
-    "timestamp_utc": "2026-10-11T07:30:02.171935+00:00",
-    "dependencies_unchanged_from_attempt_05": true,
+    "timestamp_utc": "2026-10-11T09:37:07.384209+00:00",
+    "cold_build": true,
+    "build_exit_code": 1,
     "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
-    "sources_unchanged_during_run": true,
+    "bound_inputs_unchanged": true,
+    "dependency_graph_changed": false,
     "original_cache_preserved_during_run": true,
-    "build_exit_code": 1
+    "boundary": "Fresh output with prepared pinned DEPS/toolchain inputs; not a fresh-host bootstrap or a successful ELF link",
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/module-input-snapshot/source-lock.json",
+      "sha256": "3cf9639e1497397b36b58eceb95568af42cce7d6f9dbc136a83bc1b205a19a5d"
+    },
+    "builder": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-03/builder-input-snapshot.py",
+      "sha256": "e7d2b75631cb6487970cb1af8b80074043ea00ca2fe649bcc028827a921261d7"
+    }
   },
   "platform_adaptation_evidence": {
     "dynamic_elf": {
@@ -599,8 +642,8 @@
   },
   "pending_compiler_only_adaptations": {
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-native-errors-01/status.json",
-      "sha256": "6f977c1a2f186460e677e061c06d79bcb0c8c1922f5695271f7809509b18e0a8"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-native-errors-02/status.json",
+      "sha256": "50e6668498084d6b3bdf32dcc735e046117be2399cecf77bfbea3a9fd197dcf5"
     },
     "timestamp_utc": "2026-10-11T07:39:57.729277+00:00",
     "objects": [
@@ -623,36 +666,315 @@
     ],
     "files": {
       "src/base/platform/gtos-raw-io.h": {
-        "original_sha256": "d6d450a19f767750d8ed9c924cbc0f6a60e3ccf1ce182086968a42c68f631fd5",
-        "adapted_sha256": "277104ba4eed5131c2e1af906b5dae06cf7c068ebd3d9ff534929cfab9333460"
+        "current_sha256": "277104ba4eed5131c2e1af906b5dae06cf7c068ebd3d9ff534929cfab9333460"
       },
       "third_party/abseil-cpp/absl/log/internal/conditions.h": {
-        "original_sha256": "893823d25200261315cd2e44df454df7cedccf873fd8c0ec2af302293ea31783",
-        "adapted_sha256": "6597079de4014d3d1c2f23ae0629a90dd8d02811b8d3e6c1525d782e455a0463"
+        "current_sha256": "ed5d935ae29ee4dd94954834e9471aa1e82aa29701a2aaa827a61b5a6eff60ac"
       },
       "third_party/abseil-cpp/absl/log/internal/nullstream.h": {
-        "original_sha256": "3b16c74030df83194ad15e830fa8afedb352c2fe4d3cc27f7bb5c005e205589d",
-        "adapted_sha256": "0a1dce50ba618f7adfc974457fe4c9866d9ca5829267ad5f03631b1af8eef6cb"
+        "current_sha256": "a2418f0583b7f43cf4acc0cc8ae8814552a537797fb978679670e2fc1c6f9dd0"
       },
       "third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc": {
-        "original_sha256": "cab6f0f7190ef26884be4e7ef777bcb1913bf629587a9a8d0bda838d21868073",
-        "adapted_sha256": "1cc9ff95685072ed76f4d4e714472356adeed47fb3ad12c26cd2689eb4127a89"
+        "current_sha256": "1cc9ff95685072ed76f4d4e714472356adeed47fb3ad12c26cd2689eb4127a89"
       },
       "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc": {
-        "original_sha256": "8b03e80cf92e2b66f54790f150ae2ef4ff791c18bd2129ad79191f03f9500040",
-        "adapted_sha256": "ef0b76faf46353e765f70bed6ef42a0c728d4ae9f5da7b9d0f3e92a6e23da1a6"
+        "current_sha256": "ef0b76faf46353e765f70bed6ef42a0c728d4ae9f5da7b9d0f3e92a6e23da1a6"
       }
     },
-    "complete_target_replayed_after_adaptation": false,
+    "complete_target_replayed_after_adaptation": true,
     "guest_exit_semantics_pass": false,
     "guest_explicit_failure_and_reclamation_pass": false,
     "signal_handlers_supported": false,
-    "published_production_implementation": false
+    "published_production_implementation": false,
+    "published_diagnostic_implementation": true
   },
   "next_work_package": [
-    "Publish pinned portable SDK/platform overlay and a complete-target entry; reproduce the first real failure from clean inputs in a separate output directory.",
-    "Self-review pending Abseil adaptations, replay the unchanged complete native_embedder graph, and qualify actual immediate-exit/fault/lifecycle behavior in the guest. Implement required signal semantics only when actual consumer evidence demands them.",
-    "Resolve subsequent real complete-target compile/link/guest blockers using existing qualified services; avoid unrelated API expansion.",
-    "Measure the actual complete ELF, mappings, stack and heap before coherent admission/capacity changes; qualify real guest Isolate/Context/Script and exact reclamation."
-  ]
+    "Resolve actual Abseil log immediate-exit, entropy, synchronization and timezone consumers in the measured complete target; preserve graph and explicit unsupported-service behavior.",
+    "Qualify new native immediate-exit and failure paths in the guest, including skipped user destructors/buffer flush, exit status, sibling survival and exact kernel reclamation.",
+    "Replay the complete executable after each minimal service adaptation; wire existing FILE and libc++ services only from real consumer/link evidence.",
+    "After a full ELF exists, measure image/mappings/stack/heap before coherent capacity changes; prove real guest V8 Isolate/Context/Script before Content Shell local-page work."
+  ],
+  "retained_complete_attempts": [
+    {
+      "name": "attempt-06",
+      "evidence": {
+        "name": "attempt-06",
+        "status": {
+          "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/build-status.json",
+          "sha256": "1a4ae07e132e10664c9d0c521497785f0763401c535d827b2ea259692d82f448"
+        },
+        "timestamp_utc": "2026-10-11T07:30:02.171935+00:00",
+        "dependencies_unchanged_from_attempt_05": true,
+        "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+        "sources_unchanged_during_run": true,
+        "original_cache_preserved_during_run": true,
+        "build_exit_code": 1
+      },
+      "first_build_blocker": {
+        "object": "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o",
+        "file": "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+        "line": 37,
+        "diagnostic": "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc:37:10: fatal error: 'pthread.h' file not found",
+        "compile_argv": [
+          "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+          "-x",
+          "c++",
+          "--target=i686-unknown-none-elf",
+          "-ffreestanding",
+          "-fno-stack-protector",
+          "-fno-pic",
+          "-fno-pie",
+          "-fno-unwind-tables",
+          "-fno-asynchronous-unwind-tables",
+          "-mno-mmx",
+          "-msse2",
+          "-mfpmath=sse",
+          "-mno-sse3",
+          "-mno-ssse3",
+          "-mno-sse4",
+          "-mno-avx",
+          "-femulated-tls",
+          "-fstack-usage",
+          "-nostdinc",
+          "-nostdinc++",
+          "-DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1",
+          "-isystem",
+          "@WORKSPACE@/artifacts/native-v8-isolate-closure-20261008-a/source/tools/gtos_isolate_diagnostic/sdk",
+          "-isystem",
+          "@WORKSPACE@/sources/chromium-full/src/third_party/libc++/src/include",
+          "-isystem",
+          "@WORKSPACE@/artifacts/native-v8-isolate-closure-20261008-a/sdk",
+          "-isystem",
+          "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include",
+          "-fno-exceptions",
+          "-fno-rtti",
+          "-DCR_CLANG_REVISION=\"llvmorg-24-init-7747-g62397f8b-57\"",
+          "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE",
+          "-D__GTOS__=1",
+          "-DNDEBUG",
+          "-DNVALGRIND",
+          "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+          "-DABSL_ALLOCATOR_NOTHROW=1",
+          "-I../source",
+          "-Igen",
+          "-I../source/third_party/abseil-cpp",
+          "-fno-delete-null-pointer-checks",
+          "-fno-strict-overflow",
+          "-fno-ident",
+          "-fno-math-errno",
+          "-fno-strict-aliasing",
+          "-fcolor-diagnostics",
+          "-fdiagnostics-show-inlining-chain",
+          "-fmerge-all-constants",
+          "-fcrash-diagnostics-dir=../source/out/clang-crashreports",
+          "-fno-lifetime-dse",
+          "-mllvm",
+          "-instcombine-lower-dbg-declare=0",
+          "-mllvm",
+          "-split-threshold-for-reg-with-hint=0",
+          "-ffp-contract=off",
+          "-Wno-builtin-macro-redefined",
+          "-D__DATE__=",
+          "-D__TIME__=",
+          "-D__TIMESTAMP__=",
+          "-no-canonical-prefixes",
+          "-ftrivial-auto-var-init=pattern",
+          "-O2",
+          "-fdata-sections",
+          "-ffunction-sections",
+          "-fno-unique-section-names",
+          "-fomit-frame-pointer",
+          "-g0",
+          "-fsanitize=array-bounds",
+          "-fsanitize-trap=array-bounds",
+          "-fsanitize-ignore-for-ubsan-feature=array-bounds",
+          "-Wno-unsafe-buffer-usage-in-static-sized-array",
+          "-fsanitize=return",
+          "-fsanitize-trap=return",
+          "-fsanitize-ignore-for-ubsan-feature=return",
+          "-fsanitize=unreachable",
+          "-fsanitize-trap=unreachable",
+          "-fsanitize-ignore-for-ubsan-feature=unreachable",
+          "-Wheader-hygiene",
+          "-Wstring-conversion",
+          "-Wtautological-overlap-compare",
+          "-Xclang",
+          "-add-plugin",
+          "-Xclang",
+          "find-bad-constructs",
+          "-Xclang",
+          "-plugin-arg-find-bad-constructs",
+          "-Xclang",
+          "check-stack-allocated",
+          "-Xclang",
+          "-plugin-arg-find-bad-constructs",
+          "-Xclang",
+          "relax-ctor-checks-for-aggregates",
+          "-Xclang",
+          "-add-plugin",
+          "-Xclang",
+          "raw-ptr-plugin",
+          "-Xclang",
+          "-plugin-arg-raw-ptr-plugin",
+          "-Xclang",
+          "check-raw-ptr-to-stack-allocated",
+          "-Xclang",
+          "-plugin-arg-raw-ptr-plugin",
+          "-Xclang",
+          "disable-check-raw-ptr-to-stack-allocated-error",
+          "-Xclang",
+          "-plugin-arg-raw-ptr-plugin",
+          "-Xclang",
+          "raw-ptr-exclude-path=../source/third_party/dawn/",
+          "-Xclang",
+          "-plugin-arg-raw-ptr-plugin",
+          "-Xclang",
+          "raw-ptr-exclude-path=../source/build/config/clang/chrome/test/fuzzing/webidl_fuzzing/",
+          "-Xclang",
+          "-plugin-arg-raw-ptr-plugin",
+          "-Xclang",
+          "no-special-treatment-for-oilpanized-paths",
+          "-Xclang",
+          "-plugin-arg-raw-ptr-plugin",
+          "-Xclang",
+          "check-raw-ptr-in-blink",
+          "-Wall",
+          "-Wno-unused-variable",
+          "-Wno-unused-template",
+          "-Wno-c++11-narrowing",
+          "-Wno-unused-but-set-variable",
+          "-Wno-missing-field-initializers",
+          "-Wno-unused-parameter",
+          "-Wno-psabi",
+          "-Wno-stringop-overread",
+          "-Wloop-analysis",
+          "-Wno-unneeded-internal-declaration",
+          "-Wno-cast-function-type",
+          "-Wno-thread-safety-reference-return",
+          "-Wno-nontrivial-memcall",
+          "-Wno-uninitialized-const-pointer",
+          "-Wno-unused-but-set-global",
+          "-Werror",
+          "-Werror=#pragma-messages",
+          "-Wno-exit-time-destructors",
+          "-Wimplicit-int-conversion",
+          "-Wshorten-64-to-32",
+          "-Wsign-compare",
+          "-Wsign-conversion",
+          "-Wtautological-unsigned-zero-compare",
+          "-std=c++20",
+          "-Wno-trigraphs",
+          "-gsimple-template-names",
+          "-fno-exceptions",
+          "-fno-rtti",
+          "-Wno-invalid-offsetof",
+          "-Wenum-compare-conditional",
+          "-Wno-nullability-completeness",
+          "-Wbool-conversion",
+          "-Wconstant-conversion",
+          "-Wenum-conversion",
+          "-Wint-conversion",
+          "-Wliteral-conversion",
+          "-Wnon-literal-null-conversion",
+          "-Wnull-conversion",
+          "-Wobjc-literal-conversion",
+          "-Wstring-conversion",
+          "-Wbitfield-enum-conversion",
+          "-MMD",
+          "-MF",
+          "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o.d",
+          "-c",
+          "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+          "-o",
+          "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o"
+        ],
+        "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+        "dependency_path": [
+          "native_embedder",
+          "v8",
+          "v8_abseil",
+          "absl",
+          "absl_component_deps",
+          "failure_signal_handler"
+        ],
+        "analysis": "The latest complete target selects POSIX failure-signal handling on GTOS, which lacks that service. Log immediate-exit calls and an unused POSIX include also fail. Subsequent object-only adaptations need full-target replay and guest qualification; unsupported signal calls explicitly fail and are not implemented signal support."
+      },
+      "boundary": "Historical pre-adaptation failure"
+    },
+    {
+      "name": "attempt-07",
+      "status": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-07/build-status.json",
+        "sha256": "178d8ccda7377eed0e99453892ece7c2b5c4a5501722611cdaf474b56fa326bf"
+      },
+      "first_diagnostics": [
+        "FAILED: obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o ",
+        "../source/third_party/abseil-cpp/absl/random/internal/seed_material.cc:17:10: fatal error: 'fcntl.h' file not found",
+        "FAILED: obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o ",
+        "../source/third_party/abseil-cpp/absl/log/internal/log_message.cc:59:10: fatal error: 'unistd.h' file not found",
+        "FAILED: obj/third_party/abseil-cpp/absl/synchronization/internal/synchronization.futex_waiter.o ",
+        "../source/third_party/abseil-cpp/absl/synchronization/internal/futex.h:31:10: fatal error: 'unistd.h' file not found",
+        "FAILED: obj/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone.time_zone_info.o ",
+        "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc:38:10: fatal error: 'fcntl.h' file not found",
+        "FAILED: obj/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone.time_zone_libc.o ",
+        "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:121:30: error: no matching function for call to 'tm_gmtoff'",
+        "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:174:11: error: no matching function for call to 'tm_gmtoff'",
+        "../source/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc:185:15: error: no matching function for call to 'tm_gmtoff'"
+      ],
+      "boundary": "Retained complete-target failure; not guest engine acceptance"
+    },
+    {
+      "name": "portable-cold-01",
+      "status": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-cold-01/status.json",
+        "sha256": "085345f0b9f7e4010bd37830028c59dd36de32264050ba031b0c57310d2cadcc"
+      },
+      "first_diagnostics": [
+        "FAILED: obj/src/base/libv8_libbase.abort-mode.o ",
+        "../source/third_party/libc++/src/include/cstring:69:5: error: <cstring> tried including <string.h> but didn't find libc++'s <string.h> header.           This usually means that your header search paths are not configured properly.           The header search paths should contain the C++ Standard Library headers before           any C Standard Library, and you are probably using compiler flags that make that           not be the case.",
+        "FAILED: obj/src/base/libv8_libbase.bits.o ",
+        "../source/third_party/libc++/src/include/cstring:69:5: error: <cstring> tried including <string.h> but didn't find libc++'s <string.h> header.           This usually means that your header search paths are not configured properly.           The header search paths should contain the C++ Standard Library headers before           any C Standard Library, and you are probably using compiler flags that make that           not be the case.",
+        "../source/third_party/libc++/src/include/cwctype:61:5: error: <cwctype> tried including <wctype.h> but didn't find libc++'s <wctype.h> header.           This usually means that your header search paths are not configured properly.           The header search paths should contain the C++ Standard Library headers before           any C Standard Library, and you are probably using compiler flags that make that           not be the case.",
+        "../source/third_party/libc++/src/include/cwchar:121:5: error: <cwchar> tried including <wchar.h> but didn't find libc++'s <wchar.h> header.           This usually means that your header search paths are not configured properly.           The header search paths should contain the C++ Standard Library headers before           any C Standard Library, and you are probably using compiler flags that make that           not be the case.",
+        "../source/third_party/libc++/src/include/cstdio:107:5: error: <cstdio> tried including <stdio.h> but didn't find libc++'s <stdio.h> header.           This usually means that your header search paths are not configured properly.           The header search paths should contain the C++ Standard Library headers before           any C Standard Library, and you are probably using compiler flags that make that           not be the case.",
+        "../source/third_party/libc++/src/include/cerrno:33:5: error: <cerrno> tried including <errno.h> but didn't find libc++'s <errno.h> header.           This usually means that your header search paths are not configured properly.           The header search paths should contain the C++ Standard Library headers before           any C Standard Library, and you are probably using compiler flags that make that           not be the case.",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:144:42: error: use of undeclared identifier 'EAFNOSUPPORT'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:145:42: error: use of undeclared identifier 'EADDRINUSE'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:146:42: error: use of undeclared identifier 'EADDRNOTAVAIL'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:147:42: error: use of undeclared identifier 'EISCONN'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:152:42: error: use of undeclared identifier 'EBADMSG'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:154:42: error: use of undeclared identifier 'ECONNABORTED'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:155:42: error: use of undeclared identifier 'EALREADY'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:156:42: error: use of undeclared identifier 'ECONNREFUSED'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:157:42: error: use of undeclared identifier 'ECONNRESET'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:159:42: error: use of undeclared identifier 'EDESTADDRREQ'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:161:42: error: use of undeclared identifier 'ENOTEMPTY'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:165:42: error: use of undeclared identifier 'ENAMETOOLONG'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:167:42: error: use of undeclared identifier 'EHOSTUNREACH'",
+        "../source/third_party/libc++/src/include/__system_error/errc.h:168:42: error: use of undeclared identifier 'EIDRM'",
+        "fatal error: too many errors emitted, stopping now [-ferror-limit=]"
+      ],
+      "boundary": "Retained driver configuration error"
+    },
+    {
+      "name": "portable-resume-02",
+      "status": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-02/status.json",
+        "sha256": "40b71a085630b22b3abc72315e83e952cc5c0bf5461f3055e9548e28a4d03321"
+      },
+      "first_diagnostics": [
+        "FAILED: obj/third_party/abseil-cpp/absl/log/internal/log_message.log_message.o ",
+        "../source/third_party/abseil-cpp/absl/log/internal/log_message.cc:59:10: fatal error: 'unistd.h' file not found"
+      ],
+      "boundary": "Retained complete-target failure; not guest engine acceptance"
+    }
+  ],
+  "public_entry_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/public-entry-review-01.json",
+    "sha256": "5dccd83be75c428f277bf121d33f7d01b929a57dbaeb43952d5569512f0add5a",
+    "input_negative_cases": 7,
+    "actual_ninja_compiler_timeout_recovery_pass": true,
+    "original_cache_and_private_disk_preserved": true,
+    "runtime_guest_qualification": false
+  }
 }

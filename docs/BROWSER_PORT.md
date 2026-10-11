@@ -13,11 +13,11 @@ Isolate/JavaScript，再推进 Content Shell 的本地 HTML/CSS/JS 首帧、输�
 
 每轮以完整真实目标的构建或客体失败驱动最小服务修复，报告最远阶段、首个阻塞及
 修复后的目标增量。当前已生成完整 V8 embedder 的 GN 图和实际 ELF 链接命令；
-最近完整 Ninja 重放已越过不适用的动态 ELF/VDSO 默认路径，当前首个实际失败是
-Abseil failure_signal_handler.cc:37 缺少 pthread.h，随后还有日志/栈检查的 unistd.h。
-四个对象的后续独立编译通过，完整目标重放与客体语义仍待验证；信号处理仍不支持。
-完整 ELF、链接及客体运行仍未通过。文件流消费者的独立实验
-也暴露了 libc++ 配置和运行库依赖，不能代替完整目标的首阻塞。
+已发布锁定平台覆盖/SDK 和完整构建入口，并从准备好的 pinned 输入、新输出完成
+冷构建失败重放。最新首个诊断为 third_party/abseil-cpp/absl/log/internal/log_message.cc:59；同图此前还暴露了立即退出、
+熵、同步及时间/时区服务缺口。SDK 合并顺序错误的失败版本单独保留，不算 OS 根因。
+新增退出/故障路径尚待客体语义验证，信号处理仍不支持。完整 ELF、链接及客体运行
+仍未通过。文件流消费者的独立实验也不能代替完整目标继续前进的证据。
 普通 Chromium 根明确拒绝 Linux IA32；指定 Content Shell 根可生成目标图，但尚无
 GTOS Content Shell 构建或运行证明。详细版本、证据边界与阶段门槛见
 [集成主线](chromium-integration-plan.md)。

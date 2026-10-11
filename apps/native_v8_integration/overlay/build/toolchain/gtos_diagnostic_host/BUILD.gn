@@ -1,0 +1,27 @@
+import("//gtos-isolate-diagnostic.gni")
+import("//build/toolchain/gcc_toolchain.gni")
+
+clang_toolchain("linux_x86") {
+  assert(gtos_host_i386_runtime != "", "Set the pinned Linux IA32 host runtime")
+  enable_linker_map = true
+  # Real private loader for new host generators; never a GTOS target runtime.
+  extra_ldflags = "-Wl,--dynamic-linker=$gtos_host_i386_runtime/lib/i386-linux-gnu/ld-2.31.so -Wl,--disable-new-dtags -Wl,-rpath=$gtos_host_i386_runtime/lib/i386-linux-gnu:$gtos_host_i386_runtime/usr/lib/i386-linux-gnu:$gtos_host_i386_runtime/usr/lib"
+  toolchain_args = {
+    current_cpu = "x86"
+    current_os = "linux"
+    use_sysroot = true
+    use_glib = false
+    use_custom_libcxx = true
+  }
+}
+
+clang_toolchain("linux_x64") {
+  enable_linker_map = true
+  toolchain_args = {
+    current_cpu = "x64"
+    current_os = "linux"
+    use_sysroot = true
+    use_glib = false
+    use_custom_libcxx = true
+  }
+}

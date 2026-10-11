@@ -1,0 +1,4 @@
+declare_args() {
+  gtos_isolate_compile_diagnostic = false
+  gtos_host_i386_runtime = ""
+}

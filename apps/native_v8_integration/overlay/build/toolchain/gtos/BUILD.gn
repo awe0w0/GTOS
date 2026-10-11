@@ -1,0 +1,94 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license in LICENSE.
+# Freestanding platform qualification only. No Linux sysroot or host libc.
+
+declare_args() {
+  # Absolute directory of the reviewed official Clang/LLD/llvm-ar binaries.
+  # There is no host compiler fallback for GTOS target objects.
+  gtos_clang_bin = ""
+}
+
+assert(gtos_clang_bin != "", "Set gtos_clang_bin to the pinned official Clang")
+
+template("gtos_freestanding_toolchain") {
+  toolchain(target_name) {
+    _triple = invoker.triple
+    _elf = invoker.elf
+    _clang = "$gtos_clang_bin/clang"
+    _sdk = rebase_path("//tools/gtos_isolate_diagnostic/sdk", root_build_dir)
+    _libcxx = rebase_path("//third_party/libc++/src/include", root_build_dir)
+    _c_sdk = rebase_path("//tools/gtos_isolate_diagnostic/c-sdk", root_build_dir)
+    _clang_resource = "$gtos_clang_bin/../lib/clang/24/include"
+    _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -msse2 -mfpmath=sse -mno-sse3 -mno-ssse3 -mno-sse4 -mno-avx -femulated-tls -fstack-usage -nostdinc -nostdinc++ -DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1 -isystem $_sdk -isystem $_libcxx -isystem $_c_sdk -isystem $_clang_resource"
+
+    tool("cc") {
+      _common_c = string_replace(_common, " -nostdinc++", "")
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      command = "$_clang $_common_c -isystem $_libcxx -isystem $_c_sdk -isystem $_clang_resource {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
+      description = "GTOS CC {{source}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("cxx") {
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      command = "$_clang -x c++ $_common -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
+      description = "GTOS CXX {{source}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("asm") {
+      command =
+          "$_clang --target=$_triple {{asmflags}} -c {{source}} -o {{output}}"
+      description = "GTOS ASM {{source}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("alink") {
+      command = "$gtos_clang_bin/llvm-ar rcs {{output}} {{inputs}}"
+      description = "GTOS AR {{output}}"
+      outputs = [ "{{target_out_dir}}/{{target_output_name}}.a" ]
+      default_output_extension = ".a"
+      output_prefix = "lib"
+    }
+
+    tool("link") {
+      command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}}"
+      description = "GTOS LINK {{output}}"
+      outputs =
+          [ "{{root_out_dir}}/{{target_output_name}}{{output_extension}}" ]
+      default_output_extension = ".elf"
+    }
+
+    tool("stamp") {
+      command = "touch {{output}}"
+      description = "GTOS STAMP {{output}}"
+    }
+
+    tool("copy") {
+      command = "cp -af {{source}} {{output}}"
+      description = "GTOS COPY {{source}}"
+    }
+    toolchain_args = {
+      current_os = "gtos"
+      current_cpu = invoker.cpu
+      is_clang = true
+    }
+  }
+}
+
+gtos_freestanding_toolchain("clang_x86") {
+  cpu = "x86"
+  triple = "i686-unknown-none-elf"
+  elf = "elf_i386"
+}
+
+gtos_freestanding_toolchain("clang_x64") {
+  cpu = "x64"
+  triple = "x86_64-unknown-none-elf"
+  elf = "elf_x86_64"
+}

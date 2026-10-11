@@ -1,0 +1,143 @@
+import("//gtos-isolate-diagnostic.gni")
+import("//gni/v8.gni")
+
+# Real C clock_gettime and pinned LLVM per-thread errno, backed by native emutls.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_c_clock") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [ "LIBC_NAMESPACE=__llvm_libc_cr", "LIBC_ERRNO_MODE=2" ]
+    sources = [
+      "runtime/clock-gettime.cc",
+      "runtime/nanosleep.cc",
+      "//third_party/llvm-libc/src/src/errno/libc_errno.cpp",
+    ]
+    deps = [ ":native_runtime" ]
+  }
+}
+
+
+# Actual pinned LLVM modular memory formatting and complete floating backend.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_printf_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=2",
+      "LIBC_COPT_PRINTF_MODULAR=1",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/stdio/snprintf.cpp",
+      "//third_party/llvm-libc/src/src/stdio/snprintf_modular.cpp",
+      "//third_party/llvm-libc/src/src/stdio/vsnprintf.cpp",
+      "//third_party/llvm-libc/src/src/stdio/vsnprintf_modular.cpp",
+      "//third_party/llvm-libc/src/src/__support/printf_core/float_impl.cpp",
+      "//third_party/llvm-libc/src/src/__support/StringUtil/error_to_string.cpp",
+    ]
+    deps = [ ":native_c_clock" ]
+  }
+}
+
+# Actual pinned LLVM byte/string providers referenced by the selected engine.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_string_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/string/memcpy.cpp",
+      "//third_party/llvm-libc/src/src/string/memmove.cpp",
+      "//third_party/llvm-libc/src/src/string/memset.cpp",
+      "//third_party/llvm-libc/src/src/string/memcmp.cpp",
+      "//third_party/llvm-libc/src/src/string/memchr.cpp",
+      "//third_party/llvm-libc/src/src/string/strlen.cpp",
+      "//third_party/llvm-libc/src/src/string/strcmp.cpp",
+      "//third_party/llvm-libc/src/src/string/strncmp.cpp",
+      "//third_party/llvm-libc/src/src/string/strchr.cpp",
+      "//third_party/llvm-libc/src/src/string/strstr.cpp",
+      "//third_party/llvm-libc/src/src/string/strcpy.cpp",
+      "//third_party/llvm-libc/src/src/wchar/wmemchr.cpp",
+      "//third_party/llvm-libc/src/src/wchar/wcslen.cpp",
+    ]
+  }
+}
+
+group("compile_closure") {
+  assert(gtos_isolate_compile_diagnostic)
+  deps = [ ":consumer", "//:v8", "//:v8_libplatform" ]
+  if (current_os == "gtos") {
+    deps += [ ":native_string_libc" ]
+  }
+}
+v8_source_set("consumer") {
+  configs = []
+  sources = [ "main.cc" ]
+  deps = [ "//:v8_headers", "//:v8_libplatform" ]
+}
+
+# Real public C math symbols required by the IA32 libbase object.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_math_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/math/generic/fabs.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/sqrt.cpp",
+    ]
+  }
+}
+
+
+# Actual native clock provider shared by V8 TimeTicks and Abseil CycleClock.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_clock_bridge") {
+    assert(current_cpu == "x86")
+    configs = []
+    sources = [ "//src/base/platform/gtos-clock-bridge.cc" ]
+  }
+}
+
+
+# Real VM-backed allocation and compiler-emulated TLS for the native ABI.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_runtime") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "runtime", "runtime/sdk" ]
+    sources = [
+      "runtime/heap.cc",
+      "runtime/operators.cc",
+      "runtime/emutls.cc",
+      "runtime/abort.cc",
+      "runtime/thread-exit.cc",
+      "runtime/thread-core.cc",
+    ]
+  }
+}
+
+
+# Full real embedder link, separate from object-only qualification.
+executable("native_embedder") {
+  assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
+  configs = []
+  configs += [ "//build/config/clang:compiler_builtins" ]
+  sources = [ "native-entry.cc", "native-start.s" ]
+  deps = [ ":consumer", "//:v8", "//:v8_libplatform" ]
+  ldflags = [
+    "-T", rebase_path("native.ld", root_build_dir),
+    "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),
+  ]
+}

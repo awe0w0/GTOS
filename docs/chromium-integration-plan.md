@@ -8,8 +8,8 @@ HTML5。当前交付架构为 IA32；x64 的内核态启动、帧池与稀疏 VM
 
 ## 当前证据与限制
 
-此次校准前代码基线为 dev 2be7c31132bcd5bc3a9f70fc2cb616b638d2e5d5，
-已与 origin/dev 一致。对应 [CI](https://github.com/awe0w0/GTOS/actions/runs/38120819454)
+此次入口发布前代码基线为 dev d9ace67c18f172b48dee5cea4a2d4fd7f006eeb4，
+已与 origin/dev 一致。对应 [CI](https://github.com/awe0w0/GTOS/actions/runs/38122735830)
 四项既有门禁通过，不包含完整 V8 或浏览器运行。
 Linux 参考引擎运行已完成，GTOS 客体 Isolate、
 JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未验收。
@@ -24,28 +24,31 @@ JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未
 | Rust 上游目标版本 | 1edd55dcfcd573872c727fa3e086369a71661ee0，子版本 1120；本次 V8 目标未消费 Rust |
 | 构建主机 / 客体目标 | WSL Ubuntu-20.04 Linux x64 / GTOS i686-unknown-none-elf |
 
-当前工作区已建立真正的 native_embedder executable，依赖上游 V8 与 libplatform，
-包含原生入口、构造/析构数组以及真实 Platform/Isolate/Context/Script 调用。
-GN 图与实际 ELF 链接命令已生成。完整 Ninja 首轮因 30 分钟时限退出，独立缓存
-续编 attempt-05 的首个诊断是 Abseil elf_mem_image.h:48 缺少 elf.h。
-校正动态 ELF/VDSO 能力选择后，同一完整目标 attempt-06 已越过这一错误；
-当前最近一次完整构建仍失败，首个诊断是 failure_signal_handler.cc:37 缺少 pthread.h，
-随后是 examine_stack.cc、conditions.h、nullstream.h 的 unistd.h 缺失。
-两轮完整 GN 依赖清单 SHA256 相同，没有移除失败对象。完整 ELF 尚未生成，
-链接与客体运行均未通过。
-同图单独编译的原生入口已经通过，不能由此推断完整 ELF 可装载或执行。
+仓库现在提供 [完整目标模块](../apps/native_v8_integration/README.md) 和
+`tools/build-native-v8-integration.py`。71 个平台覆盖、424 个私有/C++ SDK 文件和
+438 个 LLVM C SDK 文件均按内容锁定；原生头搜索顺序为私有覆盖、上游 libc++、
+C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内容核对，构建输出必须
+是新目录。该入口需要准备好的上游 DEPS/sysroot，不负责在空白主机安装依赖。
 
-V8 的 v8_abseil 依赖整个 absl_component_deps，带入信号处理、日志及动态 ELF/VDSO
-支持。elf_mem_image.h 按 __ELF__ 选择动态符号能力，vdso_support.h 随之启用 VDSO，
-实现会读取 /proc/self/auxv 并调用系统服务。GTOS 的静态 ELF32 装载证明尚不提供
-这些动态设施。工作区实验保留 __ELF__ 和独立 __GTOS__ 身份，关闭不适用的动态
-ELF 能力；对照实际 Linux IA32 编译配置仍保留动态 ELF 能力。没有伪装 Linux。
+真正的 native_embedder executable 仍依赖完整上游 V8 与 libplatform，包含原生入口、
+构造/析构数组和真实 Platform/Isolate/Context/Script 调用。完整 GN 图及实际 ELF
+链接命令已经生成。修正 SDK 顺序后的冷构建 portable-cold-03 返回 1，首个诊断为
+`third_party/abseil-cpp/absl/log/internal/log_message.cc:59`：`'unistd.h' file not found`。
+缓存续编 portable-resume-02 的首个诊断是 log_message.cc:59 缺少 unistd.h，实际
+消费者是 FailQuietly 的 `_exit(1)`。此前同图 attempt-07 还实际暴露了 seed_material
+熵读取、futex 等待、时区文件读取及 tm_gmtoff/tm_zone 接口缺口。并行编译的首个
+报错次序随缓存变化，保留每轮原始诊断，不将头文件声明当成服务实现。
 
-随后工作区适配将日志立即退出接到已有 GTOS Exit ABI，去掉 examine_stack 未使用
-的 POSIX 包含，并使尚未支持的信号安装调用明确报错后触发用户故障。
-四个原先失败对象的独立编译通过；这批修改尚未重放完整目标，也未完成客体回归。
-信号处理仍不支持，不能把明确失败分支算作信号服务实现。下一轮完整目标的首阻塞
-须由实际重放取得，不能由四个对象通过推断。机器清单见 chromium-integration-status.json。
+上述完整 GN 依赖清单 SHA256 相同，未删失败对象。完整 ELF、链接与客体运行
+仍未通过。初版 portable-cold-01 错误地合并 SDK，将 C 头放在 libc++ 包装头前，
+属于本集成入口的配置错误；失败版本、输入和日志已保留，不算 OS 根因。
+当前已从规定的准备输入和全新输出重放真实阻塞，尚无空白主机 bootstrap 验收。
+
+动态 ELF/VDSO 能力适配保留 __ELF__ 与独立 __GTOS__ 身份，排除目前静态装载
+模型不提供的动态设施；实际 Linux IA32 对照仍保留原能力。日志立即退出的部分
+消费者接到 GTOS Exit ABI，信号安装调用明确报错并触发用户故障；四个原先失败
+对象已编译，完整目标已前进到新的服务消费者。新增立即退出/故障路径尚未完成
+客体语义验收，信号处理仍不支持。机器清单见 chromium-integration-status.json。
 
 真实 V8 heap-profiler.cc 的编译失败指向 output-stream.h:27 的 basic_ofstream 未定义。
 原 SDK 的 _LIBCPP_HAS_FILESYSTEM=0 隐去了文件流定义。独立覆盖配置后，
@@ -62,19 +65,20 @@ linux:clang_x86 下的 testonly executable。指定根绕过了普通根的架�
 
 本地日志保存在 GTOS-Chromium 工作区的 artifacts/native-v8-integration-20261011-a：
 attempt-04 保留完整目标超时，attempt-05 保留最初的 ELF 能力错误，
-attempt-06 保留最近一次完整目标的故障处理/日志失败；abseil-static-elf-01 与
+attempt-06 保留故障处理/日志失败，attempt-07 保留后续熵、同步和时区失败；abseil-static-elf-01 与
 abseil-static-elf-identity-02 保存 ELF 能力适配和 Linux 对照，
-abseil-native-errors-01 保存尚待集成与客体验证的四对象编译实验；
+abseil-native-errors-01/02 保存四对象编译及风格复审；
 direct-dependencies-01 是同图原生依赖诊断；
 fstream-config-diagnostic-01 和 stream-runtime-diagnostic-03 是独立配置/流实验；
 content-shell-linux-ia32-01 与 content-shell-target-evidence-02 分别保留根断言和目标图证据。
-这些工作区路径不是干净检出的构建入口；发布可移植补丁、SDK 锁和重放工具仍属于 P0。
+portable-cold-01 保留配置错误，portable-resume-02 保留修正后的续编，
+portable-cold-03 保留新输出的冷构建失败。公开模块提供重放入口；完整引擎运行仍待验收。
 
 ## 阶段与验收
 
 | 阶段 | 工作 | 完成证据 |
 | --- | --- | --- |
-| P0 | 固定架构、上游源码/工具链、完整 embedder 与 Content 图；发布补丁和失败清单 | 干净目录可重放完整目标并稳定复现首个失败；当前尚未完成 |
+| P0 | 固定架构、上游源码/工具链、完整 embedder 与 Content 图；发布补丁和失败清单 | 准备好的 pinned 输入和新输出已重放完整目标失败；空白主机 bootstrap 与完整链接尚未验收 |
 | P1 | 补足真实 ELF 所需装载、运行库与内存能力 | GTOS 内真实 Isolate 执行 JS，并精确回收；随后逐项加入数组、TypedArray、GC、microtasks、浮点与异常 |
 | P2 | 由真实 V8/Content 错误驱动线程、文件、IPC、共享内存等服务 | 实际消费者前进到下一阶段；边界、低内存、取消、同伴存活与回收通过 |
 | P3 | Content Shell、本地资源、软件 Skia/Ozone、窗口及输入 | 客体 HTML/CSS 首帧、鼠标/键盘触发 JS 更新 DOM 与重绘，关闭及 renderer 故障可回收 |
@@ -96,21 +100,18 @@ IA32 后续若遇到目标版本无法合理支持，或地址空间与隔离要
 
 ## 紧接着执行的工作包
 
-1. 将现有完整 embedder 的平台覆盖、SDK、源码/工具链锁和命令收束到可发布入口，
-   去掉对旧私有诊断目录的绝对路径依赖。使用独立输出目录，从干净输入重放完整
-   GN/Ninja 目标及首个真实失败；明确报告冷构建和缓存续编的区别。P0 目前未验收。
-2. 自审待集成的 Abseil 适配，重放完整 native_embedder，不删 GN 依赖或跳过失败
-   对象。验证实际日志退出调用的状态、析构/缓冲语义、异常故障及精确回收；若真实
-   消费者需要信号处理，记录调用证据并实现所需契约，不能用明确失败分支代替它。
-3. 按完整目标下一次实际编译、链接或客体失败补足最小运行环境，复用已验收组件。
-   libc++ 文件流接线依据实际符号推进，不预先扩展通用 libc API 清单。
-4. 取得完整 ELF 后记录段、映像页、映射、栈和堆需求，再处理必要的装载/容量问题；
-   以客体真实 Platform → Isolate → Context → Script 校验与回收作为 P1 首项验收。
-   Content Shell IA32 目标及架构可行性保持旁路核对，不能只凭指定根的 GN 成功判断。
+1. 保持公开完整目标、源码/工具锁和失败清单一致；以实际消费者补足当前立即退出、
+   熵、同步及时间/时区契约。冷构建和缓存续编分别记录，不移除失败依赖。
+2. 验证新增日志退出的状态、用户态析构/缓冲刷新跳过、用户故障、同伴存活和精确
+   内核回收。信号处理仍为明确失败；有真实调用需求后才实现对应服务。
+3. 每次必要适配都重放完整 native_embedder，依据实际链接符号复用 C FILE/libc++。
+   不预先扩展通用 libc API 清单，也不把诊断单任务锁当作原生线程或 futex。
+4. 完整 ELF 生成后记录段、映像页、映射、栈与堆需求，再联动处理装载/容量；以
+   客体 Platform → Isolate → Context → Script 校验与回收作为首项功能验收。
+   Content Shell IA32 可行性保持旁路核对，不能只凭指定根 GN 成功判断。
 
-本轮路线校准只更新文档和已有证据，不代表上述工作包已经完成。PNG 桌面输出、
-文件 ABI 和 C FILE 成果继续复用；生产文件挂载与磁盘 PNG 接线仍待完成，按真实
-引擎资源需求接入。暂缓无主线消费者的 API 扩展、桌面美化和新增一般硬件专项。
+PNG 桌面、文件 ABI 和 C FILE 成果继续复用；生产挂载与磁盘 PNG 接线仍待完成，
+按真实引擎资源需求接入。暂缓无主线消费者的 API 扩展、桌面美化和一般硬件专项。
 
 ## 迭代报告与回归
 

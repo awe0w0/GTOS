@@ -1,0 +1,13 @@
+import("//build/dotfile_settings.gni")
+buildconfig = "//build/config/BUILDCONFIG.gn"
+script_executable = "//third_party/cpython3/host/bin/python3"
+root = "//tools/gtos_isolate_diagnostic:compile_closure"
+default_args = {
+  enable_js_protobuf = false
+  use_cxx23 = false
+  use_llvm_libatomic = false
+  enable_rust = false
+}
+exec_script_allowlist = build_dotfile_settings.exec_script_allowlist + [
+  "//build_overrides/build.gni", "//gni/cluster_build.gni"
+]

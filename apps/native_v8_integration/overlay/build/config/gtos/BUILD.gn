@@ -1,0 +1,8 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license in LICENSE.
+
+config("platform") {
+  assert(is_gtos)
+  defines = [ "__GTOS__=1" ]
+  include_dirs = [ "//" ]
+}
