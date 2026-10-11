@@ -29,7 +29,7 @@ JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未
 | 构建主机 / 客体目标 | WSL Ubuntu-20.04 Linux x64 / GTOS i686-unknown-none-elf |
 
 仓库现在提供 [完整目标模块](../apps/native_v8_integration/README.md) 和
-`tools/build-native-v8-integration.py`。75 个平台覆盖、424 个私有/C++ SDK 文件和
+`tools/build-native-v8-integration.py`。77 个平台覆盖、424 个私有/C++ SDK 文件和
 438 个 LLVM C SDK 文件均按内容锁定；原生头搜索顺序为私有覆盖、上游 libc++、
 C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内容核对，构建输出必须
 是新目录。该入口需要准备好的上游 DEPS/sysroot，不负责在空白主机安装依赖。
@@ -52,12 +52,14 @@ ID，LLVM C pid_t 与 Abseil 日志类型使用有符号值；这一失败要求
 `seed_material.cc:17` 缺少 fcntl.h。该轮输入和依赖图仍未变，保留为历史失败。
 随后实际熵消费者接到 GTOS CPL3 CPUID/RDRAND 源；空指针、块数/地址溢出和
 当前用户范围显式检查，不支持或十次取数失败时返回 false，没有固定种子回退。
-portable-resume-06 越过该对象，当前首个失败为 futex.h:31 缺少 unistd.h，随后
-还报告 mutex.cc:65 缺少 fcntl.h。实际宏预处理确认独立 GTOS 身份，未选择 Linux
-futex 或 POSIX semaphore；但 pthread waiter 以非 Windows 条件假定能力，优先于
-标准 C++ 回退。须修正 GTOS 能力选择，再核对候选标准 C++ waiter 的实际等待。
-不能把未用分支的头依赖机械当成必须实现 Linux futex。完整 ELF 仍未生成，单任务锁
-仍不是通用线程。
+portable-resume-06 越过该对象，当时首个失败为 futex.h:31 缺少 unistd.h，随后
+还报告 mutex.cc:65 缺少 fcntl.h。核对实际覆盖及完整编译参数后确认 GTOS 原已
+排除 pthread、Linux futex 和 POSIX semaphore；此前基于上游文件的 pthread
+判断有误，原分析及纠错证据均保留。修复两处未用 POSIX 头条件后，
+portable-resume-07 的完整目标越过 futex waiter/mutex，首个失败前进到
+zlib/zconf.h:505 缺少 unistd.h，同轮仍报告 cctz 的 tm_gmtoff/tm_zone 和时区
+文件接口缺口。实际 waiter 选择标准 C++ 分支；条件等待目前只有 SDK 声明，
+没有原生提供者。完整 ELF 仍未生成，单任务锁仍不是通用线程。
 此前同图 attempt-07 还实际暴露了 seed_material
 熵读取、futex 等待、时区文件读取及 tm_gmtoff/tm_zone 接口缺口。并行编译的首个
 报错次序随缓存变化，保留每轮原始诊断，不将头文件声明当成服务实现。
@@ -140,10 +142,10 @@ IA32 后续若遇到目标版本无法合理支持，或地址空间与隔离要
 
 ## 紧接着执行的工作包
 
-1. 根据完整目标 futex.h:31 的失败和真实宏证据，排除未选用 Linux futex 分支的
-   POSIX 头依赖，修正非 Windows 条件对 pthread 能力的误判；核对候选 StdcppWaiter、
-   mutex 的实际调用及单任务/等待能力，
-   最小正确适配后重放同一 native_embedder。保留全部依赖、警告和失败日志。
+1. 根据完整目标 zlib/zconf.h:505 的新失败，绑定与 V8 DEPS 一致的 zlib 输入，
+   核对实际 adler32 消费者及同目标的 gzip 文件后端，再作最小正确 GTOS 适配。
+   不添加空 POSIX 头、假 fd，不关闭 V8_USE_ZLIB 掩盖缺口；重放同一 native_embedder，
+   保留全部依赖、警告和失败日志。
 2. 由新实际报错驱动同步、时间/时区等契约。复用已有已验收组件，不扩展无关叶子
    清单；已有退出客体证据持续保留，信号处理仍明确失败，不能报告已安装。
 3. 每次必要适配后重放完整目标，依据实际链接符号复用 C FILE/libc++；确定性种子

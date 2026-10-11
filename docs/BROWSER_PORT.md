@@ -18,8 +18,10 @@ Isolate/JavaScript，再推进 Content Shell 的本地 HTML/CSS/JS 首帧、输�
 portable-resume-04 前进到 log_message.cc:218 的无符号 pid_t 到有符号 tid_t 冲突。
 选择 GTOS uint32 日志 ID 类型后，portable-resume-05 越过日志消费者，失败前进到
 seed_material.cc:17。实际熵消费者接到受检查的 CPUID/RDRAND 源后，最新完整续编
-portable-resume-06 越过该对象，首个失败为 futex.h:31 缺少 unistd.h。下一步根据
-实际宏和 waiter 选择核对同步契约，再推进时间/时区与链接依赖。
+portable-resume-06 越过该对象，当时首个失败为 futex.h:31。修复两处未用 POSIX
+头条件后，portable-resume-07 越过 futex waiter/mutex，首个失败前进到
+zlib/zconf.h:505 缺少 unistd.h。实际 waiter 选择标准 C++ 分支，pthread 原已
+排除；此前分析已更正。条件等待仍无原生提供者，下一步核对 zlib 和时区实际契约。
 SDK 合并顺序错误的失败版本单独保留，不算 OS 根因。
 实际 Abseil 退出和原生入口已完成 O0/O2 CPL3 对照，同伴存活与精确回收通过；
 详见[退出消费者验证](../apps/native_v8_exit_probe/README.md)。信号处理仍不支持。完整 ELF、链接及引擎客体运行

@@ -20,7 +20,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "68c14e46fae052197748493c553430b01b88a19088836f5210cd782026b25051",
+  "payload_lock_sha256": "f20b0a4bd2956284c827e227a80c46817d43369671641c298ad9eed7540cf128",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -403,5 +403,6 @@
   "browser_guest_pass": false,
   "video_guest_pass": false,
   "html5_guest_pass": false,
-  "entropy_guest_qualified": true
+  "entropy_guest_qualified": true,
+  "synchronization_wait_guest_qualified": false
 }

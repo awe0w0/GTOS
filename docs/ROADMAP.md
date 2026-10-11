@@ -15,9 +15,10 @@ This roadmap separates verified capabilities from development targets. Work is r
 
 可移植 SDK/平台覆盖及完整目标入口已发布，准备好的 pinned 输入、新输出冷构建
 已到达真实上游服务阻塞。日志立即退出和 GTOS uint32 日志 ID 适配后，完整续编
-已越过 seed_material.cc 的熵读取阻塞，当前首个失败为 futex.h:31 的同步依赖。
+已越过熵读取及 futex waiter/mutex 的头依赖，当前首个失败为 zlib/zconf.h:505。
 实际 Abseil 退出及熵消费者的客体矩阵、同伴存活和精确回收通过；熵 O2 对象与
-完整目标逐字一致。下一步依实际 waiter 选择处理同步和时间/时区；完整 ELF 与客体
+完整目标逐字一致。实际 waiter 为标准 C++，pthread 原已排除；此前判断已更正，
+条件等待仍无原生提供者。下一步核对 zlib/时区实际契约；完整 ELF 与客体
 Isolate 仍未通过，不以新叶子探针数量代替主线进度。
 
 保留既有桌面、i386/x64 和组件回归；近期不扩展无真实消费者驱动的能力。

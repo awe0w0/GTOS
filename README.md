@@ -189,5 +189,6 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 完整 V8 构建驱动的[真实 Abseil 退出验证](apps/native_v8_exit_probe/README.md)已在
 GTOS CPL3 验证正常返回、立即退出、明确拒绝信号安装及精确回收；完整目标越过
 日志消费者后，[实际熵消费者](apps/native_v8_seed_probe/README.md)通过 O0/O2 的
-RDRAND 开关、边界、用户故障及回收验证，完整目标越过熵读取，当前首个阻塞为
-同步依赖。完整 Isolate/JS 和网页运行仍待验收。
+RDRAND 开关、边界、用户故障及回收验证。修复未用 POSIX 头条件后，完整目标
+越过 futex waiter/mutex，当前首个阻塞为 zlib/zconf.h:505；实际 waiter 为标准
+C++，条件等待原生提供者仍缺。完整 Isolate/JS 和网页运行仍待验收。

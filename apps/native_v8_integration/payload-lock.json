@@ -4700,11 +4700,21 @@
       "sha256": "122e9646a8e481499782d06eff43cafea168f09dacae55aaf73fe50c5ab086c6",
       "bytes": 1807,
       "origin": "GTOS CPL3 CPUID/RDRAND source with finite retries and checked user extent; enabled/disabled source and page-fault boundaries guest-qualified; hardware retry exhaustion unqualified"
+    },
+    "overlay/third_party/abseil-cpp/absl/synchronization/internal/futex.h": {
+      "sha256": "67353f9aaef16d78ed8db95ab3085a150eeccf7c368e99b8032d95cad032bc68",
+      "bytes": 5717,
+      "origin": "Pinned Abseil body; GTOS excludes unavailable unused POSIX headers. Compile-only platform selection, no wait provider added."
+    },
+    "overlay/third_party/abseil-cpp/absl/synchronization/mutex.cc": {
+      "sha256": "95c994599137698af2108dd8c7a6db227f96a4cc0ba2ffb8588888ce86a0e654",
+      "bytes": 119030,
+      "origin": "Pinned Abseil body; GTOS excludes unavailable unused POSIX headers. Compile-only platform selection, no wait provider added."
     }
   },
-  "overlay_files": 75,
+  "overlay_files": 77,
   "sdk_files": 424,
-  "total_bytes": 1922953,
+  "total_bytes": 2047700,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,
