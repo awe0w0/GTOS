@@ -4,11 +4,3 @@ include/storage/littlefs/lfs_util.h -text -whitespace
 src/storage/littlefs/lfs.c -text -whitespace
 src/storage/littlefs/lfs_util.c -text -whitespace
 docs/littlefs/LICENSE.md -text -whitespace
-# Preserve the published V8 integration input hashes on every checkout.
-apps/native_v8_integration/overlay/** -text -whitespace
-apps/native_v8_integration/sdk/** -text -whitespace
-apps/native_v8_integration/c-sdk/** -text -whitespace
-apps/native_v8_integration/*-LICENSE.txt -text -whitespace
-apps/native_v8_integration/source-lock.json -text
-apps/native_v8_integration/payload-lock.json -text
-tools/build-native-v8-integration.py -text

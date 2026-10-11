@@ -1,0 +1,2 @@
+# Preserve the byte hash recorded by the native V8 source lock.
+build-native-v8-integration.py -text
