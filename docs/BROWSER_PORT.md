@@ -13,7 +13,9 @@ Isolate/JavaScript，再推进 Content Shell 的本地 HTML/CSS/JS 首帧、输�
 
 每轮以完整真实目标的构建或客体失败驱动最小服务修复，报告最远阶段、首个阻塞及
 修复后的目标增量。当前已生成完整 V8 embedder 的 GN 图和实际 ELF 链接命令；
-完整链接及客体运行仍未通过。文件流消费者已暴露 libc++ 配置和运行库依赖。
+完整 Ninja 续编的首个实际失败是 Abseil elf_mem_image.h:48 缺少 elf.h，随后还有
+pthread.h、unistd.h；完整 ELF、链接及客体运行仍未通过。文件流消费者的独立实验
+也暴露了 libc++ 配置和运行库依赖，不能代替完整目标的首阻塞。
 普通 Chromium 根明确拒绝 Linux IA32；指定 Content Shell 根可生成目标图，但尚无
 GTOS Content Shell 构建或运行证明。详细版本、证据边界与阶段门槛见
 [集成主线](chromium-integration-plan.md)。

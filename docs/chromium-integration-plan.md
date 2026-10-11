@@ -22,8 +22,17 @@ JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未
 
 当前工作区已建立真正的 native_embedder executable，依赖上游 V8 与 libplatform，
 包含原生入口、构造/析构数组以及真实 Platform/Isolate/Context/Script 调用。
-GN 图与实际 ELF 链接命令已生成，完整 Ninja 构建正在推进；完整链接尚未通过。
+GN 图与实际 ELF 链接命令已生成。完整 Ninja 首轮因 30 分钟时限退出，独立缓存
+续编后实际失败，首个诊断是 Abseil elf_mem_image.h:48 缺少 elf.h，随后还有 pthread.h
+与 unistd.h 缺失。完整 ELF 尚未生成，链接与客体运行均未通过。
 同图单独编译的原生入口已经通过，不能由此推断完整 ELF 可装载或执行。
+
+V8 的 v8_abseil 依赖整个 absl_component_deps，带入信号处理、日志及动态 ELF/VDSO
+支持。elf_mem_image.h 按 __ELF__ 选择动态符号能力，vdso_support.h 随之启用 VDSO，
+实现会读取 /proc/self/auxv 并调用系统服务。GTOS 的静态 ELF32 装载证明尚不提供
+这些动态设施。下一步须核对真实消费者和平台能力边界，区分必要 SDK 声明、真实
+服务与不适用的默认路径；不能只补空头文件或伪装 Linux。完整目标的这个首个失败
+优先于下述单独文件流实验。机器清单见 chromium-integration-status.json。
 
 真实 V8 heap-profiler.cc 的编译失败指向 output-stream.h:27 的 basic_ofstream 未定义。
 原 SDK 的 _LIBCPP_HAS_FILESYSTEM=0 隐去了文件流定义。独立覆盖配置后，
@@ -39,7 +48,8 @@ linux:clang_x86 下的 testonly executable。指定根绕过了普通根的架�
 证明该图可生成，不能声明官方维护支持、实际编译/链接通过或 GTOS 平台可用。
 
 本地日志保存在 GTOS-Chromium 工作区的 artifacts/native-v8-integration-20261011-a：
-attempt-04 是完整目标构建；direct-dependencies-01 是同图原生依赖诊断；
+attempt-04 保留完整目标超时，attempt-05 保留续编的首个真实失败；
+direct-dependencies-01 是同图原生依赖诊断；
 fstream-config-diagnostic-01 和 stream-runtime-diagnostic-03 是独立配置/流实验；
 content-shell-linux-ia32-01 与 content-shell-target-evidence-02 分别保留根断言和目标图证据。
 这些工作区路径不是干净检出的构建入口；发布可移植补丁、SDK 锁和重放工具仍属于 P0。
