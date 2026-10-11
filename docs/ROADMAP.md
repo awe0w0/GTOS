@@ -5,6 +5,17 @@ a separately tested x86-64 boot/protection foundation for later browser work.
 This roadmap separates verified capabilities from development targets. Work is reviewed and committed to `dev`;
 `main` is not changed automatically. No prototype is described as production-ready.
 
+## 当前优先级（2026-10-11）
+
+依据 [issue #9](https://github.com/awe0w0/GTOS/issues/9)，当前交付架构为 GTOS 原生 IA32。
+开发循环为完整真实目标构建/客体运行、记录首个失败、实现必要服务、重新推进目标。
+近期顺序为：固定完整构建入口和阻塞清单 → 客体 V8 Isolate/JS → 真实消费者所需
+运行环境 → Content Shell 本地网页与输入/DOM → HTTP/HTTPS 与安全 → 音视频及
+更丰富的 HTML5。详见[集成主线](chromium-integration-plan.md)。完整原生浏览器仍未运行。
+
+保留既有桌面、i386/x64 和组件回归；近期不扩展无真实消费者驱动的能力。
+容量修改须由真实 ELF、映射和堆/栈观测驱动，并同步检查所有权、失败回滚与回收。
+
 ## Acceptance rules for every module
 
 1. Preserve bootability through GRUB Multiboot v1 and inspect compiler diagnostics.
@@ -136,9 +147,11 @@ limits rather than a general-purpose browser platform.
 ## Separate x86-64 browser-foundation track
 
 The measured sandbox-enabled Linux V8 control reserves roughly 1.35 TiB of
-virtual space. This motivates a separate x86-64 target rather than promising a
-maintained browser within the current i386 arena. Keep the working i386 build,
-desktop/language/game and native-isolation suite throughout the transition.
+virtual space. It motivated this separate x86-64 foundation; it does not measure
+the current IA32 workload's requirements. This is now a backup track, while
+native IA32 remains the current delivery target. Preserve the working i386
+desktop/language/game and native-isolation suite. Switching architecture requires
+actual target feasibility/resource evidence and an explicit decision.
 
 - First gate: validated real long-mode boot, four-level mappings, NX/WP, own
   descriptor/exception stacks and strict actual protection-fault tests

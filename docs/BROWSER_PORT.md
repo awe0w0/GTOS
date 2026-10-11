@@ -4,6 +4,20 @@ The requested outcome is Chromium executing inside GTOS and rendering real web
 pages through GTOS services. A host browser, remote browser session, screenshot
 proxy, or set of unimplemented API stubs does not satisfy that outcome.
 
+## 当前交付路线（2026-10-11 校准）
+
+按 [issue #9](https://github.com/awe0w0/GTOS/issues/9) 收束主线，当前唯一交付目标为
+GTOS 原生 IA32；x64 保留为备选基础。下一项功能验收是客体中的真实 V8
+Isolate/JavaScript，再推进 Content Shell 的本地 HTML/CSS/JS 首帧、输入与 DOM 更新，
+之后验收 HTTP/HTTPS、隔离、安全及音视频。Linux 参考运行和独立组件通过各自记录。
+
+每轮以完整真实目标的构建或客体失败驱动最小服务修复，报告最远阶段、首个阻塞及
+修复后的目标增量。当前已生成完整 V8 embedder 的 GN 图和实际 ELF 链接命令；
+完整链接及客体运行仍未通过。文件流消费者已暴露 libc++ 配置和运行库依赖。
+普通 Chromium 根明确拒绝 Linux IA32；指定 Content Shell 根可生成目标图，但尚无
+GTOS Content Shell 构建或运行证明。详细版本、证据边界与阶段门槛见
+[集成主线](chromium-integration-plan.md)。
+
 The kernel/desktop/language gates below completed at `29f6002`. Bounded native
 ELF32 execution and process isolation subsequently completed at `b36d0c2`, with
 exact-head CI passing. See the [official-upstream and resource assessment](browser-assessment.md).
@@ -99,11 +113,12 @@ publication remains reviewed GTOS modules on `dev`.
 
 ## Next architecture and service gates
 
-The selected next kernel target is a separate x86-64 bring-up, preserving the
-existing i386 desktop and its regression suite. This follows the maintained V8
-sandbox design and the measured reference workload's roughly 1.35 TiB virtual
-reservation. Reservation size is not physical-memory consumption. This choice
-does not assume that the Linux binary can execute unchanged in GTOS.
+The separate x86-64 bring-up below is a backup foundation, preserving the
+existing i386 desktop and its regression suite. Its measured sandbox-enabled
+Linux reference workload reserves roughly 1.35 TiB of virtual space; that is
+not physical-memory consumption or a measured requirement for the current
+IA32 diagnostic. The current delivery target is native IA32 GTOS. A change of
+architecture requires measured target evidence and an explicit decision.
 
 1. A bounded real long-mode boot with validated handoff, four-level tables,
    NX/write protection, exception stacks and actual protection-fault tests
@@ -144,13 +159,16 @@ Each stage must run real guest code and have a reviewable acceptance result:
 
 1. Native userspace ABI and isolation tests; a crashing test process leaves the
    desktop and another process alive
-2. Filesystem, threading, virtual-memory and IPC conformance tests sufficient for
-   the selected browser components
-3. Network/DNS/TLS and local deterministic HTTP fixture tests inside the guest
-4. Minimal supported Chromium executable/component brought up in GTOS
-5. Real renderer/browser integration with guest input and display surfaces
-6. Real webpage navigation tests, deterministic local fixtures first, then
-   appropriately bounded public-page tests with security limitations stated
+2. Complete pinned V8 embedder build/link, followed by real Isolate/Context/Script
+   execution and exact lifecycle reclamation inside GTOS
+3. Implement filesystem, threads, virtual memory and IPC as required by measured
+   failures of the real V8/Content targets, with relevant guest boundary tests
+4. Real Content Shell local HTML/CSS/JavaScript rendering, guest input, DOM
+   updates and window/renderer lifecycle verification
+5. Controlled guest HTTP, then DNS/TLS/certificate and HTTPS fixtures, with
+   process/sandbox security gates before public-page claims
+6. Video, broader HTML5 compatibility and GPU work after the local-page and
+   network gates; preserve existing component regression evidence
 
 The assessment must decide ordering and achievable scope using current upstream
 facts. This document records dependencies and proof requirements, not a promise

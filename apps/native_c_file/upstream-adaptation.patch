@@ -1,0 +1,146 @@
+diff --git a/src/__support/File/file.cpp b/src/__support/File/file.cpp
+--- a/src/__support/File/file.cpp
++++ b/src/__support/File/file.cpp
+@@ -87 +87 @@
+-    size_t ret_val =
++    FileIOResult result =
+@@ -89,2 +89,4 @@
+-    flush_unlocked();
+-    return ret_val;
++    int flush_error = flush_unlocked();
++    if (!result.has_error() && flush_error != 0)
++      result.error = flush_error;
++    return result;
+@@ -220,14 +222,21 @@
+-  size_t written = 0;
+-
+-  written = write_unlocked_nbf(primary.data(), primary.size());
+-  if (written < primary.size()) {
+-    err = true;
+-    return written;
+-  }
+-
+-  flush_unlocked();
+-
+-  written += write_unlocked_fbf(remainder.data(), remainder.size());
+-  if (written < len) {
+-    err = true;
+-    return written;
++  FileIOResult primary_result =
++      write_unlocked_nbf(primary.data(), primary.size());
++  if (primary_result.has_error() || primary_result.value < primary.size()) {
++    err = true;
++    return {primary_result.value,
++            primary_result.error != 0 ? primary_result.error : EIO};
++  }
++
++  int flush_error = flush_unlocked();
++  if (flush_error != 0) {
++    err = true;
++    return {primary_result.value, flush_error};
++  }
++
++  FileIOResult remainder_result =
++      write_unlocked_fbf(remainder.data(), remainder.size());
++  size_t written = primary_result.value + remainder_result.value;
++  if (remainder_result.has_error() || written < len) {
++    err = true;
++    return {written,
++            remainder_result.error != 0 ? remainder_result.error : EIO};
+@@ -397,2 +406 @@
+-  err = false; // This operation was a success.
+-  return c;
++  return static_cast<unsigned char>(c);
+@@ -471,0 +480 @@
++  int write_error = 0;
+@@ -478 +487 @@
+-        return buf_result.error;
++        write_error = buf_result.error != 0 ? buf_result.error : EIO;
+@@ -493 +502,2 @@
+-  return platform_close(this);
++  int close_error = platform_close(this);
++  return write_error != 0 ? write_error : close_error;
+@@ -517,2 +527,2 @@
+-      buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
+-      if (buf == nullptr)
++      auto *new_buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
++      if (new_buf == nullptr)
+@@ -519,0 +530 @@
++      buf = new_buf;
+@@ -522 +533 @@
+-      buf = new (ac) uint8_t[size];
++      auto *new_buf = new (ac) uint8_t[size];
+@@ -524,0 +536 @@
++      buf = new_buf;
+diff --git a/src/__support/File/file.h b/src/__support/File/file.h
+--- a/src/__support/File/file.h
++++ b/src/__support/File/file.h
+@@ -258 +258,4 @@
+-  void clearerr_unlocked() { err = false; }
++  void clearerr_unlocked() {
++    err = false;
++    eof = false;
++  }
+diff --git a/src/__support/threads/gtos_mutex.h b/src/__support/threads/gtos_mutex.h
+new file mode 100644
+--- /dev/null
++++ b/src/__support/threads/gtos_mutex.h
+@@ -0,0 +1,44 @@
++// GTOS platform mutex for the kernel-reported single user thread profile.
++#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_GTOS_MUTEX_H
++#define LLVM_LIBC_SRC___SUPPORT_THREADS_GTOS_MUTEX_H
++#include "src/__support/threads/mutex_common.h"
++#include "src/base/platform/gtos-native-services.h"
++
++namespace LIBC_NAMESPACE_DECL {
++class Mutex {
++  unsigned state = 0;
++  unsigned owner = 0;
++  bool unsupported;
++public:
++  constexpr Mutex(bool timed, bool recursive, bool robust, bool pshared,
++                  bool = false)
++      : unsupported(timed || recursive || robust || pshared) {}
++  MutexError try_lock() {
++    if (unsupported) __builtin_trap();
++    unsigned id = v8::base::gtos::CurrentProcessInfo().process_id;
++    unsigned expected = 0;
++    if (!__atomic_compare_exchange_n(&state, &expected, 1, false,
++                                     __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
++      return MutexError::BUSY;
++    owner = id;
++    return MutexError::NONE;
++  }
++  MutexError lock() {
++    // There is no second user thread which could release a busy normal lock.
++    // File::FileLock ignores errors, so never enter a critical section unlocked.
++    if (try_lock() != MutexError::NONE) __builtin_trap();
++    return MutexError::NONE;
++  }
++  MutexError unlock() {
++    if (unsupported || !__atomic_load_n(&state, __ATOMIC_RELAXED) ||
++        owner != v8::base::gtos::CurrentProcessInfo().process_id)
++      __builtin_trap();
++    owner = 0;
++    __atomic_store_n(&state, 0, __ATOMIC_RELEASE);
++    return MutexError::NONE;
++  }
++  bool is_robust() const { return false; }
++  MutexError reset() { return MutexError::BAD_LOCK_STATE; }
++};
++}
++#endif
+diff --git a/src/__support/threads/mutex.h b/src/__support/threads/mutex.h
+--- a/src/__support/threads/mutex.h
++++ b/src/__support/threads/mutex.h
+@@ -43 +43,3 @@
+-#if defined(__linux__) || defined(__APPLE__)
++#if defined(__GTOS__)
++#include "src/__support/threads/gtos_mutex.h"
++#elif defined(__linux__) || defined(__APPLE__)
+diff --git a/src/stdio/generic/fputc.cpp b/src/stdio/generic/fputc.cpp
+--- a/src/stdio/generic/fputc.cpp
++++ b/src/stdio/generic/fputc.cpp
+@@ -31 +31 @@
+-  return 0;
++  return uc;

@@ -160,6 +160,9 @@ i386 非 PAE 目标仍不具备 NX 保护。
 
 [原生 Chromium 项目](docs/BROWSER_PORT.md)正在通过已验证的内核/API 前置条件和独立
 Linux 参考构建逐步推进。Chromium 和网页渲染尚未在 GTOS 中运行。
+当前路线按[真实集成主线](docs/chromium-integration-plan.md)推进：完整 V8 构建与链接、
+GTOS Isolate/JS、本地 Content 网页及交互，再验收 HTTP/HTTPS 和音视频。
+当前交付架构为 IA32，x64 保留为备选；现阶段完整原生 Isolate 尚未运行。
 
 ## 32 位 Chromium 原生运行库诊断
 
@@ -179,4 +182,6 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 
 已验收的 [C 字节/字符串组件](apps/native_c_string/README.md)提供13个默认LLVM原生接口，覆盖对齐、重叠、页尾终止符、非法读写、取消及精确回收；O2对象与实际GN对象逐字一致，完整原生浏览器仍待闭合。
 
-已验收的[通用文件存储后端](docs/littlefs/README.md)保留完整 littlefs 读写算法，覆盖真实 ATA 持久化、文件和目录操作、所有者句柄回收、满盘及中断恢复；已验收的[原生文件 ABI](apps/native_files/README.md)接入真实 CPL3 用户页检查、文件和目录操作及延迟退出回收；stdio/fstream 和完整浏览器仍待接入。
+已验收的[通用文件存储后端](docs/littlefs/README.md)保留完整 littlefs 读写算法，覆盖真实 ATA 持久化、文件和目录操作、所有者句柄回收、满盘及中断恢复；已验收的[原生文件 ABI](apps/native_files/README.md)接入真实 CPL3 用户页检查、文件和目录操作及延迟退出回收。
+
+已验收的[原生 C 文件流组件](apps/native_c_file/README.md)提供固定 LLVM libc 的 21 个普通文件字节流接口，覆盖实际 ATA 读写、错误/EOF、缓冲失败、进程故障/取消及精确回收。标准流、完整 stdio/libc++ fstream、生产文件服务挂载、磁盘 PNG 到桌面窗口及完整 V8/浏览器仍待集成。
