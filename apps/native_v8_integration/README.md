@@ -11,7 +11,7 @@ Isolate 已在 GTOS 运行。
 
 ## 输入与来源
 
-`overlay/` 保存 73 个平台覆盖文件，`sdk/` 保存 424 个私有配置及 C++ 头文件，
+`overlay/` 保存 75 个平台覆盖文件，`sdk/` 保存 424 个私有配置及 C++ 头文件，
 `c-sdk/` 保存 438 个 LLVM C SDK 文件。搜索顺序固定为私有覆盖、上游 libc++、
 C SDK、Clang 资源头；合并两层 SDK 会改变 libc++ 的 `include_next` 语义。
 构建在独立目录
@@ -93,6 +93,11 @@ FailQuietly、ExitQuietly、NullStreamFatal 跳过析构和缓冲刷新，以及
 原生入口清理、同伴存活和精确回收。信号安装明确报错并触发用户故障；这不提供
 信号处理、pthread、sigaction、altstack 或 alarm。其余未调用桥及完整日志格式化
 仍待验收，完整 Isolate 资格状态保持未通过。
+
+熵分支连接 CPUID/RDRAND 的真实 CPL3 源，检测能力、有限重试并检查地址与长度。
+[实际熵消费者验证](../native_v8_seed_probe/README.md)通过 O0/O2 的源开/关矩阵、
+用户页故障和精确回收；O2 对象与完整目标逐字一致。完整目标已越过该对象，当前
+首个失败是 futex.h:31 的同步依赖。该证明不包括真机熵质量、熵池或 TLS。
 
 每轮从完整目标的新失败取得消费者证据，再实现必要服务和客体边界回归。已有
 C FILE、VM、TLS、时钟及 PNG 桌面成果继续复用。保持内核容量和整数 ISA 门禁，

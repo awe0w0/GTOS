@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "scope": "实际 Abseil CPU 熵消费者、原生入口和回收夹具；不包括完整 V8",
+  "files": {
+    "apps/native_v8_seed_probe/probe/kernel.cpp": "67fcce9ea4d0ef9abceed982c842d972aa60c37570d3f52cbf526b2918a1400e",
+    "apps/native_v8_seed_probe/probe/kernel_common.h": "a0f39bf6becf58423be2936f60fffd61f43c2bd25e4524c776b7d2369c3627d6",
+    "apps/native_v8_seed_probe/probe/linker.ld": "34d10d69218c46dfb065174d4ca2953259280d6c134c5b6b75cd119bf6a5c91e",
+    "apps/native_v8_seed_probe/probe/main.cc": "9fe65d00cac3dc17f36982b2fc53ba411cbdf7e36da8d6c854a936e5b34c8d99",
+    "apps/native_v8_seed_probe/probe/observer.py": "df3d956442c8376fb871a0de0cd23369b8c0001d4f678dd7aeb808b37e5df37e",
+    "apps/native_v8_seed_probe/probe/record.h": "039923b68e152a3ae8eb19a1d0960912e296476acc4c7a0ebd25376c8e4fe259",
+    "tools/build-native-v8-seed-probe.py": "45d1938ba6fe09ff089772951e761bdd5128ad05550cb3a975527013ab167542"
+  },
+  "complete_target": {
+    "name": "portable-resume-06",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/status.json",
+      "sha256": "695e47a3a41531cbcc96ef3351131f8fcde12e4855d99714697611d03cd40778"
+    },
+    "timestamp_utc": "2026-10-11T11:43:30.327804+00:00",
+    "cold_build": false,
+    "build_exit_code": 1,
+    "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+    "bound_inputs_unchanged": true,
+    "dependency_graph_changed": false,
+    "original_cache_preserved_during_run": true,
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/module-input-snapshot/source-lock.json",
+      "sha256": "5b50ad7a01eb38ddf9c9454b1f0587680892c76e3f9f323e523b3194cf050403"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/module-input-snapshot/payload-lock.json",
+      "sha256": "41f9dd6a15eeaaca0524f46328aab0c3a1096e8e046143df5bf30fa5620ad470"
+    },
+    "builder": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/builder-input-snapshot.py",
+      "sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe"
+    },
+    "boundary": "完整目标越过实际熵消费者，当前同步依赖失败；未生成完整 ELF，未验收客体 Isolate。"
+  },
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/seed-guest-01/status.json",
+    "sha256": "3101d971ce62ea3eb4a5be33f0cad2fe37b898668ba1aea4ed0b08cc3ad8a2f4"
+  },
+  "objects": {
+    "O0-seed_material.o": "acc719546feee4ea75e71ea6848062ca0f591c1a9b923159713e019200a73113",
+    "O0-thread-exit.o": "66a3b592a5730ca3de0596da96015f75dadbd24b1b9d0957fdebad19fa4dd684",
+    "O0-native-entry.o": "f2441c764993af1e50a5157bf064df7cbfe0c0626c0dd56e126b25cf65931894",
+    "O2-seed_material.o": "e4bd842af55ca035ade12486d567ecbfeae01587937cc7f5aa86dc1a1833f091",
+    "O2-thread-exit.o": "7c4675ce7058adb9a84628f3d8b1198a877755972da4ebf3a718404388d7c5f7",
+    "O2-native-entry.o": "96cd6556651bf581eb59bed2232d8057f2c198b87529e8172693453b44ed40cc"
+  },
+  "elfs": {
+    "O0-mode0": {
+      "sha256": "2cf30740a976504647ca66b20e293f7e71ea8e90ed61bea7b8e45d959dbfdb9f",
+      "load_pages": 8,
+      "process_cost": 13,
+      "heap_cost": 17
+    },
+    "O0-mode1": {
+      "sha256": "172bd500f56d63222f0c5743d789ae863c0f1572f12ec199e52a1ebb19400556",
+      "load_pages": 8,
+      "process_cost": 13,
+      "heap_cost": 17
+    },
+    "O0-mode2": {
+      "sha256": "9a68861507cf41912baf9b1d0b881a8bb9159e53329aed50442fec2f04006e08",
+      "load_pages": 8,
+      "process_cost": 13,
+      "heap_cost": 17
+    },
+    "O0-mode3": {
+      "sha256": "a546761746ae2b806bbcb93efadae8283e401801863af6757f4493fdc2bf97f1",
+      "load_pages": 8,
+      "process_cost": 13,
+      "heap_cost": 17
+    },
+    "O0-mode4": {
+      "sha256": "3659b313882800e7a9b90625d43e8a8c0ffe73511e84ad728b23a645bb3b0b47",
+      "load_pages": 7,
+      "process_cost": 12,
+      "heap_cost": 17
+    },
+    "O0-mode5": {
+      "sha256": "35f10dd3a32ebdb75d4d59a94dbae450e5eba67f176daecb654648ee2b85ca6a",
+      "load_pages": 8,
+      "process_cost": 13,
+      "heap_cost": 17
+    },
+    "O2-mode0": {
+      "sha256": "0ea4d2496ef64dfd04f9f83ea8e0d1be4592ae110ff55d550d847340f8bfad23",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode1": {
+      "sha256": "5eff52c40d3d7931e6377763f441138974d8607c95a3a91434d07aa8ebc2b0d0",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode2": {
+      "sha256": "b319156c4dae0bbbb347eb496f2f1877d0e918779266cdcd61a6b64b380cdbb2",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode3": {
+      "sha256": "f80f182c6b12fe25c0c6fe02630560480b89cb14638ed8e5c10a2393411c7c41",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode4": {
+      "sha256": "98e323aaa8f8f1022f71365a9c2cbe8063f98a42f7e10d1212bcf4c9b2b36c1e",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    },
+    "O2-mode5": {
+      "sha256": "cfa11ed99fe11af4040eb2573b7c016208303f8640e0086b785fb3dfd9fb2f7c",
+      "load_pages": 4,
+      "process_cost": 9,
+      "heap_cost": 17
+    }
+  },
+  "guest_evidence": [
+    {
+      "opt": 0,
+      "rdrand_enabled": true,
+      "memory_mib": 32,
+      "evidence": {
+        "cases": 6,
+        "target_reaps": 5,
+        "all_reaped": 6,
+        "frames": 7524,
+        "checks": 988,
+        "max_trap_stack": 3692
+      },
+      "negative_observer_controls": 164,
+      "guest_log_sha256": "d2a6062b3bba1813335e2727d1875902f5c02b3779c5896231029a0a11233080",
+      "disk_sha256": "563647f59d8fbebd8c6969ccde80b1148efde87f052143fa4f7eec432127837d"
+    },
+    {
+      "opt": 0,
+      "rdrand_enabled": false,
+      "memory_mib": 32,
+      "evidence": {
+        "cases": 6,
+        "target_reaps": 5,
+        "all_reaped": 6,
+        "frames": 7524,
+        "checks": 697,
+        "max_trap_stack": 3692
+      },
+      "negative_observer_controls": 164,
+      "guest_log_sha256": "31fbc5c37553134dc4bed31229c3fe98838a69b830c53e610228b97ac9467697",
+      "disk_sha256": "faafbfcfa0cde15a27f4e56a11676ab4f9c9ee73067ef72ddb4bc81eb054394c"
+    },
+    {
+      "opt": 2,
+      "rdrand_enabled": true,
+      "memory_mib": 64,
+      "evidence": {
+        "cases": 6,
+        "target_reaps": 5,
+        "all_reaped": 6,
+        "frames": 15741,
+        "checks": 967,
+        "max_trap_stack": 2464
+      },
+      "negative_observer_controls": 164,
+      "guest_log_sha256": "4f69ffe73feca55898f6ed1bacfeacc98a2e938043a8b9d0a00a70902163d3e2",
+      "disk_sha256": "563647f59d8fbebd8c6969ccde80b1148efde87f052143fa4f7eec432127837d"
+    },
+    {
+      "opt": 2,
+      "rdrand_enabled": false,
+      "memory_mib": 64,
+      "evidence": {
+        "cases": 6,
+        "target_reaps": 5,
+        "all_reaped": 6,
+        "frames": 15741,
+        "checks": 670,
+        "max_trap_stack": 2464
+      },
+      "negative_observer_controls": 164,
+      "guest_log_sha256": "1514759099644453412324d2e90e5ac3fc542c97c50c8aec5c58440b51262b6f",
+      "disk_sha256": "faafbfcfa0cde15a27f4e56a11676ab4f9c9ee73067ef72ddb4bc81eb054394c"
+    }
+  ],
+  "actual_complete_object": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-06/build/obj/third_party/abseil-cpp/absl/random/internal/seed_material.seed_material.o",
+    "sha256": "e4bd842af55ca035ade12486d567ecbfeae01587937cc7f5aa86dc1a1833f091"
+  },
+  "actual_O2_complete_object_identical": true,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "hardware_retry_exhaustion_injected": false,
+  "hardware_entropy_quality_qualified": false,
+  "GetSaltMaterial_guest_qualified": false,
+  "capacity_changed": false,
+  "production_image_changed": false,
+  "kernels": {
+    "O0": "da82e6129a81a91a47a42e3c85597e50f3e25f1fa5d9ffa1246d5ad042245e34",
+    "O2": "2788f888c05f2f6c1312a6ea0654f0e70e81dbb56d8206cd65393eeb80d2c9b2"
+  },
+  "kernel_integer_audits": {
+    "O0": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/seed-guest-01/O0/kernel-audit.log",
+      "sha256": "ff56fcce2aacf5fa58dc4de90ee98de160c4d63c001a17729f8107d65fcdda04"
+    },
+    "O2": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/seed-guest-01/O2/kernel-audit.log",
+      "sha256": "230449558901edee71c99cb38de97b5d8f6c416c66eac85ecfc871bd5f2da5b2"
+    }
+  },
+  "review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/seed-consumer-review-01.json",
+    "sha256": "37ba76fe933934269006769c2789e1be7a551dfbe31a5a7fb9e4c9746a1fd1aa"
+  },
+  "modified_provider_cache_rejected_before_compile": true,
+  "unchanged_upstream_else_body": true
+}

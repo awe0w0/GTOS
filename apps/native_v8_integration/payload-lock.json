@@ -4690,11 +4690,21 @@
       "sha256": "cb88de8f5d85707393e919da9cb90b954a53abb01f7b17d442473cf0fe844e09",
       "bytes": 30604,
       "origin": "Pinned Abseil log_message.cc body plus GTOS immediate-exit ABI branch; actual exit consumer guest-qualified by native_v8_exit_probe; complete V8 unqualified"
+    },
+    "overlay/third_party/abseil-cpp/absl/random/internal/seed_material.cc": {
+      "sha256": "8620b425b1aad6d372c7824cae670546f397427699ea4a641ad2e82255977ab7",
+      "bytes": 7499,
+      "origin": "Pinned Abseil body plus GTOS CPU-backed entropy branch; actual consumer guest-qualified by native_v8_seed_probe; full V8 unqualified"
+    },
+    "overlay/src/base/platform/gtos-entropy.h": {
+      "sha256": "122e9646a8e481499782d06eff43cafea168f09dacae55aaf73fe50c5ab086c6",
+      "bytes": 1807,
+      "origin": "GTOS CPL3 CPUID/RDRAND source with finite retries and checked user extent; enabled/disabled source and page-fault boundaries guest-qualified; hardware retry exhaustion unqualified"
     }
   },
-  "overlay_files": 73,
+  "overlay_files": 75,
   "sdk_files": 424,
-  "total_bytes": 1913647,
+  "total_bytes": 1922953,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

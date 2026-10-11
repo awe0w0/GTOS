@@ -29,7 +29,7 @@ JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未
 | 构建主机 / 客体目标 | WSL Ubuntu-20.04 Linux x64 / GTOS i686-unknown-none-elf |
 
 仓库现在提供 [完整目标模块](../apps/native_v8_integration/README.md) 和
-`tools/build-native-v8-integration.py`。73 个平台覆盖、424 个私有/C++ SDK 文件和
+`tools/build-native-v8-integration.py`。75 个平台覆盖、424 个私有/C++ SDK 文件和
 438 个 LLVM C SDK 文件均按内容锁定；原生头搜索顺序为私有覆盖、上游 libc++、
 C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内容核对，构建输出必须
 是新目录。该入口需要准备好的上游 DEPS/sysroot，不负责在空白主机安装依赖。
@@ -49,7 +49,15 @@ ID，LLVM C pid_t 与 Abseil 日志类型使用有符号值；这一失败要求
 验收，保留为历史失败。随后为 GTOS 选择 Abseil 已支持的 uint32
 日志 ID 类型，保留原生 ABI 的完整 ID 范围及 Linux 原分支；不通过强转或关闭警告
 处理符号性冲突。最新完整续编 portable-resume-05 越过日志消费者，首个失败变为
-`seed_material.cc:17` 缺少 fcntl.h。该轮输入和依赖图仍未变，完整 ELF 仍未生成。
+`seed_material.cc:17` 缺少 fcntl.h。该轮输入和依赖图仍未变，保留为历史失败。
+随后实际熵消费者接到 GTOS CPL3 CPUID/RDRAND 源；空指针、块数/地址溢出和
+当前用户范围显式检查，不支持或十次取数失败时返回 false，没有固定种子回退。
+portable-resume-06 越过该对象，当前首个失败为 futex.h:31 缺少 unistd.h，随后
+还报告 mutex.cc:65 缺少 fcntl.h。实际宏预处理确认独立 GTOS 身份，未选择 Linux
+futex 或 POSIX semaphore；但 pthread waiter 以非 Windows 条件假定能力，优先于
+标准 C++ 回退。须修正 GTOS 能力选择，再核对候选标准 C++ waiter 的实际等待。
+不能把未用分支的头依赖机械当成必须实现 Linux futex。完整 ELF 仍未生成，单任务锁
+仍不是通用线程。
 此前同图 attempt-07 还实际暴露了 seed_material
 熵读取、futex 等待、时区文件读取及 tm_gmtoff/tm_zone 接口缺口。并行编译的首个
 报错次序随缓存变化，保留每轮原始诊断，不将头文件声明当成服务实现。
@@ -68,6 +76,13 @@ Abseil 函数和完整目标原生入口，复用哈希一致的 FILE/内核对�
 和 fini 析构并刷新缓冲，立即退出/故障跳过；活跃用户同伴、ring0 和启动任务继续
 推进。两组各有 138 个观察器负例，内核仍通过原整数指令审计。信号处理仍不支持，
 完整日志格式化和完整 V8 不由这些消费者夹具验收。机器清单见 chromium-integration-status.json。
+
+[实际熵消费者验证](../apps/native_v8_seed_probe/README.md)使用冻结完整目标中的
+真实 ReadSeedMaterialFromOSEntropy 和原生入口，O2 对象与完整目标逐字一致。
+O0/32 MiB/单 vCPU 与 O2/64 MiB/四 vCPU 分别开启和关闭 RDRAND；四组各六个任务
+精确回收、同伴继续，各有 164 个观察器负例。开启源时验证跨页、字节尾部、长度
+溢出和实际未映射/只读页故障，关闭源时返回 false 且缓冲保持原值。没有新增随机
+syscall、扩容或 ISA 豁免；不验收 GetSaltMaterial、熵池、真机熵质量、TLS 或完整 V8。
 
 真实 V8 heap-profiler.cc 的编译失败指向 output-stream.h:27 的 basic_ofstream 未定义。
 原 SDK 的 _LIBCPP_HAS_FILESYSTEM=0 隐去了文件流定义。独立覆盖配置后，
@@ -125,8 +140,10 @@ IA32 后续若遇到目标版本无法合理支持，或地址空间与隔离要
 
 ## 紧接着执行的工作包
 
-1. 先根据完整目标 seed_material.cc:17 的失败核对实际熵消费者、GTOS 熵来源和
-   失败语义，最小正确适配后重放同一 native_embedder。保留全部依赖、警告和失败日志。
+1. 根据完整目标 futex.h:31 的失败和真实宏证据，排除未选用 Linux futex 分支的
+   POSIX 头依赖，修正非 Windows 条件对 pthread 能力的误判；核对候选 StdcppWaiter、
+   mutex 的实际调用及单任务/等待能力，
+   最小正确适配后重放同一 native_embedder。保留全部依赖、警告和失败日志。
 2. 由新实际报错驱动同步、时间/时区等契约。复用已有已验收组件，不扩展无关叶子
    清单；已有退出客体证据持续保留，信号处理仍明确失败，不能报告已安装。
 3. 每次必要适配后重放完整目标，依据实际链接符号复用 C FILE/libc++；确定性种子

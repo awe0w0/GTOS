@@ -1,0 +1,3 @@
+# Preserve source-lock bytes across checkout settings.
+probe/** -text
+source-lock.json -text

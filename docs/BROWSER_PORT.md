@@ -16,13 +16,16 @@ Isolate/JavaScript，再推进 Content Shell 的本地 HTML/CSS/JS 首帧、输�
 已发布锁定平台覆盖/SDK 和完整构建入口，并从准备好的 pinned 输入、新输出完成
 冷构建失败重放。已发布入口的冷构建首个诊断为 log_message.cc:59 缺少 unistd.h。
 portable-resume-04 前进到 log_message.cc:218 的无符号 pid_t 到有符号 tid_t 冲突。
-选择 GTOS uint32 日志 ID 类型后，最新完整续编 portable-resume-05 越过日志消费者，
-当前首个失败为 seed_material.cc:17 缺少 fcntl.h。下一步按实际消费者处理熵来源、
-失败契约，再推进同步和时间/时区依赖。
+选择 GTOS uint32 日志 ID 类型后，portable-resume-05 越过日志消费者，失败前进到
+seed_material.cc:17。实际熵消费者接到受检查的 CPUID/RDRAND 源后，最新完整续编
+portable-resume-06 越过该对象，首个失败为 futex.h:31 缺少 unistd.h。下一步根据
+实际宏和 waiter 选择核对同步契约，再推进时间/时区与链接依赖。
 SDK 合并顺序错误的失败版本单独保留，不算 OS 根因。
 实际 Abseil 退出和原生入口已完成 O0/O2 CPL3 对照，同伴存活与精确回收通过；
 详见[退出消费者验证](../apps/native_v8_exit_probe/README.md)。信号处理仍不支持。完整 ELF、链接及引擎客体运行
-仍未通过。文件流消费者的独立实验也不能代替完整目标继续前进的证据。
+仍未通过。[实际熵消费者](../apps/native_v8_seed_probe/README.md)的 O0/O2 源开/关
+矩阵、长度/页边界、同伴存活和精确回收通过，O2 对象与完整目标逐字一致；不声明
+真机熵质量或 TLS 安全。文件流独立实验也不能代替完整目标继续前进的证据。
 普通 Chromium 根明确拒绝 Linux IA32；指定 Content Shell 根可生成目标图，但尚无
 GTOS Content Shell 构建或运行证明。详细版本、证据边界与阶段门槛见
 [集成主线](chromium-integration-plan.md)。
