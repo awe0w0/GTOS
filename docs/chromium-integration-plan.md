@@ -8,9 +8,13 @@ HTML5。当前交付架构为 IA32；x64 的内核态启动、帧池与稀疏 VM
 
 ## 当前证据与限制
 
-此次入口发布前代码基线为 dev d9ace67c18f172b48dee5cea4a2d4fd7f006eeb4，
-已与 origin/dev 一致。对应 [CI](https://github.com/awe0w0/GTOS/actions/runs/38122735830)
-四项既有门禁通过，不包含完整 V8 或浏览器运行。
+本次路线校准前 dev 与 origin/dev 为 9ad59b3d5cdc8767e5e7d22d4a9a63b891bb7b6e；
+完整构建入口在 82c93df 发布。9ad59b3 修正根 .gitattributes 改动触发的文件系统
+源码锁回归，将 V8 属性限定在模块目录；未修改资格锁或放宽检查。
+最新 [CI](https://github.com/awe0w0/GTOS/actions/runs/38130414120) 观察时文件系统、
+文件 ABI 和 sparse VM 三项通过，verify 仍在运行。此前 d9ace67 的
+[CI](https://github.com/awe0w0/GTOS/actions/runs/38122735830) 四项既有门禁通过。
+这些门禁均不包含完整 V8 或浏览器运行。
 Linux 参考引擎运行已完成，GTOS 客体 Isolate、
 JavaScript、Content 首帧、DOM 交互、网页导航、视频与 HTML5 尚未验收。
 
@@ -35,7 +39,15 @@ C SDK、Clang 资源头。外部源码/工具及宿主运行库按版本和内�
 链接命令已经生成。修正 SDK 顺序后的冷构建 portable-cold-03 返回 1，首个诊断为
 `third_party/abseil-cpp/absl/log/internal/log_message.cc:59`：`'unistd.h' file not found`。
 缓存续编 portable-resume-02 的首个诊断是 log_message.cc:59 缺少 unistd.h，实际
-消费者是 FailQuietly 的 `_exit(1)`。此前同图 attempt-07 还实际暴露了 seed_material
+消费者是 FailQuietly 的 `_exit(1)`。最新 portable-resume-04 使用保留的 cold-03
+缓存副本，加入尚未提交的日志立即退出适配；完整目标仍返回 1，首个诊断前进到
+log_message.cc:218 的 `pid_t`（unsigned int）到日志 `tid_t`（int）的符号性冲突，
+随后报告 seed_material.cc:17 缺少 fcntl.h。已有 GTOS sysinfo.h 覆盖使用无符号
+ID，LLVM C pid_t 与 Abseil 日志类型使用有符号值；下一步须核对实际 ID 范围和
+转换契约，不能直接关闭警告或用未经边界证明的强转掩盖。该轮 GN 依赖图未变、
+绑定输入未变；输入快照、准确编译命令和完整失败日志已保留。未提交日志分支尚无
+客体语义验收，不作为已发布或已运行的引擎成果。
+此前同图 attempt-07 还实际暴露了 seed_material
 熵读取、futex 等待、时区文件读取及 tm_gmtoff/tm_zone 接口缺口。并行编译的首个
 报错次序随缓存变化，保留每轮原始诊断，不将头文件声明当成服务实现。
 
@@ -72,7 +84,8 @@ direct-dependencies-01 是同图原生依赖诊断；
 fstream-config-diagnostic-01 和 stream-runtime-diagnostic-03 是独立配置/流实验；
 content-shell-linux-ia32-01 与 content-shell-target-evidence-02 分别保留根断言和目标图证据。
 portable-cold-01 保留配置错误，portable-resume-02 保留修正后的续编，
-portable-cold-03 保留新输出的冷构建失败。公开模块提供重放入口；完整引擎运行仍待验收。
+portable-cold-03 保留新输出的冷构建失败，portable-resume-04 保留未提交日志适配后的
+完整续编失败。公开模块提供重放入口；完整引擎运行仍待验收。
 
 ## 阶段与验收
 
@@ -100,12 +113,14 @@ IA32 后续若遇到目标版本无法合理支持，或地址空间与隔离要
 
 ## 紧接着执行的工作包
 
-1. 保持公开完整目标、源码/工具锁和失败清单一致；以实际消费者补足当前立即退出、
-   熵、同步及时间/时区契约。冷构建和缓存续编分别记录，不移除失败依赖。
-2. 验证新增日志退出的状态、用户态析构/缓冲刷新跳过、用户故障、同伴存活和精确
-   内核回收。信号处理仍为明确失败；有真实调用需求后才实现对应服务。
-3. 每次必要适配都重放完整 native_embedder，依据实际链接符号复用 C FILE/libc++。
-   不预先扩展通用 libc API 清单，也不把诊断单任务锁当作原生线程或 futex。
+1. 先处理完整目标 log_message.cc:218 的 GTOS/Abseil ID 契约冲突，再重放同一
+   native_embedder。保留全部依赖、警告与原始失败；区分发布入口和未提交适配。
+2. 以实际日志消费者进行必要的正常退出、立即退出与显式故障对照，验证退出状态、
+   用户态析构/缓冲刷新跳过、同伴存活和精确回收。复用已有已验收组件，不扩展无关
+   叶子清单；信号处理仍明确失败，不能报告已安装。
+3. 随后按完整目标实际报错处理熵、同步及时间/时区契约，每次必要适配后重放完整
+   目标。依据实际链接符号复用 C FILE/libc++；确定性种子不等于系统熵，诊断单任务
+   锁不等于原生线程或 futex。冷构建和缓存续编分别记录。
 4. 完整 ELF 生成后记录段、映像页、映射、栈与堆需求，再联动处理装载/容量；以
    客体 Platform → Isolate → Context → Script 校验与回收作为首项功能验收。
    Content Shell IA32 可行性保持旁路核对，不能只凭指定根 GN 成功判断。

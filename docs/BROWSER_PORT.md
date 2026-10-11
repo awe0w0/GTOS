@@ -14,8 +14,11 @@ Isolate/JavaScript，再推进 Content Shell 的本地 HTML/CSS/JS 首帧、输�
 每轮以完整真实目标的构建或客体失败驱动最小服务修复，报告最远阶段、首个阻塞及
 修复后的目标增量。当前已生成完整 V8 embedder 的 GN 图和实际 ELF 链接命令；
 已发布锁定平台覆盖/SDK 和完整构建入口，并从准备好的 pinned 输入、新输出完成
-冷构建失败重放。最新首个诊断为 third_party/abseil-cpp/absl/log/internal/log_message.cc:59；同图此前还暴露了立即退出、
-熵、同步及时间/时区服务缺口。SDK 合并顺序错误的失败版本单独保留，不算 OS 根因。
+冷构建失败重放。已发布入口的冷构建首个诊断为 log_message.cc:59 缺少 unistd.h。
+最新未提交日志适配的完整续编 portable-resume-04 前进到 log_message.cc:218 的
+无符号 pid_t 到有符号 tid_t 冲突，随后暴露 seed_material.cc:17 缺少 fcntl.h。
+先核对 GTOS/Abseil ID 范围与转换契约，再按完整目标处理熵、同步和时间/时区依赖。
+SDK 合并顺序错误的失败版本单独保留，不算 OS 根因。
 新增退出/故障路径尚待客体语义验证，信号处理仍不支持。完整 ELF、链接及客体运行
 仍未通过。文件流消费者的独立实验也不能代替完整目标继续前进的证据。
 普通 Chromium 根明确拒绝 Linux IA32；指定 Content Shell 根可生成目标图，但尚无
