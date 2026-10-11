@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-11T07:05:59.923322+00:00",
-  "scope": "Complete upstream V8 executable build failure and compiler-only dependency experiments; no guest engine acceptance",
+  "recorded_utc": "2026-10-11T07:47:58.825092+00:00",
+  "scope": "Latest complete upstream V8 executable build failure, retained earlier failure, and compiler-only platform experiments; no guest engine acceptance",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -32,10 +32,10 @@
   "link_pass": false,
   "full_elf_exists": false,
   "first_build_blocker": {
-    "object": "obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.elf_mem_image.o",
-    "file": "third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h",
-    "line": 48,
-    "diagnostic": "../source/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h:48:10: fatal error: 'elf.h' file not found",
+    "object": "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o",
+    "file": "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+    "line": 37,
+    "diagnostic": "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc:37:10: fatal error: 'pthread.h' file not found",
     "compile_argv": [
       "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
       "-x",
@@ -203,26 +203,24 @@
       "-Wbitfield-enum-conversion",
       "-MMD",
       "-MF",
-      "obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.elf_mem_image.o.d",
+      "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o.d",
       "-c",
-      "../source/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc",
+      "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
       "-o",
-      "obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.elf_mem_image.o"
+      "obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o"
     ],
     "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
     "dependency_path": [
+      "native_embedder",
+      "v8",
       "v8_abseil",
-      "third_party/abseil-cpp:absl",
+      "absl",
       "absl_component_deps",
-      "Abseil debugging"
+      "failure_signal_handler"
     ],
-    "analysis": "ELF object format selects Abseil dynamic ELF/VDSO capability; GTOS static ELF loading does not supply this facility. Check actual consumers, native SDK declarations and platform eligibility before implementing OS services."
+    "analysis": "The latest complete target selects POSIX failure-signal handling on GTOS, which lacks that service. Log immediate-exit calls and an unused POSIX include also fail. Subsequent object-only adaptations need full-target replay and guest qualification; unsupported signal calls explicitly fail and are not implemented signal support."
   },
   "other_observed_failures": [
-    "FAILED: obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.vdso_support.o ",
-    "../source/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h:48:10: fatal error: 'elf.h' file not found",
-    "FAILED: obj/third_party/abseil-cpp/absl/debugging/failure_signal_handler.failure_signal_handler.o ",
-    "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc:37:10: fatal error: 'pthread.h' file not found",
     "FAILED: obj/third_party/abseil-cpp/absl/debugging/internal/examine_stack.examine_stack.o ",
     "../source/third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc:32:10: fatal error: 'unistd.h' file not found",
     "FAILED: obj/third_party/abseil-cpp/absl/log/die_if_null.die_if_null.o ",
@@ -245,8 +243,8 @@
       ],
       "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-05/gn-native-embedder.log",
-      "log_sha256": "dbd4eb2ca62d1cf433a9271a04dcd77f606d6115cd927a3c548b2f9844ef55bd"
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/gn-native-embedder.log",
+      "log_sha256": "708e6424f8b983d1872a926f38f759b6ce563e6aacb4582071bbb50e85204fcb"
     },
     {
       "name": "gn-complete-dependencies",
@@ -263,7 +261,7 @@
       ],
       "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-05/gn-complete-dependencies.log",
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/gn-complete-dependencies.log",
       "log_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be"
     },
     {
@@ -278,7 +276,7 @@
       ],
       "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-05/native-executable-commands.log",
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/native-executable-commands.log",
       "log_sha256": "b03d3ce6c0d10fc88537392345b90d72ee5f834411bdb20bc0fae846743b1207"
     },
     {
@@ -294,7 +292,7 @@
       ],
       "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
       "exit_code": 0,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-05/actual-compile-database.log",
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/actual-compile-database.log",
       "log_sha256": "200472a0861fdb80b8f6a6c17f396246ac31f5c813522a8a3fabb74b5a414088"
     },
     {
@@ -311,8 +309,8 @@
       ],
       "cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/source",
       "exit_code": 1,
-      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-05/complete-native-build.log",
-      "log_sha256": "fb950077fddcbaa1f26f2b18f64be0a9a28d8d8b477ab3be92b24a67711d1460"
+      "log": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/complete-native-build.log",
+      "log_sha256": "f37491404dae859e703514090dd88de70727d271fb38354aea4a0a25d22d2060"
     }
   ],
   "prior_timeout": {
@@ -352,5 +350,309 @@
   "reproducer_publication": {
     "portable_clean_checkout_entry_available": false,
     "boundary": "Commands and hashes describe retained local workspace; portable SDK/overlay and clean full-target failure replay remain P0 work."
-  }
+  },
+  "route_review": {
+    "issue": "https://github.com/awe0w0/GTOS/issues/9",
+    "issue_updated_utc": "2026-10-09T15:37:06Z",
+    "issue_comments": 0,
+    "latest_created_and_updated_issue_checked": true,
+    "review_baseline_dev": "2be7c31132bcd5bc3a9f70fc2cb616b638d2e5d5",
+    "delivery_architecture": "IA32 GTOS; architecture change requires measured evidence and an explicit user decision",
+    "next_functional_gate": "Real V8 Isolate/Context/Script execution and reclamation in the GTOS guest",
+    "review_changed_runtime_or_image": false
+  },
+  "previous_complete_attempt": {
+    "name": "attempt-05",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-05/build-status.json",
+      "sha256": "5850e4f9707db43c4785014c631cfbe52540204c016f73d0a8f04910e06233c7"
+    },
+    "first_build_blocker": {
+      "object": "obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.elf_mem_image.o",
+      "file": "third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h",
+      "line": 48,
+      "diagnostic": "../source/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h:48:10: fatal error: 'elf.h' file not found",
+      "compile_argv": [
+        "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+        "-x",
+        "c++",
+        "--target=i686-unknown-none-elf",
+        "-ffreestanding",
+        "-fno-stack-protector",
+        "-fno-pic",
+        "-fno-pie",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-mno-mmx",
+        "-msse2",
+        "-mfpmath=sse",
+        "-mno-sse3",
+        "-mno-ssse3",
+        "-mno-sse4",
+        "-mno-avx",
+        "-femulated-tls",
+        "-fstack-usage",
+        "-nostdinc",
+        "-nostdinc++",
+        "-DGTOS_ISOLATE_COMPILE_DIAGNOSTIC=1",
+        "-isystem",
+        "@WORKSPACE@/artifacts/native-v8-isolate-closure-20261008-a/source/tools/gtos_isolate_diagnostic/sdk",
+        "-isystem",
+        "@WORKSPACE@/sources/chromium-full/src/third_party/libc++/src/include",
+        "-isystem",
+        "@WORKSPACE@/artifacts/native-v8-isolate-closure-20261008-a/sdk",
+        "-isystem",
+        "@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-DCR_CLANG_REVISION=\"llvmorg-24-init-7747-g62397f8b-57\"",
+        "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE",
+        "-D__GTOS__=1",
+        "-DNDEBUG",
+        "-DNVALGRIND",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+        "-DABSL_ALLOCATOR_NOTHROW=1",
+        "-I../source",
+        "-Igen",
+        "-I../source/third_party/abseil-cpp",
+        "-fno-delete-null-pointer-checks",
+        "-fno-strict-overflow",
+        "-fno-ident",
+        "-fno-math-errno",
+        "-fno-strict-aliasing",
+        "-fcolor-diagnostics",
+        "-fdiagnostics-show-inlining-chain",
+        "-fmerge-all-constants",
+        "-fcrash-diagnostics-dir=../source/out/clang-crashreports",
+        "-fno-lifetime-dse",
+        "-mllvm",
+        "-instcombine-lower-dbg-declare=0",
+        "-mllvm",
+        "-split-threshold-for-reg-with-hint=0",
+        "-ffp-contract=off",
+        "-Wno-builtin-macro-redefined",
+        "-D__DATE__=",
+        "-D__TIME__=",
+        "-D__TIMESTAMP__=",
+        "-no-canonical-prefixes",
+        "-ftrivial-auto-var-init=pattern",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fno-unique-section-names",
+        "-fomit-frame-pointer",
+        "-g0",
+        "-fsanitize=array-bounds",
+        "-fsanitize-trap=array-bounds",
+        "-fsanitize-ignore-for-ubsan-feature=array-bounds",
+        "-Wno-unsafe-buffer-usage-in-static-sized-array",
+        "-fsanitize=return",
+        "-fsanitize-trap=return",
+        "-fsanitize-ignore-for-ubsan-feature=return",
+        "-fsanitize=unreachable",
+        "-fsanitize-trap=unreachable",
+        "-fsanitize-ignore-for-ubsan-feature=unreachable",
+        "-Wheader-hygiene",
+        "-Wstring-conversion",
+        "-Wtautological-overlap-compare",
+        "-Xclang",
+        "-add-plugin",
+        "-Xclang",
+        "find-bad-constructs",
+        "-Xclang",
+        "-plugin-arg-find-bad-constructs",
+        "-Xclang",
+        "check-stack-allocated",
+        "-Xclang",
+        "-plugin-arg-find-bad-constructs",
+        "-Xclang",
+        "relax-ctor-checks-for-aggregates",
+        "-Xclang",
+        "-add-plugin",
+        "-Xclang",
+        "raw-ptr-plugin",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "check-raw-ptr-to-stack-allocated",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "disable-check-raw-ptr-to-stack-allocated-error",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "raw-ptr-exclude-path=../source/third_party/dawn/",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "raw-ptr-exclude-path=../source/build/config/clang/chrome/test/fuzzing/webidl_fuzzing/",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "no-special-treatment-for-oilpanized-paths",
+        "-Xclang",
+        "-plugin-arg-raw-ptr-plugin",
+        "-Xclang",
+        "check-raw-ptr-in-blink",
+        "-Wall",
+        "-Wno-unused-variable",
+        "-Wno-unused-template",
+        "-Wno-c++11-narrowing",
+        "-Wno-unused-but-set-variable",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-Wno-psabi",
+        "-Wno-stringop-overread",
+        "-Wloop-analysis",
+        "-Wno-unneeded-internal-declaration",
+        "-Wno-cast-function-type",
+        "-Wno-thread-safety-reference-return",
+        "-Wno-nontrivial-memcall",
+        "-Wno-uninitialized-const-pointer",
+        "-Wno-unused-but-set-global",
+        "-Werror",
+        "-Werror=#pragma-messages",
+        "-Wno-exit-time-destructors",
+        "-Wimplicit-int-conversion",
+        "-Wshorten-64-to-32",
+        "-Wsign-compare",
+        "-Wsign-conversion",
+        "-Wtautological-unsigned-zero-compare",
+        "-std=c++20",
+        "-Wno-trigraphs",
+        "-gsimple-template-names",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-Wno-invalid-offsetof",
+        "-Wenum-compare-conditional",
+        "-Wno-nullability-completeness",
+        "-Wbool-conversion",
+        "-Wconstant-conversion",
+        "-Wenum-conversion",
+        "-Wint-conversion",
+        "-Wliteral-conversion",
+        "-Wnon-literal-null-conversion",
+        "-Wnull-conversion",
+        "-Wobjc-literal-conversion",
+        "-Wstring-conversion",
+        "-Wbitfield-enum-conversion",
+        "-MMD",
+        "-MF",
+        "obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.elf_mem_image.o.d",
+        "-c",
+        "../source/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.cc",
+        "-o",
+        "obj/third_party/abseil-cpp/absl/debugging/internal/debugging_internal.elf_mem_image.o"
+      ],
+      "compile_cwd": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/build",
+      "dependency_path": [
+        "v8_abseil",
+        "third_party/abseil-cpp:absl",
+        "absl_component_deps",
+        "Abseil debugging"
+      ],
+      "analysis": "ELF object format selects Abseil dynamic ELF/VDSO capability; GTOS static ELF loading does not supply this facility. Check actual consumers, native SDK declarations and platform eligibility before implementing OS services."
+    },
+    "boundary": "Historical first failure before dynamic ELF/VDSO capability correction"
+  },
+  "latest_complete_attempt": {
+    "name": "attempt-06",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/build-status.json",
+      "sha256": "1a4ae07e132e10664c9d0c521497785f0763401c535d827b2ea259692d82f448"
+    },
+    "timestamp_utc": "2026-10-11T07:30:02.171935+00:00",
+    "dependencies_unchanged_from_attempt_05": true,
+    "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
+    "sources_unchanged_during_run": true,
+    "original_cache_preserved_during_run": true,
+    "build_exit_code": 1
+  },
+  "platform_adaptation_evidence": {
+    "dynamic_elf": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-01/status.json",
+      "sha256": "85fdcb58a49681758186ecf58a8745b4138937409a33b244ef074a485b4fdbc8"
+    },
+    "identity_control": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-identity-02/status.json",
+      "sha256": "df83e8454ebf4c0ec8324696571e58fa3b4b44e55ed3d208cff6fb86ac12599a"
+    },
+    "identity_profiles": [
+      {
+        "name": "native",
+        "elf_format": true,
+        "linux_identity": false,
+        "gtos_identity": true,
+        "dynamic_elf_available": false
+      },
+      {
+        "name": "linux-reference",
+        "elf_format": true,
+        "linux_identity": true,
+        "gtos_identity": false,
+        "dynamic_elf_available": true
+      }
+    ],
+    "included_in_latest_complete_attempt": true,
+    "dependency_graph_changed": false
+  },
+  "pending_compiler_only_adaptations": {
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-native-errors-01/status.json",
+      "sha256": "6f977c1a2f186460e677e061c06d79bcb0c8c1922f5695271f7809509b18e0a8"
+    },
+    "timestamp_utc": "2026-10-11T07:39:57.729277+00:00",
+    "objects": [
+      {
+        "source": "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
+        "compile_exit_code": 0
+      },
+      {
+        "source": "../source/third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc",
+        "compile_exit_code": 0
+      },
+      {
+        "source": "../source/third_party/abseil-cpp/absl/log/die_if_null.cc",
+        "compile_exit_code": 0
+      },
+      {
+        "source": "../source/third_party/abseil-cpp/absl/log/internal/check_op.cc",
+        "compile_exit_code": 0
+      }
+    ],
+    "files": {
+      "src/base/platform/gtos-raw-io.h": {
+        "original_sha256": "d6d450a19f767750d8ed9c924cbc0f6a60e3ccf1ce182086968a42c68f631fd5",
+        "adapted_sha256": "277104ba4eed5131c2e1af906b5dae06cf7c068ebd3d9ff534929cfab9333460"
+      },
+      "third_party/abseil-cpp/absl/log/internal/conditions.h": {
+        "original_sha256": "893823d25200261315cd2e44df454df7cedccf873fd8c0ec2af302293ea31783",
+        "adapted_sha256": "6597079de4014d3d1c2f23ae0629a90dd8d02811b8d3e6c1525d782e455a0463"
+      },
+      "third_party/abseil-cpp/absl/log/internal/nullstream.h": {
+        "original_sha256": "3b16c74030df83194ad15e830fa8afedb352c2fe4d3cc27f7bb5c005e205589d",
+        "adapted_sha256": "0a1dce50ba618f7adfc974457fe4c9866d9ca5829267ad5f03631b1af8eef6cb"
+      },
+      "third_party/abseil-cpp/absl/debugging/internal/examine_stack.cc": {
+        "original_sha256": "cab6f0f7190ef26884be4e7ef777bcb1913bf629587a9a8d0bda838d21868073",
+        "adapted_sha256": "1cc9ff95685072ed76f4d4e714472356adeed47fb3ad12c26cd2689eb4127a89"
+      },
+      "third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc": {
+        "original_sha256": "8b03e80cf92e2b66f54790f150ae2ef4ff791c18bd2129ad79191f03f9500040",
+        "adapted_sha256": "ef0b76faf46353e765f70bed6ef42a0c728d4ae9f5da7b9d0f3e92a6e23da1a6"
+      }
+    },
+    "complete_target_replayed_after_adaptation": false,
+    "guest_exit_semantics_pass": false,
+    "guest_explicit_failure_and_reclamation_pass": false,
+    "signal_handlers_supported": false,
+    "published_production_implementation": false
+  },
+  "next_work_package": [
+    "Publish pinned portable SDK/platform overlay and a complete-target entry; reproduce the first real failure from clean inputs in a separate output directory.",
+    "Self-review pending Abseil adaptations, replay the unchanged complete native_embedder graph, and qualify actual immediate-exit/fault/lifecycle behavior in the guest. Implement required signal semantics only when actual consumer evidence demands them.",
+    "Resolve subsequent real complete-target compile/link/guest blockers using existing qualified services; avoid unrelated API expansion.",
+    "Measure the actual complete ELF, mappings, stack and heap before coherent admission/capacity changes; qualify real guest Isolate/Context/Script and exact reclamation."
+  ]
 }

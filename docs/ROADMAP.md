@@ -13,6 +13,10 @@ This roadmap separates verified capabilities from development targets. Work is r
 运行环境 → Content Shell 本地网页与输入/DOM → HTTP/HTTPS 与安全 → 音视频及
 更丰富的 HTML5。详见[集成主线](chromium-integration-plan.md)。完整原生浏览器仍未运行。
 
+当前先完成可移植 SDK/平台覆盖与干净目录的完整目标失败重放，再将待验证的
+Abseil 适配接回完整 embedder 并验收实际退出/故障语义。最近完整目标越过 ELF/VDSO
+错误后停在故障处理和日志依赖；单独对象编译通过不能替代该目标继续前进的证据。
+
 保留既有桌面、i386/x64 和组件回归；近期不扩展无真实消费者驱动的能力。
 容量修改须由真实 ELF、映射和堆/栈观测驱动，并同步检查所有权、失败回滚与回收。
 
