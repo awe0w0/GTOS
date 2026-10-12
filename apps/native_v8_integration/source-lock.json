@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "1b8b6ba013e7da1d49289f97335785fa8372f8fb8bd92e9e42cf7429afc462a4",
+  "payload_lock_sha256": "dadbba06c599b919532fbc95ec095dd43d6ba2d5627d431b67d43f44bce55c97",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1322,5 +1322,7 @@
       "purpose": "Overlay uses the byte-identical pinned GTOS C SDK mbstate_t instead of rejecting host-libc overlay types"
     }
   },
-  "native_wide_sdk_mbstate_sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce"
+  "native_wide_sdk_mbstate_sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce",
+  "native_runtime_error_scope": "Only the pinned actual full30 locale runtime_error helper; retain native verbose fatal termination, no exception profile changes or success placeholder",
+  "native_runtime_error_upstream_sha256": "af6a2e2aea77ebf269f858d1056e50aff8aa572fd82f7750c32a4069fb76e063"
 }

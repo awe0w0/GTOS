@@ -1,0 +1,74 @@
+{
+  "recorded_utc": "2026-10-12T17:20:39.970251+00:00",
+  "scope": "Pinned libc++ runtime_error no-exception body, native callback diagnostic and fatal process exit; current single-user-task IA32 profile",
+  "actual_compile": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-native-compile-guarded-03/status.json",
+    "sha256": "4f4d1a1e1e54a6577534d9921a560dc5ae78cc45d1974531d59ec605bea77615"
+  },
+  "private_guest": {
+    "path": "@WORKSPACE@/artifacts/native-runtime-error-guest-20261013-a/qemu-guarded-03/status.json",
+    "sha256": "69a7876ae083dcf400adc37065fd9904e9c6e6bb6e35ed37070f2c9078e57947"
+  },
+  "private_review": {
+    "path": "@WORKSPACE@/artifacts/native-runtime-error-guest-20261013-a/self-review-guarded-01.json",
+    "sha256": "b0662fdffd9aca7c5f53fa3292acae77085c06dabde2d506839bacfd37612f11"
+  },
+  "public_guest": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-publication-01/public-replay-01/status.json",
+    "sha256": "608ca72cef5ca2c699b9f04702452e700609c7a2629a668e27d0ac087230f1a2"
+  },
+  "public_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-publication-01/self-review-01.json",
+    "sha256": "449e043d7bf2317c2b90a8bf2f6469eb28d3f9f0f5a4e23e81e76210d8f735e9"
+  },
+  "actual_full_link": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
+    "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
+  },
+  "actual_full_link_log": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
+    "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
+  },
+  "immutable_input_delta": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/input-delta-review-01.json",
+    "sha256": "d94eb14c8599e9cdb185693f4541a808f7cd51232d12b6177b893c1a52f58b37"
+  },
+  "source_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/module-input-delta/source-lock.json",
+    "sha256": "d0640c8efe46bc9693d66c745d5ab5a5e1647fd878ef6acf6ede5abfdd2866eb"
+  },
+  "payload_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/module-input-delta/payload-lock.json",
+    "sha256": "dadbba06c599b919532fbc95ec095dd43d6ba2d5627d431b67d43f44bce55c97"
+  },
+  "native_runtime_error_guest_pass": true,
+  "public_replay_pass": true,
+  "actual_gn_object_byte_exact": true,
+  "public_and_private_user_elf_byte_exact": true,
+  "elf_sha256": "166bde2a618e90d6465bb18b15ff0cbbe7ebf3d045595404a5d7de5f8d7d1ee2",
+  "actual_victim_cases": 12,
+  "exact_reap_checks": 14,
+  "negative_observer_controls_rejected": 200,
+  "static_elf_pages": 41,
+  "resident_frame_cost": 48,
+  "max_provider_own_stack_bytes": 0,
+  "network_disabled_during_build_and_guest_verification": true,
+  "link_replay_method": "guarded actual GN final-link replay using qualified prior object cache",
+  "new_ninja_compile_sweep_performed": false,
+  "old_object_commands_preserved": 5147,
+  "ordered_old_link_inputs_and_engine_args_preserved": true,
+  "old_cache_read_only": true,
+  "runtime_error_resolved_in_actual_full_link": true,
+  "first_actual_blocker_after_full_link": "ld.lld: error: undefined symbol: sscanf",
+  "public_verifier": "tools/verify-native-runtime-error.py",
+  "complete_native_target_pass": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "capacity_changed": false,
+  "production_image_changed": false,
+  "publication_state": "Qualification snapshot before normal dev commit; publication receipt recorded separately"
+}

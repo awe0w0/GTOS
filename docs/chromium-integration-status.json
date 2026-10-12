@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-12T14:52:34.896858+00:00",
-  "scope": "完整原生30实际最终链接已越过宽字符转换家族；私有和公开双冷启动、自审通过。真实下一首错按终态记录，尚无完整ELF或客体Isolate/JS。",
+  "recorded_utc": "2026-10-12T17:20:39.970251+00:00",
+  "scope": "实际GN完整最终链接31已越过runtime_error，首错sscanf；原生错误终止私有与公开离线双冷启动及自审通过。未生成完整ELF。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -32,44 +32,43 @@
   "link_pass": false,
   "full_elf_exists": false,
   "first_build_blocker": {
-    "phase": "actual final ELF link",
-    "target": "native_embedder.elf",
-    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*)",
-    "complete_attempt": "wide-runtime-resume-30",
+    "phase": "actual full GN final ELF link",
+    "diagnostic": "ld.lld: error: undefined symbol: sscanf",
+    "complete_attempt": "runtime-error-full-link-31",
     "link_command_evidence": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/status.json",
-      "sha256": "c996a4f71bf5d8f0cddb83d0d03ecab954dd94bf99f9bb0d9d5df317fd488d41"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
+      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/complete-native-build.log",
-      "sha256": "9e8f66cbfbf2ab15e64442b9d069a38e2e814374d255771fc1bb1d63b0941a1a"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
+      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
     },
-    "consumer": "Pinned libc++ locale.cpp wide time error path and stdexcept.cpp __throw_runtime_error no-exception branch",
-    "cause": "Implement the pinned runtime_error verbose termination through the qualified native diagnostic callback; do not return success or introduce exceptions into this profile",
+    "consumer": "Pinned libc++ locale.cpp money_get<char/wchar_t>::do_get long double conversion",
+    "cause": "Implement required sscanf conversion semantics from the measured consumer, with numeric/long-double boundaries and explicit failures",
     "default_linker_error_limit": 20,
     "all_missing_symbols_count_measured": false,
     "resolved_in_current_complete_link": false
   },
   "other_observed_failures": [
-    "ld.lld: error: undefined symbol: sscanf",
     "ld.lld: error: undefined symbol: absl::base_internal::LowLevelAlloc::Free(void*)",
-    "ld.lld: error: undefined symbol: __cxa_atexit",
     "ld.lld: error: undefined symbol: AbslInternalPerThreadSemWait",
     "ld.lld: error: undefined symbol: absl::synchronization_internal::CreateThreadIdentity()",
     "ld.lld: error: undefined symbol: AbslInternalPerThreadSemPost",
+    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
+    "ld.lld: error: undefined symbol: ceilf",
+    "ld.lld: error: undefined symbol: __cxa_atexit",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
+    "ld.lld: error: undefined symbol: floor",
+    "ld.lld: error: undefined symbol: ceil",
+    "ld.lld: error: undefined symbol: void std::__gtos_isolate_diagnostic::__sort<std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&, unsigned int*>(unsigned int*, unsigned int*, std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&)",
+    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
+    "ld.lld: error: undefined symbol: __cxa_pure_virtual",
+    "ld.lld: error: undefined symbol: nearbyint",
     "ld.lld: error: undefined symbol: strtof",
+    "ld.lld: error: undefined symbol: v8::base::Thread::Thread(v8::base::Thread::Options const&)",
     "ld.lld: error: undefined symbol: strtod",
     "ld.lld: error: undefined symbol: strtold",
-    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
-    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
-    "ld.lld: error: undefined symbol: v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-    "ld.lld: error: undefined symbol: v8::base::Thread::Start()",
-    "ld.lld: error: undefined symbol: v8::base::Thread::~Thread()",
-    "ld.lld: error: undefined symbol: ceilf",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
-    "ld.lld: error: undefined symbol: v8::base::Semaphore::Signal()",
-    "ld.lld: error: undefined symbol: v8::base::Thread::Join()",
-    "ld.lld: error: undefined symbol: void std::__gtos_isolate_diagnostic::__sort<std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&, unsigned int*>(unsigned int*, unsigned int*, std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&)",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__hash_memory(void const*, unsigned int)",
     "ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)"
   ],
   "runs": [
@@ -522,33 +521,6 @@
     ]
   },
   "previous_complete_attempt": {
-    "name": "standard-stream-runtime-resume-27",
-    "timestamp_utc": "2026-10-12T10:26:18.635188+00:00",
-    "status": {
-      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v35-status-snapshots/native27-terminal-status.json",
-      "sha256": "509389e3cd28d6615903302b7e0b2a39b95fe5f11761a3efd413e9eddb98f480"
-    },
-    "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/standard-stream-runtime-resume-27/complete-native-build.log",
-      "sha256": "3921c667d521a05f95244cd65f200bd516188a9379bfcee31466b497a8daacb2"
-    },
-    "build_exit_code": 1,
-    "gn_pass": true,
-    "bound_inputs_unchanged": true,
-    "cold_build": false,
-    "actual_final_link_attempted": true,
-    "full_elf_exists": false,
-    "ninja_elapsed_seconds": 69.92799561099673,
-    "actual_gn_and_object_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/standard-stream-runtime-full27-review-01.json",
-      "sha256": "f771b14bf22fceb736b00f21a3171ebbbb927488618de8a01f65e552488eedef"
-    },
-    "input_snapshot_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/standard-stream-runtime-resume-27/input-snapshot-review-01.json",
-      "sha256": "33d2e3a7f4c635fc504cf311a1b05684eb32f1bdcc7edeae5ecf5f0c48db8206"
-    }
-  },
-  "latest_complete_attempt": {
     "name": "wide-runtime-resume-30",
     "timestamp_utc": "2026-10-12T14:47:14.813210+00:00",
     "status": {
@@ -573,6 +545,31 @@
     "input_snapshot_review": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/input-snapshot-review-01.json",
       "sha256": "49744d69593d62be0e79bbffe042b9ed589c8fda292cb1c169a6a1ff9a853fba"
+    }
+  },
+  "latest_complete_attempt": {
+    "name": "runtime-error-full-link-31",
+    "timestamp_utc": "2026-10-12T17:00:26.324193+00:00",
+    "method": "guarded actual GN final-link replay using qualified prior object cache",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
+      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
+    },
+    "build_log": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
+      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
+    },
+    "build_exit_code": 1,
+    "gn_pass": true,
+    "bound_inputs_unchanged": true,
+    "actual_final_link_attempted": true,
+    "full_elf_exists": false,
+    "link_elapsed_seconds": 3.0393819449964212,
+    "new_ninja_compile_sweep_performed": false,
+    "input_snapshot_method": "Immutable full30 base plus four-file source delta",
+    "input_delta_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/input-delta-review-01.json",
+      "sha256": "d94eb14c8599e9cdb185693f4541a808f7cd51232d12b6177b893c1a52f58b37"
     }
   },
   "platform_adaptation_evidence": {
@@ -653,9 +650,9 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "读取实际首错 ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*) 的固定上游消费者，仅实现必要正确语义。",
-    "必要客体边界/故障/取消/回收验证后立即回放同一完整目标。",
-    "获得真实完整ELF后测量装载/堆栈并推进客体Isolate/JS，再到本地网页、受控网络、视频与HTML5。"
+    "按实际sscanf首错读取固定消费者和扫描器实现，仅补足必要正确语义。",
+    "沿安全栅栏进行原生边界/错误/资源验收，然后回放同一GN完整最终链接。",
+    "完整ELF后测量装载/堆栈并推进客体Isolate/JS，再到本地网页、网络、视频与HTML5。"
   ],
   "retained_complete_attempts": [
     {
@@ -1277,18 +1274,18 @@
   "previous_first_build_blocker": {
     "phase": "actual final ELF link",
     "target": "native_embedder.elf",
-    "diagnostic": "ld.lld: error: undefined symbol: mbsrtowcs",
-    "complete_attempt": "chrono-runtime-resume-29",
+    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*)",
+    "complete_attempt": "wide-runtime-resume-30",
     "link_command_evidence": {
-      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v43-status-snapshots/native29-terminal-status.json",
-      "sha256": "e21550fcee7c9ae447a9b6eb7715abb561e73a24d78d3e4cc24250c5f0681b30"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/status.json",
+      "sha256": "c996a4f71bf5d8f0cddb83d0d03ecab954dd94bf99f9bb0d9d5df317fd488d41"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/complete-native-build.log",
-      "sha256": "33483c1c0ce5f8a8234c8078900f1fb3e10ad355ddf20274496d5fcc5ea6c652"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/complete-native-build.log",
+      "sha256": "9e8f66cbfbf2ab15e64442b9d069a38e2e814374d255771fc1bb1d63b0941a1a"
     },
-    "consumer": "libc++ locale.cpp __time_put wchar path and codecvt wide/multibyte conversion",
-    "cause": "Connect only the actual required wide conversion family, with proper UTF-8 shortest-form/scalar checks and state/source-pointer/error semantics. Existing private candidate remains host-only until actual native compile and guest qualification.",
+    "consumer": "Pinned libc++ locale.cpp wide time error path and stdexcept.cpp __throw_runtime_error no-exception branch",
+    "cause": "Implement the pinned runtime_error verbose termination through the qualified native diagnostic callback; do not return success or introduce exceptions into this profile",
     "default_linker_error_limit": 20,
     "all_missing_symbols_count_measured": false,
     "resolved_in_current_complete_link": false
@@ -1467,30 +1464,28 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "name": "wide-runtime-resume-30",
-    "timestamp_utc": "2026-10-12T14:47:14.813210+00:00",
+    "name": "runtime-error-full-link-31",
+    "timestamp_utc": "2026-10-12T17:00:26.324193+00:00",
+    "method": "guarded actual GN final-link replay using qualified prior object cache",
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/status.json",
-      "sha256": "c996a4f71bf5d8f0cddb83d0d03ecab954dd94bf99f9bb0d9d5df317fd488d41"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
+      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/complete-native-build.log",
-      "sha256": "9e8f66cbfbf2ab15e64442b9d069a38e2e814374d255771fc1bb1d63b0941a1a"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
+      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
     },
     "build_exit_code": 1,
     "gn_pass": true,
     "bound_inputs_unchanged": true,
-    "cold_build": false,
     "actual_final_link_attempted": true,
     "full_elf_exists": false,
-    "ninja_elapsed_seconds": 73.53875743800018,
-    "actual_gn_and_object_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-full30-review-01.json",
-      "sha256": "be56a153ddccc61ed6b59ee446f201117aa5eb7e719f41c64e4727a39b2ce962"
-    },
-    "input_snapshot_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/input-snapshot-review-01.json",
-      "sha256": "49744d69593d62be0e79bbffe042b9ed589c8fda292cb1c169a6a1ff9a853fba"
+    "link_elapsed_seconds": 3.0393819449964212,
+    "new_ninja_compile_sweep_performed": false,
+    "input_snapshot_method": "Immutable full30 base plus four-file source delta",
+    "input_delta_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/input-delta-review-01.json",
+      "sha256": "d94eb14c8599e9cdb185693f4541a808f7cd51232d12b6177b893c1a52f58b37"
     }
   },
   "cctz_compile_diagnostic": {
@@ -2479,7 +2474,7 @@
     "native_provider_connected": true
   },
   "latest_handoff": {
-    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v45.json",
+    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v48.json",
     "qualification_snapshot_before_normal_dev_commit": true
   },
   "post_build_validation_pipeline": {
@@ -2618,6 +2613,90 @@
     "browser_guest_pass": false,
     "capacity_changed": false,
     "production_image_changed": false,
-    "publication_state": "qualification snapshot before normal dev commit; publication receipt is recorded separately"
+    "publication_state": "qualification snapshot before normal dev commit; publication receipt is recorded separately",
+    "published_dev_commit": "b8f746b2f4baed197c973778b5abf659950c88d7"
+  },
+  "native_runtime_error_integration": {
+    "recorded_utc": "2026-10-12T17:20:39.970251+00:00",
+    "scope": "Pinned libc++ runtime_error no-exception body, native callback diagnostic and fatal process exit; current single-user-task IA32 profile",
+    "actual_compile": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-native-compile-guarded-03/status.json",
+      "sha256": "4f4d1a1e1e54a6577534d9921a560dc5ae78cc45d1974531d59ec605bea77615"
+    },
+    "private_guest": {
+      "path": "@WORKSPACE@/artifacts/native-runtime-error-guest-20261013-a/qemu-guarded-03/status.json",
+      "sha256": "69a7876ae083dcf400adc37065fd9904e9c6e6bb6e35ed37070f2c9078e57947"
+    },
+    "private_review": {
+      "path": "@WORKSPACE@/artifacts/native-runtime-error-guest-20261013-a/self-review-guarded-01.json",
+      "sha256": "b0662fdffd9aca7c5f53fa3292acae77085c06dabde2d506839bacfd37612f11"
+    },
+    "public_guest": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-publication-01/public-replay-01/status.json",
+      "sha256": "608ca72cef5ca2c699b9f04702452e700609c7a2629a668e27d0ac087230f1a2"
+    },
+    "public_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-publication-01/self-review-01.json",
+      "sha256": "449e043d7bf2317c2b90a8bf2f6469eb28d3f9f0f5a4e23e81e76210d8f735e9"
+    },
+    "actual_full_link": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
+      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
+    },
+    "actual_full_link_log": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
+      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
+    },
+    "immutable_input_delta": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/input-delta-review-01.json",
+      "sha256": "d94eb14c8599e9cdb185693f4541a808f7cd51232d12b6177b893c1a52f58b37"
+    },
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/module-input-delta/source-lock.json",
+      "sha256": "d0640c8efe46bc9693d66c745d5ab5a5e1647fd878ef6acf6ede5abfdd2866eb"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/module-input-delta/payload-lock.json",
+      "sha256": "dadbba06c599b919532fbc95ec095dd43d6ba2d5627d431b67d43f44bce55c97"
+    },
+    "native_runtime_error_guest_pass": true,
+    "public_replay_pass": true,
+    "actual_gn_object_byte_exact": true,
+    "public_and_private_user_elf_byte_exact": true,
+    "elf_sha256": "166bde2a618e90d6465bb18b15ff0cbbe7ebf3d045595404a5d7de5f8d7d1ee2",
+    "actual_victim_cases": 12,
+    "exact_reap_checks": 14,
+    "negative_observer_controls_rejected": 200,
+    "static_elf_pages": 41,
+    "resident_frame_cost": 48,
+    "max_provider_own_stack_bytes": 0,
+    "network_disabled_during_build_and_guest_verification": true,
+    "link_replay_method": "guarded actual GN final-link replay using qualified prior object cache",
+    "new_ninja_compile_sweep_performed": false,
+    "old_object_commands_preserved": 5147,
+    "ordered_old_link_inputs_and_engine_args_preserved": true,
+    "old_cache_read_only": true,
+    "runtime_error_resolved_in_actual_full_link": true,
+    "first_actual_blocker_after_full_link": "ld.lld: error: undefined symbol: sscanf",
+    "public_verifier": "tools/verify-native-runtime-error.py",
+    "complete_native_target_pass": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "capacity_changed": false,
+    "production_image_changed": false,
+    "publication_state": "Qualification snapshot before normal dev commit; publication receipt recorded separately"
+  },
+  "execution_guards": {
+    "path": "docs/native-command-execution.md",
+    "network_disabled": true,
+    "no_inherited_shell_environment": true,
+    "no_inline_python_or_log_command_execution": true,
+    "no_global_policy_or_firewall_changes": true,
+    "external_push_and_notifications_separate": true,
+    "qq_quiet_hours_shanghai": "02:00-09:00"
   }
 }

@@ -1,33 +1,33 @@
 # 32 位 Chromium 原生集成主线
 
-2026-10-12 重新读取最新 issue，#9 仍为最新，路线要求未变。
-当前交付架构为用户选定的 IA32，首要里程碑仍是 GTOS 客体真实 V8 Isolate/JavaScript。
-随后推进 Content Shell 本地 HTML/CSS 首帧、输入驱动 DOM、受控网络、视频与 HTML5。
-工作循环遵循 [issue #9](https://github.com/awe0w0/GTOS/issues/9)：真实完整目标首阻塞、
-最小正确实现、受影响客体验证，再立即回放同一目标。
+当前交付架构保持用户选定的 IA32，目标仍是 GTOS 客体真实 Chromium 网页浏览、
+视频与 HTML5。按 [issue #9](https://github.com/awe0w0/GTOS/issues/9) 先推进真实
+V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 
 ## 当前证据与下一步
 
-时间格式化已经正常推送 dev@731a970，chrono 已正常推送 dev@f4425da，远端 SHA 已核对。
-宽字符/UTF-8 家族由实际第 29 次首错 mbsrtowcs 驱动；固定版本需要显式修正最短编码、
-Unicode 标量、错误源指针和空源调用语义。私有与公开双冷启动、自审均通过：12任务、
-14精确回收、48合法往返、80续接、224容量、52错误拒绝、194观察器控制。
+时间格式化 dev@731a970、chrono dev@f4425da、宽字符 dev@b8f746b 已正常推送并核对远端。
+本次由第30次真实首错驱动，保留固定 libc++ runtime_error 无异常终止函数体，复用
+已验收的原生诊断输出。私有和公开离线双冷启动、自审通过：12任务、14精确回收、
+200观察器反例；公开用户ELF与私有对象逐字节一致。
 
-实际完整第 30 次保持所有旧对象命令、原顺序链接输入和引擎参数，仅增加8个必要对象。
-提供者与客体执行对象字节一致，宽字符家族首错已经越过；实测下一首错为：
+第31次直接重放当前GN真实最终链接，保留5147条旧对象命令、原输入顺序和引擎参数，
+旧Ninja缓存只读，仅新增1个实际必要对象。未重跑完整Ninja编译，也未复制整套缓存。
+链接用时3.04秒，runtime_error首错已越过，实测下一首错：
 
-`ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*)`
+`ld.lld: error: undefined symbol: sscanf`
 
-下一工作包读取这个真实首错的固定消费者，按必要错误/资源语义适配后立即回放同一目标。
-完整 ELF 尚未生成，未运行客体 Isolate/JS、浏览器、视频或 HTML5。
-生产镜像本次未更新，原虚拟机、磁盘、源码及缓存保留，容量没有扩展。
+它由固定locale.cpp的money_get<char/wchar_t>::do_get长双精度转换消费。下一步按实测
+消费者实现必要扫描语义，检查数字、长双精度、源/容量、错误及回收，再回放同一目标。
+完整ELF、客体Isolate/JS、浏览器、视频和HTML5仍未通过，容量及生产镜像未改。
 
-Content IA32 第09次 Linux参考构建仍沿原运行推进。宿主生成器问题已越过，但单个生成器
-或参考编译进度不等于 GTOS 验收；取得真实ELF后才测量资源需求、评估承载模型。
-如实际支持或资源证据要求改架构，先列出证据与x64用户态门禁差额，由用户决定。
+所有未来执行沿 [安全栅栏](native-command-execution.md)：固定指纹与参数、最小环境、
+临时无外部网络空间、新输出、旧失败/缓存保留。禁用内联Python、多层shell和失败日志
+命令直接执行。推送与QQ通知单独按既有授权执行，02:00–09:00上海时间静默。
+原有Linux Content第09次运行作为参考保留，不把参考编译或叶子通过算作客体浏览器验收。
 
-本次详细证据见第45次交接和 `apps/native_wide/acceptance.json`。此文档为提交前的
-资格快照，正常dev提交、推送及远端SHA核对另记发布回执。
+证据见第48次交接和 apps/native_runtime_error/acceptance.json；这是正常dev提交前的
+资格快照，提交推送及远端SHA核对另记发布回执。
 
 ## 历史观察（第 40–42 次交接）
 
