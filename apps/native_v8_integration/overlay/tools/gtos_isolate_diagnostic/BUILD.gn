@@ -1,13 +1,15 @@
 import("//gtos-isolate-diagnostic.gni")
 import("//gni/v8.gni")
 
-# Real C clock_gettime and pinned LLVM per-thread errno, backed by native emutls.
+# Real C clock_gettime and pinned LLVM shared errno in the private single-user task.
 if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   v8_source_set("native_c_clock") {
     assert(current_cpu == "x86")
     configs = []
     include_dirs = [ "//third_party/llvm-libc/src" ]
-    defines = [ "LIBC_NAMESPACE=__llvm_libc_cr", "LIBC_ERRNO_MODE=2" ]
+    # One user task per private address space: errno must not allocate on OOM.
+    # Use the pinned LLVM shared mode only for this single-task diagnostic.
+    defines = [ "LIBC_NAMESPACE=__llvm_libc_cr", "LIBC_ERRNO_MODE=3" ]
     sources = [
       "runtime/clock-gettime.cc",
       "runtime/nanosleep.cc",
@@ -23,11 +25,11 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   v8_source_set("native_printf_libc") {
     assert(current_cpu == "x86")
     configs = []
-    include_dirs = [ "//third_party/llvm-libc/src" ]
+    include_dirs = [ "//tools/gtos_isolate_diagnostic/native-alloc-printf", "//third_party/llvm-libc/src" ]
     defines = [
       "LIBC_NAMESPACE=__llvm_libc_cr",
       "LIBC_COPT_PUBLIC_PACKAGING=1",
-      "LIBC_ERRNO_MODE=2",
+      "LIBC_ERRNO_MODE=3",
       "LIBC_COPT_PRINTF_MODULAR=1",
     ]
     sources = [
@@ -70,6 +72,48 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
     ]
   }
 }
+
+# Pinned C-locale case conversion consumed by libc++ numeric parsing.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_ctype_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/ctype/toupper.cpp",
+      "//third_party/llvm-libc/src/src/ctype/tolower.cpp",
+    ]
+  }
+}
+
+
+# Genuine allocated formatting for the libc++ floating-output consumer.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_alloc_printf_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [
+      "//tools/gtos_isolate_diagnostic/native-alloc-printf",
+      "//third_party/llvm-libc/src",
+    ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+      "LIBC_COPT_PRINTF_MODULAR=1",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/stdio/asprintf.cpp",
+      "//third_party/llvm-libc/src/src/stdio/vasprintf.cpp",
+    ]
+    deps = [ ":native_printf_libc", ":native_runtime" ]
+  }
+}
+
 
 group("compile_closure") {
   assert(gtos_isolate_compile_diagnostic)
@@ -130,13 +174,214 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
 }
 
 
+# Actual pinned libc++ file-stream runtime consumed by the real V8 target.
+# Library-only C++26 and warning policy match the pinned upstream library rules;
+# the explicit diagnostic profile retains no exceptions and no RTTI.
+config("native_stream_library_config") {
+  cflags = [
+    "-Wno-pragma-clang-attribute",
+    "-Wno-ignored-attributes",
+    # The no-exceptions library has noreturn throw helpers and terminal guards.
+    # Preserve its upstream source and restrict this policy to library targets.
+    "-Wno-unreachable-code",
+    "-Wno-unreachable-code-aggressive",
+  ]
+  cflags_cc = [ "-std=c++26" ]
+  defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
+}
+
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_stream_libcxx") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [ "//third_party/libc++/src/src" ]
+    sources = [
+      "//third_party/libc++/src/src/ios.instantiations.cpp",
+      "//third_party/libc++/src/src/ios.cpp",
+      "//third_party/libc++/src/src/locale.cpp",
+    ]
+    deps = [ ":native_runtime" ]
+  }
+}
+
+
+# Required C++ providers for the actual no-exception native consumer.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_cpp_libcxx") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [ "//third_party/libc++/src/src", "runtime", "runtime/sdk" ]
+    sources = [
+      "runtime/cpp-no-exceptions.cc",
+      "//third_party/libc++/src/src/string.cpp",
+      "//third_party/libc++/src/src/memory.cpp",
+    ]
+    deps = [ ":native_runtime" ]
+  }
+}
+
+
+# Qualified regular-file core and pinned setbuf for actual engine consumers.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_file_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [
+      "native-c-file/llvm-libc",
+      "//third_party/llvm-libc/src",
+      "runtime",
+      "runtime/sdk",
+    ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+      "LIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM",
+    ]
+    sources = [
+      "native-c-file/platform_file.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fopen.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fclose.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fread.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fwrite.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fflush.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fseek.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/ftell.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fseeko.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/ftello.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/feof.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/ferror.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/clearerr.cpp",
+      "native-c-file/llvm-libc/src/stdio/setvbuf.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/ungetc.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fgetc.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fputc.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fgets.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fputs.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/rewind.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/fileno.cpp",
+      "native-c-file/llvm-libc/src/stdio/generic/freopen.cpp",
+      "native-c-file/llvm-libc/src/__support/File/file.cpp",
+      "native-c-file/llvm-libc/src/__support/CPP/new.cpp",
+      "native-c-file/llvm-libc/src/stdio/setbuf.cpp",
+    ]
+    deps = [ ":native_runtime", ":native_c_clock", ":native_string_libc" ]
+  }
+}
+
+
+# Real native verbose termination through the pinned callback formatter.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_diagnostic_libcxx") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [ "//tools/gtos_isolate_diagnostic/native-alloc-printf", "//third_party/llvm-libc/src", "runtime", "runtime/sdk" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+      "LIBC_COPT_PRINTF_MODULAR=1",
+    ]
+    sources = [ "runtime/diagnostic-output.cc", "runtime/verbose-abort.cc" ]
+    deps = [ ":native_runtime", ":native_printf_libc" ]
+  }
+}
+
+
+# Pinned once-state algorithm for the verified single-user-task diagnostic.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_once_libcxx") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [ "//third_party/libc++/src/src" ]
+    sources = [ "runtime/call_once.cc" ]
+    deps = [ ":native_runtime" ]
+  }
+}
+
+
+# Genuine pinned Itanium guard ABI, under the enforced one-user-task profile.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_guard_libcxxabi") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [
+      "//third_party/libc++abi/src/include",
+      "//third_party/libc++abi/src/src",
+      "//third_party/libc++/src/src",
+      "runtime",
+    ]
+    defines = [ "_LIBCXXABI_HAS_NO_THREADS=1", "_LIBCXXABI_BUILDING_LIBRARY=1" ]
+    sources = [
+      "//third_party/libc++abi/src/src/cxa_guard.cpp",
+      "runtime/abi-abort-message.cc",
+    ]
+    deps = [ ":native_runtime", ":native_diagnostic_libcxx" ]
+  }
+}
+
+# Pinned C-only locale consumed by libc++'s actual LLVM-libc backend.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_locale_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_FULL_BUILD=1",
+      "LIBC_ERRNO_MODE=3",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/locale/locale.cpp",
+      "//third_party/llvm-libc/src/src/locale/newlocale.cpp",
+      "//third_party/llvm-libc/src/src/locale/freelocale.cpp",
+    ]
+    deps = [ ":native_runtime", ":native_c_clock" ]
+  }
+}
+
 # Full real embedder link, separate from object-only qualification.
 executable("native_embedder") {
   assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
   configs = []
   configs += [ "//build/config/clang:compiler_builtins" ]
   sources = [ "native-entry.cc", "native-start.s" ]
-  deps = [ ":consumer", "//:v8", "//:v8_libplatform" ]
+  deps = [ ":consumer", "//:v8", "//:v8_libplatform", ":native_stream_libcxx" ]
+  deps += [ ":native_string_libc", ":native_printf_libc" ]
+  deps += [ ":native_cpp_libcxx" ]
+  deps += [ ":native_file_libc" ]
+  deps += [ ":native_diagnostic_libcxx" ]
+  deps += [ ":native_once_libcxx" ]
+  deps += [ ":native_ctype_libc" ]
+  deps += [ ":native_alloc_printf_libc" ]
+  deps += [ ":native_guard_libcxxabi" ]
+  deps += [ ":native_locale_libc" ]
   ldflags = [
     "-T", rebase_path("native.ld", root_build_dir),
     "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),

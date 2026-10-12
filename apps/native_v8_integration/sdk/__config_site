@@ -24,7 +24,9 @@
 #define _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS 0
 /* #undef _LIBCPP_NO_VCRUNTIME */
 #define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 1
-#define _LIBCPP_HAS_FILESYSTEM 0
+// Enables upstream file-stream definitions; native filesystem APIs and
+// stream runtime still require explicit providers and guest acceptance.
+#define _LIBCPP_HAS_FILESYSTEM 1
 #define _LIBCPP_HAS_RANDOM_DEVICE 0
 #define _LIBCPP_HAS_LOCALIZATION 1
 #define _LIBCPP_HAS_UNICODE 0
