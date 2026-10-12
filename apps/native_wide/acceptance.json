@@ -1,0 +1,63 @@
+{
+  "scope": "Actual full-target LLVM UTF-8 family consumed by libc++ wide time/codecvt; original algorithms with explicit scalar/shortest-form, error-source and null-source corrections, pinned SDK state ABI",
+  "recorded_utc": "2026-10-12T14:52:34.896858+00:00",
+  "actual_compile": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-native-compile-04/status.json",
+    "sha256": "f7915392d62aa39d0548708b07c327d97690814e2a49a00918521df2b9803bbf"
+  },
+  "private_guest": {
+    "path": "@WORKSPACE@/artifacts/native-wide-runtime-guest-20261012-a/qemu-02/status.json",
+    "sha256": "a1f17e3af2a90ce8e5c4bcd51db194b0f1d1e7c179665684250a49263db50751"
+  },
+  "private_self_review": {
+    "path": "@WORKSPACE@/artifacts/native-wide-runtime-guest-20261012-a/self-review-01.json",
+    "sha256": "fb7f429e1959d70404709eaf5830f0b7f6be3a6e473d290900e58c6cf3f235c6"
+  },
+  "actual_complete30_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-full30-review-01.json",
+    "sha256": "be56a153ddccc61ed6b59ee446f201117aa5eb7e719f41c64e4727a39b2ce962"
+  },
+  "public_guest": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-publication-packet-01/public-replay-01/status.json",
+    "sha256": "3ed18587f56f5f8622dd1e6214af29f4b2301a946fcf9bbb05cb3a4c80ac7162"
+  },
+  "public_self_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-publication-packet-01/self-review-01.json",
+    "sha256": "f55ae345cdcf338c562d1c46fb377ba058dc610c32871fb45d93be9576d38d41"
+  },
+  "input_snapshot": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/input-snapshot-review-01.json",
+    "sha256": "49744d69593d62be0e79bbffe042b9ed589c8fda292cb1c169a6a1ff9a853fba"
+  },
+  "source_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/module-input-snapshot/source-lock.json",
+    "sha256": "314a579ca8641b60624cd21e96dd0741ffbe9c2680d3d399d33f4b7858975744"
+  },
+  "payload_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/module-input-snapshot/payload-lock.json",
+    "sha256": "1b8b6ba013e7da1d49289f97335785fa8372f8fb8bd92e9e42cf7429afc462a4"
+  },
+  "native_wide_guest_pass": true,
+  "public_wide_replay_pass": true,
+  "actual_complete30_objects_byte_exact": true,
+  "wide_family_resolved_in_actual_complete30": true,
+  "actual_victim_cases": 12,
+  "exact_reap_checks": 14,
+  "normal_roundtrips": 48,
+  "split_continuations": 80,
+  "guarded_byte_capacities": 224,
+  "invalid_rejections": 52,
+  "public_bound_inputs": 418,
+  "rejected_observer_controls": 194,
+  "fault_cancel_and_exact_recovery_pass": true,
+  "max_provider_own_stack_bytes": 56,
+  "public_verifier": "tools/verify-native-wide.py",
+  "first_actual_blocker_after_full_link": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*)",
+  "complete_native_target_pass": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "capacity_changed": false,
+  "production_image_changed": false,
+  "publication_state": "qualification snapshot before normal dev commit; publication receipt is recorded separately"
+}

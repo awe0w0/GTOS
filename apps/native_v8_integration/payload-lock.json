@@ -262,8 +262,8 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "2f896f8a582e760c30fadcdaf42d16e0b71c31aea88112c7a9c0c44f26b6615b",
-      "bytes": 15482
+      "sha256": "f4d31b97b1a8bd12ffbc93681a9dfc181f3ff8ac25955f1917f6f707f76153c7",
+      "bytes": 16469
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
@@ -5999,6 +5999,22 @@
     "overlay/tools/gtos_isolate_diagnostic/runtime/system-error-no-exceptions.cc": {
       "sha256": "18ff059a675fb467a64c81b254090b465dc737d8a05fc492623cff6911d4152b",
       "bytes": 1275
+    },
+    "overlay/third_party/llvm-libc/src/src/__support/wchar/character_converter.h": {
+      "sha256": "5a6ceef9fb0cca6daff0a18b106b161bbe4a83a5b0fc63cdeb71675e61528f8e",
+      "bytes": 7978
+    },
+    "overlay/third_party/llvm-libc/src/src/__support/wchar/mbsnrtowcs.h": {
+      "sha256": "5665b9a075068a1027316c2596721504ea53089c7fc86b5ddb63410a9bd8a0a9",
+      "bytes": 2086
+    },
+    "overlay/third_party/llvm-libc/src/src/__support/wchar/mbrtowc.cpp": {
+      "sha256": "17befd885cd79f6136efdf34aa470ed2fa59d6fba6a8921739418918dc96f247",
+      "bytes": 1693
+    },
+    "overlay/third_party/llvm-libc/src/hdr/types/mbstate_t.h": {
+      "sha256": "4ac00ec6a9d91e573b1d962db1b89cc752a9fc115f3771070232437fd4c505bd",
+      "bytes": 635
     }
   },
   "overlay_files": 84,

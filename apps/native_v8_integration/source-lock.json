@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "977315875915ec01f4c92db23875a57b51d52d4a9e956f865d144b6af1279db8",
+  "payload_lock_sha256": "1b8b6ba013e7da1d49289f97335785fa8372f8fb8bd92e9e42cf7429afc462a4",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1215,7 +1215,24 @@
     "third_party/libc++/src/include/__math/modulo.h": "129e47ebcc44fa8118cf5ecddbd49cdb5c96a37b82d55c8e9e84b7408a844546",
     "third_party/libc++/src/include/__math/remainder.h": "24cb82e905b99314642d15f4c49098698d30d8e255941b48d2a7565b40117653",
     "third_party/libc++/src/include/__math/rounding_functions.h": "515720b3b8565a99a108cb130ca46f0010cf29d802ee3fe417b806d023743a26",
-    "third_party/libc++/src/include/__math/trigonometric_functions.h": "d5f51af11c3fb5a6d7ddc66cbbd1246e99026f7e0b0edd6e3122db7ce5033df8"
+    "third_party/libc++/src/include/__math/trigonometric_functions.h": "d5f51af11c3fb5a6d7ddc66cbbd1246e99026f7e0b0edd6e3122db7ce5033df8",
+    "third_party/llvm-libc/src/src/wchar/mbsrtowcs.cpp": "dc997a768ca790272763e5c2cc5f3bc469777ef9f58bb249d46df05bf2cd7aeb",
+    "third_party/llvm-libc/src/src/wchar/mbsrtowcs.h": "09bef666389ae83ca76f97c578710b6db5d61dbe4436eaa0aaa455db0013d22b",
+    "third_party/libc++/src/include/uchar.h": "94db4f0ff85191573f26d66a0a4c9881eb9201cd4e0a20d11c9fa8aceb0d06ea",
+    "third_party/llvm-libc/src/src/wchar/wcsnrtombs.cpp": "3ff07a7190551660c1a7a523f34b1d6ae74d110ae8a200a28fc0dd8ba02286bb",
+    "third_party/llvm-libc/src/src/wchar/wcsnrtombs.h": "80b827e8b50afa5efc73fac95540e2670a9ca1ab92ce7dcb1445f719fb5265f1",
+    "third_party/llvm-libc/src/src/__support/wchar/wcsnrtombs.h": "fd4a848b0b12756005344fb8fcb3b3b4cb6a6fb86580bb384c5af17540075854",
+    "third_party/llvm-libc/src/src/wchar/wcrtomb.cpp": "c8bda09b6642a8076721d7f5d6bca9827a15759eeac84108814b839c948f84a8",
+    "third_party/llvm-libc/src/src/wchar/wcrtomb.h": "b21cdab68b0ded708563b66f995fc3030fec3df0c474bab687a68d72df0fa0cf",
+    "third_party/llvm-libc/src/src/wchar/mbsnrtowcs.cpp": "5087c33018bf58d6eebfe505ed7108519221682b08c213baf8f9bcdd2543af80",
+    "third_party/llvm-libc/src/src/wchar/mbsnrtowcs.h": "47915633e80fc55a5259a2fa23297e849df10d2ff8fdf89c39e86d549e5f6662",
+    "third_party/llvm-libc/src/src/wchar/mbrtowc.cpp": "80377f08c6ba7d621eeff0995623dbadf46acf6f13f16762d3b4211fb6c66004",
+    "third_party/llvm-libc/src/src/wchar/mbrtowc.h": "51c67683888787385aef764baa158f2fa645a03c0bd52af88f7c3184470b833d",
+    "third_party/llvm-libc/src/src/__support/wchar/mbrtowc.h": "b7b39ba27cd63dda017fafb18b00153f374bdeeca42461335e68f3cf32ed7e85",
+    "third_party/llvm-libc/src/src/wchar/mbrlen.cpp": "583ff328e9c1f6913ca9942642c0dc692a95c82b79ccb78fe2effaceffc4303d",
+    "third_party/llvm-libc/src/src/wchar/mbrlen.h": "38958ecedaf4ea9b338eda5439be72ce9f988aa34004ace1b83e1b9c2e447af3",
+    "third_party/llvm-libc/src/src/stdlib/mbtowc.cpp": "d2814e2284f11c8d81a760907927914f80eb081664054d9e7b784456e2a536d2",
+    "third_party/llvm-libc/src/src/stdlib/mbtowc.h": "bc0268210cf1094d09a5b0490318db8c4f4622179e7aa06edb4415d04155ce57"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1284,5 +1301,26 @@
   "native_chrono_upstream_sources": {
     "chrono.cpp": "f1559dc47b5a39e370fef4776adafb8ca4f9ac8221f9901ee4f65d999b04c2a4",
     "system_error.cpp": "32dea8edfe92738c0d35f1edc9fcd6088a30fb9861b57d728674ef23c7b919fe"
-  }
+  },
+  "native_wide_scope": "Actual full29 libc++ wide time and codecvt UTF-8 consumers; minimal explicit pinned converter scalar/shortest-form, error source-pointer and null-source restart adaptations. No locale repertoire expansion or unrelated API matrix.",
+  "native_wide_upstream_adaptations": {
+    "src/__support/wchar/character_converter.h": {
+      "upstream_sha256": "d45a8a8a5d445f5709ed3cd833bb328d888c2063a56a100f8c0bab3c08796a24",
+      "adapted_sha256": "5a6ceef9fb0cca6daff0a18b106b161bbe4a83a5b0fc63cdeb71675e61528f8e"
+    },
+    "src/__support/wchar/mbsnrtowcs.h": {
+      "upstream_sha256": "48e069784cc6ae770e957d5ba82f86a984191e06f77d5c9f09f5a1ac6e388538",
+      "adapted_sha256": "5665b9a075068a1027316c2596721504ea53089c7fc86b5ddb63410a9bd8a0a9"
+    },
+    "src/__support/wchar/mbrtowc.cpp": {
+      "upstream_sha256": "f06a8c46e1f82e0e760c3e4f539d3538f715d4e58b88763fcd1113ee1fa0aa0a",
+      "adapted_sha256": "17befd885cd79f6136efdf34aa470ed2fa59d6fba6a8921739418918dc96f247"
+    },
+    "hdr/types/mbstate_t.h": {
+      "upstream_sha256": "a2d724f907734b14670a7d5b868583da4c852ad8553d77d9d822c6b3a9099def",
+      "adapted_sha256": "4ac00ec6a9d91e573b1d962db1b89cc752a9fc115f3771070232437fd4c505bd",
+      "purpose": "Overlay uses the byte-identical pinned GTOS C SDK mbstate_t instead of rejecting host-libc overlay types"
+    }
+  },
+  "native_wide_sdk_mbstate_sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce"
 }
