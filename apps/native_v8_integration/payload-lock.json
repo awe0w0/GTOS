@@ -262,8 +262,8 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "073f739dcf388a6a95e39859158c39e49d60fd3a7d4229a8e44802c11d274a1d",
-      "bytes": 14100
+      "sha256": "4e818d3c63226cc19ef4c91f502460b13cc3b3f86093e52f54831eebacf01bd0",
+      "bytes": 14758
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",

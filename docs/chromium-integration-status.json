@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-12T10:48:25.058568+00:00",
-  "scope": "完整16完成编译并实际链接，缺失150个符号；23个既有提供者实验消除17个缺口，完整17的GN接线已启动。无完整ELF或客体资格。",
+  "recorded_utc": "2026-10-12T12:53:20.058032+00:00",
+  "scope": "完整原生28实际最终链接已越过strftime，首错为chrono::steady_clock::now；时间格式化公开双冷启动与自审通过。没有完整ELF或客体Isolate/JS/浏览器资格。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -34,42 +34,42 @@
   "first_build_blocker": {
     "phase": "actual final ELF link",
     "target": "native_embedder.elf",
-    "diagnostic": "ld.lld: error: undefined symbol: strftime",
-    "complete_attempt": "standard-stream-runtime-resume-27",
+    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::chrono::steady_clock::now()",
+    "complete_attempt": "time-format-runtime-resume-28",
     "link_command_evidence": {
-      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v35-status-snapshots/native27-terminal-status.json",
-      "sha256": "509389e3cd28d6615903302b7e0b2a39b95fe5f11761a3efd413e9eddb98f480"
+      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v40-status-snapshots/native28-terminal-status.json",
+      "sha256": "e700a3d6a0c7b62c32784e835e5cf49343540afc6bc33bcb9a38067c9d880bd5"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/standard-stream-runtime-resume-27/complete-native-build.log",
-      "sha256": "3921c667d521a05f95244cd65f200bd516188a9379bfcee31466b497a8daacb2"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/complete-native-build.log",
+      "sha256": "0c22a934b76b2095786f93fcb0463059b883f49195060902f3b1b28689adcdee"
     },
-    "consumer": "Actual pinned libc++ locale.cpp time_put<char/wchar_t>::do_put calls strftime; wide consumer also needs mbsrtowcs.",
-    "cause": "Pinned real time formatting provider is not connected. Follow actual LLVM-libc/no_locale consumer, preserve full required format/bounds behavior and qualify affected guest semantics before next full replay.",
+    "consumer": "Abseil synchronization/internal/kernel_timeout.cc KernelTimeout(Duration)",
+    "cause": "Real libc++ steady_clock::now using the existing native monotonic clock, preserving epoch/unit/error handling. Do not use wall time or a success placeholder.",
     "default_linker_error_limit": 20,
     "all_missing_symbols_count_measured": false,
     "resolved_in_current_complete_link": false
   },
   "other_observed_failures": [
+    "ld.lld: error: undefined symbol: absl::base_internal::LowLevelAlloc::Free(void*)",
+    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemWait",
+    "ld.lld: error: undefined symbol: absl::synchronization_internal::CreateThreadIdentity()",
+    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemPost",
     "ld.lld: error: undefined symbol: mbsrtowcs",
     "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*)",
     "ld.lld: error: undefined symbol: sscanf",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::chrono::steady_clock::now()",
+    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
     "ld.lld: error: undefined symbol: wcsnrtombs",
     "ld.lld: error: undefined symbol: wcrtomb",
     "ld.lld: error: undefined symbol: mbsnrtowcs",
     "ld.lld: error: undefined symbol: mbrtowc",
     "ld.lld: error: undefined symbol: mbtowc",
     "ld.lld: error: undefined symbol: mbrlen",
-    "ld.lld: error: undefined symbol: absl::base_internal::LowLevelAlloc::Free(void*)",
+    "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: __cxa_atexit",
-    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemWait",
-    "ld.lld: error: undefined symbol: absl::synchronization_internal::CreateThreadIdentity()",
-    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemPost",
-    "ld.lld: error: undefined symbol: strtof",
-    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
-    "ld.lld: error: undefined symbol: strtod",
-    "ld.lld: error: undefined symbol: strtold",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
+    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
+    "ld.lld: error: undefined symbol: __cxa_pure_virtual",
     "ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)"
   ],
   "runs": [
@@ -653,11 +653,10 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "Finish normal dev publication of qualified complete-target runtime inputs and portable standard FILE replay after review. Native27 advances standard streams to strftime. Next use actual time_put C/wide consumer and pinned real provider to implement necessary time formatting/bounds behavior, qualify affected guest paths and immediately replay same full target; no unrelated API matrix.",
-    "Resolve actually consumed FILE/C++/platform dependencies by reusing existing implementations where possible; validate only affected boundary/failure/reclamation semantics. Preserve all consumers, flags and prior failure/cache evidence.",
-    "Keep isolated reference09 running from the stopped08 cache copy. The actual host generator action now passes with the pinned i386 loader; capture whole Content compile/link terminal and first blocker. Host-interpreter failure does not reject IA32; host success does not qualify GTOS.",
-    "After a complete real ELF, measure segments, mapping, stack and heap before coordinated loader/capacity changes. First functional milestone is real GTOS Platform/Isolate/Context/Script and exact reclamation.",
-    "Then guest local HTML/CSS first frame and input-driven DOM, controlled HTTP/HTTPS and safety boundaries, then video and broader HTML5."
+    "时间格式化公共模块完成最终复审，正常提交并推送dev。",
+    "按真实chrono::steady_clock::now首错接入已有原生单调时钟，保留单位、误差及无异常失败语义。",
+    "必要受影响客体验证后立即回放同一完整目标；UTF-8候选暂留私有，按实际宽字符阻塞再接入。",
+    "真实完整ELF后测量装载/堆栈并执行客体Isolate/JS，然后按本地网页、受控网络、视频和HTML5推进。"
   ],
   "retained_complete_attempts": [
     {
@@ -1469,17 +1468,23 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "name": "standard-stream-runtime-resume-27",
-    "observed_utc": "2026-10-12T10:48:25.058568+00:00",
-    "phase": "terminal final ELF32 link failure",
-    "driver_process_observed_alive": false,
-    "build_terminal_result_observed": true,
-    "status": {
-      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v35-status-snapshots/native27-terminal-status.json",
-      "sha256": "509389e3cd28d6615903302b7e0b2a39b95fe5f11761a3efd413e9eddb98f480"
+    "name": "time-format-runtime-resume-28",
+    "terminal_status": {
+      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v40-status-snapshots/native28-terminal-status.json",
+      "sha256": "e700a3d6a0c7b62c32784e835e5cf49343540afc6bc33bcb9a38067c9d880bd5"
     },
-    "full_elf_or_guest_js_pass": false,
-    "published": false
+    "terminal_utc": "2026-10-12T12:45:08.250999+00:00",
+    "exit_code": 1,
+    "ninja_elapsed_seconds": 4211.148978654004,
+    "first_blocker": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::chrono::steady_clock::now()",
+    "strftime_resolved": true,
+    "full_elf_exists": false,
+    "gn_pass": true,
+    "bound_inputs_unchanged": true,
+    "old_object_commands_preserved": 5135,
+    "two_required_time_objects_added": true,
+    "prior_ordered_link_inputs_and_engine_args_preserved": true,
+    "all_1262_inputs_frozen": true
   },
   "cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-02",
@@ -2221,7 +2226,7 @@
     "max_provider_own_stack_bytes": 92,
     "native_standard_stream_guest_pass": true,
     "full_target_pass": false,
-    "published": false,
+    "published": true,
     "scope": "Real private static diagnostic FILE output guest-qualified. Console read/fileno explicitly ENOSYS, seek ESPIPE; actual positive native handles after real file redirection. Normal release, retained std handle/buffer fault/cancel and exact reclaim qualified; no keyboard input, general POSIX descriptor table or complete engine claim.",
     "guest_initial_environment_failure": {
       "path": "@WORKSPACE@/artifacts/native-standard-stream-guest-20261012-a/qemu-01/status.json",
@@ -2273,8 +2278,13 @@
     },
     "public_verifier": "tools/verify-native-standard-streams.py",
     "public_source_staged_in_working_tree": true,
-    "committed": false,
-    "pushed": false
+    "committed": true,
+    "pushed": true,
+    "publication_commit": "5a8f10a99fe7d514f01696abf487026423415afc",
+    "publication_receipt": {
+      "path": "@WORKSPACE@/logs/native-v8-integration-publication-5a8f10a.json",
+      "sha256": "7c9773ebfd3f20c7a15a60b14c237c153d5d67fb0cb4cf39650b1d8741aa8f32"
+    }
   },
   "qualified_runtime_publication": {
     "installation": {
@@ -2294,15 +2304,179 @@
     "all_provider_bytes_match_private_qualification": true,
     "private_input_and_old_wip_snapshot_preserved": true,
     "public_source_lock": {
-      "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/source-lock.json",
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/previous-public-source/apps/native_v8_integration/source-lock.json",
       "sha256": "3087688232db9250cf5d9968f3fe1b3c81cb12fc2a34663df84c01a88cb77516"
     },
     "public_payload_lock": {
-      "path": "@WORKSPACE@/sources/GTOS/apps/native_v8_integration/payload-lock.json",
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/previous-public-source/apps/native_v8_integration/payload-lock.json",
       "sha256": "15e2faba3e748e55605192f0948c9b0222396e0beb24113630811a7f1c5f7b5f"
     },
     "complete_native_build_pass": false,
     "empty_host_bootstrap_pass": false,
+    "committed": true,
+    "pushed": true,
+    "publication_commit": "5a8f10a99fe7d514f01696abf487026423415afc",
+    "publication_receipt": {
+      "path": "@WORKSPACE@/logs/native-v8-integration-publication-5a8f10a.json",
+      "sha256": "7c9773ebfd3f20c7a15a60b14c237c153d5d67fb0cb4cf39650b1d8741aa8f32"
+    }
+  },
+  "native_time_format_runtime_integration": {
+    "scope": "Real fixed LLVM C-locale strftime/time_utils objects from actual complete28, executed through libc++ no_locale wrapper",
+    "compile": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-native-compile-02/status.json",
+      "sha256": "f4a05f73bdd263f08612868740cb1e41eef986128133261eb45958873118a674"
+    },
+    "private_guest": {
+      "path": "@WORKSPACE@/artifacts/native-time-format-guest-20261012-a/qemu-02/status.json",
+      "sha256": "285cc2c39cbbc7963926ec08e6e3bb1b45c76c70d8cbeb1a6e79973ab4f77282"
+    },
+    "private_self_review": {
+      "path": "@WORKSPACE@/artifacts/native-time-format-guest-20261012-a/self-review-01.json",
+      "sha256": "3ba3a024f7535842d8760f3b53e4525678e705ebc1f3c0d884ee5bfd01816053"
+    },
+    "actual_complete28_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-full28-review-01.json",
+      "sha256": "eece13e03a87ce0099f243ab69d70de7363723fd84d36b5e21fbc2418c618279"
+    },
+    "public_guest": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/public-replay-01/status.json",
+      "sha256": "149ec5a118d2ae6b60136ab106e9fb29d780be518bc02f24c56e819b28198858"
+    },
+    "public_self_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/self-review-01.json",
+      "sha256": "27214a75a47084e27124171dde5044c6ea0c59b708c40b891d9f17ebcbc7e69f"
+    },
+    "public_pipeline_terminal": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
+      "sha256": "cd9bf1e6dac728765fe36b4630dc2c7ddd460aaf3b98c49a18867fbea8b18510"
+    },
+    "input_snapshot": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/input-snapshot-review-01.json",
+      "sha256": "fe8c624d4144893c218be3e7ce9f0dfc84c69d4d298376714211f2d4fdab8822"
+    },
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/module-input-snapshot/source-lock.json",
+      "sha256": "de314eb1d4da5d991535fdad8c524d967b6ad8fffd759a8f3eb36b2dfabc00b8"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/module-input-snapshot/payload-lock.json",
+      "sha256": "72620cfd99f481d7ebbb6a21fd22e89c443ad42f4696f351b64ef99a6eb9e9b7"
+    },
+    "native_time_format_guest_pass": true,
+    "public_guest_replay_pass": true,
+    "actual_complete28_objects_byte_exact": true,
+    "strftime_resolved_in_actual_complete28": true,
+    "actual_victim_cases": 12,
+    "exact_reap_checks": 14,
+    "format_cases": 104,
+    "capacity_cases": 52,
+    "rejected_observer_controls": 164,
+    "no_formatter_heap_allocation": true,
+    "native_compile_and_guest_inputs_unchanged": true,
+    "max_own_stack_bytes": {
+      "strftime": 188,
+      "time_utils": 48
+    },
+    "public_verifier": "tools/verify-native-time-format.py",
+    "complete_native_target_pass": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "capacity_changed": false,
+    "production_image_changed": false,
+    "committed": false,
+    "pushed": false
+  },
+  "next_native_consumer_analysis": {
+    "consumer": {
+      "path": "@WORKSPACE@/sources/v8-reference/v8/third_party/libc++/src/src/locale.cpp",
+      "sha256": "dbcfd5b05dd0c7b670659a1aed1c4af89d9fbc6dea765589a336ecc76cd0ca5c"
+    },
+    "converter": {
+      "path": "@WORKSPACE@/sources/v8-reference/v8/third_party/llvm-libc/src/src/__support/wchar/character_converter.h",
+      "sha256": "d45a8a8a5d445f5709ed3cd833bb328d888c2063a56a100f8c0bab3c08796a24"
+    },
+    "host_reproduction": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wchar-converter-source-repro-01/status.json",
+      "sha256": "89ec5a55c9dd5eda1bdaf4936847f6cea479f06afe5fba22d2b956b57e210c36"
+    },
+    "observed_in_previous_real_link": [
+      "mbsrtowcs",
+      "wcsnrtombs",
+      "wcrtomb",
+      "mbsnrtowcs",
+      "mbrtowc",
+      "mbtowc",
+      "mbrlen"
+    ],
+    "consumer_lines": [
+      1264,
+      1269,
+      1321,
+      1326,
+      1383,
+      1398,
+      4941
+    ],
+    "scope": "Read-only next-consumer analysis plus host root-cause reproduction. Current native28 is still live; no new provider adaptation or guest qualification.",
+    "observed_converter_values": {
+      "valid_C2_A2": "U+00A2",
+      "overlong_C0_AF": "U+002F",
+      "surrogate_ED_A0_80": "U+D800",
+      "above_range_F4_90_80_80": "U+110000"
+    },
+    "unrestricted_utf8_rejection_pass": false,
+    "native_guest_pass": false,
+    "implementation_started": false,
+    "next_constraint": "When the actual next complete-target blocker calls for wide conversion, preserve originals and add minimal proper scalar/shortest-form checks with necessary state/source-pointer and native lifetime coverage.",
+    "private_candidate": {
+      "preparation": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wchar-converter-adaptation-01/preparation.json",
+        "sha256": "13b79e6b44284fe5df476c95ad60a104e72ea414f030d78b5d0ac6ad046541c5"
+      },
+      "host_check": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wchar-converter-adaptation-01/host-check-02/status.json",
+        "sha256": "3efec29c4942187219c7d2f1c0abf36c48309b8695ed81041b610161c0485262"
+      },
+      "self_review": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wchar-converter-adaptation-01/self-review-01/status.json",
+        "sha256": "9065d42d1961d72f30dbb30dad1d34db5637eb2f258b6e0cdb537bdf4bf27b46"
+      },
+      "patch": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wchar-converter-adaptation-01/character_converter.patch",
+        "sha256": "28fad77330a07ca9b726a0622e412ea07bfd088d0ffef0f2224adeb744115367"
+      },
+      "initial_fixture_compile_failure": {
+        "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wchar-converter-adaptation-01/host-check-01/compile.log",
+        "sha256": "252a581eaff7a341538e3b4d27520e46f8552c2256d2ba956caf54cbf77b9664"
+      },
+      "host_candidate_pass": true,
+      "valid_roundtrips": 12,
+      "split_continuations": 20,
+      "invalid_rejections": 13,
+      "original_converter_negative_control_exit": 10,
+      "original_source_unchanged": true,
+      "state_layout_retained": true,
+      "scope": "Private header candidate for already observed wide-conversion dependency; host-only, not connected to current or future native target yet",
+      "native_compile_pass": false,
+      "native_guest_pass": false,
+      "published": false
+    },
+    "private_candidate_adaptation_started": true,
+    "native_provider_connected": false
+  },
+  "latest_handoff": {
+    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v40.json",
+    "sha256": "d0d5cc134b2494eda010947653156135d7d769b33ecaabd1e3e55a93738cad79"
+  },
+  "post_build_validation_pipeline": {
+    "terminal": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
+      "sha256": "cd9bf1e6dac728765fe36b4630dc2c7ddd460aaf3b98c49a18867fbea8b18510"
+    },
+    "public_guest_replay_pass": true,
+    "public_self_review_pass": true,
     "committed": false,
     "pushed": false
   }

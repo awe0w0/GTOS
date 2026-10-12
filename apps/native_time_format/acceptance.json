@@ -1,0 +1,69 @@
+{
+  "scope": "Real fixed LLVM C-locale strftime/time_utils objects from actual complete28, executed through libc++ no_locale wrapper",
+  "compile": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-native-compile-02/status.json",
+    "sha256": "f4a05f73bdd263f08612868740cb1e41eef986128133261eb45958873118a674"
+  },
+  "private_guest": {
+    "path": "@WORKSPACE@/artifacts/native-time-format-guest-20261012-a/qemu-02/status.json",
+    "sha256": "285cc2c39cbbc7963926ec08e6e3bb1b45c76c70d8cbeb1a6e79973ab4f77282"
+  },
+  "private_self_review": {
+    "path": "@WORKSPACE@/artifacts/native-time-format-guest-20261012-a/self-review-01.json",
+    "sha256": "3ba3a024f7535842d8760f3b53e4525678e705ebc1f3c0d884ee5bfd01816053"
+  },
+  "actual_complete28_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-full28-review-01.json",
+    "sha256": "eece13e03a87ce0099f243ab69d70de7363723fd84d36b5e21fbc2418c618279"
+  },
+  "public_guest": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/public-replay-01/status.json",
+    "sha256": "149ec5a118d2ae6b60136ab106e9fb29d780be518bc02f24c56e819b28198858"
+  },
+  "public_self_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/self-review-01.json",
+    "sha256": "27214a75a47084e27124171dde5044c6ea0c59b708c40b891d9f17ebcbc7e69f"
+  },
+  "public_pipeline_terminal": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
+    "sha256": "cd9bf1e6dac728765fe36b4630dc2c7ddd460aaf3b98c49a18867fbea8b18510"
+  },
+  "input_snapshot": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/input-snapshot-review-01.json",
+    "sha256": "fe8c624d4144893c218be3e7ce9f0dfc84c69d4d298376714211f2d4fdab8822"
+  },
+  "source_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/module-input-snapshot/source-lock.json",
+    "sha256": "de314eb1d4da5d991535fdad8c524d967b6ad8fffd759a8f3eb36b2dfabc00b8"
+  },
+  "payload_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/module-input-snapshot/payload-lock.json",
+    "sha256": "72620cfd99f481d7ebbb6a21fd22e89c443ad42f4696f351b64ef99a6eb9e9b7"
+  },
+  "native_time_format_guest_pass": true,
+  "public_guest_replay_pass": true,
+  "actual_complete28_objects_byte_exact": true,
+  "strftime_resolved_in_actual_complete28": true,
+  "actual_victim_cases": 12,
+  "exact_reap_checks": 14,
+  "format_cases": 104,
+  "capacity_cases": 52,
+  "rejected_observer_controls": 164,
+  "no_formatter_heap_allocation": true,
+  "native_compile_and_guest_inputs_unchanged": true,
+  "max_own_stack_bytes": {
+    "strftime": 188,
+    "time_utils": 48
+  },
+  "public_verifier": "tools/verify-native-time-format.py",
+  "complete_native_target_pass": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "capacity_changed": false,
+  "production_image_changed": false,
+  "committed": false,
+  "pushed": false,
+  "recorded_utc": "2026-10-12T12:53:20.058032+00:00",
+  "first_blocker_after_actual_link": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::chrono::steady_clock::now()"
+}

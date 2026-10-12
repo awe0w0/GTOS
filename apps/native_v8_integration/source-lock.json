@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "15e2faba3e748e55605192f0948c9b0222396e0beb24113630811a7f1c5f7b5f",
+  "payload_lock_sha256": "72620cfd99f481d7ebbb6a21fd22e89c443ad42f4696f351b64ef99a6eb9e9b7",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -672,7 +672,38 @@
     "third_party/llvm-libc/src/include/llvm-libc-types/locale_t.h": "d69fa934111cc8ed4b56983be76e401e4dd4152c29186fe1985ad83eb255f058",
     "third_party/llvm-libc/src/include/llvm-libc-macros/locale-macros.h": "df8ec4a737fb2ad7332940fd2e3763ac1856464eec9f7396338559bce84f8795",
     "third_party/llvm-libc/src/include/llvm-libc-macros/limits-macros.h": "e43a383d61514bbf4ab02e1509895c65c4a433b6d59468d7d968c1ef9537cdf4",
-    "third_party/llvm-libc/src/include/llvm-libc-macros/common-threads-macros.h": "a7819ae4b6de53e3d3da385a72fb7e46e31922a8880594488f00e9050b7dc35c"
+    "third_party/llvm-libc/src/include/llvm-libc-macros/common-threads-macros.h": "a7819ae4b6de53e3d3da385a72fb7e46e31922a8880594488f00e9050b7dc35c",
+    "third_party/llvm-libc/src/src/time/strftime.cpp": "b5cdfdb8bb504011811fb8b7efe63daeba290834c45238a38c541e262dec2f65",
+    "third_party/llvm-libc/src/src/time/strftime.h": "75b8986bb5745c94a4dd7bbe9efbfc59ce492a5e6301d13488bf64a4f0a50c59",
+    "third_party/libc++/src/include/stddef.h": "c7b1488287bc405c1eb1c44720ead99f0a810d09fe14f132592eaf34bf0da5f6",
+    "third_party/libc++/src/include/__config": "8a22f6575188bd4a8af218746301b442900356d0ad5b92e5747ac1d5e3a7a8dc",
+    "third_party/libc++/src/include/__configuration/abi.h": "1a257441d7853e0c819d078299e474d84b7638a7588c3b89d0826f33298cd9be",
+    "third_party/libc++/src/include/__configuration/compiler.h": "ea08c8efd33d694dd4d005083d8f1ebb4cfba893f0c076c1bffeee360bae7e1b",
+    "third_party/libc++/src/include/__configuration/platform.h": "c5082606d2a83ac238390ecdef46eecf17e57afff1d39a8fe602da875e9552cf",
+    "third_party/libc++/src/include/__configuration/attributes.h": "e1e586ceed3889c717b7bade57cb13b1e38946eaaa68190f396105e5a5e8efea",
+    "third_party/libc++/src/include/__configuration/hardening.h": "0e9d4d396a3b86bc0567b0fca03937f43b9c06bd770b66aec8342c39c4b18230",
+    "third_party/libc++/src/include/__configuration/experimental.h": "591854d7040d9f0cf672ebb5c85d7b9ddd0daab7bc18286a3dff8eaa7024da53",
+    "third_party/libc++/src/include/__configuration/language.h": "0e768e7562087d7b0c114ec35044efe791c8465d79766c90de7ee88f6a11f128",
+    "third_party/libc++/src/include/__configuration/utility.h": "fc0bdb0b17b4c1d3eafd2406b2297af9bffda5aeb91f8ad34defef806e589784",
+    "third_party/libc++/src/include/__configuration/availability.h": "543a73479d1fb9d0fdc33c846c99a29b0a8872e3afa6c175c92f241dddd1d6f5",
+    "third_party/libc++/src/include/__configuration/diagnostic_suppression.h": "331c70679841603599159bbe0d72fdf2ada6956a9a4ec58ab2560a0df2ce1d17",
+    "third_party/libc++/src/include/__configuration/namespace.h": "cdd2ad7c91f0b9dcc6ca40dddfb7be8053c9ef32dfe9db73d1664ae1000841ce",
+    "third_party/libc++/src/include/__configuration/pstl.h": "9f5af4a5251a6a6364a3c0d783faccaf1b56464579fbe593b886f95c89cae91c",
+    "third_party/llvm-libc/src/hdr/types/struct_tm.h": "69f7e2e289a59d4e766255d488531a49949c14fbb16d1c91ec9f5922de505ddd",
+    "third_party/llvm-libc/src/src/time/strftime_core/strftime_main.h": "b21acebbb92f5c4742ecae2233d5b377f6c32d9ba738870d03724cdc0894e6af",
+    "third_party/llvm-libc/src/src/time/strftime_core/converter.h": "8048d69fab2a83febd254960ac653df4f1139d11f344f5dd8188d913e7b01c7d",
+    "third_party/llvm-libc/src/src/time/strftime_core/composite_converter.h": "192111856eb0afb7560577c608adb931addc2a28bff3ece19b9b6588a50fd0c1",
+    "third_party/llvm-libc/src/src/time/strftime_core/core_structs.h": "6fbc781f36ab185a1a1b66ea3dd3fdcdd3cd33420ea1881a68bb12b6f6921e54",
+    "third_party/llvm-libc/src/src/time/strftime_core/num_converter.h": "de6c0ef31041c6176fdc4477edf32e0bc6d00b52171579d90ed82bb8584865b7",
+    "third_party/llvm-libc/src/src/time/time_constants.h": "88820f607c91409aea030143da4a26c30646c98a4af5a1f6b814d32f5358bfa0",
+    "third_party/llvm-libc/src/hdr/types/time_t.h": "625d866861b26e7f82c95c759e891475bc47e919a4ccd014d50405d58e275a4c",
+    "third_party/llvm-libc/src/src/time/time_utils.h": "55cee0e21e9c8ccef74fac673b79186fdf27769635425785ba02917c1bf17980",
+    "third_party/libc++/src/include/errno.h": "9314437f3d2a272e14e33950f883bd9f37e2661a1126448c8e0b26076f6374ab",
+    "third_party/llvm-libc/src/src/time/strftime_core/str_converter.h": "bf775bc06cd4a290b8b27a3df9d7a363a5e5de4c0dc6cfca8950ac6d5f3f3a56",
+    "third_party/llvm-libc/src/src/time/strftime_core/parser.h": "0b692551b75fbb3f0bb08e2be3239e6888cd9e6a721adc4a362e72930a1717da",
+    "third_party/libc++/src/include/wchar.h": "90e327a46fb9a901cff1fa623e68e1cfffb461043090d26a75281a6532b2981d",
+    "third_party/libc++/src/include/__mbstate_t.h": "188a45a458d7020dd592f99ca6edbfe820441fa8ddf9a9de9f3b8916b77b9dbc",
+    "third_party/llvm-libc/src/src/time/time_utils.cpp": "677e4d5750a36ea85e58d6540a3517e7e88c3fd28edd6fcd3c4422eb03245b15"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -735,5 +766,6 @@
     "released_native_handles": 20,
     "console_fileno_explicit_enosys_pass": true,
     "normal_heap_region_release_and_unmapped_memory_verified": true
-  }
+  },
+  "native_time_format_scope": "Pinned unmodified LLVM strftime and time_utils, C locale and non-Linux UTC semantics; formatting of caller tm, not a new RTC/timezone service."
 }
