@@ -1,0 +1,66 @@
+{
+  "scope": "Pinned chrono with explicit GTOS clock_gettime backend and original no-exception system_error behavior; current single-user-task profile",
+  "actual_compile": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-native-compile-02/status.json",
+    "sha256": "fa26a62069b54749e25a3ab494dae6c9f3acaba8da64e42d691cd65a135e44e8"
+  },
+  "private_guest": {
+    "path": "@WORKSPACE@/artifacts/native-chrono-runtime-guest-20261012-a/qemu-03/status.json",
+    "sha256": "6f01cad3a5536b8264409841912f07ef2c45de775499896b9374a439d820754c"
+  },
+  "private_self_review": {
+    "path": "@WORKSPACE@/artifacts/native-chrono-runtime-guest-20261012-a/self-review-01.json",
+    "sha256": "d16e4b05a38f32e765506f8289e86c5f3fdbb28bdea5a1e26b656191073f2ee0"
+  },
+  "actual_complete29_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-full29-review-01.json",
+    "sha256": "b1000ba4088276c8dcc90555a5f5f68ca977738a79561faf617718d77b2ce962"
+  },
+  "public_guest": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-publication-packet-01/public-replay-02/status.json",
+    "sha256": "dce039df62b3dabc7a7c2b6076ea54905481da2b05cd1474cf75c97f744917a6"
+  },
+  "public_self_review": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-publication-packet-01/self-review-01.json",
+    "sha256": "19f366c45d6449446c1a7e08c19ebbf4761ac40d79ca7426fb9551566949d530"
+  },
+  "input_snapshot": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/input-snapshot-review-01.json",
+    "sha256": "b0d05344e6b2f887ab14b71d9c101d10434154705a6f13948c9203d8df390670"
+  },
+  "source_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/module-input-snapshot/source-lock.json",
+    "sha256": "071d7217ea65b08c599733f0e3e918f2d761b2a52c0a999cf32fd00e5337805a"
+  },
+  "payload_lock": {
+    "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/module-input-snapshot/payload-lock.json",
+    "sha256": "977315875915ec01f4c92db23875a57b51d52d4a9e956f865d144b6af1279db8"
+  },
+  "native_chrono_guest_pass": true,
+  "public_chrono_replay_pass": true,
+  "actual_complete29_objects_byte_exact": true,
+  "chrono_resolved_in_actual_complete29": true,
+  "actual_victim_cases": 10,
+  "exact_reap_checks": 12,
+  "exact_clock_unit_samples": 40,
+  "public_bound_inputs": 886,
+  "rejected_observer_controls": 172,
+  "real_pit_monotonic_and_rtc_anchor_pass": true,
+  "actual_exhausted_clock_error_and_pinned_diagnostic_pass": true,
+  "fault_cancel_and_exact_recovery_pass": true,
+  "max_own_stack_bytes": {
+    "chrono": 36,
+    "system-error-no-exceptions": 0
+  },
+  "public_verifier": "tools/verify-native-chrono.py",
+  "complete_native_target_pass": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "capacity_changed": false,
+  "production_image_changed": false,
+  "committed": false,
+  "pushed": false,
+  "recorded_utc": "2026-10-12T14:00:38.009074+00:00",
+  "first_actual_blocker_after_full_link": "ld.lld: error: undefined symbol: mbsrtowcs"
+}

@@ -262,8 +262,8 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "4e818d3c63226cc19ef4c91f502460b13cc3b3f86093e52f54831eebacf01bd0",
-      "bytes": 14758
+      "sha256": "2f896f8a582e760c30fadcdaf42d16e0b71c31aea88112c7a9c0c44f26b6615b",
+      "bytes": 15482
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
@@ -5991,6 +5991,14 @@
     "README.md": {
       "sha256": "95499b5d117f3052eeefaf0633bd76821e6130a888c13deea6c8b94b6dfd7f8e",
       "bytes": 4481
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
+      "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
+      "bytes": 8669
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/system-error-no-exceptions.cc": {
+      "sha256": "18ff059a675fb467a64c81b254090b465dc737d8a05fc492623cff6911d4152b",
+      "bytes": 1275
     }
   },
   "overlay_files": 84,

@@ -385,6 +385,25 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   }
 }
 
+# Pinned chrono using real GTOS clock_gettime and its error termination.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_chrono_libcxx") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [ "//third_party/libc++/src/src" ]
+    sources = [
+      "runtime/chrono.cc",
+      "runtime/system-error-no-exceptions.cc",
+    ]
+    deps = [ ":native_c_clock", ":native_diagnostic_libcxx" ]
+  }
+}
+
 # Full real embedder link, separate from object-only qualification.
 executable("native_embedder") {
   assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
@@ -402,6 +421,7 @@ executable("native_embedder") {
   deps += [ ":native_guard_libcxxabi" ]
   deps += [ ":native_locale_libc" ]
   deps += [ ":native_time_format_libc" ]
+  deps += [ ":native_chrono_libcxx" ]
   ldflags = [
     "-T", rebase_path("native.ld", root_build_dir),
     "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),

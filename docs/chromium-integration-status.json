@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-12T12:53:20.058032+00:00",
-  "scope": "完整原生28实际最终链接已越过strftime，首错为chrono::steady_clock::now；时间格式化公开双冷启动与自审通过。没有完整ELF或客体Isolate/JS/浏览器资格。",
+  "recorded_utc": "2026-10-12T14:00:38.009074+00:00",
+  "scope": "完整原生29实际链接已越过chrono，真实首错mbsrtowcs；chrono公开双冷启动与自审通过。无完整ELF、客体Isolate/JS或浏览器资格。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -34,42 +34,42 @@
   "first_build_blocker": {
     "phase": "actual final ELF link",
     "target": "native_embedder.elf",
-    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::chrono::steady_clock::now()",
-    "complete_attempt": "time-format-runtime-resume-28",
+    "diagnostic": "ld.lld: error: undefined symbol: mbsrtowcs",
+    "complete_attempt": "chrono-runtime-resume-29",
     "link_command_evidence": {
-      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v40-status-snapshots/native28-terminal-status.json",
-      "sha256": "e700a3d6a0c7b62c32784e835e5cf49343540afc6bc33bcb9a38067c9d880bd5"
+      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v43-status-snapshots/native29-terminal-status.json",
+      "sha256": "e21550fcee7c9ae447a9b6eb7715abb561e73a24d78d3e4cc24250c5f0681b30"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-runtime-resume-28/complete-native-build.log",
-      "sha256": "0c22a934b76b2095786f93fcb0463059b883f49195060902f3b1b28689adcdee"
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/complete-native-build.log",
+      "sha256": "33483c1c0ce5f8a8234c8078900f1fb3e10ad355ddf20274496d5fcc5ea6c652"
     },
-    "consumer": "Abseil synchronization/internal/kernel_timeout.cc KernelTimeout(Duration)",
-    "cause": "Real libc++ steady_clock::now using the existing native monotonic clock, preserving epoch/unit/error handling. Do not use wall time or a success placeholder.",
+    "consumer": "libc++ locale.cpp __time_put wchar path and codecvt wide/multibyte conversion",
+    "cause": "Connect only the actual required wide conversion family, with proper UTF-8 shortest-form/scalar checks and state/source-pointer/error semantics. Existing private candidate remains host-only until actual native compile and guest qualification.",
     "default_linker_error_limit": 20,
     "all_missing_symbols_count_measured": false,
     "resolved_in_current_complete_link": false
   },
   "other_observed_failures": [
-    "ld.lld: error: undefined symbol: absl::base_internal::LowLevelAlloc::Free(void*)",
-    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemWait",
-    "ld.lld: error: undefined symbol: absl::synchronization_internal::CreateThreadIdentity()",
-    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemPost",
-    "ld.lld: error: undefined symbol: mbsrtowcs",
     "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__throw_runtime_error(char const*)",
     "ld.lld: error: undefined symbol: sscanf",
-    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
+    "ld.lld: error: undefined symbol: absl::base_internal::LowLevelAlloc::Free(void*)",
     "ld.lld: error: undefined symbol: wcsnrtombs",
     "ld.lld: error: undefined symbol: wcrtomb",
     "ld.lld: error: undefined symbol: mbsnrtowcs",
     "ld.lld: error: undefined symbol: mbrtowc",
     "ld.lld: error: undefined symbol: mbtowc",
     "ld.lld: error: undefined symbol: mbrlen",
-    "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: __cxa_atexit",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
-    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
+    "ld.lld: error: undefined symbol: strtof",
+    "ld.lld: error: undefined symbol: strtod",
+    "ld.lld: error: undefined symbol: strtold",
+    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemWait",
+    "ld.lld: error: undefined symbol: absl::synchronization_internal::CreateThreadIdentity()",
+    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemPost",
     "ld.lld: error: undefined symbol: __cxa_pure_virtual",
+    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
+    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
     "ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)"
   ],
   "runs": [
@@ -653,10 +653,10 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "时间格式化公共模块完成最终复审，正常提交并推送dev。",
-    "按真实chrono::steady_clock::now首错接入已有原生单调时钟，保留单位、误差及无异常失败语义。",
-    "必要受影响客体验证后立即回放同一完整目标；UTF-8候选暂留私有，按实际宽字符阻塞再接入。",
-    "真实完整ELF后测量装载/堆栈并执行客体Isolate/JS，然后按本地网页、受控网络、视频和HTML5推进。"
+    "chrono公共模块完成最终复审，正常提交并推送dev。",
+    "按真实mbsrtowcs首错接入宽/多字节转换，完整保留状态、源指针、容量与错误语义；修正已复现无效UTF-8接受缺口。",
+    "必要实际客体边界/故障/取消/回收验证后，立即回放同一完整目标。",
+    "真实完整ELF后测量装载/堆栈并执行客体Isolate/JS，然后按本地网页、受控网络、视频与HTML5推进。"
   ],
   "retained_complete_attempts": [
     {
@@ -1468,23 +1468,21 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "name": "time-format-runtime-resume-28",
-    "terminal_status": {
-      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v40-status-snapshots/native28-terminal-status.json",
-      "sha256": "e700a3d6a0c7b62c32784e835e5cf49343540afc6bc33bcb9a38067c9d880bd5"
+    "name": "chrono-runtime-resume-29",
+    "status": {
+      "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v43-status-snapshots/native29-terminal-status.json",
+      "sha256": "e21550fcee7c9ae447a9b6eb7715abb561e73a24d78d3e4cc24250c5f0681b30"
     },
-    "terminal_utc": "2026-10-12T12:45:08.250999+00:00",
+    "terminal_utc": "2026-10-12T13:49:38.331057+00:00",
     "exit_code": 1,
-    "ninja_elapsed_seconds": 4211.148978654004,
-    "first_blocker": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::chrono::steady_clock::now()",
-    "strftime_resolved": true,
+    "ninja_seconds": 72.42950590199325,
+    "first_actual_blocker": "ld.lld: error: undefined symbol: mbsrtowcs",
+    "chrono_resolved": true,
     "full_elf_exists": false,
-    "gn_pass": true,
-    "bound_inputs_unchanged": true,
-    "old_object_commands_preserved": 5135,
-    "two_required_time_objects_added": true,
+    "old_object_commands_preserved": 5137,
+    "two_required_chrono_objects_added": true,
     "prior_ordered_link_inputs_and_engine_args_preserved": true,
-    "all_1262_inputs_frozen": true
+    "all_1264_inputs_frozen": true
   },
   "cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-02",
@@ -2385,8 +2383,13 @@
     "browser_guest_pass": false,
     "capacity_changed": false,
     "production_image_changed": false,
-    "committed": false,
-    "pushed": false
+    "committed": true,
+    "pushed": true,
+    "publication_commit": "731a970477c53079162268a06ca37a9f6613f952",
+    "publication_receipt": {
+      "path": "@WORKSPACE@/logs/native-v8-integration-publication-731a970.json",
+      "sha256": "451c8f724e55920131cb69b4a8a373a67be98960442b7bf964e3a490a4cbff8c"
+    }
   },
   "next_native_consumer_analysis": {
     "consumer": {
@@ -2467,8 +2470,8 @@
     "native_provider_connected": false
   },
   "latest_handoff": {
-    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v40.json",
-    "sha256": "d0d5cc134b2494eda010947653156135d7d769b33ecaabd1e3e55a93738cad79"
+    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v43.json",
+    "sha256": "d30bac66de39a1c3f6a7fa40bae1b1bd96a453cefc8bff8005f88a30fac310a6"
   },
   "post_build_validation_pipeline": {
     "terminal": {
@@ -2477,6 +2480,70 @@
     },
     "public_guest_replay_pass": true,
     "public_self_review_pass": true,
+    "committed": false,
+    "pushed": false
+  },
+  "native_chrono_runtime_integration": {
+    "scope": "Pinned chrono with explicit GTOS clock_gettime backend and original no-exception system_error behavior; current single-user-task profile",
+    "actual_compile": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-native-compile-02/status.json",
+      "sha256": "fa26a62069b54749e25a3ab494dae6c9f3acaba8da64e42d691cd65a135e44e8"
+    },
+    "private_guest": {
+      "path": "@WORKSPACE@/artifacts/native-chrono-runtime-guest-20261012-a/qemu-03/status.json",
+      "sha256": "6f01cad3a5536b8264409841912f07ef2c45de775499896b9374a439d820754c"
+    },
+    "private_self_review": {
+      "path": "@WORKSPACE@/artifacts/native-chrono-runtime-guest-20261012-a/self-review-01.json",
+      "sha256": "d16e4b05a38f32e765506f8289e86c5f3fdbb28bdea5a1e26b656191073f2ee0"
+    },
+    "actual_complete29_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-full29-review-01.json",
+      "sha256": "b1000ba4088276c8dcc90555a5f5f68ca977738a79561faf617718d77b2ce962"
+    },
+    "public_guest": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-publication-packet-01/public-replay-02/status.json",
+      "sha256": "dce039df62b3dabc7a7c2b6076ea54905481da2b05cd1474cf75c97f744917a6"
+    },
+    "public_self_review": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-publication-packet-01/self-review-01.json",
+      "sha256": "19f366c45d6449446c1a7e08c19ebbf4761ac40d79ca7426fb9551566949d530"
+    },
+    "input_snapshot": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/input-snapshot-review-01.json",
+      "sha256": "b0d05344e6b2f887ab14b71d9c101d10434154705a6f13948c9203d8df390670"
+    },
+    "source_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/module-input-snapshot/source-lock.json",
+      "sha256": "071d7217ea65b08c599733f0e3e918f2d761b2a52c0a999cf32fd00e5337805a"
+    },
+    "payload_lock": {
+      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/chrono-runtime-resume-29/module-input-snapshot/payload-lock.json",
+      "sha256": "977315875915ec01f4c92db23875a57b51d52d4a9e956f865d144b6af1279db8"
+    },
+    "native_chrono_guest_pass": true,
+    "public_chrono_replay_pass": true,
+    "actual_complete29_objects_byte_exact": true,
+    "chrono_resolved_in_actual_complete29": true,
+    "actual_victim_cases": 10,
+    "exact_reap_checks": 12,
+    "exact_clock_unit_samples": 40,
+    "public_bound_inputs": 886,
+    "rejected_observer_controls": 172,
+    "real_pit_monotonic_and_rtc_anchor_pass": true,
+    "actual_exhausted_clock_error_and_pinned_diagnostic_pass": true,
+    "fault_cancel_and_exact_recovery_pass": true,
+    "max_own_stack_bytes": {
+      "chrono": 36,
+      "system-error-no-exceptions": 0
+    },
+    "public_verifier": "tools/verify-native-chrono.py",
+    "complete_native_target_pass": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "capacity_changed": false,
+    "production_image_changed": false,
     "committed": false,
     "pushed": false
   }
