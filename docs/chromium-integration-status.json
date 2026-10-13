@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-13 22:12:55 UTC",
+  "recorded_utc": "2026-10-13 22:58:10 UTC",
   "scope": "完整42已实际链接；nearbyint通过12个原生任务（含2个标志破坏负控）和精确回收，首错按实测。完整ELF/Isolate/浏览器仍待验收。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -31,7 +31,7 @@
   "complete_build_pass": false,
   "link_pass": false,
   "full_elf_exists": false,
-  "first_build_blocker": "v8::base::OS::FOpen(char const*, char const*)",
+  "first_build_blocker": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
   "other_observed_failures": [
     "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: floor",
@@ -503,29 +503,8 @@
       "Replay the same complete native target after the affected checks; record whether asprintf advances and the new first blocker."
     ]
   },
-  "previous_complete_attempt": {
-    "name": "native-nearbyint-20261014-a/full-link-42",
-    "method": "Offline actual GN link with qualified nearbyint provider",
-    "status": {
-      "path": "@WORKSPACE@/artifacts/native-nearbyint-20261014-a/full-link-42/status.json",
-      "sha256": "bc4714cb0fecd66c389a5043ec350b52cc87c7098555ac0558b1085349cac8a1"
-    },
-    "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-nearbyint-20261014-a/full-link-42/actual-final-link.log",
-      "sha256": "8e5a6f11caa3de37f4a9b12f2d461ae4aab9ea17788c28af83d4cbadba2fda3d"
-    },
-    "build_exit_code": 1,
-    "gn_pass": true,
-    "actual_final_link_attempted": true,
-    "bound_inputs_unchanged": true,
-    "old_cache_metadata_unchanged": true,
-    "full_elf_exists": false,
-    "prior_object_commands_preserved": 5173,
-    "selected_objects_compiled": 1,
-    "diagnostics_complete": false,
-    "new_ninja_compile_sweep_performed": false
-  },
-  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/full-link-43/status.json",
+  "previous_complete_attempt": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/full-link-43/status.json",
+  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-fopen-20261014-a/full-link-44/status.json",
   "platform_adaptation_evidence": {
     "dynamic_elf": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-01/status.json",
@@ -603,7 +582,7 @@
     "published_diagnostic_implementation": true,
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
-  "next_work_package": "按完整43的真实首错继续最小正确原生适配和客体验证；仍以完整V8/Chromium网页、视频、HTML5为最终验收",
+  "next_work_package": "按完整44的真实首错继续最小正确原生适配和客体验证；仍以完整V8/Chromium网页、视频、HTML5为最终验收",
   "retained_complete_attempts": [
     {
       "name": "attempt-06",
@@ -1221,24 +1200,7 @@
       "sha256": "ff1594bf604c1b024a8b547e0bdc1a037c1f4069a9d50ee47e0e84318d08521d"
     }
   },
-  "previous_first_build_blocker": {
-    "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: __cxa_pure_virtual",
-    "consumer": "V8 assembler.cc AssemblerBase and macro-assembler-base.cc MacroAssemblerBase vtables",
-    "cause": "Pinned libc++abi cxa_virtual.cpp provider not connected; existing ABI abort_message path is available",
-    "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-nearbyint-20261014-a/full-link-42/actual-final-link.log",
-      "sha256": "8e5a6f11caa3de37f4a9b12f2d461ae4aab9ea17788c28af83d4cbadba2fda3d"
-    },
-    "link_command_evidence": {
-      "path": "@WORKSPACE@/artifacts/native-nearbyint-20261014-a/full-link-42/status.json",
-      "sha256": "bc4714cb0fecd66c389a5043ec350b52cc87c7098555ac0558b1085349cac8a1"
-    },
-    "complete_attempt": "native-nearbyint-20261014-a/full-link-42",
-    "all_missing_symbols_count_measured": false,
-    "default_linker_error_limit": 20,
-    "resolved_in_current_complete_link": false
-  },
+  "previous_first_build_blocker": "v8::base::OS::FOpen(char const*, char const*)",
   "zlib_filestore_qualification": {
     "canonical_filestore_adopted": true,
     "public_replays": [
@@ -1414,34 +1376,34 @@
   },
   "current_complete_attempt_observation": {
     "exit_code": 1,
-    "first_undefined_symbol": "v8::base::OS::FOpen(char const*, char const*)",
+    "first_undefined_symbol": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
     "undefined_symbols": [
-      "v8::base::OS::FOpen(char const*, char const*)",
-      "v8::base::Semaphore::Semaphore(int)",
-      "v8::base::Semaphore::~Semaphore()",
-      "v8::base::OS::CreateTimezoneCache()",
       "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
       "v8::base::Thread::Start()",
       "v8::base::Thread::~Thread()",
+      "v8::base::Semaphore::Signal()",
+      "v8::base::Thread::Join()",
+      "v8::base::Semaphore::Semaphore(int)",
       "std::__gtos_isolate_diagnostic::cout",
-      "v8::base::OS::SNPrintF(char*, int, char const*, ...)",
+      "v8::base::Semaphore::~Semaphore()",
       "v8::base::Semaphore::Wait()",
-      "v8::base::OS::AdjustSchedulingParams()",
-      "v8::base::OS::GetLastError()",
-      "isspace",
-      "exp2",
-      "strtol",
-      "strtoll",
-      "v8::base::OS::SetDataReadOnly(void*, unsigned int)",
+      "v8::base::OS::CreateTimezoneCache()",
+      "v8::base::OS::SNPrintF(char*, int, char const*, ...)",
       "v8::base::OS::OpenTemporaryFile()",
       "v8::base::OS::LogFileOpenMode",
-      "isprint"
+      "v8::base::OS::AdjustSchedulingParams()",
+      "isprint",
+      "v8::base::OS::GetSharedLibraryAddresses()",
+      "pow",
+      "v8::base::OS::SignalCodeMovingGC()",
+      "v8::base::OS::isDirectorySeparator(char)",
+      "trunc"
     ],
     "diagnostics_complete": false,
     "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
-    "status_sha256": "dfaf67eb13484dac5ddc91b85f32a0ca78b93af5108c911c229a72f79ffcacda",
-    "log_sha256": "db358d298c33acd6b6c56215687414a2c1b221adce8433a7cf2b3e25322a58f1"
+    "status_sha256": "92657c78a040a8cb1b6d6dd6ea03b24bf38654a3f0045a93eafb3ef75138b304",
+    "log_sha256": "2afcbdbb7e487201110e7cbe8b71bb15d57b2d19f6ad860deb376526044edde9"
   },
   "cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-02",
@@ -1512,26 +1474,35 @@
     "boundary": "实际宿主命令不变，内容相同的生成头因时间戳变化触发重编；独立草稿验证成功和失败路径，当前 13 输入不改。"
   },
   "previous_complete_attempt_observation": {
-    "name": "native-nearbyint-20261014-a/full-link-42",
-    "method": "Offline actual GN link with qualified nearbyint provider",
-    "status": {
-      "path": "@WORKSPACE@/artifacts/native-nearbyint-20261014-a/full-link-42/status.json",
-      "sha256": "bc4714cb0fecd66c389a5043ec350b52cc87c7098555ac0558b1085349cac8a1"
-    },
-    "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-nearbyint-20261014-a/full-link-42/actual-final-link.log",
-      "sha256": "8e5a6f11caa3de37f4a9b12f2d461ae4aab9ea17788c28af83d4cbadba2fda3d"
-    },
-    "build_exit_code": 1,
-    "gn_pass": true,
-    "actual_final_link_attempted": true,
+    "exit_code": 1,
+    "first_undefined_symbol": "v8::base::OS::FOpen(char const*, char const*)",
+    "undefined_symbols": [
+      "v8::base::OS::FOpen(char const*, char const*)",
+      "v8::base::Semaphore::Semaphore(int)",
+      "v8::base::Semaphore::~Semaphore()",
+      "v8::base::OS::CreateTimezoneCache()",
+      "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
+      "v8::base::Thread::Start()",
+      "v8::base::Thread::~Thread()",
+      "std::__gtos_isolate_diagnostic::cout",
+      "v8::base::OS::SNPrintF(char*, int, char const*, ...)",
+      "v8::base::Semaphore::Wait()",
+      "v8::base::OS::AdjustSchedulingParams()",
+      "v8::base::OS::GetLastError()",
+      "isspace",
+      "exp2",
+      "strtol",
+      "strtoll",
+      "v8::base::OS::SetDataReadOnly(void*, unsigned int)",
+      "v8::base::OS::OpenTemporaryFile()",
+      "v8::base::OS::LogFileOpenMode",
+      "isprint"
+    ],
+    "diagnostics_complete": false,
     "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
-    "full_elf_exists": false,
-    "prior_object_commands_preserved": 5173,
-    "selected_objects_compiled": 1,
-    "diagnostics_complete": false,
-    "new_ninja_compile_sweep_performed": false
+    "status_sha256": "dfaf67eb13484dac5ddc91b85f32a0ca78b93af5108c911c229a72f79ffcacda",
+    "log_sha256": "db358d298c33acd6b6c56215687414a2c1b221adce8433a7cf2b3e25322a58f1"
   },
   "sampler_compile_diagnostic": {
     "preparation": {
@@ -2360,8 +2331,8 @@
       "sha256": "451c8f724e55920131cb69b4a8a373a67be98960442b7bf964e3a490a4cbff8c"
     }
   },
-  "next_native_consumer_analysis": "真实首错：v8::base::OS::FOpen(char const*, char const*)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v63.json",
+  "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v65.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -3256,6 +3227,110 @@
     "observed_trap_entry_stack_bytes": 376,
     "provider_max_single_function_stack_bytes": 0,
     "consumer_max_single_function_stack_bytes": 44,
+    "whole_call_chain_stack_bound_proven": false,
+    "parallel_user_threads_qualified": false,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false,
+    "new_remote_ci_run": false,
+    "stock_cold_readback_performed": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "production_image_changed": false
+  },
+  "native_fopen": {
+    "scope": "真实V8 FOpen普通文件语义/FILE错误/OOM/取消故障回收；私有单用户任务",
+    "guest_pass": true,
+    "guest_status": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/guest-01/status.json",
+      "sha256": "fab44731eff9d194fb255f1d261276eb066a4a5b574612cb1fc910eac7031e2d"
+    },
+    "tasks": 8,
+    "exact_reaps": 8,
+    "guest_configurations": [
+      "32M-smp1",
+      "64M-smp4"
+    ],
+    "unit_checks": 72,
+    "checks_per_configuration": 518,
+    "checks_total": 1036,
+    "negative_log_controls_rejected": 314,
+    "mode_checks": [
+      74,
+      77,
+      77,
+      290
+    ],
+    "real_v8_fopen_calls_per_configuration": 135,
+    "regular_file_and_directory_contract_pass": true,
+    "mode_path_and_exclusive_errors_pass": true,
+    "malloc_failure_before_create_or_truncate_pass": true,
+    "active_file_heap_fault_and_cancel_reclaimed": true,
+    "synthetic_disk_faults_used": false,
+    "actual_gn": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/gn-01/status.json",
+      "sha256": "ece936ec676e50579e31fdd9b1df28b24164563fcb974a510c11ec31d77a1281"
+    },
+    "provider_compile": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/compile-01/status.json",
+      "sha256": "5e2c4e20bb3a4f611db0d5b75d576a820a5025234175ee7264c7f251da0afc97"
+    },
+    "consumer_compile": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/probe-compile-02/status.json",
+      "sha256": "dac5eb0be6a5f06634e74931d9e27669865f4cbbc7e9f18a029c6040fadc9ae6"
+    },
+    "consumer_link": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/probe-link-02/status.json",
+      "sha256": "5f4e8c0a00ea159c875b404e224af4f3f4a6ad97a81976d3fa936d71e9cdba6e"
+    },
+    "negative_without_provider_rejected": true,
+    "complete_replay": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/full-link-44/status.json",
+      "sha256": "92657c78a040a8cb1b6d6dd6ea03b24bf38654a3f0045a93eafb3ef75138b304"
+    },
+    "complete_replay_log_sha256": "2afcbdbb7e487201110e7cbe8b71bb15d57b2d19f6ad860deb376526044edde9",
+    "complete_replay_exit_code": 1,
+    "first_remaining_blocker": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
+    "linker_diagnostics_complete": false,
+    "complete_bound_inputs": 14416,
+    "old_cache_metadata_unchanged": true,
+    "prior_object_commands_preserved": 5175,
+    "current_object_commands": 5176,
+    "added_objects": 1,
+    "replaced_objects": 0,
+    "engine_args_and_prior_link_order_preserved": true,
+    "full_system_header_dependencies": true,
+    "consumer_and_provider_input_scope": "qualified GN profile/tools and actual complete pre/post MD closure",
+    "small_compile_all_gn_inputs_rehashed": false,
+    "self_review": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/module-self-review.md",
+      "sha256": "de7f7e92a6a425209d3b08633c9647e1819726cea5b48e02198d62d8ba47a9b5"
+    },
+    "probe_files": {
+      "main.cc": "69d381da3032472846fca60eb9ac35d64e8417108d88ee3a800c767d466191eb",
+      "kernel.cpp": "3d30165284bc860dc03518d299ce25b12878b104295a27742ea51e6d271d6ba1",
+      "kernel_common.h": "5d8104e44c87578e217d9633914a4b1bfe3c6c06a9877e0ae40a17bae6e9055f",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+      "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+      "observer.py": "2b2fe737b7b0519980e44fea26ca1fd98fb56066f29fbbfd72a076a8eb475fa1"
+    },
+    "canonical_byte_equivalence": {
+      "path": "@WORKSPACE@/artifacts/native-fopen-20261014-a/canonical-byte-equivalence.json",
+      "sha256": "9ecee26232516f5ba17cc145f9d88d3d35faff7e477e2b2f165d03c42597d78e"
+    },
+    "canonical_payload_files_verified": 1295,
+    "entry_state_symbols": {
+      "native_v8_integration_stage": 1074005640,
+      "native_v8_integration_result": 1074004076
+    },
+    "load_pages": 5,
+    "observed_trap_entry_stack_bytes": 2332,
+    "provider_max_single_function_stack_bytes": 0,
+    "consumer_max_single_function_stack_bytes": 60,
     "whole_call_chain_stack_bound_proven": false,
     "parallel_user_threads_qualified": false,
     "canonical_gn_reexecuted": false,
