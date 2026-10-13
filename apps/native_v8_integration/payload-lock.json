@@ -302,14 +302,14 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/heap.cc": {
-      "sha256": "4b5b4223279c787c3fc4b0af0facbf2d1fa7fbf11ad37f7def1d4fe3b09b758c",
-      "bytes": 12705,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "sha256": "999a0d9774a52b8a5a8bcb5d0d318856b1b1ce1d172c2dab17ee673c3aa54722",
+      "bytes": 13602,
+      "origin": "GTOS real shared heap lock; native_thread_heap guest-qualified; errno/TLS remain unqualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/heap.h": {
-      "sha256": "654962e887e43f430f7fe3679ae68277e44a022db541db03b5983962ef83051d",
-      "bytes": 1694,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "sha256": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f",
+      "bytes": 1914,
+      "origin": "GTOS real shared heap lock; native_thread_heap guest-qualified; errno/TLS remain unqualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/nanosleep-internal.h": {
       "sha256": "e3f84e698898bc869ee0ca1fb5976f1be3b31b301209605eaa3e2848fde093e8",
@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "7ac76a3f9c014e51195494ffdaa6716c3760f8e7446426292f896eac65d7ec71",
-      "bytes": 11097
+      "sha256": "99fc9f9dddf83b72cb0540f5254f0860c52836939ac3b1760de940d5a8842fe9",
+      "bytes": 11546
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6166,7 +6166,7 @@
   },
   "overlay_files": 422,
   "sdk_files": 430,
-  "total_bytes": 3350338,
+  "total_bytes": 3351904,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

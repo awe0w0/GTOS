@@ -13,8 +13,11 @@
 #define GTOS_NATIVE_HEAP_EXIT_NEW_OOM 0x10U
 
 // The standard allocation declarations come from the genuine SDK stdlib.h
-// and new headers. This bounded heap has one arena and one user thread per
-// process. Zero-size malloc/calloc return null without changing errno;
+// and new headers. This bounded heap has one arena per process. Its metadata
+// is serialized with an atomic lock and real Yield on the BSP scheduler.
+// No async signal/allocator callback or independently killed worker is supported;
+// the native fault/cancel path terminates the whole shared process.
+// Zero-size malloc/calloc return null without changing errno;
 // realloc(p,0) frees p. Positive allocation failure preserves existing blocks.
 // posix_memalign rejects a null, misaligned or out-of-user-range output before
 // writing it. Other outputs must be valid writable pointer objects: this

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-13 23:19:13 UTC",
-  "scope": "完整44首错为真实V8 Thread；有界内核线程生命周期通过私有客体和默认FOpen回归，TLS/errno/锁及V8线程桥接待实现，完整45未重放。完整ELF/Isolate/浏览器/视频/HTML5未验收。",
+  "recorded_utc": "2026-10-13 23:46:27 UTC",
+  "scope": "完整44首错仍为V8 Thread；有界线程生命周期及共享heap同步/默认FOpen回归已验收，TLS/errno/同步及V8线程桥接待实现，完整45未重放，浏览器/视频/HTML5未验收。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -582,7 +582,7 @@
     "published_diagnostic_implementation": true,
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
-  "next_work_package": "按完整44的真实首错继续最小正确原生适配和客体验证；仍以完整V8/Chromium网页、视频、HTML5为最终验收",
+  "next_work_package": "实际每线程TLS/errno、共享锁与guard，再接入固定V8 Thread/Semaphore并重放完整45；不删除one-task保护或使用假成功线程",
   "retained_complete_attempts": [
     {
       "name": "attempt-06",
@@ -2332,7 +2332,7 @@
     }
   },
   "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v65.json",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v68.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -3385,5 +3385,65 @@
     "public_byte_equivalence": true,
     "public_tool_rerun": false,
     "remote_ci": false
+  },
+  "native_thread_heap": {
+    "scope": "real BSP shared heap synchronization; per-thread errno/TLS not qualified",
+    "qualified_runs": {
+      "compile-01": "54f6b5055767770559ebd4cf3412ec96505a3643b55dcc7a5854de84dfaa5f6b",
+      "consumer-02": "d29ce769f12e4ca552e6073501d603c470e2240cbb0ff26713c7bb57aa045939",
+      "guest-01": "c3aa336b1d79507156c71021e5d9757686a4a3828e4a3b158bf0800613c16e05",
+      "fopen-link-01": "f8d477861a54ed865000af368cc0cace8f365681406c2125c57e056b3cb9bd91",
+      "legacy-01": "d1a9267186e0ff8894a7f05380c730db0b6a2eee3955428942bbdbd207ebbfe9"
+    },
+    "native_contexts": 24,
+    "exact_context_recovery": 24,
+    "consumer_checks": 701542,
+    "old_heap_negative_exit": "0x48000002",
+    "actual_contention_yields": [
+      3,
+      2,
+      2
+    ],
+    "forced_owner_switches_per_configuration": 3,
+    "shared_heap_guest_pass": true,
+    "actual_gn_flags_matched": true,
+    "new_gn_graph_executed": false,
+    "default_fopen_tasks": 8,
+    "default_fopen_exact_reaps": 8,
+    "default_fopen_checks": 1036,
+    "default_fopen_log_negative_controls": 314,
+    "source_byte_equivalence": {
+      "changed_sources": {
+        "overlay/tools/gtos_isolate_diagnostic/runtime/heap.cc": "999a0d9774a52b8a5a8bcb5d0d318856b1b1ce1d172c2dab17ee673c3aa54722",
+        "overlay/tools/gtos_isolate_diagnostic/runtime/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f"
+      },
+      "probe_files": {
+        "main.cc": "ab7ba6c3f5a910a127f502d70b6d2b1a485f8a00af66736b2ab19fef33b7fd1f",
+        "kernel.cpp": "32fff805eb1f78dd5972df86c6a2f12829003072602e4a49bbe6cf2890498ff1",
+        "record.h": "14d1ed61a7898ba0cd6428df3e00ba1b46297301021f3023166fd77356830ba0",
+        "linker.ld": "32a7c7f7adcaca6cb80ac360db061e465c6d2b2efa65666d6ef140a35d38f4ca",
+        "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+      },
+      "canonical_payload_files_verified": 1295,
+      "canonical_source_byte_equivalence_verified": true,
+      "canonical_gn_reexecuted": false,
+      "canonical_guest_rerun": false
+    },
+    "maximum_native_contexts_total": 4,
+    "scheduler_cpus": 1,
+    "per_thread_errno_qualified": false,
+    "tls_qualified": false,
+    "v8_thread_bridge_qualified": false,
+    "full45_replayed": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "production_image_changed": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "public_tool_rerun": false,
+    "remote_ci": false,
+    "stock_cold_readback_performed": false
   }
 }

@@ -1,0 +1,60 @@
+{
+  "scope": "real BSP shared heap synchronization; per-thread errno/TLS not qualified",
+  "qualified_runs": {
+    "compile-01": "54f6b5055767770559ebd4cf3412ec96505a3643b55dcc7a5854de84dfaa5f6b",
+    "consumer-02": "d29ce769f12e4ca552e6073501d603c470e2240cbb0ff26713c7bb57aa045939",
+    "guest-01": "c3aa336b1d79507156c71021e5d9757686a4a3828e4a3b158bf0800613c16e05",
+    "fopen-link-01": "f8d477861a54ed865000af368cc0cace8f365681406c2125c57e056b3cb9bd91",
+    "legacy-01": "d1a9267186e0ff8894a7f05380c730db0b6a2eee3955428942bbdbd207ebbfe9"
+  },
+  "native_contexts": 24,
+  "exact_context_recovery": 24,
+  "consumer_checks": 701542,
+  "old_heap_negative_exit": "0x48000002",
+  "actual_contention_yields": [
+    3,
+    2,
+    2
+  ],
+  "forced_owner_switches_per_configuration": 3,
+  "shared_heap_guest_pass": true,
+  "actual_gn_flags_matched": true,
+  "new_gn_graph_executed": false,
+  "default_fopen_tasks": 8,
+  "default_fopen_exact_reaps": 8,
+  "default_fopen_checks": 1036,
+  "default_fopen_log_negative_controls": 314,
+  "source_byte_equivalence": {
+    "changed_sources": {
+      "overlay/tools/gtos_isolate_diagnostic/runtime/heap.cc": "999a0d9774a52b8a5a8bcb5d0d318856b1b1ce1d172c2dab17ee673c3aa54722",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f"
+    },
+    "probe_files": {
+      "main.cc": "ab7ba6c3f5a910a127f502d70b6d2b1a485f8a00af66736b2ab19fef33b7fd1f",
+      "kernel.cpp": "32fff805eb1f78dd5972df86c6a2f12829003072602e4a49bbe6cf2890498ff1",
+      "record.h": "14d1ed61a7898ba0cd6428df3e00ba1b46297301021f3023166fd77356830ba0",
+      "linker.ld": "32a7c7f7adcaca6cb80ac360db061e465c6d2b2efa65666d6ef140a35d38f4ca",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    "canonical_payload_files_verified": 1295,
+    "canonical_source_byte_equivalence_verified": true,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false
+  },
+  "maximum_native_contexts_total": 4,
+  "scheduler_cpus": 1,
+  "per_thread_errno_qualified": false,
+  "tls_qualified": false,
+  "v8_thread_bridge_qualified": false,
+  "full45_replayed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "public_tool_rerun": false,
+  "remote_ci": false,
+  "stock_cold_readback_performed": false
+}

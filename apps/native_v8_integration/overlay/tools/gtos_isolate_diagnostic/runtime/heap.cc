@@ -34,6 +34,24 @@ namespace {
             : "a"(operation), "b"(first), "c"(second) : "memory", "cc");
         return result;
     }
+    unsigned heapLock;
+    class HeapGuard {
+        HeapGuard(const HeapGuard&);
+        HeapGuard& operator=(const HeapGuard&);
+    public:
+        HeapGuard() noexcept {
+            unsigned expected = 0;
+            while (!__atomic_compare_exchange_n(&heapLock, &expected, 1U, false,
+                    __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+                // Only BSP runs user contexts. Let the preempted owner run;
+                // no errno/TLS/allocation or callback is used on this path.
+                if (Call(GTOS_SYS_YIELD, 0, 0) != 0)
+                    gtos_native_heap_panic(GTOS_NATIVE_HEAP_EXIT_VM_CONTRACT);
+                expected = 0;
+            }
+        }
+        ~HeapGuard() noexcept { __atomic_store_n(&heapLock, 0U, __ATOMIC_RELEASE); }
+    };
     Block* At(unsigned address) noexcept { return (Block*)address; }
     unsigned Address(const Block* block) noexcept { return (unsigned)block; }
     unsigned Payload(const Block* block) noexcept { return Address(block) + Header + block->userOffset; }
@@ -194,6 +212,7 @@ extern "C" [[noreturn]] void gtos_native_heap_panic(unsigned code) noexcept {
     __builtin_unreachable();
 }
 extern "C" void* malloc(size_t bytes) noexcept {
+    HeapGuard guard;
     void* result = Allocate(bytes, Alignment);
     if (!result && bytes) errno = ENOMEM;
     return result;
@@ -214,11 +233,13 @@ extern "C" void* calloc(size_t count, size_t bytes) noexcept {
 }
 extern "C" void free(void* pointer) noexcept {
     if (!pointer) return;
+    HeapGuard guard;
     Validate();
     FreeBlock(Find(pointer));
 }
 extern "C" void* realloc(void* pointer, size_t bytes) noexcept {
     if (!pointer) return malloc(bytes);
+    HeapGuard guard;
     Validate();
     Block* block = Find(pointer);
     if (!bytes) {
@@ -255,18 +276,20 @@ extern "C" void* realloc(void* pointer, size_t bytes) noexcept {
     volatile unsigned char* output = (volatile unsigned char*)replacement;
     const volatile unsigned char* input = (const volatile unsigned char*)pointer;
     for (unsigned i = 0; i < length; ++i) output[i] = input[i];
-    free(pointer);
+    FreeBlock(Find(pointer));
     return replacement;
 }
 extern "C" int posix_memalign(void** output, size_t alignment, size_t bytes) noexcept {
     if (!PowerOfTwo((unsigned)alignment) || alignment < sizeof(void*) || !OutputAddress(output)) return EINVAL;
     if (alignment < Alignment) alignment = Alignment;
+    HeapGuard guard;
     void* result = Allocate(bytes, (unsigned)alignment);
     if (!result && bytes) return ENOMEM;
     *output = result;
     return 0;
 }
 extern "C" int gtos_native_heap_query(GtosVmRegionInfo* output) noexcept {
+    HeapGuard guard;
     Validate();
     if (!arena.handle) return 0;
     const GtosVmQueryRequest request = {GTOS_VM_ABI_VERSION, arena.handle, (unsigned)output};

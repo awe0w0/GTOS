@@ -13,6 +13,11 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 候选内核默认关闭线程时，原真实V8 FOpen另通过8任务/8精确回收。
 详见[线程生命周期模块](../apps/native_thread_lifecycle/README.md)。
 
+共享堆已加入实际原子锁和BSP Yield，覆盖首次arena发布、链表拆合、realloc及释放。
+同一抢占点的旧heap报0x48000002，新heap在双配置24上下文中完成701542项检查并
+精确回收，默认FOpen另通过8任务回归。详见[共享堆模块](../apps/native_thread_heap/README.md)。
+这解决TLS首次分配的前置竞态，不代表TLS/errno或V8线程已经具备共享资格。
+
 下一步校准每线程TLS/errno、共享锁与libc++abi guard，再实现固定V8的真实
 Thread/Start/Join/Semaphore。当前仅内核基础显式opt-in，诊断入口仍关闭线程；
 完整45尚未重放，完整ELF/Isolate/JS、网页、视频及HTML5仍未验收，生产镜像未改。
