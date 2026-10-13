@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "4e33b4c75de5a4d1637d3af44aa7e0eda9570c7b7c1ed8939c510fabf7e7ad75",
-      "bytes": 7331
+      "sha256": "fd21b99a038c9bdf6f7d4568eeeb7ad407df87f56d34b0f286481dc12ee1e7ae",
+      "bytes": 7923
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,8 +6104,8 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "0023674dfb3dc5967affcd04e7e1ffab1efe69ccd031e3923e94584d50347b25",
-      "bytes": 19747,
+      "sha256": "edf51ec96fbddc2301fed7480bea6f31218c1c32dfe881127deb35852a8d6200",
+      "bytes": 20676,
       "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {

@@ -1,0 +1,4 @@
+#ifndef GTOS_MATH_RECORD_H
+#define GTOS_MATH_RECORD_H
+#define MATH_CASE_CHECKS 921U
+#endif

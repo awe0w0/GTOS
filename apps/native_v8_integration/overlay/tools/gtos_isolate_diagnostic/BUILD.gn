@@ -515,6 +515,30 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   }
 }
 
+# Pinned numeric providers required by the actual V8/libc++ consumers.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_numeric_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    # Keep real math library errno semantics; engine call-site flags stay as is.
+    cflags_cc = [ "-fmath-errno" ]
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/math/generic/ceilf.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/ceil.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/floor.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/fmod.cpp",
+      "//third_party/llvm-libc/src/src/stdlib/abs.cpp",
+    ]
+    deps = [ ":native_c_clock" ]
+  }
+}
+
 # Full real embedder link, separate from object-only qualification.
 executable("native_embedder") {
   assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
@@ -538,6 +562,7 @@ executable("native_embedder") {
   deps += [ ":native_scanf_libc" ]
   deps += [ ":native_sync_libcxx" ]
   deps += [ ":native_output_libc" ]
+  deps += [ ":native_numeric_libc" ]
   ldflags = [
     "-T", rebase_path("native.ld", root_build_dir),
     "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),

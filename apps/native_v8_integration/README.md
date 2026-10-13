@@ -101,3 +101,13 @@ PrintError在真实stderr重定向后提交C缓冲及原生文件SYNC；w/w+截�
 实际完整链接full-link-37已越过OS::PrintError，当前首错ceilf；完整ELF、
 Isolate/JS及浏览器仍未生成或运行。公有源码/测试逐字节核对，未重跑公有GN或客体。
 详见[模块说明](../native_output/README.md)及[验收记录](../native_output/acceptance.json)。
+
+
+## 原生基础数学提供者
+
+新增native_numeric_libc接入固定LLVM ceilf/ceil/floor/fmod/abs；目标局部
+-fmath-errno恢复库的域错误语义，旧fabs/sqrt及引擎参数保持。两组客体共12个
+任务、12次精确回收，每任务921数学检查；原FILE/PNG等回归继续通过。
+同一完整链接保留5160条旧对象命令及旧输入顺序，仅增加五项提供者。当前
+真实链接终态及下一阻塞见[模块说明](../native_numeric/README.md)和
+[验收记录](../native_numeric/acceptance.json)。完整ELF/Isolate/JS及浏览器仍未验收。

@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "85a99772ee16d1ff5af5c54629f2c3a58d769a11d0f16eb5b3ec9b069adbad43",
+  "payload_lock_sha256": "27600d680136d1f92ccb0331e3d14fb85fe4a49b2ce597ce6f00b203734bc985",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1261,7 +1261,12 @@
     "third_party/libc++/src/src/mutex.cpp": "910f9774ac7dcfb98354f3487bbfe0dedb86394e6f1c7a0fd7702285cdde95be",
     "third_party/libc++/src/src/mutex_destructor.cpp": "074f72b3901da4fe0d4f4237cbc0431ea4fe6ff9712345b4aa4341805bb467ae",
     "third_party/libc++/src/src/condition_variable.cpp": "8cd75dd0973213cb7151d7807c519960567165614a8bc2e3d7b8de0210a57b4d",
-    "third_party/libc++/src/src/condition_variable_destructor.cpp": "5dffcf28178338009a83adb322b71bdd4ded3b613932b627a15e798a05939ab1"
+    "third_party/libc++/src/src/condition_variable_destructor.cpp": "5dffcf28178338009a83adb322b71bdd4ded3b613932b627a15e798a05939ab1",
+    "third_party/llvm-libc/src/src/math/generic/ceilf.cpp": "8a79ea415762f4e744431d041fbbc72f156f18ba0655b4875224fbeb08244797",
+    "third_party/llvm-libc/src/src/math/generic/ceil.cpp": "f66d50251d8442c5d1db86b3e7ecb9d05ce3db37d9c63d69cb21ee821f19aa48",
+    "third_party/llvm-libc/src/src/math/generic/floor.cpp": "eefda2774692e71fed3f83eab43fd8b3701ac50fef55b364e66cdd10e57540b3",
+    "third_party/llvm-libc/src/src/math/generic/fmod.cpp": "1f91df0c36b27c04ada5bb9aa310a1a5c48171690e29ade947e5fa51f3d9d550",
+    "third_party/llvm-libc/src/src/stdlib/abs.cpp": "9b8f9980d60d5a0ef24d9bc682aed808c2fd9f33c8cf1be1fee0e36f291b1f96"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1432,5 +1437,9 @@
   "native_output_scope": "Six pinned V8 OS FILE output wrappers and generic printf family; real native SYNC and truncate-open coherence. Private IA32 single-user-task profile only.",
   "native_output_target": "//tools/gtos_isolate_diagnostic:native_output_libc",
   "native_output_qualification": "apps/native_output/acceptance.json",
-  "native_file_sync_current_regression": "apps/native_output/acceptance.json"
+  "native_file_sync_current_regression": "apps/native_output/acceptance.json",
+  "native_numeric_guest_qualified": true,
+  "native_numeric_scope": "Pinned ceilf/ceil/floor/fmod/abs with real shared errno, integer builtins and x86 FP exceptions; private IA32 single-user task only.",
+  "native_numeric_target": "//tools/gtos_isolate_diagnostic:native_numeric_libc",
+  "native_numeric_qualification": "apps/native_numeric/acceptance.json"
 }

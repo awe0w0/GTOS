@@ -1,0 +1,96 @@
+{
+  "scope": "固定LLVM ceilf/ceil/floor/fmod/abs；私有IA32单用户任务配置",
+  "guest_pass": true,
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/guest-01/status.json",
+    "sha256": "21dc6544f60dbe006c28cbe578ba9e81aeeddc8557fe3a1cc8f1b29110281ea6"
+  },
+  "guest_configurations": [
+    "32M-smp1",
+    "64M-smp4"
+  ],
+  "tasks": 12,
+  "exact_reaps": 12,
+  "math_checks_per_task": 921,
+  "math_checks_total": 11052,
+  "checks_total": 172918,
+  "negative_log_controls_rejected": 444,
+  "io_errors_per_configuration": 42,
+  "independent_stock_cold_mounts": 2,
+  "stock_readback": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/stock-read-01/status.json",
+    "sha256": "b1a2f0e65836c6ccced75805d1b5cd0db917b7ad52c37ae558372780ba38a0db"
+  },
+  "stock_disks_unchanged": true,
+  "actual_gn": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/gn-03/status.json",
+    "sha256": "056f066ab98316d9b062058b7ab5d0cb84fa61d780b542b5a49b85580dfeeb72"
+  },
+  "numeric_compile": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/compile-03/status.json",
+    "sha256": "26622328eb4fd335778e22695068c88795f0c4d61d3507de7f0406d38eb63474"
+  },
+  "consumer_compile": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/probe-compile-01/status.json",
+    "sha256": "3c7a2fdf756ed4cfadd312d4e842ef7c95d1f437aff3ed2b33ab52fdb8919d59"
+  },
+  "consumer_link": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/probe-link-02/status.json",
+    "sha256": "7cf1b16bd12b0597cba57310fea8381ede156e5957706dbb6a1456bc77fc5aa5"
+  },
+  "full_system_header_dependencies": true,
+  "prior_object_commands_preserved": 5160,
+  "added_objects": 5,
+  "current_object_commands": 5165,
+  "engine_args_and_prior_link_order_preserved": true,
+  "complete_replay": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+    "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
+  },
+  "complete_replay_log_sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb",
+  "complete_replay_exit_code": 1,
+  "first_remaining_blocker": "__cxa_atexit",
+  "linker_diagnostics_complete": false,
+  "complete_bound_inputs": 12380,
+  "old_cache_metadata_unchanged": true,
+  "self_review": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/module-self-review.md",
+    "sha256": "07a203a4dfb06795b456bfc86e36125039922e231658fcca93ca32cd239f9bf6"
+  },
+  "probe_files": {
+    "main.cc": "1a666442b02327a9ca793d6f3e5178ee6bcccc51d9a893594ab7c6c082eeb6d5",
+    "kernel.cpp": "cf63a7319d0dc814540837965a3a36d88e44804dd4ff10d7ecbf8891be8f78fa",
+    "math-checks.h": "4b90744e76813cf44cc73ace1d41d551e7ed42d1b5f364f9a41959c29240a9ac",
+    "math-record.h": "54d6422dae56eea0f690999451927cc90de36197034f1f340f4c0db5e2d6b33a",
+    "kernel_common.h": "d4ed77434b9732d8f3cf989eb37331c8a10958492148e2273d5a37720225dbcb",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+    "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+    "observer.py": "6fb946c1d92a7dfe218ed7accbfe558b0323f3115d3d0207b79da3565afee466",
+    "stock.c": "6df662043b1369895186ed537130bebc2936e4e618bb6779c46070a3f20fd90c"
+  },
+  "upstream_source_files": {
+    "third_party/llvm-libc/src/src/math/generic/ceilf.cpp": "8a79ea415762f4e744431d041fbbc72f156f18ba0655b4875224fbeb08244797",
+    "third_party/llvm-libc/src/src/math/generic/ceil.cpp": "f66d50251d8442c5d1db86b3e7ecb9d05ce3db37d9c63d69cb21ee821f19aa48",
+    "third_party/llvm-libc/src/src/math/generic/floor.cpp": "eefda2774692e71fed3f83eab43fd8b3701ac50fef55b364e66cdd10e57540b3",
+    "third_party/llvm-libc/src/src/math/generic/fmod.cpp": "1f91df0c36b27c04ada5bb9aa310a1a5c48171690e29ade947e5fa51f3d9d550",
+    "third_party/llvm-libc/src/src/stdlib/abs.cpp": "9b8f9980d60d5a0ef24d9bc682aed808c2fd9f33c8cf1be1fee0e36f291b1f96"
+  },
+  "canonical_byte_equivalence": {
+    "path": "@WORKSPACE@/artifacts/native-math-20261013-a/canonical-byte-equivalence.json",
+    "sha256": "74f643cc4dc5321fca0cd3618fd18dd833d216ad3c128b0026c3a6d38a9f4c76"
+  },
+  "canonical_payload_files_verified": 1287,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "new_remote_ci_run": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "parallel_user_threads_qualified": false,
+  "production_image_changed": false
+}

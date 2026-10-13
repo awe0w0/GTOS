@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-13T14:21:51.4370698Z",
+  "recorded_utc": "2026-10-13T15:50:30.1297111Z",
   "scope": "实际完整目标full-link-37已越过OS::PrintError；12个原生任务、12次精确回收、428个日志反例及两盘stock冷读回通过。首错ceilf，完整ELF和浏览器仍未生成或运行。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -32,21 +32,21 @@
   "link_pass": false,
   "full_elf_exists": false,
   "first_build_blocker": {
+    "phase": "actual full GN final ELF link",
+    "diagnostic": "ld.lld: error: undefined symbol: __cxa_atexit",
+    "consumer": "Pinned libc++ locale.cpp init_weeks/init_wweeks/init_months; see actual log",
+    "cause": "Missing real C++ process destructor registration/lifecycle provider",
     "build_log": {
-      "sha256": "f81ecab8378dfbb67a652255da9c30532f7c4b4ce6472be8fec8251a25c5e10c",
-      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/actual-final-link.log"
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
+      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
     },
     "link_command_evidence": {
-      "sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
-      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json"
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
     },
-    "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: ceilf",
-    "consumer": "libc++ __hash_table in pinned V8 source-range-ast-visitor.cc/scopes.cc; see actual log",
+    "complete_attempt": "native-math-20261013-a/full-link-38",
     "all_missing_symbols_count_measured": false,
-    "complete_attempt": "native-output-20261013-a/full-link-37",
     "default_linker_error_limit": 20,
-    "cause": "Required native math provider absent; inspect pinned LLVM math and actual consumers",
     "resolved_in_current_complete_link": false
   },
   "other_observed_failures": [
@@ -544,27 +544,26 @@
     "diagnostics_complete": false
   },
   "latest_complete_attempt": {
-    "build_exit_code": 1,
-    "bound_inputs_unchanged": true,
-    "build_log": {
-      "sha256": "bb7b1de9e6262e3e5005756e8fd7031088f8ffb4a4d78417ee58d74113b4a0e2",
-      "path": "@WORKSPACE@/artifacts/native-condvar-20261013-a/full-link-34/actual-final-link.log"
+    "name": "native-math-20261013-a/full-link-38",
+    "method": "Offline actual GN link with five guest-qualified numeric providers",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
     },
+    "build_log": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
+      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
+    },
+    "build_exit_code": 1,
     "gn_pass": true,
     "actual_final_link_attempted": true,
+    "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
-    "guest_self_review_pass": true,
     "full_elf_exists": false,
-    "method": "Offline real GN final-link replay with five qualified native synchronization objects",
-    "prior_object_commands_preserved": 5150,
-    "new_ninja_compile_sweep_performed": false,
-    "name": "native-condvar-20261013-a/full-link-34",
-    "status": {
-      "sha256": "8018bddd5bb46ba103b58d10dca4b32398727bc2c67486b5d8bfdccbe07ac8b3",
-      "path": "@WORKSPACE@/artifacts/native-condvar-20261013-a/full-link-34/status.json"
-    },
+    "prior_object_commands_preserved": 5160,
     "selected_objects_compiled": 5,
-    "diagnostics_complete": false
+    "diagnostics_complete": false,
+    "new_ninja_compile_sweep_performed": false
   },
   "platform_adaptation_evidence": {
     "dynamic_elf": {
@@ -644,9 +643,9 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "只读核对固定V8 OS::PrintError实现及既有真实诊断、FILE与格式化接口；补齐正确错误输出，不添加成功占位。",
-    "完成必要边界与回收回归后重放同一实际GN完整链接；真实ELF生成后按观测处理装载与容量。",
-    "继续推进客体Isolate/JS、本地网页与DOM、受控网络、视频和HTML5；单用户任务同步不代表完整线程平台。"
+    "只读核对完整38的__cxa_atexit消费者与既有C++退出/回收路径；实现真实析构注册及生命周期，覆盖逆序、失败、重复终结、故障/取消回收，再重放同一完整目标。",
+    "完整ELF生成后按实际段、页、栈和堆需求推进原生装载、Isolate/JS及精确回收。",
+    "继续本地HTML/CSS与DOM输入、受控网络、视频及HTML5；单用户诊断配置不等于完整浏览器平台。"
   ],
   "retained_complete_attempts": [
     {
@@ -1266,21 +1265,21 @@
     }
   },
   "previous_first_build_blocker": {
-    "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::mutex::lock()",
-    "complete_attempt": "native-low-level-alloc-20261013-a/full-link-33",
-    "link_command_evidence": {
-      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/status.json",
-      "sha256": "3131165cf7c59cb50382ccf9f2cc1ea921d743891f1a2088c830a3a604a42b23"
-    },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/actual-final-link.log",
-      "sha256": "a6767a9ba50dd3cddf1304d6fe865aaf7a0a6f77c75214d4ca2bc30c5d6f62ff"
+      "sha256": "f81ecab8378dfbb67a652255da9c30532f7c4b4ce6472be8fec8251a25c5e10c",
+      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/actual-final-link.log"
     },
-    "consumer": "Pinned Abseil synchronization/internal/stdcpp_waiter.cc Wait and Post",
-    "cause": "Selected StdcppWaiter requires real libc++ mutex and condition-variable providers; review native single-task waiting semantics before integration",
-    "default_linker_error_limit": 20,
+    "link_command_evidence": {
+      "sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
+      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json"
+    },
+    "phase": "actual full GN final ELF link",
+    "diagnostic": "ld.lld: error: undefined symbol: ceilf",
+    "consumer": "libc++ __hash_table in pinned V8 source-range-ast-visitor.cc/scopes.cc; see actual log",
     "all_missing_symbols_count_measured": false,
+    "complete_attempt": "native-output-20261013-a/full-link-37",
+    "default_linker_error_limit": 20,
+    "cause": "Required native math provider absent; inspect pinned LLVM math and actual consumers",
     "resolved_in_current_complete_link": false
   },
   "zlib_filestore_qualification": {
@@ -1457,27 +1456,26 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "build_exit_code": 1,
-    "bound_inputs_unchanged": true,
-    "build_log": {
-      "sha256": "bb7b1de9e6262e3e5005756e8fd7031088f8ffb4a4d78417ee58d74113b4a0e2",
-      "path": "@WORKSPACE@/artifacts/native-condvar-20261013-a/full-link-34/actual-final-link.log"
+    "name": "native-math-20261013-a/full-link-38",
+    "method": "Offline actual GN link with five guest-qualified numeric providers",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
     },
+    "build_log": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
+      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
+    },
+    "build_exit_code": 1,
     "gn_pass": true,
     "actual_final_link_attempted": true,
+    "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
-    "guest_self_review_pass": true,
     "full_elf_exists": false,
-    "method": "Offline real GN final-link replay with five qualified native synchronization objects",
-    "prior_object_commands_preserved": 5150,
-    "new_ninja_compile_sweep_performed": false,
-    "name": "native-condvar-20261013-a/full-link-34",
-    "status": {
-      "sha256": "8018bddd5bb46ba103b58d10dca4b32398727bc2c67486b5d8bfdccbe07ac8b3",
-      "path": "@WORKSPACE@/artifacts/native-condvar-20261013-a/full-link-34/status.json"
-    },
+    "prior_object_commands_preserved": 5160,
     "selected_objects_compiled": 5,
-    "diagnostics_complete": false
+    "diagnostics_complete": false,
+    "new_ninja_compile_sweep_performed": false
   },
   "cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-02",
@@ -1548,27 +1546,10 @@
     "boundary": "实际宿主命令不变，内容相同的生成头因时间戳变化触发重编；独立草稿验证成功和失败路径，当前 13 输入不改。"
   },
   "previous_complete_attempt_observation": {
-    "name": "native-low-level-alloc-20261013-a/full-link-33",
-    "method": "Offline actual GN final-link replay, six replaced objects plus one native page backend",
-    "status": {
-      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/status.json",
-      "sha256": "3131165cf7c59cb50382ccf9f2cc1ea921d743891f1a2088c830a3a604a42b23"
-    },
-    "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/actual-final-link.log",
-      "sha256": "a6767a9ba50dd3cddf1304d6fe865aaf7a0a6f77c75214d4ca2bc30c5d6f62ff"
-    },
-    "build_exit_code": 1,
-    "gn_pass": true,
-    "guest_self_review_pass": true,
-    "bound_inputs_unchanged": true,
-    "old_cache_metadata_unchanged": true,
-    "actual_final_link_attempted": true,
-    "full_elf_exists": false,
-    "prior_object_commands_preserved": 5149,
-    "selected_objects_compiled": 7,
-    "new_ninja_compile_sweep_performed": false,
-    "diagnostics_complete": false
+    "name": "native-output-20261013-a/full-link-37",
+    "status": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json",
+    "status_sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
+    "first_remaining_blocker": "ceilf"
   },
   "sampler_compile_diagnostic": {
     "preparation": {
@@ -2476,7 +2457,7 @@
     "native_provider_connected": true
   },
   "latest_handoff": {
-    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v54.json",
+    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v57.json",
     "qualification_snapshot_before_normal_dev_commit": true
   },
   "post_build_validation_pipeline": {
@@ -2793,6 +2774,102 @@
     "html5_guest_pass": false,
     "parallel_user_threads_qualified": false,
     "whole_call_chain_stack_bound_proven": false,
+    "production_image_changed": false
+  },
+  "native_numeric": {
+    "scope": "固定LLVM ceilf/ceil/floor/fmod/abs；私有IA32单用户任务配置",
+    "guest_pass": true,
+    "guest_status": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/guest-01/status.json",
+      "sha256": "21dc6544f60dbe006c28cbe578ba9e81aeeddc8557fe3a1cc8f1b29110281ea6"
+    },
+    "guest_configurations": [
+      "32M-smp1",
+      "64M-smp4"
+    ],
+    "tasks": 12,
+    "exact_reaps": 12,
+    "math_checks_per_task": 921,
+    "math_checks_total": 11052,
+    "checks_total": 172918,
+    "negative_log_controls_rejected": 444,
+    "io_errors_per_configuration": 42,
+    "independent_stock_cold_mounts": 2,
+    "stock_readback": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/stock-read-01/status.json",
+      "sha256": "b1a2f0e65836c6ccced75805d1b5cd0db917b7ad52c37ae558372780ba38a0db"
+    },
+    "stock_disks_unchanged": true,
+    "actual_gn": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/gn-03/status.json",
+      "sha256": "056f066ab98316d9b062058b7ab5d0cb84fa61d780b542b5a49b85580dfeeb72"
+    },
+    "numeric_compile": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/compile-03/status.json",
+      "sha256": "26622328eb4fd335778e22695068c88795f0c4d61d3507de7f0406d38eb63474"
+    },
+    "consumer_compile": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/probe-compile-01/status.json",
+      "sha256": "3c7a2fdf756ed4cfadd312d4e842ef7c95d1f437aff3ed2b33ab52fdb8919d59"
+    },
+    "consumer_link": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/probe-link-02/status.json",
+      "sha256": "7cf1b16bd12b0597cba57310fea8381ede156e5957706dbb6a1456bc77fc5aa5"
+    },
+    "full_system_header_dependencies": true,
+    "prior_object_commands_preserved": 5160,
+    "added_objects": 5,
+    "current_object_commands": 5165,
+    "engine_args_and_prior_link_order_preserved": true,
+    "complete_replay": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
+    },
+    "complete_replay_log_sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb",
+    "complete_replay_exit_code": 1,
+    "first_remaining_blocker": "__cxa_atexit",
+    "linker_diagnostics_complete": false,
+    "complete_bound_inputs": 12380,
+    "old_cache_metadata_unchanged": true,
+    "self_review": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/module-self-review.md",
+      "sha256": "07a203a4dfb06795b456bfc86e36125039922e231658fcca93ca32cd239f9bf6"
+    },
+    "probe_files": {
+      "main.cc": "1a666442b02327a9ca793d6f3e5178ee6bcccc51d9a893594ab7c6c082eeb6d5",
+      "kernel.cpp": "cf63a7319d0dc814540837965a3a36d88e44804dd4ff10d7ecbf8891be8f78fa",
+      "math-checks.h": "4b90744e76813cf44cc73ace1d41d551e7ed42d1b5f364f9a41959c29240a9ac",
+      "math-record.h": "54d6422dae56eea0f690999451927cc90de36197034f1f340f4c0db5e2d6b33a",
+      "kernel_common.h": "d4ed77434b9732d8f3cf989eb37331c8a10958492148e2273d5a37720225dbcb",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+      "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+      "observer.py": "6fb946c1d92a7dfe218ed7accbfe558b0323f3115d3d0207b79da3565afee466",
+      "stock.c": "6df662043b1369895186ed537130bebc2936e4e618bb6779c46070a3f20fd90c"
+    },
+    "upstream_source_files": {
+      "third_party/llvm-libc/src/src/math/generic/ceilf.cpp": "8a79ea415762f4e744431d041fbbc72f156f18ba0655b4875224fbeb08244797",
+      "third_party/llvm-libc/src/src/math/generic/ceil.cpp": "f66d50251d8442c5d1db86b3e7ecb9d05ce3db37d9c63d69cb21ee821f19aa48",
+      "third_party/llvm-libc/src/src/math/generic/floor.cpp": "eefda2774692e71fed3f83eab43fd8b3701ac50fef55b364e66cdd10e57540b3",
+      "third_party/llvm-libc/src/src/math/generic/fmod.cpp": "1f91df0c36b27c04ada5bb9aa310a1a5c48171690e29ade947e5fa51f3d9d550",
+      "third_party/llvm-libc/src/src/stdlib/abs.cpp": "9b8f9980d60d5a0ef24d9bc682aed808c2fd9f33c8cf1be1fee0e36f291b1f96"
+    },
+    "canonical_byte_equivalence": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/canonical-byte-equivalence.json",
+      "sha256": "74f643cc4dc5321fca0cd3618fd18dd833d216ad3c128b0026c3a6d38a9f4c76"
+    },
+    "canonical_payload_files_verified": 1287,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false,
+    "new_remote_ci_run": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "parallel_user_threads_qualified": false,
     "production_image_changed": false
   }
 }
