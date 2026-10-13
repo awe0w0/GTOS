@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "9c4d495c5f17c76deec362a78e8b9b9d7039d5e5c03ddc686ce9812a376f18e6",
+  "payload_lock_sha256": "327de2ec89dbabd75f418873af0915b4ff4da7c4e68540dac00e1103ea7959a4",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1268,7 +1268,10 @@
     "third_party/llvm-libc/src/src/math/generic/fmod.cpp": "1f91df0c36b27c04ada5bb9aa310a1a5c48171690e29ade947e5fa51f3d9d550",
     "third_party/llvm-libc/src/src/stdlib/abs.cpp": "9b8f9980d60d5a0ef24d9bc682aed808c2fd9f33c8cf1be1fee0e36f291b1f96",
     "third_party/llvm-libc/src/src/stdlib/atexit.cpp": "80c277cd395e947ec98671cbe00488f202cf88b933d8941e66834f5f97cb38c9",
-    "third_party/llvm-libc/src/src/stdlib/exit_handler.h": "75edae3e15445e5517439a2dc7c9dddc1dcc25a2f342b8da1a62d30466d8617d"
+    "third_party/llvm-libc/src/src/stdlib/exit_handler.h": "75edae3e15445e5517439a2dc7c9dddc1dcc25a2f342b8da1a62d30466d8617d",
+    "third_party/libc++/src/src/hash.cpp": "c79c74c4e0925a50343adb3c084d1281516ee9a209d4bddc677275d09096963c",
+    "third_party/libc++/src/src/functional.cpp": "82e910930c4298c85c5d0fab76c8c9e236d59d7239ea2b06f79dcd0e31486ac1",
+    "third_party/libc++/src/src/algorithm.cpp": "0138ecbf4ffb62718b0ab580fcb05570ccd444486d3d88a0768447f6a665c6d0"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1447,5 +1450,9 @@
   "native_exit_guest_qualified": true,
   "native_exit_target": "//tools/gtos_isolate_diagnostic:native_exit_libc",
   "native_exit_scope": "Real process callback registration, selective/repeated finalize and normal TLS/static/fini/FILE cleanup; private IA32 single-user task only.",
-  "native_exit_qualification": "apps/native_exit/acceptance.json"
+  "native_exit_qualification": "apps/native_exit/acceptance.json",
+  "native_hash_guest_qualified": true,
+  "native_hash_target": "//tools/gtos_isolate_diagnostic:native_cpp_libcxx",
+  "native_hash_scope": "Pinned IA32 libc++ prime, Murmur2 hash, unsigned sort and unordered containers; private single-user task.",
+  "native_hash_qualification": "apps/native_hash_runtime/acceptance.json"
 }

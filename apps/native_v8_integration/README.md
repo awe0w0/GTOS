@@ -121,3 +121,12 @@ native_exit_libc接入真实__cxa_atexit/atexit、选择性及重复终结，正
 释放句柄并保留退出码，不承诺新数据提交。完整39的实际结果及下一阻塞见
 [模块说明](../native_exit/README.md)及[验收记录](../native_exit/acceptance.json)。
 公开字节对应检查不等于重跑公开GN/客体；完整V8/JS及浏览器仍待验收。
+
+
+## 原生哈希、质数与无符号排序
+
+native_cpp_libcxx接入固定上游hash.cpp、functional.cpp和algorithm.cpp，保留
+原库配置与5167条旧对象命令。真实消费者、缺提供者链接反例、八模式CPL3
+任务与精确回收的结果见[模块说明](../native_hash_runtime/README.md)和
+[验收记录](../native_hash_runtime/acceptance.json)。完整40按实际结果继续；
+公开字节对应不等于公开GN/客体重跑，完整V8/JS与浏览器仍待验收。

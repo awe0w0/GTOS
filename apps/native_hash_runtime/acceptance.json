@@ -1,0 +1,94 @@
+{
+  "scope": "固定libc++真实质数、IA32 Murmur2、无符号排序与unordered容器；私有单用户任务",
+  "guest_pass": true,
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/guest-02/status.json",
+    "sha256": "e7ca50995a71a8e743f0ff92cb74d88a7361745c25c271ddd6af2af1b92b9f81"
+  },
+  "guest_configurations": [
+    "32M-smp1",
+    "64M-smp4"
+  ],
+  "tasks": 16,
+  "exact_reaps": 16,
+  "prime_checks_per_task": 4106,
+  "hash_checks_per_task": 114,
+  "sort_checks_per_task": 4768,
+  "container_checks_per_task": 1416,
+  "checks_total": 169392,
+  "negative_log_controls_rejected": 530.0,
+  "actual_gn": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/gn-01/status.json",
+    "sha256": "02c3b9c83c8c7bd1758462ad13353078d7e8e439d317051276b848ecaa9ddff6"
+  },
+  "provider_compile": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/compile-02/status.json",
+    "sha256": "23a1dd7740c2c89d2c4a9c4be8edce81186435d438c1cf401d81765ed2f08f73"
+  },
+  "consumer_compile": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/probe-compile-02/status.json",
+    "sha256": "5ab0e5b32bd3d6adf1ffb12127d6b6066d4af59d03d64d852b9e8148a6992eb8"
+  },
+  "consumer_link": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/probe-link-01/status.json",
+    "sha256": "b08cb2f5b7b3b1edcb9ccbf8534b3b8a31be97f63cc2eaa32035ae6669dcfa69"
+  },
+  "negative_without_hash_providers_rejected": true,
+  "upstream_sources": {
+    "hash.cpp": "c79c74c4e0925a50343adb3c084d1281516ee9a209d4bddc677275d09096963c",
+    "functional.cpp": "82e910930c4298c85c5d0fab76c8c9e236d59d7239ea2b06f79dcd0e31486ac1",
+    "algorithm.cpp": "0138ecbf4ffb62718b0ab580fcb05570ccd444486d3d88a0768447f6a665c6d0"
+  },
+  "full_system_header_dependencies": true,
+  "prior_object_commands_preserved": 5167,
+  "added_objects": 3,
+  "replaced_source_objects": 0,
+  "current_object_commands": 5170,
+  "engine_args_and_prior_link_order_preserved": true,
+  "complete_replay": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/full-link-40/status.json",
+    "sha256": "78b9b7587871b898d9127e54c06cfff4470336a1c350748253b1e68530b89b80"
+  },
+  "complete_replay_log_sha256": "e15e442cf10e9d30c9a3113cc4bd194b4aad9b8b206c86ecefa6800391ba4eb7",
+  "complete_replay_exit_code": 1,
+  "first_remaining_blocker": "strtof",
+  "linker_diagnostics_complete": false,
+  "complete_bound_inputs": 13243,
+  "old_cache_metadata_unchanged": true,
+  "self_review": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/module-self-review.md",
+    "sha256": "39b38fe174cc894209d74872f9774b8ba711ce755cbf845b8a56542b80ab30f7"
+  },
+  "probe_files": {
+    "main.cc": "4e44638fac222a5c7c6832a5ecb34615b2df8e690ca2c62ff70ede9c50fb7fe8",
+    "kernel.cpp": "96b7a33b356bb0ad9b25daf0a5239f14d5d5eda256bd58d4dbb71d88434ee007",
+    "hash_common.h": "4315d409c90d563e0f26d3cf02fdb41eea2e424b5f677d80ecf61c6ec5cf466c",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+    "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+    "observer.py": "5ff3b72d02c10305dc4688de56f7f747b98536f9bb5d48a68ce1e69091866c36"
+  },
+  "canonical_byte_equivalence": {
+    "path": "@WORKSPACE@/artifacts/native-hash-runtime-20261014-a/canonical-byte-equivalence.json",
+    "sha256": "16010eca35d40d43412ff615e65881cb1a800462cc0a8dbdc6c7983b1acd6f08"
+  },
+  "canonical_payload_files_verified": 1291,
+  "entry_state_symbols": {
+    "native_v8_integration_stage": 1074005088,
+    "native_v8_integration_result": 1074004052
+  },
+  "observed_trap_entry_stack_bytes": 192,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "new_remote_ci_run": false,
+  "stock_cold_readback_performed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "parallel_user_threads_qualified": false,
+  "production_image_changed": false
+}

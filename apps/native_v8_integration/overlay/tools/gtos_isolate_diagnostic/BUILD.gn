@@ -225,6 +225,9 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "runtime/cpp-no-exceptions.cc",
       "//third_party/libc++/src/src/string.cpp",
       "//third_party/libc++/src/src/memory.cpp",
+      "//third_party/libc++/src/src/hash.cpp",
+      "//third_party/libc++/src/src/functional.cpp",
+      "//third_party/libc++/src/src/algorithm.cpp",
     ]
     deps = [ ":native_runtime" ]
   }

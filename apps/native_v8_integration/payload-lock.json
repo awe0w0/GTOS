@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "e376ea4f0fb518926d31a7563128a05786739e0aafd02b0a811f4246dfaa9a00",
-      "bytes": 8546
+      "sha256": "727f462027c1feb4cdabdb7d25b0568b43beb17fd96b9c3f052c0330f5c42daf",
+      "bytes": 9042
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,9 +6104,9 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "7e90d35bc4e7cd1896d8f6b7da3a8cf967a6dd4024755386e8beedfc9ad0b396",
-      "bytes": 21374,
-      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
+      "sha256": "76adee4a5566a4e3a6d359e35cf26fb370122c6b543f04d2f42c72ce8064ac7d",
+      "bytes": 21526,
+      "origin": "GTOS IA32 genuine pinned libc++ hash, functional and algorithm providers; native_hash_runtime guest-qualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
