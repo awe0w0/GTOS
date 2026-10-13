@@ -261,11 +261,6 @@
       "bytes": 4783,
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
-    "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "bytes": 18712,
-      "origin": "Pinned libc++ synchronization integration and real GTOS ABI1 single-user-task wait provider; native guest qualified",
-      "sha256": "67dc581fbbe2692dd1316b96deaf5ae95b18991ffda0b6110bddcd0c2ff33abf"
-    },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
       "bytes": 2267,
@@ -5396,10 +5391,6 @@
       "sha256": "42677f5abd1ba5b244eaf2cc1e54d52061beb590d03614aa2a871e414e4c30c1",
       "bytes": 933
     },
-    "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/File/file.cpp": {
-      "sha256": "79b611fb4cfb2dcda256d1d4eb924ed0ba671c0e11221a314bfb60a549a2c1d7",
-      "bytes": 21822
-    },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/File/file.h": {
       "sha256": "3e9f0c31a1ad560ab2516f4ff71b9fa1b37b459f8833d792a5d2be6eb75be9b4",
       "bytes": 11669
@@ -5940,10 +5931,6 @@
       "sha256": "6370b89f785ef227558fae2ad3e7cb49ce05ac64d920f7d082cc7408e6670601",
       "bytes": 11283
     },
-    "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
-      "sha256": "0c01db4d4901680c064309542401692710e488e667274158a2f62f28738aae9b",
-      "bytes": 9484
-    },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/setbuf.cpp": {
       "sha256": "66c5e88981e11cbfb4564a413f02430c97e2bee9df280bf64218a2fc585bbd48",
       "bytes": 923
@@ -5990,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "652393c1294a3adfc1e72c2e3d2018dacc65213f8addc08ec753f76b4f01f2aa",
-      "bytes": 6317
+      "sha256": "4e33b4c75de5a4d1637d3af44aa7e0eda9570c7b7c1ed8939c510fabf7e7ad75",
+      "bytes": 7331
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6115,6 +6102,26 @@
       "bytes": 3402,
       "origin": "Pinned libc++ synchronization integration and real GTOS ABI1 single-user-task wait provider; native guest qualified",
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
+      "sha256": "0023674dfb3dc5967affcd04e7e1ffab1efe69ccd031e3923e94584d50347b25",
+      "bytes": 19747,
+      "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
+      "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
+      "bytes": 9971,
+      "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/File/file.cpp": {
+      "sha256": "294d32eaa239b9f24bd699696104677c586f841af2b050c615ba4606e60e36f3",
+      "bytes": 22027,
+      "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
+    },
+    "overlay/src/base/platform/gtos-output.cc": {
+      "sha256": "f49aa5358ed7f98c3b326037bd48daaf2a665553a602a619b64f4bdf2a75e25a",
+      "bytes": 1151,
+      "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
     }
   },
   "overlay_files": 413,

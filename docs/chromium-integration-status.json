@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-13T09:52:56.8489380Z",
-  "scope": "实际GN完整最终链接33已越过LowLevelAlloc；12个原生任务、14次回收及508个日志反例通过。当前首错为StdcppWaiter依赖的std::mutex::lock()，完整ELF尚未生成。",
+  "recorded_utc": "2026-10-13T14:21:51.4370698Z",
+  "scope": "实际完整目标full-link-37已越过OS::PrintError；12个原生任务、12次精确回收、428个日志反例及两盘stock冷读回通过。首错ceilf，完整ELF和浏览器仍未生成或运行。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -33,42 +33,43 @@
   "full_elf_exists": false,
   "first_build_blocker": {
     "build_log": {
-      "sha256": "bb7b1de9e6262e3e5005756e8fd7031088f8ffb4a4d78417ee58d74113b4a0e2",
-      "path": "@WORKSPACE@/artifacts/native-condvar-20261013-a/full-link-34/actual-final-link.log"
+      "sha256": "f81ecab8378dfbb67a652255da9c30532f7c4b4ce6472be8fec8251a25c5e10c",
+      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/actual-final-link.log"
     },
     "link_command_evidence": {
-      "sha256": "8018bddd5bb46ba103b58d10dca4b32398727bc2c67486b5d8bfdccbe07ac8b3",
-      "path": "@WORKSPACE@/artifacts/native-condvar-20261013-a/full-link-34/status.json"
+      "sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
+      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json"
     },
     "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
-    "consumer": "V8 FatalProcessOutOfMemory, API failure and other diagnostic consumers",
+    "diagnostic": "ld.lld: error: undefined symbol: ceilf",
+    "consumer": "libc++ __hash_table in pinned V8 source-range-ast-visitor.cc/scopes.cc; see actual log",
     "all_missing_symbols_count_measured": false,
-    "complete_attempt": "native-condvar-20261013-a/full-link-34",
+    "complete_attempt": "native-output-20261013-a/full-link-37",
     "default_linker_error_limit": 20,
-    "cause": "GTOS platform OS::PrintError provider is absent; inspect pinned OS implementation and real native diagnostic/formatting interfaces",
+    "cause": "Required native math provider absent; inspect pinned LLVM math and actual consumers",
     "resolved_in_current_complete_link": false
   },
   "other_observed_failures": [
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::condition_variable::__do_timed_wait(std::__gtos_isolate_diagnostic::unique_lock<std::__gtos_isolate_diagnostic::mutex>&, std::__gtos_isolate_diagnostic::chrono::time_point<std::__gtos_isolate_diagnostic::chrono::system_clock, std::__gtos_isolate_diagnostic::chrono::duration<long long, std::__gtos_isolate_diagnostic::ratio<1ll, 1000000000ll>>>)",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::condition_variable::wait(std::__gtos_isolate_diagnostic::unique_lock<std::__gtos_isolate_diagnostic::mutex>&)",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::mutex::unlock()",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::condition_variable::notify_one()",
-    "ld.lld: error: undefined symbol: __cxa_pure_virtual",
-    "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
-    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
     "ld.lld: error: undefined symbol: ceilf",
+    "ld.lld: error: undefined symbol: floor",
+    "ld.lld: error: undefined symbol: ceil",
     "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
-    "ld.lld: error: undefined symbol: void std::__gtos_isolate_diagnostic::__sort<std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&, unsigned int*>(unsigned int*, unsigned int*, std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&)",
+    "ld.lld: error: undefined symbol: __cxa_pure_virtual",
+    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
+    "ld.lld: error: undefined symbol: __cxa_atexit",
     "ld.lld: error: undefined symbol: v8::base::Thread::Thread(v8::base::Thread::Options const&)",
     "ld.lld: error: undefined symbol: v8::base::Thread::Start()",
     "ld.lld: error: undefined symbol: v8::base::Thread::~Thread()",
-    "ld.lld: error: undefined symbol: floor",
-    "ld.lld: error: undefined symbol: ceil",
-    "ld.lld: error: undefined symbol: __cxa_atexit",
-    "ld.lld: error: undefined symbol: printf",
     "ld.lld: error: undefined symbol: fmod",
-    "ld.lld: error: undefined symbol: v8::base::Semaphore::Signal()"
+    "ld.lld: error: undefined symbol: void std::__gtos_isolate_diagnostic::__sort<std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&, unsigned int*>(unsigned int*, unsigned int*, std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&)",
+    "ld.lld: error: undefined symbol: strtof",
+    "ld.lld: error: undefined symbol: strtod",
+    "ld.lld: error: undefined symbol: strtold",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__hash_memory(void const*, unsigned int)",
+    "ld.lld: error: undefined symbol: v8::base::Semaphore::Semaphore(int)",
+    "ld.lld: error: undefined symbol: abs",
+    "ld.lld: error: undefined symbol: v8::base::OS::SNPrintF(char*, int, char const*, ...)",
+    "ld.lld: error: undefined symbol: v8::base::Semaphore::~Semaphore()"
   ],
   "runs": [
     {
@@ -260,7 +261,7 @@
     "gtos_platform_gn_pass": false,
     "latest_reference_observation": {
       "name": "content-shell-linux-ia32-metagen-resume-08",
-      "timestamp_utc": "2026-10-12T07:20:46.628226+00:00",
+      "timestamp_utc": "2026-10-12T15:20:46.628226+08:00",
       "gn_pass": true,
       "build_exit_code": 1,
       "bound_inputs_unchanged": true,
@@ -299,7 +300,7 @@
     },
     "previous_reference_observation": {
       "name": "content-shell-linux-ia32-compile-06",
-      "observed_utc": "2026-10-12T00:22:44.012893+00:00",
+      "observed_utc": "2026-10-12T08:22:44.012893+08:00",
       "driver_pid": 75913,
       "driver_process_observed_alive": true,
       "gn_pass": true,
@@ -348,7 +349,7 @@
     },
     "current_reference_attempt_observation": {
       "name": "content-shell-linux-ia32-host-runtime-resume-09",
-      "observed_utc": "2026-10-12T10:48:25.058568+00:00",
+      "observed_utc": "2026-10-12T18:48:25.058568+08:00",
       "phase": "actual ninja content_shell build",
       "driver_process_observed_alive": true,
       "driver_pid": 167456,
@@ -464,7 +465,7 @@
         "path": "@WORKSPACE@/logs/issue-route-calibration-20261012-d.json",
         "sha256": "dd3fd75ad2dfcf60d0d16bb5bb6158d30f972f3c3c9b4b0b47de26ec1782b34f"
       },
-      "observed_utc": "2026-10-11T20:11:39.505513+00:00",
+      "observed_utc": "2026-10-12T04:11:39.505513+08:00",
       "status": "completed",
       "conclusion": "success",
       "passed_jobs": [
@@ -482,7 +483,7 @@
     "previous_observation": {
       "run_id": 38139891840,
       "url": "https://github.com/awe0w0/GTOS/actions/runs/38139891840",
-      "observed_utc": "2026-10-11T18:02:27.083070+00:00",
+      "observed_utc": "2026-10-12T02:02:27.08307+08:00",
       "status": "completed",
       "conclusion": "success",
       "passed_jobs": [
@@ -598,7 +599,7 @@
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-native-errors-02/status.json",
       "sha256": "50e6668498084d6b3bdf32dcc735e046117be2399cecf77bfbea3a9fd197dcf5"
     },
-    "timestamp_utc": "2026-10-11T07:39:57.729277+00:00",
+    "timestamp_utc": "2026-10-11T15:39:57.729277+08:00",
     "objects": [
       {
         "source": "../source/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc",
@@ -656,7 +657,7 @@
           "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/attempt-06/build-status.json",
           "sha256": "1a4ae07e132e10664c9d0c521497785f0763401c535d827b2ea259692d82f448"
         },
-        "timestamp_utc": "2026-10-11T07:30:02.171935+00:00",
+        "timestamp_utc": "2026-10-11T15:30:02.171935+08:00",
         "dependencies_unchanged_from_attempt_05": true,
         "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
         "sources_unchanged_during_run": true,
@@ -967,7 +968,7 @@
         "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/portable-resume-07/status.json",
         "sha256": "e51ee40f5b0cfdf4596705278828f599c64704eb3c7e37be33cca011fbba6c90"
       },
-      "timestamp_utc": "2026-10-11T12:24:47.036951+00:00",
+      "timestamp_utc": "2026-10-11T20:24:47.036951+08:00",
       "cold_build": false,
       "build_exit_code": 1,
       "dependency_graph_sha256": "1c958c6641813262961c281c3eda9a76abb5995f829684f2f91b755bb9ab39be",
@@ -994,7 +995,7 @@
         "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/zlib-draft-resume-11/status.json",
         "sha256": "144ba61b5764f270961f17806f81225f52c722bc2cb41ecaa23d5491e5b8fb6b"
       },
-      "timestamp_utc": "2026-10-11T15:57:29.933887+00:00",
+      "timestamp_utc": "2026-10-11T23:57:29.933887+08:00",
       "cold_build": false,
       "build_exit_code": 1,
       "bound_inputs_unchanged": true,
@@ -1021,7 +1022,7 @@
         "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v10-status-snapshots/cctz-native-resume-12-status.json",
         "sha256": "33ff075a7eb4f3c9059aa49fd03d68b88b38e20ad100fa9b029d0cfb7f9a02bc"
       },
-      "timestamp_utc": "2026-10-11T19:21:41.177609+00:00",
+      "timestamp_utc": "2026-10-12T03:21:41.177609+08:00",
       "cold_build": false,
       "build_exit_code": 1,
       "bound_inputs_unchanged": true,
@@ -1047,7 +1048,7 @@
     },
     {
       "name": "diagnostic-runtime-resume-20",
-      "timestamp_utc": "2026-10-11T23:36:15.598048+00:00",
+      "timestamp_utc": "2026-10-12T07:36:15.598048+08:00",
       "status": {
         "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v21-status-snapshots/native20-terminal-status.json",
         "sha256": "fa13ac5e85a7510d50f0a952f632dde4a892e2b19014231f0ee719e7053147f3"
@@ -1506,7 +1507,7 @@
   },
   "previous_cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-01",
-    "observed_utc": "2026-10-11T18:55:40.803071+00:00",
+    "observed_utc": "2026-10-12T02:55:40.803071+08:00",
     "status": {
       "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v9-status-snapshots/cctz-native-compile-diagnostic-01-status.json",
       "sha256": "88f5aa7743071729acd638d410d8737f2680df05f9fbd7cdc19c553bddd84d2d"
@@ -1692,7 +1693,7 @@
     },
     "actual_complete17_terminal": {
       "name": "runtime-link-resume-17",
-      "timestamp_utc": "2026-10-11T22:02:18.424893+00:00",
+      "timestamp_utc": "2026-10-12T06:02:18.424893+08:00",
       "status": {
         "path": "@WORKSPACE@/logs/issue-route-calibration-20261012-f-evidence/native17-terminal-status.json",
         "sha256": "3aae6883f1cd8a32aa7d48d545fa1e8fe883f83484ead90bc759561b26dc1482"
@@ -2555,7 +2556,7 @@
   },
   "native_wide_runtime_integration": {
     "scope": "Actual full-target LLVM UTF-8 family consumed by libc++ wide time/codecvt; original algorithms with explicit scalar/shortest-form, error-source and null-source corrections, pinned SDK state ABI",
-    "recorded_utc": "2026-10-12T14:52:34.896858+00:00",
+    "recorded_utc": "2026-10-12T22:52:34.896858+08:00",
     "actual_compile": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/wide-runtime-native-compile-04/status.json",
       "sha256": "f7915392d62aa39d0548708b07c327d97690814e2a49a00918521df2b9803bbf"
@@ -2618,7 +2619,7 @@
     "published_dev_commit": "b8f746b2f4baed197c973778b5abf659950c88d7"
   },
   "native_runtime_error_integration": {
-    "recorded_utc": "2026-10-12T17:20:39.970251+00:00",
+    "recorded_utc": "2026-10-13T01:20:39.970251+08:00",
     "scope": "Pinned libc++ runtime_error no-exception body, native callback diagnostic and fatal process exit; current single-user-task IA32 profile",
     "actual_compile": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-native-compile-guarded-03/status.json",
@@ -2725,5 +2726,73 @@
     "negative_log_controls_rejected": 380,
     "full_native_elf_exists": false,
     "objects_byte_identical": 5
+  },
+  "native_output": {
+    "scope": "Pinned V8 OS FILE output and printf family; native FILE SYNC and truncate-open coherence",
+    "guest_pass": true,
+    "guest_status": "@WORKSPACE@/artifacts/native-output-20261013-a/guest-07/status.json",
+    "guest_status_sha256": "7bc2c2c6b841f0dd063839e8cbaa427a1455a43807f4ab9e0bd4f66b6f3b7d9c",
+    "guest_configurations": [
+      "32M-smp1",
+      "64M-smp4"
+    ],
+    "tasks": 12,
+    "checks_total": 161842,
+    "format_checks_total": 37272,
+    "native_calls_total": 4200,
+    "standard_checks_per_task": 46,
+    "io_errors_per_configuration": 42,
+    "exact_reaps": 12,
+    "negative_log_controls_rejected": 428,
+    "truncate_open_existing_and_new_reader_pass": true,
+    "truncate_open_real_flush_failure_pass": true,
+    "independent_stock_cold_mounts": 2,
+    "stock_readback_status": "@WORKSPACE@/artifacts/native-output-20261013-a/stock-read-02/status.json",
+    "stock_readback_status_sha256": "4f927ea7d1577e853d85b867ab93427f9be6224c234a389dd26e120110326c7f",
+    "stock_readback_disks_unchanged": true,
+    "full_system_header_dependencies": true,
+    "output_compile_status_sha256": "66af8c6b6c293352a8d0727f77abc04331bbe58612fbba38b6903f40a4883d19",
+    "file_compile_status_sha256": "aed33280fcc396b65354806d100c14385bc3a31b4a149af89a5ab4a8b2fca0c9",
+    "actual_gn_status_sha256": "3d69386460c069db255b03219dea258f15ab03666cfb2c6176ffef3a011be6d3",
+    "prior_object_commands_preserved": 5155,
+    "new_output_objects": 5,
+    "file_source_overrides": 2,
+    "current_object_commands_preserved": 5160,
+    "engine_args_and_link_order_preserved": true,
+    "complete_replay": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json",
+    "complete_replay_status_sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
+    "complete_replay_log_sha256": "f81ecab8378dfbb67a652255da9c30532f7c4b4ce6472be8fec8251a25c5e10c",
+    "complete_replay_exit_code": 1,
+    "first_remaining_blocker": "ceilf",
+    "linker_diagnostics_complete": false,
+    "complete_bound_inputs": 12135,
+    "old_cache_metadata_unchanged": true,
+    "self_review": "@WORKSPACE@/artifacts/native-output-20261013-a/module-self-review-v2.md",
+    "self_review_sha256": "d95a499578be4f89e321fcd4f369b50dd0f0f182948b7b648587a8c93a8af8c4",
+    "canonical_source_byte_equivalence_verified": true,
+    "canonical_byte_equivalence_record": "@WORKSPACE@/artifacts/native-output-20261013-a/canonical-byte-equivalence.json",
+    "canonical_byte_equivalence_sha256": "925363308d4adcf26603f72c6fb16d3865946d1db9644634d8353d0c33e5c827",
+    "canonical_payload_files_verified": 1287,
+    "probe_files": {
+      "main.cc": "884dd7a0bc2daa3af64e5a486e1d3ea7e3c16be50bf4469e0bbbe134bb7e834e",
+      "kernel.cpp": "57391666baafd086945836dd0260130677ed1d9ef21d1ad172914804155c9cb0",
+      "kernel_common.h": "d4ed77434b9732d8f3cf989eb37331c8a10958492148e2273d5a37720225dbcb",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+      "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+      "observer.py": "7f12f226d80b259b129c165710f0af67856d7baf3f2b3c26842838928e543137",
+      "stock.c": "6df662043b1369895186ed537130bebc2936e4e618bb6779c46070a3f20fd90c"
+    },
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "parallel_user_threads_qualified": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "production_image_changed": false
   }
 }

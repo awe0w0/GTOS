@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "755e026c25f3f68cbd39971945c5c575abab63c963557d7a2c012b9175f4c0f8",
+  "payload_lock_sha256": "85a99772ee16d1ff5af5c54629f2c3a58d769a11d0f16eb5b3ec9b069adbad43",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1427,5 +1427,10 @@
   "native_sync_guest_qualified": true,
   "native_sync_scope": "Pinned mutex/condition_variable; checked GTOS ABI1 private single-user-task profile, real deadlines and yielding, no cross-thread notification qualification",
   "native_sync_target": "//tools/gtos_isolate_diagnostic:native_sync_libcxx",
-  "native_sync_qualification": "apps/native_sync/acceptance.json"
+  "native_sync_qualification": "apps/native_sync/acceptance.json",
+  "native_output_guest_qualified": true,
+  "native_output_scope": "Six pinned V8 OS FILE output wrappers and generic printf family; real native SYNC and truncate-open coherence. Private IA32 single-user-task profile only.",
+  "native_output_target": "//tools/gtos_isolate_diagnostic:native_output_libc",
+  "native_output_qualification": "apps/native_output/acceptance.json",
+  "native_file_sync_current_regression": "apps/native_output/acceptance.json"
 }

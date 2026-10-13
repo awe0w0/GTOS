@@ -158,6 +158,15 @@ public:
     }
     return result;
   }
+  static int flush(File *file) {
+    auto *f = static_cast<GtosFile *>(file);
+    // Console writes are submitted synchronously by the native write service.
+    if (f->console) return 0;
+    if (!f->handle) return EBADF;
+    GtosFileControlRequest request = {GTOS_FILE_ABI_VERSION, f->handle};
+    int result = call(GTOS_SYS_FILE_SYNC, &request, sizeof(request));
+    return result < 0 ? native_error(result) : 0;
+  }
   GtosFile(uint8_t *buffer, FileMode mode)
       : File(write, read, seek, close, buffer, DEFAULT_BUFFER_SIZE, _IOFBF,
              true, mode), handle(0), console(0), permanent(false) {}
@@ -243,4 +252,5 @@ int reopenfile(File *file, const char *path, const char *mode) {
   File::FileLock lock(file);
   return reopenfile_unlocked(file, path, mode);
 }
+int flushfile_unlocked(File *file) { return GtosFile::flush(file); }
 } // namespace LIBC_NAMESPACE_DECL

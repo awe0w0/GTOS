@@ -485,6 +485,36 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   }
 }
 
+# Real formatted FILE output consumed by the V8 OS diagnostic paths.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_output_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [
+      "native-c-file/llvm-libc",
+      "native-alloc-printf",
+      "//third_party/llvm-libc/src",
+      "runtime",
+      "runtime/sdk",
+    ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+      "LIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM",
+      "LIBC_COPT_PRINTF_MODULAR=1",
+    ]
+    sources = [
+      "//third_party/llvm-libc/src/src/stdio/generic/printf.cpp",
+      "//third_party/llvm-libc/src/src/stdio/generic/fprintf.cpp",
+      "//third_party/llvm-libc/src/src/stdio/generic/vprintf.cpp",
+      "//third_party/llvm-libc/src/src/stdio/generic/vfprintf.cpp",
+      "//src/base/platform/gtos-output.cc",
+    ]
+    deps = [ ":native_file_libc", ":native_printf_libc" ]
+  }
+}
+
 # Full real embedder link, separate from object-only qualification.
 executable("native_embedder") {
   assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
@@ -507,6 +537,7 @@ executable("native_embedder") {
   deps += [ ":native_runtime_error_libcxx" ]
   deps += [ ":native_scanf_libc" ]
   deps += [ ":native_sync_libcxx" ]
+  deps += [ ":native_output_libc" ]
   ldflags = [
     "-T", rebase_path("native.ld", root_build_dir),
     "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),

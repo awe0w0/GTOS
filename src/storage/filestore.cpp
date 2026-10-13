@@ -98,6 +98,12 @@ int32_t FileStore::Open(uint32_t owner,const char* path,uint32_t flags) {
     gtos_lfs_memset(slot,0,sizeof(*slot));slot->config.buffer=slot->cache;
     error=lfs_file_opencfg(&filesystem,&slot->file,path,flags,&slot->config);if (error) return error;
     slot->owner=owner;slot->handle=nextHandle++;slot->mode=access;slot->kind=LFS_TYPE_REG;
+    if (flags&Truncate) {
+        // Opening with truncation must expose the empty file to other handles
+        // before any later user-space buffered write is flushed.
+        error=Sync(owner,slot->handle);
+        if (error) { CloseSlot(*slot);return error; }
+    }
     return slot->handle;
 }
 int32_t FileStore::OpenDirectory(uint32_t owner,const char* path) {

@@ -86,3 +86,18 @@ condition_variable使用现有owner/depth和真实GTOS时钟/调度服务。12�
 和时钟失败恢复；380个日志反例被拒绝。系统头文件改为完整MD记录并锁定，五个
 对象字节一致。单用户任务边界保持，不能宣称跨线程通知或完整线程支持。当前
 首错是`v8::base::OS::PrintError`，完整ELF仍未生成。
+
+
+## 原生格式化FILE输出与同步修正
+
+接入固定LLVM generic printf/fprintf/vprintf/vfprintf及六项V8 OS输出包装。
+PrintError在真实stderr重定向后提交C缓冲及原生文件SYNC；w/w+截断打开返回之前
+提交空版本，刷新已有读者缓存并保留游标。实际I/O错误返回原错误，失败打开与
+异常回收均释放原生句柄。File.h及对象布局保持不变。
+
+32M/1CPU与64M/4CPU共12个CPL3任务、12次精确回收、161842项检查及428个
+日志反例通过。独立stock LittleFS两盘冷读回核对长输出、恢复后缀及PNG字节，
+前后磁盘哈希不变。格式化检查共37272项；范围仍为私有单用户任务诊断配置。
+实际完整链接full-link-37已越过OS::PrintError，当前首错ceilf；完整ELF、
+Isolate/JS及浏览器仍未生成或运行。公有源码/测试逐字节核对，未重跑公有GN或客体。
+详见[模块说明](../native_output/README.md)及[验收记录](../native_output/acceptance.json)。

@@ -28,6 +28,8 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
+// Target-local flush of the host filesystem cache, under the FILE lock.
+int flushfile_unlocked(File *file);
 File *File::list_all = nullptr;
 Mutex File::list_lock(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
                       /*pshared=*/false);
@@ -469,7 +471,10 @@ int File::flush_unlocked() {
     }
     pos = read_limit = 0;
   }
-  return 0;
+  int flush_error = flushfile_unlocked(this);
+  if (flush_error != 0)
+    err = true;
+  return flush_error;
 }
 
 // Does the following:
