@@ -5990,8 +5990,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "0be057e6ed2ba6ae7670bb8b48ef0ab22d72ed3d3644e3c51724b72a08d056bf",
-      "bytes": 5250
+      "sha256": "8e13c3813ad285722881de123ba8a43988c7778f1295ceaa94f6cebe60c8cf97",
+      "bytes": 5735
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6070,6 +6070,46 @@
       "sha256": "d3aa58c62f17d272bfb942292b8c7bf3b8d4e5600ae0d1a4771f922e8a73814a",
       "bytes": 2620,
       "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/third_party/abseil-cpp/absl/base/BUILD.gn": {
+      "sha256": "db71115b9f51cbbc937f50888ab855189b4d0403e98ea0094b160bbcf004a821",
+      "bytes": 13260,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "overlay/third_party/abseil-cpp/absl/base/internal/low_level_alloc.h": {
+      "sha256": "0e96a53c05b345aebb7ee1658c3eb671dbc5e21a3db0df9bebabd7dbbc9ca69f",
+      "bytes": 5130,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "overlay/third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc": {
+      "sha256": "6a1a8429097074e4dfdc7a4e63b44fb1d3d9b76751bbcdd93dd240a469675377",
+      "bytes": 25188,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc": {
+      "sha256": "4971352adbf49f1ef041b06eb28710094a35415a6102a88534e401c0829ec8f9",
+      "bytes": 8597,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h": {
+      "sha256": "bbfcc0c66da3784d6735963d343f5f947d92f85f3907f44a27b1d3823ca1bb2d",
+      "bytes": 1431,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "sdk/process/info_abi.h": {
+      "sha256": "a05c914d9d52e67d1d7c521da2a252e1602dab4236e7fb8b44e23d86b4f33696",
+      "bytes": 4024,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "sdk/process/abi.h": {
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055",
+      "bytes": 668,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "sdk/process/vm_abi.h": {
+      "sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11",
+      "bytes": 3625,
+      "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
     }
   },
   "overlay_files": 407,

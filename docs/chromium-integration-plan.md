@@ -6,6 +6,21 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 
 ## 当前证据与下一步
 
+2026-10-13，第33次真实完整目标链接已越过LowLevelAlloc。保留固定Abseil的arena、
+skiplist、拆分合并与计数，接入GTOS VM页服务，并按原始reservation句柄释放。
+实际GN重编译6个受影响对象，新增1个页后端对象，5149条旧编译命令和引擎参数
+保持。32MiB/单CPU与64MiB/四CPU共12个任务完成正常、溢出、重复释放、配额失败
+和取消检查，14次精确回收，508个日志反例被拒绝。
+
+当前首错为`std::__gtos_isolate_diagnostic::mutex::lock()`，由StdcppWaiter消费。
+下一步核对真实mutex/condition_variable消费者与GTOS等待能力；保留单用户任务
+约束，不能用空锁或无条件成功消除链接错误。首次TLS分配仍使用C堆。
+完整ELF、Isolate/JS、网页、视频与HTML5未通过，生产镜像和容量未改。
+证据见[底层分配器模块](../apps/native_low_level_alloc/README.md)和工作区
+`artifacts/native-low-level-alloc-20261013-a/full-link-33`。
+
+## 上一节点：原生字符串扫描
+
 2026-10-13，第32次真实完整目标最终链接已使用新增的 `sscanf` GN 对象；
 5148条旧对象命令、原输入顺序和引擎参数保持，旧缓存只读，全部绑定输入及旧缓存
 元数据复核一致。`sscanf` 未定义错误已消失，实际首错为：
@@ -19,10 +34,9 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 13541条指令符合IA32/x87/SSE2范围。852字节仅是扫描器自身最大帧，未证明完整
 调用链栈上界，也未证明取消时内部临时扫描缓冲仍存活。
 
-下一步保留固定Abseil的arena、skiplist、合并及计数逻辑，接入真实GTOS VM页服务。
-现有LowLevelAlloc对象已在真实GN链接中，但平台缺失判定排除了实现；页后端需按
-原始reservation句柄释放合并范围。单任务TLS首次访问仍使用真实C heap，不能把
-后端无malloc分配描述为整个allocator冷启动完全独立。
+当时LowLevelAlloc对象已在真实GN链接中，但平台缺失判定排除了实现；该阻塞现已
+通过上述原生页后端推进。单任务TLS首次访问仍使用真实C heap，不能把后端无malloc
+描述为整个allocator冷启动完全独立。
 
 完整ELF、客体Isolate/JS、网页浏览、视频和HTML5仍未通过。生产镜像与容量未改。
 第32次证据位于工作区 `artifacts/native-v8-integration-20261011-a/sscanf-full-link-32`，

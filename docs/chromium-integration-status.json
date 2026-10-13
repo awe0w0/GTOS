@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-12T17:20:39.970251+00:00",
-  "scope": "实际GN完整最终链接31已越过runtime_error，首错sscanf；原生错误终止私有与公开离线双冷启动及自审通过。未生成完整ELF。",
+  "recorded_utc": "2026-10-13T07:24:24.7222959Z",
+  "scope": "实际GN完整最终链接33已越过LowLevelAlloc；12个原生任务、14次回收及508个日志反例通过。当前首错为StdcppWaiter依赖的std::mutex::lock()，完整ELF尚未生成。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -33,43 +33,42 @@
   "full_elf_exists": false,
   "first_build_blocker": {
     "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: sscanf",
-    "complete_attempt": "runtime-error-full-link-31",
+    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::mutex::lock()",
+    "complete_attempt": "native-low-level-alloc-20261013-a/full-link-33",
     "link_command_evidence": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
-      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
+      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/status.json",
+      "sha256": "3131165cf7c59cb50382ccf9f2cc1ea921d743891f1a2088c830a3a604a42b23"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
-      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
+      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/actual-final-link.log",
+      "sha256": "a6767a9ba50dd3cddf1304d6fe865aaf7a0a6f77c75214d4ca2bc30c5d6f62ff"
     },
-    "consumer": "Pinned libc++ locale.cpp money_get<char/wchar_t>::do_get long double conversion",
-    "cause": "Implement required sscanf conversion semantics from the measured consumer, with numeric/long-double boundaries and explicit failures",
+    "consumer": "Pinned Abseil synchronization/internal/stdcpp_waiter.cc Wait and Post",
+    "cause": "Selected StdcppWaiter requires real libc++ mutex and condition-variable providers; review native single-task waiting semantics before integration",
     "default_linker_error_limit": 20,
     "all_missing_symbols_count_measured": false,
     "resolved_in_current_complete_link": false
   },
   "other_observed_failures": [
-    "ld.lld: error: undefined symbol: absl::base_internal::LowLevelAlloc::Free(void*)",
-    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemWait",
-    "ld.lld: error: undefined symbol: absl::synchronization_internal::CreateThreadIdentity()",
-    "ld.lld: error: undefined symbol: AbslInternalPerThreadSemPost",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::condition_variable::__do_timed_wait(std::__gtos_isolate_diagnostic::unique_lock<std::__gtos_isolate_diagnostic::mutex>&, std::__gtos_isolate_diagnostic::chrono::time_point<std::__gtos_isolate_diagnostic::chrono::system_clock, std::__gtos_isolate_diagnostic::chrono::duration<long long, std::__gtos_isolate_diagnostic::ratio<1ll, 1000000000ll>>>)",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::condition_variable::wait(std::__gtos_isolate_diagnostic::unique_lock<std::__gtos_isolate_diagnostic::mutex>&)",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::mutex::unlock()",
+    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::condition_variable::notify_one()",
+    "ld.lld: error: undefined symbol: __cxa_pure_virtual",
     "ld.lld: error: undefined symbol: v8::base::OS::PrintError(char const*, ...)",
+    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
     "ld.lld: error: undefined symbol: ceilf",
-    "ld.lld: error: undefined symbol: __cxa_atexit",
     "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
+    "ld.lld: error: undefined symbol: void std::__gtos_isolate_diagnostic::__sort<std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&, unsigned int*>(unsigned int*, unsigned int*, std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&)",
+    "ld.lld: error: undefined symbol: v8::base::Thread::Thread(v8::base::Thread::Options const&)",
+    "ld.lld: error: undefined symbol: v8::base::Thread::Start()",
+    "ld.lld: error: undefined symbol: v8::base::Thread::~Thread()",
     "ld.lld: error: undefined symbol: floor",
     "ld.lld: error: undefined symbol: ceil",
-    "ld.lld: error: undefined symbol: void std::__gtos_isolate_diagnostic::__sort<std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&, unsigned int*>(unsigned int*, unsigned int*, std::__gtos_isolate_diagnostic::__less<unsigned int, unsigned int>&)",
-    "ld.lld: error: undefined symbol: v8::base::OS::FOpen(char const*, char const*)",
-    "ld.lld: error: undefined symbol: __cxa_pure_virtual",
-    "ld.lld: error: undefined symbol: nearbyint",
-    "ld.lld: error: undefined symbol: strtof",
-    "ld.lld: error: undefined symbol: v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-    "ld.lld: error: undefined symbol: strtod",
-    "ld.lld: error: undefined symbol: strtold",
-    "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__hash_memory(void const*, unsigned int)",
-    "ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)"
+    "ld.lld: error: undefined symbol: __cxa_atexit",
+    "ld.lld: error: undefined symbol: printf",
+    "ld.lld: error: undefined symbol: fmod",
+    "ld.lld: error: undefined symbol: v8::base::Semaphore::Signal()"
   ],
   "runs": [
     {
@@ -548,29 +547,27 @@
     }
   },
   "latest_complete_attempt": {
-    "name": "runtime-error-full-link-31",
-    "timestamp_utc": "2026-10-12T17:00:26.324193+00:00",
-    "method": "guarded actual GN final-link replay using qualified prior object cache",
+    "name": "native-low-level-alloc-20261013-a/full-link-33",
+    "method": "Offline actual GN final-link replay, six replaced objects plus one native page backend",
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
-      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
+      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/status.json",
+      "sha256": "3131165cf7c59cb50382ccf9f2cc1ea921d743891f1a2088c830a3a604a42b23"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
-      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
+      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/actual-final-link.log",
+      "sha256": "a6767a9ba50dd3cddf1304d6fe865aaf7a0a6f77c75214d4ca2bc30c5d6f62ff"
     },
     "build_exit_code": 1,
     "gn_pass": true,
+    "guest_self_review_pass": true,
     "bound_inputs_unchanged": true,
+    "old_cache_metadata_unchanged": true,
     "actual_final_link_attempted": true,
     "full_elf_exists": false,
-    "link_elapsed_seconds": 3.0393819449964212,
+    "prior_object_commands_preserved": 5149,
+    "selected_objects_compiled": 7,
     "new_ninja_compile_sweep_performed": false,
-    "input_snapshot_method": "Immutable full30 base plus four-file source delta",
-    "input_delta_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/input-delta-review-01.json",
-      "sha256": "d94eb14c8599e9cdb185693f4541a808f7cd51232d12b6177b893c1a52f58b37"
-    }
+    "diagnostics_complete": false
   },
   "platform_adaptation_evidence": {
     "dynamic_elf": {
@@ -650,9 +647,9 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "按实际sscanf首错读取固定消费者和扫描器实现，仅补足必要正确语义。",
-    "沿安全栅栏进行原生边界/错误/资源验收，然后回放同一GN完整最终链接。",
-    "完整ELF后测量装载/堆栈并推进客体Isolate/JS，再到本地网页、网络、视频与HTML5。"
+    "按实际StdcppWaiter消费者核对mutex/condition_variable提供者及GTOS原生等待语义；不以空锁或成功占位隐藏缺失。",
+    "沿固定脚本、断网与限定写入栅栏验证边界、终止和资源回收，再回放同一GN完整最终链接。",
+    "完整ELF后测量实际装载与内存需求，推进Isolate/JS，再到本地网页、网络、视频和HTML5。"
   ],
   "retained_complete_attempts": [
     {
@@ -1464,29 +1461,27 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "name": "runtime-error-full-link-31",
-    "timestamp_utc": "2026-10-12T17:00:26.324193+00:00",
-    "method": "guarded actual GN final-link replay using qualified prior object cache",
+    "name": "native-low-level-alloc-20261013-a/full-link-33",
+    "method": "Offline actual GN final-link replay, six replaced objects plus one native page backend",
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/status.json",
-      "sha256": "2329a3ad9688d481404aca124f35f78c2b8829137640d6486cdce1f186d5ed61"
+      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/status.json",
+      "sha256": "3131165cf7c59cb50382ccf9f2cc1ea921d743891f1a2088c830a3a604a42b23"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/actual-final-link.log",
-      "sha256": "3005d5abeab6b7f1e0b746be759129bb6244e72058bb02ae3fa3354f1dd5c726"
+      "path": "@WORKSPACE@/artifacts/native-low-level-alloc-20261013-a/full-link-33/actual-final-link.log",
+      "sha256": "a6767a9ba50dd3cddf1304d6fe865aaf7a0a6f77c75214d4ca2bc30c5d6f62ff"
     },
     "build_exit_code": 1,
     "gn_pass": true,
+    "guest_self_review_pass": true,
     "bound_inputs_unchanged": true,
+    "old_cache_metadata_unchanged": true,
     "actual_final_link_attempted": true,
     "full_elf_exists": false,
-    "link_elapsed_seconds": 3.0393819449964212,
+    "prior_object_commands_preserved": 5149,
+    "selected_objects_compiled": 7,
     "new_ninja_compile_sweep_performed": false,
-    "input_snapshot_method": "Immutable full30 base plus four-file source delta",
-    "input_delta_review": {
-      "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/runtime-error-full-link-31/input-delta-review-01.json",
-      "sha256": "d94eb14c8599e9cdb185693f4541a808f7cd51232d12b6177b893c1a52f58b37"
-    }
+    "diagnostics_complete": false
   },
   "cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-02",
@@ -2474,7 +2469,7 @@
     "native_provider_connected": true
   },
   "latest_handoff": {
-    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v48.json",
+    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v52.json",
     "qualification_snapshot_before_normal_dev_commit": true
   },
   "post_build_validation_pipeline": {
@@ -2698,5 +2693,17 @@
     "no_global_policy_or_firewall_changes": true,
     "external_push_and_notifications_separate": true,
     "qq_quiet_hours_shanghai": "02:00-09:00"
+  },
+  "native_low_level_alloc_integration": {
+    "acceptance": "apps/native_low_level_alloc/acceptance.json",
+    "actual_gn_objects_compiled": 7,
+    "guest_pass": true,
+    "victims": 12,
+    "exact_reaps": 14,
+    "observer_negative_controls_rejected": 508,
+    "cold_tls_uses_real_c_heap": true,
+    "async_signal_safe": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "full_native_elf_exists": false
   }
 }

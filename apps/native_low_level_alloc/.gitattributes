@@ -1,0 +1,2 @@
+# Preserve the exact guest-qualified fixture bytes.
+probe/** -text
