@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "dadbba06c599b919532fbc95ec095dd43d6ba2d5627d431b67d43f44bce55c97",
+  "payload_lock_sha256": "856827d5aac315f8793a0743aa43aa890ef0f6d41adf313ce8cc9ccc43702aa5",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1232,7 +1232,29 @@
     "third_party/llvm-libc/src/src/wchar/mbrlen.cpp": "583ff328e9c1f6913ca9942642c0dc692a95c82b79ccb78fe2effaceffc4303d",
     "third_party/llvm-libc/src/src/wchar/mbrlen.h": "38958ecedaf4ea9b338eda5439be72ce9f988aa34004ace1b83e1b9c2e447af3",
     "third_party/llvm-libc/src/src/stdlib/mbtowc.cpp": "d2814e2284f11c8d81a760907927914f80eb081664054d9e7b784456e2a536d2",
-    "third_party/llvm-libc/src/src/stdlib/mbtowc.h": "bc0268210cf1094d09a5b0490318db8c4f4622179e7aa06edb4415d04155ce57"
+    "third_party/llvm-libc/src/src/stdlib/mbtowc.h": "bc0268210cf1094d09a5b0490318db8c4f4622179e7aa06edb4415d04155ce57",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/parser.h": "3db611ee5394848b65131e58c3ac3607efd90fb72cf1032a596ba9b54219b4ba",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/scanf_main.h": "69a850d5bc37174dfd0225bff4ddaf593f5a94eccf5850249475aaa02fcf8950",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/reader.h": "ca29ba8b1baeef148db727395d72d8d20e3773d4d107bb00799a05ba61f103e2",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/string_reader.h": "46c631bdb1a7f51f6a6d590ff24a28cb633f75118f9c3d15ae9bc3b15042f656",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/converter.h": "6e2d1d0554d73efd51a824c60f446c33d9242e6891c386d53dd6639eab8c1dfd",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/int_converter.h": "f304923221dca9c6ee061608755f0689029c1b659db9b54a4b08993972abe732",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/string_converter.h": "d4437899b04bc5b81d936f0203ef5f31f88e2f7bc776c881918610c9ed1ae048",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/ptr_converter.h": "9b5cd5d367e6299bbcd94e5a4147e4ba5c7d17ae82ec5d765ea406c1813b3acf",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/float_converter.h": "fc2e1b4a09560cefa988b2d67fe949009d27bd681402a8ab3a4713b12d87c10e",
+    "third_party/llvm-libc/src/src/__support/char_vector.h": "fac333d9a7f53604c2b49a76342eb891b7bcb1ba0ee42154b4717acdc7a3d523",
+    "third_party/llvm-libc/src/src/stdio/sscanf.cpp": "0b4330b90af0c55cc21ce4d030075b3e84273fb5e2dcb8e9bb90bd93649b4c07",
+    "third_party/llvm-libc/src/src/stdio/sscanf.h": "8eec52103428fbca601422ab85adffb0252e6522ad089f76f151fabc38a7301b",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/core_structs.h": "15116d5f5779a4b5385f88ed0e1e661cf398c37c429d2235f703d45f6233e07b",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/converter_utils.h": "3d242e0539b78e7c06ea76ed8271bf764968d9fbd860e443779b47919e4b137a",
+    "third_party/llvm-libc/src/src/__support/str_to_float.h": "c62d18044eac0a0a834c5bc8d7b850c102bc66e7074b8e15429fceb5ddf11a41",
+    "third_party/llvm-libc/src/src/__support/detailed_powers_of_ten.h": "b9a82a7211ee4e3bfbfc5798b802a3d1f97f4bc9af2fcdf9b4620eb285259036",
+    "third_party/llvm-libc/src/src/__support/high_precision_decimal.h": "acf6f16a0c494b71752948ccfb71a18b5546157beae0903b504a4314c082511b",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/current_pos_converter.h": "21c249f841d0c354221cea0bf47c76a0592458e2341f238859f3206ddf24ef36",
+    "third_party/llvm-libc/src/src/stdio/scanf_core/scanf_config.h": "53a108439bd8434f2af36d55adb014192c38fbd67e98e9d286e0fb6f34629709",
+    "third_party/llvm-libc/src/hdr/stdio_macros.h": "1236ca5e7c7d814daba2d6c708bc1db525854c94b64c8741d4050c9ef453ea06",
+    "third_party/llvm-libc/src/hdr/stdio_overlay.h": "39032e7648b2cc92c4d585fb5b2c0f56fdfe031ce6965aa2ffeed8363039f97c",
+    "third_party/llvm-libc/src/hdr/types/FILE.h": "4efa84b154446cb1779407d149acd26520bf4e02e146391be129ecd42d4c75d1"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1324,5 +1346,64 @@
   },
   "native_wide_sdk_mbstate_sha256": "6f6b3def4d45e0ec490e5fa18ce078a800211bf5844c0214c365bf3e489d84ce",
   "native_runtime_error_scope": "Only the pinned actual full30 locale runtime_error helper; retain native verbose fatal termination, no exception profile changes or success placeholder",
-  "native_runtime_error_upstream_sha256": "af6a2e2aea77ebf269f858d1056e50aff8aa572fd82f7750c32a4069fb76e063"
+  "native_runtime_error_upstream_sha256": "af6a2e2aea77ebf269f858d1056e50aff8aa572fd82f7750c32a4069fb76e063",
+  "native_scanf_scope": "Pinned required sscanf with full float and 80-bit long-double backend; private GTOS CPL3 qualified, public replay pending. No complete V8 or browser qualification.",
+  "native_scanf_target_local_adaptations": {
+    "src/stdio/scanf_core/parser.h": {
+      "upstream_sha256": "3db611ee5394848b65131e58c3ac3607efd90fb72cf1032a596ba9b54219b4ba",
+      "adapted_sha256": "595ecd8447b1ae91c329edcb0db63af9f8439c9ce7ca9b1f40429fb5fe1ae8fe"
+    },
+    "src/stdio/scanf_core/scanf_main.h": {
+      "upstream_sha256": "69a850d5bc37174dfd0225bff4ddaf593f5a94eccf5850249475aaa02fcf8950",
+      "adapted_sha256": "682dbbce5e5eb2ca76d75ab5ee71f1c368cf52898416bd0ef9855e335c38f4db"
+    },
+    "src/stdio/scanf_core/reader.h": {
+      "upstream_sha256": "ca29ba8b1baeef148db727395d72d8d20e3773d4d107bb00799a05ba61f103e2",
+      "adapted_sha256": "6c4425ea3d91c43aabd7311b27b3c5b94c7eb1ecaa75daa86d49d45050073d40"
+    },
+    "src/stdio/scanf_core/string_reader.h": {
+      "upstream_sha256": "46c631bdb1a7f51f6a6d590ff24a28cb633f75118f9c3d15ae9bc3b15042f656",
+      "adapted_sha256": "f03496736199f016f754ce83026839a02f092be1456024e7fda9e15fd7a716f9"
+    },
+    "src/stdio/scanf_core/converter.h": {
+      "upstream_sha256": "6e2d1d0554d73efd51a824c60f446c33d9242e6891c386d53dd6639eab8c1dfd",
+      "adapted_sha256": "e641efc840a86daba17580e406d155a0dbbf549599d756024af0099b2ba0630d"
+    },
+    "src/stdio/scanf_core/int_converter.h": {
+      "upstream_sha256": "f304923221dca9c6ee061608755f0689029c1b659db9b54a4b08993972abe732",
+      "adapted_sha256": "a89df579c70e44640bfe9c9c94df3e5c09a12ab526e94bf02fa0bdac26f7ef3a"
+    },
+    "src/stdio/scanf_core/string_converter.h": {
+      "upstream_sha256": "d4437899b04bc5b81d936f0203ef5f31f88e2f7bc776c881918610c9ed1ae048",
+      "adapted_sha256": "40a94582f586b9cb7507aa084a079550b89030d93540b01cc07473cdda395e73"
+    },
+    "src/stdio/scanf_core/ptr_converter.h": {
+      "upstream_sha256": "9b5cd5d367e6299bbcd94e5a4147e4ba5c7d17ae82ec5d765ea406c1813b3acf",
+      "adapted_sha256": "acfd95dfbe524c0518ebef6298c9b80ea1adc4bd15ae996075a6fc0c695c8cb5"
+    },
+    "src/stdio/scanf_core/float_converter.h": {
+      "upstream_sha256": "fc2e1b4a09560cefa988b2d67fe949009d27bd681402a8ab3a4713b12d87c10e",
+      "adapted_sha256": "a579cb8bf9586fe57360581f393eed6f526b2161b2ad4aa37cfdac5cde9c3fff"
+    },
+    "src/__support/char_vector.h": {
+      "upstream_sha256": "fac333d9a7f53604c2b49a76342eb891b7bcb1ba0ee42154b4717acdc7a3d523",
+      "adapted_sha256": "d3aa58c62f17d272bfb942292b8c7bf3b8d4e5600ae0d1a4771f922e8a73814a"
+    }
+  },
+  "native_scanf_guest_qualified": true,
+  "native_scanf_qualification": {
+    "private_guest_status_sha256": "660e64c4afb1abaae905d4e175db197011d502f53f033395a8e6199145750388",
+    "private_review_sha256": "3a7fd8211ccdb710d4a07200193ffe915e4a17aa0ed59b330dc476de00d6d39e",
+    "compile_status_sha256": "f626e9ebfca2ddef94f8eaed54f973c568978c281eb0ccfb1a1147fe9f08226f",
+    "actual_gn_object_sha256": "7d23ae705c8110c93312df37674efd4d4ed58547690f1706c5b28399b17c2c81",
+    "actual_victim_cases": 14,
+    "exact_reap_checks": 16,
+    "normal_scanner_cases": 164,
+    "negative_observer_controls_rejected": 594,
+    "negative_isa_controls_rejected": 5,
+    "max_provider_own_stack_bytes": 852,
+    "whole_call_chain_stack_bound_proven": false,
+    "scanner_internal_buffer_live_at_cancellation_proven": false,
+    "public_replay_pass": false
+  }
 }

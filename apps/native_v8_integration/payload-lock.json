@@ -262,8 +262,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "7661428836dc21b10c44e392c4217ed94b3ff467d06e1e86af747c18e4d90243",
-      "bytes": 17101
+      "sha256": "c5219ab58aa65f0670f8d8598c7878e2c20445fdbafbcec85b2d13b4bbcd62ce",
+      "bytes": 17759,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
@@ -5989,8 +5990,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "95499b5d117f3052eeefaf0633bd76821e6130a888c13deea6c8b94b6dfd7f8e",
-      "bytes": 4481
+      "sha256": "0be057e6ed2ba6ae7670bb8b48ef0ab22d72ed3d3644e3c51724b72a08d056bf",
+      "bytes": 5250
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6019,11 +6020,61 @@
     "overlay/tools/gtos_isolate_diagnostic/runtime/runtime-error-no-exceptions.cc": {
       "sha256": "1d5778f0e24dd078e576f1894725c74fada782767671e0c03c260dfd5c8f1822",
       "bytes": 1034
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/converter.h": {
+      "sha256": "e641efc840a86daba17580e406d155a0dbbf549599d756024af0099b2ba0630d",
+      "bytes": 3389,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/float_converter.h": {
+      "sha256": "a579cb8bf9586fe57360581f393eed6f526b2161b2ad4aa37cfdac5cde9c3fff",
+      "bytes": 8107,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/int_converter.h": {
+      "sha256": "a89df579c70e44640bfe9c9c94df3e5c09a12ab526e94bf02fa0bdac26f7ef3a",
+      "bytes": 8171,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/parser.h": {
+      "sha256": "595ecd8447b1ae91c329edcb0db63af9f8439c9ce7ca9b1f40429fb5fe1ae8fe",
+      "bytes": 10354,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/ptr_converter.h": {
+      "sha256": "acfd95dfbe524c0518ebef6298c9b80ea1adc4bd15ae996075a6fc0c695c8cb5",
+      "bytes": 1806,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/reader.h": {
+      "sha256": "6c4425ea3d91c43aabd7311b27b3c5b94c7eb1ecaa75daa86d49d45050073d40",
+      "bytes": 1509,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/scanf_main.h": {
+      "sha256": "682dbbce5e5eb2ca76d75ab5ee71f1c368cf52898416bd0ef9855e335c38f4db",
+      "bytes": 1807,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/string_converter.h": {
+      "sha256": "40a94582f586b9cb7507aa084a079550b89030d93540b01cc07473cdda395e73",
+      "bytes": 2804,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/stdio/scanf_core/string_reader.h": {
+      "sha256": "f03496736199f016f754ce83026839a02f092be1456024e7fda9e15fd7a716f9",
+      "bytes": 1565,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-scanf/src/__support/char_vector.h": {
+      "sha256": "d3aa58c62f17d272bfb942292b8c7bf3b8d4e5600ae0d1a4771f922e8a73814a",
+      "bytes": 2620,
+      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
     }
   },
-  "overlay_files": 84,
-  "sdk_files": 426,
-  "total_bytes": 2146769,
+  "overlay_files": 407,
+  "sdk_files": 427,
+  "total_bytes": 3218961,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

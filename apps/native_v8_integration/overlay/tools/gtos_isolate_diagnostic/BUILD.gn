@@ -444,6 +444,25 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   }
 }
 
+# Required pinned string scanner with target-local correctness adaptations.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_scanf_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [
+      "//tools/gtos_isolate_diagnostic/native-scanf",
+      "//third_party/llvm-libc/src",
+    ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+    ]
+    sources = [ "//third_party/llvm-libc/src/src/stdio/sscanf.cpp" ]
+    deps = [ ":native_runtime", ":native_c_clock", ":native_string_libc" ]
+  }
+}
+
 # Full real embedder link, separate from object-only qualification.
 executable("native_embedder") {
   assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
@@ -464,6 +483,7 @@ executable("native_embedder") {
   deps += [ ":native_chrono_libcxx" ]
   deps += [ ":native_wide_libc" ]
   deps += [ ":native_runtime_error_libcxx" ]
+  deps += [ ":native_scanf_libc" ]
   ldflags = [
     "-T", rebase_path("native.ld", root_build_dir),
     "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),

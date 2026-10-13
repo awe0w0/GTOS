@@ -17,5 +17,17 @@
 metagen 文件本身未发现下载/上传调用，但其子进程缺少独立环境和网络约束。
 这些属于执行边界不足，不能据此断言曾发生入侵或外传。
 
+2026-10-13 再次审查后的收紧：
+
+- 不清空或绕过 Git hooks、审批规则、Codex 安全配置和全局执行策略。
+- 不扫描其他进程的命令行、环境、IO 或文件描述符；进度只读本轮产物状态及工具会话输出。
+- 不再用字符串替换生成下一版执行脚本；静态脚本直接编辑，审阅后再执行。
+- WSL 无网络命名空间不等于文件系统隔离。需要离开默认沙箱的具体动作仍须通过现有审批，子进程写入另外限制在新产物目录；限制建立失败即停止，不使用更宽的入口继续。
+- 不为规避拒绝、监控或 `cyber_policy` 改名、拆分命令、换工具或降低安全设置。自动批准也不能替代范围和结果审查。
+
+依据：[OpenAI 使用政策](https://openai.com/policies/usage-policies/)、
+[网络安全检查](https://developers.openai.com/api/docs/guides/safety-checks/cybersecurity)、
+[Codex 审批与安全](https://learn.chatgpt.com/docs/agent-approvals-security)。
+
 旧脚本和历史日志保留为反例，不重复使用旧 shell 入口。当前以固定工具、
 已校验的编译数据库、最小环境和无网络执行完成必要结果。
