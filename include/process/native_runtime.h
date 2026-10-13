@@ -6,6 +6,8 @@
 #include <process/native_fp.h>
 #include <process/native_realtime.h>
 #include <process/native_file_endpoint.h>
+#include <process/thread_abi.h>
+#include <process/elf32.h>
 namespace gtos { namespace process {
     // A bounded kernel-provided isolation fixture. This is NOT an ELF loader.
     struct NativeImage {
@@ -44,8 +46,15 @@ namespace gtos { namespace process {
             NativeStatus status;
             NativeFpRecord fp;
             uint32_t stackFrames[KernelStackPages];
+            Slot* process;
+            uint32_t userStackBegin, userStackEnd, stackHandle;
+            struct CodeRange { uint32_t begin, end; } code[Elf32MaximumSegments];
+            uint32_t codeCount;
             bool occupied;
-            Slot() : task((uint16_t)0, 0), occupied(false) {}
+            Slot() : task((uint16_t)0, 0), process(this), userStackBegin(UserStackBottom),
+                userStackEnd(UserStackTop), stackHandle(0), codeCount(0), occupied(false) {}
+            memory::ProcessAddressSpace& Space() { return process->space; }
+            const memory::ProcessAddressSpace& Space() const { return process->space; }
         };
         Slot slots[MaximumProcesses];
         memory::KernelPaging* paging;
@@ -53,6 +62,7 @@ namespace gtos { namespace process {
         TaskManager* scheduler;
         GlobalDescriptorTable* gdt;
         bool stacksPrepared, enabled;
+        bool threadsEnabled;
         uint32_t nextId;
         NativeStatistics statistics;
         NativeFp fp;
@@ -63,6 +73,11 @@ namespace gtos { namespace process {
         Slot* Current();
         void Observe(Slot&, const CPUState&);
         CPUState* Stop(Slot&, CPUState*, uint32_t code);
+        void StopGroup(Slot&, uint32_t code);
+        int CreateThread(Slot&, const GtosThreadCreateRequest&);
+        int TryJoin(Slot&, const GtosThreadJoinRequest&);
+        bool StackPinned(const Slot&, uint32_t handle) const;
+        bool ExecutableEntry(const Slot&, uint32_t entry) const;
         bool SafeKernelContext() const;
         bool TrustedImage(const uint8_t*, uint32_t) const;
         Slot* FreeSlot(uint32_t& index);
@@ -78,7 +93,8 @@ namespace gtos { namespace process {
         bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&);
         // Call after enable + sealForSharedProcessors, on BSP kernel CR3, IF=0.
         bool Activate(TaskManager&, GlobalDescriptorTable&, memory::KernelPaging&,
-                      memory::PhysicalMemoryManager&, NativeFpPolicy = NativeFpDisabled);
+                      memory::PhysicalMemoryManager&, NativeFpPolicy = NativeFpDisabled,
+                      bool enableThreads = false);
         bool Create(const NativeImage&, uint32_t& id);
         // Validated static ET_EXEC only. The trusted source is consumed/copied
         // synchronously and is not retained. Stack+guards cannot overlap loads.

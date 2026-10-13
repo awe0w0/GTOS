@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-13 22:58:10 UTC",
-  "scope": "完整42已实际链接；nearbyint通过12个原生任务（含2个标志破坏负控）和精确回收，首错按实测。完整ELF/Isolate/浏览器仍待验收。",
+  "recorded_utc": "2026-10-13 23:19:13 UTC",
+  "scope": "完整44首错为真实V8 Thread；有界内核线程生命周期通过私有客体和默认FOpen回归，TLS/errno/锁及V8线程桥接待实现，完整45未重放。完整ELF/Isolate/浏览器/视频/HTML5未验收。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -3344,5 +3344,46 @@
     "video_guest_pass": false,
     "html5_guest_pass": false,
     "production_image_changed": false
+  },
+  "native_thread_lifecycle_module": {
+    "schema_version": 1,
+    "module": "native_thread_lifecycle",
+    "architecture": "IA32",
+    "explicit_opt_in": true,
+    "default_threads_enabled": false,
+    "maximum_native_contexts_total": 4,
+    "scheduler_cpus": 1,
+    "qualified_runs": {
+      "guest-03": "723e9582b6254fb4bdaf39cecbc14ecb570a1753d42c921f7d227ae046bb05f8",
+      "legacy-01": "7674b0625d9517c4b73db86c1f53bcbfee3dd0cc3402fb99629772575bf2225d"
+    },
+    "qualified_sources": {
+      "include/process/native_runtime.h": "960644b53cee1c602c49e238e7e9e3bc2af856caea3c91d075d9c374409969d9",
+      "src/process/native_runtime.cpp": "083145be019bf50b37713d43af5ea8eafe3e6b2f8565972408d5dadfed33cc7c",
+      "include/process/thread_abi.h": "39a95b2821530a3afd78812558b10a91f61c43b047f2afcfe62d60e90c6830df",
+      "apps/native_thread_lifecycle/probe/main.cc": "c21d0600e83d35e1213054d2ddb1491ccf65529aae4718e61472e3055af9c7cd",
+      "apps/native_thread_lifecycle/probe/kernel.cpp": "8dcd51c05c4c0826c491341c77501eb43e8536a79d36d93200d36671b20ee32b",
+      "apps/native_thread_lifecycle/probe/record.h": "17ed390f5de75c60098ed91c57ddf153a7c096991d96256b0917ab289b977c33",
+      "apps/native_thread_lifecycle/probe/linker.ld": "9b07c239dbc8d9a5bfcc320379d38d9d181441cae55843750feadb186d406fd2",
+      "apps/native_thread_lifecycle/probe/fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    "source_lock_sha256": "c62dda9d588a2a8cc219b27530eff6dc185109e12e0a7b804a3f3a7eaa78911d",
+    "thread_contexts": 44,
+    "exact_thread_context_recovery": 44,
+    "default_fopen_regression_tasks": 8,
+    "default_fopen_exact_reaps": 8,
+    "full44_first_blocker": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
+    "v8_thread_bridge_qualified": false,
+    "tls_errno_shared_locks_qualified": false,
+    "full45_replayed": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "production_image_changed": false,
+    "public_byte_equivalence": true,
+    "public_tool_rerun": false,
+    "remote_ci": false
   }
 }

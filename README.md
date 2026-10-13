@@ -16,6 +16,10 @@ GTOS 是一个在 `dev` 分支开发的 32 位 x86 教学操作系统。
 仍是路线图中的待办工作。
 详见[工程路线图](docs/ROADMAP.md)。
 
+显式测试配置新增[有界原生线程生命周期](apps/native_thread_lifecycle/README.md)：
+在 BSP 上调度共享地址空间的独立 CPL3 上下文，并验证退出、join、FP 和资源回收。
+默认启动及 V8 诊断配置仍关闭该能力；TLS、errno、共享锁和 V8 线程桥接尚待接入。
+
 ## 构建与运行
 
 需要支持 i386 独立环境的 GNU g++/binutils、GRUB i386-pc 工具、

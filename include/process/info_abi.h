@@ -19,15 +19,18 @@ typedef struct GtosProcessInfoResult {
     unsigned maximum_parallel_threads, scheduler_cpu_count;
 } GtosProcessInfoResult;
 
-// IDs identify only the current native task. A process has one task in its
-// private address space, hence thread_id == process_id. IDs are positive,
+// IDs identify only the current native task and its owning process. Default
+// activation has one task, hence thread_id == process_id. Explicit bounded
+// thread activation reports an independent worker ID and its own stack.
+// IDs are positive,
 // stable until Reap and never reused; uint32 IDs need a checked signed cast.
 // Stack/user ends are exclusive. Stack bounds exclude both guard pages.
 // Maximum pages includes static loads, stack and committed dynamic pages;
 // it does not count page tables, directory or retained kernel stacks.
 // Regions are reservations, not resident pages. Query changes none of them.
-// The BSP-only scheduler supplies one CPU and no shared-address-space threads.
-// These limits describe the existing runtime, not physical RAM/free capacity.
+// The BSP-only scheduler supplies one CPU. Default activation reports one
+// thread; opt-in activation reports four total native context slots across
+// all processes, not four workers per process or physical RAM/free capacity.
 //
 // Error order: ECX size, whole request copy, version, flags/result size,
 // whole writable output validation, current-task snapshot and checked copy.

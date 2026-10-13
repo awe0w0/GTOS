@@ -6,15 +6,28 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 
 ## 当前证据与下一步
 
+2026-10-14，完整44的实际首错为 `v8::base::Thread::Thread(Options const&)`。
+有界原生线程生命周期已通过32M/smp1及64M/smp4客体：每个上下文有独立CPL3帧、
+内核/用户栈与FP记录，worker共享root地址空间及进程资源。44个上下文精确回收，
+真实创建/join、栈保留、整组取消、worker页故障和跨进程join拒绝均通过。
+候选内核默认关闭线程时，原真实V8 FOpen另通过8任务/8精确回收。
+详见[线程生命周期模块](../apps/native_thread_lifecycle/README.md)。
+
+下一步校准每线程TLS/errno、共享锁与libc++abi guard，再实现固定V8的真实
+Thread/Start/Join/Semaphore。当前仅内核基础显式opt-in，诊断入口仍关闭线程；
+完整45尚未重放，完整ELF/Isolate/JS、网页、视频及HTML5仍未验收，生产镜像未改。
+
+## 历史第33次链接：底层分配器
+
 2026-10-13，第33次真实完整目标链接已越过LowLevelAlloc。保留固定Abseil的arena、
 skiplist、拆分合并与计数，接入GTOS VM页服务，并按原始reservation句柄释放。
 实际GN重编译6个受影响对象，新增1个页后端对象，5149条旧编译命令和引擎参数
 保持。32MiB/单CPU与64MiB/四CPU共12个任务完成正常、溢出、重复释放、配额失败
 和取消检查，14次精确回收，508个日志反例被拒绝。
 
-当前首错为`std::__gtos_isolate_diagnostic::mutex::lock()`，由StdcppWaiter消费。
-下一步核对真实mutex/condition_variable消费者与GTOS等待能力；保留单用户任务
-约束，不能用空锁或无条件成功消除链接错误。首次TLS分配仍使用C堆。
+当时首错为`std::__gtos_isolate_diagnostic::mutex::lock()`，由StdcppWaiter消费。
+后续已按真实消费者推进单用户任务同步模块；不能用空锁或无条件成功消除链接错误。
+首次TLS分配仍使用C堆，真实共享线程的TLS与同步资格见上面的当前阶段。
 完整ELF、Isolate/JS、网页、视频与HTML5未通过，生产镜像和容量未改。
 证据见[底层分配器模块](../apps/native_low_level_alloc/README.md)和工作区
 `artifacts/native-low-level-alloc-20261013-a/full-link-33`。

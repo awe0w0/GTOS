@@ -86,7 +86,7 @@ namespace {
 }
 NativeRuntime* NativeRuntime::active = 0;
 NativeRuntime::NativeRuntime() : paging(0), frames(0), scheduler(0), gdt(0),
-    stacksPrepared(false), enabled(false), nextId(1), files(0) {
+    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
@@ -137,7 +137,8 @@ rollback:
     return false;
 }
 bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descriptors,
-                             KernelPaging& kernel, PhysicalMemoryManager& allocator, NativeFpPolicy policy) {
+                             KernelPaging& kernel, PhysicalMemoryManager& allocator, NativeFpPolicy policy,
+                             bool enableThreads) {
     uint32_t flags; asm volatile("pushfl; popl %0" : "=r"(flags));
     PagingStatistics info = kernel.getStatistics();
     if (!BootstrapProcessor() || (flags & 0x200) || active || enabled || !stacksPrepared || paging != &kernel
@@ -156,7 +157,7 @@ bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descript
     NativeRtcSnapshot calendar;
     if (scheduler->ReadClock(clock) == 0 && ReadNativeRtc(calendar))
         realtime.Initialize(calendar, clock);
-    enabled = true; active = this;
+    threadsEnabled = enableThreads; enabled = true; active = this;
     return true;
 }
 bool NativeRuntime::SafeKernelContext() const {
@@ -189,6 +190,8 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     Zero(&slot.status, sizeof(slot.status));
     id = slot.status.id = nextId++; slot.status.directory = slot.space.DirectoryAddress();
     slot.status.live = slot.occupied = true; ++statistics.created;
+    slot.process = &slot; slot.stackHandle = 0;
+    slot.userStackBegin = UserStackBottom; slot.userStackEnd = UserStackTop;
     return true;
 }
 bool NativeRuntime::Create(const NativeImage& image, uint32_t& id) {
@@ -208,6 +211,8 @@ bool NativeRuntime::Create(const NativeImage& image, uint32_t& id) {
         || !Admit(slot, index, CodeAddress + image.entryOffset, id)) {
         slot.space.Destroy(); return false;
     }
+    slot.codeCount = 1; slot.code[0].begin = CodeAddress;
+    slot.code[0].end = CodeAddress + image.codeBytes;
     return true;
 }
 bool NativeRuntime::TrustedImage(const uint8_t* image, uint32_t bytes) const {
@@ -251,7 +256,17 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
             for (uint32_t page = begin; page < end; page += 4096)
                 if (!slot.space.ProtectPage(page, false)) goto rollback;
     }
-    if (Admit(slot, index, plan.entry, id)) return true;
+    if (Admit(slot, index, plan.entry, id)) {
+        slot.codeCount = 0;
+        for (uint32_t i = 0; i < plan.segmentCount; ++i) {
+            const Elf32LoadSegment& segment = plan.segments[i];
+            if (segment.flags & Elf32Execute) {
+                slot.code[slot.codeCount].begin = segment.virtualAddress;
+                slot.code[slot.codeCount++].end = segment.virtualAddress + segment.memorySize;
+            }
+        }
+        return true;
+    }
 rollback:
     slot.space.Destroy(); return false;
 }
@@ -261,7 +276,7 @@ NativeRuntime::Slot* NativeRuntime::Current() {
     if (!task || !task->UserMode()) return 0;
     for (uint32_t i = 0; i < MaximumProcesses; ++i)
         if (slots[i].occupied && &slots[i].task == task
-            && Cr3() == slots[i].space.DirectoryAddress()) return &slots[i];
+            && Cr3() == slots[i].Space().DirectoryAddress()) return &slots[i];
     return 0;
 }
 void NativeRuntime::Observe(Slot& slot, const CPUState& cpu) {
@@ -269,15 +284,117 @@ void NativeRuntime::Observe(Slot& slot, const CPUState& cpu) {
     slot.status.observedEflags = cpu.eflags;
 }
 CPUState* NativeRuntime::Stop(Slot& slot, CPUState* cpu, uint32_t code) {
-    NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
-    slot.status.live = false; slot.status.exitCode = code;
-    scheduler->TerminateTask(&slot.task);
+    StopGroup(*slot.process, code);
     return scheduler->Reschedule(cpu);
 }
+void NativeRuntime::StopGroup(Slot& process, uint32_t code) {
+    NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
+    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+        Slot& member = slots[i];
+        if (!member.occupied || member.process != &process || !member.status.live) continue;
+        member.status.live = false; member.status.exitCode = code;
+        scheduler->TerminateTask(&member.task);
+    }
+}
+bool NativeRuntime::StackPinned(const Slot& process, uint32_t handle) const {
+    if (!handle) return false;
+    for (uint32_t i = 0; i < MaximumProcesses; ++i)
+        if (slots[i].occupied && slots[i].process == &process && slots[i].stackHandle == handle)
+            return true;
+    return false;
+}
+bool NativeRuntime::ExecutableEntry(const Slot& process, uint32_t entry) const {
+    for (uint32_t i = 0; i < process.codeCount; ++i)
+        if (entry >= process.code[i].begin && entry < process.code[i].end) return true;
+    return false;
+}
+int NativeRuntime::CreateThread(Slot& caller, const GtosThreadCreateRequest& request) {
+    Slot& process = *caller.process;
+    ProcessAddressSpace& space = process.space;
+    if (request.version != GTOS_THREAD_ABI_VERSION) return GTOS_THREAD_ERR_UNSUPPORTED;
+    if (request.flags) return GTOS_THREAD_ERR_BAD_SIZE;
+    if (!space.ValidateUserRange(request.result_va, sizeof(uint32_t), true))
+        return GTOS_THREAD_ERR_BAD_ADDRESS;
+    if (!ExecutableEntry(process, request.entry)
+        || !space.ValidateUserRange(request.entry, 1, false)) return GTOS_THREAD_ERR_BAD_ADDRESS;
+    ProcessMemoryRegionInfo region;
+    if (!space.QueryRegion(request.stack_handle, region)) return GTOS_THREAD_ERR_BAD_STATE;
+    if (region.bytes < 4 * 4096 || region.bytes > 64 * 4096
+        || (region.base & 4095) || (region.bytes & 4095)) return GTOS_THREAD_ERR_BAD_STATE;
+    const uint32_t begin = region.base + 4096, end = region.base + region.bytes - 4096;
+    // Both guards must be wholly inaccessible, even to reads. Region bounds
+    // are validated by QueryRegion, so these additions cannot wrap.
+    if (space.ValidateUserRange(region.base, 4096, false)
+        || space.ValidateUserRange(end, 4096, false)) return GTOS_THREAD_ERR_BAD_STATE;
+    if (!space.ValidateUserRange(begin, end - begin, true)) return GTOS_THREAD_ERR_BAD_ADDRESS;
+    if ((uint64_t)request.result_va < (uint64_t)region.base + region.bytes
+        && (uint64_t)region.base < (uint64_t)request.result_va + sizeof(uint32_t))
+        return GTOS_THREAD_ERR_BAD_ADDRESS;
+    if (StackPinned(process, request.stack_handle)) return GTOS_THREAD_ERR_BUSY;
+    uint32_t index; Slot* target = FreeSlot(index);
+    if (!target || !nextId || nextId > 0x7FFFFFFFU) return GTOS_THREAD_ERR_LIMIT;
+    const uint32_t esp = end - 20;
+    uint32_t previous[2], initial[2] = {0, request.argument};
+    if (!space.CopyFromUser(previous, esp, sizeof(previous))) return GTOS_THREAD_ERR_BAD_ADDRESS;
+    const uint32_t top = StackTop(index);
+    Zero((void*)(top - KernelStackPages * 4096), KernelStackPages * 4096);
+    target->task.Initialize(gdt->CodeSegmentSelector(), 0);
+    target->task.cpustate = (CPUState*)(top - sizeof(CPUState));
+    Zero(target->task.cpustate, sizeof(CPUState));
+    CPUState& cpu = *target->task.cpustate;
+    cpu.cs = gdt->UserCodeSegmentSelector();
+    cpu.ds = cpu.es = cpu.fs = cpu.gs = cpu.ss = gdt->UserDataSegmentSelector();
+    cpu.eip = request.entry; cpu.esp = esp; cpu.eflags = 0x202;
+    target->task.userMode = true; target->task.directoryAddress = space.DirectoryAddress();
+    target->task.kernelStackTop = top;
+    if (!fp.Initialize(target->fp, nextId)) return GTOS_THREAD_ERR_BAD_STATE;
+    if (!scheduler->AddTask(&target->task)) {
+        fp.Invalidate(target->fp); return GTOS_THREAD_ERR_LIMIT;
+    }
+    // IF=0 on BSP: the admitted task cannot run before all checked copies
+    // finish. On failure restore stack bytes, remove its frame and FP owner.
+    if (!space.CopyToUser(esp, initial, sizeof(initial))
+        || !space.CopyToUser(request.result_va, &nextId, sizeof(nextId))) {
+        space.CopyToUser(esp, previous, sizeof(previous));
+        scheduler->RemoveTask(&target->task); fp.Invalidate(target->fp);
+        return GTOS_THREAD_ERR_BAD_ADDRESS;
+    }
+    Zero(&target->status, sizeof(target->status));
+    target->process = &process; target->stackHandle = request.stack_handle;
+    target->userStackBegin = begin; target->userStackEnd = end;
+    target->status.id = nextId++; target->status.directory = space.DirectoryAddress();
+    target->status.live = target->occupied = true; ++statistics.created;
+    return 0;
+}
+int NativeRuntime::TryJoin(Slot& caller, const GtosThreadJoinRequest& request) {
+    if (request.version != GTOS_THREAD_ABI_VERSION) return GTOS_THREAD_ERR_UNSUPPORTED;
+    ProcessAddressSpace& space = caller.Space();
+    if (!space.ValidateUserRange(request.result_va, sizeof(uint32_t), true))
+        return GTOS_THREAD_ERR_BAD_ADDRESS;
+    if (request.thread_id == caller.status.id) return GTOS_THREAD_ERR_DEADLOCK;
+    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+        Slot& target = slots[i];
+        if (!target.occupied || !request.thread_id || target.status.id != request.thread_id) continue;
+        if (target.process != caller.process || target.process == &target)
+            return GTOS_THREAD_ERR_NO_THREAD;
+        if (target.status.live) return GTOS_THREAD_ERR_BUSY;
+        if (target.task.State() != TaskTerminated) return GTOS_THREAD_ERR_BAD_STATE;
+        target.status.statistics = target.task.Statistics();
+        if (target.task.owner && !scheduler->RemoveTask(&target.task)) return GTOS_THREAD_ERR_BAD_STATE;
+        if (target.fp.initialized) fp.Invalidate(target.fp);
+        if (!space.CopyToUser(request.result_va, &target.status.exitCode, sizeof(uint32_t)))
+            return GTOS_THREAD_ERR_BAD_ADDRESS;
+        target.status.reaped = true; target.occupied = false; target.stackHandle = 0;
+        target.process = &target; ++statistics.reaped;
+        return 0;
+    }
+    return GTOS_THREAD_ERR_NO_THREAD;
+}
 CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
-    Slot* slot = Current();
-    if (!cpu || (cpu->cs & 3) != 3 || !slot) return 0;
-    Observe(*slot, *cpu); ++slot->status.systemCalls;
+    Slot* thread = Current();
+    if (!cpu || (cpu->cs & 3) != 3 || !thread) return 0;
+    Slot* slot = thread->process;
+    Observe(*thread, *cpu); ++thread->status.systemCalls;
     cpu->eflags = (cpu->eflags & 0xCD5U) | 0x202U;
     switch (cpu->eax) {
     case GTOS_SYS_FILE_OPEN:
@@ -374,10 +491,10 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
         }
         const GtosProcessInfoResult result = {GTOS_PROCESS_INFO_ABI_VERSION,
-            slot->status.id, slot->status.id, UserStackBottom, UserStackTop,
+            slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
             GTOS_VM_PAGE_BYTES, ProcessAddressSpace::MaximumPages,
-            ProcessAddressSpace::MaximumRegions, 1, 1};
+            ProcessAddressSpace::MaximumRegions, threadsEnabled ? MaximumProcesses : 1, 1};
         // The request was consumed before any write. IF is clear on BSP, so
         // full output validation also covers aliases and mixed-page failures.
         cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
@@ -385,10 +502,38 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         break;
     }
     case GTOS_SYS_YIELD:
-        cpu->eax = 0; ++slot->task.statistics.yields;
+        cpu->eax = 0; ++thread->task.statistics.yields;
         return scheduler->Reschedule(cpu);
     case GTOS_SYS_EXIT:
-        ++statistics.exited; return Stop(*slot, cpu, cpu->ebx);
+        ++statistics.exited; return Stop(*thread, cpu, cpu->ebx);
+    case GTOS_SYS_THREAD_EXIT:
+        if (!threadsEnabled) { cpu->eax = (uint32_t)GTOS_THREAD_ERR_UNSUPPORTED; break; }
+        if (thread == slot) { cpu->eax = (uint32_t)GTOS_THREAD_ERR_BAD_STATE; break; }
+        thread->status.live = false; thread->status.exitCode = cpu->ebx;
+        ++statistics.exited; scheduler->TerminateTask(&thread->task);
+        return scheduler->Reschedule(cpu);
+    case GTOS_SYS_THREAD_CREATE: {
+        if (!threadsEnabled) { cpu->eax = (uint32_t)GTOS_THREAD_ERR_UNSUPPORTED; break; }
+        if (cpu->ecx != GTOS_THREAD_CREATE_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_THREAD_ERR_BAD_SIZE; break;
+        }
+        GtosThreadCreateRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request)))
+            cpu->eax = (uint32_t)GTOS_THREAD_ERR_BAD_ADDRESS;
+        else cpu->eax = (uint32_t)CreateThread(*thread, request);
+        break;
+    }
+    case GTOS_SYS_THREAD_TRY_JOIN: {
+        if (!threadsEnabled) { cpu->eax = (uint32_t)GTOS_THREAD_ERR_UNSUPPORTED; break; }
+        if (cpu->ecx != GTOS_THREAD_JOIN_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_THREAD_ERR_BAD_SIZE; break;
+        }
+        GtosThreadJoinRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request)))
+            cpu->eax = (uint32_t)GTOS_THREAD_ERR_BAD_ADDRESS;
+        else cpu->eax = (uint32_t)TryJoin(*thread, request);
+        break;
+    }
     case GTOS_SYS_WRITE: {
         const uint32_t bytes = cpu->ecx;
         if (bytes > GTOS_NATIVE_WRITE_LIMIT) cpu->eax = (uint32_t)GTOS_ERR_TOO_LARGE;
@@ -401,7 +546,7 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             for (uint32_t i = 0; i < bytes; ++i) { text[0] = bounce[i]; printf(text); }
             statistics.writtenBytes += bytes; cpu->eax = bytes;
         }
-        slot->status.lastWriteResult = cpu->eax;
+        thread->status.lastWriteResult = cpu->eax;
         break;
     }
     case GTOS_SYS_RESOURCE_INFO: {
@@ -529,6 +674,9 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (call != GTOS_SYS_VM_SET_PERMISSIONS && request.protection) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_STATE; break;
         }
+        if (StackPinned(*slot, request.handle)) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_CONFLICT; break;
+        }
         const bool ok = call == GTOS_SYS_VM_SET_PERMISSIONS
             ? slot->space.SetPermissions(request.handle, request.offset, request.length, request.protection)
             : call == GTOS_SYS_VM_DECOMMIT
@@ -552,6 +700,9 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         }
         if (release && request.length) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_STATE; break;
+        }
+        if (StackPinned(*slot, request.handle)) {
+            cpu->eax = (uint32_t)GTOS_VM_ERR_CONFLICT; break;
         }
         const bool ok = release ? slot->space.Release(request.handle)
             : slot->space.Trim(request.handle, request.length);
@@ -602,17 +753,28 @@ uint32_t NativeRuntime::Reap() {
     if (!SafeKernelContext()) return 0;
     uint32_t reaped = 0;
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
-        Slot& slot = slots[i];
-        if (!slot.occupied || slot.status.live || slot.task.State() != TaskTerminated) continue;
-        slot.status.statistics = slot.task.Statistics();
-        if (slot.task.owner && !scheduler->RemoveTask(&slot.task)) continue;
-        // Check hardware ownership and scrub BEFORE any victim frame is freed.
-        NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
-        if (files) files->ReclaimOwner(slot.status.id);
-        fp.Invalidate(slot.fp);
-        if (!slot.space.Destroy()) continue;
-        slot.occupied = false; slot.status.reaped = true;
-        ++statistics.reaped; ++reaped;
+        Slot& process = slots[i];
+        if (!process.occupied || process.process != &process || process.status.live) continue;
+        bool removed = true;
+        for (uint32_t j = 0; j < MaximumProcesses; ++j) {
+            Slot& member = slots[j];
+            if (!member.occupied || member.process != &process) continue;
+            if (member.status.live || member.task.State() != TaskTerminated) { removed = false; continue; }
+            member.status.statistics = member.task.Statistics();
+            if (member.task.owner && !scheduler->RemoveTask(&member.task)) { removed = false; continue; }
+            // No task/frame may still reference the CR3 when Destroy runs.
+            if (member.fp.initialized) fp.Invalidate(member.fp);
+        }
+        if (!removed) continue;
+        NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
+        if (files) files->ReclaimOwner(process.status.id);
+        if (!process.space.Destroy()) continue;
+        for (uint32_t j = 0; j < MaximumProcesses; ++j) {
+            Slot& member = slots[j];
+            if (!member.occupied || member.process != &process) continue;
+            member.occupied = false; member.status.reaped = true; member.stackHandle = 0;
+            member.process = &member; ++statistics.reaped; ++reaped;
+        }
     }
     return reaped;
 }
@@ -630,7 +792,7 @@ bool NativeRuntime::ReadMemory(uint32_t id, uint32_t address, void* out, uint32_
     if (!SafeKernelContext()) return false;
     for (uint32_t i = 0; i < MaximumProcesses; ++i)
         if (slots[i].occupied && slots[i].status.id == id)
-            return slots[i].space.CopyFromUser(out, address, bytes);
+            return slots[i].Space().CopyFromUser(out, address, bytes);
     return false;
 }
 NativeStatistics NativeRuntime::Statistics() const { InterruptGuard guard; return statistics; }
@@ -642,10 +804,9 @@ bool NativeRuntime::RequestExit(uint32_t id, uint32_t code) {
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Slot& slot = slots[i];
         if (id && slot.occupied && slot.status.id == id && slot.status.live) {
-            NativeSurfaceBank::Instance().ReclaimOwner(slot.status.id);
-            slot.status.live = false; slot.status.exitCode = code;
             ++statistics.exited;
-            return scheduler->TerminateTask(&slot.task);
+            StopGroup(*slot.process, code);
+            return true;
         }
     }
     return false;
