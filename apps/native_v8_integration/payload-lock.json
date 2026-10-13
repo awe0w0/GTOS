@@ -267,9 +267,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-entry.cc": {
-      "sha256": "75f4e728477ed4f1e98b12efb8ea3d05e9deca09fe49b6d3b5ab2b581d9922d5",
-      "bytes": 1006,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "sha256": "6b3e635655cf325f6809a7b5e4f1e99401c2d79efb36e5c575973712824f5c7e",
+      "bytes": 709,
+      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-start.s": {
       "sha256": "7f56a50ec84155e45d8e5a3ef4531b7c3de426b308a89eed599d5d1e8fd5e98f",
@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "fd21b99a038c9bdf6f7d4568eeeb7ad407df87f56d34b0f286481dc12ee1e7ae",
-      "bytes": 7923
+      "sha256": "e376ea4f0fb518926d31a7563128a05786739e0aafd02b0a811f4246dfaa9a00",
+      "bytes": 8546
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,9 +6104,9 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "edf51ec96fbddc2301fed7480bea6f31218c1c32dfe881127deb35852a8d6200",
-      "bytes": 20676,
-      "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
+      "sha256": "7e90d35bc4e7cd1896d8f6b7da3a8cf967a6dd4024755386e8beedfc9ad0b396",
+      "bytes": 21374,
+      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
@@ -6122,6 +6122,26 @@
       "sha256": "f49aa5358ed7f98c3b326037bd48daaf2a665553a602a619b64f4bdf2a75e25a",
       "bytes": 1151,
       "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/process-exit.cc": {
+      "sha256": "7848755069a7d45ab00fd9896d883a9de78fc671c1f1e54cf946ef29a79c4791",
+      "bytes": 1793,
+      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-exit/llvm-libc/src/stdlib/atexit.cpp": {
+      "sha256": "e9316a79b4525fb70e32382c540950c6b88364dadd74bae77d7c0ef51b95da5e",
+      "bytes": 1385,
+      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-exit/llvm-libc/src/stdlib/exit_handler.h": {
+      "sha256": "a84023d6d656f37bf0371c89d592f55d12ca8cd264d861eeac4f3caeebf73404",
+      "bytes": 2775,
+      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-exit/llvm-libc/hdr/types/atexithandler_t.h": {
+      "sha256": "503eafc90fc87dd454d83f481436464705e135c1cbe1a33353b3940cb78ae2f1",
+      "bytes": 224,
+      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
     }
   },
   "overlay_files": 413,

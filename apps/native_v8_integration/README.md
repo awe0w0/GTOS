@@ -111,3 +111,13 @@ Isolate/JS及浏览器仍未生成或运行。公有源码/测试逐字节核对
 同一完整链接保留5160条旧对象命令及旧输入顺序，仅增加五项提供者。当前
 真实链接终态及下一阻塞见[模块说明](../native_numeric/README.md)和
 [验收记录](../native_numeric/acceptance.json)。完整ELF/Isolate/JS及浏览器仍未验收。
+
+
+## 原生退出登记与生命周期
+
+native_exit_libc接入真实__cxa_atexit/atexit、选择性及重复终结，正常main返回
+和C exit统一处理TLS、静态/C回调、fini与C流关闭。既有TLS/DSO和FILE布局保持。
+两组共14个任务、14次精确回收，7660项检查与536个日志反例通过。失败Flush
+释放句柄并保留退出码，不承诺新数据提交。完整39的实际结果及下一阻塞见
+[模块说明](../native_exit/README.md)及[验收记录](../native_exit/acceptance.json)。
+公开字节对应检查不等于重跑公开GN/客体；完整V8/JS及浏览器仍待验收。

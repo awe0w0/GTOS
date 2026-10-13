@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-13T15:50:30.1297111Z",
+  "recorded_utc": "2026-10-13T17:10:29.6047434Z",
   "scope": "实际完整目标full-link-37已越过OS::PrintError；12个原生任务、12次精确回收、428个日志反例及两盘stock冷读回通过。首错ceilf，完整ELF和浏览器仍未生成或运行。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -33,18 +33,18 @@
   "full_elf_exists": false,
   "first_build_blocker": {
     "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: __cxa_atexit",
-    "consumer": "Pinned libc++ locale.cpp init_weeks/init_wweeks/init_months; see actual log",
-    "cause": "Missing real C++ process destructor registration/lifecycle provider",
+    "diagnostic": "ld.lld: error: undefined symbol: std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
+    "consumer": "libc++ __hash_table in V8 source-range-ast-visitor.cc/debug-scope-info.cc",
+    "cause": "Pinned libc++ hash runtime provider absent",
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
-      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/actual-final-link.log",
+      "sha256": "9e44716ec2e0cf1ed6d5b9b4cc365114ba30b200944068e90d2e930d70a6fef4"
     },
     "link_command_evidence": {
-      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
-      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/status.json",
+      "sha256": "797aa38b4647518754dca1f3a6b83c2b5fe330b9a4cad1b8637dfa62cd4df2a9"
     },
-    "complete_attempt": "native-math-20261013-a/full-link-38",
+    "complete_attempt": "native-exit-lifecycle-20261013-a/full-link-39",
     "all_missing_symbols_count_measured": false,
     "default_linker_error_limit": 20,
     "resolved_in_current_complete_link": false
@@ -544,15 +544,15 @@
     "diagnostics_complete": false
   },
   "latest_complete_attempt": {
-    "name": "native-math-20261013-a/full-link-38",
-    "method": "Offline actual GN link with five guest-qualified numeric providers",
+    "name": "native-exit-lifecycle-20261013-a/full-link-39",
+    "method": "Offline actual GN link with two exit providers and real entry replacement",
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
-      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/status.json",
+      "sha256": "797aa38b4647518754dca1f3a6b83c2b5fe330b9a4cad1b8637dfa62cd4df2a9"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
-      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/actual-final-link.log",
+      "sha256": "9e44716ec2e0cf1ed6d5b9b4cc365114ba30b200944068e90d2e930d70a6fef4"
     },
     "build_exit_code": 1,
     "gn_pass": true,
@@ -560,8 +560,8 @@
     "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
     "full_elf_exists": false,
-    "prior_object_commands_preserved": 5160,
-    "selected_objects_compiled": 5,
+    "prior_object_commands_preserved": 5165,
+    "selected_objects_compiled": 3,
     "diagnostics_complete": false,
     "new_ninja_compile_sweep_performed": false
   },
@@ -643,9 +643,9 @@
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
   "next_work_package": [
-    "只读核对完整38的__cxa_atexit消费者与既有C++退出/回收路径；实现真实析构注册及生命周期，覆盖逆序、失败、重复终结、故障/取消回收，再重放同一完整目标。",
-    "完整ELF生成后按实际段、页、栈和堆需求推进原生装载、Isolate/JS及精确回收。",
-    "继续本地HTML/CSS与DOM输入、受控网络、视频及HTML5；单用户诊断配置不等于完整浏览器平台。"
+    "按完整39的真实首阻塞和固定消费者进行最小正确适配，必要边界/回收后重放同一完整目标。",
+    "完整ELF生成后按实际段、页、栈和堆需求推进装载、Isolate/JS及精确回收。",
+    "继续本地HTML/CSS、DOM输入、受控网络、视频和HTML5；单用户诊断不等于完整浏览器平台。"
   ],
   "retained_complete_attempts": [
     {
@@ -1265,21 +1265,21 @@
     }
   },
   "previous_first_build_blocker": {
+    "phase": "actual full GN final ELF link",
+    "diagnostic": "ld.lld: error: undefined symbol: __cxa_atexit",
+    "consumer": "Pinned libc++ locale.cpp init_weeks/init_wweeks/init_months; see actual log",
+    "cause": "Missing real C++ process destructor registration/lifecycle provider",
     "build_log": {
-      "sha256": "f81ecab8378dfbb67a652255da9c30532f7c4b4ce6472be8fec8251a25c5e10c",
-      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/actual-final-link.log"
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
+      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
     },
     "link_command_evidence": {
-      "sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
-      "path": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json"
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
     },
-    "phase": "actual full GN final ELF link",
-    "diagnostic": "ld.lld: error: undefined symbol: ceilf",
-    "consumer": "libc++ __hash_table in pinned V8 source-range-ast-visitor.cc/scopes.cc; see actual log",
+    "complete_attempt": "native-math-20261013-a/full-link-38",
     "all_missing_symbols_count_measured": false,
-    "complete_attempt": "native-output-20261013-a/full-link-37",
     "default_linker_error_limit": 20,
-    "cause": "Required native math provider absent; inspect pinned LLVM math and actual consumers",
     "resolved_in_current_complete_link": false
   },
   "zlib_filestore_qualification": {
@@ -1456,15 +1456,15 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "name": "native-math-20261013-a/full-link-38",
-    "method": "Offline actual GN link with five guest-qualified numeric providers",
+    "name": "native-exit-lifecycle-20261013-a/full-link-39",
+    "method": "Offline actual GN link with two exit providers and real entry replacement",
     "status": {
-      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
-      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/status.json",
+      "sha256": "797aa38b4647518754dca1f3a6b83c2b5fe330b9a4cad1b8637dfa62cd4df2a9"
     },
     "build_log": {
-      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
-      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/actual-final-link.log",
+      "sha256": "9e44716ec2e0cf1ed6d5b9b4cc365114ba30b200944068e90d2e930d70a6fef4"
     },
     "build_exit_code": 1,
     "gn_pass": true,
@@ -1472,8 +1472,8 @@
     "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
     "full_elf_exists": false,
-    "prior_object_commands_preserved": 5160,
-    "selected_objects_compiled": 5,
+    "prior_object_commands_preserved": 5165,
+    "selected_objects_compiled": 3,
     "diagnostics_complete": false,
     "new_ninja_compile_sweep_performed": false
   },
@@ -1546,10 +1546,26 @@
     "boundary": "实际宿主命令不变，内容相同的生成头因时间戳变化触发重编；独立草稿验证成功和失败路径，当前 13 输入不改。"
   },
   "previous_complete_attempt_observation": {
-    "name": "native-output-20261013-a/full-link-37",
-    "status": "@WORKSPACE@/artifacts/native-output-20261013-a/full-link-37/status.json",
-    "status_sha256": "46cd75d7c91588f001f3c9af8ff87065fe115a49f3db8ed4b0247171d3dde915",
-    "first_remaining_blocker": "ceilf"
+    "name": "native-math-20261013-a/full-link-38",
+    "method": "Offline actual GN link with five guest-qualified numeric providers",
+    "status": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/status.json",
+      "sha256": "b4526ca786a92993d8044730bd4bb1277e4a8005c839fcfdb416dd4eb4db9f23"
+    },
+    "build_log": {
+      "path": "@WORKSPACE@/artifacts/native-math-20261013-a/full-link-38/actual-final-link.log",
+      "sha256": "242fdcbd12bda892e614ad99e8541356372715b2cae80cbb03a0969d1b4a2beb"
+    },
+    "build_exit_code": 1,
+    "gn_pass": true,
+    "actual_final_link_attempted": true,
+    "bound_inputs_unchanged": true,
+    "old_cache_metadata_unchanged": true,
+    "full_elf_exists": false,
+    "prior_object_commands_preserved": 5160,
+    "selected_objects_compiled": 5,
+    "diagnostics_complete": false,
+    "new_ninja_compile_sweep_performed": false
   },
   "sampler_compile_diagnostic": {
     "preparation": {
@@ -2457,7 +2473,7 @@
     "native_provider_connected": true
   },
   "latest_handoff": {
-    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v57.json",
+    "path": "@WORKSPACE@/logs/native-v8-integration-handoff-v58.json",
     "qualification_snapshot_before_normal_dev_commit": true
   },
   "post_build_validation_pipeline": {
@@ -2871,5 +2887,94 @@
     "whole_call_chain_stack_bound_proven": false,
     "parallel_user_threads_qualified": false,
     "production_image_changed": false
+  },
+  "native_exit": {
+    "scope": "真实C/C++析构登记与进程正常退出；私有IA32单用户任务",
+    "guest_pass": true,
+    "guest_status": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/guest-04/status.json",
+      "sha256": "2b752317278ffe48e060c933e96cb41296c6e5b556d673491b27564f9d5cb829"
+    },
+    "guest_configurations": [
+      "32M-smp1",
+      "64M-smp4"
+    ],
+    "tasks": 14,
+    "exact_reaps": 14,
+    "registry_checks_per_task": 529,
+    "registry_checks_total": 7406,
+    "checks_total": 7660,
+    "negative_log_controls_rejected": 536,
+    "native_calls_total": 52,
+    "actual_close_flush_errors_per_configuration": 2,
+    "successful_close_bytes_verified": true,
+    "io_failure_atomic_commit_promised": false,
+    "actual_gn": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/gn-02/status.json",
+      "sha256": "5546cc7790339e5065b2fb270f217499180575b86287966173103e441747a218"
+    },
+    "provider_compile": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/compile-02/status.json",
+      "sha256": "46d8f006123dcc92f765cc3bdea7d24979d904366b0427351da2bd12810106d4"
+    },
+    "consumer_compile": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/probe-compile-01/status.json",
+      "sha256": "fc7fe4dff8cd4c85b81c46816573c98cd3dbcc66c05d5bfbc4bdfb7dc0d63ce9"
+    },
+    "consumer_link": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/probe-link-01/status.json",
+      "sha256": "02178adef750a32747cd70b39398c110a8afa3e4608d417a7d82ba0b4a167e38"
+    },
+    "full_system_header_dependencies": true,
+    "prior_object_commands_preserved": 5165,
+    "added_objects": 2,
+    "replaced_source_objects": 1,
+    "current_object_commands": 5167,
+    "engine_args_and_prior_link_order_preserved": true,
+    "complete_replay": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/status.json",
+      "sha256": "797aa38b4647518754dca1f3a6b83c2b5fe330b9a4cad1b8637dfa62cd4df2a9"
+    },
+    "complete_replay_log_sha256": "9e44716ec2e0cf1ed6d5b9b4cc365114ba30b200944068e90d2e930d70a6fef4",
+    "complete_replay_exit_code": 1,
+    "first_remaining_blocker": "std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
+    "linker_diagnostics_complete": false,
+    "complete_bound_inputs": 12617,
+    "old_cache_metadata_unchanged": true,
+    "self_review": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/module-self-review.md",
+      "sha256": "f290d9b4dd1502ec2586657ea75e48a6fa18ec0278dd12d90dbf3c1199b66846"
+    },
+    "probe_files": {
+      "main.cc": "2b7f2d01d705903f9ae1ae4aa13e224c810e03765ce5dc4de476cebc73153b2a",
+      "kernel.cpp": "5b395bab12191a306a6c0a266094acf2ede99d20f28988e6498f20dfb9290ebb",
+      "kernel_common.h": "d6118464b0ce9cdf529c67d8094fd51ec110b4cfbd2e19c4c897228b30bebc13",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+      "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+      "observer.py": "379828a4d8f07e36524d2af31bc6baec47908c32c4a03436e07e3a2072ea464d"
+    },
+    "canonical_byte_equivalence": {
+      "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/canonical-byte-equivalence.json",
+      "sha256": "f328eb047e8af4945a84d35a49d89e8ef4cc3c89de92baa23af7e15b4519965e"
+    },
+    "canonical_payload_files_verified": 1291,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false,
+    "new_remote_ci_run": false,
+    "stock_cold_readback_performed": false,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "javascript_guest_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "parallel_user_threads_qualified": false,
+    "production_image_changed": false,
+    "entry_state_symbols": {
+      "native_v8_integration_stage": 1074006128,
+      "native_v8_integration_result": 1074004040
+    }
   }
 }

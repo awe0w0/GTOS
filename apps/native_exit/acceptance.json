@@ -1,0 +1,89 @@
+{
+  "scope": "真实C/C++析构登记与进程正常退出；私有IA32单用户任务",
+  "guest_pass": true,
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/guest-04/status.json",
+    "sha256": "2b752317278ffe48e060c933e96cb41296c6e5b556d673491b27564f9d5cb829"
+  },
+  "guest_configurations": [
+    "32M-smp1",
+    "64M-smp4"
+  ],
+  "tasks": 14,
+  "exact_reaps": 14,
+  "registry_checks_per_task": 529,
+  "registry_checks_total": 7406,
+  "checks_total": 7660,
+  "negative_log_controls_rejected": 536,
+  "native_calls_total": 52,
+  "actual_close_flush_errors_per_configuration": 2,
+  "successful_close_bytes_verified": true,
+  "io_failure_atomic_commit_promised": false,
+  "actual_gn": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/gn-02/status.json",
+    "sha256": "5546cc7790339e5065b2fb270f217499180575b86287966173103e441747a218"
+  },
+  "provider_compile": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/compile-02/status.json",
+    "sha256": "46d8f006123dcc92f765cc3bdea7d24979d904366b0427351da2bd12810106d4"
+  },
+  "consumer_compile": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/probe-compile-01/status.json",
+    "sha256": "fc7fe4dff8cd4c85b81c46816573c98cd3dbcc66c05d5bfbc4bdfb7dc0d63ce9"
+  },
+  "consumer_link": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/probe-link-01/status.json",
+    "sha256": "02178adef750a32747cd70b39398c110a8afa3e4608d417a7d82ba0b4a167e38"
+  },
+  "full_system_header_dependencies": true,
+  "prior_object_commands_preserved": 5165,
+  "added_objects": 2,
+  "replaced_source_objects": 1,
+  "current_object_commands": 5167,
+  "engine_args_and_prior_link_order_preserved": true,
+  "complete_replay": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/full-link-39/status.json",
+    "sha256": "797aa38b4647518754dca1f3a6b83c2b5fe330b9a4cad1b8637dfa62cd4df2a9"
+  },
+  "complete_replay_log_sha256": "9e44716ec2e0cf1ed6d5b9b4cc365114ba30b200944068e90d2e930d70a6fef4",
+  "complete_replay_exit_code": 1,
+  "first_remaining_blocker": "std::__gtos_isolate_diagnostic::__next_prime(unsigned int)",
+  "linker_diagnostics_complete": false,
+  "complete_bound_inputs": 12617,
+  "old_cache_metadata_unchanged": true,
+  "self_review": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/module-self-review.md",
+    "sha256": "f290d9b4dd1502ec2586657ea75e48a6fa18ec0278dd12d90dbf3c1199b66846"
+  },
+  "probe_files": {
+    "main.cc": "2b7f2d01d705903f9ae1ae4aa13e224c810e03765ce5dc4de476cebc73153b2a",
+    "kernel.cpp": "5b395bab12191a306a6c0a266094acf2ede99d20f28988e6498f20dfb9290ebb",
+    "kernel_common.h": "d6118464b0ce9cdf529c67d8094fd51ec110b4cfbd2e19c4c897228b30bebc13",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+    "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+    "observer.py": "379828a4d8f07e36524d2af31bc6baec47908c32c4a03436e07e3a2072ea464d"
+  },
+  "canonical_byte_equivalence": {
+    "path": "@WORKSPACE@/artifacts/native-exit-lifecycle-20261013-a/canonical-byte-equivalence.json",
+    "sha256": "f328eb047e8af4945a84d35a49d89e8ef4cc3c89de92baa23af7e15b4519965e"
+  },
+  "canonical_payload_files_verified": 1291,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "new_remote_ci_run": false,
+  "stock_cold_readback_performed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "parallel_user_threads_qualified": false,
+  "production_image_changed": false,
+  "entry_state_symbols": {
+    "native_v8_integration_stage": 1074006128,
+    "native_v8_integration_result": 1074004040
+  }
+}
