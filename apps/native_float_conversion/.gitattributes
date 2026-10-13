@@ -1,0 +1,4 @@
+# Preserve the published qualification and consumer bytes on every checkout.
+probe/** -text -whitespace
+README.md -text
+acceptance.json -text

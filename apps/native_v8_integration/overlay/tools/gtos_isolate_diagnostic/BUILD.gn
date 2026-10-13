@@ -537,6 +537,9 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "//third_party/llvm-libc/src/src/math/generic/floor.cpp",
       "//third_party/llvm-libc/src/src/math/generic/fmod.cpp",
       "//third_party/llvm-libc/src/src/stdlib/abs.cpp",
+      "//third_party/llvm-libc/src/src/stdlib/strtof.cpp",
+      "//third_party/llvm-libc/src/src/stdlib/strtod.cpp",
+      "//third_party/llvm-libc/src/src/stdlib/strtold.cpp",
     ]
     deps = [ ":native_c_clock" ]
   }

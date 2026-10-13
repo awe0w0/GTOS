@@ -1,0 +1,107 @@
+{
+  "scope": "固定 LLVM libc IA32 浮点文本转换、十六进制向下舍入修正与旧 sscanf 回归；私有单用户任务",
+  "guest_pass": true,
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/guest-03/status.json",
+    "sha256": "86331d4a520538be24eed68bebf1af1b514232b647f8cc16ff206c897431feea"
+  },
+  "guest_configurations": [
+    "32M-smp1",
+    "64M-smp4"
+  ],
+  "tasks": 16,
+  "exact_reaps": 16,
+  "exact_rational_vectors": 43,
+  "byte_alignments": 8,
+  "finite_checks_per_task": 5160,
+  "special_checks_per_task": 72,
+  "long_digit_checks_per_task": 9,
+  "page_edge_checks_per_task": 45,
+  "rounding_checks_per_task": 82,
+  "fp_context_checks_per_configuration": 22,
+  "scanner_checks_per_numeric_run": 41,
+  "checks_total": 97466,
+  "negative_log_controls_rejected": 576.0,
+  "actual_gn": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/gn-02/status.json",
+    "sha256": "cc69b4b04164490558c97b84874ec014508046c6d3d878c1549074f91025e6a9"
+  },
+  "provider_compile": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/compile-02/status.json",
+    "sha256": "ca0d9ab1e4bc39d74e82ac0caa1e78ea4261d7074db6eab5acac51929ca19a0c"
+  },
+  "consumer_compile": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/probe-compile-03/status.json",
+    "sha256": "e041fbb204ccc851a1a4cfa2d9696ec0a30d79b50842357063934a23f1f86009"
+  },
+  "consumer_link": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/probe-link-03/status.json",
+    "sha256": "871ca02088a03b52bd530901adcfd83647c452d788e2840eb9a723774a207036"
+  },
+  "negative_without_conversion_providers_rejected": true,
+  "upstream_sources": {
+    "strtof.cpp": "8862f90674aa148e43c459d6ab9038136c06fbac0733367ac4e577648492784c",
+    "strtod.cpp": "2be9d708d7f1535cbab386c27766b2ed267a7dadfc54af392987a51ace773b80",
+    "strtold.cpp": "838b37ade0faac23dabd59435e65eadc7e6f15ea665b700061cbb7b058f7e246"
+  },
+  "full_system_header_dependencies": true,
+  "prior_object_commands_preserved": 5170,
+  "added_objects": 3,
+  "recompiled_header_consumers": 1,
+  "current_object_commands": 5173,
+  "engine_args_and_prior_link_order_preserved": true,
+  "complete_replay": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/full-link-41/status.json",
+    "sha256": "21c4f752f59190d1cd36729b3afdcc7a2ed0eb92f240963fc909cdc8f01aa164"
+  },
+  "complete_replay_log_sha256": "1e89ebdd3af90e7853c6fe5501dd912f785e8efd0bab402616d6baeb7d26f79e",
+  "complete_replay_exit_code": 1,
+  "first_remaining_blocker": "nearbyint",
+  "linker_diagnostics_complete": false,
+  "complete_bound_inputs": 13501,
+  "old_cache_metadata_unchanged": true,
+  "correction_review": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/rounding-correction-review.md",
+    "sha256": "4e6eb0334da5821d97c797f8659990a7a34d8f4acc37fb698ef3e284c93f4dbb"
+  },
+  "self_review": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/module-self-review.md",
+    "sha256": "e3b5d234babd00aaaee54be2051b987bc43df8c4d6f86c5f131866541e7ce26e"
+  },
+  "probe_files": {
+    "main.cc": "6ce805f48624a01c238c94204876e570d1d10d69efba52804e99885b4547bd56",
+    "kernel.cpp": "8eac698674be916976f941a2d146d526f3e4aa5c91f3fbfe8383e0e43216fc63",
+    "float_common.h": "4316ed7206aa52a9fc4adeb651596157f8e6443765be340850ca8837b24f2c53",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+    "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+    "observer.py": "abff24c0b65b42343c00dfd8eb1b843e010b211f4a261cac7ffe2e182c776661",
+    "vectors.h": "097e64b2ce910f61bced7babbf9cbc5d62b5bfbf65c53112d3ec3b81d21decbd",
+    "sscanf-cases-v1.h": "9af9c7d8e7b1ad64856ff8f9ff570d7b176eafaaaa13d14b8afe7306c174701f"
+  },
+  "canonical_byte_equivalence": {
+    "path": "@WORKSPACE@/artifacts/native-float-conversion-20261014-a/canonical-byte-equivalence.json",
+    "sha256": "5579de52244b390ca12e7fbcde4215f90ac9203360f36257159acaa37104e1ac"
+  },
+  "canonical_payload_files_verified": 1292,
+  "entry_state_symbols": {
+    "native_v8_integration_stage": 1074005620,
+    "native_v8_integration_result": 1074004056
+  },
+  "observed_trap_entry_stack_bytes": 192,
+  "consumer_max_single_function_stack_bytes": 2284,
+  "provider_max_single_function_stack_bytes": 852,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "new_remote_ci_run": false,
+  "stock_cold_readback_performed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "parallel_user_threads_qualified": false,
+  "production_image_changed": false
+}

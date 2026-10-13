@@ -130,3 +130,13 @@ native_cpp_libcxx接入固定上游hash.cpp、functional.cpp和algorithm.cpp，�
 任务与精确回收的结果见[模块说明](../native_hash_runtime/README.md)和
 [验收记录](../native_hash_runtime/acceptance.json)。完整40按实际结果继续；
 公开字节对应不等于公开GN/客体重跑，完整V8/JS与浏览器仍待验收。
+
+
+## 原生浮点文本转换
+
+固定 LLVM libc 的 strtof/strtod/strtold 接入原 numeric 库；原生反例发现
+十六进制向下舍入的增位错误，最小修正及受影响 sscanf 的 41 项回归通过。
+独立位模式、页边界、四种舍入、FP 上下文、取消和资源回收见
+[模块说明](../native_float_conversion/README.md)与
+[验收记录](../native_float_conversion/acceptance.json)。完整41按实际首错继续。
+公开字节对应不等于公开 GN/客体重跑，完整 V8/JS 和浏览器仍待验收。
