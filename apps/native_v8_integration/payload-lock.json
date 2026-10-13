@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "e4686a92430766a1488512125a543c4d1e411593220681f973a643c1b8fed26d",
-      "bytes": 10074
+      "sha256": "2830d91ad6cb57c8a0a14fb37071cfa5784632808996b714984ae5f68ef11c1f",
+      "bytes": 10588
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,9 +6104,9 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "fbf0a22f3385081354694dae997ce72114e6d2b2d1a8179a94ec4ba4c52cbae2",
-      "bytes": 21772,
-      "origin": "Pinned LLVM IA32 nearbyint with direct MXCSR mode read; native_nearbyint guest-qualified"
+      "sha256": "16e2b7169949b797214ed88780925027b9a8edf8523a127431a3323bc35d260c",
+      "bytes": 21829,
+      "origin": "Pinned libc++abi virtual termination; native_virtual_abi guest-qualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
@@ -6152,11 +6152,16 @@
       "sha256": "f060d639b9d77666d172cf230de27ff1089e65dec9f59add9f40e041e6399c01",
       "bytes": 1018,
       "origin": "Pinned LLVM IA32 nearbyint with direct MXCSR mode read; native_nearbyint guest-qualified"
+    },
+    "overlay/third_party/libc++abi/src/src/cxa_virtual.cpp": {
+      "sha256": "79320f7033e714cd03c705755fb6f87ef2a6608adde5f18a11943d09b46511a4",
+      "bytes": 724,
+      "origin": "Pinned libc++abi virtual termination; native_virtual_abi guest-qualified"
     }
   },
-  "overlay_files": 420,
+  "overlay_files": 421,
   "sdk_files": 430,
-  "total_bytes": 3347819,
+  "total_bytes": 3349114,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

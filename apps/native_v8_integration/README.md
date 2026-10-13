@@ -149,3 +149,11 @@ native_cpp_libcxx接入固定上游hash.cpp、functional.cpp和algorithm.cpp，�
 syscall及实际标志破坏反例和精确回收见[模块说明](../native_nearbyint/README.md)
 及[验收记录](../native_nearbyint/acceptance.json)。完整42按真实首错继续，
 局部客体和公开字节对应不代表完整引擎/浏览器或公开重跑通过。
+
+## 2026-10-14 原生虚函数 ABI 终止
+
+完整42首错驱动接入固定pure/deleted实现，旧5174命令和次序保持。两个真实
+ABI经实际诊断/abort退出，16任务精确回收。12次真实写后的返回值故障按固定
+非Linux格式器映射校验EDOM33，并证明不重试已写出的诊断。完整43首错以
+status实测推进；公开字节对应不代表公开GN/客体、远程CI或新stock读回。
+完整V8/JS、浏览器网页、视频、HTML5仍待验收，生产镜像未改。

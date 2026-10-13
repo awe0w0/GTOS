@@ -342,6 +342,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
     defines = [ "_LIBCXXABI_HAS_NO_THREADS=1", "_LIBCXXABI_BUILDING_LIBRARY=1" ]
     sources = [
       "//third_party/libc++abi/src/src/cxa_guard.cpp",
+      "//third_party/libc++abi/src/src/cxa_virtual.cpp",
       "runtime/abi-abort-message.cc",
     ]
     deps = [ ":native_runtime", ":native_diagnostic_libcxx" ]

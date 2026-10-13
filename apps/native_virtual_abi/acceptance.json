@@ -1,0 +1,94 @@
+{
+  "scope": "固定libc++abi pure/deleted -> 真实诊断/abort；私有单用户任务",
+  "guest_pass": true,
+  "guest_status": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/guest-02/status.json",
+    "sha256": "c955b410afd3e4450b27aebd9f51e703ad58686533faf7dda6c3a22bf76ef330"
+  },
+  "tasks": 16,
+  "exact_reaps": 16,
+  "normal_diagnostic_abort_tasks": 4,
+  "injected_return_fault_controls": 12,
+  "return_fault_scope": "EIO/zero/oversize after actual successful diagnostic write; not a real disk error",
+  "fixed_formatter_error_mapping": "FILE_WRITE_ERROR -> generic EDOM33; upstream/provider unchanged",
+  "checks_total": 64,
+  "negative_log_controls_rejected": 464,
+  "actual_gn": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/gn-01/status.json",
+    "sha256": "e5a3728f2a1f1db872b92ee5fa2febd55bb062a8f3f8f24e5589ff59c287157f"
+  },
+  "provider_compile": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/compile-02/status.json",
+    "sha256": "14304ba9230431600384874e597df5b8205393d87e779d724c85996a64002f87"
+  },
+  "consumer_compile": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/probe-compile-01/status.json",
+    "sha256": "433d341d2e57f6c609d5dc8417891d274a64e9ef44b3001f0b92c4e8316519a4"
+  },
+  "consumer_link": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/probe-link-01/status.json",
+    "sha256": "633d4299732476ca63dd73efe652df5021ce62d12b2c4f7b5d3edf8a5e008a4c"
+  },
+  "negative_without_provider_rejected": true,
+  "complete_replay": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/full-link-43/status.json",
+    "sha256": "dfaf67eb13484dac5ddc91b85f32a0ca78b93af5108c911c229a72f79ffcacda"
+  },
+  "complete_replay_log_sha256": "db358d298c33acd6b6c56215687414a2c1b221adce8433a7cf2b3e25322a58f1",
+  "complete_replay_exit_code": 1,
+  "first_remaining_blocker": "v8::base::OS::FOpen(char const*, char const*)",
+  "linker_diagnostics_complete": false,
+  "complete_bound_inputs": 13748,
+  "old_cache_metadata_unchanged": true,
+  "prior_object_commands_preserved": 5174,
+  "current_object_commands": 5175,
+  "added_objects": 1,
+  "replaced_objects": 0,
+  "engine_args_and_prior_link_order_preserved": true,
+  "full_system_header_dependencies": true,
+  "consumer_and_provider_input_scope": "qualified GN profile/tools and actual complete pre/post MD closure",
+  "small_compile_all_gn_inputs_rehashed": false,
+  "self_review": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/module-self-review.md",
+    "sha256": "bd23d01a1a58e4d7c1dbf3d1021cb8e857a288a4636f7a417f4813b84bf201eb"
+  },
+  "errno_review": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/errno-review.md",
+    "sha256": "4356c6808a674d05a7712652b8fd57838c82f03a0f0a60658447583c53e0ce56"
+  },
+  "probe_files": {
+    "main.cc": "7ac9dd686722445406c26f488c2e774da0522aa3b0d87ceb64cab854c0aa97ab",
+    "kernel.cpp": "b322e476b0b415f5029e36c72d017704c3d8683ab748179e8e00fb37e757c250",
+    "float_common.h": "9ccd325b3481e6188b0eafadfb09f0a6c47a438fa33f60bf42e3d59e975c7b06",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
+    "linker.ld": "291c8c83b7b0d6a70675a2359df178ded5a26c0b9861dfb595019a5791135b12",
+    "observer.py": "cb9c6a38ae618cd98a95e77286f0fa96627c93b2c9e28944d11635aceb5917c2"
+  },
+  "canonical_byte_equivalence": {
+    "path": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/canonical-byte-equivalence.json",
+    "sha256": "e6ea4b0e34c9475cd3131b3e63072c02162a50338a5e027196d94290897508dc"
+  },
+  "canonical_payload_files_verified": 1294,
+  "entry_state_symbols": {
+    "native_v8_integration_stage": 1074004764,
+    "native_v8_integration_result": 1074004048
+  },
+  "load_pages": 42,
+  "observed_trap_entry_stack_bytes": 376,
+  "provider_max_single_function_stack_bytes": 0,
+  "consumer_max_single_function_stack_bytes": 44,
+  "whole_call_chain_stack_bound_proven": false,
+  "parallel_user_threads_qualified": false,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "new_remote_ci_run": false,
+  "stock_cold_readback_performed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false
+}
