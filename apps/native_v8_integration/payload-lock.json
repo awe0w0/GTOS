@@ -262,9 +262,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "c5219ab58aa65f0670f8d8598c7878e2c20445fdbafbcec85b2d13b4bbcd62ce",
-      "bytes": 17759,
-      "origin": "Target-local pinned sscanf correctness adaptation; private GTOS CPL3 qualified, public replay pending"
+      "bytes": 18712,
+      "origin": "Pinned libc++ synchronization integration and real GTOS ABI1 single-user-task wait provider; native guest qualified",
+      "sha256": "67dc581fbbe2692dd1316b96deaf5ae95b18991ffda0b6110bddcd0c2ff33abf"
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
       "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
@@ -5990,8 +5990,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "8e13c3813ad285722881de123ba8a43988c7778f1295ceaa94f6cebe60c8cf97",
-      "bytes": 5735
+      "sha256": "652393c1294a3adfc1e72c2e3d2018dacc65213f8addc08ec753f76b4f01f2aa",
+      "bytes": 6317
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6110,11 +6110,16 @@
       "sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11",
       "bytes": 3625,
       "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc": {
+      "bytes": 3402,
+      "origin": "Pinned libc++ synchronization integration and real GTOS ABI1 single-user-task wait provider; native guest qualified",
+      "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     }
   },
-  "overlay_files": 407,
-  "sdk_files": 427,
-  "total_bytes": 3218961,
+  "overlay_files": 413,
+  "sdk_files": 430,
+  "total_bytes": 3286306,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

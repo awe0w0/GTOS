@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "bd30086f88ff7e2221a60b6f4f2c1845e4f5a21b82318af8e48f8712830e73f5",
+  "payload_lock_sha256": "755e026c25f3f68cbd39971945c5c575abab63c963557d7a2c012b9175f4c0f8",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1257,7 +1257,11 @@
     "third_party/llvm-libc/src/hdr/types/FILE.h": "4efa84b154446cb1779407d149acd26520bf4e02e146391be129ecd42d4c75d1",
     "third_party/abseil-cpp/absl/base/BUILD.gn": "f6c580632d447ed1a46ce3026e0182604381d5fe1c47d3b3a49ec8e55b04f114",
     "third_party/abseil-cpp/absl/base/internal/low_level_alloc.h": "0f7dd074b79f49b57c2491987e722dbc0301018937e2a0573e10b3df8afe0649",
-    "third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc": "c8d0eb92b93100e440fc2f0c764c0161cc47024948762899fccc9dc0d38f7b69"
+    "third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc": "c8d0eb92b93100e440fc2f0c764c0161cc47024948762899fccc9dc0d38f7b69",
+    "third_party/libc++/src/src/mutex.cpp": "910f9774ac7dcfb98354f3487bbfe0dedb86394e6f1c7a0fd7702285cdde95be",
+    "third_party/libc++/src/src/mutex_destructor.cpp": "074f72b3901da4fe0d4f4237cbc0431ea4fe6ff9712345b4aa4341805bb467ae",
+    "third_party/libc++/src/src/condition_variable.cpp": "8cd75dd0973213cb7151d7807c519960567165614a8bc2e3d7b8de0210a57b4d",
+    "third_party/libc++/src/src/condition_variable_destructor.cpp": "5dffcf28178338009a83adb322b71bdd4ded3b613932b627a15e798a05939ab1"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1419,5 +1423,9 @@
     "exact_reaps": 14,
     "observer_negative_controls": 508,
     "full_native_elf_exists": false
-  }
+  },
+  "native_sync_guest_qualified": true,
+  "native_sync_scope": "Pinned mutex/condition_variable; checked GTOS ABI1 private single-user-task profile, real deadlines and yielding, no cross-thread notification qualification",
+  "native_sync_target": "//tools/gtos_isolate_diagnostic:native_sync_libcxx",
+  "native_sync_qualification": "apps/native_sync/acceptance.json"
 }

@@ -463,6 +463,28 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   }
 }
 
+# Pinned libc++ synchronization consumers and native single-task wait semantics.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_sync_libcxx") {
+    assert(current_cpu == "x86")
+    configs = [
+      ":native_stream_library_config",
+      "//build/config/compiler:no_chromium_code",
+      "//build/config/compiler:no_exit_time_destructors",
+    ]
+    remove_configs = [ "//build/config/compiler:chromium_code", "//:strict_warnings" ]
+    include_dirs = [ "//third_party/libc++/src/src" ]
+    sources = [
+      "//third_party/libc++/src/src/mutex.cpp",
+      "//third_party/libc++/src/src/mutex_destructor.cpp",
+      "//third_party/libc++/src/src/condition_variable.cpp",
+      "//third_party/libc++/src/src/condition_variable_destructor.cpp",
+      "runtime/condition-variable-core.cc",
+    ]
+    deps = [ ":native_runtime", ":native_c_clock", ":native_chrono_libcxx" ]
+  }
+}
+
 # Full real embedder link, separate from object-only qualification.
 executable("native_embedder") {
   assert(gtos_isolate_compile_diagnostic && current_os == "gtos" && current_cpu == "x86")
@@ -484,6 +506,7 @@ executable("native_embedder") {
   deps += [ ":native_wide_libc" ]
   deps += [ ":native_runtime_error_libcxx" ]
   deps += [ ":native_scanf_libc" ]
+  deps += [ ":native_sync_libcxx" ]
   ldflags = [
     "-T", rebase_path("native.ld", root_build_dir),
     "--gc-sections", "-Map=" + rebase_path("$root_out_dir/native_embedder.map", root_build_dir),
