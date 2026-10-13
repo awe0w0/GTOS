@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "6dbe7d32afc2d4643cd753c9559ffd4affabeee9fb54867b5673d905a3f25d10",
-      "bytes": 9587
+      "sha256": "e4686a92430766a1488512125a543c4d1e411593220681f973a643c1b8fed26d",
+      "bytes": 10074
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,9 +6104,9 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "a21fcd616d3731cf8d51a010512ad5a8d9f3bad4fef912028b46cad9e85d8d3b",
-      "bytes": 21704,
-      "origin": "Pinned IA32 LLVM libc floating conversion; magnitude Down truncation correction; native_float_conversion guest-qualified"
+      "sha256": "fbf0a22f3385081354694dae997ce72114e6d2b2d1a8179a94ec4ba4c52cbae2",
+      "bytes": 21772,
+      "origin": "Pinned LLVM IA32 nearbyint with direct MXCSR mode read; native_nearbyint guest-qualified"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
@@ -6147,11 +6147,16 @@
       "sha256": "bcdc751a068052e5fc69cd3cf554181bf095738c8d21d532db06c445b186e872",
       "bytes": 45955,
       "origin": "Pinned IA32 LLVM libc floating conversion; magnitude Down truncation correction; native_float_conversion guest-qualified"
+    },
+    "overlay/third_party/llvm-libc/src/src/math/generic/nearbyint.cpp": {
+      "sha256": "f060d639b9d77666d172cf230de27ff1089e65dec9f59add9f40e041e6399c01",
+      "bytes": 1018,
+      "origin": "Pinned LLVM IA32 nearbyint with direct MXCSR mode read; native_nearbyint guest-qualified"
     }
   },
-  "overlay_files": 419,
+  "overlay_files": 420,
   "sdk_files": 430,
-  "total_bytes": 3346246,
+  "total_bytes": 3347819,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

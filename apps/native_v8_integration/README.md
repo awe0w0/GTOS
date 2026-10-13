@@ -140,3 +140,12 @@ native_cpp_libcxx接入固定上游hash.cpp、functional.cpp和algorithm.cpp，�
 [模块说明](../native_float_conversion/README.md)与
 [验收记录](../native_float_conversion/acceptance.json)。完整41按实际首错继续。
 公开字节对应不等于公开 GN/客体重跑，完整 V8/JS 和浏览器仍待验收。
+
+
+## 原生 nearbyint
+
+完整41的实际Atomics.pause消费者驱动接入固定LLVM nearbyint，IA32/SSE2
+分支直接读取模式并复用原整数舍入算法。独立向量、两种FP初态、跨定时器/
+syscall及实际标志破坏反例和精确回收见[模块说明](../native_nearbyint/README.md)
+及[验收记录](../native_nearbyint/acceptance.json)。完整42按真实首错继续，
+局部客体和公开字节对应不代表完整引擎/浏览器或公开重跑通过。

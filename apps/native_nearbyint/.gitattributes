@@ -1,0 +1,4 @@
+# Preserve qualification bytes.
+probe/** -text -whitespace
+README.md -text
+acceptance.json -text
