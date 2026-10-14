@@ -777,3 +777,12 @@ UTC-only时区缓存、真实有界格式化及固定调度钩子在GTOS通过76
 完整46按真实38成员归档重放，三项缺失符号消除，首错变为isspace，ELF仍缺失。
 详见[原生平台核心模块](../apps/native_v8_platform_core/README.md)。生产镜像未改，完整
 Isolate、浏览器、视频和HTML5仍未验收。
+
+
+## 2026-10-14 字符分类与整数解析
+
+固定 LLVM 的 isspace、isprint、strtol、strtoll 已接入原有运行库配置，函数体
+未改。GN 新增四个对象，原5179条命令和最终顺序保持；客机76上下文、145358
+项检查、48次Join及精确资源回收通过。完整47消除这四项缺失符号，首错变为
+SetDataReadOnly，诊断仍非穷尽。详见[原生分类与整数模块](../apps/native_text_integer/README.md)。
+完整ELF、Isolate、浏览器、视频和HTML5尚未验收，生产镜像未改。

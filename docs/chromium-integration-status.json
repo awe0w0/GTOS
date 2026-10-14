@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-14 03:20:58 UTC",
-  "scope": "真实UTC-only时区缓存、有界格式化和固定调度钩子已验收76上下文；完整46首错isspace，完整ELF/Isolate/浏览器/视频/HTML5尚未验收。",
+  "recorded_utc": "2026-10-14 04:14:50 UTC",
+  "scope": "固定LLVM分类和整数解析已验收76上下文；完整47首错SetDataReadOnly，完整ELF/Isolate/浏览器/视频/HTML5尚未验收。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -31,7 +31,7 @@
   "complete_build_pass": false,
   "link_pass": false,
   "full_elf_exists": false,
-  "first_build_blocker": "isspace",
+  "first_build_blocker": "v8::base::OS::SetDataReadOnly(void*, unsigned int)",
   "other_observed_failures": [
     "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: floor",
@@ -504,7 +504,7 @@
     ]
   },
   "previous_complete_attempt": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/full-link-43/status.json",
-  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-v8-platform-core-20261014-a/full-link-46/status.json",
+  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-text-integer-20261014-a/full-link-47/status.json",
   "platform_adaptation_evidence": {
     "dynamic_elf": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-01/status.json",
@@ -582,7 +582,7 @@
     "published_diagnostic_implementation": true,
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
-  "next_work_package": "按实际完整46首错接入固定LLVM字符分类及后续整数解析；用真实调用者回归并重放完整目标，保留其他未验收限制",
+  "next_work_package": "按实际完整47首错核对SetDataReadOnly的静态ELF权限契约，实现最小正确服务并客机回归；保留其他未验收限制",
   "retained_complete_attempts": [
     {
       "name": "attempt-06",
@@ -1200,7 +1200,7 @@
       "sha256": "ff1594bf604c1b024a8b547e0bdc1a037c1f4069a9d50ee47e0e84318d08521d"
     }
   },
-  "previous_first_build_blocker": "v8::base::OS::CreateTimezoneCache()",
+  "previous_first_build_blocker": "isspace",
   "zlib_filestore_qualification": {
     "canonical_filestore_adopted": true,
     "public_replays": [
@@ -2332,7 +2332,7 @@
     }
   },
   "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v72.json",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v73.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -4075,5 +4075,245 @@
     "public_tool_rerun": false,
     "remote_ci": false
   },
-  "full46_diagnostics_complete": false
+  "full46_diagnostics_complete": false,
+  "native_text_integer": {
+    "scope": "real unchanged pinned LLVM isspace/isprint/strtol/strtoll on native IA32",
+    "qualified_runs": {
+      "gn-01": "c7ba6ab09bf94f38bc28363131796ec2fc3860fc3c0ebcf38fdc770b443fbd78",
+      "compile-02": "17c05ca96dca92c62335ad56f0f1373c416ebc176d01231ab9cfe5c2f9c43f02",
+      "consumer-link-02": "be6d31f26b77a4ee9215433fad6bb7519cc500fdec7af131d5521105b5261503",
+      "guest-01": "9e6acee427918536def1a8201b691c638389c6ac479d96c2ab3673ed20b3707a"
+    },
+    "upstream_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+    "pinned_upstream_sources": {
+      "third_party/llvm-libc/src/src/ctype/isspace.cpp": "ed28905e7b40749b5009a6923c3db9bbc8ad4b26ae0c27acbb8d7972a6535327",
+      "third_party/llvm-libc/src/src/ctype/isprint.cpp": "1f9072250cc09509f8e5f32633dfa22c8a4f80ae305610f4eee6b06b1ecf797a",
+      "third_party/llvm-libc/src/src/stdlib/strtol.cpp": "093adbdc9e0fb110b075cb90f0c099e2f61ceab14d1a735bf12d3afa0e25d937",
+      "third_party/llvm-libc/src/src/stdlib/strtoll.cpp": "cbfe8b67ee1d58464c6defcb24a5c920d56e7e59dfd567fafa7907a1feb88cbc"
+    },
+    "provider_objects": {
+      "isspace": {
+        "sha256": "ac2aa4eda7948ce2de182bfb2234525cf8963b3b5540e9b10551837da8f8d21b",
+        "gn_output": "obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isspace.o"
+      },
+      "isprint": {
+        "sha256": "5c06d4f850a7baa43a5e54a46e066cc9aa94a4b06ac153e8135bcd89fb8b814f",
+        "gn_output": "obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isprint.o"
+      },
+      "strtol": {
+        "sha256": "2b80b6090644aeac45c871f3770e26c33f2e29a44252ca007a77ce50ff68176c",
+        "gn_output": "obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtol.o"
+      },
+      "strtoll": {
+        "sha256": "0da9f7855a1b2b3c191ea22037f8daa6a919cff6f7397f5500dbde46ffb22210",
+        "gn_output": "obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtoll.o"
+      }
+    },
+    "native_contexts": 76,
+    "exact_context_recovery": 76,
+    "consumer_checks": 145358,
+    "normal_worker_joins": 48,
+    "classification_eof_allbytes_and_outofrange": true,
+    "integer_32_64_bounds_prefixes_bases_endptr_errno": true,
+    "invalid_base_endptr_unchanged": true,
+    "public_function_pointer_calls": true,
+    "errno_declaration_mode": 3,
+    "real_external_errno_provider_mode": 4,
+    "wrong_storage_negative_controls": [
+      {
+        "variant": "shared-errno",
+        "rejected": true,
+        "log_sha256": "e4aca41a616b059f1001657da6722063b7c043482a6e12cbbac19ac94ecc0c69",
+        "failure_lines": [
+          " error_line=000000CB",
+          "FAILED THREAD TLS consumer assertions",
+          "NATIVE THREAD TLS FAIL"
+        ]
+      },
+      {
+        "variant": "shared-tls",
+        "rejected": true,
+        "log_sha256": "88c1424039f902a5115e507b0d577342968a78221c77c4e7b82c4e39eb986799",
+        "failure_lines": [
+          " error_line=000000CC",
+          "FAILED THREAD TLS consumer assertions",
+          "NATIVE THREAD TLS FAIL"
+        ]
+      }
+    ],
+    "guest_rows": [
+      {
+        "configuration": "after-32M-smp1",
+        "rows": [
+          {
+            "mode": 0,
+            "checks": 50172,
+            "contexts": 25,
+            "joins": 24,
+            "reaps": 1,
+            "free": 7546,
+            "baseline": 7546,
+            "fp_init": 25,
+            "fp_invalid": 25
+          },
+          {
+            "mode": 1,
+            "checks": 7208,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 7546,
+            "baseline": 7546,
+            "fp_init": 29,
+            "fp_invalid": 29
+          },
+          {
+            "mode": 2,
+            "checks": 7208,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 7546,
+            "baseline": 7546,
+            "fp_init": 33,
+            "fp_invalid": 33
+          },
+          {
+            "mode": 3,
+            "checks": 7208,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 7546,
+            "baseline": 7546,
+            "fp_init": 37,
+            "fp_invalid": 37
+          }
+        ],
+        "log_sha256": "b03e86fe31fb9acc823abfedd23e82f5249f5d520f82b042a4ce5377b2d94c0e"
+      },
+      {
+        "configuration": "after-64M-smp4",
+        "rows": [
+          {
+            "mode": 0,
+            "checks": 50172,
+            "contexts": 25,
+            "joins": 24,
+            "reaps": 1,
+            "free": 15730,
+            "baseline": 15730,
+            "fp_init": 25,
+            "fp_invalid": 25
+          },
+          {
+            "mode": 1,
+            "checks": 7208,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 15730,
+            "baseline": 15730,
+            "fp_init": 29,
+            "fp_invalid": 29
+          },
+          {
+            "mode": 2,
+            "checks": 7208,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 15730,
+            "baseline": 15730,
+            "fp_init": 33,
+            "fp_invalid": 33
+          },
+          {
+            "mode": 3,
+            "checks": 7208,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 15730,
+            "baseline": 15730,
+            "fp_init": 37,
+            "fp_invalid": 37
+          }
+        ],
+        "log_sha256": "f80e93ae1561041977cd1eb0ee8786564f66281712a5d8d7cfc33efb39cea3f9"
+      }
+    ],
+    "default_guest_rows": [
+      {
+        "configuration": "default-32M-smp1",
+        "checks": 883,
+        "free": 7547,
+        "contexts": 1,
+        "exact_reaps": 1,
+        "log_sha256": "dcb1d79d1059490824b4dc68643b5c46355026c37965592b1fb613ef41ef0d22"
+      },
+      {
+        "configuration": "default-64M-smp4",
+        "checks": 883,
+        "free": 15731,
+        "contexts": 1,
+        "exact_reaps": 1,
+        "log_sha256": "e6a043969ff3dc830c51e55f440e1f29567f49e0defa8c47623bd3bcde3ec608"
+      }
+    ],
+    "actual_gn_flags_matched": true,
+    "preserved_prior_object_commands": 5179,
+    "current_object_commands": 5183,
+    "new_runtime_objects": 4,
+    "new_gn_graph_executed": true,
+    "upstream_function_bodies_unchanged": true,
+    "full47_status_sha256": "1293fabedfaf65fb4dbfd3b2e4508526729fab851371f68052eb6d9b2efcbe11",
+    "full47_replayed": true,
+    "first_undefined_symbol": "v8::base::OS::SetDataReadOnly(void*, unsigned int)",
+    "full_link_diagnostics_complete": false,
+    "existing_platform_archive_reused": true,
+    "old_cache_unchanged": true,
+    "link_input_scope": "all actual linker files; exact GN/profile; complete new provider pre-M/post-MD closure",
+    "original_compilation_sources_rehashed": false,
+    "source_byte_equivalence": {
+      "changed_sources": {
+        "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
+          "sha": "c208d88c20ab0b8aa638f00dfcadc45a2dce83a647b952fca203c0f2cd8f866f",
+          "source": "patch/BUILD.gn"
+        }
+      },
+      "pinned_upstream_sources": {
+        "third_party/llvm-libc/src/src/ctype/isspace.cpp": "ed28905e7b40749b5009a6923c3db9bbc8ad4b26ae0c27acbb8d7972a6535327",
+        "third_party/llvm-libc/src/src/ctype/isprint.cpp": "1f9072250cc09509f8e5f32633dfa22c8a4f80ae305610f4eee6b06b1ecf797a",
+        "third_party/llvm-libc/src/src/stdlib/strtol.cpp": "093adbdc9e0fb110b075cb90f0c099e2f61ceab14d1a735bf12d3afa0e25d937",
+        "third_party/llvm-libc/src/src/stdlib/strtoll.cpp": "cbfe8b67ee1d58464c6defcb24a5c920d56e7e59dfd567fafa7907a1feb88cbc"
+      },
+      "probe_files": {
+        "main.cc": "a52ee0262901106354ebf0d4c499f6b72d9c1d29e84feed4e0779db3c1227f1a",
+        "kernel.cpp": "12201840519e9a5429395e60a80eea325a062c967209978734be71fcac1bd6f3",
+        "record.h": "8c2df6a2736739359dd44815e19f0b096d720b497bfb2f613ca0ed084a0377df",
+        "linker.ld": "9f57650485a5a26dd4463471b58c14213467150765cc1540fdb73722aa6e9650",
+        "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+        "shared-errno-control.cc": "fc71d3af991795dc1d7414244a09871648552a49df9f1855742a0006d2e6e6bc",
+        "shared-tls-control.cc": "c309c616b49bc805a477f9e6fd693da313f1c2dc212d8e812570bf4367fae9d4"
+      },
+      "canonical_payload_files_verified": 1300,
+      "canonical_source_byte_equivalence_verified": true,
+      "canonical_gn_reexecuted": false,
+      "canonical_guest_rerun": false
+    },
+    "maximum_native_contexts_total": 4,
+    "scheduler_cpus": 1,
+    "inherited_platform_thread_tls_checks_pass": true,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "production_image_changed": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "public_tool_rerun": false,
+    "remote_ci": false
+  },
+  "full47_diagnostics_complete": false
 }

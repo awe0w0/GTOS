@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "3b8f6bb51a53e176c9a62428a064bcb5e106adaf4bf4b04ce46441253f21fada",
+  "payload_lock_sha256": "542c5fea2fc7fe646e1a4fb214c8edd2b02ca2c5963da0a29461e07e6df38313",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1282,7 +1282,7 @@
     "src/base/platform/gtos-file.cc": "2cf6bbe5aacc99f6f6075654694580759afa23d4ea90c337eac079f8ed5e2ee7",
     "tools/gtos_isolate_diagnostic/runtime/heap.cc": "999a0d9774a52b8a5a8bcb5d0d318856b1b1ce1d172c2dab17ee673c3aa54722",
     "tools/gtos_isolate_diagnostic/runtime/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f",
-    "tools/gtos_isolate_diagnostic/BUILD.gn": "58d350ec4c2072daff0c4230d87ce0b7fc6e23219b1676ea4295d9a95a86a324",
+    "tools/gtos_isolate_diagnostic/BUILD.gn": "c208d88c20ab0b8aa638f00dfcadc45a2dce83a647b952fca203c0f2cd8f866f",
     "tools/gtos_isolate_diagnostic/runtime/emutls.cc": "b74e36a2fb1786dc618c3380bac3ba8ff2f016f7ed30cdb1dbfdcb73fc5dbf29",
     "tools/gtos_isolate_diagnostic/runtime/thread-exit.cc": "18362de2d541e60a690cde541d8c8f7a7eb08055632da3bfebd2525cf8af1476",
     "tools/gtos_isolate_diagnostic/runtime/thread-exit.h": "74ee5c8353f5ec509a70751e198e05886003ccbf20b736c5e584b3d99270be24",
@@ -1508,5 +1508,8 @@
   "native_v8_thread_scope": "real Thread/Semaphore and generation-isolated key;76contexts;full45 now timezone first;whole browser pending",
   "native_v8_platform_core_guest_qualified": true,
   "native_v8_platform_core_qualification": "apps/native_v8_platform_core/acceptance.json",
-  "native_v8_platform_core_scope": "UTC-only cache, real bounded formatting, fixed scheduling;76contexts;full46 isspace first;whole browser pending"
+  "native_v8_platform_core_scope": "UTC-only cache, real bounded formatting, fixed scheduling;76contexts;full46 isspace first;whole browser pending",
+  "native_text_integer_guest_qualified": true,
+  "native_text_integer_qualification": "apps/native_text_integer/acceptance.json",
+  "native_text_integer_scope": "unchanged pinned LLVM classification and signed integer parsing;76contexts;full47 SetDataReadOnly first;whole browser pending"
 }

@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "90715c6a248d2199380b943e2139c5a93000a9ea3d31e2f95f12abc58d40feb4",
-      "bytes": 13296
+      "sha256": "d90076469a6b3f3c87c9cbfa1d113897e30468256e156c7b8701569b7fad495b",
+      "bytes": 13835
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,9 +6104,9 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "58d350ec4c2072daff0c4230d87ce0b7fc6e23219b1676ea4295d9a95a86a324",
-      "bytes": 22047,
-      "origin": "GTOS real V8 Thread/Semaphore and per-thread key bridge; native_v8_thread qualified; complete browser pending"
+      "sha256": "c208d88c20ab0b8aa638f00dfcadc45a2dce83a647b952fca203c0f2cd8f866f",
+      "bytes": 22284,
+      "origin": "GTOS pinned LLVM isspace/isprint/strtol/strtoll providers; native_text_integer qualified; whole browser pending"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
@@ -6191,7 +6191,7 @@
   },
   "overlay_files": 422,
   "sdk_files": 430,
-  "total_bytes": 3371684,
+  "total_bytes": 3372460,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,
