@@ -1,0 +1,213 @@
+{
+  "scope": "real pinned UTC-only TimezoneCache, SNPrintF/VSNPrintF and fixed scheduling initialization",
+  "qualified_runs": {
+    "compile-01": "24d9aed8cb09cd73bca3812e0ef7f1c62ffa52d569d43e55c4ad2ea469bc6575",
+    "consumer-01": "89a4455a8d699f3bbfef1a8fcd891ef8a03995f4dbee39810831a263b904dbe3",
+    "guest-01": "8dd9b248311be30268b6c3354f359ffba0cf5a7c30531238be2ecb363e1625b8",
+    "fopen-link-01": "3c7ede796adf1cb181e09b964a0be1d256c3e5a455b118eac8a301d74b46d298"
+  },
+  "gn_status_sha256": "de9e3daa7d4a9151918a81f913f07001d428869cc8a7e65fcb860d8b2b8f01cd",
+  "native_contexts": 76,
+  "exact_context_recovery": 76,
+  "consumer_checks": 91854,
+  "normal_worker_joins": 48,
+  "timezone_policy": "immutable UTC without DST; no configurable TZ service",
+  "timezone_nan_infinity_and_extreme_dates": true,
+  "timezone_shared_cache_clear_and_deletion": true,
+  "real_snprintf_varargs_and_va_list": true,
+  "formatting_truncation_negative_capacity_and_sentinels": true,
+  "wrong_storage_negative_controls": [
+    {
+      "variant": "shared-errno",
+      "rejected": true,
+      "log_sha256": "42b5b4cf154c02e25adcf3c142e80024ed22b01a0da8cc2185a8244d2b1279ae",
+      "failure_lines": [
+        " error_line=0000008B",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    },
+    {
+      "variant": "shared-tls",
+      "rejected": true,
+      "log_sha256": "b3ae9c1b3f12d1ee543c4d9ff3f890309b2d40eeef6fdad307a9d4b92a24f4c7",
+      "failure_lines": [
+        " error_line=0000008C",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    }
+  ],
+  "guest_rows": [
+    {
+      "configuration": "after-32M-smp1",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 32572,
+          "contexts": 25,
+          "joins": 24,
+          "reaps": 1,
+          "free": 7547,
+          "baseline": 7547,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 4392,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7547,
+          "baseline": 7547,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 4392,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7547,
+          "baseline": 7547,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 4392,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7547,
+          "baseline": 7547,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "2660b11957b7042dd2f2209a476c0ee68a270b1459b9a8a84cb01ba90775bc57"
+    },
+    {
+      "configuration": "after-64M-smp4",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 32572,
+          "contexts": 25,
+          "joins": 24,
+          "reaps": 1,
+          "free": 15731,
+          "baseline": 15731,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 4392,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15731,
+          "baseline": 15731,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 4392,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15731,
+          "baseline": 15731,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 4392,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15731,
+          "baseline": 15731,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "cc19d5426ed66b867ce41dfeca9a7626a9ed65d8a4c2df582dc9cffae109a381"
+    }
+  ],
+  "default_guest_rows": [
+    {
+      "configuration": "default-32M-smp1",
+      "checks": 179,
+      "free": 7548,
+      "contexts": 1,
+      "exact_reaps": 1,
+      "log_sha256": "41fbe638ef81d0649e15f69ee4ec8a8db7cdb8025b0946fc3a2ab99681c7b98f"
+    },
+    {
+      "configuration": "default-64M-smp4",
+      "checks": 179,
+      "free": 15732,
+      "contexts": 1,
+      "exact_reaps": 1,
+      "log_sha256": "a607c4869f6b89703360dec367520c8fd986a69ba2c2be4455efc036a40ea046"
+    }
+  ],
+  "actual_gn_flags_matched": true,
+  "preserved_prior_object_commands": 5179,
+  "new_runtime_objects": 0,
+  "new_gn_graph_executed": false,
+  "source_replacement_only": true,
+  "full46_status_sha256": "dac0e61c633ef696f434ca3affe28c2984f2fd2d1cc86ecc4c4dadbf8dbd4cf8",
+  "full46_replayed": true,
+  "first_undefined_symbol": "isspace",
+  "full_link_diagnostics_complete": false,
+  "archive_members_verified": 38,
+  "archive_members_replaced": 1,
+  "old_cache_unchanged": true,
+  "link_input_scope": "all actual linker files and archive members; exact GN/profile; complete new platform pre-M/post-MD closure",
+  "original_compilation_sources_rehashed": false,
+  "default_fopen_elf_byte_identical_to_accepted_guest": true,
+  "new_fopen_guest_run": false,
+  "default_fopen_prior_tasks": 8,
+  "default_fopen_prior_exact_reaps": 8,
+  "source_byte_equivalence": {
+    "changed_sources": {
+      "overlay/src/base/platform/platform-gtos.cc": {
+        "sha": "330cf5642bbeb3a17f7099e773ca72ce6422a0d610ffb3730fd342dd68e27963",
+        "source": "patch/platform-gtos.cc"
+      }
+    },
+    "probe_files": {
+      "main.cc": "43972fd8ddd4a75fb8a6cb12c65708f613522b6e60cb0a15c16154d6c0b5a84c",
+      "kernel.cpp": "12201840519e9a5429395e60a80eea325a062c967209978734be71fcac1bd6f3",
+      "record.h": "8c2df6a2736739359dd44815e19f0b096d720b497bfb2f613ca0ed084a0377df",
+      "linker.ld": "9f57650485a5a26dd4463471b58c14213467150765cc1540fdb73722aa6e9650",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "shared-errno-control.cc": "fc71d3af991795dc1d7414244a09871648552a49df9f1855742a0006d2e6e6bc",
+      "shared-tls-control.cc": "c309c616b49bc805a477f9e6fd693da313f1c2dc212d8e812570bf4367fae9d4"
+    },
+    "canonical_payload_files_verified": 1300,
+    "canonical_source_byte_equivalence_verified": true,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false
+  },
+  "maximum_native_contexts_total": 4,
+  "scheduler_cpus": 1,
+  "only_default_priority_supported": true,
+  "v8_platform_core_qualified": true,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "public_tool_rerun": false,
+  "remote_ci": false
+}

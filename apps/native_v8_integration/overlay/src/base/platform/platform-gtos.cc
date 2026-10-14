@@ -6,6 +6,7 @@
 #include "src/base/platform/gtos-native-api/vm_abi.h"
 #include "src/base/platform/gtos-native-services.h"
 #include "src/base/platform/time.h"
+#include "src/base/timezone-cache.h"
 #include "tools/gtos_isolate_diagnostic/runtime/thread-context.h"
 
 #if !V8_OS_GTOS || V8_OS_POSIX || V8_OS_LINUX || !defined(__i386__) || \
@@ -16,6 +17,20 @@
 namespace v8 {
 namespace base {
 namespace {
+// This native PC profile defines immutable UTC local time without DST.
+// UTC wall time uses the separate validated CMOS/PIT realtime ABI.
+class GtosUtcTimezoneCache final : public TimezoneCache {
+ public:
+  const char* LocalTimezone(double time_ms) override {
+    return __builtin_isfinite(time_ms) ? "UTC" : "";
+  }
+  double DaylightSavingsOffset(double) override { return 0; }
+  double LocalTimeOffset(double, bool) override { return 0; }
+  void Clear(TimeZoneDetection) override {
+    // There is no mutable native TZ setting to redetect in this profile.
+  }
+};
+
 struct Region {
   uint32_t handle, base, length;
 };
@@ -136,6 +151,34 @@ LocalKey* FindKey(Thread::LocalStorageKey key) {
 void OS::Initialize(const char*) {
   // No POSIX loader or fake GC file mapping is initialized on this target.
   gtos::CurrentProcessInfo();
+}
+
+TimezoneCache* OS::CreateTimezoneCache() {
+  gtos::CurrentNativeThreadInfo();
+  return new GtosUtcTimezoneCache();
+}
+
+void OS::AdjustSchedulingParams() {
+  // BSP scheduling/default priority are fixed; no parameters need adjustment.
+  gtos::CurrentNativeThreadInfo();
+}
+
+int OS::SNPrintF(char* str, int length, const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  const int result = VSNPrintF(str, length, format, args);
+  va_end(args);
+  return result;
+}
+
+int OS::VSNPrintF(char* str, int length, const char* format, va_list args) {
+  if (length < 0 || format == nullptr || (length > 0 && str == nullptr)) return -1;
+  const int result = vsnprintf(str, static_cast<size_t>(length), format, args);
+  if (result < 0 || result >= length) {
+    if (length > 0) str[length - 1] = '\0';
+    return -1;
+  }
+  return result;
 }
 
 size_t OS::AllocatePageSize() { return GTOS_VM_PAGE_BYTES; }

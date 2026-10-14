@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "f2055f5938656a328c5e4449200c706140ad2b06e35385904fdb3156d2b2f1c1",
+  "payload_lock_sha256": "3b8f6bb51a53e176c9a62428a064bcb5e106adaf4bf4b04ce46441253f21fada",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1291,7 +1291,7 @@
     "tools/gtos_isolate_diagnostic/runtime/sdk/process/thread_abi.h": "39a95b2821530a3afd78812558b10a91f61c43b047f2afcfe62d60e90c6830df",
     "tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc": "2d9fc70c28f00c493ba99c685099e3f96b3a6cf0f5749c1fcaa88f82f7df1f25",
     "tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc": "8520340537938a744fcee6c0e8b7127ca0012ba8e26b43d73fb29171d109121d",
-    "src/base/platform/platform-gtos.cc": "232c66f78e4d06e6a35e54c41277b7b3e330470bdfb5fa0599ed9266596726e8"
+    "src/base/platform/platform-gtos.cc": "330cf5642bbeb3a17f7099e773ca72ce6422a0d610ffb3730fd342dd68e27963"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1505,5 +1505,8 @@
   "native_thread_tls_scope": "real per-thread emutls, external errno and normal cleanup; 74 contexts and default FOpen regression; other shared services and V8 Thread pending",
   "native_v8_thread_guest_qualified": true,
   "native_v8_thread_qualification": "apps/native_v8_thread/acceptance.json",
-  "native_v8_thread_scope": "real Thread/Semaphore and generation-isolated key;76contexts;full45 now timezone first;whole browser pending"
+  "native_v8_thread_scope": "real Thread/Semaphore and generation-isolated key;76contexts;full45 now timezone first;whole browser pending",
+  "native_v8_platform_core_guest_qualified": true,
+  "native_v8_platform_core_qualification": "apps/native_v8_platform_core/acceptance.json",
+  "native_v8_platform_core_scope": "UTC-only cache, real bounded formatting, fixed scheduling;76contexts;full46 isspace first;whole browser pending"
 }

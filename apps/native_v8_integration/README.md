@@ -191,3 +191,11 @@ FILE取消/故障走实际原生通路。旧remove清理依赖失败保留，不
 完整45已按真实38成员归档重放，首错为 CreateTimezoneCache，完整ELF仍缺失。
 详见[原生V8线程模块](../native_v8_thread/README.md)。生产镜像未改，完整
 Isolate、浏览器、视频和HTML5仍未验收。
+
+## 2026-10-14 V8 平台核心补齐
+
+UTC-only时区缓存、真实有界格式化及固定调度钩子在GTOS通过76上下文、91854
+检查和精确回收。FOpen字节与既有验收版本相同，沿用旧运行证据。GN图未变。
+完整46按真实38成员归档重放，三项缺失符号消除，首错变为isspace，ELF仍缺失。
+详见[原生平台核心模块](../native_v8_platform_core/README.md)。生产镜像未改，完整
+Isolate、浏览器、视频和HTML5仍未验收。
