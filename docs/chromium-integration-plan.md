@@ -795,3 +795,11 @@ SetDataReadOnly，诊断仍非穷尽。详见[原生分类与整数模块](../ap
 完整48消除SetDataReadOnly缺失，首错exp2，诊断未穷尽。详见
 [原生静态只读模块](../apps/native_static_readonly/README.md)。现有GN图不变，生产镜像未改；
 完整ELF、Isolate、浏览器、视频和HTML5尚未验收。
+
+## 2026-10-14 exp2 数值提供者
+
+固定LLVM exp2及GTOS IA32极小输入舍入适配已验收：两组默认完整整数幂、
+各线程全部58边界/四模式/两种种子，52048次调用、76上下文精确回收。
+真实完整49首错前进到std::__gtos_isolate_diagnostic::cout，诊断未穷尽。
+详见[原生exp2模块](../apps/native_exp2/README.md)。生产镜像未改，完整ELF、
+Isolate、网页、浏览器、视频和HTML5仍未完成。

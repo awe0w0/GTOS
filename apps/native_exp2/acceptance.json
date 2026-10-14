@@ -1,0 +1,209 @@
+{
+  "scope": "real fixed LLVM exp2;GTOS IA32 |x|<=2^-1022 rounding adaptation;not whole Isolate",
+  "qualified_runs": {
+    "gn-02": "63dbbf1d76f0632aad60b17af4690f0f6d4f50ee8f2c8eca3e0ca96287efb73c",
+    "compile-03": "162f5289844fe7d9f6441bd26a2a497b4cc9f4790d37d006e9c4c4085ac25883",
+    "consumer-06": "538d2dfdafe474dd5808b8d8270cc5e83fdb4cc370c4c68eb84bbb362ac50bd7",
+    "guest-07": "d60b95e76185b7ebc64aec900e4833429821ff92199b340a993ef0ac7ccbd0dd"
+  },
+  "source_sha256": {
+    "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
+      "sha": "8e1f182170f5ee23b8043100ed4bcf8b58798df94e3eb61acf8c56e57f575bf1",
+      "source": "patch/BUILD.gn"
+    },
+    "overlay/third_party/llvm-libc/src/src/__support/math/exp2.h": {
+      "sha": "671bce4808c46ed14c9ca0c473da51ae86a76a1f1b452eaad179794315132c52",
+      "source": "patch/third_party/llvm-libc/src/src/__support/math/exp2.h"
+    }
+  },
+  "probe_sha256": {
+    "main.cc": "e5f1218891b75c6efcca583e0d530e67d0589ad435f618aa3701e1f8806fc496",
+    "kernel.cpp": "115779c4050919ba5307edf36a047da9aca7570fdce497c60d30ec1a97d7f8d7",
+    "record.h": "d773d282409ac813e87b309b30121ac41b58300aa5589098b6eb1dcfef10e1df",
+    "linker.ld": "9f57650485a5a26dd4463471b58c14213467150765cc1540fdb73722aa6e9650",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "vectors.h": "4b349a9d3279c982b8fc35f74bd6791346dd1103f713320d2fe650b3e2e199a1",
+    "shared-errno-control.cc": "fc71d3af991795dc1d7414244a09871648552a49df9f1855742a0006d2e6e6bc",
+    "shared-tls-control.cc": "c309c616b49bc805a477f9e6fd693da313f1c2dc212d8e812570bf4367fae9d4"
+  },
+  "provider_object_sha256": "05427e884abf90ff95117bc2c325ff7126cf867af3c3805f50790d7a80c7ac1f",
+  "reference_status_sha256": "e0e82a8ded434466229ea2162c798ed10cc9b61649a9724a16e746e85f0a5655",
+  "reference_source_sha256": "eba18bae333ea810bf34d027b5c7449acbd6be7085606be7a3cf6c2895498a57",
+  "source_provenance_sha256": "e36ff57c37e12cdc9a5ad33046f2dc44f603452c4f6e518695e3f6a02e3d529e",
+  "current_object_commands": 5184,
+  "prior_object_commands_preserved": 5183,
+  "native_contexts": 76,
+  "exact_context_recovery": 76,
+  "actual_exp2_calls": 52048,
+  "default_calls_per_context": 8856,
+  "threaded_boundary_calls_per_context": 464,
+  "default_guests": [
+    {
+      "configuration": "default-32M-smp1",
+      "checks": 56775,
+      "free": 7540,
+      "contexts": 1,
+      "exact_reaps": 1,
+      "log_sha256": "aad4f038409e5699dd734a8095554b4922ee80e19288df09e7d73a5e9fcd90f7"
+    },
+    {
+      "configuration": "default-64M-smp4",
+      "checks": 56775,
+      "free": 15724,
+      "contexts": 1,
+      "exact_reaps": 1,
+      "log_sha256": "b822a51137d0fe4f42f0f971546054ce178cfd74413337e75eca5692eb9f8416"
+    }
+  ],
+  "guest_rows": [
+    {
+      "configuration": "after-32M-smp1",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 109672,
+          "contexts": 25,
+          "math_calls": 11600,
+          "joins": 24,
+          "reaps": 1,
+          "free": 7539,
+          "baseline": 7539,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 16728,
+          "contexts": 4,
+          "math_calls": 1856,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7539,
+          "baseline": 7539,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 16728,
+          "contexts": 4,
+          "math_calls": 1856,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7539,
+          "baseline": 7539,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 16728,
+          "contexts": 4,
+          "math_calls": 1856,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7539,
+          "baseline": 7539,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "e59fc0d62e3dcc57f57367b057a5bfba3a5b2bc40078f1da7b04cf53362c6562"
+    },
+    {
+      "configuration": "after-64M-smp4",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 109672,
+          "contexts": 25,
+          "math_calls": 11600,
+          "joins": 24,
+          "reaps": 1,
+          "free": 15723,
+          "baseline": 15723,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 16728,
+          "contexts": 4,
+          "math_calls": 1856,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15723,
+          "baseline": 15723,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 16728,
+          "contexts": 4,
+          "math_calls": 1856,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15723,
+          "baseline": 15723,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 16728,
+          "contexts": 4,
+          "math_calls": 1856,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15723,
+          "baseline": 15723,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "2c531e5207824d37a11af2875edb971dbc9b6bffbca4f05d8a7032cdd1d9ab46"
+    }
+  ],
+  "wrong_storage_controls": [
+    {
+      "variant": "shared-errno",
+      "rejected": true,
+      "log_sha256": "37943fa15d409268515d0f6cdb09b3f362774cce8e2e40ab7b8b81d6264070c7",
+      "failure_lines": [
+        " error_line=000000E6 math_mode=00000003 seed=00000001 row=00000039 input_hi=FFF80000 input_lo=00001234 actual_hi=FFF80000 actual_lo=00001234 expected_hi=7FF80000 expected_lo=00000000",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    },
+    {
+      "variant": "shared-tls",
+      "rejected": true,
+      "log_sha256": "705873348d3772facfda2549c5ec81ba7a6022dd8ecb7b98f844a1b27d930f58",
+      "failure_lines": [
+        " error_line=000000E7 math_mode=00000003 seed=00000001 row=00000039 input_hi=FFF80000 input_lo=00001234 actual_hi=FFF80000 actual_lo=00001234 expected_hi=7FF80000 expected_lo=00000000",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    }
+  ],
+  "full49_status_sha256": "e2fb5202e9a8573804a1e7a7681dfa4acbc027e794e4dd667426f7209802118a",
+  "full49_replayed": true,
+  "first_undefined_symbol": "std::__gtos_isolate_diagnostic::cout",
+  "full_link_diagnostics_complete": false,
+  "prior_input_order_preserved": true,
+  "old_cache_unchanged": true,
+  "source_byte_equivalence_verified": true,
+  "canonical_payload_files_verified": 1302,
+  "original_compilation_sources_rehashed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "public_tool_rerun": false,
+  "remote_ci": false
+}

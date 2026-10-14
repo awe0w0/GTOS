@@ -551,6 +551,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "//third_party/llvm-libc/src/src/stdlib/strtol.cpp",
       "//third_party/llvm-libc/src/src/stdlib/strtoll.cpp",
       "//third_party/llvm-libc/src/src/math/generic/nearbyint.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/exp2.cpp",
     ]
     deps = [ ":native_c_clock" ]
   }
