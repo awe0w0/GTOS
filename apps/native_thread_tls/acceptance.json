@@ -1,0 +1,195 @@
+{
+  "scope": "real BSP per-thread emutls/errno/destructor cleanup; other shared services and V8 Thread remain pending",
+  "qualified_runs": {
+    "compile-03": "d365e84234c8d74e7df18974761df1d31e37c6e62cdc1605e0185c0924ba0025",
+    "consumer-01": "bfcdb0b6311f3ba17be149b6b632e4075709e0b8fd52aedd0ce682b01b94826a",
+    "guest-04": "2185561f09814f87966df005a041dea5ee4b2ba1683308bff49bed3a5023db94",
+    "fopen-link-01": "3e2a2cd2966e5499806c3250c044e8d91e5642ab087e6a7e6912535a1df16709",
+    "legacy-02": "eb33a07c3b5510ce3ba725895b4b655126b7b2bf4062bad95cf916be7d0fc876"
+  },
+  "gn_status_sha256": "64f395fb619c47f06038f7410b17d7bc61233116e93169b679772461cc22a3d0",
+  "native_contexts": 74,
+  "exact_context_recovery": 74,
+  "consumer_checks": 75816,
+  "worker_recreation_waves": 8,
+  "normal_contexts_per_configuration": 25,
+  "joins_per_configuration": 24,
+  "tls_variables_growth_probe": 32,
+  "overalignment": 256,
+  "destructor_order": "2341",
+  "wrong_storage_negative_controls": [
+    {
+      "variant": "shared-errno",
+      "rejected": true,
+      "log_sha256": "3e8d7bea8917b268ce8bd82af74730afbc848b5e8016c93ff907fef988a99c34",
+      "failure_lines": [
+        " error_line=00000051",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    },
+    {
+      "variant": "shared-tls",
+      "rejected": true,
+      "log_sha256": "da0f877f267bbef272501a9750a801272f47051b61ba3a0efc6a1c0f445fd6bb",
+      "failure_lines": [
+        " error_line=00000054",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    }
+  ],
+  "actual_tls_oom_exit": "0x48000021",
+  "guest_rows": [
+    {
+      "configuration": "after-32M-smp1",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 27147,
+          "contexts": 25,
+          "joins": 24,
+          "reaps": 1,
+          "free": 7597,
+          "baseline": 7597,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 3587,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7597,
+          "baseline": 7597,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 3587,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7597,
+          "baseline": 7597,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 3587,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7597,
+          "baseline": 7597,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "3f50005d1c1510cec2df8f7c41b31ce7c828f05bcd776282c179e6ff48ae30d4"
+    },
+    {
+      "configuration": "after-64M-smp4",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 27147,
+          "contexts": 25,
+          "joins": 24,
+          "reaps": 1,
+          "free": 15781,
+          "baseline": 15781,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 3587,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15781,
+          "baseline": 15781,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 3587,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15781,
+          "baseline": 15781,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 3587,
+          "contexts": 4,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15781,
+          "baseline": 15781,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "c887925676720da2d551ded47e579541fcaa531555e226e284d01d7fa887a796"
+    }
+  ],
+  "actual_gn_flags_matched": true,
+  "new_gn_graph_executed": true,
+  "preserved_prior_object_commands": 5173,
+  "new_context_objects": 1,
+  "errno_clock_objects_recompiled": 3,
+  "four_initial_objects_byte_identical": true,
+  "default_fopen_tasks": 8,
+  "default_fopen_exact_reaps": 8,
+  "default_fopen_checks": 1036,
+  "default_fopen_log_negative_controls": 314,
+  "source_byte_equivalence": {
+    "changed_sources": {
+      "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": "64b5908875e36eb83024aff2c5fd6fe15392a48023453e99c41768dcc1b0244a",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/emutls.cc": "b74e36a2fb1786dc618c3380bac3ba8ff2f016f7ed30cdb1dbfdcb73fc5dbf29",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/thread-exit.cc": "18362de2d541e60a690cde541d8c8f7a7eb08055632da3bfebd2525cf8af1476",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/thread-exit.h": "74ee5c8353f5ec509a70751e198e05886003ccbf20b736c5e584b3d99270be24",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.cc": "f1c3fb0f57ee63e5e4182d35a0e744cfc97042aa0fac03b88c086ca08340f09f",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.h": "cd025564aa3a372f5eeb4e31055f5111eb3552343ff92b7c850d8e3c69910dd4",
+      "overlay/tools/gtos_isolate_diagnostic/runtime/sdk/process/thread_abi.h": "39a95b2821530a3afd78812558b10a91f61c43b047f2afcfe62d60e90c6830df"
+    },
+    "probe_files": {
+      "main.cc": "3efd3ee3b0e3e7fee1c4497352efd2bce25b6fcb22a431923056fcbdc4c5f8f5",
+      "kernel.cpp": "3041b684b46c13bdd46fd635cd9cf8c6afb619f0bf7cb054f030ed58317e5f00",
+      "record.h": "8c2df6a2736739359dd44815e19f0b096d720b497bfb2f613ca0ed084a0377df",
+      "linker.ld": "9f57650485a5a26dd4463471b58c14213467150765cc1540fdb73722aa6e9650",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "shared-errno-control.cc": "fc71d3af991795dc1d7414244a09871648552a49df9f1855742a0006d2e6e6bc",
+      "shared-tls-control.cc": "c309c616b49bc805a477f9e6fd693da313f1c2dc212d8e812570bf4367fae9d4"
+    },
+    "canonical_payload_files_verified": 1298,
+    "canonical_source_byte_equivalence_verified": true,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false
+  },
+  "maximum_native_contexts_total": 4,
+  "scheduler_cpus": 1,
+  "per_thread_errno_qualified": true,
+  "tls_qualified": true,
+  "v8_thread_bridge_qualified": false,
+  "full45_replayed": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "public_tool_rerun": false,
+  "remote_ci": false,
+  "stock_cold_readback_performed": false
+}

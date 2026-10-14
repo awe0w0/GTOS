@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "ab275d8234e181a16b7a026f8517ae46176d4094fb8041b021376abc711a010c",
+  "payload_lock_sha256": "84a4d154642495b64e58ab104d201b1d21a37e10ed8351769a5f17dcf80594a2",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1281,7 +1281,14 @@
     "third_party/libc++abi/src/src/cxa_virtual.cpp": "79320f7033e714cd03c705755fb6f87ef2a6608adde5f18a11943d09b46511a4",
     "src/base/platform/gtos-file.cc": "2cf6bbe5aacc99f6f6075654694580759afa23d4ea90c337eac079f8ed5e2ee7",
     "tools/gtos_isolate_diagnostic/runtime/heap.cc": "999a0d9774a52b8a5a8bcb5d0d318856b1b1ce1d172c2dab17ee673c3aa54722",
-    "tools/gtos_isolate_diagnostic/runtime/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f"
+    "tools/gtos_isolate_diagnostic/runtime/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f",
+    "tools/gtos_isolate_diagnostic/BUILD.gn": "64b5908875e36eb83024aff2c5fd6fe15392a48023453e99c41768dcc1b0244a",
+    "tools/gtos_isolate_diagnostic/runtime/emutls.cc": "b74e36a2fb1786dc618c3380bac3ba8ff2f016f7ed30cdb1dbfdcb73fc5dbf29",
+    "tools/gtos_isolate_diagnostic/runtime/thread-exit.cc": "18362de2d541e60a690cde541d8c8f7a7eb08055632da3bfebd2525cf8af1476",
+    "tools/gtos_isolate_diagnostic/runtime/thread-exit.h": "74ee5c8353f5ec509a70751e198e05886003ccbf20b736c5e584b3d99270be24",
+    "tools/gtos_isolate_diagnostic/runtime/thread-context.cc": "f1c3fb0f57ee63e5e4182d35a0e744cfc97042aa0fac03b88c086ca08340f09f",
+    "tools/gtos_isolate_diagnostic/runtime/thread-context.h": "cd025564aa3a372f5eeb4e31055f5111eb3552343ff92b7c850d8e3c69910dd4",
+    "tools/gtos_isolate_diagnostic/runtime/sdk/process/thread_abi.h": "39a95b2821530a3afd78812558b10a91f61c43b047f2afcfe62d60e90c6830df"
   },
   "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
@@ -1489,5 +1496,8 @@
   },
   "native_thread_heap_guest_qualified": true,
   "native_thread_heap_qualification": "apps/native_thread_heap/acceptance.json",
-  "native_thread_heap_scope": "real allocator metadata lock and Yield; 24 shared contexts and default FOpen regression; no TLS/per-thread errno/V8 thread qualification"
+  "native_thread_heap_scope": "real allocator metadata lock and Yield; 24 shared contexts and default FOpen regression; no TLS/per-thread errno/V8 thread qualification",
+  "native_thread_tls_guest_qualified": true,
+  "native_thread_tls_qualification": "apps/native_thread_tls/acceptance.json",
+  "native_thread_tls_scope": "real per-thread emutls, external errno and normal cleanup; 74 contexts and default FOpen regression; other shared services and V8 Thread pending"
 }

@@ -1,15 +1,16 @@
 import("//gtos-isolate-diagnostic.gni")
 import("//gni/v8.gni")
 
-# Real C clock_gettime and pinned LLVM shared errno in the private single-user task.
+# Real C clock_gettime and pinned LLVM external errno with native thread cells.
 if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
   v8_source_set("native_c_clock") {
     assert(current_cpu == "x86")
     configs = []
     include_dirs = [ "//third_party/llvm-libc/src" ]
-    # One user task per private address space: errno must not allocate on OOM.
-    # Use the pinned LLVM shared mode only for this single-task diagnostic.
-    defines = [ "LIBC_NAMESPACE=__llvm_libc_cr", "LIBC_ERRNO_MODE=3" ]
+    # External errno cells allocate nothing, including on heap OOM. Other libc
+    # consumers use the same Errno class ABI; mode3/4 headers have identical
+    # declarations and their actual read/write provider is this mode4 object.
+    defines = [ "LIBC_NAMESPACE=__llvm_libc_cr", "LIBC_ERRNO_MODE=4" ]
     sources = [
       "runtime/clock-gettime.cc",
       "runtime/nanosleep.cc",
@@ -168,6 +169,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "runtime/emutls.cc",
       "runtime/abort.cc",
       "runtime/thread-exit.cc",
+      "runtime/thread-context.cc",
       "runtime/thread-core.cc",
     ]
   }
