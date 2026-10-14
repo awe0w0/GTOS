@@ -137,9 +137,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/src/base/platform/platform-gtos.cc": {
-      "sha256": "330cf5642bbeb3a17f7099e773ca72ce6422a0d610ffb3730fd342dd68e27963",
-      "bytes": 15837,
-      "origin": "GTOS real UTC-only TimezoneCache, bounded formatting and fixed scheduling hook; native_v8_platform_core qualified; whole browser pending"
+      "sha256": "277ceb3c229cf408816915e23ab40097833b46dd4ac414403db795276e7321d2",
+      "bytes": 16425,
+      "origin": "GTOS native static data readonly ABI;real V8 FreezeFlags guest-qualified;whole browser pending"
     },
     "overlay/src/base/platform/semaphore.h": {
       "sha256": "6e9399d0f08d22ba157144f0c501723686f652de4f6944b7a84c1728adf9433b",
@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "d90076469a6b3f3c87c9cbfa1d113897e30468256e156c7b8701569b7fad495b",
-      "bytes": 13835
+      "sha256": "5b5db8b087e88490d2a4c39c7867eceabf2610bc9d1ef89b8fdd600404f4dd6b",
+      "bytes": 14327
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6187,11 +6187,16 @@
       "sha256": "8520340537938a744fcee6c0e8b7127ca0012ba8e26b43d73fb29171d109121d",
       "bytes": 2030,
       "origin": "GTOS real V8 Thread/Semaphore and per-thread key bridge; native_v8_thread qualified; complete browser pending"
+    },
+    "overlay/src/base/platform/gtos-native-api/readonly_abi.h": {
+      "sha256": "3c30d437057c17fcad09a0efc33c40d8c99cb9f008b7a133c31a65e19fffa383",
+      "bytes": 1507,
+      "origin": "GTOS native static data readonly ABI;real V8 FreezeFlags guest-qualified;whole browser pending"
     }
   },
-  "overlay_files": 422,
+  "overlay_files": 428,
   "sdk_files": 430,
-  "total_bytes": 3372460,
+  "total_bytes": 3375047,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

@@ -49,10 +49,11 @@ namespace gtos { namespace process {
             Slot* process;
             uint32_t userStackBegin, userStackEnd, stackHandle;
             struct CodeRange { uint32_t begin, end; } code[Elf32MaximumSegments];
-            uint32_t codeCount;
+            struct DataRange { uint32_t begin, end; } data[Elf32MaximumSegments];
+            uint32_t codeCount, dataCount;
             bool occupied;
             Slot() : task((uint16_t)0, 0), process(this), userStackBegin(UserStackBottom),
-                userStackEnd(UserStackTop), stackHandle(0), codeCount(0), occupied(false) {}
+                userStackEnd(UserStackTop), stackHandle(0), codeCount(0), dataCount(0), occupied(false) {}
             memory::ProcessAddressSpace& Space() { return process->space; }
             const memory::ProcessAddressSpace& Space() const { return process->space; }
         };
@@ -78,6 +79,7 @@ namespace gtos { namespace process {
         int TryJoin(Slot&, const GtosThreadJoinRequest&);
         bool StackPinned(const Slot&, uint32_t handle) const;
         bool ExecutableEntry(const Slot&, uint32_t entry) const;
+        bool LoadedDataRange(const Slot&, uint32_t address, uint32_t bytes) const;
         bool SafeKernelContext() const;
         bool TrustedImage(const uint8_t*, uint32_t) const;
         Slot* FreeSlot(uint32_t& index);

@@ -2,6 +2,7 @@
 #include <process/resources.h>
 #include <process/native_surface.h>
 #include <process/vm_abi.h>
+#include <process/readonly_abi.h>
 #include <process/clock_abi.h>
 #include <process/info_abi.h>
 #include <process/file_abi.h>
@@ -213,6 +214,8 @@ bool NativeRuntime::Create(const NativeImage& image, uint32_t& id) {
     }
     slot.codeCount = 1; slot.code[0].begin = CodeAddress;
     slot.code[0].end = CodeAddress + image.codeBytes;
+    slot.dataCount = 1; slot.data[0].begin = DataAddress;
+    slot.data[0].end = DataAddress + 4096;
     return true;
 }
 bool NativeRuntime::TrustedImage(const uint8_t* image, uint32_t bytes) const {
@@ -257,12 +260,16 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
                 if (!slot.space.ProtectPage(page, false)) goto rollback;
     }
     if (Admit(slot, index, plan.entry, id)) {
-        slot.codeCount = 0;
+        slot.codeCount = slot.dataCount = 0;
         for (uint32_t i = 0; i < plan.segmentCount; ++i) {
             const Elf32LoadSegment& segment = plan.segments[i];
             if (segment.flags & Elf32Execute) {
                 slot.code[slot.codeCount].begin = segment.virtualAddress;
                 slot.code[slot.codeCount++].end = segment.virtualAddress + segment.memorySize;
+            } else {
+                slot.data[slot.dataCount].begin = segment.virtualAddress & ~4095U;
+                slot.data[slot.dataCount++].end =
+                    (segment.virtualAddress + segment.memorySize + 4095) & ~4095U;
             }
         }
         return true;
@@ -307,6 +314,19 @@ bool NativeRuntime::ExecutableEntry(const Slot& process, uint32_t entry) const {
     for (uint32_t i = 0; i < process.codeCount; ++i)
         if (entry >= process.code[i].begin && entry < process.code[i].end) return true;
     return false;
+}
+bool NativeRuntime::LoadedDataRange(const Slot& process, uint32_t address, uint32_t bytes) const {
+    if (bytes / 4096 > ProcessAddressSpace::MaximumPages) return false;
+    const uint32_t end = address + bytes;
+    for (uint32_t page = address; page < end; page += 4096) {
+        bool found = false;
+        for (uint32_t i = 0; i < process.dataCount; ++i)
+            if (page >= process.data[i].begin && page + 4096 <= process.data[i].end) {
+                found = true; break;
+            }
+        if (!found) return false;
+    }
+    return true;
 }
 int NativeRuntime::CreateThread(Slot& caller, const GtosThreadCreateRequest& request) {
     Slot& process = *caller.process;
@@ -655,6 +675,34 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
                 cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS;
             }
         }
+        break;
+    }
+    case GTOS_SYS_DATA_READONLY: {
+        if (cpu->ecx != GTOS_READONLY_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_READONLY_ERR_BAD_SIZE; break;
+        }
+        GtosDataReadonlyRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_READONLY_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_READONLY_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_READONLY_ERR_UNSUPPORTED_VERSION; break;
+        }
+        if (!request.length || ((request.address | request.length) & 4095)
+            || request.address < ProcessAddressSpace::UserBase
+            || request.address >= ProcessAddressSpace::UserLimit
+            || request.length > ProcessAddressSpace::UserLimit - request.address) {
+            cpu->eax = (uint32_t)GTOS_READONLY_ERR_RANGE; break;
+        }
+        if (!LoadedDataRange(*slot, request.address, request.length)) {
+            cpu->eax = (uint32_t)GTOS_READONLY_ERR_PERMISSION; break;
+        }
+        // The complete request is already snapshotted, even if it lies inside
+        // the range being sealed. There is no user output buffer to write back.
+        const bool ok = slot->space.SetDataReadOnly(request.address, request.length);
+        cpu->eax = ok ? 0 : slot->space.GetLastError() == ProcessMemoryNotMapped
+            ? (uint32_t)GTOS_READONLY_ERR_BAD_ADDRESS
+            : (uint32_t)VmError(slot->space.GetLastError());
         break;
     }
     case GTOS_SYS_VM_SET_PERMISSIONS:

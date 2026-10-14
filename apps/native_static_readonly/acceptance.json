@@ -1,0 +1,362 @@
+{
+  "scope": "real V8 FreezeFlags static IA32 data protection;dedicated ABI1;not whole Isolate",
+  "qualified_runs": {
+    "kernel-compile-01": "68d11189bbc910b8559e1e212074af509269905fea3e4c9c8fc37b6cdb2dd555",
+    "compile-01": "a0fdcce9c00eea6c123a97d8a9edf6e90933b5d1220cefab3d5b65f4a74a69d0",
+    "consumer-link-05": "5daf341b7eaf2e4fb93f94c5e5b3ee237346f653fee2f5085989470c16bd0130",
+    "guest-02": "d9527bf2947768a031eb1e9b26b8c5cd6522aa0c5a9b166cece40ac5496edfdc"
+  },
+  "source_sha256": {
+    "include/memory/process_address_space.h": {
+      "sha": "2ce07a0f6844a336c3ff0d1aa85cc76579976411f5ca8602fbf02ef296ec8da6",
+      "source": "patch/include/memory/process_address_space.h"
+    },
+    "src/memory/process_address_space.cpp": {
+      "sha": "5cac6ab9efa59c04abcda189f3c16156c370c8e3a33a4a8ac11359f02982acaf",
+      "source": "patch/src/memory/process_address_space.cpp"
+    },
+    "include/process/native_runtime.h": {
+      "sha": "7b4930a4d2d58cd4d4d8ad9dd4d49d59f48bf3931f0da0061e0f9d10f277fed4",
+      "source": "patch/include/process/native_runtime.h"
+    },
+    "src/process/native_runtime.cpp": {
+      "sha": "2da05ad6f70fd2f9cf54e541f2037a9c767c98592c9b0e2058da34eb09c9ca29",
+      "source": "patch/src/process/native_runtime.cpp"
+    },
+    "apps/native_v8_integration/overlay/src/base/platform/platform-gtos.cc": {
+      "sha": "277ceb3c229cf408816915e23ab40097833b46dd4ac414403db795276e7321d2",
+      "source": "patch/platform-gtos.cc"
+    },
+    "include/process/readonly_abi.h": {
+      "sha": "3c30d437057c17fcad09a0efc33c40d8c99cb9f008b7a133c31a65e19fffa383",
+      "source": "patch/include/process/readonly_abi.h"
+    },
+    "apps/native_v8_integration/overlay/src/base/platform/gtos-native-api/readonly_abi.h": {
+      "sha": "3c30d437057c17fcad09a0efc33c40d8c99cb9f008b7a133c31a65e19fffa383",
+      "source": "patch/include/process/readonly_abi.h"
+    }
+  },
+  "probe_sha256": {
+    "main.cc": "e6e5432090ae4ec5f804c967cc3a8207659a4511e536c992341fb5da2b0646a5",
+    "kernel.cpp": "0a4d243e6a577001f26bb07e4872ca7f2095c2611d971f6063e45203c7e117ee",
+    "record.h": "4370eccc98df87e1c95d5c845a95ae46c218fcd8762d59c9915a4ad359eb04a8",
+    "linker.ld": "c6081c3cfc24b581831843a6b60c667cd0b4a02bb40477457a727ab3ffafda74",
+    "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+  },
+  "platform_object_sha256": "ba832a5f2370934b0289bb4ae80793506b278525f7fd3a3a53f1f64f3d6a3a43",
+  "kernel_objects_sha256": {
+    "native_runtime": "b89efa8524c9bca33c200a5dce502f9815cd6313f3209cc2956b22ee4ba162da",
+    "process_address_space": "e5ce420814900d3cd35b51f002218d90415a753da3830c2beaf843eef47be246",
+    "syscalls": "c5f813a98f2932d9c65234d37fb86d7cc61a68b1173b37ea10e71324a171aaff",
+    "interrupts": "e1e0a6b7fa842f117367cc0eb0c8f0a359e76ae150a2675281dc9588402c2f24",
+    "native_files": "b60219f0f4fa5a08fbd0664b0007098158b8581c30612b10815cc385e836b73a"
+  },
+  "unchanged_flags_object_sha256": "22ab608c4323e25a4cc938a86e82127146e0b0477d95268e4ecb7bca1cb5911f",
+  "actual_gn_flags_matched": true,
+  "current_object_commands": 5183,
+  "new_gn_graph_executed": false,
+  "affected_kernel_objects_recompiled": 5,
+  "full_system_header_dependencies": true,
+  "native_contexts": 20,
+  "exact_context_recovery": 20,
+  "consumer_checks": 532,
+  "actual_v8_freeze_flags": true,
+  "main_and_shared_worker_write_faults_7": true,
+  "whole_range_rejection_preserves_rw": true,
+  "readonly_request_snapshotted_before_mutation": true,
+  "static_data_only_eligibility": true,
+  "default_single_context_qualified": true,
+  "guest_rows": [
+    {
+      "configuration": "threaded-32M-smp1",
+      "profile": "threaded",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 29,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 1,
+          "fp_invalid": 1
+        },
+        {
+          "mode": 1,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 2,
+          "fp_invalid": 2
+        },
+        {
+          "mode": 2,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 3,
+          "fp_invalid": 3
+        },
+        {
+          "mode": 3,
+          "checks": 32,
+          "contexts": 2,
+          "reaps": 2,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 5,
+          "fp_invalid": 5
+        },
+        {
+          "mode": 4,
+          "checks": 32,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 6,
+          "fp_invalid": 6
+        }
+      ],
+      "log_sha256": "54476146ba2f397bc1f117968569e9b871d78dae1dd0712a4190db681ae5eab7"
+    },
+    {
+      "configuration": "threaded-64M-smp4",
+      "profile": "threaded",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 29,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 1,
+          "fp_invalid": 1
+        },
+        {
+          "mode": 1,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 2,
+          "fp_invalid": 2
+        },
+        {
+          "mode": 2,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 3,
+          "fp_invalid": 3
+        },
+        {
+          "mode": 3,
+          "checks": 32,
+          "contexts": 2,
+          "reaps": 2,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 5,
+          "fp_invalid": 5
+        },
+        {
+          "mode": 4,
+          "checks": 32,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 6,
+          "fp_invalid": 6
+        }
+      ],
+      "log_sha256": "378ff66c0a7e2e9f11765d7c9a50762e337d00b07776166b267edc3ebad8fb06"
+    },
+    {
+      "configuration": "default-32M-smp1",
+      "profile": "default",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 29,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 1,
+          "fp_invalid": 1
+        },
+        {
+          "mode": 1,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 2,
+          "fp_invalid": 2
+        },
+        {
+          "mode": 2,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 3,
+          "fp_invalid": 3
+        },
+        {
+          "mode": 4,
+          "checks": 32,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 7577,
+          "baseline": 7577,
+          "flags_bytes": 4096,
+          "fp_init": 4,
+          "fp_invalid": 4
+        }
+      ],
+      "log_sha256": "d53533c916e9978bd0a02cb5175562f5f36e2d1ef11f21b561e6287005ca8f67"
+    },
+    {
+      "configuration": "default-64M-smp4",
+      "profile": "default",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 29,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 1,
+          "fp_invalid": 1
+        },
+        {
+          "mode": 1,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 2,
+          "fp_invalid": 2
+        },
+        {
+          "mode": 2,
+          "checks": 28,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 3,
+          "fp_invalid": 3
+        },
+        {
+          "mode": 4,
+          "checks": 32,
+          "contexts": 1,
+          "reaps": 1,
+          "free": 15761,
+          "baseline": 15761,
+          "flags_bytes": 4096,
+          "fp_init": 4,
+          "fp_invalid": 4
+        }
+      ],
+      "log_sha256": "d625a05018d00653e467c01e7b4ae584ce21a8a898996a73e120d8d482446ada"
+    }
+  ],
+  "full48_status_sha256": "730121245efb2a8d2f3fb9f78b5ece2bf1859270ee8f5f29811a15178b42acfa",
+  "full48_replayed": true,
+  "first_undefined_symbol": "exp2",
+  "full_link_diagnostics_complete": false,
+  "platform_archive_members_verified": 38,
+  "platform_archive_members_replaced": 1,
+  "prior_input_order_preserved": true,
+  "old_cache_unchanged": true,
+  "link_input_scope": "all actual linker files; exact GN/profile; complete new provider pre-M/post-MD closure",
+  "original_compilation_sources_rehashed": false,
+  "source_byte_equivalence": {
+    "changed_sources": {
+      "include/memory/process_address_space.h": {
+        "sha": "2ce07a0f6844a336c3ff0d1aa85cc76579976411f5ca8602fbf02ef296ec8da6",
+        "source": "patch/include/memory/process_address_space.h"
+      },
+      "src/memory/process_address_space.cpp": {
+        "sha": "5cac6ab9efa59c04abcda189f3c16156c370c8e3a33a4a8ac11359f02982acaf",
+        "source": "patch/src/memory/process_address_space.cpp"
+      },
+      "include/process/native_runtime.h": {
+        "sha": "7b4930a4d2d58cd4d4d8ad9dd4d49d59f48bf3931f0da0061e0f9d10f277fed4",
+        "source": "patch/include/process/native_runtime.h"
+      },
+      "src/process/native_runtime.cpp": {
+        "sha": "2da05ad6f70fd2f9cf54e541f2037a9c767c98592c9b0e2058da34eb09c9ca29",
+        "source": "patch/src/process/native_runtime.cpp"
+      },
+      "apps/native_v8_integration/overlay/src/base/platform/platform-gtos.cc": {
+        "sha": "277ceb3c229cf408816915e23ab40097833b46dd4ac414403db795276e7321d2",
+        "source": "patch/platform-gtos.cc"
+      },
+      "include/process/readonly_abi.h": {
+        "sha": "3c30d437057c17fcad09a0efc33c40d8c99cb9f008b7a133c31a65e19fffa383",
+        "source": "patch/include/process/readonly_abi.h"
+      },
+      "apps/native_v8_integration/overlay/src/base/platform/gtos-native-api/readonly_abi.h": {
+        "sha": "3c30d437057c17fcad09a0efc33c40d8c99cb9f008b7a133c31a65e19fffa383",
+        "source": "patch/include/process/readonly_abi.h"
+      }
+    },
+    "probe_files": {
+      "main.cc": "e6e5432090ae4ec5f804c967cc3a8207659a4511e536c992341fb5da2b0646a5",
+      "kernel.cpp": "0a4d243e6a577001f26bb07e4872ca7f2095c2611d971f6063e45203c7e117ee",
+      "record.h": "4370eccc98df87e1c95d5c845a95ae46c218fcd8762d59c9915a4ad359eb04a8",
+      "linker.ld": "c6081c3cfc24b581831843a6b60c667cd0b4a02bb40477457a727ab3ffafda74",
+      "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    "canonical_payload_files_verified": 1301,
+    "canonical_source_byte_equivalence_verified": true,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false
+  },
+  "maximum_native_contexts_total": 4,
+  "scheduler_cpus": 1,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "whole_call_chain_stack_bound_proven": false,
+  "public_tool_rerun": false,
+  "remote_ci": false
+}

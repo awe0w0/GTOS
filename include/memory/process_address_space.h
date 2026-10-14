@@ -88,6 +88,10 @@ namespace gtos { namespace memory {
         // R/RW commit holes as zero pages. Other permissions (including EXEC)
         // are refused: non-PAE IA32 cannot provide execute-disable protection.
         bool SetPermissions(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t protection);
+        // Tighten owned resident region-zero pages after whole-range validation.
+        // The runtime separately checks loaded data eligibility, excluding code
+        // and stacks. Positive whole pages; idempotent, no allocation or RW undo.
+        bool SetDataReadOnly(uint32_t address, uint32_t bytes);
         bool Decommit(uint32_t handle, uint32_t offset, uint32_t bytes);
         // Discard clears committed contents without changing permissions; a
         // hole anywhere in the range rejects the entire operation.

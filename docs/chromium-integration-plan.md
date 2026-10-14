@@ -786,3 +786,12 @@ Isolate、浏览器、视频和HTML5仍未验收。
 项检查、48次Join及精确资源回收通过。完整47消除这四项缺失符号，首错变为
 SetDataReadOnly，诊断仍非穷尽。详见[原生分类与整数模块](../apps/native_text_integer/README.md)。
 完整ELF、Isolate、浏览器、视频和HTML5尚未验收，生产镜像未改。
+
+
+## 2026-10-14 静态数据只读保护
+
+独立版本的原生只读ABI与OS::SetDataReadOnly已接入。真实FlagList::FreezeFlags
+客机20上下文、532项检查、整范围拒绝、共享线程PF7、自覆盖请求和精确回收通过。
+完整48消除SetDataReadOnly缺失，首错exp2，诊断未穷尽。详见
+[原生静态只读模块](../apps/native_static_readonly/README.md)。现有GN图不变，生产镜像未改；
+完整ELF、Isolate、浏览器、视频和HTML5尚未验收。

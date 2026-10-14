@@ -4,6 +4,7 @@
 
 #include "src/base/platform/gtos-clock-bridge.h"
 #include "src/base/platform/gtos-native-api/vm_abi.h"
+#include "src/base/platform/gtos-native-api/readonly_abi.h"
 #include "src/base/platform/gtos-native-services.h"
 #include "src/base/platform/time.h"
 #include "src/base/timezone-cache.h"
@@ -186,6 +187,21 @@ size_t OS::CommitPageSize() { return GTOS_VM_PAGE_BYTES; }
 bool OS::HasLazyCommits() {
   // R/RW permissions eagerly allocate real zeroed frames; reserve alone does not.
   return false;
+}
+
+void OS::SetDataReadOnly(void* address, size_t size) {
+  gtos::CurrentNativeThreadInfo();
+  const uintptr_t base = reinterpret_cast<uintptr_t>(address);
+  if (((base | size) & (GTOS_READONLY_PAGE_BYTES - 1)) != 0) {
+    gtos::UnsupportedService();
+  }
+  if (size == 0) return;
+  GtosDataReadonlyRequest request = {
+      GTOS_READONLY_ABI_VERSION, static_cast<unsigned>(base),
+      static_cast<unsigned>(size)};
+  if (NativeCall(GTOS_SYS_DATA_READONLY, &request, sizeof(request)) != 0) {
+    gtos::UnsupportedService();
+  }
 }
 
 void OS::SetRandomMmapSeed(int64_t seed) {

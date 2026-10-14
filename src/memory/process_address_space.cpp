@@ -467,6 +467,31 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
     error = ProcessMemoryOk;
     return true;
 }
+bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
+    InterruptGuard guard;
+    if (!RuntimeMutable()) return false;
+    if (!bytes || ((address | bytes) & 4095) || address < UserBase
+        || address >= UserLimit || bytes > UserLimit - address)
+        return Fail(ProcessMemoryBadRange);
+    if (bytes / 4096 > MaximumPages) return Fail(ProcessMemoryNotMapped);
+    const uint32_t end = address + bytes;
+    for (uint32_t page = address; page < end; page += 4096) {
+        const int index = FindPage(page);
+        if (index < 0 || !pages[index].present) return Fail(ProcessMemoryNotMapped);
+        if (pages[index].region) return Fail(ProcessMemoryPermission);
+    }
+    // Layout and every page were checked. No fallible operation follows.
+    for (uint32_t i = 0; i < pageCount; ++i) {
+        Page& page = pages[i];
+        if (page.address < address || page.address >= end || !page.writable) continue;
+        uint32_t& entry = ((uint32_t*)tables[page.address >> 22])[(page.address >> 12) & 1023];
+        entry &= ~Writable;
+        page.writable = false;
+        InvalidatePage(page.address);
+    }
+    error = ProcessMemoryOk;
+    return true;
+}
 void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes) {
     const uint32_t end = base + bytes;
     uint32_t index = 0;
