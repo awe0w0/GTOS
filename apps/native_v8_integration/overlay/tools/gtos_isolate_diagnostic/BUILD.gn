@@ -209,6 +209,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
     sources = [
       "//third_party/libc++/src/src/ios.instantiations.cpp",
       "//third_party/libc++/src/src/ios.cpp",
+      "//third_party/libc++/src/src/iostream.cpp",
       "//third_party/libc++/src/src/locale.cpp",
     ]
     deps = [ ":native_runtime" ]
@@ -274,6 +275,8 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "native-c-file/llvm-libc/src/stdio/setvbuf.cpp",
       "native-c-file/llvm-libc/src/stdio/generic/ungetc.cpp",
       "native-c-file/llvm-libc/src/stdio/generic/fgetc.cpp",
+      "//third_party/llvm-libc/src/src/stdio/generic/getc.cpp",
+      "runtime/standard-stream-file.cc",
       "native-c-file/llvm-libc/src/stdio/generic/fputc.cpp",
       "native-c-file/llvm-libc/src/stdio/generic/fgets.cpp",
       "native-c-file/llvm-libc/src/stdio/generic/fputs.cpp",

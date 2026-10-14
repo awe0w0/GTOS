@@ -1,0 +1,212 @@
+{
+  "scope": "Real pinned libc++ standard streams and LLVM File UTF8; bounded 1/4 native contexts on BSP; not full Isolate or browser",
+  "qualified_evidence_sha256": {
+    "publish-sources-01.json": "0422ec3c58226bceb3bc10ece4ab95d37f84c2a32b98777f7a4ca2318d898059",
+    "module-README.md": "c2ca5aa6e34da508727cb081464ff2e7e275bd35b11b0a5cd1bfce05fe3c24ec",
+    "module-self-review.md": "3e745d7541221a4e3384a8f713e0101c750ef0c53443d79b4afc00ed2bf61fdd",
+    "gn-05/status.json": "c1e302ea0d02b17374fbad2d89d6c1f18f8850ca8fd43df0f0ca0d6001be2299",
+    "compile-03/status.json": "ddb5929da8f3ac2a36c2711e36a9febd2e1e373de67692042bb1a1703b898c4b",
+    "compile-thread-05/status.json": "677b09eaffff215d9c9a233d82a85db6b12991b963fbba8dcf4b550f67b083f4",
+    "compile-thread-extra-01/status.json": "267ebb466bbccc1ca30623b800def983074091b16030c67b15e85c4dd5745cff",
+    "compile-header-final-01/status.json": "fab535cb859e0011fc21ce13c56653b24659d50d27c833df8d6ea7ab3a06ea9c",
+    "guest-thread-02/status.json": "7e477d25b9c7a98a569476c7eb6a397b39dc22c3fb2dfb762f91c990162a1f76",
+    "guest-single-02/status.json": "c48f6ac3c76372d3a48f1fff87c69b70760c44a3dae43f14d81f8d0d2a0c3bee",
+    "guest-sync-02/status.json": "38d99ecbe31d5dcd5ee1cd98027f3546f4871b0f919adfd6294e75df6fbaa32f",
+    "guest-once-02/status.json": "ac33e7a415057cceb8448b45afce1ce6a3001544f47e79e23678e2997b84e8cc",
+    "full-link-53/status.json": "87e5a0b993671863029156904550e2284384a9e6a99a050b1cec83e5f022dd56",
+    "header-closure-01.json": "42540b6f9967cf151468dc0dd2988cb046ccca74d53f2135649b54f8b4990301",
+    "source-provenance.json": "232cfccbab8f664ec2048a6c0b4111290d64b084202c3a8758efc86ca3910881",
+    "file-source-provenance.json": "0cb08f296b9afea5283a57a9cd97bff0f0c6d0a1fc5b45d22902b1e25cc845f4",
+    "utf8-source-provenance.json": "5c313c0fbc3fb93c7950a845f16250f4a02c3d85b43abc3226ed252dc27dffe4",
+    "thread-source-provenance.json": "d129a520b24c12527829080173b58d876db21ae9de3a918f1ecc40170c6dd780",
+    "thread-extra-source-provenance.json": "451b16475edbc441bdb896558a07b538f1161cbae17dd18c10d9f4addac4045b",
+    "header-final-source-provenance.json": "dc7fb3dd0c26af88b5f0ef36acdb871645a7577e7aa7146fb50bdd38e6b89bb3",
+    "prefix-public-baseline-01.json": "bab79760172da8f12fe0ba4ce9a299dc07d262fa64ef1199a91dfba197af6ffb",
+    "module-prefix-README.md": "cffa7f5b64ced6b374b4bac6a3f0085de8590a00c83e34a2bdf1f30f84d9f4c2",
+    "module-prefix-self-review.md": "bd12d084e25ec0d1ad8e3d866385c56788ab5c0ce92520404816e35a3b746878",
+    "patch/character_converter-v2.h": "a73e506dd93d79c372885a2780aebba8668fb250a1aa50dc7012bda2e82be388",
+    "gn-06/status.json": "c4414b65c451795c482cc25310bafe1720291dba5e21e7e387cd77250fc3adcb",
+    "compile-prefix-02/status.json": "c4476aca4f9e823b12e5bd32bf0b869d4110895df185ffe8c49aa4cde67ddd23",
+    "prefix-source-provenance.json": "775faf698a94249f9e67697fdcf7a2fde52bfb3b32db96f74ea36c4a51d14b8d",
+    "consumer-prefix-negative-01/status.json": "a23bcb1c2ad05743c02e82625bb15fd1004c8874e4cda6631b949fcb5878f5ef",
+    "guest-prefix-negative-03/status.json": "687e9d77c3157c7192d27857ba7ce0b693f8b8fbb1d814aaa093b1a39aa51e11",
+    "consumer-prefix-single-01/status.json": "8ace0af23f79b67c7e3606f59051623a697a74f019ca1f856cc605a95e0a821f",
+    "consumer-prefix-thread-01/status.json": "e5edb0e4434be9f04f7de782bc3838e548c49451a739437c5661c73e33bb07c7",
+    "guest-prefix-single-01/status.json": "d0a1a3ed1faa422b8b10abfb8b91279eb3fbd8f64e72c234d3c774bc04477a22",
+    "guest-prefix-thread-01/status.json": "67bf84db80e849ba6e38a15a035fceb79a64cc554fae2742e9ae53cda9041d87",
+    "full-link-54/status.json": "071f277d500899aff24d2339f0f45e29105e249dff05022809f77bc15916f896",
+    "input-substitution-before-iostream.json": "40eaadcc3db68bb1b5c2c19d666c8da3599aa61ea4f36dd87f50bb4c6e576d6f"
+  },
+  "published_source_sha256": [
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/BUILD.gn",
+      "sha256": "c8bf4189ee54406ec9610a10643618d9cf65e37cabb1e759b232dbf7b37a6a59",
+      "source": "patch/BUILD-v2.gn"
+    },
+    {
+      "destination": "overlay/src/base/platform/gtos-native-services.h",
+      "sha256": "116d34133d4b3809db535b97e28f1a413c4a07b9a09ffff02813c3665292294b",
+      "source": "patch/thread-v1/gtos-native-services.h"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/threads/gtos_mutex.h",
+      "sha256": "0ebadcbebf9e2d97908fa70d53da4dbd001c16564ef7e1a45bd999a6e527d32e",
+      "source": "patch/thread-v1/gtos_mutex.h"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/runtime/thread-core.cc",
+      "sha256": "dc3e78e94d1c5971809749ef88c0f713ec79f717733ea0e67bd22b1e04c70879",
+      "source": "patch/thread-v1/thread-core.cc"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/runtime/call_once.cc",
+      "sha256": "8eccd7255ed6ce90a5428ff51dd29dc810d14ce279b415ce8f47fdf9bb22f8cf",
+      "source": "patch/thread-v1/call_once.cc"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc",
+      "sha256": "7512bf2745e4ff4a145539aa75b44377a2482192dd476f68509a7c62baaf08fa",
+      "source": "patch/thread-v1/condition-variable-core.cc"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.h",
+      "sha256": "347be2e0533ef631cacad1e58a141d00caa89153c2aeb80a34dad6fa35ca4e77",
+      "source": "patch/thread-v1/thread-context.h"
+    },
+    {
+      "destination": "overlay/third_party/llvm-libc/src/src/__support/wchar/character_converter.h",
+      "sha256": "a73e506dd93d79c372885a2780aebba8668fb250a1aa50dc7012bda2e82be388",
+      "source": "patch/character_converter-v2.h"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/wchar/character_converter.h",
+      "sha256": "a73e506dd93d79c372885a2780aebba8668fb250a1aa50dc7012bda2e82be388",
+      "source": "patch/character_converter-v2.h"
+    },
+    {
+      "destination": "overlay/tools/gtos_isolate_diagnostic/runtime/standard-stream-file.cc",
+      "sha256": "783296e5ba0cf4e1291ecf1c0f6906f0e2045a0fbdfbabfe9ca4302826286a40",
+      "source": "patch/runtime/standard-stream-file.cc"
+    }
+  ],
+  "published_probe_sha256": [
+    {
+      "destination": "probe/main.cc",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-thread-v2/main.cc",
+      "sha256": "199ba21b7660269e057a7367b2a85ede94d49c370d19e9ebe0ed243f369ead87"
+    },
+    {
+      "destination": "probe/kernel.cpp",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-thread-v2/kernel.cpp",
+      "sha256": "a3fe00c5cfdcf7d9aa9deb6bd934b8fb223e0bea54f26d180e290847d642138b"
+    },
+    {
+      "destination": "probe/kernel_common.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-thread-v2/kernel_common.h",
+      "sha256": "88d2936f85bbe4a1572297a48f59e4b1ac45437bef15014e6c9375f381108c17"
+    },
+    {
+      "destination": "probe/fixture-helpers.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-thread-v2/fixture-helpers.h",
+      "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    {
+      "destination": "probe/record.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-thread-v2/record.h",
+      "sha256": "b29ffe25b1c6feee678a96c0cf813f002b31a1366a5d019ff7fe0f8f69b57bd8"
+    },
+    {
+      "destination": "probe/linker.ld",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-thread-v2/linker.ld",
+      "sha256": "afb326feb6a1453f8b0d17f7743c83e816d9dec8102a2a746e36e3e206b61569"
+    },
+    {
+      "destination": "probe/entry-symbols.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/guest-prefix-thread-01/entry-symbols.h",
+      "sha256": "7d3fd8c7c0517360bdf3cae0f29d4df8926b242640dd2360d0998543209f8b5d"
+    },
+    {
+      "destination": "probe-single/main.cc",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-v9/main.cc",
+      "sha256": "af7e8dd42f2a9ff006bf5391bb55a2d454a30e0110d15e5d640b36e1cbad9d9c"
+    },
+    {
+      "destination": "probe-single/kernel.cpp",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-v9/kernel.cpp",
+      "sha256": "f6c7abbcedd989568794f9929b6698ef02172f8a29e8e00574e6004d1e79416d"
+    },
+    {
+      "destination": "probe-single/kernel_common.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-v9/kernel_common.h",
+      "sha256": "e75c263df2faa25f10d03ffe6b564aca453d716c4d8fd0dc3cf3f9a46f8e4090"
+    },
+    {
+      "destination": "probe-single/fixture-helpers.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-v9/fixture-helpers.h",
+      "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    {
+      "destination": "probe-single/record.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-v9/record.h",
+      "sha256": "9cc854dc55657126f1093c17928834c6cdb5550b31a85f629f5084fccd3e70f6"
+    },
+    {
+      "destination": "probe-single/linker.ld",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/probe-v9/linker.ld",
+      "sha256": "afb326feb6a1453f8b0d17f7743c83e816d9dec8102a2a746e36e3e206b61569"
+    },
+    {
+      "destination": "probe-single/entry-symbols.h",
+      "source": "@WORKSPACE@/artifacts/native-iostream-20261014-a/guest-prefix-single-01/entry-symbols.h",
+      "sha256": "1c9c8f1aefb73f73a35ec20cdf9ad817707297d3827ac1953e5832a0fbb032bc"
+    }
+  ],
+  "standard_stream_processes": 16,
+  "threaded_native_contexts": 32,
+  "thread_joins": 24,
+  "thread_process_reaps": 8,
+  "single_context_reaps": 8,
+  "sync_processes": 12,
+  "sync_checks": 648,
+  "sync_reaps": 14,
+  "once_processes": 16,
+  "once_reaps": 18,
+  "sync_once_before_final_formatter_rebuild": true,
+  "final_formatter_standard_stream_regression_pass": true,
+  "conservative_modified_header_candidates": 62,
+  "computed_include_selections": 2,
+  "current_gn_object_commands": 5187,
+  "prior_gn_object_commands_preserved": 5184,
+  "complete_link_status_sha256": "071f277d500899aff24d2339f0f45e29105e249dff05022809f77bc15916f896",
+  "complete_link_exit_code": 1,
+  "first_undefined_symbol": "v8::base::OS::GetLastError()",
+  "full_link_diagnostics_complete": false,
+  "exact_archive_members": 38,
+  "archive_members_replaced": 3,
+  "complete_link_bound_inputs": 7724,
+  "source_byte_equivalence_verified": true,
+  "payload_files": 1303,
+  "prior_input_order_preserved": true,
+  "old_cache_unchanged": true,
+  "kernel_isa_audit_pass": true,
+  "user_smp_supported": false,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "javascript_guest_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "remote_ci": false,
+  "sync_once_before_final_prefix_rebuild": true,
+  "final_prefix_standard_stream_regression_pass": true,
+  "incremental_invalid_prefix_cases": 8,
+  "incremental_valid_scalar_cases": 6,
+  "old_provider_negative_configurations": 2,
+  "prefix_dependency_audits": 17,
+  "prefix_header_consumers_recompiled": 14,
+  "prefix_source_provenance_inputs": 1273,
+  "published_probe_files": 14
+}

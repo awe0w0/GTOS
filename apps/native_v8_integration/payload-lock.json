@@ -127,9 +127,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/src/base/platform/gtos-native-services.h": {
-      "sha256": "af6dc0beb442dc46508037910fa6c3cfedca637df2684da9e5670b2b6aca1ac5",
-      "bytes": 1700,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "bytes": 2088,
+      "sha256": "116d34133d4b3809db535b97e28f1a413c4a07b9a09ffff02813c3665292294b",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/src/base/platform/gtos-raw-io.h": {
       "sha256": "277104ba4eed5131c2e1af906b5dae06cf7c068ebd3d9ff534929cfab9333460",
@@ -337,9 +337,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/thread-core.cc": {
-      "sha256": "48d499973a855abc0a9804a58ac3131ce90793cca86cbc2b9d691bd1bb749f96",
-      "bytes": 4947,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "bytes": 6189,
+      "sha256": "dc3e78e94d1c5971809749ef88c0f713ec79f717733ea0e67bd22b1e04c70879",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/thread-exit.cc": {
       "sha256": "18362de2d541e60a690cde541d8c8f7a7eb08055632da3bfebd2525cf8af1476",
@@ -5604,8 +5604,9 @@
       "bytes": 759
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/threads/gtos_mutex.h": {
-      "sha256": "d0a0924dfc8f7320d34f9171c8417c6ed45847a0b0c50f5223a2af5911fcd7f9",
-      "bytes": 1618
+      "bytes": 2206,
+      "sha256": "0ebadcbebf9e2d97908fa70d53da4dbd001c16564ef7e1a45bd999a6e527d32e",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/threads/identifier.h": {
       "sha256": "6706b6c6abb80e18c76fbf014b3e381c4d116387f5845e28e3ee974cea97603c",
@@ -5688,8 +5689,9 @@
       "bytes": 1428
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/wchar/character_converter.h": {
-      "sha256": "d45a8a8a5d445f5709ed3cd833bb328d888c2063a56a100f8c0bab3c08796a24",
-      "bytes": 7193
+      "sha256": "a73e506dd93d79c372885a2780aebba8668fb250a1aa50dc7012bda2e82be388",
+      "origin": "Qualified GTOS UTF8 conversion with immediate invalid-prefix rejection and scalar bounds",
+      "bytes": 8194
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/wchar/mbstate.h": {
       "sha256": "3d68e27a00033a2a90d054b995e6ea8a7a6b53218328d743ed3b55f3a57715c6",
@@ -5952,9 +5954,9 @@
       "bytes": 685
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/call_once.cc": {
-      "sha256": "4b4cebfa8af40f76a2a6fe31dc6886d4c76890e11e1611410ed07173714744a3",
-      "bytes": 3453,
-      "origin": "Byte-exact copy of qualified pinned once adaptation; native-owned target source, upstream host source retained"
+      "bytes": 3821,
+      "sha256": "8eccd7255ed6ce90a5428ff51dd29dc810d14ce279b415ce8f47fdf9bb22f8cf",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-alloc-printf/src/__support/printf_core/vasprintf_internal.h": {
       "sha256": "2dbd15d103c73c650076cd3403f98c44d9ecbc06adfb22e4f1a7070efa3d80d8",
@@ -5977,8 +5979,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "b75613d350b400d42259192f965ee6b25dd4c439f8e520f64b7d5777cd99c5b3",
-      "bytes": 14786
+      "sha256": "42501038a2079edc0935ee44e927bb1d49f38e9da6dacd12cd105803f93b4411",
+      "bytes": 15903
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -5989,8 +5991,9 @@
       "bytes": 1275
     },
     "overlay/third_party/llvm-libc/src/src/__support/wchar/character_converter.h": {
-      "sha256": "5a6ceef9fb0cca6daff0a18b106b161bbe4a83a5b0fc63cdeb71675e61528f8e",
-      "bytes": 7978
+      "sha256": "a73e506dd93d79c372885a2780aebba8668fb250a1aa50dc7012bda2e82be388",
+      "origin": "Qualified GTOS UTF8 conversion with immediate invalid-prefix rejection and scalar bounds",
+      "bytes": 8194
     },
     "overlay/third_party/llvm-libc/src/src/__support/wchar/mbsnrtowcs.h": {
       "sha256": "5665b9a075068a1027316c2596721504ea53089c7fc86b5ddb63410a9bd8a0a9",
@@ -6099,14 +6102,14 @@
       "origin": "Qualified native GTOS LowLevelAlloc page backend and exact process ABI declarations"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc": {
-      "bytes": 3402,
-      "origin": "Pinned libc++ synchronization integration and real GTOS ABI1 single-user-task wait provider; native guest qualified",
-      "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
+      "bytes": 5911,
+      "sha256": "7512bf2745e4ff4a145539aa75b44377a2482192dd476f68509a7c62baaf08fa",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "8e1f182170f5ee23b8043100ed4bcf8b58798df94e3eb61acf8c56e57f575bf1",
-      "bytes": 22347,
-      "origin": "fixed LLVM exp2 and bounded GTOS IA32 tiny-input adaptation;real native guest qualified"
+      "bytes": 22503,
+      "sha256": "c8bf4189ee54406ec9610a10643618d9cf65e37cabb1e759b232dbf7b37a6a59",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
@@ -6169,9 +6172,9 @@
       "origin": "GTOS actual per-thread TLS/errno/cleanup; native_thread_tls qualified; V8 Thread and other shared services pending"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.h": {
-      "sha256": "cd025564aa3a372f5eeb4e31055f5111eb3552343ff92b7c850d8e3c69910dd4",
       "bytes": 625,
-      "origin": "GTOS actual per-thread TLS/errno/cleanup; native_thread_tls qualified; V8 Thread and other shared services pending"
+      "sha256": "347be2e0533ef631cacad1e58a141d00caa89153c2aeb80a34dad6fa35ca4e77",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/sdk/process/thread_abi.h": {
       "sha256": "39a95b2821530a3afd78812558b10a91f61c43b047f2afcfe62d60e90c6830df",
@@ -6197,11 +6200,16 @@
       "sha256": "671bce4808c46ed14c9ca0c473da51ae86a76a1f1b452eaad179794315132c52",
       "bytes": 16140,
       "origin": "fixed LLVM exp2 and bounded GTOS IA32 tiny-input adaptation;real native guest qualified"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/standard-stream-file.cc": {
+      "bytes": 1141,
+      "sha256": "783296e5ba0cf4e1291ecf1c0f6906f0e2045a0fbdfbabfe9ca4302826286a40",
+      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     }
   },
-  "overlay_files": 429,
+  "overlay_files": 430,
   "sdk_files": 430,
-  "total_bytes": 3391709,
+  "total_bytes": 3400435,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

@@ -94,7 +94,7 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
     }
     // UTF-8 char has 2 through 4 bytes total
     else if (num_ones >= 2 && num_ones <= 4) {
-      // C0/C1 start overlong sequences; F5-F7 exceed the Unicode range.
+      // Impossible prefixes are invalid even when no later byte is available.
       if (utf8_byte < 0xC2 || utf8_byte > 0xF4) {
         clear();
         return EILSEQ;
@@ -120,7 +120,6 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
   // Any subsequent push
   // Adding 6 more bits so need to left shift
   if (num_ones == 1 && !isFull()) {
-    // Reject impossible prefixes immediately, including incomplete input.
     if (state->bytes_stored == 1 &&
         ((state->total_bytes == 3 && state->partial == 0 && utf8_byte < 0xA0) ||
          (state->total_bytes == 3 && state->partial == 0xD && utf8_byte >= 0xA0) ||
@@ -133,6 +132,15 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_stored++;
+    if (isFull()) {
+      constexpr char32_t MIN_VALUE_PER_UTF8_LEN[] = {0, 0x80, 0x800, 0x10000};
+      if (state->partial < MIN_VALUE_PER_UTF8_LEN[state->total_bytes - 1] ||
+          state->partial > 0x10ffff ||
+          (state->partial >= 0xd800 && state->partial <= 0xdfff)) {
+        clear();
+        return EILSEQ;
+      }
+    }
     return 0;
   }
 
@@ -146,11 +154,11 @@ LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
   if (!isEmpty())
     return -1;
 
-  // Surrogate values are not Unicode scalar values.
-  if (utf32 >= 0xD800 && utf32 <= 0xDFFF) {
+  if (utf32 >= 0xd800 && utf32 <= 0xdfff) {
     clear();
     return EILSEQ;
   }
+
   state->partial = utf32;
 
   // determine number of utf-8 bytes needed to represent this utf32 value

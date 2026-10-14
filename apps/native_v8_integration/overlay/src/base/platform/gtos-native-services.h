@@ -25,12 +25,18 @@ inline GtosProcessInfoResult CurrentProcessInfo() {
                  "c"(sizeof(request))
                : "memory", "cc");
   if (call != 0 || result.version != GTOS_PROCESS_INFO_ABI_VERSION ||
-      result.process_id == 0 || result.thread_id != result.process_id ||
+      result.process_id == 0 || result.thread_id == 0 ||
+      result.process_id > 0x7fffffffU || result.thread_id > 0x7fffffffU ||
+      result.user_begin != 0x40000000U || result.user_end != 0xc0000000U ||
       result.stack_begin >= result.stack_end ||
       result.user_begin > result.stack_begin ||
       result.stack_end > result.user_end || result.user_begin >= result.user_end ||
-      result.page_bytes != 4096 || result.maximum_pages == 0 ||
-      result.maximum_regions == 0 || result.maximum_parallel_threads != 1 ||
+      result.stack_end - result.stack_begin < 8192 ||
+      ((result.stack_begin | result.stack_end) & 4095) != 0 ||
+      result.page_bytes != 4096 || result.maximum_pages < 2 ||
+      result.maximum_regions == 0 ||
+      (result.maximum_parallel_threads != 1 && result.maximum_parallel_threads != 4) ||
+      (result.maximum_parallel_threads == 1 && result.thread_id != result.process_id) ||
       result.scheduler_cpu_count != 1) {
     UnsupportedService();
   }

@@ -11,7 +11,7 @@ struct NativeThreadState {
   bool cleaning;
 };
 // No allocation or TLS access in self-query, registration or errno lookup.
-// Default single-task capability checks in gtos-native-services.h remain.
+// Self-query accepts only the kernel's one- or four-context BSP profiles.
 GtosProcessInfoResult CurrentNativeThreadInfo();
 NativeThreadState& CurrentNativeThreadState();
 void ReleaseNativeThreadState(NativeThreadState&);

@@ -94,6 +94,11 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
     }
     // UTF-8 char has 2 through 4 bytes total
     else if (num_ones >= 2 && num_ones <= 4) {
+      // Impossible prefixes are invalid even when no later byte is available.
+      if (utf8_byte < 0xC2 || utf8_byte > 0xF4) {
+        clear();
+        return EILSEQ;
+      }
       /* Since the format is 110xxxxx, 1110xxxx, and 11110xxx for 2, 3, and 4,
       we will make the base mask with 7 ones and right shift it as necessary. */
       constexpr size_t SIGNIFICANT_BITS = 7;
@@ -115,10 +120,27 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
   // Any subsequent push
   // Adding 6 more bits so need to left shift
   if (num_ones == 1 && !isFull()) {
+    if (state->bytes_stored == 1 &&
+        ((state->total_bytes == 3 && state->partial == 0 && utf8_byte < 0xA0) ||
+         (state->total_bytes == 3 && state->partial == 0xD && utf8_byte >= 0xA0) ||
+         (state->total_bytes == 4 && state->partial == 0 && utf8_byte < 0x90) ||
+         (state->total_bytes == 4 && state->partial == 4 && utf8_byte > 0x8F))) {
+      clear();
+      return EILSEQ;
+    }
     char32_t byte = utf8_byte & MASK_ENCODED_BITS;
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_stored++;
+    if (isFull()) {
+      constexpr char32_t MIN_VALUE_PER_UTF8_LEN[] = {0, 0x80, 0x800, 0x10000};
+      if (state->partial < MIN_VALUE_PER_UTF8_LEN[state->total_bytes - 1] ||
+          state->partial > 0x10ffff ||
+          (state->partial >= 0xd800 && state->partial <= 0xdfff)) {
+        clear();
+        return EILSEQ;
+      }
+    }
     return 0;
   }
 
@@ -131,6 +153,11 @@ LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
   // we can't be partially through a conversion when pushing a utf32 value
   if (!isEmpty())
     return -1;
+
+  if (utf32 >= 0xd800 && utf32 <= 0xdfff) {
+    clear();
+    return EILSEQ;
+  }
 
   state->partial = utf32;
 

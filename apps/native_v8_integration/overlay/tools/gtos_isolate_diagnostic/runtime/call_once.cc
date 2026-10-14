@@ -40,19 +40,27 @@ static constinit __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
 void __call_once(volatile once_flag::_State_type& flag, void* arg, void (*func)(void*)) {
 #if defined(__GTOS__)
 
-  // The native ABI reports one user task in this private address space.
-  // Keep the global thread ABI unchanged; shared-thread waits are unsupported.
-  v8::base::gtos::CurrentProcessInfo();
-  const auto state = __atomic_load_n(&flag, __ATOMIC_ACQUIRE);
-  if (state == once_flag::_Complete)
-    return;
-  if (state != once_flag::_Unset || func == nullptr)
-    v8::base::gtos::UnsupportedService();
+  // A positive signed thread ID marks the executing owner. It cannot collide
+  // with _Unset or _Complete and requires no TLS allocation during startup.
+  const auto info = v8::base::gtos::CurrentProcessInfo();
+  const auto owner = static_cast<once_flag::_State_type>(info.thread_id);
+  for (;;) {
+    const auto state = __atomic_load_n(&flag, __ATOMIC_ACQUIRE);
+    if (state == once_flag::_Complete)
+      return;
+    if (func == nullptr || state == owner || state > 0x7fffffffUL ||
+        (info.maximum_parallel_threads == 1 && state != once_flag::_Unset))
+      v8::base::gtos::UnsupportedService();
+    auto expected = once_flag::_Unset;
+    if (__atomic_compare_exchange_n(&flag, &expected, owner, false,
+                                     __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+      break;
+    v8::base::gtos::Yield();
+  }
 
   auto guard = std::__make_exception_guard([&flag] {
     __atomic_store_n(&flag, once_flag::_Unset, __ATOMIC_RELEASE);
   });
-  __atomic_store_n(&flag, once_flag::_Pending, __ATOMIC_RELAXED);
   // No lock is held across the callback, so nesting a different flag works.
   func(arg);
   __atomic_store_n(&flag, once_flag::_Complete, __ATOMIC_RELEASE);
