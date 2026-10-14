@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-14 01:14:40 UTC",
-  "scope": "完整44首错仍为V8 Thread；有界线程生命周期、共享堆、每线程TLS/errno/析构及默认FOpen回归已验收，共享同步与guard及V8线程桥接待实现，完整45未重放，浏览器/视频/HTML5未验收。",
+  "recorded_utc": "2026-10-14 02:26:18 UTC",
+  "scope": "真实V8 Thread/Semaphore/key桥接已验收76上下文；完整45首错为CreateTimezoneCache，完整ELF/Isolate/浏览器/视频/HTML5尚未验收。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -31,7 +31,7 @@
   "complete_build_pass": false,
   "link_pass": false,
   "full_elf_exists": false,
-  "first_build_blocker": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
+  "first_build_blocker": "v8::base::OS::CreateTimezoneCache()",
   "other_observed_failures": [
     "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: floor",
@@ -504,7 +504,7 @@
     ]
   },
   "previous_complete_attempt": "@WORKSPACE@/artifacts/native-cxa-virtual-20261014-a/full-link-43/status.json",
-  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-fopen-20261014-a/full-link-44/status.json",
+  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-v8-thread-20261014-a/full-link-45-02/status.json",
   "platform_adaptation_evidence": {
     "dynamic_elf": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-01/status.json",
@@ -582,7 +582,7 @@
     "published_diagnostic_implementation": true,
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
-  "next_work_package": "实际共享mutex/condvar/call_once/guard，再接入固定V8 Thread/Semaphore并重放完整45；保留限制直到完整真实调用链验收",
+  "next_work_package": "检查固定TimezoneCache契约及GTOS真实时钟/时区政策，完成首错的真实服务，再重放完整目标；保留其他单任务限制直到调用链验收",
   "retained_complete_attempts": [
     {
       "name": "attempt-06",
@@ -1200,7 +1200,7 @@
       "sha256": "ff1594bf604c1b024a8b547e0bdc1a037c1f4069a9d50ee47e0e84318d08521d"
     }
   },
-  "previous_first_build_blocker": "v8::base::OS::FOpen(char const*, char const*)",
+  "previous_first_build_blocker": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
   "zlib_filestore_qualification": {
     "canonical_filestore_adopted": true,
     "public_replays": [
@@ -2332,7 +2332,7 @@
     }
   },
   "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v69.json",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v71.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -3640,5 +3640,226 @@
     "public_tool_rerun": false,
     "remote_ci": false,
     "stock_cold_readback_performed": false
-  }
+  },
+  "native_v8_thread": {
+    "scope": "real pinned IA32 V8 Thread/Semaphore/per-thread key; bounded BSP contexts",
+    "qualified_runs": {
+      "compile-01": "2fb0c5df87c089a3cf2864335cd6c72384daf46dadf44869e95f2e094a709992",
+      "consumer-05": "274780290626d237285e1d59fe086200fe0fd36a8ba786e691b4ca653718ba79",
+      "guest-02": "2172f9d68866f781e75f289e510af17b5f82db7db100fa7d08201ecf3b464d25",
+      "fopen-link-01": "9b82cbe5dbb6f3c05ac52782a9065fc232111926cbe2bfc2cd3ab77360189b98"
+    },
+    "gn_status_sha256": "de9e3daa7d4a9151918a81f913f07001d428869cc8a7e65fcb860d8b2b8f01cd",
+    "native_contexts": 76,
+    "exact_context_recovery": 76,
+    "consumer_checks": 79224,
+    "normal_worker_joins": 48,
+    "default_stack_bytes": 65536,
+    "explicit_worker_stack_bytes": 8192,
+    "default_capability_start_failure_reclaimed": true,
+    "key_delete_reuse_generation_across_live_threads": true,
+    "wrong_storage_negative_controls": [
+      {
+        "variant": "shared-errno",
+        "rejected": true,
+        "log_sha256": "c23ac78f0a36b68706ec6fa409bea83da5b4a45071dae5973e128172691cc864",
+        "failure_lines": [
+          " error_line=00000059",
+          "FAILED THREAD TLS consumer assertions",
+          "NATIVE THREAD TLS FAIL"
+        ]
+      },
+      {
+        "variant": "shared-tls",
+        "rejected": true,
+        "log_sha256": "4660a0a3921c3c4538c46e82811d9f61d93ef6ab5f7918a9e04e8573eb5152d4",
+        "failure_lines": [
+          " error_line=0000005A",
+          "FAILED THREAD TLS consumer assertions",
+          "NATIVE THREAD TLS FAIL"
+        ]
+      }
+    ],
+    "guest_rows": [
+      {
+        "configuration": "after-32M-smp1",
+        "rows": [
+          {
+            "mode": 0,
+            "checks": 28394,
+            "contexts": 25,
+            "joins": 24,
+            "reaps": 1,
+            "free": 7556,
+            "baseline": 7556,
+            "fp_init": 25,
+            "fp_invalid": 25
+          },
+          {
+            "mode": 1,
+            "checks": 3731,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 7556,
+            "baseline": 7556,
+            "fp_init": 29,
+            "fp_invalid": 29
+          },
+          {
+            "mode": 2,
+            "checks": 3731,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 7556,
+            "baseline": 7556,
+            "fp_init": 33,
+            "fp_invalid": 33
+          },
+          {
+            "mode": 3,
+            "checks": 3731,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 7556,
+            "baseline": 7556,
+            "fp_init": 37,
+            "fp_invalid": 37
+          }
+        ],
+        "log_sha256": "525783fd3d7e49d39fe344a56b696c3b423de20582967569668132720d5683bd"
+      },
+      {
+        "configuration": "after-64M-smp4",
+        "rows": [
+          {
+            "mode": 0,
+            "checks": 28394,
+            "contexts": 25,
+            "joins": 24,
+            "reaps": 1,
+            "free": 15740,
+            "baseline": 15740,
+            "fp_init": 25,
+            "fp_invalid": 25
+          },
+          {
+            "mode": 1,
+            "checks": 3731,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 15740,
+            "baseline": 15740,
+            "fp_init": 29,
+            "fp_invalid": 29
+          },
+          {
+            "mode": 2,
+            "checks": 3731,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 15740,
+            "baseline": 15740,
+            "fp_init": 33,
+            "fp_invalid": 33
+          },
+          {
+            "mode": 3,
+            "checks": 3731,
+            "contexts": 4,
+            "joins": 0,
+            "reaps": 4,
+            "free": 15740,
+            "baseline": 15740,
+            "fp_init": 37,
+            "fp_invalid": 37
+          }
+        ],
+        "log_sha256": "d959896d3479fa15bda16d90388d7f37f20b1391cd4bd65b04753998cf021ade"
+      }
+    ],
+    "default_guest_rows": [
+      {
+        "configuration": "default-32M-smp1",
+        "checks": 25,
+        "free": 7557,
+        "contexts": 1,
+        "exact_reaps": 1,
+        "log_sha256": "ae77d5905f6379893727d1f7d61aece8b2c675b1b8c695283f300ae4084da409"
+      },
+      {
+        "configuration": "default-64M-smp4",
+        "checks": 25,
+        "free": 15741,
+        "contexts": 1,
+        "exact_reaps": 1,
+        "log_sha256": "ba0de14d8c3926b7db9efc8cfc8a506d4e3bf60ee52afa646692a772900374b1"
+      }
+    ],
+    "actual_gn_flags_matched": true,
+    "preserved_prior_object_commands": 5177,
+    "new_runtime_objects": 2,
+    "full45_status_sha256": "8784461e232ead436d90bb33693bb3d742db6fdfd9c3dcc141c7672232717b1a",
+    "full45_replayed": true,
+    "first_undefined_symbol": "v8::base::OS::CreateTimezoneCache()",
+    "full_link_diagnostics_complete": false,
+    "archive_members_verified": 38,
+    "archive_members_replaced": 1,
+    "old_cache_unchanged": true,
+    "default_fopen_elf_byte_identical_to_accepted_guest": true,
+    "new_fopen_guest_run": false,
+    "default_fopen_prior_tasks": 8,
+    "default_fopen_prior_exact_reaps": 8,
+    "source_byte_equivalence": {
+      "changed_sources": {
+        "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
+          "sha": "58d350ec4c2072daff0c4230d87ce0b7fc6e23219b1676ea4295d9a95a86a324",
+          "source": "patch/BUILD.gn"
+        },
+        "overlay/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc": {
+          "sha": "2d9fc70c28f00c493ba99c685099e3f96b3a6cf0f5749c1fcaa88f82f7df1f25",
+          "source": "patch/runtime/gtos-thread.cc"
+        },
+        "overlay/tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc": {
+          "sha": "8520340537938a744fcee6c0e8b7127ca0012ba8e26b43d73fb29171d109121d",
+          "source": "patch/runtime/gtos-semaphore.cc"
+        },
+        "overlay/src/base/platform/platform-gtos.cc": {
+          "sha": "232c66f78e4d06e6a35e54c41277b7b3e330470bdfb5fa0599ed9266596726e8",
+          "source": "patch/platform/platform-gtos.cc"
+        }
+      },
+      "probe_files": {
+        "main.cc": "d1803ef3695f03b3b166a98dfa697cbdd7cdf2452ab96d9551124a079b190722",
+        "kernel.cpp": "12201840519e9a5429395e60a80eea325a062c967209978734be71fcac1bd6f3",
+        "record.h": "8c2df6a2736739359dd44815e19f0b096d720b497bfb2f613ca0ed084a0377df",
+        "linker.ld": "9f57650485a5a26dd4463471b58c14213467150765cc1540fdb73722aa6e9650",
+        "fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+        "shared-errno-control.cc": "fc71d3af991795dc1d7414244a09871648552a49df9f1855742a0006d2e6e6bc",
+        "shared-tls-control.cc": "c309c616b49bc805a477f9e6fd693da313f1c2dc212d8e812570bf4367fae9d4"
+      },
+      "canonical_payload_files_verified": 1300,
+      "canonical_source_byte_equivalence_verified": true,
+      "canonical_gn_reexecuted": false,
+      "canonical_guest_rerun": false
+    },
+    "maximum_native_contexts_total": 4,
+    "scheduler_cpus": 1,
+    "only_default_priority_supported": true,
+    "v8_thread_bridge_qualified": true,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "production_image_changed": false,
+    "whole_call_chain_stack_bound_proven": false,
+    "public_tool_rerun": false,
+    "remote_ci": false
+  },
+  "full45_diagnostics_complete": false
 }

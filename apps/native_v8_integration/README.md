@@ -182,3 +182,12 @@ FILE取消/故障走实际原生通路。旧remove清理依赖失败保留，不
 实际加入。源码与1298文件包清单逐字节核对，生产镜像未改。
 详见[每线程存储模块](../native_thread_tls/README.md)。共享同步/guard及V8线程
 仍待实现，完整45未重放，原生浏览器/视频/HTML5未验收。
+
+## 2026-10-14 真实 V8 线程桥接
+
+固定 Thread/Semaphore 与每线程 key 在 GTOS 通过76上下文精确回收、48次Join、
+默认栈和key代际复用；默认单线程失败路径也通过。FOpen stripped ELF 与既有
+验收版本相同，沿用此前运行证据。新GN保留5177旧命令和最终顺序。
+完整45已按真实38成员归档重放，首错为 CreateTimezoneCache，完整ELF仍缺失。
+详见[原生V8线程模块](../native_v8_thread/README.md)。生产镜像未改，完整
+Isolate、浏览器、视频和HTML5仍未验收。

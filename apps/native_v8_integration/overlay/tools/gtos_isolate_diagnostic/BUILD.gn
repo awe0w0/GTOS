@@ -170,6 +170,8 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "runtime/abort.cc",
       "runtime/thread-exit.cc",
       "runtime/thread-context.cc",
+      "runtime/gtos-thread.cc",
+      "runtime/gtos-semaphore.cc",
       "runtime/thread-core.cc",
     ]
   }

@@ -1,0 +1,233 @@
+#include <process/abi.h>
+#include <process/thread_abi.h>
+#include <process/info_abi.h>
+#include <process/vm_abi.h>
+#include <errno.h>
+#include <stdlib.h>
+#include "src/__support/libc_errno.h"
+#include "heap.h"
+#include "thread-exit.h"
+#include "record.h"
+#include "src/base/platform/platform.h"
+#include "src/base/platform/time.h"
+extern "C" {
+volatile TlsRecord native_tls_record __attribute__((section(".data.tls_record"))) = {1};
+extern void* __dso_handle;
+}
+namespace {
+using v8::base::Thread;
+using v8::base::Semaphore;
+using v8::base::TimeDelta;
+Thread::LocalStorageKey localKey;
+Semaphore* gate;
+thread_local unsigned localValue = 17;
+alignas(256) thread_local unsigned char localBlock[257] = {3};
+auto volatile Query = &gtos_native_heap_query;
+int Call(unsigned op, unsigned a=0, unsigned b=0) {
+    asm volatile("int $0x80" : "+a"(op) : "b"(a), "c"(b) : "memory", "cc"); return (int)op;
+}
+template <class T> int Request(unsigned op, T& r) { return Call(op, (unsigned)&r, sizeof(r)); }
+void Yield() { Call(GTOS_SYS_YIELD); }
+void Need(bool pass, unsigned line) {
+    asm volatile("lock incl %0" : "+m"(native_tls_record.checks) : : "cc", "memory");
+    if (!pass) { native_tls_record.error=line; Call(GTOS_SYS_EXIT,line); for (;;) Yield(); }
+}
+#define NEED(x) Need((x), __LINE__)
+unsigned CurrentIndex() {
+    GtosProcessInfoResult info={}; GtosProcessInfoRequest self={1,0,(unsigned)&info,sizeof(info)};
+    NEED(Request(GTOS_SYS_PROCESS_INFO,self)==0);
+    if (info.thread_id==native_tls_record.parent) return 3;
+    for (unsigned i=0;i<3;++i) if (info.thread_id==native_tls_record.worker[i].id) return i;
+    NEED(false); return 0;
+}
+unsigned Expected(unsigned index) { return 1000+index+(index==3 ? 0 : native_tls_record.wave*10); }
+void CheckOwned(unsigned index) {
+    NEED(CurrentIndex()==index && localValue==Expected(index));
+    NEED(errno==(int)(Expected(index)+500));
+    NEED((int)__llvm_libc_cr::libc_errno==(int)(Expected(index)+500));
+    NEED(Thread::GetThreadLocal(localKey)==(void*)Expected(index));
+}
+void Append(unsigned index,unsigned tag) {
+    auto& r=native_tls_record.worker[index]; r.order=r.order*10+tag;
+}
+void Callback(void* pointer) {
+    unsigned index=(unsigned)pointer; CheckOwned(index); Append(index,3);
+    auto& r=native_tls_record.worker[index]; r.callbacks=r.callbacks+1;
+}
+struct Tracked {
+    unsigned owner, tag;
+    explicit Tracked(unsigned value) : owner(CurrentIndex()), tag(value) {
+        auto& r=native_tls_record.worker[owner]; r.constructions=r.constructions+1;
+    }
+    ~Tracked();
+};
+Tracked& First() { static thread_local Tracked object(1); return object; }
+Tracked& Second() { static thread_local Tracked object(2); return object; }
+Tracked& Late() { static thread_local Tracked object(4); return object; }
+Tracked::~Tracked() {
+    CheckOwned(owner); Append(owner,tag);
+    auto& r=native_tls_record.worker[owner]; r.destructions=r.destructions+1;
+    if (tag==2) {
+        NEED(Late().owner==owner);
+        NEED(__cxa_thread_atexit(Callback,(void*)owner,__dso_handle)==0);
+    }
+    Yield();
+}
+template <unsigned N> unsigned& Slot() { static thread_local unsigned value=N+100; return value; }
+template <unsigned N> void Slots(unsigned index,bool initial) {
+    unsigned& value=Slot<N>();
+    NEED(value==(initial ? N+100 : Expected(index)+N));
+    if (initial) value=Expected(index)+N;
+    Slots<N-1>(index,initial);
+}
+template <> void Slots<0>(unsigned index,bool initial) {
+    unsigned& value=Slot<0>(); NEED(value==(initial ? 100 : Expected(index)));
+    if (initial) value=Expected(index);
+}
+void Initialize(unsigned index) {
+    // Errno must register an owner before the first allocator/TLS operation.
+    NEED(errno==0 && (int)__llvm_libc_cr::libc_errno==0);
+    NEED(Thread::GetThreadLocal(localKey)==nullptr);
+    Thread::SetThreadLocal(localKey,(void*)Expected(index));
+    __llvm_libc_cr::libc_errno=(int)(Expected(index)+500);
+    NEED(errno==(int)(Expected(index)+500));
+    NEED(localValue==17 && localBlock[0]==3 && !((unsigned)localBlock&255));
+    for (unsigned i=1;i<257;++i) NEED(localBlock[i]==0);
+    localValue=Expected(index); localBlock[256]=(unsigned char)(index+21);
+    auto& r=native_tls_record.worker[index]; r.valueAddress=(unsigned)&localValue; r.blockAddress=(unsigned)localBlock;
+    NEED(First().owner==index && Second().owner==index);
+    Slots<31>(index,true); CheckOwned(index); r.stage=1;
+}
+void Exercise(unsigned index) {
+    for (unsigned n=0;n<16;++n) {
+        Yield(); CheckOwned(index); Slots<31>(index,false);
+        NEED(localBlock[0]==3 && localBlock[256]==index+21);
+        auto& r=native_tls_record.worker[index]; r.rounds=r.rounds+1;
+    }
+}
+void ExhaustTls() {
+    static thread_local unsigned char tooLarge[65536];
+    auto* volatile pointer=&tooLarge[0]; *pointer=1;
+    NEED(false);
+}
+void Worker(unsigned index) {
+    NEED(index<3); Initialize(index);
+    gate->Wait();
+    NEED(Thread::GetThreadLocal(localKey)==nullptr);
+    Thread::SetThreadLocal(localKey,(void*)Expected(index));
+    Exercise(index); native_tls_record.worker[index].stage=2;
+    if (native_tls_record.mode) {
+        while (native_tls_record.go!=2) Yield();
+        if (index==0 && native_tls_record.mode==2) ExhaustTls();
+        if (index==0 && native_tls_record.mode==3) *(volatile unsigned*)0x70000000=1;
+        for (;;) Yield();
+    }
+}
+class ActualThread final : public Thread {
+public:
+    explicit ActualThread(unsigned index,int size=8192) : Thread(Options("gtos-v8-probe",size)), index_(index) {}
+    void Run() override {
+        GtosProcessInfoResult info={}; GtosProcessInfoRequest self={1,0,(unsigned)&info,sizeof(info)};
+        NEED(Request(GTOS_SYS_PROCESS_INFO,self)==0 && info.thread_id!=info.process_id);
+        native_tls_record.worker[index_].id=info.thread_id;
+        unsigned stackMarker=0;
+        NEED((unsigned)&stackMarker>=info.stack_begin && (unsigned)&stackMarker<info.stack_end);
+        NEED(info.stack_end-info.stack_begin==(index_==0 ? 65536U : 8192U));
+        Worker(index_);
+    }
+private:
+    unsigned index_;
+};
+void Main() {
+    GtosProcessInfoResult info={}; GtosProcessInfoRequest self={1,0,(unsigned)&info,sizeof(info)};
+    NEED(Request(GTOS_SYS_PROCESS_INFO,self)==0 && info.thread_id==info.process_id);
+    native_tls_record.parent=info.process_id;
+    NEED(errno==0); GtosVmRegionInfo empty={}; NEED(Query(&empty)==0);
+    if (info.maximum_parallel_threads==1) {
+        for (unsigned i=0;i<8;++i) {
+            ActualThread unavailable(0,0);
+            NEED(!unavailable.StartSynchronously()); NEED(!unavailable.Start());
+        }
+        {
+            Semaphore available(1);
+            NEED(available.WaitFor(TimeDelta::FromMicroseconds(0)));
+            NEED(!available.WaitFor(TimeDelta::FromMicroseconds(0)));
+            localKey=Thread::CreateThreadLocalKey();
+            NEED(Thread::GetThreadLocal(localKey)==nullptr);
+            Thread::SetThreadLocal(localKey,(void*)3);
+            auto old=localKey; Thread::DeleteThreadLocalKey(old);
+            localKey=Thread::CreateThreadLocalKey();
+            NEED(localKey!=old && Thread::GetThreadLocal(localKey)==nullptr);
+            Thread::SetThreadLocal(localKey,(void*)4);
+            NEED(Thread::GetThreadLocal(localKey)==(void*)4);
+            Thread::DeleteThreadLocalKey(localKey);
+        }
+        gtos_native_thread_cleanup();
+        NEED(Query(&empty)==0); native_tls_record.emptyHeap=1;
+        native_tls_record.stage=20; Call(GTOS_SYS_EXIT,0); for (;;) Yield();
+    }
+    NEED(info.maximum_parallel_threads==4);
+    localKey=Thread::CreateThreadLocalKey(); Initialize(3);
+    for (unsigned wave=0;wave<(native_tls_record.mode ? 1U : TLS_WAVES);++wave) {
+        native_tls_record.wave=wave; native_tls_record.go=0;
+        Semaphore permits(0); gate=&permits;
+        NEED(!permits.WaitFor(TimeDelta::FromMicroseconds(0)));
+        NEED(!permits.WaitFor(TimeDelta::FromMicroseconds(-1)));
+        NEED(!permits.WaitFor(TimeDelta::FromMicroseconds(1000)));
+        permits.Signal(); NEED(permits.WaitFor(TimeDelta::FromMicroseconds(0)));
+        NEED(!permits.WaitFor(TimeDelta::FromMicroseconds(0)));
+        ActualThread first(0,0),second(1),third(2);
+        ActualThread* threads[]={&first,&second,&third};
+        for (unsigned index=0;index<3;++index) {
+            for (unsigned byte=0;byte<sizeof(TlsWorkerRecord);++byte)
+                ((volatile unsigned char*)&native_tls_record.worker[index])[byte]=0;
+            NEED(threads[index]->StartSynchronously());
+            NEED(!threads[index]->Start());
+            auto& r=native_tls_record.worker[index];
+            while (!r.stage) Yield();
+        }
+        { ActualThread extra(0); NEED(!extra.StartSynchronously()); }
+        { ActualThread invalid(0,-1); NEED(!invalid.StartSynchronously()); }
+        for (unsigned i=0;i<4;++i) for (unsigned j=i+1;j<4;++j) {
+            NEED(native_tls_record.worker[i].valueAddress!=native_tls_record.worker[j].valueAddress);
+            NEED(native_tls_record.worker[i].blockAddress!=native_tls_record.worker[j].blockAddress);
+        }
+        auto old=localKey; Thread::DeleteThreadLocalKey(old);
+        localKey=Thread::CreateThreadLocalKey();
+        NEED(localKey!=old && Thread::GetThreadLocal(localKey)==nullptr);
+        Thread::SetThreadLocal(localKey,(void*)Expected(3));
+        native_tls_record.go=1;
+        for (unsigned count=1;count<=3;++count) {
+            permits.Signal();
+            for (;;) {
+                unsigned stopped=0;
+                for (unsigned i=0;i<3;++i) if (native_tls_record.worker[i].stage==2) ++stopped;
+                NEED(stopped<=count);
+                if (stopped==count) break;
+                Yield();
+            }
+        }
+        Exercise(3);
+        if (native_tls_record.mode) {
+            for (unsigned i=0;i<3;++i) while (native_tls_record.worker[i].stage!=2) Yield();
+            native_tls_record.stage=10;
+            if (native_tls_record.mode!=1) native_tls_record.go=2;
+            for (;;) Yield();
+        }
+        for (unsigned i=0;i<3;++i) {
+            auto& r=native_tls_record.worker[i]; threads[i]->Join();
+            NEED(r.constructions==3 && r.destructions==3 && r.callbacks==1 && r.order==2341 && r.rounds==16);
+            native_tls_record.joins=native_tls_record.joins+1;
+        }
+        CheckOwned(3);
+    }
+    NEED(native_tls_record.joins==3*TLS_WAVES);
+    gtos_native_thread_cleanup();
+    Thread::DeleteThreadLocalKey(localKey);
+    const auto& root=native_tls_record.worker[3];
+    NEED(root.constructions==3 && root.destructions==3 && root.callbacks==1 && root.order==2341 && root.rounds==16*TLS_WAVES);
+    NEED(Query(&empty)==0); native_tls_record.emptyHeap=1;
+    native_tls_record.stage=20; Call(GTOS_SYS_EXIT,0); for (;;) Yield();
+}
+}
+extern "C" __attribute__((section(".text.entry"),noreturn)) void _start() { Main(); for (;;) Yield(); }

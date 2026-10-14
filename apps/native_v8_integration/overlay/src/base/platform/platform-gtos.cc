@@ -6,6 +6,7 @@
 #include "src/base/platform/gtos-native-api/vm_abi.h"
 #include "src/base/platform/gtos-native-services.h"
 #include "src/base/platform/time.h"
+#include "tools/gtos_isolate_diagnostic/runtime/thread-context.h"
 
 #if !V8_OS_GTOS || V8_OS_POSIX || V8_OS_LINUX || !defined(__i386__) || \
     !defined(GTOS_ISOLATE_COMPILE_DIAGNOSTIC)
@@ -99,13 +100,29 @@ bool Inside(void* base, size_t length, void* address, size_t size) {
 struct LocalKey {
   uint32_t generation;
   bool active;
-  void* value;
 };
 LocalKey local_keys[32];
+struct LocalValue { uint32_t generation; void* value; };
+thread_local LocalValue local_values[32];
+uint32_t key_lock;
+class KeyGuard {
+ public:
+  KeyGuard() {
+    gtos::CurrentNativeThreadInfo();
+    uint32_t expected = 0;
+    while (!__atomic_compare_exchange_n(&key_lock, &expected, 1U, false,
+                                        __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+      gtos::Yield();
+      expected = 0;
+    }
+  }
+  ~KeyGuard() { __atomic_store_n(&key_lock, 0U, __ATOMIC_RELEASE); }
+  KeyGuard(const KeyGuard&) = delete;
+  KeyGuard& operator=(const KeyGuard&) = delete;
+};
 constexpr uint32_t kMaximumKeyGeneration = 0x03ffffffU;
 
 LocalKey* FindKey(Thread::LocalStorageKey key) {
-  gtos::CurrentProcessInfo();
   if (key <= 0) gtos::UnsupportedService();
   const uint32_t value = static_cast<uint32_t>(key);
   LocalKey* entry = &local_keys[value & 31U];
@@ -298,19 +315,19 @@ bool AddressSpaceReservation::AllocateShared(void*, size_t,
 bool AddressSpaceReservation::FreeShared(void*, size_t) { return false; }
 
 int OS::GetCurrentProcessId() {
-  const uint32_t id = gtos::CurrentProcessInfo().process_id;
+  const uint32_t id = gtos::CurrentNativeThreadInfo().process_id;
   if (id > 0x7fffffffU) gtos::UnsupportedService();
   return static_cast<int>(id);
 }
 int OS::GetCurrentThreadIdInternal() {
-  const uint32_t id = gtos::CurrentProcessInfo().thread_id;
+  const uint32_t id = gtos::CurrentNativeThreadInfo().thread_id;
   if (id > 0x7fffffffU) gtos::UnsupportedService();
   return static_cast<int>(id);
 }
 void OS::Sleep(TimeDelta interval) {
   const int64_t duration = interval.InMicroseconds();
   if (duration <= 0) return;
-  gtos::CurrentProcessInfo();
+  gtos::CurrentNativeThreadInfo();
   const int64_t begin = gtos_v8_clock_read_microseconds();
   for (;;) {
     gtos::Yield();
@@ -329,13 +346,13 @@ void OS::ExitProcess(int code) {
 }
 
 Stack::StackSlot Stack::ObtainCurrentThreadStackStart() {
-  return static_cast<uintptr_t>(gtos::CurrentProcessInfo().stack_end);
+  return static_cast<uintptr_t>(gtos::CurrentNativeThreadInfo().stack_end);
 }
 Stack::StackSlot Stack::ObtainCurrentThreadStackReservedLimit() {
-  return static_cast<uintptr_t>(gtos::CurrentProcessInfo().stack_begin);
+  return static_cast<uintptr_t>(gtos::CurrentNativeThreadInfo().stack_begin);
 }
 Stack::StackSlot Stack::GetCommittedStackLimit() {
-  return static_cast<uintptr_t>(gtos::CurrentProcessInfo().stack_begin);
+  return static_cast<uintptr_t>(gtos::CurrentNativeThreadInfo().stack_begin);
 }
 Stack::StackSlot Stack::GetCurrentStackPosition() {
   return __builtin_frame_address(0);
@@ -345,12 +362,11 @@ void Stack::SetCurrentThreadStackBounds(uintptr_t, uintptr_t) {
 }
 
 Thread::LocalStorageKey Thread::CreateThreadLocalKey() {
-  gtos::CurrentProcessInfo();
+  KeyGuard guard;
   for (uint32_t i = 0; i < 32; ++i) {
     LocalKey& key = local_keys[i];
     if (!key.active && key.generation < kMaximumKeyGeneration) {
       ++key.generation;
-      key.value = nullptr;
       key.active = true;
       return static_cast<LocalStorageKey>((key.generation << 5) | i);
     }
@@ -358,13 +374,21 @@ Thread::LocalStorageKey Thread::CreateThreadLocalKey() {
   gtos::UnsupportedService();
 }
 void Thread::DeleteThreadLocalKey(LocalStorageKey key) {
+  KeyGuard guard;
   LocalKey* entry = FindKey(key);
-  entry->value = nullptr;
   entry->active = false;
 }
-void* Thread::GetThreadLocal(LocalStorageKey key) { return FindKey(key)->value; }
+void* Thread::GetThreadLocal(LocalStorageKey key) {
+  KeyGuard guard;
+  LocalKey* entry = FindKey(key);
+  LocalValue& value = local_values[static_cast<uint32_t>(key) & 31U];
+  if (value.generation != entry->generation) value = {entry->generation, nullptr};
+  return value.value;
+}
 void Thread::SetThreadLocal(LocalStorageKey key, void* value) {
-  FindKey(key)->value = value;
+  KeyGuard guard;
+  LocalKey* entry = FindKey(key);
+  local_values[static_cast<uint32_t>(key) & 31U] = {entry->generation, value};
 }
 
 }  // namespace base

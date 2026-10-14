@@ -137,9 +137,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/src/base/platform/platform-gtos.cc": {
-      "sha256": "bcfa3b35f2f61eb376e9c46613111c96062f3765c894e80dccd854a853176336",
-      "bytes": 13505,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "sha256": "232c66f78e4d06e6a35e54c41277b7b3e330470bdfb5fa0599ed9266596726e8",
+      "bytes": 14393,
+      "origin": "GTOS real V8 Thread/Semaphore and per-thread key bridge; native_v8_thread qualified; complete browser pending"
     },
     "overlay/src/base/platform/semaphore.h": {
       "sha256": "6e9399d0f08d22ba157144f0c501723686f652de4f6944b7a84c1728adf9433b",
@@ -5977,8 +5977,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "c96b77af3619856987187bbb83436abaeaac8cc159a55b8685d94cc0122264a2",
-      "bytes": 12236
+      "sha256": "b08c4faec7304c3fe89020b71e8a67406c88d4450fc34bab9a34f27e965f5fc2",
+      "bytes": 12798
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6104,9 +6104,9 @@
       "sha256": "59f3fe33fe0d825f4f245572a26359c1da50398b001b4d17ea2c987826a973e1"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "sha256": "64b5908875e36eb83024aff2c5fd6fe15392a48023453e99c41768dcc1b0244a",
-      "bytes": 21980,
-      "origin": "GTOS actual per-thread TLS/errno/cleanup; native_thread_tls qualified; V8 Thread and other shared services pending"
+      "sha256": "58d350ec4c2072daff0c4230d87ce0b7fc6e23219b1676ea4295d9a95a86a324",
+      "bytes": 22047,
+      "origin": "GTOS real V8 Thread/Semaphore and per-thread key bridge; native_v8_thread qualified; complete browser pending"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
@@ -6177,11 +6177,21 @@
       "sha256": "39a95b2821530a3afd78812558b10a91f61c43b047f2afcfe62d60e90c6830df",
       "bytes": 2372,
       "origin": "GTOS actual per-thread TLS/errno/cleanup; native_thread_tls qualified; V8 Thread and other shared services pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc": {
+      "sha256": "2d9fc70c28f00c493ba99c685099e3f96b3a6cf0f5749c1fcaa88f82f7df1f25",
+      "bytes": 5131,
+      "origin": "GTOS real V8 Thread/Semaphore and per-thread key bridge; native_v8_thread qualified; complete browser pending"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc": {
+      "sha256": "8520340537938a744fcee6c0e8b7127ca0012ba8e26b43d73fb29171d109121d",
+      "bytes": 2030,
+      "origin": "GTOS real V8 Thread/Semaphore and per-thread key bridge; native_v8_thread qualified; complete browser pending"
     }
   },
   "overlay_files": 422,
   "sdk_files": 430,
-  "total_bytes": 3361064,
+  "total_bytes": 3369742,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,
