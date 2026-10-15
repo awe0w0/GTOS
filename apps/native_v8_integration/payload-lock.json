@@ -1,5 +1,5 @@
 {
-  "scope": "锁定完整IA32 V8 Isolate/Context/Script原生双配置通过；浏览器/视频/HTML5未验收",
+  "scope": "完整 IA32 V8 原生工作负载双配置通过；Content/网页/视频/HTML5 尚未验收",
   "files": {
     "overlay/BUILD.gn": {
       "bytes": 322046,
@@ -262,9 +262,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/main.cc": {
-      "sha256": "d78251131b9c6d70f95912624adc75f9f83adfa731fae280341071ca56acc0ae",
-      "bytes": 2267,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "origin": "真实原生 IA32 V8 对象/TypedArray/GC/微任务/异常恢复双配置补验",
+      "sha256": "f0ecd9c784fcba75d642126e4a689c9ee4209127c1b975bb3f21b44d6a7dac29",
+      "bytes": 5831
     },
     "overlay/tools/gtos_isolate_diagnostic/native-entry.cc": {
       "sha256": "a21b330f96f993753941c3718818de064153cc67438f6bce3af0c7f9c3b0aa7f",
@@ -5979,9 +5979,9 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "5091df0a149d99142f7ab19b254df58360300702d2e52093f79a98835c9e86e9",
-      "bytes": 19497,
-      "origin": "GTOS 原生完整 V8 脚本双配置验收；显式后备堆与入口"
+      "origin": "真实原生 IA32 V8 对象/TypedArray/GC/微任务/异常恢复双配置补验",
+      "sha256": "37622a30a785fdc46518cd13be7a0b7a92b039555395491267965cc72861ee9a",
+      "bytes": 19853
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6225,7 +6225,7 @@
   },
   "overlay_files": 433,
   "sdk_files": 430,
-  "total_bytes": 3378885,
+  "total_bytes": 3427132,
   "old_source_or_cache_written": false,
   "native_isolate_pass": true,
   "browser_guest_pass": false,

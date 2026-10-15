@@ -207,8 +207,10 @@ Two independent QEMU/official Bochs cohorts each completed eight cold boots,
 all eight runtime objects byte-for-byte before reusing that qualification.
 No production kernel capacity or image is changed by this module.
 
-Condition variables, native shared-address-space threads and TLS keys, complete
-libc++ out-of-line services, Abseil OS services and the actual GTOS V8 platform
-remain open. Full V8 Isolate, Chromium navigation, video and HTML5 guest
-acceptance remain false. Full engine memory and stack requirements must be
-measured before changing production capacity.
+Subsequent native modules qualify bounded shared-address-space threads, TLS and
+the platform services consumed by the actual whole-V8 target. The complete IA32
+V8 Isolate now runs scripts and exits with exact reclamation inside GTOS; the
+[workload qualification](../apps/native_v8_launch/workloads/README.md) covers
+objects, TypedArray, GC, microtasks and exception recovery. Chromium navigation,
+video and HTML5 guest acceptance remain false. The whole-V8 diagnostic uses an
+explicit launch profile; production capacity and images remain unchanged.

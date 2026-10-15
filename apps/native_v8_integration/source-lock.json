@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "锁定完整IA32 V8 Isolate/Context/Script原生双配置通过；浏览器/视频/HTML5未验收",
+  "scope": "完整 IA32 V8 原生工作负载双配置通过；Content/网页/视频/HTML5 尚未验收",
   "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
   "upstream_revisions": {
     "": "be042d4462bee463c9b785701b8c6ee4576ee0a3",
@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "3e90efe3cc20048c11c5e852e9f36e554aec4b270ae05608cbd3a330e77e06cb",
+  "payload_lock_sha256": "93e7a015016374081335301c2bf855feeef6c2aad81c69affdd1ff88210d11b3",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1560,7 +1560,7 @@
   "native_debug_shared_qualification": "docs/chromium-integration-status.json#native_debug_shared",
   "native_debug_shared_scope": "One real caller PC/raw addresses; EBADF on closed stderr; shared mapping/naming explicitly unsupported; invalid shared free traps without releasing private pages.",
   "full_native_elf_link_qualified": true,
-  "full_native_elf_sha256": "01a6464a8dde52cc3b848a344ffec92af66ba05655f4b66bf78f661225d13441",
+  "full_native_elf_sha256": "3e6068b3a541405b85ceb791c2e79d7106bf863fbd3b1b8cd8f2501c7aff745c",
   "native_v8_admission_qualified": true,
   "native_v8_admission_qualification": "apps/native_v8_admission/acceptance.json",
   "native_v8_admission_scope": "真实2383页ELF进入CPL3，按需元数据、权限、OOM回滚、故障/普通槽位回收及真实容量查询；Isolate对齐分配失败，JS与浏览器未成功",
@@ -1646,5 +1646,118 @@
     "include/process/native_runtime.h": "de8f0c117013024528eda6d9ca0c8b0dc8c16ea4c2d90185935bd7542d8fa40a",
     "src/process/native_runtime.cpp": "f2f101703a00a5a7195ba05faa9e1f027d095983bc7fae80ed252fca38d70c26"
   },
-  "native_v8_launch_input_preservation_sha256": "1d99820d69fb157c8d144a8cb0f8602e982d62ec382b986c9c138fc36483412a"
+  "native_v8_launch_input_preservation_sha256": "1d99820d69fb157c8d144a8cb0f8602e982d62ec382b986c9c138fc36483412a",
+  "native_v8_workload_qualification": {
+    "module": "apps/native_v8_launch/workloads",
+    "proofs": {
+      "compile": {
+        "path": "artifacts/native-v8-workloads-20261015-a/compile-04/status.json",
+        "sha256": "0f515abc843efb676217d3e75629a17a7135bae060bba4a8f751adb946cb3a2a"
+      },
+      "full_link": {
+        "path": "artifacts/native-v8-workloads-20261015-a/full-link-62/status.json",
+        "sha256": "014b18d577856bbd1d3fc69321d30e920fe1071ed5aa33b05cdd5ecaf88853ae"
+      },
+      "native_workloads": {
+        "path": "artifacts/native-v8-workloads-20261015-a/guest-01/status.json",
+        "sha256": "bc54f2e80343743b79c811e67d13de69fecc86de3e7f6dbc75a23482c9dd7200"
+      }
+    },
+    "elf_sha256": "3e6068b3a541405b85ceb791c2e79d7106bf863fbd3b1b8cd8f2501c7aff745c",
+    "elf_bytes": 12933488,
+    "native_isolate_pass": true,
+    "javascript_guest_pass": true,
+    "workloads_pass": true,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "main_sha256": "f0ecd9c784fcba75d642126e4a689c9ee4209127c1b975bb3f21b44d6a7dac29",
+    "kernel_sha256": "c7287b08f62d7f32cffb842a3d410c8b70394c04688e9b811ce826275bcc730b",
+    "header_provenance_sha256": "d7fc67b351c7ce2ca4788511d1a706c86a7db6b47d4609068306fd04db4a9188",
+    "locked_api_headers": 574,
+    "retained_full_link_inputs": 1109,
+    "retained_kernel_core_objects": 25,
+    "full_M_MD": true,
+    "cases": [
+      "string",
+      "float",
+      "object-array",
+      "TypedArray-DataView",
+      "actual-GC-and-live-buffer",
+      "explicit-Promise-checkpoint",
+      "expected-exception-and-recovery"
+    ],
+    "configurations": [
+      {
+        "configuration": "32M-smp4",
+        "initial": {
+          "image": 2385,
+          "resident": 2513,
+          "capacity": 3537,
+          "metadata": 14,
+          "tables": 4
+        },
+        "execution": {
+          "stage": 4,
+          "result": 0,
+          "exit": 0,
+          "vector": 0,
+          "error": 0,
+          "fault": 0,
+          "calls": 6159,
+          "resident": 2531,
+          "dynamic": 18,
+          "peer": 1617562715
+        },
+        "blocks": [],
+        "workload": {
+          "mask": 127,
+          "gc": 2
+        },
+        "reap": {
+          "free": 4427,
+          "baseline": 4427,
+          "checks": 3096
+        },
+        "log_sha256": "e1f281b4baf209892c1913291fb163f815b11fca66b1905b913ded2a881cad3b"
+      },
+      {
+        "configuration": "64M-smp1",
+        "initial": {
+          "image": 2385,
+          "resident": 2513,
+          "capacity": 3537,
+          "metadata": 14,
+          "tables": 4
+        },
+        "execution": {
+          "stage": 4,
+          "result": 0,
+          "exit": 0,
+          "vector": 0,
+          "error": 0,
+          "fault": 0,
+          "calls": 6159,
+          "resident": 2531,
+          "dynamic": 18,
+          "peer": 1616980335
+        },
+        "blocks": [],
+        "workload": {
+          "mask": 127,
+          "gc": 2
+        },
+        "reap": {
+          "free": 12611,
+          "baseline": 12611,
+          "checks": 3096
+        },
+        "log_sha256": "9842a3ea7bd73944977cd3d45ce53480c086571e001ca4d4086ea78b747a235e"
+      }
+    ],
+    "complete_cold_build_pass": false,
+    "blank_host_bootstrap_pass": false,
+    "production_image_changed": false
+  },
+  "native_v8_workload_input_preservation_sha256": "3a04a44cf8103ad14e628def7808780ff777c76601c2b12120bb8fb76e3a7c2e"
 }

@@ -18,6 +18,8 @@ GTOS 是一个在 `dev` 分支开发的 32 位 x86 教学操作系统。
 
 真实的[原生 IA32 V8](apps/native_v8_launch/README.md)已在 GTOS 用户态完成
 Isolate、Context、脚本编译与执行及退出回收；两种配置检查得到 `GTOS42` 和 `3.75`。
+同一引擎的[工作负载补验](apps/native_v8_launch/workloads/README.md)继续覆盖对象/数组、
+TypedArray/DataView、真实 GC、Promise 微任务及异常后的脚本恢复。
 当前是单用户线程、jitless 入口。下一步推进 Chromium Content 本地首帧与 DOM，
 网页浏览、视频和 HTML5 尚未验收。
 
@@ -172,16 +174,16 @@ i386 非 PAE 目标仍不具备 NX 保护。
 Linux 参考构建逐步推进。Chromium 和网页渲染尚未在 GTOS 中运行。
 当前路线按[真实集成主线](docs/chromium-integration-plan.md)推进：完整 V8 构建与链接、
 GTOS Isolate/JS、本地 Content 网页及交互，再验收 HTTP/HTTPS 和音视频。
-当前交付架构为 IA32，x64 保留为备选。真实静态 V8 ELF 已通过
-[大镜像装载模块](apps/native_v8_admission/README.md)在 GTOS CPL3 执行到 Isolate 创建；
-当前首错为对齐分配失败后的空指针写入，完整 Isolate/JS 尚未成功。
+当前交付架构为 IA32，x64 保留为备选。真实静态 V8 ELF 已在 GTOS CPL3 完成
+Isolate/JS 及退出回收，最新脚本范围见[工作负载补验](apps/native_v8_launch/workloads/README.md)。
+大镜像装载时的堆/栈失败与后续修订保留在对应模块，浏览器仍待实际运行。
 
 ## 32 位 Chromium 原生运行库诊断
 
 已验收的[IA32 运行库子集](apps/native_v8_runtime/README.md)包含 VM-backed heap、
 new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任务锁和线程身份接口。
 来源锁与独立构建工具固定实际已执行对象，必须显式启用私有诊断 ABI。
-完整 V8 Isolate、Chromium 网页浏览、视频播放和 HTML5 仍未在 GTOS 中运行。
+完整 V8 Isolate 的当前资格见上方原生脚本模块；Chromium 网页、视频与 HTML5 尚未运行。
 
 原生进程新增[RTC/PIT UTC 只读接口](docs/native-realtime.md)，独立于既有单调 ABI。
 已验证日历格式、实际 CPL3 边界和资源回收；它尚未接入完整 Chromium/V8 浏览器。

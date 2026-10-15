@@ -1,5 +1,9 @@
 # GTOS 原生 IA32 V8 脚本运行
 
+后续完整62的[工作负载补验](workloads/README.md)已在同一真实引擎中覆盖对象/数组、
+TypedArray/DataView、真实GC、显式Promise微任务及异常恢复；其双配置机器证据与
+原始日志单独保存在子目录。下文完整61保留堆、启动配置及基础表达式的验收历史。
+
 锁定的完整 V8 ELF 已在 GTOS CPL3 中实际创建 Isolate、Context，编译并执行
 `'GTOS' + (40 + 2)` 和 `1.25 + 2.5`，分别检查得到 `GTOS42`、`3.75`。
 两个配置均以 stage=4、result=0、exit=0、无故障结束，并精确回收进程物理页。

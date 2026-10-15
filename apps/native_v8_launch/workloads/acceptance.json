@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "qualification": {
+    "module": "apps/native_v8_launch/workloads",
+    "proofs": {
+      "compile": {
+        "path": "artifacts/native-v8-workloads-20261015-a/compile-04/status.json",
+        "sha256": "0f515abc843efb676217d3e75629a17a7135bae060bba4a8f751adb946cb3a2a"
+      },
+      "full_link": {
+        "path": "artifacts/native-v8-workloads-20261015-a/full-link-62/status.json",
+        "sha256": "014b18d577856bbd1d3fc69321d30e920fe1071ed5aa33b05cdd5ecaf88853ae"
+      },
+      "native_workloads": {
+        "path": "artifacts/native-v8-workloads-20261015-a/guest-01/status.json",
+        "sha256": "bc54f2e80343743b79c811e67d13de69fecc86de3e7f6dbc75a23482c9dd7200"
+      }
+    },
+    "elf_sha256": "3e6068b3a541405b85ceb791c2e79d7106bf863fbd3b1b8cd8f2501c7aff745c",
+    "elf_bytes": 12933488,
+    "native_isolate_pass": true,
+    "javascript_guest_pass": true,
+    "workloads_pass": true,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "main_sha256": "f0ecd9c784fcba75d642126e4a689c9ee4209127c1b975bb3f21b44d6a7dac29",
+    "kernel_sha256": "c7287b08f62d7f32cffb842a3d410c8b70394c04688e9b811ce826275bcc730b",
+    "header_provenance_sha256": "d7fc67b351c7ce2ca4788511d1a706c86a7db6b47d4609068306fd04db4a9188",
+    "locked_api_headers": 574,
+    "retained_full_link_inputs": 1109,
+    "retained_kernel_core_objects": 25,
+    "full_M_MD": true,
+    "cases": [
+      "string",
+      "float",
+      "object-array",
+      "TypedArray-DataView",
+      "actual-GC-and-live-buffer",
+      "explicit-Promise-checkpoint",
+      "expected-exception-and-recovery"
+    ],
+    "configurations": [
+      {
+        "configuration": "32M-smp4",
+        "initial": {
+          "image": 2385,
+          "resident": 2513,
+          "capacity": 3537,
+          "metadata": 14,
+          "tables": 4
+        },
+        "execution": {
+          "stage": 4,
+          "result": 0,
+          "exit": 0,
+          "vector": 0,
+          "error": 0,
+          "fault": 0,
+          "calls": 6159,
+          "resident": 2531,
+          "dynamic": 18,
+          "peer": 1617562715
+        },
+        "blocks": [],
+        "workload": {
+          "mask": 127,
+          "gc": 2
+        },
+        "reap": {
+          "free": 4427,
+          "baseline": 4427,
+          "checks": 3096
+        },
+        "log_sha256": "e1f281b4baf209892c1913291fb163f815b11fca66b1905b913ded2a881cad3b"
+      },
+      {
+        "configuration": "64M-smp1",
+        "initial": {
+          "image": 2385,
+          "resident": 2513,
+          "capacity": 3537,
+          "metadata": 14,
+          "tables": 4
+        },
+        "execution": {
+          "stage": 4,
+          "result": 0,
+          "exit": 0,
+          "vector": 0,
+          "error": 0,
+          "fault": 0,
+          "calls": 6159,
+          "resident": 2531,
+          "dynamic": 18,
+          "peer": 1616980335
+        },
+        "blocks": [],
+        "workload": {
+          "mask": 127,
+          "gc": 2
+        },
+        "reap": {
+          "free": 12611,
+          "baseline": 12611,
+          "checks": 3096
+        },
+        "log_sha256": "9842a3ea7bd73944977cd3d45ce53480c086571e001ca4d4086ea78b747a235e"
+      }
+    ],
+    "complete_cold_build_pass": false,
+    "blank_host_bootstrap_pass": false,
+    "production_image_changed": false
+  },
+  "sources": {
+    "apps/native_v8_launch/workloads/kernel.cpp": "c7287b08f62d7f32cffb842a3d410c8b70394c04688e9b811ce826275bcc730b",
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/main.cc": "f0ecd9c784fcba75d642126e4a689c9ee4209127c1b975bb3f21b44d6a7dac29",
+    "apps/native_v8_launch/workloads/main.cc": "f0ecd9c784fcba75d642126e4a689c9ee4209127c1b975bb3f21b44d6a7dac29"
+  },
+  "public_logs": {
+    "apps/native_v8_launch/workloads/64M-smp1.log": "9842a3ea7bd73944977cd3d45ce53480c086571e001ca4d4086ea78b747a235e",
+    "apps/native_v8_launch/workloads/32M-smp4.log": "e1f281b4baf209892c1913291fb163f815b11fca66b1905b913ded2a881cad3b"
+  }
+}

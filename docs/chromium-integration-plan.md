@@ -6,6 +6,11 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 
 ## 当前证据与下一步
 
+2026-10-15，完整62在同一真实原生V8入口上补验对象/数组、ArrayBuffer/TypedArray/
+DataView、MarkSweepCompact GC回调、显式Promise微任务和预期异常后的恢复。两配置
+均要求掩码127、GC回调大于0、stage4/result0/exit0及精确Reap。仅替换main对象，
+另外1109个链接输入及25个客机内核核心对象保持。详见[补验模块](../apps/native_v8_launch/workloads/README.md)。
+
 2026-10-15，完整61的真实IA32 V8 ELF已在GTOS用户态完成Isolate、Context、
 Script与退出：两种内存/CPU配置均检查得到GTOS42和3.75，stage4/result0/exit0，
 无故障，所有进程物理帧精确回收。详见[原生脚本运行模块](../apps/native_v8_launch/README.md)。
@@ -19,6 +24,9 @@ Script与退出：两种内存/CPU配置均检查得到GTOS42和3.75，stage4/re
 
 下一步按issue #9推进真实Chromium Content本地首帧和DOM，再接受控网络、
 网页导航、音视频及HTML5。浏览器、视频、HTML5、Wasm和通用用户SMP尚未验收。
+实际Content Shell目标引入Rust；现有GTOS工具链仍是freestanding资格工具链，
+上游Rust配置没有GTOS目标分支。先用完整锁定源码与GTOS覆盖建立真实目标图，
+按实际首错补齐目标/服务。此处是源码检查结论，尚未完成GTOS Content GN图执行。
 
 栈迹/共享边界的源码和必要回归见[对应模块](../apps/native_debug_shared/README.md)：
 真实直接调用者PC、原始地址输出及关闭stderr；共享映射和命名显式失败，误用共享
