@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15 04:44:54 UTC",
+  "recorded_utc": "2026-10-15T06:24:38.9144222Z",
   "scope": "九项原生libc提供者、统一ldexp错误状态及真实printf已验收；完整V8/浏览器/视频/HTML5尚未运行。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -26,12 +26,12 @@
   "profile": "Explicit single-threaded JIT-less diagnostic; no Wasm/ICU/sandbox",
   "args_gn": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\nclang_base_path=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57\"\ngtos_host_i386_runtime=\"@WORKSPACE@/toolchains/linux-i386-runtime-focal/root\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
   "args_sha256": "ee1e3670706d126d17c6036024557718fa213961545bb9e03e16f078f5a6ac6d",
-  "furthest_complete_target_stage": "Actual complete native target compiled and attempted final ELF32 link; link failed on unresolved providers, no ELF",
+  "furthest_complete_target_stage": "Qualified real static IA32 native V8 ELF link; native admission and Isolate/JS remain unrun",
   "gn_pass": true,
   "complete_build_pass": false,
-  "link_pass": false,
-  "full_elf_exists": false,
-  "first_build_blocker": "v8::base::debug::EnableInProcessStackDumping()",
+  "link_pass": true,
+  "full_elf_exists": true,
+  "first_build_blocker": null,
   "other_observed_failures": [
     "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: floor",
@@ -503,8 +503,8 @@
       "Replay the same complete native target after the affected checks; record whether asprintf advances and the new first blocker."
     ]
   },
-  "previous_complete_attempt": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/full-link-56/status.json",
-  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/full-link-57/status.json",
+  "previous_complete_attempt": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/full-link-57/status.json",
+  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-debug-shared-20261015-a/full-link-58/status.json",
   "platform_adaptation_evidence": {
     "dynamic_elf": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-01/status.json",
@@ -582,7 +582,7 @@
     "published_diagnostic_implementation": true,
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
-  "next_work_package": "按实际完整链接补齐GetLastError/OpenTemporaryFile等真实依赖，验证errno/文件生命周期，再推进完整原生V8和浏览器。",
+  "next_work_package": "Use real ELF in GTOS ValidateElf32; confirm exact rejection; review page/page-table metadata, ownership, rollback and physical budgets before changing capacity; then measure heap/stack/RSS and execute real Isolate/JS.",
   "retained_complete_attempts": [
     {
       "name": "attempt-06",
@@ -1200,7 +1200,7 @@
       "sha256": "ff1594bf604c1b024a8b547e0bdc1a037c1f4069a9d50ee47e0e84318d08521d"
     }
   },
-  "previous_first_build_blocker": "ldexp",
+  "previous_first_build_blocker": "v8::base::debug::EnableInProcessStackDumping()",
   "zlib_filestore_qualification": {
     "canonical_filestore_adopted": true,
     "public_replays": [
@@ -1375,35 +1375,13 @@
     "published_head": "ff537182673747682718ff4e159f4ff78c6c563a"
   },
   "current_complete_attempt_observation": {
-    "exit_code": 1,
-    "first_undefined_symbol": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-    "undefined_symbols": [
-      "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-      "v8::base::Thread::Start()",
-      "v8::base::Thread::~Thread()",
-      "v8::base::Semaphore::Signal()",
-      "v8::base::Thread::Join()",
-      "v8::base::Semaphore::Semaphore(int)",
-      "std::__gtos_isolate_diagnostic::cout",
-      "v8::base::Semaphore::~Semaphore()",
-      "v8::base::Semaphore::Wait()",
-      "v8::base::OS::CreateTimezoneCache()",
-      "v8::base::OS::SNPrintF(char*, int, char const*, ...)",
-      "v8::base::OS::OpenTemporaryFile()",
-      "v8::base::OS::LogFileOpenMode",
-      "v8::base::OS::AdjustSchedulingParams()",
-      "isprint",
-      "v8::base::OS::GetSharedLibraryAddresses()",
-      "pow",
-      "v8::base::OS::SignalCodeMovingGC()",
-      "v8::base::OS::isDirectorySeparator(char)",
-      "trunc"
-    ],
-    "diagnostics_complete": false,
-    "bound_inputs_unchanged": true,
-    "old_cache_metadata_unchanged": true,
-    "status_sha256": "92657c78a040a8cb1b6d6dd6ea03b24bf38654a3f0045a93eafb3ef75138b304",
-    "log_sha256": "2afcbdbb7e487201110e7cbe8b71bb15d57b2d19f6ad860deb376526044edde9"
+    "full_elf_exists": true,
+    "native_isolate_pass": false,
+    "undefined_symbols": [],
+    "native_admission_run": false,
+    "actual_link_exit_code": 0,
+    "inputs_aliases_and_cache_unchanged": true,
+    "run": "full-link-58"
   },
   "cctz_compile_diagnostic": {
     "name": "cctz-native-compile-diagnostic-02",
@@ -1475,34 +1453,34 @@
   },
   "previous_complete_attempt_observation": {
     "exit_code": 1,
-    "first_undefined_symbol": "v8::base::OS::FOpen(char const*, char const*)",
+    "first_undefined_symbol": "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
     "undefined_symbols": [
-      "v8::base::OS::FOpen(char const*, char const*)",
-      "v8::base::Semaphore::Semaphore(int)",
-      "v8::base::Semaphore::~Semaphore()",
-      "v8::base::OS::CreateTimezoneCache()",
       "v8::base::Thread::Thread(v8::base::Thread::Options const&)",
       "v8::base::Thread::Start()",
       "v8::base::Thread::~Thread()",
+      "v8::base::Semaphore::Signal()",
+      "v8::base::Thread::Join()",
+      "v8::base::Semaphore::Semaphore(int)",
       "std::__gtos_isolate_diagnostic::cout",
-      "v8::base::OS::SNPrintF(char*, int, char const*, ...)",
+      "v8::base::Semaphore::~Semaphore()",
       "v8::base::Semaphore::Wait()",
-      "v8::base::OS::AdjustSchedulingParams()",
-      "v8::base::OS::GetLastError()",
-      "isspace",
-      "exp2",
-      "strtol",
-      "strtoll",
-      "v8::base::OS::SetDataReadOnly(void*, unsigned int)",
+      "v8::base::OS::CreateTimezoneCache()",
+      "v8::base::OS::SNPrintF(char*, int, char const*, ...)",
       "v8::base::OS::OpenTemporaryFile()",
       "v8::base::OS::LogFileOpenMode",
-      "isprint"
+      "v8::base::OS::AdjustSchedulingParams()",
+      "isprint",
+      "v8::base::OS::GetSharedLibraryAddresses()",
+      "pow",
+      "v8::base::OS::SignalCodeMovingGC()",
+      "v8::base::OS::isDirectorySeparator(char)",
+      "trunc"
     ],
     "diagnostics_complete": false,
     "bound_inputs_unchanged": true,
     "old_cache_metadata_unchanged": true,
-    "status_sha256": "dfaf67eb13484dac5ddc91b85f32a0ca78b93af5108c911c229a72f79ffcacda",
-    "log_sha256": "db358d298c33acd6b6c56215687414a2c1b221adce8433a7cf2b3e25322a58f1"
+    "status_sha256": "92657c78a040a8cb1b6d6dd6ea03b24bf38654a3f0045a93eafb3ef75138b304",
+    "log_sha256": "2afcbdbb7e487201110e7cbe8b71bb15d57b2d19f6ad860deb376526044edde9"
   },
   "sampler_compile_diagnostic": {
     "preparation": {
@@ -2332,7 +2310,7 @@
     }
   },
   "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v97.json",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v98.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -5101,15 +5079,7 @@
     "prefix_source_provenance_inputs": 1273,
     "published_probe_files": 14
   },
-  "latest_observed_undefined_symbols": [
-    "v8::base::debug::EnableInProcessStackDumping()",
-    "v8::base::OS::AllocateShared(void*, unsigned int, v8::base::OS::MemoryPermission, v8::SharedMemoryHandle, unsigned long long)",
-    "v8::base::OS::FreeShared(void*, unsigned int)",
-    "v8::base::OS::SetMemoryRegionName(void const*, unsigned int, char const*)",
-    "v8::base::debug::StackTrace::StackTrace()",
-    "v8::base::debug::StackTrace::Print() const",
-    "v8::base::debug::DisableSignalStackDump()"
-  ],
+  "latest_observed_undefined_symbols": [],
   "latest_diagnostics_complete": true,
   "native_os_file": {
     "schema_version": 1,
@@ -8845,5 +8815,36 @@
     "canonical_gn_reexecuted": false,
     "canonical_guest_rerun": false,
     "remote_ci": false
+  },
+  "native_debug_shared": {
+    "private_page_preserved_before_reap": true,
+    "elf_file_bytes": 12927508,
+    "gn_status_sha256": "386614c2f9fb5355af9cc26d387eab3d7891b2d9e057f13554ab03240e08dc97",
+    "load_pages": 2383,
+    "full_link_status_sha256": "294c992c20a93eb465d1c8a878b4ccd1b14b68936829a76c9493a253453fcbf1",
+    "process_reaps": 44,
+    "provider_status_sha256": "77bc58fe8682fe299ceda0407d393063005976c72ce16b3c6e8a0b91a10d9944",
+    "archive_members": 39,
+    "production_image_changed": false,
+    "old37_members_byte_equal": true,
+    "consumer_status_sha256": "3d2d5ffa217d01a26bcecc6318ed07b47b9296820ba78cc32b138795b6680f05",
+    "current_loader_limit": 256,
+    "user_smp_supported": false,
+    "elf_sha256": "6eb32fb64cb140cb526c64ce7b73dbe20638afae25b0f1fc913c78a4ad131c48",
+    "memory_region_naming_supported": false,
+    "guest_qualified": true,
+    "shared_memory_supported": false,
+    "invalid_shared_free_processes": 4,
+    "signal_handlers_supported": false,
+    "processes": 44,
+    "prior_gn_commands_preserved": 5196,
+    "added_gn_objects": 1,
+    "guest_status_sha256": "a363bbdee9543b5612db48fbf965fd848eab282a7e179214c0938d82fba48c0c",
+    "actual_elf_admission_run": false,
+    "closed_stderr_EBADF": true,
+    "total_contexts": 68,
+    "thread_joins": 24,
+    "canonical_cold_build_run": false,
+    "complete_link_inputs": 1110
   }
 }

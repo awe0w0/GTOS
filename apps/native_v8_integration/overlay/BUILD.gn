@@ -7743,7 +7743,10 @@ v8_component("v8_libbase") {
   }
 
   if (current_os == "gtos" && gtos_isolate_compile_diagnostic) {
-    sources += [ "src/base/platform/platform-gtos.cc" ]
+    sources += [
+      "src/base/debug/stack_trace_gtos.cc",
+      "src/base/platform/platform-gtos.cc",
+    ]
   } else if (is_linux || is_chromeos) {
     sources += [
       "src/base/debug/stack_trace_posix.cc",

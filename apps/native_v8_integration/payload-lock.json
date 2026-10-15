@@ -1,10 +1,10 @@
 {
-  "scope": "Pinned complete native IA32 V8 executable integration input bundle, not qualified guest runtime",
+  "scope": "Pinned native IA32 V8 payload; complete cached link and debug/shared guest boundaries qualified; cold bootstrap and native Isolate/browser unqualified.",
   "files": {
     "overlay/BUILD.gn": {
-      "sha256": "9c3f5cc70cfe3f3849c723d6a4f487b88c6ea21415073e549eba0403cb7570fb",
-      "bytes": 321991,
-      "origin": "retained native integration input; original ordered SDK tiers preserved"
+      "bytes": 322046,
+      "origin": "GTOS debug/shared source byte-equal to qualified IA32 provider and real full link",
+      "sha256": "9c4b8bd0a636b4d50edd8299270b700c7e3d5227b05a4fc118f0206572f7c2ef"
     },
     "overlay/build/build_config.h": {
       "sha256": "bd185448071dbd2907bdf2896ff754573ee841e8c4cdc939595c00c53e9a5216",
@@ -137,9 +137,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/src/base/platform/platform-gtos.cc": {
-      "sha256": "c0e89265a2a3c66d683dc0ff51d69f25eed3427b1b7ecd49470e42bc77ab05d7",
-      "bytes": 17366,
-      "origin": "native platform helpers, real UTC and bounded copy qualification"
+      "bytes": 17989,
+      "origin": "GTOS debug/shared source byte-equal to qualified IA32 provider and real full link",
+      "sha256": "4a5f12d773bfdc87994b1984d1538070aa420b652ab9ffc477c1821171fec185"
     },
     "overlay/src/base/platform/semaphore.h": {
       "sha256": "6e9399d0f08d22ba157144f0c501723686f652de4f6944b7a84c1728adf9433b",
@@ -5979,8 +5979,8 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "a152dcda86854225c96f67c6c38c575583594003f247e0eaa65033561ad8d537",
-      "bytes": 18235,
+      "sha256": "1d973ef092c6a8927fe5e379a99e39cc26ccb7488896e9e098390c7643b0dfbe",
+      "bytes": 19214,
       "origin": "native runtime-gap qualification; Chinese module documentation"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
@@ -6216,11 +6216,16 @@
       "bytes": 1756,
       "origin": "qualified native runtime-gap source; original license headers retained",
       "sha256": "f8852c3d5a57066fb19870de918dde7b4b95e16243bce695a85e67ec23313785"
+    },
+    "overlay/src/base/debug/stack_trace_gtos.cc": {
+      "bytes": 1881,
+      "origin": "GTOS debug/shared source byte-equal to qualified IA32 provider and real full link",
+      "sha256": "b264765845298b2406ed31cbb328b1ca94e4abd499280f4ce6e43f630302130a"
     }
   },
-  "overlay_files": 432,
+  "overlay_files": 433,
   "sdk_files": 430,
-  "total_bytes": 3410786,
+  "total_bytes": 3414324,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

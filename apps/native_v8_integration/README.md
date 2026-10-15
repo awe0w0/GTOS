@@ -2,9 +2,15 @@
 
 本模块把锁定的真实 V8、libplatform、Platform/Isolate/Context/Script 消费者和
 GTOS 原生入口连接为 `native_embedder.elf` 目标。当前是显式启用的 IA32、单用户
-线程、JIT-less 诊断配置，关闭 Wasm、ICU 和 sandbox。完整 ELF、客体 Isolate/JS、
-浏览器、视频和 HTML5 尚未验收。当前阶段及首阻塞见[集成主线](../../docs/chromium-integration-plan.md)
+线程、JIT-less 诊断配置，关闭 Wasm、ICU 和 sandbox。完整58已按真实GN配置及已验收
+对象缓存链接生成静态IA32 ELF，输入与缓存终验通过；客体Isolate/JS、浏览器、视频和
+HTML5尚未运行。冷构建及空白主机bootstrap仍未验收。当前阶段及首阻塞见[集成主线](../../docs/chromium-integration-plan.md)
 和[机器清单](../../docs/chromium-integration-status.json)。
+
+最新ELF为12,927,508字节，两个PT_LOAD合计2383页，超过现有装载器256页上限。
+当前只完成尺寸测量，尚未验证实际装载拒绝点或测量堆/栈/RSS；不能只扩大配额。
+本组栈迹报告真实一帧原始PC，关闭stderr返回EBADF；共享映射/区域命名明确失败，
+误用共享释放立即终止，不伪造共享内存。客机验收结果见[栈迹与共享边界模块](../native_debug_shared/README.md)。
 
 ## 输入与复现
 
@@ -19,7 +25,7 @@ LLVM libc、Abseil 和 zlib revision 以源码锁为准。原上游检出不被�
 及整数 builtins，在 Linux/WSL 的 GTOS 仓库执行：
 
 ```sh
-python3 -B tools/build-native-v8-integration.py /path/to/fresh-output \
+python3 -I -B -S tools/build-native-v8-integration.py /path/to/fresh-output \
   --v8-source /path/to/pinned-v8 \
   --clang /path/to/pinned-clang/bin/clang \
   --gn /path/to/pinned-gn --ninja /path/to/pinned-ninja \
@@ -32,6 +38,10 @@ python3 -B tools/build-native-v8-integration.py /path/to/fresh-output \
 实际命令，默认执行完整 Ninja。输出的 `status.json`、编译数据库、链接命令和原始
 日志是阶段证据；完整构建失败返回非零，驱动/准备错误不能记为 OS 根因。默认配置
 不启用诊断目标，工具路径不能包含空格或 shell 元字符。
+
+以上是公开入口的参数参考，不代表冷构建已通过。当前会话按[本地执行栅栏](../../docs/native-command-execution.md)
+先固定脚本/工具SHA，再在无网络、最小环境、精确执行文件白名单及仅新输出可写的
+Landlock约束下运行；不直接执行日志或编译数据库中的命令，不降低隔离来继续。
 
 `--cache-from /path/to/retained/build` 将停止的缓存复制到新目录，再重新生成目标；
 原缓存不变。相邻 `module-input-snapshot/source-lock.json` 必须存在并匹配固定版本

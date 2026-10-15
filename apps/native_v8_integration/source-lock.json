@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Portable pinned complete native IA32 V8 build/failure entry. Actual Abseil exit and CPU entropy consumers are separately guest-qualified; complete engine and remaining runtime bridges are unqualified.",
+  "scope": "Pinned native IA32 V8: qualified complete cached GN link and debug/shared consumer guests; cold bootstrap, native Isolate/JS and browser remain unqualified.",
   "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
   "upstream_revisions": {
     "": "be042d4462bee463c9b785701b8c6ee4576ee0a3",
@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "fb3d0da19ba11ca6dbadeaa8d07015d488c4ddc657f4778d26b160b815951113",
+  "payload_lock_sha256": "1f0c7cfd9df724e4191615c45c67bc0a1a83fdc09d806f4ee01af21c65b0a0bb",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1555,5 +1555,10 @@
     "native_allocated_string_libc",
     "native_output_libc"
   ],
-  "native_runtime_gap_llvm_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f"
+  "native_runtime_gap_llvm_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+  "native_debug_shared_guest_qualified": true,
+  "native_debug_shared_qualification": "docs/chromium-integration-status.json#native_debug_shared",
+  "native_debug_shared_scope": "One real caller PC/raw addresses; EBADF on closed stderr; shared mapping/naming explicitly unsupported; invalid shared free traps without releasing private pages.",
+  "full_native_elf_link_qualified": true,
+  "full_native_elf_sha256": "6eb32fb64cb140cb526c64ce7b73dbe20638afae25b0f1fc913c78a4ad131c48"
 }

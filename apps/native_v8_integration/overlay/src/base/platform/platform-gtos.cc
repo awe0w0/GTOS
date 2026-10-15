@@ -338,6 +338,23 @@ bool OS::DecommitPages(void* address, size_t size) {
 bool OS::SealPages(void*, size_t) { return false; }
 bool OS::RemapPages(const void*, size_t, void*, MemoryPermission) { return false; }
 
+bool OS::SetMemoryRegionName(const void*, size_t, const char*) {
+  return false;  // Native ABI1 has no region-name service.
+}
+
+void* OS::AllocateShared(void*, size_t, MemoryPermission,
+                         SharedMemoryHandle, uint64_t) {
+  // Native ABI1 cannot map a shared object. A private allocation would violate
+  // the caller's aliasing/ownership contract, so report allocation failure.
+  return nullptr;
+}
+
+void OS::FreeShared(void*, size_t) {
+  // No shared allocation can succeed in this profile. Never release a private
+  // reservation through a mismatched ownership API.
+  gtos::UnsupportedService();
+}
+
 bool OS::CanReserveAddressSpace() { return true; }
 std::optional<AddressSpaceReservation> OS::CreateAddressSpaceReservation(
     void* hint, size_t size, size_t alignment, MemoryPermission max_permission,
