@@ -2,13 +2,17 @@
 
 本模块把锁定的真实 V8、libplatform、Platform/Isolate/Context/Script 消费者和
 GTOS 原生入口连接为 `native_embedder.elf` 目标。当前是显式启用的 IA32、单用户
-线程、JIT-less 诊断配置，关闭 Wasm、ICU 和 sandbox。完整58已按真实GN配置及已验收
-对象缓存链接生成静态IA32 ELF，输入与缓存终验通过；客体Isolate/JS、浏览器、视频和
-HTML5尚未运行。冷构建及空白主机bootstrap仍未验收。当前阶段及首阻塞见[集成主线](../../docs/chromium-integration-plan.md)
+线程、JIT-less 配置，关闭 Wasm、ICU 和 sandbox。完整61已按真实GN配置及已验收
+对象缓存生成静态IA32 ELF，并在32MiB/smp4和64MiB/smp1完成真实Isolate、Context、
+Script及退出：`GTOS42`、`3.75`两项结果正确，stage4/result0/exit0，无故障，
+物理页精确回收。详见[原生脚本运行模块](../native_v8_launch/README.md)。
+浏览器、网页、视频和HTML5仍未运行；冷构建及空白主机bootstrap仍未验收。
+当前阶段与下一步见[集成主线](../../docs/chromium-integration-plan.md)
 和[机器清单](../../docs/chromium-integration-status.json)。
 
-最新ELF为12,927,508字节，两个PT_LOAD合计2383页，超过现有装载器256页上限。
-当前只完成尺寸测量，尚未验证实际装载拒绝点或测量堆/栈/RSS；不能只扩大配额。
+最新ELF为12,932,528字节，两个PT_LOAD合计2385页。显式内核配置使用128页根栈、
+1024运行页预算，总容量3537条；普通入口保留256页。已根据实际堆、配额、栈guard
+故障修订后备分配与启动配置，并保留所有映射检查完成原生运行。
 本组栈迹报告真实一帧原始PC，关闭stderr返回EBADF；共享映射/区域命名明确失败，
 误用共享释放立即终止，不伪造共享内存。客机验收结果见[栈迹与共享边界模块](../native_debug_shared/README.md)。
 

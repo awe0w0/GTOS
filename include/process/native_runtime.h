@@ -16,6 +16,10 @@ namespace gtos { namespace process {
         const void* data;
         uint32_t dataBytes;
     };
+    // Trusted kernel launch choice; never accepted from a user syscall.
+    struct NativeElfLaunchProfile {
+        uint32_t imagePageLimit, stackPages, runtimePages;
+    };
     struct NativeStatus {
         uint32_t id, directory, exitCode, faultVector, faultError, faultAddress;
         uint32_t observedCs, observedCr3, observedEflags, systemCalls;
@@ -83,7 +87,9 @@ namespace gtos { namespace process {
         bool SafeKernelContext() const;
         bool TrustedImage(const uint8_t*, uint32_t, uint32_t) const;
         Slot* FreeSlot(uint32_t& index);
-        bool Admit(Slot&, uint32_t index, uint32_t entry, uint32_t& id);
+        bool Admit(Slot&, uint32_t index, uint32_t entry, uint32_t& id, uint32_t stackPages = 2);
+        bool CreateElfWithBudget(const uint8_t*, uint32_t bytes, uint32_t& id,
+                                 uint32_t imagePageLimit, uint32_t stackPages, uint32_t runtimePages);
         NativeRuntime(const NativeRuntime&);
         NativeRuntime& operator=(const NativeRuntime&);
     public:
@@ -105,6 +111,11 @@ namespace gtos { namespace process {
         // and2MiB file limits. Runtime VM transactions retain the old256 cap.
         bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
                        uint32_t imagePageLimit);
+        // Explicit root-stack/runtime budget. Stack2..128pages, runtime1..1024;
+        // actual image+stack+runtime must fit the supported ownership capacity.
+        // Both guards remain unmapped and excluded from runtime reservations.
+        bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                       const NativeElfLaunchProfile& profile);
         // Boot/desktop context only, never from a trap or on a victim stack.
         uint32_t Reap();
         bool RequestExit(uint32_t id, uint32_t code);

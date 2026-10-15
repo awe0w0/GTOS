@@ -170,9 +170,10 @@ NativeRuntime::Slot* NativeRuntime::FreeSlot(uint32_t& index) {
         if (!slots[index].occupied && !slots[index].space.Prepared()) return &slots[index];
     return 0;
 }
-bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& id) {
-    if (!slot.space.MapNewPage(UserStackBottom, true)
-        || !slot.space.MapNewPage(UserStackBottom + 4096, true)
+bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& id,
+                           uint32_t stackPages) {
+    const uint32_t stackBottom = UserStackTop - stackPages * 4096;
+    if (!slot.space.MapNewRange(stackBottom, stackPages * 4096, true)
         || !slot.space.Seal()) return false;
     const uint32_t top = StackTop(index);
     Zero((void*)(top - KernelStackPages * 4096), KernelStackPages * 4096);
@@ -192,7 +193,7 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     id = slot.status.id = nextId++; slot.status.directory = slot.space.DirectoryAddress();
     slot.status.live = slot.occupied = true; ++statistics.created;
     slot.process = &slot; slot.stackHandle = 0;
-    slot.userStackBegin = UserStackBottom; slot.userStackEnd = UserStackTop;
+    slot.userStackBegin = stackBottom; slot.userStackEnd = UserStackTop;
     return true;
 }
 bool NativeRuntime::Create(const NativeImage& image, uint32_t& id) {
@@ -235,6 +236,20 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
 }
 bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
                               uint32_t imagePageLimit) {
+    return CreateElfWithBudget(image, bytes, id, imagePageLimit, 2,
+        imagePageLimit > Elf32MaximumPages ? ProcessAddressSpace::MaximumPages : 0);
+}
+bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                              const NativeElfLaunchProfile& profile) {
+    id = 0;
+    if (profile.stackPages < 2 || profile.stackPages > 128
+        || !profile.runtimePages || profile.runtimePages > 1024) return false;
+    return CreateElfWithBudget(image, bytes, id, profile.imagePageLimit,
+        profile.stackPages, profile.runtimePages);
+}
+bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                                        uint32_t imagePageLimit, uint32_t stackPages,
+                                        uint32_t runtimePages) {
     InterruptGuard guard;
     id = 0;
     if (!imagePageLimit || imagePageLimit > Elf32MaximumLargePages) return false;
@@ -244,11 +259,13 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
     Elf32LoadPlan plan;
     Elf32Error validation;
     if (!ValidateElf32(image, bytes, plan, validation, imagePageLimit)) return false;
-    const uint32_t capacity = large ? plan.pageCount + 2 + ProcessAddressSpace::MaximumPages
-                                    : ProcessAddressSpace::MaximumPages;
-    if (capacity > ProcessAddressSpace::MaximumCapacityPages || plan.pageCount > capacity - 2)
+    const uint32_t capacity = runtimePages ? plan.pageCount + stackPages + runtimePages
+                                          : ProcessAddressSpace::MaximumPages;
+    if (capacity < ProcessAddressSpace::MaximumPages || capacity > ProcessAddressSpace::MaximumCapacityPages
+        || plan.pageCount > capacity - stackPages)
         return false;
-    const uint32_t reservedBegin = UserStackBottom - 4096, reservedEnd = UserStackTop + 4096;
+    const uint32_t stackBottom = UserStackTop - stackPages * 4096;
+    const uint32_t reservedBegin = stackBottom - 4096, reservedEnd = UserStackTop + 4096;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
         const Elf32LoadSegment& segment = plan.segments[i];
         const uint32_t begin = segment.virtualAddress & ~4095U;
@@ -256,7 +273,7 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
         if (begin < reservedEnd && reservedBegin < end) return false;
     }
     uint32_t index; Slot* target = FreeSlot(index);
-    if (!target || !target->space.Prepare(*paging, *frames, capacity)) return false;
+    if (!target || !target->space.Prepare(*paging, *frames, capacity, reservedBegin)) return false;
     Slot& slot = *target;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
         const Elf32LoadSegment& segment = plan.segments[i];
@@ -268,7 +285,7 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
         if (!(segment.flags & Elf32Write) && !slot.space.ProtectRange(begin, end - begin, false))
             goto rollback;
     }
-    if (Admit(slot, index, plan.entry, id)) {
+    if (Admit(slot, index, plan.entry, id, stackPages)) {
         slot.codeCount = slot.dataCount = 0;
         for (uint32_t i = 0; i < plan.segmentCount; ++i) {
             const Elf32LoadSegment& segment = plan.segments[i];

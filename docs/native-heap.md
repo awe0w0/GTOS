@@ -1,5 +1,8 @@
 # Native IA32 C/C++ heap
 
+后续进展：完整 V8 已通过[原生脚本运行验收](../apps/native_v8_launch/README.md)。
+其显式入口启用按需后备 arena 与独立映射；本页仍记录默认单 arena 的早期叶子验收。
+
 This module supplies a bounded native C/C++ heap above the accepted GTOS data-page
 VM ABI. The genuine pinned V8 `src/base/platform/memory.h` consumer and official
 LLVM libc/libc++ declarations execute against this heap in real CPL3. It retains

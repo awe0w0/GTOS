@@ -16,9 +16,15 @@ GTOS 是一个在 `dev` 分支开发的 32 位 x86 教学操作系统。
 仍是路线图中的待办工作。
 详见[工程路线图](docs/ROADMAP.md)。
 
+真实的[原生 IA32 V8](apps/native_v8_launch/README.md)已在 GTOS 用户态完成
+Isolate、Context、脚本编译与执行及退出回收；两种配置检查得到 `GTOS42` 和 `3.75`。
+当前是单用户线程、jitless 入口。下一步推进 Chromium Content 本地首帧与 DOM，
+网页浏览、视频和 HTML5 尚未验收。
+
 显式测试配置新增[有界原生线程生命周期](apps/native_thread_lifecycle/README.md)：
 在 BSP 上调度共享地址空间的独立 CPL3 上下文，并验证退出、join、FP 和资源回收。
-默认启动及 V8 诊断配置仍关闭该能力；TLS、errno、共享锁和 V8 线程桥接尚待接入。
+默认启动及完整 V8 入口仍关闭该能力；TLS、errno、共享锁和 V8 线程桥接的显式
+BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多进程支持。
 
 ## 构建与运行
 

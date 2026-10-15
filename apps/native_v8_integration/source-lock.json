@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Pinned native IA32 V8: complete cached GN link, real CPL3 large-image admission/fault/reap qualified; native Isolate/JS and browser remain unqualified.",
+  "scope": "锁定完整IA32 V8 Isolate/Context/Script原生双配置通过；浏览器/视频/HTML5未验收",
   "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
   "upstream_revisions": {
     "": "be042d4462bee463c9b785701b8c6ee4576ee0a3",
@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "1f0c7cfd9df724e4191615c45c67bc0a1a83fdc09d806f4ee01af21c65b0a0bb",
+  "payload_lock_sha256": "3e90efe3cc20048c11c5e852e9f36e554aec4b270ae05608cbd3a330e77e06cb",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1309,7 +1309,7 @@
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
   "new_runtime_bridges_guest_qualified": false,
   "signal_handlers_supported": false,
-  "native_isolate_pass": false,
+  "native_isolate_pass": true,
   "browser_guest_pass": false,
   "video_guest_pass": false,
   "html5_guest_pass": false,
@@ -1560,7 +1560,7 @@
   "native_debug_shared_qualification": "docs/chromium-integration-status.json#native_debug_shared",
   "native_debug_shared_scope": "One real caller PC/raw addresses; EBADF on closed stderr; shared mapping/naming explicitly unsupported; invalid shared free traps without releasing private pages.",
   "full_native_elf_link_qualified": true,
-  "full_native_elf_sha256": "6eb32fb64cb140cb526c64ce7b73dbe20638afae25b0f1fc913c78a4ad131c48",
+  "full_native_elf_sha256": "01a6464a8dde52cc3b848a344ffec92af66ba05655f4b66bf78f661225d13441",
   "native_v8_admission_qualified": true,
   "native_v8_admission_qualification": "apps/native_v8_admission/acceptance.json",
   "native_v8_admission_scope": "真实2383页ELF进入CPL3，按需元数据、权限、OOM回滚、故障/普通槽位回收及真实容量查询；Isolate对齐分配失败，JS与浏览器未成功",
@@ -1572,5 +1572,79 @@
     "include/process/native_runtime.h": "f1a5b91c17122965e1a65ab21dac90c8d116a6bb6d09f1939583f62f10b60fb5",
     "src/process/native_runtime.cpp": "e2b12afdf07c8f6dda0d46fc66cd86b7f48736770767bafced568c08a9514386"
   },
-  "native_v8_admission_input_preservation_sha256": "37c529c4d99fffdeecbb1815d2c8295ed7fa71b44b36c75e293ca00cedab639e"
+  "native_v8_admission_input_preservation_sha256": "37c529c4d99fffdeecbb1815d2c8295ed7fa71b44b36c75e293ca00cedab639e",
+  "javascript_guest_pass": true,
+  "native_v8_launch_qualification": {
+    "module": "apps/native_v8_launch",
+    "proofs": {
+      "heap_compile": {
+        "path": "artifacts/native-large-heap-20261015-a/compile-05/status.json",
+        "sha256": "04aa857682f7d1db50c0984f8652252ecf11c559f3a7a267d07e30aa55c0092f"
+      },
+      "full_link": {
+        "path": "artifacts/native-large-heap-20261015-a/full-link-61/status.json",
+        "sha256": "3edac568988fccc2652bd0a93ccc95c6f7d73653410adf8dab100b02b2cc5c91"
+      },
+      "heap_boundaries": {
+        "path": "artifacts/native-large-heap-20261015-a/tests-02/status.json",
+        "sha256": "978547c3dbf2c54fcc75983b23abbda81e5392808a1b7e5d89a54400cdca6726"
+      },
+      "native_v8": {
+        "path": "artifacts/native-v8-launch-20261015-a/guest-04/status.json",
+        "sha256": "5231d19d2b8b756b22a18430e5d8bf88524351a861a2937e737e19ce4bfba5f1"
+      },
+      "launch_boundaries": {
+        "path": "artifacts/native-v8-launch-20261015-a/boundaries-02/status.json",
+        "sha256": "899c4be9babffde053423f404935112209321302021894363c8f59550cd726d8"
+      },
+      "shared_heap": {
+        "path": "artifacts/native-v8-launch-20261015-a/thread-01/status.json",
+        "sha256": "d9dc3335d5dcf61101a2110540c55eeb49ecc91df1262d25c8640a8c72b87342"
+      },
+      "default_regression": {
+        "path": "artifacts/native-v8-launch-20261015-a/default-02/status.json",
+        "sha256": "09dc348f1eff3b06fc2e0a41cc2ff9300ff9e658333c7ef6c5bf91905ad45232"
+      }
+    },
+    "elf_sha256": "01a6464a8dde52cc3b848a344ffec92af66ba05655f4b66bf78f661225d13441",
+    "native_isolate_pass": true,
+    "javascript_guest_pass": true,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "configurations": [
+      "32M-smp4",
+      "64M-smp1"
+    ],
+    "expressions": [
+      "'GTOS' + (40 + 2)",
+      "1.25 + 2.5"
+    ],
+    "results": [
+      "GTOS42",
+      "3.75"
+    ],
+    "profile": {
+      "image_page_limit": 4096,
+      "stack_pages": 128,
+      "runtime_pages": 1024,
+      "image_pages": 2385,
+      "capacity_pages": 3537,
+      "metadata_frames": 14
+    },
+    "default_processes": 44,
+    "default_contexts": 68,
+    "thread_joins": 24,
+    "process_reaps": 44,
+    "shared_heap_contexts": 24,
+    "complete_cold_build_pass": false,
+    "production_image_changed": false
+  },
+  "native_v8_launch_kernel_sources": {
+    "include/memory/process_address_space.h": "cca56254fc2467f35e2fd2e69cec904424ffa5415767ccc25a78c797be66b234",
+    "src/memory/process_address_space.cpp": "4792215c3df797ddacd02211c5c0ef71a21c0bb9e1d7f1834bcb5f4cb182984c",
+    "include/process/native_runtime.h": "de8f0c117013024528eda6d9ca0c8b0dc8c16ea4c2d90185935bd7542d8fa40a",
+    "src/process/native_runtime.cpp": "f2f101703a00a5a7195ba05faa9e1f027d095983bc7fae80ed252fca38d70c26"
+  },
+  "native_v8_launch_input_preservation_sha256": "1d99820d69fb157c8d144a8cb0f8602e982d62ec382b986c9c138fc36483412a"
 }

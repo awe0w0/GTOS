@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "scope": "真实IA32 V8 Isolate/Context/Script原生双配置通过并精确回收；继续真实Content本地首帧/DOM，再到网络、视频和HTML5。",
+  "qualification": {
+    "module": "apps/native_v8_launch",
+    "proofs": {
+      "heap_compile": {
+        "path": "artifacts/native-large-heap-20261015-a/compile-05/status.json",
+        "sha256": "04aa857682f7d1db50c0984f8652252ecf11c559f3a7a267d07e30aa55c0092f"
+      },
+      "full_link": {
+        "path": "artifacts/native-large-heap-20261015-a/full-link-61/status.json",
+        "sha256": "3edac568988fccc2652bd0a93ccc95c6f7d73653410adf8dab100b02b2cc5c91"
+      },
+      "heap_boundaries": {
+        "path": "artifacts/native-large-heap-20261015-a/tests-02/status.json",
+        "sha256": "978547c3dbf2c54fcc75983b23abbda81e5392808a1b7e5d89a54400cdca6726"
+      },
+      "native_v8": {
+        "path": "artifacts/native-v8-launch-20261015-a/guest-04/status.json",
+        "sha256": "5231d19d2b8b756b22a18430e5d8bf88524351a861a2937e737e19ce4bfba5f1"
+      },
+      "launch_boundaries": {
+        "path": "artifacts/native-v8-launch-20261015-a/boundaries-02/status.json",
+        "sha256": "899c4be9babffde053423f404935112209321302021894363c8f59550cd726d8"
+      },
+      "shared_heap": {
+        "path": "artifacts/native-v8-launch-20261015-a/thread-01/status.json",
+        "sha256": "d9dc3335d5dcf61101a2110540c55eeb49ecc91df1262d25c8640a8c72b87342"
+      },
+      "default_regression": {
+        "path": "artifacts/native-v8-launch-20261015-a/default-02/status.json",
+        "sha256": "09dc348f1eff3b06fc2e0a41cc2ff9300ff9e658333c7ef6c5bf91905ad45232"
+      }
+    },
+    "elf_sha256": "01a6464a8dde52cc3b848a344ffec92af66ba05655f4b66bf78f661225d13441",
+    "native_isolate_pass": true,
+    "javascript_guest_pass": true,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "configurations": [
+      "32M-smp4",
+      "64M-smp1"
+    ],
+    "expressions": [
+      "'GTOS' + (40 + 2)",
+      "1.25 + 2.5"
+    ],
+    "results": [
+      "GTOS42",
+      "3.75"
+    ],
+    "profile": {
+      "image_page_limit": 4096,
+      "stack_pages": 128,
+      "runtime_pages": 1024,
+      "image_pages": 2385,
+      "capacity_pages": 3537,
+      "metadata_frames": 14
+    },
+    "default_processes": 44,
+    "default_contexts": 68,
+    "thread_joins": 24,
+    "process_reaps": 44,
+    "shared_heap_contexts": 24,
+    "complete_cold_build_pass": false,
+    "production_image_changed": false
+  },
+  "sources": {
+    "include/memory/process_address_space.h": "cca56254fc2467f35e2fd2e69cec904424ffa5415767ccc25a78c797be66b234",
+    "src/memory/process_address_space.cpp": "4792215c3df797ddacd02211c5c0ef71a21c0bb9e1d7f1834bcb5f4cb182984c",
+    "include/process/native_runtime.h": "de8f0c117013024528eda6d9ca0c8b0dc8c16ea4c2d90185935bd7542d8fa40a",
+    "src/process/native_runtime.cpp": "f2f101703a00a5a7195ba05faa9e1f027d095983bc7fae80ed252fca38d70c26",
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/heap.cc": "b10c3497cd8f2e3659044cca847f73fe21042b31f0951e14d5e1dbf297400308",
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/heap.h": "2ccee048e304672a0a978fefd95e5b3e625a3639d8c70b31ab86bf75999ccea2",
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native-entry.cc": "a21b330f96f993753941c3718818de064153cc67438f6bce3af0c7f9c3b0aa7f"
+  },
+  "public_logs": {
+    "apps/native_v8_launch/v8-32M-smp4.log": "bf3f99f98b4fc69ac491217583523c14c904649e65c819031e00e1b4074708cf",
+    "apps/native_v8_launch/boundary-32M-smp4.log": "934bfb61cbd26f0073494d393f8068b9220ed33b4d68d6e00ea489e29f3d4eac",
+    "apps/native_v8_launch/v8-64M-smp1.log": "12f4bac60dfbdafa000bb01c01f6fde14b9f4a8d75d4886d732de4a74ca8c6e8",
+    "apps/native_v8_launch/boundary-64M-smp1.log": "ded2852f92413f967036959d94e21bb0e37765fbce9c3639bcd68fd51fc23acb",
+    "apps/native_v8_launch/thread-32M-smp1.log": "83d2e9d6d484ca1330180fc30b86f16d1131fd4a2448364880f60382790d9e2d",
+    "apps/native_v8_launch/heap-32M-smp1.log": "5f04c35a5d25d635ebf7c306ac75287c1143b78b9f83c94d644eff31bc673574",
+    "apps/native_v8_launch/thread-64M-smp4.log": "eaafb184812bf0e97c43defcb53dd4cba6b896edb988efd7d69fcb89fa4eda19",
+    "apps/native_v8_launch/heap-64M-smp4.log": "6a3f179d8129e0589588cde50d3a82a33cd11916592843f66e1798efe152a3df",
+    "apps/native_v8_launch/default-single-32M-smp1.log": "ac0b78839a357b922b09f0d0ec2965f1b5602e9e29b485c6326acc93d794ed1b",
+    "apps/native_v8_launch/default-single-64M-smp4.log": "e2a567ce4cf6e23f69fe1cf57596715be94372ad1817b55d0299c5d8ba18861d",
+    "apps/native_v8_launch/default-thread-32M-smp1.log": "24d9d66580a677baa325f5fa5bd8b0ccfbcb83a8f005385426d07a5cbd636344",
+    "apps/native_v8_launch/default-thread-64M-smp4.log": "eea211d69aa8a15900043b033e2b35744b76171eceed356a3a2f9c5d7890dd98"
+  }
+}

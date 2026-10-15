@@ -27,6 +27,10 @@ namespace {
     struct Arena { unsigned base, handle, length, first, liveBlocks; };
     static_assert(sizeof(Block) == Header && alignof(Block) == Alignment, "Native heap block layout");
     Arena arena;
+    Arena extraArenas[GTOS_NATIVE_HEAP_ARENAS - 1U];
+    struct LargeAllocation { unsigned base, handle, length, requested, alignment; };
+    LargeAllocation largeAllocations[GTOS_NATIVE_HEAP_LARGE_SLOTS];
+    unsigned largeAllocationsEnabled;
 
     int Call(unsigned operation, unsigned first, unsigned second) noexcept {
         int result;
@@ -57,7 +61,9 @@ namespace {
     unsigned Payload(const Block* block) noexcept { return Address(block) + Header + block->userOffset; }
     bool PowerOfTwo(unsigned value) noexcept { return value && !(value & (value - 1U)); }
     [[noreturn]] void Corrupt() noexcept { gtos_native_heap_panic(GTOS_NATIVE_HEAP_EXIT_CORRUPT); }
-    void Validate() noexcept {
+    Arena& ArenaAt(unsigned index) noexcept { return index ? extraArenas[index - 1U] : arena; }
+    void Validate(const Arena& owner) noexcept {
+        const Arena& arena = owner;
         if (!arena.handle) {
             if (arena.base || arena.length || arena.first || arena.liveBlocks) Corrupt();
             return;
@@ -96,6 +102,65 @@ namespace {
         }
         if (!count || live != arena.liveBlocks) Corrupt();
     }
+    void ValidateLarge() noexcept {
+        if (largeAllocationsEnabled > 1U) Corrupt();
+        for (unsigned i = 0; i < GTOS_NATIVE_HEAP_LARGE_SLOTS; ++i) {
+            const LargeAllocation& block = largeAllocations[i];
+            if (!block.handle) {
+                if (block.base || block.length || block.requested || block.alignment) Corrupt();
+                continue;
+            }
+            if (!largeAllocationsEnabled || block.handle > 0x7FFFFFFFU
+                || !block.length || block.length > GTOS_NATIVE_HEAP_LARGE_BYTES
+                || (block.length & (GTOS_VM_PAGE_BYTES - 1U))
+                || block.base < ArenaBase || block.base > ArenaLimit - block.length
+                || (block.base & (GTOS_VM_PAGE_BYTES - 1U))
+                || !block.requested || block.requested > block.length
+                || block.alignment < Alignment || !PowerOfTwo(block.alignment)
+                || (block.base & (block.alignment - 1U))) Corrupt();
+            for (unsigned j = 0; j < GTOS_NATIVE_HEAP_ARENAS; ++j) {
+                const Arena& owner = ArenaAt(j);
+                if (owner.handle && (block.handle == owner.handle
+                    || (block.base < owner.base + owner.length
+                        && owner.base < block.base + block.length))) Corrupt();
+            }
+            for (unsigned j = 0; j < i; ++j) {
+                const LargeAllocation& other = largeAllocations[j];
+                if (other.handle && (other.handle == block.handle
+                    || (block.base < other.base + other.length
+                        && other.base < block.base + block.length))) Corrupt();
+            }
+        }
+    }
+    void ValidateAll() noexcept {
+        for (unsigned i = 0; i < GTOS_NATIVE_HEAP_ARENAS; ++i) {
+            const Arena& owner = ArenaAt(i);
+            Validate(owner);
+            if (i && owner.handle && !largeAllocationsEnabled) Corrupt();
+            if (!owner.handle) continue;
+            for (unsigned j = 0; j < i; ++j) {
+                const Arena& other = ArenaAt(j);
+                if (other.handle && (owner.handle == other.handle
+                    || (owner.base < other.base + other.length
+                        && other.base < owner.base + owner.length))) Corrupt();
+            }
+        }
+        ValidateLarge();
+    }
+    Arena& FindArena(const void* pointer) noexcept {
+        const unsigned address = (unsigned)pointer;
+        for (unsigned i = 0; i < GTOS_NATIVE_HEAP_ARENAS; ++i) {
+            Arena& owner = ArenaAt(i);
+            if (owner.handle && address >= owner.base && address < owner.base + owner.length)
+                return owner;
+        }
+        gtos_native_heap_panic(GTOS_NATIVE_HEAP_EXIT_BAD_POINTER);
+    }
+    LargeAllocation* FindLarge(const void* pointer) noexcept {
+        for (LargeAllocation& block : largeAllocations)
+            if (block.handle && block.base == (unsigned)pointer) return &block;
+        return nullptr;
+    }
     void Initialize(Block* block, unsigned capacity, unsigned previous, unsigned next) noexcept {
         ::new ((void*)block) Block{next, previous, capacity, 0, 0, Alignment, 0, Magic};
     }
@@ -122,7 +187,7 @@ namespace {
         if (Call(GTOS_SYS_VM_RELEASE, (unsigned)&request, sizeof(request)) != 0)
             gtos_native_heap_panic(GTOS_NATIVE_HEAP_EXIT_RELEASE);
     }
-    bool EnsureArena() noexcept {
+    bool EnsureArena(Arena& arena) noexcept {
         if (arena.handle) return true;
         GtosVmReserveResult result = {};
         const GtosVmReserveRequest reserve = {GTOS_VM_ABI_VERSION, GTOS_NATIVE_HEAP_BYTES,
@@ -143,13 +208,41 @@ namespace {
         arena = {result.base, result.handle, result.length, result.base, 0};
         return true;
     }
-    void* Allocate(size_t bytes, unsigned alignment) noexcept {
+    void* AllocateLarge(size_t bytes, unsigned alignment) noexcept {
+        if (!largeAllocationsEnabled || !bytes || bytes > GTOS_NATIVE_HEAP_LARGE_BYTES)
+            return nullptr;
+        LargeAllocation* slot = nullptr;
+        for (LargeAllocation& block : largeAllocations)
+            if (!block.handle) { slot = &block; break; }
+        if (!slot) return nullptr;
+        // The size bound above makes rounding safe. Reservation alignment
+        // makes the whole mapping a payload; ownership stays out of user data.
+        const unsigned length = ((unsigned)bytes + GTOS_VM_PAGE_BYTES - 1U)
+            & ~(GTOS_VM_PAGE_BYTES - 1U);
+        const unsigned pageAlignment = alignment < GTOS_VM_PAGE_BYTES ? GTOS_VM_PAGE_BYTES : alignment;
+        GtosVmReserveResult result = {};
+        const GtosVmReserveRequest reserve = {GTOS_VM_ABI_VERSION, length, pageAlignment, 0, (unsigned)&result};
+        if (Call(GTOS_SYS_VM_RESERVE, (unsigned)&reserve, sizeof(reserve)) != 0) return nullptr;
+        if (result.version != GTOS_VM_ABI_VERSION || !result.handle || result.handle > 0x7FFFFFFFU
+            || result.base < ArenaBase || result.base > ArenaLimit - length
+            || (result.base & (pageAlignment - 1U)) || result.length != length
+            || result.page_size != GTOS_VM_PAGE_BYTES)
+            gtos_native_heap_panic(GTOS_NATIVE_HEAP_EXIT_VM_CONTRACT);
+        const GtosVmRangeRequest commit = {GTOS_VM_ABI_VERSION, result.handle, 0, length, GTOS_VM_READ_WRITE};
+        if (Call(GTOS_SYS_VM_SET_PERMISSIONS, (unsigned)&commit, sizeof(commit)) != 0) {
+            Release(result.handle);
+            return nullptr;
+        }
+        *slot = {result.base, result.handle, result.length, (unsigned)bytes, alignment};
+        return (void*)result.base;
+    }
+    void* Allocate(Arena& arena, size_t bytes, unsigned alignment) noexcept {
         if (!bytes) return nullptr;
         if (bytes > MaximumPayload) {
             return nullptr;
         }
-        Validate();
-        if (!EnsureArena()) {
+        Validate(arena);
+        if (!EnsureArena(arena)) {
             return nullptr;
         }
         for (unsigned address = arena.first; address; address = At(address)->next) {
@@ -164,7 +257,7 @@ namespace {
             block->alignment = alignment;
             block->allocated = 1;
             ++arena.liveBlocks;
-            Validate();
+            Validate(arena);
             return (void*)Payload(block);
         }
         // A newly initialized arena that cannot satisfy alignment must not
@@ -175,14 +268,34 @@ namespace {
         }
         return nullptr;
     }
-    Block* Find(const void* pointer) noexcept {
+    void* Acquire(size_t bytes, unsigned alignment) noexcept {
+        if (!bytes) return nullptr;
+        ValidateAll();
+        void* result = Allocate(arena, bytes, alignment);
+        if (!result && largeAllocationsEnabled) {
+            // Pack small overflow requests; one descriptor/page per tiny
+            // allocation exhausts region slots before V8 can deserialize.
+            for (Arena& owner : extraArenas)
+                if (owner.handle && !result) result = Allocate(owner, bytes, alignment);
+            if (!result && bytes <= GTOS_NATIVE_HEAP_SMALL_FALLBACK_BYTES
+                && alignment <= GTOS_VM_PAGE_BYTES) {
+                for (Arena& owner : extraArenas) if (!owner.handle) {
+                    result = Allocate(owner, bytes, alignment);
+                    break;
+                }
+            } else if (!result) result = AllocateLarge(bytes, alignment);
+        }
+        ValidateAll();
+        return result;
+    }
+    Block* Find(const Arena& arena, const void* pointer) noexcept {
         for (unsigned address = arena.first; address; address = At(address)->next) {
             Block* block = At(address);
             if (block->allocated && Payload(block) == (unsigned)pointer) return block;
         }
         gtos_native_heap_panic(GTOS_NATIVE_HEAP_EXIT_BAD_POINTER);
     }
-    void FreeBlock(Block* block) noexcept {
+    void FreeBlock(Arena& arena, Block* block) noexcept {
         block->requested = block->userOffset = block->allocated = 0;
         block->alignment = Alignment;
         --arena.liveBlocks;
@@ -192,10 +305,19 @@ namespace {
             block = previous;
         }
         if (block->next && !At(block->next)->allocated) Merge(block, At(block->next));
-        Validate();
+        Validate(arena);
         if (!arena.liveBlocks) {
             Release(arena.handle);
             arena = {};
+        }
+    }
+    void FreePointer(void* pointer) noexcept {
+        if (LargeAllocation* block = FindLarge(pointer)) {
+            Release(block->handle);
+            *block = {};
+        } else {
+            Arena& owner = FindArena(pointer);
+            FreeBlock(owner, Find(owner, pointer));
         }
     }
     bool OutputAddress(const void* output) noexcept {
@@ -203,6 +325,15 @@ namespace {
         return address >= UserBase && address <= UserLimit - sizeof(void*)
             && !(address & (alignof(void*) - 1U));
     }
+}
+extern "C" int gtos_native_heap_enable_large_allocations() noexcept {
+    HeapGuard guard;
+    ValidateAll();
+    for (unsigned i = 0; i < GTOS_NATIVE_HEAP_ARENAS; ++i)
+        if (ArenaAt(i).handle) return EBUSY;
+    for (const LargeAllocation& block : largeAllocations) if (block.handle) return EBUSY;
+    largeAllocationsEnabled = 1;
+    return 0;
 }
 extern "C" [[noreturn]] void gtos_native_heap_panic(unsigned code) noexcept {
     static const char failure[] = "GTOS NATIVE HEAP FAIL V1\n";
@@ -213,7 +344,7 @@ extern "C" [[noreturn]] void gtos_native_heap_panic(unsigned code) noexcept {
 }
 extern "C" void* malloc(size_t bytes) noexcept {
     HeapGuard guard;
-    void* result = Allocate(bytes, Alignment);
+    void* result = Acquire(bytes, Alignment);
     if (!result && bytes) errno = ENOMEM;
     return result;
 }
@@ -234,19 +365,34 @@ extern "C" void* calloc(size_t count, size_t bytes) noexcept {
 extern "C" void free(void* pointer) noexcept {
     if (!pointer) return;
     HeapGuard guard;
-    Validate();
-    FreeBlock(Find(pointer));
+    ValidateAll();
+    FreePointer(pointer);
+    ValidateAll();
 }
 extern "C" void* realloc(void* pointer, size_t bytes) noexcept {
     if (!pointer) return malloc(bytes);
     HeapGuard guard;
-    Validate();
-    Block* block = Find(pointer);
+    ValidateAll();
+    if (LargeAllocation* large = FindLarge(pointer)) {
+        if (!bytes) { FreePointer(pointer); return nullptr; }
+        if (bytes <= large->length) { large->requested = (unsigned)bytes; return pointer; }
+        void* replacement = Acquire(bytes, large->alignment);
+        if (!replacement) { errno = ENOMEM; return nullptr; }
+        const unsigned length = large->requested;
+        volatile unsigned char* output = (volatile unsigned char*)replacement;
+        const volatile unsigned char* input = (const volatile unsigned char*)pointer;
+        for (unsigned i = 0; i < length; ++i) output[i] = input[i];
+        FreePointer(pointer);
+        ValidateAll();
+        return replacement;
+    }
+    Arena& owner = FindArena(pointer);
+    Block* block = Find(owner, pointer);
     if (!bytes) {
-        FreeBlock(block);
+        FreeBlock(owner, block);
         return nullptr;
     }
-    if (bytes > MaximumPayload) {
+    if (bytes > MaximumPayload && !largeAllocationsEnabled) {
         errno = ENOMEM;
         return nullptr;
     }
@@ -256,7 +402,7 @@ extern "C" void* realloc(void* pointer, size_t bytes) noexcept {
     if (needed <= block->capacity) {
         Split(block, needed);
         block->requested = (unsigned)bytes;
-        Validate();
+        ValidateAll();
         return pointer;
     }
     if (block->next && !At(block->next)->allocated
@@ -264,10 +410,10 @@ extern "C" void* realloc(void* pointer, size_t bytes) noexcept {
         Merge(block, At(block->next));
         Split(block, needed);
         block->requested = (unsigned)bytes;
-        Validate();
+        ValidateAll();
         return pointer;
     }
-    void* replacement = Allocate(bytes, block->alignment);
+    void* replacement = Acquire(bytes, block->alignment);
     if (!replacement) {
         errno = ENOMEM;
         return nullptr;
@@ -276,21 +422,22 @@ extern "C" void* realloc(void* pointer, size_t bytes) noexcept {
     volatile unsigned char* output = (volatile unsigned char*)replacement;
     const volatile unsigned char* input = (const volatile unsigned char*)pointer;
     for (unsigned i = 0; i < length; ++i) output[i] = input[i];
-    FreeBlock(Find(pointer));
+    FreePointer(pointer);
+    ValidateAll();
     return replacement;
 }
 extern "C" int posix_memalign(void** output, size_t alignment, size_t bytes) noexcept {
     if (!PowerOfTwo((unsigned)alignment) || alignment < sizeof(void*) || !OutputAddress(output)) return EINVAL;
     if (alignment < Alignment) alignment = Alignment;
     HeapGuard guard;
-    void* result = Allocate(bytes, (unsigned)alignment);
+    void* result = Acquire(bytes, (unsigned)alignment);
     if (!result && bytes) return ENOMEM;
     *output = result;
     return 0;
 }
 extern "C" int gtos_native_heap_query(GtosVmRegionInfo* output) noexcept {
     HeapGuard guard;
-    Validate();
+    ValidateAll();
     if (!arena.handle) return 0;
     const GtosVmQueryRequest request = {GTOS_VM_ABI_VERSION, arena.handle, (unsigned)output};
     if (Call(GTOS_SYS_VM_QUERY, (unsigned)&request, sizeof(request)) != 0) return 0;

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15T06:24:38.9144222Z",
-  "scope": "九项原生libc提供者、统一ldexp错误状态及真实printf已验收；完整V8/浏览器/视频/HTML5尚未运行。",
+  "recorded_utc": "2026-10-15T10:00:27.2956735Z",
+  "scope": "真实IA32 V8 Isolate/Context/Script原生双配置通过并精确回收；继续真实Content本地首帧/DOM，再到网络、视频和HTML5。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -26,7 +26,7 @@
   "profile": "Explicit single-threaded JIT-less diagnostic; no Wasm/ICU/sandbox",
   "args_gn": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\ngtos_clang_bin=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\nclang_base_path=\"@WORKSPACE@/toolchains/chromium-clang-llvm24-62397f8b-57\"\ngtos_host_i386_runtime=\"@WORKSPACE@/toolchains/linux-i386-runtime-focal/root\"\ngtos_native_integer_builtins=\"@WORKSPACE@/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
   "args_sha256": "ee1e3670706d126d17c6036024557718fa213961545bb9e03e16f078f5a6ac6d",
-  "furthest_complete_target_stage": "Qualified real static IA32 native V8 ELF link; native admission and Isolate/JS remain unrun",
+  "furthest_complete_target_stage": "GTOS CPL3 actual full IA32 V8 Isolate/Context/Script and orderly exit, stage4/result0/exit0",
   "gn_pass": true,
   "complete_build_pass": false,
   "link_pass": true,
@@ -380,8 +380,8 @@
       "gtos_browser_pass": false
     }
   },
-  "native_isolate_pass": false,
-  "javascript_guest_pass": false,
+  "native_isolate_pass": true,
+  "javascript_guest_pass": true,
   "browser_guest_pass": false,
   "video_guest_pass": false,
   "html5_guest_pass": false,
@@ -8846,5 +8846,72 @@
     "thread_joins": 24,
     "canonical_cold_build_run": false,
     "complete_link_inputs": 1110
-  }
+  },
+  "native_v8_launch": {
+    "module": "apps/native_v8_launch",
+    "proofs": {
+      "heap_compile": {
+        "path": "artifacts/native-large-heap-20261015-a/compile-05/status.json",
+        "sha256": "04aa857682f7d1db50c0984f8652252ecf11c559f3a7a267d07e30aa55c0092f"
+      },
+      "full_link": {
+        "path": "artifacts/native-large-heap-20261015-a/full-link-61/status.json",
+        "sha256": "3edac568988fccc2652bd0a93ccc95c6f7d73653410adf8dab100b02b2cc5c91"
+      },
+      "heap_boundaries": {
+        "path": "artifacts/native-large-heap-20261015-a/tests-02/status.json",
+        "sha256": "978547c3dbf2c54fcc75983b23abbda81e5392808a1b7e5d89a54400cdca6726"
+      },
+      "native_v8": {
+        "path": "artifacts/native-v8-launch-20261015-a/guest-04/status.json",
+        "sha256": "5231d19d2b8b756b22a18430e5d8bf88524351a861a2937e737e19ce4bfba5f1"
+      },
+      "launch_boundaries": {
+        "path": "artifacts/native-v8-launch-20261015-a/boundaries-02/status.json",
+        "sha256": "899c4be9babffde053423f404935112209321302021894363c8f59550cd726d8"
+      },
+      "shared_heap": {
+        "path": "artifacts/native-v8-launch-20261015-a/thread-01/status.json",
+        "sha256": "d9dc3335d5dcf61101a2110540c55eeb49ecc91df1262d25c8640a8c72b87342"
+      },
+      "default_regression": {
+        "path": "artifacts/native-v8-launch-20261015-a/default-02/status.json",
+        "sha256": "09dc348f1eff3b06fc2e0a41cc2ff9300ff9e658333c7ef6c5bf91905ad45232"
+      }
+    },
+    "elf_sha256": "01a6464a8dde52cc3b848a344ffec92af66ba05655f4b66bf78f661225d13441",
+    "native_isolate_pass": true,
+    "javascript_guest_pass": true,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "configurations": [
+      "32M-smp4",
+      "64M-smp1"
+    ],
+    "expressions": [
+      "'GTOS' + (40 + 2)",
+      "1.25 + 2.5"
+    ],
+    "results": [
+      "GTOS42",
+      "3.75"
+    ],
+    "profile": {
+      "image_page_limit": 4096,
+      "stack_pages": 128,
+      "runtime_pages": 1024,
+      "image_pages": 2385,
+      "capacity_pages": 3537,
+      "metadata_frames": 14
+    },
+    "default_processes": 44,
+    "default_contexts": 68,
+    "thread_joins": 24,
+    "process_reaps": 44,
+    "shared_heap_contexts": 24,
+    "complete_cold_build_pass": false,
+    "production_image_changed": false
+  },
+  "next_required": "真实 Chromium Content 本地首帧与 DOM；后续网页导航、受控网络、音视频及 HTML5 均需实际验收。"
 }

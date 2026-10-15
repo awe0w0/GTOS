@@ -1,5 +1,9 @@
 # Native IA32 data-page VM, ABI v1
 
+显式完整 V8 配置的总容量、根栈及每进程动态上界见
+[原生脚本运行模块](../apps/native_v8_launch/README.md)。普通入口和本ABI单次256页
+事务上限保留；完整 V8 的成功不等同于浏览器、视频或 HTML5 验收。
+
 This additive interface lets a real CPL3 process reserve virtual data regions
 and change their resident pages at runtime. It retains the original sealed ELF,
 stack and guard mappings, supervisor template, BSP scheduling and 256-page total

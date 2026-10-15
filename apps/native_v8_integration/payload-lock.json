@@ -1,5 +1,5 @@
 {
-  "scope": "Pinned native IA32 V8 payload; complete cached link and debug/shared guest boundaries qualified; cold bootstrap and native Isolate/browser unqualified.",
+  "scope": "锁定完整IA32 V8 Isolate/Context/Script原生双配置通过；浏览器/视频/HTML5未验收",
   "files": {
     "overlay/BUILD.gn": {
       "bytes": 322046,
@@ -267,9 +267,9 @@
       "origin": "retained native integration input; original ordered SDK tiers preserved"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-entry.cc": {
-      "sha256": "6b3e635655cf325f6809a7b5e4f1e99401c2d79efb36e5c575973712824f5c7e",
-      "bytes": 709,
-      "origin": "GTOS IA32 real process exit registration/lifecycle; native_exit guest-qualified"
+      "sha256": "a21b330f96f993753941c3718818de064153cc67438f6bce3af0c7f9c3b0aa7f",
+      "bytes": 858,
+      "origin": "GTOS 原生完整 V8 脚本双配置验收；显式后备堆与入口"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-start.s": {
       "sha256": "7f56a50ec84155e45d8e5a3ef4531b7c3de426b308a89eed599d5d1e8fd5e98f",
@@ -302,14 +302,14 @@
       "origin": "GTOS actual per-thread TLS/errno/cleanup; native_thread_tls qualified; V8 Thread and other shared services pending"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/heap.cc": {
-      "sha256": "999a0d9774a52b8a5a8bcb5d0d318856b1b1ce1d172c2dab17ee673c3aa54722",
-      "bytes": 13602,
-      "origin": "GTOS real shared heap lock; native_thread_heap guest-qualified; errno/TLS remain unqualified"
+      "sha256": "b10c3497cd8f2e3659044cca847f73fe21042b31f0951e14d5e1dbf297400308",
+      "bytes": 21252,
+      "origin": "GTOS 原生完整 V8 脚本双配置验收；显式后备堆与入口"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/heap.h": {
-      "sha256": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f",
-      "bytes": 1914,
-      "origin": "GTOS real shared heap lock; native_thread_heap guest-qualified; errno/TLS remain unqualified"
+      "sha256": "2ccee048e304672a0a978fefd95e5b3e625a3639d8c70b31ab86bf75999ccea2",
+      "bytes": 2720,
+      "origin": "GTOS 原生完整 V8 脚本双配置验收；显式后备堆与入口"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/nanosleep-internal.h": {
       "sha256": "e3f84e698898bc869ee0ca1fb5976f1be3b31b301209605eaa3e2848fde093e8",
@@ -5979,9 +5979,9 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "1d973ef092c6a8927fe5e379a99e39cc26ccb7488896e9e098390c7643b0dfbe",
-      "bytes": 19214,
-      "origin": "native runtime-gap qualification; Chinese module documentation"
+      "sha256": "5091df0a149d99142f7ab19b254df58360300702d2e52093f79a98835c9e86e9",
+      "bytes": 19497,
+      "origin": "GTOS 原生完整 V8 脚本双配置验收；显式后备堆与入口"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6225,9 +6225,9 @@
   },
   "overlay_files": 433,
   "sdk_files": 430,
-  "total_bytes": 3414324,
+  "total_bytes": 3378885,
   "old_source_or_cache_written": false,
-  "native_isolate_pass": false,
+  "native_isolate_pass": true,
   "browser_guest_pass": false,
   "signal_handlers_supported": false,
   "c_sdk_files": 438

@@ -44,7 +44,7 @@ namespace gtos { namespace memory {
         uint32_t tables[1024]; // Owned tables only; borrowed tables stay zero.
         Page inlinePages[MaximumPages];
         Page* pages; // Authoritative ownership, never inferred from PTEs.
-        uint32_t pageLimit, metadataBase, metadataPages;
+        uint32_t pageLimit, metadataBase, metadataPages, dynamicLimit;
         Region regions[MaximumRegions];
         // A readable range can contain at most MaximumPages consecutive pages,
         // hence at most two new tables. Transaction scratch never uses the stack.
@@ -62,6 +62,7 @@ namespace gtos { namespace memory {
         bool Mutable() const;
         bool RuntimeMutable() const;
         int FindPage(uint32_t address) const;
+        int IndexedLayoutPage(uint32_t address) const;
         int FindRegion(uint32_t handle) const;
         bool RegionRange(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t& base) const;
         uint32_t ConflictEnd(uint32_t base, uint32_t bytes) const;
@@ -84,6 +85,10 @@ namespace gtos { namespace memory {
         // supervisor identity frames, not from the kernel/trap stack or heap.
         bool Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
                      uint32_t capacityPages);
+        // Kernel-selected exclusive dynamic bound, below the root stack guard.
+        // Frozen mappings may lie above it; runtime reservations cannot.
+        bool Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                     uint32_t capacityPages, uint32_t dynamicEnd);
         // New zeroed data frames, never caller-supplied physical aliases.
         // Mapping/protection changes require unsealed state and kernel CR3.
         bool MapNewPage(uint32_t virtualAddress, bool writable);
