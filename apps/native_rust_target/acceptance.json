@@ -16,8 +16,8 @@
         "path": "artifacts/native-rust-gtos-20261015-a/core-validate-01/status.json"
       },
       "content_graph": {
-        "sha256": "99144a3a44d09760d1f6651b60b7cedfc5580fc1a50e1795a1205a52fbdce402",
-        "path": "artifacts/native-rust-gtos-20261015-a/graph-07/status.json"
+        "sha256": "02ea80cf57d8057dc6505fb58edf33230c9e11f4e5795bd8e78cc7c513fc1759",
+        "path": "artifacts/native-rust-gtos-20261015-a/graph-08/status.json"
       }
     },
     "target_sha256": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
@@ -59,10 +59,53 @@
     "browser_guest_pass": false,
     "video_guest_pass": false,
     "html5_guest_pass": false,
-    "first_content_blocker": "//base/test:immediate_crash_test_helper shared_library requires undefined solink in //build/toolchain/gtos:clang_x86",
+    "first_content_blocker": "//net:test_badgssapi shared_library requires undefined solink in //build/toolchain/gtos:clang_x86; exact root-pattern graph still fails",
     "production_image_changed": false,
     "complete_cold_build_pass": false,
-    "blank_host_bootstrap_pass": false
+    "blank_host_bootstrap_pass": false,
+    "gn_core": {
+      "module": "apps/native_rust_target/gn",
+      "qualification_sha256": "a84fe20041e9afc0cffe8aa2ab7fe848d030c5cccd0cb060807b30d01fcce56d",
+      "proof": {
+        "sha256": "24b780e640d390f3b71dde6c68ec73cc7d706f7743981f06c3b2c1e1f2e1d232",
+        "path": "artifacts/native-rust-gn-core-20261015-a/build-03/status.json"
+      },
+      "gn_core_build_pass": true,
+      "x64_cpp_graph_pass": true,
+      "x64_rust_supported": false,
+      "source_inputs": 91,
+      "actual_dependency_files": 393,
+      "codegen_elf32_i386_objects": 16,
+      "codegen_object_bytes": 590476,
+      "outputs": {
+        "build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib": {
+          "sha256": "7d974ef96b7d2ffac7214ec6702c6be928e8d28acf63a4e19d9bf922193ecbfb",
+          "bytes": 66021998
+        },
+        "build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rmeta": {
+          "sha256": "3fc8f02906f4575e29a2b81d0ed50c005bfb9de26bc4e5fb4cb90e85dc332ba9",
+          "bytes": 65371912
+        },
+        "build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib.d": {
+          "sha256": "9ba93431d0fdd4edd72fa9c5d0c9cf98cdb7823b836041563b55915e85477a22",
+          "bytes": 114411
+        },
+        "archive-members.json": {
+          "sha256": "33b05dbecca1ae0296c8fdfc33bc62cff792148220074ff036df8ff8e4759507",
+          "bytes": 4269
+        },
+        "build/obj/build/rust/std/rules/core.rustflags.json": {
+          "sha256": "f2c8e32a9f29fe82173589eed4dff00fb0847709dc431f3afe8d4c28d9ff3b73",
+          "bytes": 811
+        }
+      },
+      "patch_sha256": "fd4d93175e4a9ad209d5f3fd51ce1a81d683078aebace0e04443fedbb21b6d06",
+      "full_std_qualified": false,
+      "rust_guest_pass": false,
+      "content_shell_build_pass": false,
+      "browser_guest_pass": false,
+      "production_image_changed": false
+    }
   },
   "public_files": {
     "apps/native_rust_target/i686-unknown-gtos.json": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
@@ -73,10 +116,28 @@
     "apps/native_rust_target/fixtures/content-shell-gn.log": "3271d13cef158987f78b0a34166f80f43717501de0e792d2b40b98b4c9f95b75",
     "apps/native_rust_target/fixtures/rustc.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "apps/native_rust_target/fixtures/rustc.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "apps/native_rust_target/README.md": "7db16799cbc066550768cf4b4d148cdcc6c40e21fef6500a9866d54f6bbc7ea3",
-    "apps/native_rust_target/self-review.md": "e732365f230aaa545b1da840bcf46529ed36f55638c4c3c56e03dc5ca512a219",
-    "apps/native_rust_target/source-lock.json": "80582f71d47fa2bea89d40edb296ec829c8ca7b9a9d77c9e788f14ca0044c525",
-    "apps/native_rust_target/core-compile.json": "2b4ac92ec579dedabed3de1da17e720c372e933b1c27fe43b99fa333db559f0e"
+    "apps/native_rust_target/README.md": "e12b8b52327f4fa1cdadc38c67b19f99240437bb1ed73b81825d209047aab276",
+    "apps/native_rust_target/self-review.md": "f69e1ace19f5e71e2a22ba8315548ca485618a80e415ec166acd7766317aaad4",
+    "apps/native_rust_target/source-lock.json": "cb57c397ac42ac8f5c86e0d9f1b963764f8a26a447237467cf5e67909a27658d",
+    "apps/native_rust_target/core-compile.json": "2b4ac92ec579dedabed3de1da17e720c372e933b1c27fe43b99fa333db559f0e",
+    "apps/native_rust_target/gn/README.md": "7410510af57b75c5442750917ecc4362ede36fdaddc82060f8c1873a0a02dbb1",
+    "apps/native_rust_target/gn/self-review.md": "106fd6e0253e9a607fb7dade0ae9abddb8fb03ebb867a5bd61d7bf1792f4684c",
+    "apps/native_rust_target/gn/gtos-rust-core.patch": "fd4d93175e4a9ad209d5f3fd51ce1a81d683078aebace0e04443fedbb21b6d06",
+    "apps/native_rust_target/gn/patch-replay.json": "16fe794a45547f712fb9a7d7557b9fa0cef18dfcdf455175436912cd5a01b0ec",
+    "apps/native_rust_target/gn/inputs.json": "1797c2a12685f7417abceaf13c620ae49086afedb760d15acc4b296d9ac33ea5",
+    "apps/native_rust_target/gn/fixtures/core.ninja": "5ba39a3ac11e9cb474321665ec4e97f28175221c7b05d475cd18a276d3b1fc87",
+    "apps/native_rust_target/gn/fixtures/toolchain.ninja": "d2697f39e0119ccbc26e5f8219bc0a6d9c3f4e80233426461759df39094b5b03",
+    "apps/native_rust_target/gn/fixtures/core.rustflags.json": "f2c8e32a9f29fe82173589eed4dff00fb0847709dc431f3afe8d4c28d9ff3b73",
+    "apps/native_rust_target/gn/fixtures/allow_all_warnings.rsp": "5fc53d1cbb2eb82bdae8d724e74b0d8ecff0c48a25b3f6fdaead7452d1bb4d3e",
+    "apps/native_rust_target/gn/fixtures/archive-members.json": "33b05dbecca1ae0296c8fdfc33bc62cff792148220074ff036df8ff8e4759507",
+    "apps/native_rust_target/gn/fixtures/args.gn": "ec572a8bc2a242a3bb9abd5165dac0f854cfb441003bb979f7686cd89eafab29",
+    "apps/native_rust_target/gn/fixtures/gn.log": "8ae9d362b64137ad8a5717de662c107de84ac7c196e878ac162ef0650def1497",
+    "apps/native_rust_target/gn/fixtures/core.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "apps/native_rust_target/gn/fixtures/gn-x64.log": "adc493848cd51cd259a29333800e184945e472d7e1b1ff745c64dee614a3252d",
+    "apps/native_rust_target/gn/fixtures/x64-args.gn": "c27ee40b81f38942d80f8c5653efdb6012d5a82db93386573ed5e9ceaf18f054",
+    "apps/native_rust_target/gn/fixtures/x64-toolchain.ninja": "d9e63ecf992ce05efb8b4158214df319fa00666b651f9f37298f22ef3e7097e5",
+    "apps/native_rust_target/gn/fixtures/x64-platform-probe.ninja": "50fc4631f340b679611c5b85ab52ce05006b7c71a57f47062b7b67dc40977725",
+    "apps/native_rust_target/gn/qualification.json": "a84fe20041e9afc0cffe8aa2ab7fe848d030c5cccd0cb060807b30d01fcce56d"
   },
   "input_preservation_sha256": "095453262bb6b3bd7b9a272747d15be3ca91382de16631bdbb6064b96eab9e0b"
 }

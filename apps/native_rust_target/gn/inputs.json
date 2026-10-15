@@ -1,0 +1,683 @@
+{
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "source_inputs": {
+    "build_overrides/build.gni": {
+      "sha256": "d9b533eb6f607fb2c7fa4ac8c8dfab3909053a599ca64babe4188fbc48fe66b2",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build_overrides/build.gni",
+      "git_blob": "cd62385050b0ad022f5f1967eb64ee08f10ddf7b",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/action_helpers.py": {
+      "sha256": "4b167218299aa332bacc1c09262ddc498f092f63280781fe0c2b846b89f54f7b",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/action_helpers.py",
+      "git_blob": "52096fc83f890842f67a3d9f714589649c266a88",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/buildflag_header.gni": {
+      "sha256": "c7a9b9dbc208c6390eb5eb740d05bd563ae3f582bbd14618b3e0978361bd98fb",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/buildflag_header.gni",
+      "git_blob": "9819b41c97abdb08e9d6d82ca4124d787eed6280",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/circular_includes_bedrock.gni": {
+      "sha256": "2496459514f18fd491cef240e5572a6314694e3c72a8b69b9214e2282f768b08",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/circular_includes_bedrock.gni",
+      "git_blob": "e2337a8f8e2accce384430a822266c4be53e8ec4",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/circular_includes_untriaged.gni": {
+      "sha256": "4b9a5cf245931caef44d8eb0c4d760ef54e642cae642c04c19204cbbe3f39864",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/circular_includes_untriaged.gni",
+      "git_blob": "4625af7e4167f302b9e957ca031f146214b6c3c9",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/android/config.gni": {
+      "sha256": "4771dd7ca70f5d6a24d40bebad4c220f2b05c06d1d687babffc719792cceeae5",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/android/config.gni",
+      "git_blob": "e2a796f5d50f15e35ae1c33162fe2a190cda9ea3",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/apple/apple_sdk.gni": {
+      "sha256": "5b1372298c95a053d08b34da7cac47745e56a160173e0988ac5ca5133279c60b",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/apple/apple_sdk.gni",
+      "git_blob": "09e2a46a84c2d7f50fc21f7a1555e71f925fb075",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/apple/mobile_config.gni": {
+      "sha256": "103492bbb56a67529113fd7a13b939ad65fbf26f36c30bc3304cd362b6e85e81",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/apple/mobile_config.gni",
+      "git_blob": "e1f469c135e77d6f00735f64c5025a434844594d",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/BUILD.gn": {
+      "sha256": "76cbe40466e61bcce470230120bbebb526a31123964e870b7e56021ad49b1614",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/BUILD.gn",
+      "git_blob": "91c1e7703bbd30bf75241ae358284c6e2321e1e0",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/BUILDCONFIG.gn": {
+      "sha256": "e60a062e46bde7256a1b82918f1b79a0b403a5a1d93999e435e09d6dc79166f2",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/config/BUILDCONFIG.gn"
+    },
+    "build/config/c++/BUILD.gn": {
+      "sha256": "cb4a178040bb3066962cda1dbc390a4b0243c6a80d9545d3faf49b139dbf1a6e",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/c++/BUILD.gn",
+      "git_blob": "8975d683f5e65c30d96760833978ef7b237556ee",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/c++/c++.gni": {
+      "sha256": "19fe86f58887317c952a29678d201789af43fd0994e5e8609e5b6ed3e82945dd",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/c++/c++.gni",
+      "git_blob": "cd07de0717f3846f1060848cfd1c21c7f4342a4d",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/c++/modules.gni": {
+      "sha256": "1f218af78f4108f4923eea96390a6da588ba8a9da6270ffd4ee3c591c3ebf2a0",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/c++/modules.gni",
+      "git_blob": "1f3dde489632e8caabd85f2b7a8e1b2de43d0a2e",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/cast.gni": {
+      "sha256": "b965ccbaacebb13332bcbec50aae4668b564a8b5721916023b389c2689428da4",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/cast.gni",
+      "git_blob": "b829116d976e1620f7c724df8d3ab31392366dc6",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/chrome_build.gni": {
+      "sha256": "8c2ab25d5ca26b7761ca9b6ab5830a6c8f9f25dbf2e9d7c0cc369329813c5978",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/chrome_build.gni",
+      "git_blob": "4163d9806888f00e37201be05bea8a302c8f757f",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/chromeos/args.gni": {
+      "sha256": "add3f08793d71a5db5d3476c1d9866d242c93200e60d2b54aabc34654096daaa",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/chromeos/args.gni",
+      "git_blob": "6fde6c80be7946faf36e26e1df43ce3f21e1a045",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/clang/BUILD.gn": {
+      "sha256": "d932b2211457b02fe271e0d8992314fff604657e866fbe853ab002512424c4e4",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/patch/build/config/clang/BUILD.gn"
+    },
+    "build/config/clang/clang.gni": {
+      "sha256": "d1a225de54a707a933a9bf9556d8191ca5049b6fc306980d80b8628b7624452d",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/clang/clang.gni",
+      "git_blob": "1e5dc57538e4702ea7ccaa77b83c19f5c80e655f",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/compiler_cpu_abi.gn": {
+      "sha256": "64796f42db27b2e143c7f69ddc3bae1c25dfce16cb86e5d9a72eec4d823b1554",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/compiler_cpu_abi.gn",
+      "git_blob": "ae62bab587e7dd1727cc44550d9fad42a23cf3ce",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/compiler/BUILD.gn": {
+      "sha256": "0402686feda257479996328887918a8cfae43253545b5d19376a418de7044c48",
+      "kind": "reviewed IA32 Rust capability boundary; preserves x64 C++",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gn-core-20261015-a/patch/build/config/compiler/BUILD.gn"
+    },
+    "build/config/compiler/compiler.gni": {
+      "sha256": "251c239416334d20a7c34eebd2b345dfe81359e83ab2c57d196bb96c8cb0a0c4",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/compiler/compiler.gni",
+      "git_blob": "a312b04c0741bc0a43eab7daa86c46d87d4a87c1",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/compiler/pgo/BUILD.gn": {
+      "sha256": "5f66308ad49f83f2aee507fb8e532dc6f591888443615073443ad49cbdfa46a2",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/compiler/pgo/BUILD.gn",
+      "git_blob": "d874f9b960a89fb431293048da0a5957c13e12c8",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/compiler/pgo/pgo.gni": {
+      "sha256": "754dc82d9e86932d36dabf69554f69d79c56a592cb1fbab2f3d5da936030caac",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/compiler/pgo/pgo.gni",
+      "git_blob": "4f9a7b0f30a92b0bbe293f846d50de9a85d32dd8",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/coverage/coverage.gni": {
+      "sha256": "d36e79ee1929ac3ff639a645399c0cfec1cf9ebde76be2a9ca3ac59f5437de81",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/coverage/coverage.gni",
+      "git_blob": "0cb89d036c0199947287ca1296dd41d9e51230f2",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/cronet/config.gni": {
+      "sha256": "aa345afb958873cacf5d42ac2f90e9987c54afcf59b7350a33ad7462b69d55c8",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/cronet/config.gni",
+      "git_blob": "e529cc5da12fdc1fc26a8f0f54c1b50e31d0f095",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/dcheck_always_on.gni": {
+      "sha256": "4f69937f8dfebaae5ae8accf470ad8090a5ae16eac15a2bee3554d2a32a8a202",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/dcheck_always_on.gni",
+      "git_blob": "556569cc2db5ce189e78ceb4812625fc41bd7658",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/features.gni": {
+      "sha256": "915f78aabf4afa8010b6579f6cb45131e1b24a9176a39185e6e2d17a871f2e2d",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/features.gni",
+      "git_blob": "2579a2befc3bb68d7f9ceb9f2f1e078a1ecad304",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/gclient_args.gni": {
+      "sha256": "3088c66d759f20621ba627265d9ab55dcd235b05ed1e341cd53529715b6cf3aa",
+      "kind": "reviewed generated configuration; not an upstream Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/gclient_args.gni"
+    },
+    "build/config/gtos/BUILD.gn": {
+      "sha256": "cdbc134649b5deeb2cf4aa87234b637977e78378d6d7e8f3cc0b79cc6faafeac",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/config/gtos/BUILD.gn"
+    },
+    "build/config/host_byteorder.gni": {
+      "sha256": "f295e57f5f296423646faa411ca9c51c161285f800ae890b83d754cd0b0fdf1c",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/host_byteorder.gni",
+      "git_blob": "8d9fafdf2baab0036ce15c3cc9ae097041377ffe",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/ios/ios_sdk_overrides.gni": {
+      "sha256": "d99e9683d0bb42d9a49ef495e2c4cc00c2a7feecbfa5eb5403934684b0dc0252",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/ios/ios_sdk_overrides.gni",
+      "git_blob": "2b5229ab03afbfa634418c54c3aff71c0f18de17",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/mac/mac_sdk_overrides.gni": {
+      "sha256": "6b5482d4dacf2932bc9af41b71baf9208c8782943194fe68cd52113367b7850a",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/mac/mac_sdk_overrides.gni",
+      "git_blob": "8f8ac1c218ce15fa5c1aecbbcd0b93281f6c52f2",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/ozone_extra.gni": {
+      "sha256": "4fb2ef2917cad3156567956a655a2b04e66a47159fc48a4d69b34afacab0ca14",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/ozone_extra.gni",
+      "git_blob": "5a4936c2d365c5ade9d812b6c0ffc7f814e82c6d",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/ozone.gni": {
+      "sha256": "84edd6072e1c69b9132514bc3cdc526cac8f95ca730a6665946cb25f09900c09",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/config/ozone.gni"
+    },
+    "build/config/pch.gni": {
+      "sha256": "072f05bc5a24fa44b165cfa92dfdd01febba3abca6b83e3dfdfc4aa5855818aa",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/pch.gni",
+      "git_blob": "06bd85e490794c106f042e55d5b0eb74a3c3b43e",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/profiling/profiling.gni": {
+      "sha256": "f774c23a4d5274542d054e3a2f6a9e0e9f5bcd3230b3f9b79cfd969ed26d4007",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/profiling/profiling.gni",
+      "git_blob": "d30ef745699075d2370b2f177f94db222eb1bb1a",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/rust.gni": {
+      "sha256": "de574907f78b1b8f67aab6e1081b5cd14f5327eda3112ca47e86c712aa793ad6",
+      "kind": "reviewed IA32 Rust capability boundary; preserves x64 C++",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gn-core-20261015-a/patch/build/config/rust.gni"
+    },
+    "build/config/sanitizers/BUILD.gn": {
+      "sha256": "f9a167f67211ead5ec07e2c4e2eb4c73fe0ef60ccc1b3a40cbbc4b270eddc10f",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/sanitizers/BUILD.gn",
+      "git_blob": "45ba413d73199351856b3c6e7aa327d703657ad0",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/sanitizers/sanitizers.gni": {
+      "sha256": "62b2e6339b590ed0a47c1c23ba90d51695813ea86e1087e9cee4562c2e92e638",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/sanitizers/sanitizers.gni",
+      "git_blob": "d06cc2953efa84e09b39fd5e8df24e3bebaf072d",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/sysroot.gni": {
+      "sha256": "45746a6a0fffa057b6e6a4d5db0183a3d1cc383fe1337395bfcafeb5f92d6890",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/config/sysroot.gni"
+    },
+    "build/config/ui.gni": {
+      "sha256": "9e53423f68f869a6110b906749e6d8ea9c8b93b775626b1a742e0570adcd26e1",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/ui.gni",
+      "git_blob": "9b879a7e4c080798a79a06c1b54c9b4159781e51",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/config/unwind.gni": {
+      "sha256": "6e71b1e0d00a576fec1407ae732e77c55a4da6349e7c246fc38b8d819433dbb8",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/unwind.gni",
+      "git_blob": "fd2b597f1a536cf495803dd51bfed70c1b2334b5",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/dotfile_settings.gni": {
+      "sha256": "2c74958e803550e4b29781039b00b851a9d84d8aed69beb548b355d86f2199a5",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/dotfile_settings.gni",
+      "git_blob": "dc47c40070b238996d694663e540c75c36fabb88",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/gn_helpers.py": {
+      "sha256": "de17be55d96e91db721b022b39daa94a9f9d6c8f99e257f523027b4aba04e279",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/gn_helpers.py",
+      "git_blob": "5517771d13e08a0648854817f1f19f8263937dcb",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/BUILD.gn": {
+      "sha256": "d6528be79e9f2449eb6331e51074104f15699c0abdad7414f5ea589a7ddd1e94",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/BUILD.gn",
+      "git_blob": "d1ca11ef1672b8bf9797d08ba1f69f4e06833a3b",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/cargo_crate.gni": {
+      "sha256": "489d82b81bd4c4043ae1491f8be47928807240ce9b2d6414d53aaa4a279542e7",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/cargo_crate.gni",
+      "git_blob": "3d8a929adcfc8b16d9258b8dc2ac68a8ee0646c0",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/BUILD.gn": {
+      "sha256": "1106bd62a03288e3220820b1f79bbeee19eee062d5e1c34bb5fa604df1a3c6a9",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/BUILD.gn",
+      "git_blob": "930450adb6a169c2cc12a0923339c44e6c817f6d",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/cpp_api_from_rust.gni": {
+      "sha256": "2e2707c33968c4af5741978ace64bd304a74c0d30a48a0359d3446adb3e63714",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/cpp_api_from_rust.gni",
+      "git_blob": "7d82912d3063fcf34510860f75d5fb27fd479341",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/crubit_shared_args.gni": {
+      "sha256": "496e311ab38bbf1b71d4022ce65150e400b44116f4827f09eb8e1579e982b15f",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/crubit_shared_args.gni",
+      "git_blob": "99756c29077a07bd4fc70c448915b6492ffa182e",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/gen_allow_all_warnings_rsp.py": {
+      "sha256": "90527a0156adb2979b4ba90bbbaad30fc9626229da3fca9eb08655065e7db026",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/gen_allow_all_warnings_rsp.py",
+      "git_blob": "98a6eedc6accc47ae272ffed8db8bea39b39f350",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/rust_target.gni": {
+      "sha256": "8150ca86b302898488d8a4ce3b599088a0959540a3d6fd056eee753742f34cd6",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/rust_target.gni",
+      "git_blob": "ed5c9f1f2cc1c541c0068c21abbd08647352fbc6",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/rustc_print_cfg.gni": {
+      "sha256": "a0faedb431c99a509413125c1ea6f6b9e0a375ad1646e0f7807f950a0a0ed6e3",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/rustc_print_cfg.gni",
+      "git_blob": "fb19f5be5e3dcd91c01642aa5bc78bb8bf5694fe",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/rustc_print_cfg.py": {
+      "sha256": "1a08afbd6405fa3a5a01abf7f52472f1cfc481b4908eeee872ed11f9ee1df102",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/gni_impl/rustc_print_cfg.py",
+      "git_blob": "29b98b3c6f87d065111706a94c17d65440549be7",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/gni_impl/rustc_wrapper.py": {
+      "sha256": "fe42daeaf84d3c957b14936b886abc254e5b905e616753d7347c1c57a6ec8e35",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/patch/build/rust/gni_impl/rustc_wrapper.py"
+    },
+    "build/rust/known-target-triples.txt": {
+      "sha256": "823fd9d7210cb23e1dee9eae59e1e37366f674b67531f6b67c309137d0e32162",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/patch/build/rust/known-target-triples.txt"
+    },
+    "build/rust/rust_executable.gni": {
+      "sha256": "cc16b55e5cc54b67e03635f6e9af299b58ababe9da74f4e1dbffa3d216b58e5e",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/rust_executable.gni",
+      "git_blob": "7f2215c0762b5c98379906666b047bd0e18a119b",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/rust_macro.gni": {
+      "sha256": "ac68a883f12484cce846bb3bf24d975fb7b7fd5e865878a8b38afaead8ad0911",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/rust_macro.gni",
+      "git_blob": "cd11e85dc6b643e7e1a54a3b2c6bdcc0c7989be3",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/rust_static_library.gni": {
+      "sha256": "d24a6f8e87f0b1a7bb7337af983275c0ed86acea91f5744e5c372b8ef4b7ad11",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/rust_static_library.gni",
+      "git_blob": "7291d59f246981c7c6924f0570ba218aaba5aa7f",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/rust_unit_test.gni": {
+      "sha256": "a3871f91bf112361f286bd601467f38a2bb5affafdc7f5c94e661adc10478c49",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/rust_unit_test.gni",
+      "git_blob": "1996a0a9de604abb500472fcc7aa037b6ac6b5b3",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/rust_unit_tests_group.gni": {
+      "sha256": "ca4d138e961fef46c7a3fdadc172a265c3c7db31f9001616d1c2cfdfcf9fa86a",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/rust_unit_tests_group.gni",
+      "git_blob": "7b6a8bfcd6238d8d8b19933bdfd5a91c1e96ef9a",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/std/BUILD.gn": {
+      "sha256": "e5d3c9593d08e9c93a0e59127ab938a397fdce4c820750ea80af5c409350fb40",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/std/BUILD.gn",
+      "git_blob": "b6e976b2550327b0ea87810b5bd89e80b1f87bcd",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/rust/std/rules/BUILD.gn": {
+      "sha256": "aec704ffc0528f5c10b237fc531bf6bf6bbdc848b91beb84de2a03273ee6f795",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/rust/std/rules/BUILD.gn",
+      "git_blob": "5bf12985967830b252e22c6d7ab4f8f8535f9bf6",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/strict_deps_failures.gni": {
+      "sha256": "a8929be03541bba7329c28578851811791bb99c9e690a55b44ed4dd17186c00b",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/strict_deps_failures.gni",
+      "git_blob": "b6a20fed5923346a6ffe0ecd25a8cfa9b3909f06",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/toolchain/cc_wrapper.gni": {
+      "sha256": "abd28fc373976b31d63003cdc4495570aacc89f8080cd836d2a2a4bd016a0242",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/toolchain/cc_wrapper.gni",
+      "git_blob": "b9b558a8a6b233d278e1d39389c3a9f2f6eeb89b",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/toolchain/gtos/BUILD.gn": {
+      "sha256": "237284795062a610e38a99ea895149d282c73691ef909ad46bec9db57c406b73",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/patch/build/toolchain/gtos/BUILD.gn"
+    },
+    "build/toolchain/kythe.gni": {
+      "sha256": "a154824f01c9736061bbbff036d7c4f96cafa108789871ba086f95155d9d6a24",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/toolchain/kythe.gni",
+      "git_blob": "f04fbb037af8a1f31304fe8d98ab8c11f9b5cea7",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/toolchain/rbe.gni": {
+      "sha256": "8cec2ca088ce1ffe46a19baedc091a1e13a4021fe04769ec3fbd44b68957dc1e",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/toolchain/rbe.gni",
+      "git_blob": "78cd9d5c3f5205ebedb6adff6903218e70f6b30c",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/toolchain/siso.gni": {
+      "sha256": "51d55e8f7d8ca3252d60a92ab215609f893efdeacb2d84b25a7a25a73a26d5ef",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/toolchain/siso.gni",
+      "git_blob": "63dea48db49d328cb15623356be02e5460d56505",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/toolchain/sysroot.gni": {
+      "sha256": "ab721df0243a7ca7631ba18fbb495f214bca9b76dacacab49e934979f2ff82e8",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/toolchain/sysroot.gni"
+    },
+    "build/toolchain/toolchain.gni": {
+      "sha256": "4e6860856985a4deea3e63c872d2bc6ce4c0e3cb2014c80d3e888ae506560681",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/toolchain/toolchain.gni"
+    },
+    "buildtools/deps_revisions.gni": {
+      "sha256": "49504582097a171f9a296f474fd83a9a540265c94a450da5868edad3c4f6043a",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/buildtools/deps_revisions.gni",
+      "git_blob": "cc994e6c29db9e1357c7651aea840f9f34471605",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "content-diagnostic.gn": {
+      "sha256": "9a9cc55f049b1383e0d20a186fcfd6cd62fc0e4a96a43b32ceb664a135f4f023",
+      "kind": "reviewed GN helper-denial diagnostic",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-content-graph-20261015-a/content-diagnostic.gn"
+    },
+    "DEPS": {
+      "sha256": "161aff1a78eb76cf7912b35850156b01e47478db90a32b0076fa874ac26ccd61",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/DEPS",
+      "git_blob": "ce98a0973a653ed3a4b01de8c71433db06904355",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "third_party/angle/dotfile_settings.gni": {
+      "sha256": "c8cb93e8f8a3cb9e08bf607aaac5cee5612fc4cc0b7d16eb1f612758338b39ad",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/angle/dotfile_settings.gni",
+      "git_blob": "d27fae199a7a7cc5f4b306f5bb2be930c0ceae8c",
+      "revision": "628f3fa5003d5b80a9ba64a850882d9d244bd020"
+    },
+    "third_party/llvm-build/Release+Asserts/cr_build_revision": {
+      "sha256": "94a82c516e4c26a1cfdcee1477ff4a7804962c4c43d36d4df9d87add192c3c3e",
+      "kind": "reviewed generated version marker; compiler not executed",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/llvm-build/Release+Asserts/cr_build_revision"
+    },
+    "third_party/rust-toolchain/VERSION": {
+      "sha256": "a3b613ececb9f283c96dc9b71fa9097a47f243cd0f2f562b37d12fd91e0429b0",
+      "kind": "authenticated Rust package member",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/rust-toolchain/VERSION"
+    },
+    "third_party/rust/cxx/chromium_integration/rust_cxx.gni": {
+      "sha256": "9797b17b1024125a998a6cf47028f15f8c64d4f2de73bc5b42006737c6228b92",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/rust/cxx/chromium_integration/rust_cxx.gni",
+      "git_blob": "d43a3bb3b0591995d9cac70cb1426b9f9b30b574",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "tools/clang/scripts/update.py": {
+      "sha256": "ee3c082d0db612e663284993c11dec4f96922e89ded3661a537057d32f374dff",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/tools/clang/scripts/update.py",
+      "git_blob": "ec101d97d443ae28225a59937c5b626df4529c29",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "tools/rust/update_rust.py": {
+      "sha256": "813e553066b73575c2066c54a14c373b5205f026ef48369511f368f8bae7e8ad",
+      "kind": "raw Git blob",
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/tools/rust/update_rust.py",
+      "git_blob": "2d53a5df41f3c4bd11832f6515b54a2aa5409f92",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "BUILD.gn": {
+      "sha256": "c1efb2fe61ce734f9826cec51702428cfa8732867b6480649082e88aea6e2fd0",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/BUILD.gn"
+    },
+    "build/build_config.h": {
+      "sha256": "bd185448071dbd2907bdf2896ff754573ee841e8c4cdc939595c00c53e9a5216",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/build/build_config.h"
+    },
+    "tools/gtos/BUILD.gn": {
+      "sha256": "dad6bde4c94fed7f57669d1e9dbdcc88cae418a674f0f7b4658e7a6edea72b1a",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/BUILD.gn"
+    },
+    "tools/gtos/README.md": {
+      "sha256": "3d7a2971580cdada6e2d57db4fbb9dae51eb348fbbd43c944f32f38836f00078",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/README.md"
+    },
+    "tools/gtos/identity.ld": {
+      "sha256": "3826a1002edf43db6cebcc697f2b4dfc9109afc235180281a4d4295775393411",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/identity.ld"
+    },
+    "tools/gtos/patches/README.md": {
+      "sha256": "5d2b0d829ea79b9c95a400119aeb6e7ede96c289ddb0feed207e1382bf1f8b56",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/patches/README.md"
+    },
+    "tools/gtos/patches/v8-0001-gtos-platform-foundation.patch": {
+      "sha256": "f8679584282798a4fb5d40701895548457e94675f026ca111a36c728ef819f48",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/patches/v8-0001-gtos-platform-foundation.patch"
+    },
+    "tools/gtos/platform_identity.c": {
+      "sha256": "24cb3042730729da935fe49dce66f0ebe73ddc35d282af8363caee5ac7eb2065",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/platform_identity.c"
+    },
+    "tools/gtos/platform_identity.gn": {
+      "sha256": "cef4c39bc7679151683d657153d6d1ce825798b9a292f5203686f401a22b5e13",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/platform_identity.gn"
+    },
+    "tools/gtos/start.s": {
+      "sha256": "3dc87d99a7780aad68a88071d5307da75b1ffafce35a5f0c7443ec3beef88df5",
+      "kind": "previously reviewed GTOS foundation",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/chromium-fork-publication-20261008-01a11ae5/tree/tools/gtos/start.s"
+    },
+    "build/config/gtos/rust/i686-unknown-gtos.json": {
+      "sha256": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/target/i686-unknown-gtos.json"
+    },
+    "content/test/BUILD.gn": {
+      "sha256": "779aeae9c91529a0680105b1236e0753010e22daaa73ce65d18fe1d052c45313",
+      "kind": "previously reviewed GTOS overlay",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/patch/content/test/BUILD.gn"
+    }
+  },
+  "previous_gn_dependencies": [
+    "../source/build_overrides/build.gni",
+    "../source/build/buildflag_header.gni",
+    "../source/build/circular_includes_bedrock.gni",
+    "../source/build/circular_includes_untriaged.gni",
+    "../source/build/config/android/config.gni",
+    "../source/build/config/apple/apple_sdk.gni",
+    "../source/build/config/apple/mobile_config.gni",
+    "../source/build/config/BUILD.gn",
+    "../source/build/config/BUILDCONFIG.gn",
+    "../source/build/config/c++/BUILD.gn",
+    "../source/build/config/c++/c++.gni",
+    "../source/build/config/c++/modules.gni",
+    "../source/build/config/cast.gni",
+    "../source/build/config/chrome_build.gni",
+    "../source/build/config/chromeos/args.gni",
+    "../source/build/config/clang/BUILD.gn",
+    "../source/build/config/clang/clang.gni",
+    "../source/build/config/compiler_cpu_abi.gn",
+    "../source/build/config/compiler/BUILD.gn",
+    "../source/build/config/compiler/compiler.gni",
+    "../source/build/config/compiler/pgo/BUILD.gn",
+    "../source/build/config/compiler/pgo/pgo.gni",
+    "../source/build/config/coverage/coverage.gni",
+    "../source/build/config/cronet/config.gni",
+    "../source/build/config/dcheck_always_on.gni",
+    "../source/build/config/features.gni",
+    "../source/build/config/gclient_args.gni",
+    "../source/build/config/gtos/BUILD.gn",
+    "../source/build/config/host_byteorder.gni",
+    "../source/build/config/ios/ios_sdk_overrides.gni",
+    "../source/build/config/mac/mac_sdk_overrides.gni",
+    "../source/build/config/ozone_extra.gni",
+    "../source/build/config/ozone.gni",
+    "../source/build/config/pch.gni",
+    "../source/build/config/profiling/profiling.gni",
+    "../source/build/config/rust.gni",
+    "../source/build/config/sanitizers/BUILD.gn",
+    "../source/build/config/sanitizers/sanitizers.gni",
+    "../source/build/config/sysroot.gni",
+    "../source/build/config/ui.gni",
+    "../source/build/config/unwind.gni",
+    "../source/build/dotfile_settings.gni",
+    "../source/build/rust/BUILD.gn",
+    "../source/build/rust/cargo_crate.gni",
+    "../source/build/rust/gni_impl/BUILD.gn",
+    "../source/build/rust/gni_impl/cpp_api_from_rust.gni",
+    "../source/build/rust/gni_impl/crubit_shared_args.gni",
+    "../source/build/rust/gni_impl/rust_target.gni",
+    "../source/build/rust/gni_impl/rustc_print_cfg.gni",
+    "../source/build/rust/known-target-triples.txt",
+    "../source/build/rust/rust_executable.gni",
+    "../source/build/rust/rust_macro.gni",
+    "../source/build/rust/rust_static_library.gni",
+    "../source/build/rust/rust_unit_test.gni",
+    "../source/build/rust/rust_unit_tests_group.gni",
+    "../source/build/rust/std/BUILD.gn",
+    "../source/build/rust/std/rules/BUILD.gn",
+    "../source/build/strict_deps_failures.gni",
+    "../source/build/toolchain/cc_wrapper.gni",
+    "../source/build/toolchain/gtos/BUILD.gn",
+    "../source/build/toolchain/kythe.gni",
+    "../source/build/toolchain/rbe.gni",
+    "../source/build/toolchain/siso.gni",
+    "../source/build/toolchain/sysroot.gni",
+    "../source/build/toolchain/toolchain.gni",
+    "../source/buildtools/deps_revisions.gni",
+    "../source/content-diagnostic.gn",
+    "../source/third_party/angle/dotfile_settings.gni",
+    "../source/third_party/llvm-build/Release+Asserts/cr_build_revision",
+    "../source/third_party/rust-toolchain/VERSION",
+    "../source/third_party/rust/cxx/chromium_integration/rust_cxx.gni",
+    "../source/tools/clang/scripts/update.py",
+    "../source/tools/rust/update_rust.py",
+    "./args.gn",
+    "./mobileprovisions.filelist",
+    "gen/module_platform.txt"
+  ],
+  "previous_generated_metadata": {
+    "gen/module_platform.txt": {
+      "sha256": "779d7db153fd87a2ec44e3978a929418b40e2e9059d696f65f0486e54e2d912e",
+      "bytes": 8
+    },
+    "./mobileprovisions.filelist": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "./args.gn": {
+      "sha256": "ec572a8bc2a242a3bb9abd5165dac0f854cfb441003bb979f7686cd89eafab29",
+      "bytes": 436
+    }
+  },
+  "previous_gn_dependency_sha256": "26b79f6b81f0383ebf14c96b4d0c30a7b8fb7653fbf8eb82c037306d32b4aafa",
+  "upstream_git_verified_files": 62,
+  "gn_source_inputs": 73,
+  "scope": "Core GN dependency closure and helpers plus complete reviewed GTOS overlays for x64 C++ graph check",
+  "previous_inputs_sha256": "5b23fe3d8c2bcf8d05f66cf54f371017591a1d4181f99790dd8a2a26b63014be"
+}

@@ -23,8 +23,9 @@ ABI 映射而失败。本模块固定编译器及其自定义目标规格，并�
 
 先按已认证归档核对 `core`、`stdarch` 和 `portable-simd` 三棵源码树的 730 个文件。
 使用固定参数直接调用真实 rustc，在空 sysroot 中生成 rlib、rmeta 和 dep-info，
-不执行 Cargo、build.rs 或目标产物。参数与环境见 `core-compile.json`；这是独立的
-编译器资格命令，尚不是完整 GN 图生成出的编译行。
+不执行 Cargo、build.rs 或目标产物。参数与环境见 `core-compile.json`；这是原有独立
+编译器资格命令。后续[真实 GN core 规则](gn/README.md)另按实际 O3 参数通过，
+两组证据分别保存，不把独立 O2 编译替代为 GN 验收。
 
 首次编译返回 0、无标准错误，但旧归档检查器错误假定 rmeta 是非 ELF 文件，因此
 该次整体未通过。读取同包编译器源码后确认，`lib.rmeta` 和 `lib.rmeta-link` 都是
@@ -42,9 +43,13 @@ checkout 不加入仓库。工作区原始材料位于 `artifacts/native-rust-gt
 
 ## 当前 Content 首错与边界
 
+真实 GN core 的最小接入补丁与资格证明已保存于 `gn/`；仅新增 `rust_rlib`，没有
+声明 Rust 可执行文件、动态库、完整 std 或客机支持。原有目标和 O2 core 记录保留。
+
 私有真实 Content Shell 图已越过 Rust ABI 身份、原生整数 builtins、崩溃键后端选择、
 固定链接并发数、构建时间戳和通用测试资源的 GTOS 分支。最新原始失败在
-`base/test:immediate_crash_test_helper`：GTOS 工具链尚无 `solink`。只读诊断的
+`net:test_badgssapi`：GTOS 工具链尚无 `solink`。这是使用精确 root-pattern 后的
+最新观察；此前 `base/test:immediate_crash_test_helper` 的失败仍保留。只读诊断的
 驱动退出码 0 表示错误采集完成，实际 GN 返回 1，完整图仍未通过。
 
 GN 仅允许固定时间戳脚本及 `default` 参数；其来源与输入经过固定 Git 核验，

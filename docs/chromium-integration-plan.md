@@ -6,11 +6,15 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 
 ## 当前证据与下一步
 
-2026-10-15，真实Content Shell GN首错从Rust ABI空值前进到GTOS工具链缺少solink：
-`//base/test:immediate_crash_test_helper`共享库辅助目标。独立GTOS Rust规格由固定
-Chromium DEPS中的已认证工具链读取，保留GTOS/x86身份、SSE2和真实多线程目标属性。
-包内未修改的core已用该目标编译并独立核对来源、依赖与ELF32归档；这是编译器基础
-资格，非完整GN、std或客机运行。详见[Rust目标基础](../apps/native_rust_target/README.md)。
+2026-10-15，真实GN的`//build/rust/std/rules:core`已按O3/debug assertions编译通过：
+393个实际依赖闭合，16个ELF32/i386代码对象，全部输入及别名终验通过。新增的IA32
+Rust能力边界同时保留x64纯C++资格图。详见[GN core模块](../apps/native_rust_target/gn/README.md)。
+这只解决一个Content前置，完整std、C互调用与Rust客机程序仍未通过。
+
+Content Shell使用精确root-pattern后，最新真实首错为`//net:test_badgssapi`缺少solink；
+此前`base/test:immediate_crash_test_helper`失败仍保留。GN会检查已加载文件中的目标，
+不能把首错顺序当作实际依赖路径。继续核对GTOS默认启用的可选Kerberos/GSSAPI与
+共享库边界，不按测试名字删除目标，不提供假成功链接工具。
 
 2026-10-15，完整62在同一真实原生V8入口上补验对象/数组、ArrayBuffer/TypedArray/
 DataView、MarkSweepCompact GC回调、显式Promise微任务和预期异常后的恢复。两配置

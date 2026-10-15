@@ -1,0 +1,27 @@
+rule alink
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/llvm-ar rcs ${out} ${in}
+  description = GTOS AR ${out}
+rule asm
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang --target=x86_64-unknown-none-elf ${asmflags} -c ${in} -o ${out}
+  description = GTOS ASM ${in}
+rule cc
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang --target=x86_64-unknown-none-elf -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2 ${defines} ${include_dirs} ${cflags} ${cflags_c} -MMD -MF ${out}.d -c ${in} -o ${out}
+  description = GTOS CC ${in}
+  depfile = ${out}.d
+  deps = gcc
+rule copy
+  command = cp -af ${in} ${out}
+  description = GTOS COPY ${in}
+rule cxx
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang -x c++ --target=x86_64-unknown-none-elf -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2 -fno-exceptions -fno-rtti ${defines} ${include_dirs} ${cflags} ${cflags_cc} -MMD -MF ${out}.d -c ${in} -o ${out}
+  description = GTOS CXX ${in}
+  depfile = ${out}.d
+  deps = gcc
+rule link
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld -m elf_x86_64 ${ldflags} -o ${out} ${in} ${solibs} ${libs}
+  description = GTOS LINK ${out}
+rule stamp
+  command = touch ${out}
+  description = GTOS STAMP ${out}
+
+subninja obj/tools/gtos/platform_identity_probe.ninja

@@ -1,0 +1,38 @@
+{
+  "patch_sha256": "fd4d93175e4a9ad209d5f3fd51ce1a81d683078aebace0e04443fedbb21b6d06",
+  "qualified_build_sha256": "24b780e640d390f3b71dde6c68ec73cc7d706f7743981f06c3b2c1e1f2e1d232",
+  "files": {
+    "build/config/rust.gni": {
+      "before": "d0ab7d0dda842f041163016c99f4eecfece9016b1b4c6a0ac6467aba4682f3d8",
+      "after": "de574907f78b1b8f67aab6e1081b5cd14f5327eda3112ca47e86c712aa793ad6"
+    },
+    "build/config/compiler/BUILD.gn": {
+      "before": "5fd8410dce79947067a656feb24d150bb838269f3f934f3028b00a62fc56b859",
+      "after": "0402686feda257479996328887918a8cfae43253545b5d19376a418de7044c48"
+    },
+    "build/config/clang/BUILD.gn": {
+      "before": "ec4692b6ab0ae78675b7af8c7f5218e062258672be3261804f29ca3f44325969",
+      "after": "d932b2211457b02fe271e0d8992314fff604657e866fbe853ab002512424c4e4"
+    },
+    "build/rust/known-target-triples.txt": {
+      "before": "e2b7a027b2a7b4afcde89ebfb2c0e8c6d20b29e93b92d375e6b3d31c4b310cd1",
+      "after": "823fd9d7210cb23e1dee9eae59e1e37366f674b67531f6b67c309137d0e32162"
+    },
+    "build/rust/gni_impl/rustc_wrapper.py": {
+      "before": "233aafbe82662053d88537a7ef14af0a26f68ab29605451cad4fd363e8765c57",
+      "after": "fe42daeaf84d3c957b14936b886abc254e5b905e616753d7347c1c57a6ec8e35"
+    },
+    "build/toolchain/gtos/BUILD.gn": {
+      "before": "65f9df12cd2614c52b10c8462d5617876a5a3e51aeea9aee5139e0588eaf3d62",
+      "after": "237284795062a610e38a99ea895149d282c73691ef909ad46bec9db57c406b73"
+    },
+    "build/config/gtos/rust/i686-unknown-gtos.json": {
+      "before": null,
+      "after": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33"
+    }
+  },
+  "patch_check_pass": true,
+  "patch_replay_bytes_equal": true,
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "foundation_required": true
+}

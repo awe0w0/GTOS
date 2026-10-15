@@ -1,0 +1,119 @@
+{
+  "objects": [
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.00.rcgu.o",
+      "bytes": 35432,
+      "sha256": "a0186d47451fcc10a5dd6ec38a79df27ccd5a7531a17cc5805a99e000c1d5843",
+      "executable_section_bytes": 7946
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.01.rcgu.o",
+      "bytes": 57128,
+      "sha256": "a269415c0a3a069613e447bee7b1e40c2526d92d4924442770f6643790ac8988",
+      "executable_section_bytes": 12580
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.02.rcgu.o",
+      "bytes": 29324,
+      "sha256": "50ff9974c693f83377cad3b5c725747c512e4d7e43ed3108c22ae58134e13d9c",
+      "executable_section_bytes": 8993
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.03.rcgu.o",
+      "bytes": 33352,
+      "sha256": "2539a6cb1db3573980c472558dbc651c5e6ca48f44d61b58f9e1094b238364e3",
+      "executable_section_bytes": 8693
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.04.rcgu.o",
+      "bytes": 22400,
+      "sha256": "0592b7dabfd7b369ef17103c98ce7dbe6493d62c4426372c0c4936462b91f41b",
+      "executable_section_bytes": 8308
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.05.rcgu.o",
+      "bytes": 35792,
+      "sha256": "5b39953e6e25311d2493159f4aea151ae07a3b498c615c77a211bea36f0e6735",
+      "executable_section_bytes": 7951
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.06.rcgu.o",
+      "bytes": 14984,
+      "sha256": "4ac8792f7b1d18e5774d97b28ab14df69f8386df6193653de8222daeb68e4181",
+      "executable_section_bytes": 6843
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.07.rcgu.o",
+      "bytes": 47480,
+      "sha256": "313deee47b09fb0ad2d04c4b1daa6bee9526588a3000a86e495b868baad1d52c",
+      "executable_section_bytes": 7949
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.08.rcgu.o",
+      "bytes": 32952,
+      "sha256": "f71b20e5c58f9c2eae64550bd74df5d926bb4b46e2f426cd258c07bde4abf1c1",
+      "executable_section_bytes": 5595
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.09.rcgu.o",
+      "bytes": 33128,
+      "sha256": "353986c1f80127369c1d5665b6c78256e9fb815458227483819dd233ddabb574",
+      "executable_section_bytes": 7695
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.10.rcgu.o",
+      "bytes": 33820,
+      "sha256": "5519b90d5ea90c8fcbbc2c99af67be9b442113a990878441efc66da85d1a2b70",
+      "executable_section_bytes": 5162
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.11.rcgu.o",
+      "bytes": 47484,
+      "sha256": "7246fbdfd302a81786699b5ca26066cbffff8695abb6a95ad4987fd0b0ef7cd2",
+      "executable_section_bytes": 5549
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.12.rcgu.o",
+      "bytes": 29012,
+      "sha256": "7118f70fdb720bf87417957e8a89e127f98243cfcc9b23da13eb518b2210367d",
+      "executable_section_bytes": 7451
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.13.rcgu.o",
+      "bytes": 54952,
+      "sha256": "7957d650ec9f6a19d7dc281001304e34cf3a8b80e9977ca9fccbfd9fd1f4ab16",
+      "executable_section_bytes": 28777
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.14.rcgu.o",
+      "bytes": 52412,
+      "sha256": "624b8330518bae95e663d2b1a934d56bfc7de0671ec79de49463e3c3c51a47c1",
+      "executable_section_bytes": 6162
+    },
+    {
+      "name": "libcore_core.core.e5b3da6fbd4f48d0-cgu.15.rcgu.o",
+      "bytes": 30824,
+      "sha256": "47452f37a1597d987b388f0311b2503f4ab4bb8ca35db1223570ae709ec3d048",
+      "executable_section_bytes": 6681
+    }
+  ],
+  "metadata": {
+    "lib.rmeta": {
+      "name": "lib.rmeta",
+      "bytes": 65372216,
+      "sha256": "a4bbd062ab461332924f2bc3c6ec8aca5ba0e51a094448612379715abc8eefa6",
+      "payload_bytes": 65371912,
+      "payload_sha256": "3fc8f02906f4575e29a2b81d0ed50c005bfb9de26bc4e5fb4cb90e85dc332ba9"
+    },
+    "lib.rmeta-link": {
+      "name": "lib.rmeta-link",
+      "bytes": 1124,
+      "sha256": "085efe4c664e45216a0604d66345ce45fbe0ad470a8cc61de7bca1a3a048eafd",
+      "payload_bytes": 815,
+      "payload_sha256": "3d8eb4bfceedef1ea75ffbc339a323536c4e29636c18f474ec4664782b68faf0"
+    }
+  },
+  "elf_class": 32,
+  "elf_machine": "i386",
+  "elf_type": "ET_REL"
+}

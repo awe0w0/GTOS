@@ -1,0 +1,254 @@
+diff --git a/build/config/clang/BUILD.gn b/build/config/clang/BUILD.gn
+index 3384a06..9a3ba70 100644
+--- a/build/config/clang/BUILD.gn
++++ b/build/config/clang/BUILD.gn
+@@ -6,6 +6,13 @@ import("//build/config/pch.gni")
+ import("//build/config/rust.gni")
+ import("clang.gni")
+ 
++if (is_gtos) {
++  declare_args() {
++    # The caller verifies this native LLVM integer archive against its lock.
++    gtos_compiler_builtins = ""
++  }
++}
++
+ if (is_ios) {
+   # For `target_environment` and `target_platform`.
+   import("//build/config/apple/mobile_config.gni")
+@@ -180,6 +187,13 @@ template("clang_lib") {
+ 
+     config(target_name) {
+     }
++  } else if (is_gtos) {
++    assert(current_cpu == "x86" && invoker.libname == "builtins",
++           "This GTOS profile only provides native IA32 integer builtins")
++    assert(gtos_compiler_builtins != "", "Set the qualified GTOS builtins archive")
++    config(target_name) {
++      libs = [ gtos_compiler_builtins ]
++    }
+   } else {
+     config(target_name) {
+       _dir = ""
+@@ -293,7 +307,10 @@ clang_lib("compiler_builtins") {
+ 
+ # Adds a dependency on the Clang runtime library clang_rt.profile.
+ clang_lib("compiler_profile") {
+-  if (!toolchain_has_rust) {
++  if (is_gtos) {
++    assert(!use_clang_coverage && chrome_pgo_phase == 0,
++           "The GTOS profiling runtime is not implemented")
++  } else if (!toolchain_has_rust) {
+     # This is only used when `toolchain_has_rust` to support Rust linking.
+     #
+     # Don't define libname which makes this target do nothing.
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index c106acf..c5752ec 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -973,14 +973,18 @@ config("compiler") {
+ 
+   # Rust compiler flags setup.
+   # ---------------------------
+-  rustflags += [
+-    # By default Rust passes `-nodefaultlibs` to the linker, however this
+-    # conflicts with our `--unwind=none` flag for Android dylibs, as the latter
+-    # is then unused and produces a warning/error. So this removes the
+-    # `-nodefaultlibs` from the linker invocation from Rust, which would be used
+-    # to compile dylibs on Android, such as for constructing unit test APKs.
+-    "-Cdefault-linker-libraries",
+-  ]
++  if (is_gtos) {
++    rustflags += [ "-Cdefault-linker-libraries=no" ]
++  } else {
++    rustflags += [
++      # By default Rust passes `-nodefaultlibs` to the linker, however this
++      # conflicts with our `--unwind=none` flag for Android dylibs, as the latter
++      # is then unused and produces a warning/error. So this removes the
++      # `-nodefaultlibs` from the linker invocation from Rust, which would be used
++      # to compile dylibs on Android, such as for constructing unit test APKs.
++      "-Cdefault-linker-libraries",
++    ]
++  }
+ 
+   rustflags += [
+     # To make Rust .d files compatible with ninja
+@@ -1004,7 +1008,12 @@ config("compiler") {
+     # sequences, ignoring the platform, when stderr is not a terminal.
+     rustflags += [ "--color=always" ]
+   }
+-  if (rust_abi_target != "") {
++  if (is_gtos && rust_target_json != "") {
++    rustflags += [
++      "-Zunstable-options",
++      "--target=" + rebase_path(rust_target_json, root_build_dir),
++    ]
++  } else if (rust_abi_target != "") {
+     rustflags += [ "--target=$rust_abi_target" ]
+   }
+   if (!use_thin_lto || !toolchain_supports_rust_thin_lto) {
+diff --git a/build/config/gtos/rust/i686-unknown-gtos.json b/build/config/gtos/rust/i686-unknown-gtos.json
+new file mode 100644
+index 0000000..809cc1a
+--- /dev/null
++++ b/build/config/gtos/rust/i686-unknown-gtos.json
+@@ -0,0 +1,27 @@
++{
++  "llvm-target": "i686-unknown-none-elf",
++  "data-layout": "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:32-n8:16:32-S128",
++  "arch": "x86",
++  "target-pointer-width": 32,
++  "os": "gtos",
++  "env": "",
++  "vendor": "unknown",
++  "target-family": [],
++  "cpu": "pentium4",
++  "features": "-mmx,+sse,+sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2",
++  "rustc-abi": "x86-sse2",
++  "max-atomic-width": 64,
++  "singlethread": false,
++  "has-thread-local": false,
++  "linker-flavor": "gnu-lld",
++  "executables": true,
++  "dynamic-linking": false,
++  "relocation-model": "static",
++  "position-independent-executables": false,
++  "panic-strategy": "abort",
++  "disable-redzone": true,
++  "stack-probes": {"kind": "inline"},
++  "default-uwtable": false,
++  "eh-frame-header": false,
++  "emit-debug-gdb-scripts": false
++}
+diff --git a/build/config/rust.gni b/build/config/rust.gni
+index 146007f..cfc81ee 100644
+--- a/build/config/rust.gni
++++ b/build/config/rust.gni
+@@ -131,8 +131,9 @@ use_chromium_rust_toolchain = rust_sysroot_absolute == ""
+ rustc_nightly_capability = use_chromium_rust_toolchain || build_with_chromium
+ 
+ # Platform support for the Rust toolchain.
+-chromium_toolchain_supports_platform = !is_wasm
+-custom_toolchain_supports_platform = true
++chromium_toolchain_supports_platform =
++    !is_wasm && (!is_gtos || current_cpu == "x86")
++custom_toolchain_supports_platform = !is_gtos || current_cpu == "x86"
+ 
+ # Not all target triples (GN toolchains) are supported by the Rust compiler.
+ # Define if we support the current GN toolchain.
+@@ -200,7 +201,13 @@ if (enable_rust) {
+ # (see '*_toolchain_supports_platform above') to enable experimentation with
+ # other toolchains.
+ rust_abi_target = ""
+-if (is_linux || is_chromeos) {
++rust_target_json = ""
++if (is_gtos) {
++  if (current_cpu == "x86") {
++    rust_abi_target = "i686-unknown-gtos"
++    rust_target_json = "//build/config/gtos/rust/i686-unknown-gtos.json"
++  }
++} else if (is_linux || is_chromeos) {
+   if (current_cpu == "arm64") {
+     rust_abi_target = "aarch64-unknown-linux-gnu"
+   } else if (current_cpu == "x86") {
+@@ -431,6 +438,10 @@ rustc_wrapper_inputs = [
+   "//build/rust/gni_impl/rustc_wrapper.py",
+ ]
+ 
++if (is_gtos && rust_target_json != "") {
++  rustc_wrapper_inputs += [ rust_target_json ]
++}
++
+ if (host_os == "win") {
+   rustc_wrapper_inputs += [ "//third_party/rust-toolchain/bin/rustc.exe" ]
+ } else {
+diff --git a/build/rust/gni_impl/rustc_wrapper.py b/build/rust/gni_impl/rustc_wrapper.py
+index c0f4319..149696d 100644
+--- a/build/rust/gni_impl/rustc_wrapper.py
++++ b/build/rust/gni_impl/rustc_wrapper.py
+@@ -4,6 +4,8 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++from __future__ import annotations
++
+ import argparse
+ import json
+ import pathlib
+diff --git a/build/rust/known-target-triples.txt b/build/rust/known-target-triples.txt
+index fc4780b..897877a 100644
+--- a/build/rust/known-target-triples.txt
++++ b/build/rust/known-target-triples.txt
+@@ -27,6 +27,7 @@ armv7s-apple-ios
+ i386-apple-ios
+ i686-linux-android
+ i686-pc-windows-msvc
++i686-unknown-gtos
+ i686-unknown-linux-gnu
+ loongarch64-unknown-linux-gnu
+ riscv64-linux-android
+diff --git a/build/toolchain/gtos/BUILD.gn b/build/toolchain/gtos/BUILD.gn
+index 06e554c..3fe930b 100644
+--- a/build/toolchain/gtos/BUILD.gn
++++ b/build/toolchain/gtos/BUILD.gn
+@@ -2,10 +2,15 @@
+ # Use of this source code is governed by a BSD-style license in LICENSE.
+ # Freestanding platform qualification only. No Linux sysroot or host libc.
+ 
++import("//build/config/rust.gni")
++
+ declare_args() {
+   # Absolute directory of the reviewed official Clang/LLD/llvm-ar binaries.
+   # There is no host compiler fallback for GTOS target objects.
+   gtos_clang_bin = ""
++
++  # Isolated host interpreter for the reviewed Rust wrapper.
++  gtos_python = ""
+ }
+ 
+ assert(gtos_clang_bin != "", "Set gtos_clang_bin to the pinned official Clang")
+@@ -59,6 +64,44 @@ template("gtos_freestanding_toolchain") {
+       default_output_extension = ".elf"
+     }
+ 
++    # Rlibs do not link a GTOS program. Executables and dynamic libraries need
++    # separate native runtime/link qualification before those tools are added.
++    if (toolchain_has_rust && invoker.cpu == "x86") {
++      assert(gtos_python != "", "Set gtos_python to the reviewed host Python")
++      rustc_wrapper_path =
++          rebase_path("//build/rust/gni_impl/rustc_wrapper.py", root_build_dir)
++      rustc_wrapper = "\"$gtos_python\" -I -B -S \"$rustc_wrapper_path\""
++      rustc_env_and_flags_path =
++          "{{target_out_dir}}/{{label_name}}.rustflags.json"
++      rustc_rsp_path = "{{target_out_dir}}/{{label_name}}.rsp"
++      rustc_wrapper += " --dump-rustc-env-and-flags=$rustc_env_and_flags_path"
++      rustc_wrapper += " --rsp=$rustc_rsp_path"
++      rust_sysroot_relative = rebase_path(rust_sysroot, root_build_dir)
++      rustc_wrapper += " --rustc=$rust_sysroot_relative/bin/rustc"
++
++      tool("rust_rlib") {
++        rlibname =
++            "{{output_dir}}/lib{{target_output_name}}{{output_extension}}"
++        rmetaname = "{{output_dir}}/lib{{target_output_name}}.rmeta"
++        rspfile = rustc_rsp_path
++        depfile = "$rlibname.d"
++        default_output_extension = ".rlib"
++        default_output_dir = "{{target_out_dir}}"
++        description = "GTOS RUST {{output}}"
++        outputs = [
++          rlibname,
++          rmetaname,
++          rustc_env_and_flags_path,
++          "${rspfile}.rust",
++        ]
++        rspfile_content =
++            "$rustc_common_args {{rustdeps}} {{externs}} SOURCES {{sources}}"
++        command = "$rustc_wrapper --depfile=$depfile --emit=dep-info=$depfile,link,metadata=$rmetaname -o $rlibname -- {{source}} LDFLAGS RUSTENV {{rustenv}}"
++        rust_sysroot = rust_sysroot_relative
++        inputs = rustc_wrapper_inputs
++      }
++    }
++
+     tool("stamp") {
+       command = "touch {{output}}"
+       description = "GTOS STAMP {{output}}"

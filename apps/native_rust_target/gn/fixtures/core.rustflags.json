@@ -1,0 +1,21 @@
+{
+    "rustenv": {
+        "OUT_DIR": "gen/build/rust/std/rules/core",
+        "CLIPPY_CONF_DIR": "../source/build/config",
+        "CFG_DISABLE_UNSTABLE_FEATURES": "0",
+        "STD_ENV_ARCH": "x86",
+        "CARGO_PKG_VERSION": "0.0.0",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "0",
+        "CARGO_PKG_VERSION_PATCH": "0",
+        "CARGO_PKG_VERSION_PRE": "",
+        "CARGO_PKG_NAME": "core",
+        "CARGO_PKG_DESCRIPTION": "The Rust Core Library",
+        "CARGO_PKG_REPOSITORY": "https://github.com/rust-lang/rust.git",
+        "CARGO_MANIFEST_DIR": "../source/build/rust/std/rules/core/crate"
+    },
+    "rustflags": [
+        "../source/third_party/rust-toolchain/lib/rustlib/src/rust/library/core/src/lib.rs",
+        "@obj/build/rust/std/rules/core.rsp.rust"
+    ]
+}

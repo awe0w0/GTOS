@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15T12:18:54.2365966Z",
+  "recorded_utc": "2026-10-15T13:12:22.7997781Z",
   "scope": "完整 IA32 V8 原生工作负载双配置通过；Content/网页/视频/HTML5 尚未验收",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -9042,8 +9042,8 @@
         "path": "artifacts/native-rust-gtos-20261015-a/core-validate-01/status.json"
       },
       "content_graph": {
-        "sha256": "99144a3a44d09760d1f6651b60b7cedfc5580fc1a50e1795a1205a52fbdce402",
-        "path": "artifacts/native-rust-gtos-20261015-a/graph-07/status.json"
+        "sha256": "02ea80cf57d8057dc6505fb58edf33230c9e11f4e5795bd8e78cc7c513fc1759",
+        "path": "artifacts/native-rust-gtos-20261015-a/graph-08/status.json"
       }
     },
     "target_sha256": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
@@ -9085,9 +9085,52 @@
     "browser_guest_pass": false,
     "video_guest_pass": false,
     "html5_guest_pass": false,
-    "first_content_blocker": "//base/test:immediate_crash_test_helper shared_library requires undefined solink in //build/toolchain/gtos:clang_x86",
+    "first_content_blocker": "//net:test_badgssapi shared_library requires undefined solink in //build/toolchain/gtos:clang_x86; exact root-pattern graph still fails",
     "production_image_changed": false,
     "complete_cold_build_pass": false,
-    "blank_host_bootstrap_pass": false
+    "blank_host_bootstrap_pass": false,
+    "gn_core": {
+      "module": "apps/native_rust_target/gn",
+      "qualification_sha256": "a84fe20041e9afc0cffe8aa2ab7fe848d030c5cccd0cb060807b30d01fcce56d",
+      "proof": {
+        "sha256": "24b780e640d390f3b71dde6c68ec73cc7d706f7743981f06c3b2c1e1f2e1d232",
+        "path": "artifacts/native-rust-gn-core-20261015-a/build-03/status.json"
+      },
+      "gn_core_build_pass": true,
+      "x64_cpp_graph_pass": true,
+      "x64_rust_supported": false,
+      "source_inputs": 91,
+      "actual_dependency_files": 393,
+      "codegen_elf32_i386_objects": 16,
+      "codegen_object_bytes": 590476,
+      "outputs": {
+        "build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib": {
+          "sha256": "7d974ef96b7d2ffac7214ec6702c6be928e8d28acf63a4e19d9bf922193ecbfb",
+          "bytes": 66021998
+        },
+        "build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rmeta": {
+          "sha256": "3fc8f02906f4575e29a2b81d0ed50c005bfb9de26bc4e5fb4cb90e85dc332ba9",
+          "bytes": 65371912
+        },
+        "build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib.d": {
+          "sha256": "9ba93431d0fdd4edd72fa9c5d0c9cf98cdb7823b836041563b55915e85477a22",
+          "bytes": 114411
+        },
+        "archive-members.json": {
+          "sha256": "33b05dbecca1ae0296c8fdfc33bc62cff792148220074ff036df8ff8e4759507",
+          "bytes": 4269
+        },
+        "build/obj/build/rust/std/rules/core.rustflags.json": {
+          "sha256": "f2c8e32a9f29fe82173589eed4dff00fb0847709dc431f3afe8d4c28d9ff3b73",
+          "bytes": 811
+        }
+      },
+      "patch_sha256": "fd4d93175e4a9ad209d5f3fd51ce1a81d683078aebace0e04443fedbb21b6d06",
+      "full_std_qualified": false,
+      "rust_guest_pass": false,
+      "content_shell_build_pass": false,
+      "browser_guest_pass": false,
+      "production_image_changed": false
+    }
   }
 }

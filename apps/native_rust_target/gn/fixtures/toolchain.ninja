@@ -1,0 +1,46 @@
+rule alink
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/llvm-ar rcs ${out} ${in}
+  description = GTOS AR ${out}
+rule asm
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang --target=i686-unknown-none-elf ${asmflags} -c ${in} -o ${out}
+  description = GTOS ASM ${in}
+rule cc
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang --target=i686-unknown-none-elf -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2 ${defines} ${include_dirs} ${cflags} ${cflags_c} -MMD -MF ${out}.d -c ${in} -o ${out}
+  description = GTOS CC ${in}
+  depfile = ${out}.d
+  deps = gcc
+rule copy
+  command = cp -af ${in} ${out}
+  description = GTOS COPY ${in}
+rule cxx
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang -x c++ --target=i686-unknown-none-elf -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2 -fno-exceptions -fno-rtti ${defines} ${include_dirs} ${cflags} ${cflags_cc} -MMD -MF ${out}.d -c ${in} -o ${out}
+  description = GTOS CXX ${in}
+  depfile = ${out}.d
+  deps = gcc
+rule link
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld -m elf_i386 ${ldflags} -o ${out} ${in} ${solibs} ${libs}
+  description = GTOS LINK ${out}
+rule rust_rlib
+  command = "/usr/bin/python3" -I -B -S "../source/build/rust/gni_impl/rustc_wrapper.py" --dump-rustc-env-and-flags=${target_out_dir}/${label_name}.rustflags.json --rsp=${target_out_dir}/${label_name}.rsp --rustc=../source/third_party/rust-toolchain/bin/rustc --depfile=${output_dir}/lib${target_output_name}${output_extension}.d --emit=dep-info=${output_dir}/lib${target_output_name}${output_extension}.d,link,metadata=${output_dir}/lib${target_output_name}.rmeta -o ${output_dir}/lib${target_output_name}${output_extension} -- ${in} LDFLAGS RUSTENV ${rustenv}
+  description = GTOS RUST ${out}
+  rspfile = ${target_out_dir}/${label_name}.rsp
+  rspfile_content = --crate-name ${crate_name} --crate-type ${crate_type} ${rustflags} ${rustdeps} ${externs} SOURCES ${sources}
+  depfile = ${output_dir}/lib${target_output_name}${output_extension}.d
+  deps = gcc
+build phony/rust_rlib_inputs: phony ../source/build/action_helpers.py ../source/build/gn_helpers.py ../source/build/rust/gni_impl/rustc_wrapper.py ../source/build/config/gtos/rust/i686-unknown-gtos.json ../source/third_party/rust-toolchain/bin/rustc
+rule stamp
+  command = touch ${out}
+  description = GTOS STAMP ${out}
+
+build phony/build/rust/gni_impl/allow_all_warnings: phony phony/build/rust/gni_impl/gen_allow_all_warnings_rsp
+rule __build_rust_gni_impl_gen_allow_all_warnings_rsp___build_toolchain_gtos_clang_x86__rule
+  command = /nonexistent/gtos-content-diagnostic-no-scripts ../source/build/rust/gni_impl/gen_allow_all_warnings_rsp.py --rust-prefix ../source/third_party/rust-toolchain/bin --output-path gen/build/rust/gni_impl/allow_all_warnings.rsp
+  description = ACTION //build/rust/gni_impl:gen_allow_all_warnings_rsp(//build/toolchain/gtos:clang_x86)
+  restat = 1
+
+build gen/build/rust/gni_impl/allow_all_warnings.rsp: __build_rust_gni_impl_gen_allow_all_warnings_rsp___build_toolchain_gtos_clang_x86__rule | ../source/build/rust/gni_impl/gen_allow_all_warnings_rsp.py ../source/build/rust/gni_impl/rustc_print_cfg.py ../source/third_party/rust-toolchain/bin/rustc
+
+build phony/build/rust/gni_impl/gen_allow_all_warnings_rsp: phony gen/build/rust/gni_impl/allow_all_warnings.rsp
+build phony/build/rust/std/empty_sysroot_for_std_build: phony local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/.empty
+build phony/build/rust/std/std_build_deps: phony phony/build/rust/std/empty_sysroot_for_std_build
+subninja obj/build/rust/std/rules/core.ninja
