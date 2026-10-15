@@ -1,0 +1,15 @@
+{
+  "requires": "Pinned Chromium plus existing GTOS/Rust platform overlays; cache entries use OUT/source and OUT/build layout",
+  "passed": true,
+  "files": {
+    "build/toolchain/linux/BUILD.gn": {
+      "base_sha256": "663b6cb9f1e12073e4e9313047bb8945e10a502f9461c13274e4d7fb94fd5ddb",
+      "candidate_sha256": "6093e2b6f7361a55611d745809cb83ba1b265437d9c5fa5cd1745ac76b98f868"
+    },
+    "build/config/linux/cached_results.scope": {
+      "base_sha256": "61d65755ca4ea74fefbfe9bde70e88de8cb945e7b9ca9fe3ecd5a8ab092af2bc",
+      "candidate_sha256": "a0b5a101928909519d1a18fd380de99b397c6647a34434ce62f3bf0745547c9d"
+    }
+  },
+  "patch_sha256": "48df1c4d9043a404edd830315b75de4dff0b0ee21568f39934c64fbe10a2c3ff"
+}

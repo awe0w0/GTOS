@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15T13:52:01.8698678Z",
+  "recorded_utc": "2026-10-15T16:58:11.2053966Z",
   "scope": "完整 IA32 V8 原生工作负载双配置通过；Content/网页/视频/HTML5 尚未验收",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -582,7 +582,7 @@
     "published_diagnostic_implementation": true,
     "qualification_scope": "ExitQuietly、NullStreamFatal、LogMessage::FailQuietly 与 InstallFailureSignalHandler 调用的实际客体路径；其余未调用路径仍未验收。"
   },
-  "next_work_package": "Use real ELF in GTOS ValidateElf32; confirm exact rejection; review page/page-table metadata, ownership, rollback and physical budgets before changing capacity; then measure heap/stack/RSS and execute real Isolate/JS.",
+  "next_work_package": "审查 Linux 次级工具链 udev/MIDI 探测条件；继续真实 Rust std、libxml 线程/fd/ICU、libaom 平台配置与 Content 本地首帧/DOM，之后推进受控网络、网页、视频及 HTML5。",
   "retained_complete_attempts": [
     {
       "name": "attempt-06",
@@ -2310,7 +2310,7 @@
     }
   },
   "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v98.json",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v109.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -8913,7 +8913,7 @@
     "complete_cold_build_pass": false,
     "production_image_changed": false
   },
-  "next_required": "审查 Linux 次级工具链 CUPS 探测；继续真实 Rust std、libxml 线程/fd/ICU、libaom 平台配置与 Content 本地首帧/DOM，之后推进受控网络及音视频。",
+  "next_required": "审查 Linux 次级工具链 udev/MIDI 探测条件；继续真实 Rust std、libxml 线程/fd/ICU、libaom 平台配置与 Content 本地首帧/DOM，之后推进受控网络、网页、视频及 HTML5。",
   "native_v8_workloads": {
     "module": "apps/native_v8_launch/workloads",
     "proofs": {
@@ -9356,12 +9356,12 @@
   },
   "content_graph_current": {
     "proof": {
-      "sha256": "2d22521718df135692d8586b26a9878a36fe8aaf8c6181ce48a62c1a68a668af",
-      "path": "artifacts/native-rust-gtos-20261015-a/graph-18/status.json"
+      "path": "artifacts/native-rust-gtos-20261015-a/graph-23/status.json",
+      "sha256": "f901d49ffd8b1160ece0580a244b9bc62be18a58c2a79389123d9fc3799ad0ef"
     },
-    "driver_sha256": "74fcdb6abee88591393f25c7042f767624ace74ca539c3e2c57019c6fe92e8ed",
-    "launcher_sha256": "a574f5315a3f7f110d170686dda55c7a73f18a523910478ee7f3091dae430c11",
-    "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
+    "driver_sha256": "016d3a3a13bbb69497107fa005558dfcba17f3dcd111d85e5b7c3593495dd859",
+    "launcher_sha256": "d2e27e54a76dda741bff2052448a6b17442ff575c44fdd8e7688f5470bf8e364",
+    "dispatcher_sha256": "5af0a0bba8379a07b62c5ee0c878ecc607987d7209815f51e8db3ba1502c8512",
     "diagnostic_complete": true,
     "gn_returncode": 1,
     "gn_generation_pass": false,
@@ -9374,15 +9374,15 @@
     "argv": [
       "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
       "gen",
-      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-18/build",
-      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-18/source",
-      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-18/source/content-diagnostic.gn",
+      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-23/build",
+      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-23/source",
+      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-23/source/content-diagnostic.gn",
       "--root-target=//content/shell:content_shell",
       "--root-pattern=//content/shell:content_shell",
-      "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nuse_glib=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
+      "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nuse_glib=false\nuse_dbus=false\nuse_gio=false\nuse_cups=false\nrtc_use_pipewire=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
       "--fail-on-unused-args"
     ],
-    "gn_log_sha256": "e9c743d1942d507aecec03795d1c8fd8acef8ce7bb1613aa26b267d651cbcb58",
+    "gn_log_sha256": "8dc1d06786b28bfb71fa6718fc6126cbd858e4a987c21c149d9829e31631649c",
     "exec_script_callsites": [
       "//build/timestamp.gni",
       "//build/util/branding.gni",
@@ -9396,7 +9396,7 @@
         ],
         "timestamp": 1791090000,
         "script_sha256": "36bb3744127e386475fac3301a8f3911438296658c7bc5aef5aa4ba5362a01a4",
-        "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
+        "dispatcher_sha256": "5af0a0bba8379a07b62c5ee0c878ecc607987d7209815f51e8db3ba1502c8512",
         "proof_sha256": "439241db2103d6f9a3919cf40e6d041327233cb3f2829d3fae8bdf1b2330fae6",
         "bound_inputs_unchanged": true,
         "returncode": 0
@@ -9413,7 +9413,7 @@
         ],
         "output": "full_name = \"Chromium\" short_name = \"Chromium\" bundle_id = \"org.chromium.Chromium\" creator_code = \"Cr24\" installer_full_name = \"Chromium Installer\" installer_short_name = \"Chromium Installer\" team_id = \"\" \n",
         "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
-        "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
+        "dispatcher_sha256": "5af0a0bba8379a07b62c5ee0c878ecc607987d7209815f51e8db3ba1502c8512",
         "proof_sha256": "cd941bb6f1e1d6caaee854f6b3a5b7f7361ab3c0f334fd655ceb7f359cbc8450",
         "bound_inputs_unchanged": true,
         "returncode": 0
@@ -9432,7 +9432,7 @@
         ],
         "output": "full = \"157.0.8089.0\" major = \"157\" minor = \"0\" build = \"8089\" patch = \"0\" \n",
         "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
-        "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
+        "dispatcher_sha256": "5af0a0bba8379a07b62c5ee0c878ecc607987d7209815f51e8db3ba1502c8512",
         "proof_sha256": "bfc551816002c80c24d4769ecfc9ef96411ab451ce76823a4c6fff9b405e2982",
         "bound_inputs_unchanged": true,
         "returncode": 0
@@ -9442,13 +9442,22 @@
     "helper_output_option_rejected": true,
     "kerberos_enabled": false,
     "host_glib_enabled": false,
+    "host_cups_enabled": false,
+    "host_pipewire_capture_enabled": false,
+    "host_dbus_enabled": false,
+    "host_gio_enabled": false,
+    "gtos_main_use_sysroot": false,
+    "host_linux_sysroots_requested": true,
+    "direct_dual_linux_nss_gn_metadata_qualified": true,
+    "certificate_configuration_changed": false,
+    "pkg_config_executed_by_gn": false,
     "official_google_api_keys_enabled": false,
     "internal_key_probe_executed": false,
     "rust_bin_link_qualified": true,
     "menus_runtime_qualified": false,
     "libxml_runtime_qualified": false,
-    "first_blocker": "printing/BUILD.gn:482 (build/toolchain/linux:clang_x86): cups_config_helper.py exec_script denied, via Blink printing:metafile",
-    "next": "Review optional host CUPS probe without widening helper permissions; continue real std, libxml pthread/fd/ICU and Content first frame/DOM"
+    "first_blocker": "device/udev_linux/BUILD.gn:9 pkg_config(\"udev\") in build/toolchain/linux:clang_x86, via media/midi/BUILD.gn:172",
+    "next": "Review host udev conditions without widening helper permissions; then real std, libxml pthread/fd/ICU and Content first frame/DOM"
   },
   "native_nasm": {
     "module": "apps/native_nasm",
@@ -9578,5 +9587,35 @@
       "empty_objects": 1
     },
     "content_candidates": "Four menus/libxml files published for reviewed graph reproduction; complete runtime unqualified. Actual libxml threads.c requires pthread.h, xmlIO.c requires fcntl.h."
+  },
+  "native_host_nss": {
+    "module": "apps/native_host_nss",
+    "proof": {
+      "path": "artifacts/native-host-nss-20261016-a/graph-04/status.json",
+      "sha256": "f020bdbaa9a3958cf0023352bea1c93790bcbb5970ab9f2543520ad8c99ec772"
+    },
+    "patch_sha256": "48df1c4d9043a404edd830315b75de4dff0b0ee21568f39934c64fbe10a2c3ff",
+    "patch_replay_pass": true,
+    "patch_files": 2,
+    "gn_targets": 5,
+    "gn_files": 43,
+    "actual_gn_dependencies": 48,
+    "declared_source_inputs": 111,
+    "bound_inputs": 253,
+    "offline_metadata_queries": 2,
+    "metadata_query_pass": true,
+    "dual_linux_gn_metadata_pass": true,
+    "gn_dependency_closure_qualified": true,
+    "gtos_freestanding_assert_retained": true,
+    "gtos_main_use_sysroot": false,
+    "linux_secondary_use_sysroot": true,
+    "selected_archive_members_per_arch": 4,
+    "installed_sysroot_whole_tree_qualified": false,
+    "compiled_objects": false,
+    "tls_runtime_qualified": false,
+    "guest_executed": false,
+    "content_graph_qualified": false,
+    "browser_guest_pass": false,
+    "production_image_changed": false
   }
 }

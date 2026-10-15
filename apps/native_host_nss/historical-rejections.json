@@ -1,0 +1,8 @@
+{
+  "global_sysroot": "graph20 GN1 at unchanged GTOS freestanding assertion; not accepted",
+  "probe_01": "GN1 nonempty configs replacement, overall qualification false",
+  "records_preserved": true,
+  "probe_03": "GN0 closure pass but driver1 desc omitted private root/dotfile and hit default root assertion, overall false",
+  "accepted": "graph04 driver0,gen0,desc0 twice,all inputs unchanged",
+  "probe_02": "GN0 but driver1 unbound v8_target_cpu.gni, overall false"
+}

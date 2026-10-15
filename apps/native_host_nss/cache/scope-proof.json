@@ -1,0 +1,84 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "original_relative": "build/config/linux/cached_results.scope",
+  "original_sha256": "61d65755ca4ea74fefbfe9bde70e88de8cb945e7b9ca9fe3ecd5a8ab092af2bc",
+  "query_proof": "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/nss-query-01/status.json",
+  "query_sha256": "58c52704d2087fda96596cdc0dcaa5a4a35d45bfb07d36cb612739ed6c4469e6",
+  "candidate": "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/nss-cache-01/cached_results.scope",
+  "candidate_sha256": "a0b5a101928909519d1a18fd380de99b397c6647a34434ce62f3bf0745547c9d",
+  "entries": {
+    "bullseye_i386": {
+      "args": [
+        "nss",
+        "-v",
+        "-lssl3"
+      ],
+      "query_result_name": "bullseye_i386",
+      "pkgresult": [
+        [
+          "../source/build/linux/debian_bullseye_i386-sysroot/usr/include/nspr",
+          "../source/build/linux/debian_bullseye_i386-sysroot/usr/include/nss"
+        ],
+        [],
+        [
+          "nspr4",
+          "nss3",
+          "nssutil3",
+          "plc4",
+          "plds4",
+          "smime3"
+        ],
+        []
+      ],
+      "sysroot": "../source/build/linux/debian_bullseye_i386-sysroot"
+    },
+    "bullseye_amd64": {
+      "args": [
+        "nss",
+        "-v",
+        "-lssl3"
+      ],
+      "query_result_name": "bullseye_amd64",
+      "pkgresult": [
+        [
+          "../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr",
+          "../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nss"
+        ],
+        [],
+        [
+          "nspr4",
+          "nss3",
+          "nssutil3",
+          "plc4",
+          "plds4",
+          "smime3"
+        ],
+        []
+      ],
+      "sysroot": "../source/build/linux/debian_bullseye_amd64-sysroot"
+    }
+  },
+  "selected_arg": "use_sysroot=false",
+  "original_entries_retained": true,
+  "gn_exec_script_allowlist_changed": false,
+  "certificate_configuration_changed": false,
+  "pkg_config_executed_by_gn": false,
+  "scope": "GTOS main keeps use_sysroot=false and original freestanding assertion; only Linux clang_x86/clang_x64 secondary toolchain arguments select true when target_os is gtos. NSS data from two actual offline queries, no GN helper expansion or certificate changes. No compile/runtime qualification.",
+  "data_proof": "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/nss-cache-01/proof.json",
+  "data_proof_sha256": "15250e7611187049400170a8f036f86937fe81aeab92e4a7d0ff51b69318c990",
+  "linux_secondary_use_sysroot": true,
+  "linux_toolchains": [
+    "clang_x86",
+    "clang_x64"
+  ],
+  "linux_source": {
+    "candidate": "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/host-sysroot-patch-v1/build/toolchain/linux/BUILD.gn",
+    "candidate_sha256": "6093e2b6f7361a55611d745809cb83ba1b265437d9c5fa5cd1745ac76b98f868",
+    "blob": "fa3d1ba0cb4ea11312bf94cf482e0152f59225e4",
+    "relative": "build/toolchain/linux/BUILD.gn",
+    "sha256": "663b6cb9f1e12073e4e9313047bb8945e10a502f9461c13274e4d7fb94fd5ddb"
+  },
+  "gtos_freestanding_assert_unchanged": true,
+  "failed_global_attempt": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-20/status.json",
+  "failed_global_attempt_sha256": "570c55fbfd17149f17be163c095eb422bbb810aa114e4cc167d6ddd72c219920"
+}

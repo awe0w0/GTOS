@@ -1,0 +1,21 @@
+ERROR at //build/config/linux/pkg_config.gni:155:19 (//build/toolchain/linux:clang_x86): Disallowed exec_script call.
+      pkgresult = exec_script(pkg_config_script, _script_args, "json")
+                  ^--------------------------------------------------
+The use of exec_script use is restricted in this build. exec_script
+is discouraged because it can slow down the GN run and is easily
+abused.
+
+Generally nontrivial work should be done as build steps rather than
+when GN is run. For example, if you need to compute a nontrivial
+preprocessor define, it will be better to have an action target
+generate a header containing the define rather than blocking the GN
+run to compute the value.
+
+The allowed callers of exec_script is maintained in the "//.gn" file
+if you need to modify the allowlist.
+See //device/udev_linux/BUILD.gn:9:3: whence pkg_config was called.
+  pkg_config("udev") {
+  ^-------------------
+See //media/midi/BUILD.gn:172:15: which caused the file to be included.
+    deps += [ "//device/udev_linux" ]
+              ^--------------------

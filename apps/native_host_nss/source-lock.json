@@ -1,0 +1,99 @@
+{
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "sysroots": {
+    "bullseye_i386": {
+      "selected": {
+        "usr/lib/pkgconfig/nss.pc": {
+          "bytes": 271,
+          "sha256": "45437cacd9c2091cde98e5a19654dabfa7e60aa678ea7a89614435d3ad70ffd9"
+        },
+        "usr/lib/pkgconfig/nspr.pc": {
+          "bytes": 258,
+          "sha256": "5220134971b1a7f3fd6bcf78a0dd6c33517c686981a48604979ce7827608f64c"
+        },
+        "usr/include/nss/nss.h": {
+          "bytes": 14399,
+          "sha256": "45be6c6ef9d2150954f8c81750a0e263c8865af663e4a53b5b5f8cdb9da3ff26"
+        },
+        "usr/include/nspr/prtypes.h": {
+          "bytes": 19891,
+          "sha256": "cd7ad81c344310d6392b7e78a85ade676c86ba48c69d0dde5b16d61e491a4c57"
+        }
+      },
+      "directory": "build/linux/debian_bullseye_i386-sysroot",
+      "archive_sha256": "3de724b0d63478e1ae35f07b95d02261581a66e05c19aebe4e443d76179a565e",
+      "archive": ".3de724b0d63478e1ae35f07b95d02261581a66e05c19aebe4e443d76179a565e"
+    },
+    "bullseye_amd64": {
+      "selected": {
+        "usr/lib/pkgconfig/nss.pc": {
+          "bytes": 273,
+          "sha256": "be4847c3d322f6e1e9d0075583d90249974f6a862d8dedc041af8f4d94d4b4bd"
+        },
+        "usr/lib/pkgconfig/nspr.pc": {
+          "bytes": 262,
+          "sha256": "dee8cafd61a22c3b36d2052af870cf127df95baad778fe4335d152b71609575b"
+        },
+        "usr/include/nss/nss.h": {
+          "bytes": 14399,
+          "sha256": "45be6c6ef9d2150954f8c81750a0e263c8865af663e4a53b5b5f8cdb9da3ff26"
+        },
+        "usr/include/nspr/prtypes.h": {
+          "bytes": 19891,
+          "sha256": "cd7ad81c344310d6392b7e78a85ade676c86ba48c69d0dde5b16d61e491a4c57"
+        }
+      },
+      "directory": "build/linux/debian_bullseye_amd64-sysroot",
+      "archive_sha256": "52d61d4446ffebfaa3dda2cd02da4ab4876ff237853f46d273e7f9b666652e1d",
+      "archive": ".52d61d4446ffebfaa3dda2cd02da4ab4876ff237853f46d273e7f9b666652e1d"
+    }
+  },
+  "source_files": {
+    "build/config/sysroot.gni": {
+      "sha256": "321f44b7a38a780fda2796c6fef5b80e04fbffbc551d9bea35b57fb14c3c7a0a",
+      "blob": "e7aaa18479d47958d6407f4d22bbe7ea939e1f92"
+    },
+    "build/toolchain/sysroot.gni": {
+      "sha256": "5071cbe46d130d5838ecdb68c22ecacc0140e857769a7146d3a6917a03901449",
+      "blob": "3063d241006749d984cc5cbca154d31093cd97ba"
+    },
+    "build/config/linux/cached_results.scope": {
+      "sha256": "61d65755ca4ea74fefbfe9bde70e88de8cb945e7b9ca9fe3ecd5a8ab092af2bc",
+      "blob": "07544f84fed2786f56a4b8f4ed180b4078552718"
+    },
+    "build/linux/sysroot_scripts/sysroots.json": {
+      "sha256": "586a193b7af31448bd09f8dd843cd0d19c1a9a5311c58a5ddf59805ba2480044",
+      "blob": "a9388a65c87e93e9baabdd1ddd1bbf8ad2788171"
+    },
+    "crypto/features.gni": {
+      "sha256": "72c0785787d32238aeedfad5f1b87e65ffa94035a086e8694ba23e0e34fab104",
+      "blob": "afef3c54419922326461f9444c633435fde427bb"
+    },
+    "build/config/linux/nss/BUILD.gn": {
+      "sha256": "3ebaf05c987c7af09caf80af7b1c1562e5acf415740c5ac0f21da6f624993fd3",
+      "blob": "c67cefc148b06726301b9fed9d6d50e99a791e54"
+    },
+    "build/config/linux/pkg_config.gni": {
+      "sha256": "8d485d31c13668fda2cb17a69f791fb53f733327e11368fc6400b039da11e1ba",
+      "blob": "d637bd04af5fdd2b99d827026584616719baef9b"
+    },
+    "build/config/linux/pkg-config.py": {
+      "sha256": "2cee73c02c7651b00e59749bb4d6fcb674010cf543674d4a8d24f435401c428f",
+      "blob": "a4d5342b57070840ba82771760ee9a27c260ec50"
+    },
+    "net/BUILD.gn": {
+      "sha256": "c887d0c1a40d1eb482a3240a26bcb5bcab228dc370a809171571e2597ecc4a8e",
+      "blob": "65359e1e2c6d8934f8dcf6a150e65e384fde8a04"
+    }
+  },
+  "gn_sha256": "c0dec98e11c4008b165a44bf407e06704710cf76e2af4aea22dd3b7102f0778e",
+  "pkg_config_sha256": "229ad55026c5c2045ddb0a2b7772d629f488dd38278c982d5c67258a743ff8e3",
+  "qualification_sha256": "f020bdbaa9a3958cf0023352bea1c93790bcbb5970ab9f2543520ad8c99ec772",
+  "inputs_sha256": "03e94164aeba885014d57c8f6a7d2b99bb92b279ec3eade7cff80aa1327e0f83",
+  "patch_sha256": "48df1c4d9043a404edd830315b75de4dff0b0ee21568f39934c64fbe10a2c3ff",
+  "patch_replay_sha256": "2f66259c44fe95f8ffbfc7595c6415e9578a82c02d077fa88fa435995a9bf85d",
+  "accepted_main_use_sysroot": false,
+  "accepted_linux_secondary_use_sysroot": true,
+  "cache_layout": "OUT/source and OUT/build only",
+  "older_data_proof_scope_note": "cache/data-proof.json records derivation; its global use_sysroot=true attempt was rejected. Accepted scope is cache/scope-proof.json and qualification.json."
+}

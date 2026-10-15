@@ -1,0 +1,22 @@
+{
+  "compiled_objects": false,
+  "html5_guest_pass": false,
+  "actual_gn_dependencies": 48,
+  "tls_runtime_qualified": false,
+  "gn_dependency_closure_qualified": true,
+  "gtos_freestanding_assert_retained": true,
+  "gn_targets": 5,
+  "production_image_changed": false,
+  "content_graph_qualified": false,
+  "metadata_query_pass": true,
+  "nss_dual_linux_gn_metadata_pass": true,
+  "patch_replay_pass": true,
+  "browser_guest_pass": false,
+  "declared_source_inputs": 111,
+  "guest_executed": false,
+  "video_guest_pass": false,
+  "bound_inputs": 253,
+  "fixture_configs_isolated": true,
+  "gn_files": 43,
+  "gn_returncode": 0
+}

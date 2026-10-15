@@ -23,11 +23,17 @@ Content Shell精确root-pattern图继续使用通用菜单模型准入和独立l
 原始libxml解析器/字符表已编译为IA32，但pthread.h/fcntl.h等接口仍缺，候选运行时未验收。
 2026-10-15，[Rust可执行链接规则](../apps/native_rust_target/bin/README.md)完成真实GN
 两目标/34文件闭合，Rust/C/64位除法静态ELF及缺失提供者负例通过；已有core和本轮
-真实compiler_builtins提供元数据与内建函数。完整图已越过rust_bin错误，当前首错为
+真实compiler_builtins提供元数据与内建函数。当时完整图已越过rust_bin错误，首错为
 Linux次级工具链`printing/BUILD.gn:482`的CUPS探测限制。GN仍返回1，没有Content产物。
 时间戳和品牌信息仅允许锁定脚本及固定参数；显式`use_kerberos=false`和
 `use_official_google_api_keys=false`用于开源本地首帧准备，未探测内部密钥。完整图仍返回1。
-下一步审查宿主CUPS探测，再继续完整Rust std、libxml线程/fd/ICU及真实libaom配置；
+2026-10-16，[宿主NSS构建配置](../apps/native_host_nss/README.md)完成双架构固定归档
+选定成员核对、实际离线元数据查询、真实GN 5目标/43文件生成及两次配置描述。
+48项实际依赖闭合，253个绑定输入终验通过，两文件补丁重放与候选逐字节一致。
+GTOS主参数仍为`use_sysroot=false`，仅Linux次级x86/x64工具链使用固定sysroot；
+NSS证书配置保留，宿主可选PipeWire、D-Bus/GIO桌面集成显式关闭。Content首错已
+移动至`device/udev_linux/BUILD.gn:9`探测，GN仍返回1，未编译Content对象。
+下一步审查宿主udev条件，再继续完整Rust std、libxml线程/fd/ICU及真实libaom配置；
 不能直接把Linux平台宏当作GTOS能力。旧失败保留，不按测试名字删除目标。
 
 2026-10-15，完整62在同一真实原生V8入口上补验对象/数组、ArrayBuffer/TypedArray/

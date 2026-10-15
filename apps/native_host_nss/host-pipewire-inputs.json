@@ -1,0 +1,23 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "webrtc_revision": "32f1c74f24cca82575607fa8718c0174d80204f8",
+  "selected_arg": "rtc_use_pipewire=false",
+  "files": {
+    "third_party/webrtc_overrides/BUILD.gn": {
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+      "blob": "35be1dfdda580060967accff44a33c247f680cd0",
+      "sha256": "e1c777ff691656e7eb00b0ce6d8426f5879cada15ab08a7a5d4c222a63d1c104"
+    },
+    "third_party/webrtc/webrtc.gni": {
+      "revision": "32f1c74f24cca82575607fa8718c0174d80204f8",
+      "blob": "dce017bb2e6bd25bba5741be5eec50e933c60ff9",
+      "sha256": "12246524fb3f041e4230ddfa8ebbaaf037284af26adb8ac98cecdc4830a60845"
+    },
+    "third_party/webrtc/modules/portal/BUILD.gn": {
+      "revision": "32f1c74f24cca82575607fa8718c0174d80204f8",
+      "blob": "7fa6ae078ef7dec8d04fbe19f0a18f9f2801c86b",
+      "sha256": "868e2e6fea896be2374753f3e52ac32231fb8598b82d60ac423f8b097cf76669"
+    }
+  },
+  "scope": "Restores prior false value of optional Linux secondary PipeWire capture when enabling its sysroot; GTOS default already false. General WebRTC and page media dependencies retained. No capture/video/HTML5 runtime claim."
+}

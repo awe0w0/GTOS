@@ -1,0 +1,35 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "selected_args": [
+    "use_dbus=false",
+    "use_gio=false"
+  ],
+  "files": {
+    "build/config/features.gni": {
+      "sha256": "915f78aabf4afa8010b6579f6cb45131e1b24a9176a39185e6e2d17a871f2e2d",
+      "blob": "2579a2befc3bb68d7f9ceb9f2f1e078a1ecad304"
+    },
+    "build/config/linux/dbus/BUILD.gn": {
+      "sha256": "6b2952f647bfbf1a9456c0c0bb85a5b911a85a841dd7102c415d0c8446922ada",
+      "blob": "7dcc68bbd1d6b2a86016f2539b498ae3598305a4"
+    },
+    "net/BUILD.gn": {
+      "sha256": "c887d0c1a40d1eb482a3240a26bcb5bcab228dc370a809171571e2597ecc4a8e",
+      "blob": "65359e1e2c6d8934f8dcf6a150e65e384fde8a04"
+    },
+    "dbus/BUILD.gn": {
+      "sha256": "e5947f2a4df06e7a60fba7f58e3a2d1de24b95419b1b2aabfae78fa3c79ec78c",
+      "blob": "5cca90ac7ca3b8e30eca65d177b71130217da558"
+    },
+    "build/linux/BUILD.gn": {
+      "sha256": "2cb9da5e7f6da47001bfd1349131d044f073e7cfd58be5ec1bad21904a35870e",
+      "blob": "d5021af8423dfed142896e1ebbcfdfbd5f1d40cc"
+    },
+    "net/proxy_resolution/proxy_config_service_linux.cc": {
+      "sha256": "7948c708eb945c2397e55f33f51b531a15eb74c3387c0399bca5658c88347753",
+      "blob": "e07afa936ab239c71c91f771664465dbcf4f4e6c"
+    }
+  },
+  "certificate_configuration_changed": false,
+  "scope": "Linux secondary host-tool configuration: omit optional D-Bus portal and GIO/GSettings proxy integration. GTOS defaults already false; NSS certificate integrations retained. No network or browser runtime qualification."
+}

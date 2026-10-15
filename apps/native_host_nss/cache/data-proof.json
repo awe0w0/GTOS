@@ -1,0 +1,67 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "original_relative": "build/config/linux/cached_results.scope",
+  "original_sha256": "61d65755ca4ea74fefbfe9bde70e88de8cb945e7b9ca9fe3ecd5a8ab092af2bc",
+  "query_proof": "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/nss-query-01/status.json",
+  "query_sha256": "58c52704d2087fda96596cdc0dcaa5a4a35d45bfb07d36cb612739ed6c4469e6",
+  "candidate": "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/nss-cache-01/cached_results.scope",
+  "candidate_sha256": "a0b5a101928909519d1a18fd380de99b397c6647a34434ce62f3bf0745547c9d",
+  "entries": {
+    "bullseye_i386": {
+      "args": [
+        "nss",
+        "-v",
+        "-lssl3"
+      ],
+      "query_result_name": "bullseye_i386",
+      "pkgresult": [
+        [
+          "../source/build/linux/debian_bullseye_i386-sysroot/usr/include/nspr",
+          "../source/build/linux/debian_bullseye_i386-sysroot/usr/include/nss"
+        ],
+        [],
+        [
+          "nspr4",
+          "nss3",
+          "nssutil3",
+          "plc4",
+          "plds4",
+          "smime3"
+        ],
+        []
+      ],
+      "sysroot": "../source/build/linux/debian_bullseye_i386-sysroot"
+    },
+    "bullseye_amd64": {
+      "args": [
+        "nss",
+        "-v",
+        "-lssl3"
+      ],
+      "query_result_name": "bullseye_amd64",
+      "pkgresult": [
+        [
+          "../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr",
+          "../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nss"
+        ],
+        [],
+        [
+          "nspr4",
+          "nss3",
+          "nssutil3",
+          "plc4",
+          "plds4",
+          "smime3"
+        ],
+        []
+      ],
+      "sysroot": "../source/build/linux/debian_bullseye_amd64-sysroot"
+    }
+  },
+  "selected_arg": "use_sysroot=true",
+  "original_entries_retained": true,
+  "gn_exec_script_allowlist_changed": false,
+  "certificate_configuration_changed": false,
+  "pkg_config_executed_by_gn": false,
+  "scope": "Append two exact NSS query results for the private source/build layout; Linux secondary sysroots only, GTOS branch has no Linux sysroot. No compile, target runtime or trust-store qualification."
+}

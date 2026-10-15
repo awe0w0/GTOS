@@ -1,0 +1,14 @@
+group("qualification") {
+  deps = [
+    ":nss(//build/toolchain/linux:clang_x86)",
+    ":nss(//build/toolchain/linux:clang_x64)",
+  ]
+}
+
+if (is_linux && (current_cpu == "x86" || current_cpu == "x64")) {
+  source_set("nss") {
+    sources = [ "nss-cache-probe.c" ]
+    configs = []
+    configs = [ "//build/config/linux/nss" ]
+  }
+}

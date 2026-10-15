@@ -1,0 +1,51 @@
+diff --git a/build/config/linux/cached_results.scope b/build/config/linux/cached_results.scope
+index 07544f8..64ad7a7 100644
+--- a/build/config/linux/cached_results.scope
++++ b/build/config/linux/cached_results.scope
+@@ -101,4 +101,22 @@ data = [
+       },
+     ]
+   },
++  {
++    sysroot = "../source/build/linux/debian_bullseye_i386-sysroot"
++    entries = [
++      {
++        args = ["nss", "-v", "-lssl3"]
++        pkgresult = [["../source/build/linux/debian_bullseye_i386-sysroot/usr/include/nspr","../source/build/linux/debian_bullseye_i386-sysroot/usr/include/nss"],[],["nspr4","nss3","nssutil3","plc4","plds4","smime3"],[]]
++      },
++    ]
++  },
++  {
++    sysroot = "../source/build/linux/debian_bullseye_amd64-sysroot"
++    entries = [
++      {
++        args = ["nss", "-v", "-lssl3"]
++        pkgresult = [["../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr","../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nss"],[],["nspr4","nss3","nssutil3","plc4","plds4","smime3"],[]]
++      },
++    ]
++  },
+ ]
+diff --git a/build/toolchain/linux/BUILD.gn b/build/toolchain/linux/BUILD.gn
+index fa3d1ba..7073cfb 100644
+--- a/build/toolchain/linux/BUILD.gn
++++ b/build/toolchain/linux/BUILD.gn
+@@ -79,6 +79,9 @@ clang_toolchain("clang_x86") {
+   toolchain_args = {
+     current_cpu = "x86"
+     current_os = "linux"
++    if (target_os == "gtos") {
++      use_sysroot = true
++    }
+   }
+ }
+ 
+@@ -111,6 +114,9 @@ clang_toolchain("clang_x64") {
+   toolchain_args = {
+     current_cpu = "x64"
+     current_os = "linux"
++    if (target_os == "gtos") {
++      use_sysroot = true
++    }
+   }
+ }
+ 

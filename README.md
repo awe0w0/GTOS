@@ -28,9 +28,11 @@ Content 依赖所需的[GTOS Rust 目标基础](apps/native_rust_target/README.m
 也已按 O3 参数编译通过。[IA32 共享链接规则](apps/native_shared_link/README.md)已生成并检查
 真实 ELF32 共享库和模块，包含 PIC、符号与拒绝边界。[NASM 格式适配](apps/native_nasm/README.md)
 已验证真实 IA32 汇编对象及拒绝边界。[Rust 可执行链接规则](apps/native_rust_target/bin/README.md)
-已使用真实 core/compiler_builtins 完成 Rust/C 静态链接及未定义符号负例。Content 图已
-越过菜单、libxml 配置和 rust_bin，停在宿主 CUPS 探测；这些候选的完整运行时、
-libaom 平台配置、Rust std、动态加载和 Content 构建仍待接入。
+已使用真实 core/compiler_builtins 完成 Rust/C 静态链接及未定义符号负例。
+[宿主 NSS 构建配置](apps/native_host_nss/README.md)已通过离线元数据与双架构真实 GN
+配置验证，GTOS 主工具链保持 freestanding。Content 图首错已推进至 Linux 宿主
+udev 探测；菜单/libxml 候选的完整运行时、libaom 平台配置、Rust std、动态加载和
+Content 构建仍待接入。
 
 显式测试配置新增[有界原生线程生命周期](apps/native_thread_lifecycle/README.md)：
 在 BSP 上调度共享地址空间的独立 CPL3 上下文，并验证退出、join、FP 和资源回收。

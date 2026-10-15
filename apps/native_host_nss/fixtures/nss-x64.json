@@ -1,0 +1,25 @@
+{
+   "//tools/gtos_host_nss_qualification:nss(//build/toolchain/linux:clang_x64)": {
+      "allow_circular_includes_from": [  ],
+      "cflags_c": [ "-isystem../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr", "-isystem../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nss" ],
+      "cflags_cc": [ "-isystem../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr", "-isystem../source/build/linux/debian_bullseye_amd64-sysroot/usr/include/nss" ],
+      "check_includes": true,
+      "check_includes_strict": false,
+      "configs": [ "//build/config/linux/nss:nss" ],
+      "deps": [  ],
+      "externs": {
+
+      },
+      "inputs": [ "//build/config/unsafe_buffers_paths.txt", "//build/config/raw_ptr_plugin_config.yaml" ],
+      "libs": [ "nspr4", "nss3", "nssutil3", "plc4", "plds4", "smime3" ],
+      "metadata": {
+
+      },
+      "public": "*",
+      "sources": [ "//tools/gtos_host_nss_qualification/nss-cache-probe.c" ],
+      "testonly": false,
+      "toolchain": "//build/toolchain/linux:clang_x64",
+      "type": "source_set",
+      "visibility": [ "*" ]
+   }
+}

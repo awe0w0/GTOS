@@ -1,0 +1,165 @@
+{
+  "audit_complete": true,
+  "pkg_config_executed": false,
+  "installer_executed": false,
+  "gn_executed": false,
+  "certificate_configuration_changed": false,
+  "complete_pkg_config_runtime_qualification": false,
+  "inputs": {
+    "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/host-sysroot-inputs-01.json": "2312fe136ce46079f5fe8e35389a77a17d2428b02d3b948f919ee8666f19bf95",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/sysroot.gni": "321f44b7a38a780fda2796c6fef5b80e04fbffbc551d9bea35b57fb14c3c7a0a",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/toolchain/sysroot.gni": "5071cbe46d130d5838ecdb68c22ecacc0140e857769a7146d3a6917a03901449",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/linux/cached_results.scope": "61d65755ca4ea74fefbfe9bde70e88de8cb945e7b9ca9fe3ecd5a8ab092af2bc",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/sysroot_scripts/sysroots.json": "586a193b7af31448bd09f8dd843cd0d19c1a9a5311c58a5ddf59805ba2480044",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/crypto/features.gni": "72c0785787d32238aeedfad5f1b87e65ffa94035a086e8694ba23e0e34fab104",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/linux/nss/BUILD.gn": "3ebaf05c987c7af09caf80af7b1c1562e5acf415740c5ac0f21da6f624993fd3",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/linux/pkg_config.gni": "8d485d31c13668fda2cb17a69f791fb53f733327e11368fc6400b039da11e1ba",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/linux/pkg-config.py": "2cee73c02c7651b00e59749bb4d6fcb674010cf543674d4a8d24f435401c428f",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/net/BUILD.gn": "c887d0c1a40d1eb482a3240a26bcb5bcab228dc370a809171571e2597ecc4a8e",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_i386-sysroot/.3de724b0d63478e1ae35f07b95d02261581a66e05c19aebe4e443d76179a565e": "3de724b0d63478e1ae35f07b95d02261581a66e05c19aebe4e443d76179a565e",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_i386-sysroot/usr/lib/pkgconfig/nss.pc": "45437cacd9c2091cde98e5a19654dabfa7e60aa678ea7a89614435d3ad70ffd9",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_i386-sysroot/usr/lib/pkgconfig/nspr.pc": "5220134971b1a7f3fd6bcf78a0dd6c33517c686981a48604979ce7827608f64c",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_i386-sysroot/usr/include/nss/nss.h": "45be6c6ef9d2150954f8c81750a0e263c8865af663e4a53b5b5f8cdb9da3ff26",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_i386-sysroot/usr/include/nspr/prtypes.h": "cd7ad81c344310d6392b7e78a85ade676c86ba48c69d0dde5b16d61e491a4c57",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_amd64-sysroot/.52d61d4446ffebfaa3dda2cd02da4ab4876ff237853f46d273e7f9b666652e1d": "52d61d4446ffebfaa3dda2cd02da4ab4876ff237853f46d273e7f9b666652e1d",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_amd64-sysroot/usr/lib/pkgconfig/nss.pc": "be4847c3d322f6e1e9d0075583d90249974f6a862d8dedc041af8f4d94d4b4bd",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_amd64-sysroot/usr/lib/pkgconfig/nspr.pc": "dee8cafd61a22c3b36d2052af870cf127df95baad778fe4335d152b71609575b",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_amd64-sysroot/usr/include/nss/nss.h": "45be6c6ef9d2150954f8c81750a0e263c8865af663e4a53b5b5f8cdb9da3ff26",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/linux/debian_bullseye_amd64-sysroot/usr/include/nspr/prtypes.h": "cd7ad81c344310d6392b7e78a85ade676c86ba48c69d0dde5b16d61e491a4c57",
+    "/usr/bin/pkg-config": "229ad55026c5c2045ddb0a2b7772d629f488dd38278c982d5c67258a743ff8e3",
+    "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+    "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+    "/usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.6400.6": "b0057d1c3863b30b0f6d16b8b3d46cad97c66a41ab8898a3083d30a12f3e032f",
+    "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+    "/usr/lib/x86_64-linux-gnu/libpcre.so.3.13.3": "fb2fc875c7902c8c80045c93957d9aa45f5d80e096f74baa4ecf80f25e40752d"
+  },
+  "aliases": {},
+  "sysroots": {
+    "bullseye_i386": {
+      "archive_sha256": "3de724b0d63478e1ae35f07b95d02261581a66e05c19aebe4e443d76179a565e",
+      "members": {
+        "usr/include/nspr/prtypes.h": {
+          "sha256": "cd7ad81c344310d6392b7e78a85ade676c86ba48c69d0dde5b16d61e491a4c57",
+          "bytes": 19891,
+          "archive_member": "./usr/include/nspr/prtypes.h"
+        },
+        "usr/include/nss/nss.h": {
+          "sha256": "45be6c6ef9d2150954f8c81750a0e263c8865af663e4a53b5b5f8cdb9da3ff26",
+          "bytes": 14399,
+          "archive_member": "./usr/include/nss/nss.h"
+        },
+        "usr/lib/pkgconfig/nspr.pc": {
+          "sha256": "5220134971b1a7f3fd6bcf78a0dd6c33517c686981a48604979ce7827608f64c",
+          "bytes": 258,
+          "archive_member": "./usr/lib/pkgconfig/nspr.pc"
+        },
+        "usr/lib/pkgconfig/nss.pc": {
+          "sha256": "45437cacd9c2091cde98e5a19654dabfa7e60aa678ea7a89614435d3ad70ffd9",
+          "bytes": 271,
+          "archive_member": "./usr/lib/pkgconfig/nss.pc"
+        }
+      },
+      "selected_installed_members_match_archive": true
+    },
+    "bullseye_amd64": {
+      "archive_sha256": "52d61d4446ffebfaa3dda2cd02da4ab4876ff237853f46d273e7f9b666652e1d",
+      "members": {
+        "usr/include/nspr/prtypes.h": {
+          "sha256": "cd7ad81c344310d6392b7e78a85ade676c86ba48c69d0dde5b16d61e491a4c57",
+          "bytes": 19891,
+          "archive_member": "./usr/include/nspr/prtypes.h"
+        },
+        "usr/include/nss/nss.h": {
+          "sha256": "45be6c6ef9d2150954f8c81750a0e263c8865af663e4a53b5b5f8cdb9da3ff26",
+          "bytes": 14399,
+          "archive_member": "./usr/include/nss/nss.h"
+        },
+        "usr/lib/pkgconfig/nspr.pc": {
+          "sha256": "dee8cafd61a22c3b36d2052af870cf127df95baad778fe4335d152b71609575b",
+          "bytes": 262,
+          "archive_member": "./usr/lib/pkgconfig/nspr.pc"
+        },
+        "usr/lib/pkgconfig/nss.pc": {
+          "sha256": "be4847c3d322f6e1e9d0075583d90249974f6a862d8dedc041af8f4d94d4b4bd",
+          "bytes": 273,
+          "archive_member": "./usr/lib/pkgconfig/nss.pc"
+        }
+      },
+      "selected_installed_members_match_archive": true
+    }
+  },
+  "host_elf_files": {
+    "/usr/bin/pkg-config": {
+      "sha256": "229ad55026c5c2045ddb0a2b7772d629f488dd38278c982d5c67258a743ff8e3",
+      "bytes": 55552,
+      "needed": [
+        "libglib-2.0.so.0",
+        "libc.so.6"
+      ],
+      "interpreter": "/lib64/ld-linux-x86-64.so.2",
+      "rpath": null,
+      "runpath": null
+    },
+    "/usr/lib/x86_64-linux-gnu/libc-2.31.so": {
+      "sha256": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+      "bytes": 2029592,
+      "needed": [
+        "ld-linux-x86-64.so.2"
+      ],
+      "interpreter": "/lib64/ld-linux-x86-64.so.2",
+      "rpath": null,
+      "runpath": null
+    },
+    "/usr/lib/x86_64-linux-gnu/ld-2.31.so": {
+      "sha256": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+      "bytes": 191504,
+      "needed": [],
+      "interpreter": null,
+      "rpath": null,
+      "runpath": null
+    },
+    "/usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.6400.6": {
+      "sha256": "b0057d1c3863b30b0f6d16b8b3d46cad97c66a41ab8898a3083d30a12f3e032f",
+      "bytes": 1212016,
+      "needed": [
+        "libpcre.so.3",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "interpreter": null,
+      "rpath": null,
+      "runpath": null
+    },
+    "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": {
+      "sha256": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+      "bytes": 157224,
+      "needed": [
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "interpreter": "/lib64/ld-linux-x86-64.so.2",
+      "rpath": null,
+      "runpath": null
+    },
+    "/usr/lib/x86_64-linux-gnu/libpcre.so.3.13.3": {
+      "sha256": "fb2fc875c7902c8c80045c93957d9aa45f5d80e096f74baa4ecf80f25e40752d",
+      "bytes": 465008,
+      "needed": [
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "interpreter": null,
+      "rpath": null,
+      "runpath": null
+    }
+  },
+  "host_pkg_config_path": "/usr/bin/pkg-config",
+  "host_pkg_config_actual_path": "/usr/bin/pkg-config",
+  "host_pkg_config_sha256": "229ad55026c5c2045ddb0a2b7772d629f488dd38278c982d5c67258a743ff8e3",
+  "bound_inputs_unchanged": true,
+  "input_aliases_unchanged": true,
+  "cached_scope_has_i386": false,
+  "cached_scope_has_amd64_nss": true,
+  "query_still_requires_review": true,
+  "scope": "Authenticated selected sysroot metadata/headers and read-only host tool dependency inventory; no query, GN, runtime, TLS or certificate verification qualification"
+}
