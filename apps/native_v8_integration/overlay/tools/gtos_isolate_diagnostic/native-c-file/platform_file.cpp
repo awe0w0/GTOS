@@ -10,6 +10,7 @@
 #include "src/stdio/stderr.h"
 #include <process/abi.h>
 #include <process/file_abi.h>
+#include "src/base/platform/gtos-native-services.h"
 
 #if !defined(__GTOS__) || !defined(__i386__) || defined(__linux__)
 #error This port requires the native GTOS IA32 ABI
@@ -209,10 +210,17 @@ static GtosFile StdErr(3);
 LLVM_LIBC_VARIABLE(::FILE *, stdin) = reinterpret_cast<::FILE *>(&StdIn);
 LLVM_LIBC_VARIABLE(::FILE *, stdout) = reinterpret_cast<::FILE *>(&StdOut);
 LLVM_LIBC_VARIABLE(::FILE *, stderr) = reinterpret_cast<::FILE *>(&StdErr);
-ErrorOr<File *> openfile(const char *path, const char *mode_string) {
+namespace {
+ErrorOr<File *> openfile_impl(const char *path, const char *mode_string,
+                             bool temporary) {
   FileMode mode(mode_string);
   auto flags = open_flags(mode);
   if (!flags.has_value()) return Error(flags.error());
+  if (temporary) {
+    if (!mode.is_write() || !mode.is_update()) return Error(EINVAL);
+    flags = GTOS_FILE_READ_WRITE | GTOS_FILE_CREATE | GTOS_FILE_EXCLUSIVE |
+            GTOS_FILE_TEMPORARY;
+  }
   auto length = path_bytes(path);
   if (!length.has_value()) return Error(length.error());
   // Allocate before opening so OOM cannot create or truncate a disk file.
@@ -236,6 +244,41 @@ ErrorOr<File *> openfile(const char *path, const char *mode_string) {
   file->set_handle(result);
   File::add_file(file);
   return static_cast<File *>(file);
+}
+unsigned temporary_sequence;
+ErrorOr<File *> opentemporaryfile() {
+  const unsigned process = v8::base::gtos::CurrentProcessInfo().process_id;
+  for (unsigned attempt = 0; attempt < 64; ++attempt) {
+    unsigned sequence = __atomic_load_n(&temporary_sequence, __ATOMIC_RELAXED);
+    do {
+      if (sequence == 0x7fffffffU) return Error(EOVERFLOW);
+    } while (!__atomic_compare_exchange_n(&temporary_sequence, &sequence,
+               sequence + 1, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+    ++sequence;
+    char path[] = "/.gtos-tmp-00000000-00000000";
+    const char digits[] = "0123456789abcdef";
+    for (unsigned i = 0; i < 8; ++i) {
+      const unsigned shift = (7 - i) * 4;
+      path[11 + i] = digits[(process >> shift) & 15];
+      path[20 + i] = digits[(sequence >> shift) & 15];
+    }
+    auto result = openfile_impl(path, "w+", true);
+    if (result.has_value() || result.error() != EEXIST) return result;
+  }
+  return Error(EEXIST);
+}
+} // namespace
+ErrorOr<File *> openfile(const char *path, const char *mode_string) {
+  return openfile_impl(path, mode_string, false);
+}
+::FILE *tmpfile();
+LLVM_LIBC_FUNCTION(::FILE *, tmpfile, ()) {
+  auto result = opentemporaryfile();
+  if (!result.has_value()) {
+    libc_errno = result.error();
+    return nullptr;
+  }
+  return reinterpret_cast<::FILE *>(result.value());
 }
 int get_fileno(File *file) {
   int result = static_cast<GtosFile *>(file)->descriptor();

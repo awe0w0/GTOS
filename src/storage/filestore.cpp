@@ -90,14 +90,21 @@ int32_t FileStore::Open(uint32_t owner,const char* path,uint32_t flags) {
     InterruptGuard guard;if (!mounted||!owner) return LFS_ERR_BADF;
     int32_t error=ValidPath(path);if (error) return error;
     uint32_t access=flags&3;
-    if (!access||(flags&~(3U|Create|Exclusive|Truncate|Append))
+    if (!access||(flags&~(3U|Create|Exclusive|Truncate|Append|Temporary))
         ||((flags&Exclusive)&&!(flags&Create))||((flags&(Truncate|Append))&&access==Read)) return LFS_ERR_INVAL;
+    if ((flags&Temporary)&&flags!=(ReadWrite|Create|Exclusive|Temporary)) return LFS_ERR_INVAL;
     if (readOnly&&(access!=Read||(flags&Create))) return ReadOnly;
     if (nextHandle>0x7FFFFFFFU) return Overflow;
     Slot* slot=FreeSlot();if (!slot) return TooManyHandles;
     gtos_lfs_memset(slot,0,sizeof(*slot));slot->config.buffer=slot->cache;
-    error=lfs_file_opencfg(&filesystem,&slot->file,path,flags,&slot->config);if (error) return error;
+    error=lfs_file_opencfg(&filesystem,&slot->file,path,flags&~Temporary,&slot->config);if (error) return error;
     slot->owner=owner;slot->handle=nextHandle++;slot->mode=access;slot->kind=LFS_TYPE_REG;
+    if (flags&Temporary) {
+        // Keep creation and unlink in this same IF-clear BSP operation. The
+        // live LittleFS file stays on its allocation list until close/reap.
+        error=lfs_remove(&filesystem,path);
+        if (error) { CloseSlot(*slot);return error; }
+    }
     if (flags&Truncate) {
         // Opening with truncation must expose the empty file to other handles
         // before any later user-space buffered write is flushed.

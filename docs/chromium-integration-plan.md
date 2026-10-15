@@ -819,3 +819,14 @@ Isolate、网页、浏览器、视频和HTML5仍未完成。
 旧对象 C0 负控制在两配置精确失败，修正了把非法前缀报告为未完成的回归。
 完整54保持 GN 顺序，7724 项输入和旧缓存终验通过；仍首缺 GetLastError，
 完整 V8、网页浏览、视频与 HTML5 尚未运行。
+
+
+## 2026-10-15 原生 OS 错误与临时文件
+
+GetLastError、LogFileOpenMode 和 OpenTemporaryFile 已接入真实每线程 errno、
+w+ 文件和立即 unlink 临时文件。默认与 BSP 四上下文控制共 24 程序、48 上下文、
+24 Join、24 次 Reap；覆盖实际 ENOMEM/EMFILE、只读卷、非法标志、磁盘错误、
+UD2 故障及外部取消，资源精确恢复。详见 [原生临时文件模块](../apps/native_os_file/README.md)。
+完整55保持实际 GN 顺序，仅替换两个已有提供者；三项 OS 缺失已消除。
+完整 V8 ELF、Isolate、网页浏览、视频和 HTML5 仍未运行；生产镜像未更新。
+当前完整链接首缺：v8::base::OS::GetSharedLibraryAddresses()；错误数量上限下的诊断尚未穷尽依赖。

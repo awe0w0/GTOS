@@ -2,6 +2,7 @@
 // Native regular-file open for the pinned V8 OS interface.
 #include "src/base/platform/platform.h"
 
+#include <errno.h>
 #include <stdio.h>
 
 #if !V8_OS_GTOS || V8_OS_POSIX || V8_OS_LINUX || !defined(__i386__) || \
@@ -11,6 +12,12 @@
 
 namespace v8 {
 namespace base {
+
+int OS::GetLastError() { return errno; }
+
+const char* const OS::LogFileOpenMode = "w+";
+
+FILE* OS::OpenTemporaryFile() { return tmpfile(); }
 
 FILE* OS::FOpen(const char* path, const char* mode) {
   // NativeFiles/FileStore admits only regular LittleFS files through fopen.

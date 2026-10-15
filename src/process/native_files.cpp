@@ -9,7 +9,7 @@ using gtos::storage::FileStore;
 static_assert(FileStore::Read==GTOS_FILE_READ&&FileStore::Write==GTOS_FILE_WRITE
     &&FileStore::ReadWrite==GTOS_FILE_READ_WRITE&&FileStore::Create==GTOS_FILE_CREATE
     &&FileStore::Exclusive==GTOS_FILE_EXCLUSIVE&&FileStore::Truncate==GTOS_FILE_TRUNCATE
-    &&FileStore::Append==GTOS_FILE_APPEND,"Real store open flags");
+    &&FileStore::Append==GTOS_FILE_APPEND&&FileStore::Temporary==GTOS_FILE_TEMPORARY,"Real store open flags");
 static_assert(LFS_TYPE_REG==GTOS_FILE_TYPE_REGULAR&&LFS_TYPE_DIR==GTOS_FILE_TYPE_DIRECTORY,"Real file types");
 namespace {
     template<class Request> int32_t Snapshot(ProcessAddressSpace& space,uint32_t address,uint32_t bytes,Request& request) {

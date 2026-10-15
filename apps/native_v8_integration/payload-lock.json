@@ -4736,9 +4736,9 @@
       "origin": "GTOS File ABI v1 short-transfer/seek/error bridge; no Linux descriptor layer, guest validation pending"
     },
     "sdk/process/file_abi.h": {
-      "sha256": "07b0aa8d2999ac00b0a00925a54c0928774268392e2cc2601bdf8ed3379d756e",
-      "bytes": 4205,
-      "origin": "Exact canonical already qualified native File ABI declarations"
+      "sha256": "2a140e7193d010ea2ddd21e56bf9592d7c82d769336c5c9ab793538d47c207b4",
+      "bytes": 4549,
+      "origin": "native OS error and real unlinked temporary-file qualification"
     },
     "licenses/zlib-LICENSE": {
       "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2",
@@ -5979,8 +5979,9 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "42501038a2079edc0935ee44e927bb1d49f38e9da6dacd12cd105803f93b4411",
-      "bytes": 15903
+      "sha256": "1d401eccc16c43388575b721a6198dae7e5c842f4f24ce95381b623651852cbf",
+      "bytes": 16670,
+      "origin": "Chinese native OS error and temporary-file qualification documentation"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6112,9 +6113,9 @@
       "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
-      "sha256": "e5b4ec089d9c71e7d05627d409b91435d9e7caedf18c911c454be857770c7065",
-      "bytes": 9971,
-      "origin": "GTOS IA32 FILE output and native synchronization adaptation; qualified native_output regression"
+      "sha256": "ea166301180799dcac8e599d167fe743820e3afb4ad1d7d7e5dc9ec9336ed86b",
+      "bytes": 11620,
+      "origin": "native OS error and real unlinked temporary-file qualification"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/File/file.cpp": {
       "sha256": "294d32eaa239b9f24bd699696104677c586f841af2b050c615ba4606e60e36f3",
@@ -6162,9 +6163,9 @@
       "origin": "Pinned libc++abi virtual termination; native_virtual_abi guest-qualified"
     },
     "overlay/src/base/platform/gtos-file.cc": {
-      "sha256": "2cf6bbe5aacc99f6f6075654694580759afa23d4ea90c337eac079f8ed5e2ee7",
-      "bytes": 673,
-      "origin": "GTOS regular-only V8 FOpen; native_fopen guest-qualified"
+      "sha256": "a5c115929998748f81291957e96634d91ca168d213c3e4affc6f205f51df8577",
+      "bytes": 834,
+      "origin": "native OS error and real unlinked temporary-file qualification"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.cc": {
       "sha256": "f1c3fb0f57ee63e5e4182d35a0e744cfc97042aa0fac03b88c086ca08340f09f",

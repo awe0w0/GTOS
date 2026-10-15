@@ -1,0 +1,1028 @@
+{
+  "schema_version": 1,
+  "scope": "GTOS IA32 OS errno and real temporary files; private BSP 1/4-context controls",
+  "qualified": true,
+  "baseline_dev": "58f1611fb837b8f7231c84b6a4b6d2226211e5bb",
+  "evidence_packet": "@WORKSPACE@/artifacts/native-os-file-20261015-a",
+  "evidence_sha256": {
+    "public-baseline-01.json": "54443c77f860edb93b74fc3a8509d1d062077a27caa92f3cc3fb6fc74d6d9609",
+    "private-sources-02.json": "418d11bf01d7ac5cb4e2de187d6999533344318af6b308266c7715513f0ab301",
+    "probe-sources-07.json": "3539dc54f91b86ace7e87b5749a72bf505f2fdfe9cb9e8bff45461c7a702569f",
+    "provider-03/status.json": "de0fa8442e1831fcc9d471d5f0c580f66e06ba86b6697ecdf112efa57f32f893",
+    "consumers-04/status.json": "e63466ec0f57ca14c31d58357b392ac11ff6ba928d07c0a36094db6584c6eebc",
+    "guests-04/status.json": "542c3cda26f0767a3c07e2889ea831d820013fd764fd787f9e893ac4297ffc6d",
+    "full-link-55/status.json": "fc32054c457b6febb864b83b82876847dc339a49e544188ef99dbb8f5d85b490",
+    "module-README.md": "560d45e91d831805df049c9ee14875bba01060f3961d24fe02d4702073401411",
+    "module-self-review.md": "a80ee413f1a73b511440bec2411d6873191b654752943c0e7e3a7a2b98d1ffd8"
+  },
+  "source_byte_equivalences": [
+    {
+      "sha256": "a5c115929998748f81291957e96634d91ca168d213c3e4affc6f205f51df8577",
+      "destination": "apps/native_v8_integration/overlay/src/base/platform/gtos-file.cc",
+      "source": "patch/gtos-file-v1.cc"
+    },
+    {
+      "sha256": "ea166301180799dcac8e599d167fe743820e3afb4ad1d7d7e5dc9ec9336ed86b",
+      "destination": "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp",
+      "source": "patch/platform_file-v2.cpp"
+    },
+    {
+      "sha256": "2a140e7193d010ea2ddd21e56bf9592d7c82d769336c5c9ab793538d47c207b4",
+      "destination": "include/process/file_abi.h",
+      "source": "patch/file_abi-v1.h"
+    },
+    {
+      "sha256": "2a140e7193d010ea2ddd21e56bf9592d7c82d769336c5c9ab793538d47c207b4",
+      "destination": "apps/native_v8_integration/sdk/process/file_abi.h",
+      "source": "patch/file_abi-v1.h"
+    },
+    {
+      "sha256": "240fa046cbdad05febef9430669fc9c2c8e1438cc19219e69bf2a2b553bd933e",
+      "destination": "include/storage/filestore.h",
+      "source": "patch/filestore-v1.h"
+    },
+    {
+      "sha256": "a66539107cb0edf13f1dbbfd654154bc3cf6cbb49d70b785c566674801d1575c",
+      "destination": "src/storage/filestore.cpp",
+      "source": "patch/filestore-v1.cpp"
+    },
+    {
+      "sha256": "42b6ff85ecc46985490e67ca7c9dbf71a3c47099e89c2fbad653cb32f1aede79",
+      "destination": "src/process/native_files.cpp",
+      "source": "patch/native_files-v1.cpp"
+    }
+  ],
+  "probe_byte_equivalences": [
+    {
+      "sha256": "f5dcb0d0b3b0c0ec1972a660ce3ea5ca15858aabf5d240086a9f7a1fe6d99943",
+      "destination": "probe-single/main.cc",
+      "source": "probe-single-v4/main.cc"
+    },
+    {
+      "sha256": "0ee54173bdf624c191c437e9f9712b60938d5b93652c88c9062165c9c29698b3",
+      "destination": "probe-single/kernel.cpp",
+      "source": "probe-single-kernel-v5/kernel.cpp"
+    },
+    {
+      "sha256": "565a40790a950a0505c1869d05ae87388f05d7954b8cf722b5a64aebd5c65311",
+      "destination": "probe-single/kernel_common.h",
+      "source": "probe-single-kernel-v5/kernel_common.h"
+    },
+    {
+      "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "destination": "probe-single/fixture-helpers.h",
+      "source": "probe-single-kernel-v5/fixture-helpers.h"
+    },
+    {
+      "sha256": "398c91df33ca700288759f6d12774311557db04c088d47520bc96f9056faefa7",
+      "destination": "probe-single/record.h",
+      "source": "probe-single-kernel-v5/record.h"
+    },
+    {
+      "sha256": "afb326feb6a1453f8b0d17f7743c83e816d9dec8102a2a746e36e3e206b61569",
+      "destination": "probe-single/linker.ld",
+      "source": "probe-single-v4/linker.ld"
+    },
+    {
+      "sha256": "76116431e12f3696a89eefbd153d08d89a8033817d28b06faf90e252cbb405df",
+      "destination": "probe-single/temporary-cases.h",
+      "source": "probe-single-v4/temporary-cases.h"
+    },
+    {
+      "sha256": "1c7eb974aa8952036c1de9a96db82a2bcff8b6905e61e0ac169e867132ad9fca",
+      "destination": "probe-single/temporary-observer.h",
+      "source": "probe-single-kernel-v5/temporary-observer.h"
+    },
+    {
+      "sha256": "f9458a1dec8f7edf128412260af1fa6d07bd1ccec7fda3882fc236f6d1977125",
+      "destination": "probe-single/entry-symbols.h",
+      "source": "guests-04/single/entry-symbols.h"
+    },
+    {
+      "sha256": "033caef871d48a2ef6788cf5351601e5f900bd228486fac5252c97961e9d89ac",
+      "destination": "probe-thread/main.cc",
+      "source": "probe-thread-v4/main.cc"
+    },
+    {
+      "sha256": "9606287b1288a4d67e34e040250ae46d60660a3f29f93cac167ced4f2c8a8fc8",
+      "destination": "probe-thread/kernel.cpp",
+      "source": "probe-thread-kernel-v5/kernel.cpp"
+    },
+    {
+      "sha256": "0e92dc64b7a4819651a0d1f5b05507af8f322a6551fe1964bc982ed555ae0784",
+      "destination": "probe-thread/kernel_common.h",
+      "source": "probe-thread-kernel-v5/kernel_common.h"
+    },
+    {
+      "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+      "destination": "probe-thread/fixture-helpers.h",
+      "source": "probe-thread-kernel-v5/fixture-helpers.h"
+    },
+    {
+      "sha256": "e4513272a9ebf31d74021fcbcc67e69b8f3dee98e5d84bbeb5c0313680c7174d",
+      "destination": "probe-thread/record.h",
+      "source": "probe-thread-kernel-v5/record.h"
+    },
+    {
+      "sha256": "afb326feb6a1453f8b0d17f7743c83e816d9dec8102a2a746e36e3e206b61569",
+      "destination": "probe-thread/linker.ld",
+      "source": "probe-thread-v4/linker.ld"
+    },
+    {
+      "sha256": "76116431e12f3696a89eefbd153d08d89a8033817d28b06faf90e252cbb405df",
+      "destination": "probe-thread/temporary-cases.h",
+      "source": "probe-thread-v4/temporary-cases.h"
+    },
+    {
+      "sha256": "1c7eb974aa8952036c1de9a96db82a2bcff8b6905e61e0ac169e867132ad9fca",
+      "destination": "probe-thread/temporary-observer.h",
+      "source": "probe-thread-kernel-v5/temporary-observer.h"
+    },
+    {
+      "sha256": "bb3ca9a526565e777f8d6cc931977c8571488cabbdf2cfe5ad755f47be60048d",
+      "destination": "probe-thread/entry-symbols.h",
+      "source": "guests-04/thread/entry-symbols.h"
+    }
+  ],
+  "objects": [
+    {
+      "source": "patch/gtos-file-v1.cc",
+      "gn_source": "../source/src/base/platform/gtos-file.cc",
+      "gn_output": "obj/src/base/platform/native_output_libc.gtos-file.o",
+      "path": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/src/base/platform/native_output_libc.gtos-file.o",
+      "sha256": "14a5958bdecd1aeeff845fb09667bc132787b12ff8a8ce951b678d2b693ef0c4",
+      "dependencies": 672,
+      "profile": "actual GN with bound SDK header overlay"
+    },
+    {
+      "source": "patch/platform_file-v2.cpp",
+      "gn_source": "../source/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp",
+      "gn_output": "obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+      "path": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+      "sha256": "bb27e0938a385a9d9a829035db24b697a693f0abc203a91b6afe0dfbac12c6c3",
+      "dependencies": 124,
+      "profile": "actual GN with bound SDK header overlay"
+    },
+    {
+      "source": "patch/filestore-v1.cpp",
+      "path": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/kernel/filestore.o",
+      "sha256": "56b2d08ad01a8139f89a23d9a7cc2b0f52e58836a05f51c9849087b9d278d1bc",
+      "dependencies": 14,
+      "profile": "coherent native kernel pair with private header overlay"
+    },
+    {
+      "source": "patch/native_files-v1.cpp",
+      "path": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/kernel/native_files.o",
+      "sha256": "027572557e27485a0b9d0847f6fb1886373bd070e950fde8fe0eacdcabd249f1",
+      "dependencies": 23,
+      "profile": "coherent native kernel pair with private header overlay"
+    }
+  ],
+  "consumers": {
+    "single": {
+      "elf": "@WORKSPACE@/artifacts/native-os-file-20261015-a/consumers-04/single/after.elf",
+      "elf_sha256": "868ff24057408f6d97d102dcaaae42d7563794c5c3dbac8cb74edf3c9fe2c255",
+      "stripped": "@WORKSPACE@/artifacts/native-os-file-20261015-a/consumers-04/single/after.stripped.elf",
+      "stripped_sha256": "8fde95a709afac84a61bc555b95859ff0524fc301fc05b3775de5ff02f9a8778",
+      "symbols": "@WORKSPACE@/artifacts/native-os-file-20261015-a/consumers-04/single-symbols.log",
+      "symbols_sha256": "d6c8940e856f31e47dcd72dfbe7356eb6652f66614a14329bfc41e4aaef83cae",
+      "source_sha256": "f5dcb0d0b3b0c0ec1972a660ce3ea5ca15858aabf5d240086a9f7a1fe6d99943",
+      "full_M_MD": true,
+      "dependencies": 691,
+      "support_substitutions": [
+        {
+          "old": "@WORKSPACE@/artifacts/native-fopen-20261014-a/compile-01/build/obj/src/base/platform/native_output_libc.gtos-file.o",
+          "new": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/src/base/platform/native_output_libc.gtos-file.o"
+        },
+        {
+          "old": "@WORKSPACE@/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+          "new": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o"
+        }
+      ],
+      "prior_support_order_preserved": true
+    },
+    "thread": {
+      "elf": "@WORKSPACE@/artifacts/native-os-file-20261015-a/consumers-04/thread/after.elf",
+      "elf_sha256": "ca452fdd3f2a39f4fd847b731cd3e94b7cb079cee18b59b02e777d265827f5fc",
+      "stripped": "@WORKSPACE@/artifacts/native-os-file-20261015-a/consumers-04/thread/after.stripped.elf",
+      "stripped_sha256": "49c888d01c0f6a52dd00c64f38a8cabc4383d4b812d36c154480d7f5f0005b7f",
+      "symbols": "@WORKSPACE@/artifacts/native-os-file-20261015-a/consumers-04/thread-symbols.log",
+      "symbols_sha256": "d497ef2e876652f92797ce09bc83dbe0f315d911acd47296bfec982300cb4666",
+      "source_sha256": "033caef871d48a2ef6788cf5351601e5f900bd228486fac5252c97961e9d89ac",
+      "full_M_MD": true,
+      "dependencies": 732,
+      "support_substitutions": [
+        {
+          "old": "@WORKSPACE@/artifacts/native-fopen-20261014-a/compile-01/build/obj/src/base/platform/native_output_libc.gtos-file.o",
+          "new": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/src/base/platform/native_output_libc.gtos-file.o"
+        },
+        {
+          "old": "@WORKSPACE@/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+          "new": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o"
+        }
+      ],
+      "prior_support_order_preserved": true
+    }
+  },
+  "guests": [
+    {
+      "profile": "single",
+      "configuration": "single-32M-smp1",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 16977,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 7356,
+          "baseline": 7474,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 1,
+          "id": 2,
+          "checks": 16977,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 7356,
+          "baseline": 7474,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 2,
+          "id": 3,
+          "checks": 16971,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 488,
+          "mask": 575,
+          "free": 7339,
+          "baseline": 7474,
+          "open": 2,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 3,
+          "id": 4,
+          "checks": 16969,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 486,
+          "mask": 575,
+          "free": 7339,
+          "baseline": 7474,
+          "open": 3,
+          "error": 0,
+          "ack": 0
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 2,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 3,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 4,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 61903,
+        "free": 7474,
+        "baseline": 7474,
+        "open": 0,
+        "trap_stack": 3048
+      },
+      "log_sha256": "7e0004c86656f201cd3d758cf45c74da7aabed81a8192eb07de4c1769e4aed5d",
+      "disk_sha256": "91ba26c771730f3f19aa6846d778b4f172b3529fa0b14c8913d0bc7b057f39f9"
+    },
+    {
+      "profile": "single",
+      "configuration": "single-64M-smp4",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 16977,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 15540,
+          "baseline": 15658,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 1,
+          "id": 2,
+          "checks": 16977,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 15540,
+          "baseline": 15658,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 2,
+          "id": 3,
+          "checks": 16971,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 488,
+          "mask": 575,
+          "free": 15523,
+          "baseline": 15658,
+          "open": 2,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 3,
+          "id": 4,
+          "checks": 16969,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 486,
+          "mask": 575,
+          "free": 15523,
+          "baseline": 15658,
+          "open": 3,
+          "error": 0,
+          "ack": 0
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 2,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 3,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 4,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 61615,
+        "free": 15658,
+        "baseline": 15658,
+        "open": 0,
+        "trap_stack": 3048
+      },
+      "log_sha256": "f92a5b4edbe193e98b658f28849f771fdfac43e44d8cd77b7e8550228ac77626",
+      "disk_sha256": "91ba26c771730f3f19aa6846d778b4f172b3529fa0b14c8913d0bc7b057f39f9"
+    },
+    {
+      "profile": "thread",
+      "configuration": "thread-32M-smp1",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 17135,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2826240,
+          "kernel": 2719744,
+          "calls": 555,
+          "mask": 575,
+          "free": 7349,
+          "baseline": 7470,
+          "open": 0
+        },
+        {
+          "mode": 1,
+          "id": 5,
+          "checks": 17135,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2826240,
+          "kernel": 2719744,
+          "calls": 555,
+          "mask": 575,
+          "free": 7349,
+          "baseline": 7470,
+          "open": 0
+        },
+        {
+          "mode": 2,
+          "id": 9,
+          "checks": 17129,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2826240,
+          "kernel": 2719744,
+          "calls": 548,
+          "mask": 575,
+          "free": 7332,
+          "baseline": 7470,
+          "open": 2
+        },
+        {
+          "mode": 3,
+          "id": 13,
+          "checks": 17127,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2826240,
+          "kernel": 2719744,
+          "calls": 546,
+          "mask": 575,
+          "free": 7332,
+          "baseline": 7470,
+          "open": 3
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 7470,
+          "baseline": 7470,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 5,
+          "free": 7470,
+          "baseline": 7470,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 9,
+          "free": 7470,
+          "baseline": 7470,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 13,
+          "free": 7470,
+          "baseline": 7470,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7470,
+          "baseline": 7470,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 7470,
+          "baseline": 7470,
+          "open": 0
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 80325,
+        "free": 7470,
+        "baseline": 7470,
+        "open": 0,
+        "trap_stack": 3268
+      },
+      "log_sha256": "12febde95f19b6c87614139f82e5786fd61a367f67c95483de2f94526919413a",
+      "disk_sha256": "df61c97aeb630e8bb692d9d669f2c14776dd2896b80f288f890169c616f4977f"
+    },
+    {
+      "profile": "thread",
+      "configuration": "thread-64M-smp4",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 17135,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2859008,
+          "kernel": 2719744,
+          "calls": 555,
+          "mask": 575,
+          "free": 15533,
+          "baseline": 15654,
+          "open": 0
+        },
+        {
+          "mode": 1,
+          "id": 5,
+          "checks": 17135,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2859008,
+          "kernel": 2719744,
+          "calls": 555,
+          "mask": 575,
+          "free": 15533,
+          "baseline": 15654,
+          "open": 0
+        },
+        {
+          "mode": 2,
+          "id": 9,
+          "checks": 17129,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2859008,
+          "kernel": 2719744,
+          "calls": 548,
+          "mask": 575,
+          "free": 15516,
+          "baseline": 15654,
+          "open": 2
+        },
+        {
+          "mode": 3,
+          "id": 13,
+          "checks": 17127,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2859008,
+          "kernel": 2719744,
+          "calls": 546,
+          "mask": 575,
+          "free": 15516,
+          "baseline": 15654,
+          "open": 3
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 15654,
+          "baseline": 15654,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 5,
+          "free": 15654,
+          "baseline": 15654,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 9,
+          "free": 15654,
+          "baseline": 15654,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 13,
+          "free": 15654,
+          "baseline": 15654,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15654,
+          "baseline": 15654,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 15654,
+          "baseline": 15654,
+          "open": 0
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 79988,
+        "free": 15654,
+        "baseline": 15654,
+        "open": 0,
+        "trap_stack": 3268
+      },
+      "log_sha256": "0a9347ec124949814c2848762999ce0f20070eef58d77a84ec11eeca9e90785e",
+      "disk_sha256": "df61c97aeb630e8bb692d9d669f2c14776dd2896b80f288f890169c616f4977f"
+    }
+  ],
+  "actual_gn_order_preserved": true,
+  "provider_substitutions": [
+    {
+      "index": 108,
+      "old": "@WORKSPACE@/artifacts/native-fopen-20261014-a/compile-01/build/obj/src/base/platform/native_output_libc.gtos-file.o",
+      "new": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/src/base/platform/native_output_libc.gtos-file.o",
+      "gn_output": "obj/src/base/platform/native_output_libc.gtos-file.o"
+    },
+    {
+      "index": 42,
+      "old": "@WORKSPACE@/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+      "new": "@WORKSPACE@/artifacts/native-os-file-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+      "gn_output": "obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o"
+    }
+  ],
+  "exact_archive_members": 38,
+  "archive_members_replaced": 3,
+  "qualified_archive_reused_unchanged": true,
+  "processes": 24,
+  "total_contexts": 48,
+  "thread_profile_contexts": 36,
+  "thread_joins": 24,
+  "process_reaps": 24,
+  "immediate_unlink_observed": true,
+  "collision_preserved": true,
+  "heap_and_handle_exhaustion_recovery": true,
+  "readonly_recovery": true,
+  "invalid_flag_cases_per_complete_process": 8,
+  "actual_disk_error_propagation": true,
+  "actual_fault_and_cancel_recovery": true,
+  "kernel_isa_audit_pass": true,
+  "source_byte_equivalence_verified": true,
+  "complete_link_exit_code": 1,
+  "first_undefined_symbol": "v8::base::OS::GetSharedLibraryAddresses()",
+  "undefined_symbols": [
+    "v8::base::OS::GetSharedLibraryAddresses()",
+    "v8::base::OS::SignalCodeMovingGC()",
+    "v8::base::OS::isDirectorySeparator(char)",
+    "ldexp",
+    "pow",
+    "lrint",
+    "fabsf",
+    "trunc",
+    "strtoul",
+    "v8::base::OS::ActivationFrameAlignment()",
+    "v8::base::debug::EnableInProcessStackDumping()",
+    "v8::base::OS::TimeCurrentMillis()",
+    "v8::base::debug::StackTrace::StackTrace()",
+    "v8::base::debug::StackTrace::Print() const",
+    "v8::base::debug::DisableSignalStackDump()",
+    "strdup",
+    "__printf_modular",
+    "v8::base::OS::StrNCpy(char*, int, char const*, unsigned int)",
+    "v8::base::OS::AllocateShared(void*, unsigned int, v8::base::OS::MemoryPermission, v8::SharedMemoryHandle, unsigned long long)",
+    "v8::base::OS::FreeShared(void*, unsigned int)"
+  ],
+  "diagnostics_complete": false,
+  "complete_link_bound_inputs": 8464,
+  "old_cache_unchanged": true,
+  "payload_files": 1303,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "user_smp_supported": false,
+  "production_image_changed": false,
+  "canonical_guest_rerun": false,
+  "canonical_gn_reexecuted": false,
+  "remote_ci": false,
+  "published_document_sha256": {
+    "self_review": "887a3554f0f55f2ecd354873c5ad335cfd81abccac96680c3dc56eea6cf043ce",
+    "self_review_source": "@WORKSPACE@/artifacts/native-os-file-20261015-a/module-self-review-v2.md",
+    "README": "560d45e91d831805df049c9ee14875bba01060f3961d24fe02d4702073401411"
+  }
+}

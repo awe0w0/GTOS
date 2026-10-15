@@ -28,6 +28,7 @@
 #define GTOS_FILE_EXCLUSIVE 0x200U
 #define GTOS_FILE_TRUNCATE 0x400U
 #define GTOS_FILE_APPEND 0x800U
+#define GTOS_FILE_TEMPORARY 0x1000U
 #define GTOS_FILE_TYPE_REGULAR 1U
 #define GTOS_FILE_TYPE_DIRECTORY 2U
 #define GTOS_FILE_ERR_BAD_ADDRESS (-14)
@@ -60,6 +61,10 @@ typedef struct GtosFileInfo { unsigned version,type,bytes;char name[256]; } Gtos
 // Close errors still invalidate the handle. Exit/fault/cancel closes are deferred
 // to kernel Reap, which reports aggregate failures through kernel statistics.
 // This is a native file service, not a Linux syscall or complete POSIX runtime.
+// TEMPORARY requires READ_WRITE|CREATE|EXCLUSIVE without TRUNCATE or APPEND.
+// A successful open removes the new directory entry before returning its
+// ordinary owned handle. Existing paths are never overwritten. Close/reap
+// releases the unnamed file; actual I/O failures can have partial disk effects.
 #if defined(__cplusplus)
 static_assert(sizeof(unsigned)==4,"File ABI unsigned");
 static_assert(sizeof(GtosFileOpenRequest)==16,"File open ABI");
