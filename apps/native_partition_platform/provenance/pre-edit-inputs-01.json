@@ -1,0 +1,67 @@
+{
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "native_revision": "cb82b10724507679e6d99a3af81cec53c29f2e0b",
+  "upstream_patch_bases": {
+    "base/allocator/partition_allocator/src/partition_alloc/BUILD.gn": {
+      "blob": "93470014129c5b20fa076c0200f2661c7a1df7dd",
+      "sha256": "72691b962697b3e958162707408a59bf426031159123a7c9421a7a63263446be"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/build_config.h": {
+      "blob": "a124902743e11e3d288da8602b820bbd452b4659",
+      "sha256": "a0bc70bbb196d756c14b24d9da928301273a09dddcd84f2879cec475c5675811"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/scoped_clear_last_error.h": {
+      "blob": "3516b0cf23e5a666616d3edc886684bc6d84f163",
+      "sha256": "6659b2ff66f9b814e6a5c3ee1f85cec4ebdc84ff313637b799210f5503ab96e4"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h": {
+      "blob": "46b233d674e5f60f35983252acf5ddec0f925092",
+      "sha256": "1152b52ddf3a7b5389794fd9ed0dfdbe627750309df5ed6e6a020f8681f85633"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc": {
+      "blob": "ed3cda33235e8c4e6fdd87f1eba1e7c514238de7",
+      "sha256": "a2f26258b13278e238c8b2169fddf172fdd3655851f09f927f325b25531d6295"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/check.h": {
+      "blob": "bdd09dc9bfbe5aab5369579266beba473d3461d6",
+      "sha256": "17046570d9a3c34de98769bc84ebc75e37edbdf4d39d401220c79b117a34e6ad"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h": {
+      "blob": "d441d9715f33561e770d5e8bb426f0732248fda0",
+      "sha256": "a8a30eda1ad6fcf995ede35d5355d9b111aacd1b138814dc099fd1d53c89ea95"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h": {
+      "blob": "223ec10f1204dfa6953fd8494dde63af77528cc3",
+      "sha256": "45e4fbeec450b72ea0633e63e7f17b8feaab6d73f574583d7f451915ce71b97e"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_posix.cc": {
+      "blob": "ff4bf714e4bceec0348fadb8d603ff0118845a40",
+      "sha256": "f0cb69fb212e15b08ccae48ec876a7d5f3be9e499720b7a84421c82132dbdf62"
+    }
+  },
+  "native_sources": {
+    "include/process/abi.h": {
+      "blob": "9974cbda514168e9db17901a67749a1a5874eb77",
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055"
+    },
+    "include/process/info_abi.h": {
+      "blob": "1d6af584397c5ef5898370e49bdf35d236ef854f",
+      "sha256": "ed9828c1c4bb923f7d3aaa892886bd3d681b18bd92ed4355149928aaad158f7d"
+    },
+    "apps/native_v8_integration/overlay/src/base/platform/gtos-native-services.h": {
+      "blob": "522f5e5d59e798e35720d1a6421a4b618ca69498",
+      "sha256": "116d34133d4b3809db535b97e28f1a413c4a07b9a09ffff02813c3665292294b"
+    },
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.cc": {
+      "blob": "d0120e0234ec4e4348e0b04edc4d18dbf2e56022",
+      "sha256": "f1c3fb0f57ee63e5e4182d35a0e744cfc97042aa0fac03b88c086ca08340f09f"
+    },
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/nanosleep.cc": {
+      "blob": "f1d3972616eddb02a33b871eadbc723d1ae545a9",
+      "sha256": "8d07e60f31b826092e0c2717c692e66d72882fb983862fb606401f9fc9117b2a"
+    }
+  },
+  "source_audit_sha256": "a87aadf74571df63d7a98595a8e4b396bc4938919e537f07218ec84fb5248ea8",
+  "candidate_private": true,
+  "canonical_changed": false
+}

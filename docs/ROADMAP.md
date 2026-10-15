@@ -13,13 +13,15 @@ This roadmap separates verified capabilities from development targets. Work is r
 运行环境 → Content Shell 本地网页与输入/DOM → HTTP/HTTPS 与安全 → 音视频及
 更丰富的 HTML5。详见[集成主线](chromium-integration-plan.md)。完整原生浏览器仍未运行。
 
-完整58已由锁定真实对象缓存链接出静态IA32 V8 ELF，无未定义符号；空白主机
-bootstrap与完整冷构建仍待验收。真实2383页镜像已通过
-[大镜像装载模块](../apps/native_v8_admission/README.md)进入GTOS CPL3并完成全局
-初始化。当前首错是Isolate对齐分配失败后的空指针写入，尚未成功建立Isolate。
-下一步测实际堆存活、空闲及最大对齐块，依据失败处理分配策略，再推进Context/JS；
-网页、网络、视频和HTML5仍待后续主线。大镜像权限、失败回滚与精确回收已验收，
-普通入口限制保持；不以容量常量或叶子探针数量代替真实消费者进度。
+锁定真实对象缓存已链接出静态 IA32 V8 ELF，并在 GTOS CPL3 完成
+[Isolate/Context/JS](../apps/native_v8_launch/README.md)和
+[GC/Promise/异常工作负载](../apps/native_v8_launch/workloads/README.md)。
+[PA 平台基础](../apps/native_partition_platform/README.md)继续用真实消费者验证身份、
+errno、诊断、睡眠和 FATAL 后的动态映射回收。空白主机 bootstrap、完整冷构建、
+全部 PA 外部服务及 Content 平台运行时仍待验收。
+下一步从真实 Content 消费者的首个失败推进本地首帧、输入和 DOM，再进入网络、
+视频和 HTML5。大镜像权限、失败回滚与精确回收已验收，普通入口限制保持；
+不以容量常量或叶子探针数量代替真实消费者进度。
 
 保留既有桌面、i386/x64 和组件回归；近期不扩展无真实消费者驱动的能力。
 容量修改须由真实 ELF、映射和堆/栈观测驱动，并同步检查所有权、失败回滚与回收。

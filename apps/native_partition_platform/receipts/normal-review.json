@@ -1,0 +1,122 @@
+{
+  "recorded_local": "2026-10-16 05:01:19 +08:00",
+  "candidate_private": true,
+  "module_complete": false,
+  "references": {
+    "patch/main.cc": "7ff57b86d0c1b9edbeeda07a543cfb2c622554d4259c6254655ae3bb0697db10",
+    "patch/partition-checks.cc": "c758b1335f40105733af7bae64bc35b824bbda7cbff33a34208b7fb4fce04bf2",
+    "compile-main-v1.py": "2ee0c60693125ce00e1a5c3027998f079e6fabbe284ccd0f1aaeb6adf9cf09f1",
+    "launch-main-v1.py": "ab5e50d4d90e9b270d98713c8323932853ca8c506539d3af24402749496e37e3",
+    "compile-main-01/status.json": "07e4eca658b12a050cf45fc1e260db0915c37573486c1a5f7b5ef643c8a321e4",
+    "compile-checks-v1.py": "63996b3d47f563eb53350fa9e53fe50b08bd97a60fd094263a0e9f93c2815b01",
+    "launch-checks-v1.py": "cc3c8d2e2c324621e86ca7fee759f5774736cde0ab6e60113b6ef90e6fd39004",
+    "compile-checks-01/status.json": "f95d0fec11b5687cb19df73a09a397386ab5a6b4cc73582e792cb86f5c4c3946",
+    "link-v1.py": "ff2661cbf01dba84a154e43d94bd3f0f803c41cfdd19b5e5d6bded44d85e7d0e",
+    "launch-link-v1.py": "b9652579e2fc09c664be70d8ebc2a3a3b0af31502dce80d2eb7ef4809ab576a4",
+    "link-01/status.json": "188e170b3653569f2609d38569af1d9e2311747b5e5106d8ff42c88bab47e120",
+    "kernel-v1.cpp": "614ddedb687074549ccf587101f3a1899b1b812362966b4e46ef8cd3033d9c98",
+    "guest-v1.py": "cb2ae84662b67d841cf9fec4338064a855e97da366fe7808524fa084a47b7f7d",
+    "launch-guest-v1.py": "9da590b9b04a81318ecd7ca6b4870cdda78c8a6541528590ddcda9fb62d79180",
+    "guest-01/status.json": "39539e7d6b97f7b9c93002619fa93060c5b51598e02cbe670fe1e59a2df9843e",
+    "guest-01/launcher-result.json": "8de80adf186096b760adba4a83e7b666e2d2d50224b26a26974d59e7068434cf"
+  },
+  "normal_guest_pass": true,
+  "configurations": [
+    {
+      "configuration": "32M-smp4",
+      "initial": {
+        "image": 2388,
+        "resident": 2516,
+        "capacity": 3540,
+        "metadata": 14,
+        "tables": 4
+      },
+      "execution": {
+        "stage": 4,
+        "result": 0,
+        "exit": 0,
+        "vector": 0,
+        "error": 0,
+        "fault": 0,
+        "calls": 6254,
+        "resident": 2534,
+        "dynamic": 18,
+        "peer": 1683451935
+      },
+      "blocks": [],
+      "workload": {
+        "mask": 127,
+        "gc": 2
+      },
+      "platform": {
+        "mask": 63,
+        "process": 1,
+        "thread": 1,
+        "expected": 514,
+        "written": 514
+      },
+      "reap": {
+        "free": 4423,
+        "baseline": 4423,
+        "checks": 3128
+      },
+      "log_sha256": "1937f8d6cb4a5ad980af4c5929d431043370c40d193640c5756fd7dc143fe9ed"
+    },
+    {
+      "configuration": "64M-smp1",
+      "initial": {
+        "image": 2388,
+        "resident": 2516,
+        "capacity": 3540,
+        "metadata": 14,
+        "tables": 4
+      },
+      "execution": {
+        "stage": 4,
+        "result": 0,
+        "exit": 0,
+        "vector": 0,
+        "error": 0,
+        "fault": 0,
+        "calls": 6254,
+        "resident": 2534,
+        "dynamic": 18,
+        "peer": 1682862355
+      },
+      "blocks": [],
+      "workload": {
+        "mask": 127,
+        "gc": 2
+      },
+      "platform": {
+        "mask": 63,
+        "process": 1,
+        "thread": 1,
+        "expected": 514,
+        "written": 514
+      },
+      "reap": {
+        "free": 12607,
+        "baseline": 12607,
+        "checks": 3128
+      },
+      "log_sha256": "d19d5753684b4b461cf2172e32f02c2564118784c85c02350e83261616d88fb9"
+    }
+  ],
+  "reasoning": [
+    "Original V8 flags and ABI were retained for main.cc. The helper uses the actual PA GN flags. Only a plain extern C int function crosses the object profile boundary.",
+    "Normal RawLog checks both a 256-byte newline-terminated input and a 257-byte input requiring a new trailing newline. Suppressed/null/empty writes must not change the exact 514-byte kernel counter.",
+    "Nested errno scopes, numeric EINVAL formatting, signed INT64_MIN/truncation and negative/zero/positive native sleep all complete before real V8 execution.",
+    "Same selected full-link62 runtime and every other object/archive remain byte-identical. A successful selected consumer link does not prove all archive externals have providers."
+  ],
+  "browser_guest_pass": false,
+  "production_image_changed": false,
+  "fatal_process_cleanup_qualified": false,
+  "tool_session": 78922,
+  "terminal_returncode": 0,
+  "limitations": [
+    "No full PA core, clock callbacks, RandBytes, floating-format runtime, Dawn common or Content/browser claim.",
+    "Fatal cleanup remains a separate pending real guest test.",
+    "The diagnostic write loop return-count guards were logic-reviewed; short/zero/error responses are not injected into the real sink in this test."
+  ]
+}

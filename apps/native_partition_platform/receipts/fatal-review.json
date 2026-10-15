@@ -1,0 +1,150 @@
+{
+  "recorded_local": "2026-10-16 05:03:17 +08:00",
+  "references": {
+    "normal-review-01.json": "532d73028a4cd63697722d14d40708d4b758d8e2d8d5cea12863299b9b6ad629",
+    "patch/fatal-checks.cc": "3a41f8fc389e2bbcf28d78c523d586c73e87e68ba2dc074dcd5eb1144c58473a",
+    "compile-fatal-v1.py": "cce3ad9fa42042fd8da69253c084405de8d2bf5ddcebc5dcba0b67b7981c2df1",
+    "launch-compile-fatal-v1.py": "c19c55a62f965fc15085580355bbff61a7a61bb72f4173621dcff7dede6f2713",
+    "compile-fatal-01/status.json": "a6a5860639e0277c5f54efc3dffac674b5e5df728fbcd196ec47112223bd3800",
+    "link-fatal-v1.py": "9feb5abdc8ef85954fca065d35d4904b9ae19bb64969b975b4a7b8f6d8e318c6",
+    "launch-link-fatal-v1.py": "a9a9bf9d9ce3bd88e90bcf6f3793267b74e8810553ad75d4a39e329ffd1e3ecd",
+    "link-fatal-01/status.json": "0d6c1a75c5a61df95e1d6ac860cd0ca55f329568a595285dccb759dc52fdd0b6",
+    "kernel-fatal-v1.cpp": "06ce6e29bb0e2691c1ab29c45affe217b04a7305d344e895b45a097c50e6b61f",
+    "guest-fatal-v1.py": "3e16ae49bbb3cde87bce71e2d51bcecbae78c2bf89590d36441dcdb2c503f6ba",
+    "launch-guest-fatal-v1.py": "9f0fd16a16a2ad7d28f15ddfdc237231c8330e205f5c78d3742d121e03c6a752",
+    "guest-fatal-01/status.json": "fe9fa945e1b1efb92a4ab23af5e62e1a44a3aac0bbb8cf421e9b5c614ab7af74",
+    "guest-fatal-01/launcher-result.json": "5ce041903628f1502f66a36a6f75a5f370a98ded4278c7aa25c529f233032d61"
+  },
+  "accepted_scope": "Native IA32 PA platform primitives and selected real V8 consumer, including fatal process cleanup",
+  "candidate_private": true,
+  "module_complete": false,
+  "normal_guest_pass": true,
+  "fatal_guest_pass": true,
+  "fatal_guests": [
+    {
+      "configuration": "32M-smp4",
+      "initial": {
+        "image": 2387,
+        "resident": 2515,
+        "capacity": 3539,
+        "metadata": 14,
+        "tables": 4
+      },
+      "execution": {
+        "stage": 2,
+        "result": 4294967295,
+        "exit": 2147483661,
+        "vector": 13,
+        "error": 26,
+        "fault": 0,
+        "calls": 40,
+        "resident": 2547,
+        "dynamic": 32,
+        "peer": 45568240
+      },
+      "blocks": [
+        {
+          "index": 0,
+          "base": 2147483648,
+          "pages": 32,
+          "requested": 131072,
+          "alignment": 16
+        }
+      ],
+      "workload": {
+        "mask": 0,
+        "gc": 0
+      },
+      "platform": {
+        "mask": 1,
+        "process": 1,
+        "thread": 1,
+        "expected": 51,
+        "written": 51
+      },
+      "reap": {
+        "free": 4424,
+        "baseline": 4424,
+        "checks": 35
+      },
+      "log_sha256": "41b2adb308afecd3e134e7ee7e20e23d6881f0fa673f369648933edce688ff5c"
+    },
+    {
+      "configuration": "64M-smp1",
+      "initial": {
+        "image": 2387,
+        "resident": 2515,
+        "capacity": 3539,
+        "metadata": 14,
+        "tables": 4
+      },
+      "execution": {
+        "stage": 2,
+        "result": 4294967295,
+        "exit": 2147483661,
+        "vector": 13,
+        "error": 26,
+        "fault": 0,
+        "calls": 40,
+        "resident": 2547,
+        "dynamic": 32,
+        "peer": 45561840
+      },
+      "blocks": [
+        {
+          "index": 0,
+          "base": 2147483648,
+          "pages": 32,
+          "requested": 131072,
+          "alignment": 16
+        }
+      ],
+      "workload": {
+        "mask": 0,
+        "gc": 0
+      },
+      "platform": {
+        "mask": 1,
+        "process": 1,
+        "thread": 1,
+        "expected": 51,
+        "written": 51
+      },
+      "reap": {
+        "free": 12608,
+        "baseline": 12608,
+        "checks": 35
+      },
+      "log_sha256": "f9242c927dada3042e7c115206ab434d4f110a1c2aa79fad2a49ac7e8bea8fbb"
+    }
+  ],
+  "thought_experiments": [
+    "LogMessage may be consumed by a user handler; the fatal test explicitly clears that handler. It uses the actual destructor and RawLog, not an alternative abort implementation.",
+    "The upstream int3/ud2 sequence would yield #BP with an accessible breakpoint gate; current GTOS gate3 DPL0 instead causes #GP with IDT selector error0x1a. Source and Intel protected-mode privilege rules were checked before execution. Both observed guests matched this one exact prediction.",
+    "A fatal-only empty process would not prove dynamic cleanup. The consumer retains and verifies131072 bytes in a real32-page mapping; the observer validates bounds before reading content, checks the live allocation metadata, then exact-Reap.",
+    "The after-FATAL marker2 and result197 must never appear. Stage remains2/result0xffffffff, V8 workload/GC remain0 in this intentional pre-engine fault test. Normal workload qualification is a separate real test."
+  ],
+  "architecture_reference": "https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3a-part-1-manual.pdf",
+  "terminal_sessions": [
+    {
+      "id": 23688,
+      "returncode": 0
+    },
+    {
+      "id": 69037,
+      "returncode": 0
+    },
+    {
+      "id": 95561,
+      "returncode": 0
+    }
+  ],
+  "production_image_changed": false,
+  "browser_guest_pass": false,
+  "limits": [
+    "Selected native API consumption only; GC sections mean unused archive clock callbacks, random and floating-format providers remain unqualified.",
+    "No full PA allocator core, Dawn common, complete GN graph input audit, Content, DOM, networking, video or HTML5 claim.",
+    "Standalone diagnostic kernels reused25 accepted core objects; production kernel/runtime/ISO and visible VM were not updated."
+  ],
+  "next": "Package the declared SDK/PA platform source boundary with provenance, exact consumer proofs and Chinese documentation; review and verify package bytes before normal dev commit/push."
+}

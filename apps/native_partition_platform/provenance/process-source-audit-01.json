@@ -1,0 +1,19 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "files": {
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h": {
+      "blob": "1cc9eafc71394a5a26c7a267ff812bbcc45854dd",
+      "sha256": "64ac91919d6a049f11b5ef5bb5063b0cd4a9a4fbf70794d45eb83b3a3787e49f"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/cstring_builder.cc": {
+      "blob": "c951cdd8c4f5a247cc11405c412bc71e727a5b65",
+      "sha256": "4be8043d3702f4dfaa82b2c94ffb94fe93fa485afbf5898bea91a95e24ce2e66"
+    }
+  },
+  "build_patch_base_sha256": "4aee0b1087aad2fca600b46844b95707471c4e793d500804f7fe2984d49a7b18",
+  "first_actual_failures": "allocator-build01 stack_trace:ProcessId absent;cstring_builder:missing unistd.h;logging:write and STDERR_FILENO absent",
+  "native_process_provider": "Allocation-free existing GTOS self-query returns validated positive process ID. Zero remains null; no target PID or foreign process is queried.",
+  "cstring_scope": "This source uses ssize_t from safe_sprintf/native scalar sys/types.h and no unistd service. Keep non-GTOS include selection unchanged.",
+  "candidate_private": true,
+  "runtime_qualified": false
+}

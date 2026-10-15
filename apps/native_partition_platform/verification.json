@@ -1,0 +1,18 @@
+{
+  "all_package_checks_pass": true,
+  "exact_copied_files": 64,
+  "package_files_before_verification": 71,
+  "reused_sdk_files": 866,
+  "overlays": 20,
+  "effective_source_view_files": 884,
+  "materialized_view": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\package-view-01",
+  "source_view_hashes_unchanged": true,
+  "all_text_utf8_json_parses": true,
+  "native_normal_and_fatal_dual_configuration_receipts_match": true,
+  "new_build_or_guest_execution": false,
+  "binary_payload": false,
+  "browser_guest_pass": false,
+  "full_partition_allocator_qualified": false,
+  "production_image_changed": false,
+  "validator_sha256": "1a03aec493a86feb142a6b5ca20f1146b648570b1d467d31ef5397330c0af8ed"
+}

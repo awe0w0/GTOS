@@ -1,0 +1,187 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license in LICENSE.
+# Freestanding platform qualification only. No Linux sysroot or host libc.
+
+import("//build/config/rust.gni")
+import("//build/config/gtos/native_sdk.gni")
+
+declare_args() {
+  # Absolute directory of the reviewed official Clang/LLD/llvm-ar binaries.
+  # There is no host compiler fallback for GTOS target objects.
+  gtos_clang_bin = ""
+
+  # Isolated host interpreter for the reviewed Rust wrapper.
+  gtos_python = ""
+}
+
+assert(gtos_clang_bin != "", "Set gtos_clang_bin to the pinned official Clang")
+
+template("gtos_freestanding_toolchain") {
+  toolchain(target_name) {
+    _triple = invoker.triple
+    _elf = invoker.elf
+    _clang = "$gtos_clang_bin/clang"
+    _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2"
+    _common_c = _common
+    if (invoker.cpu == "x86" && gtos_native_sdk != "") {
+      assert(gtos_clang_resource_dir != "",
+             "Set the reviewed Clang resource directory with the native SDK")
+      assert(path_exists("$gtos_native_sdk/sdk/__config_site"))
+      assert(path_exists("$gtos_native_sdk/c-sdk/stdlib.h"))
+      assert(path_exists("$gtos_clang_resource_dir/stddef.h"))
+      _sdk = rebase_path("$gtos_native_sdk/sdk", root_build_dir)
+      _c_sdk = rebase_path("$gtos_native_sdk/c-sdk", root_build_dir)
+      _libcxx = rebase_path("//third_party/libc++/src/include", root_build_dir)
+      _clang_resource = rebase_path(gtos_clang_resource_dir, root_build_dir)
+      _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -msse2 -mfpmath=sse -mno-sse3 -mno-ssse3 -mno-sse4 -mno-avx -femulated-tls -fstack-usage -nostdinc -nostdinc++ -DGTOS_NATIVE_SDK=1 -isystem $_sdk -isystem $_libcxx -isystem $_c_sdk -isystem $_clang_resource"
+      _common_c = string_replace(_common, " -nostdinc++", "")
+    }
+
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+
+    tool("cc") {
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      command = "$_clang $_common_c {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+      description = "GTOS CC {{source}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("cxx") {
+      depfile = "{{output}}.d"
+      depsformat = "gcc"
+      command = "$_clang -x c++ $_common -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+      description = "GTOS CXX {{source}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("asm") {
+      command =
+          "$_clang --target=$_triple {{asmflags}} -c {{source}} -o {{output}}"
+      description = "GTOS ASM {{source}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("alink") {
+      command = "$gtos_clang_bin/llvm-ar rcs {{output}} {{inputs}}"
+      description = "GTOS AR {{output}}"
+      outputs = [ "{{target_out_dir}}/{{target_output_name}}.a" ]
+      default_output_extension = ".a"
+      output_prefix = "lib"
+    }
+
+    tool("link") {
+      command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}}"
+      description = "GTOS LINK {{output}}"
+      outputs =
+          [ "{{root_out_dir}}/{{target_output_name}}{{output_extension}}" ]
+      default_output_extension = ".elf"
+    }
+
+    if (invoker.cpu == "x86") {
+      # Produce real ELF32 shared files. This does not establish a guest loader.
+      foreach(_shared_tool, [ "solink", "solink_module" ]) {
+        tool(_shared_tool) {
+          _sofile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+          command = "$gtos_clang_bin/ld.lld -m $_elf --shared --no-undefined --fatal-warnings -z text -z noexecstack --build-id=none --soname={{target_output_name}}{{output_extension}} {{ldflags}} -o $_sofile @${_sofile}.rsp"
+          description = "GTOS SHARED {{output}}"
+          outputs = [ _sofile ]
+          default_output_dir = "{{root_out_dir}}"
+          default_output_extension = ".so"
+          output_prefix = "lib"
+          rspfile = "${_sofile}.rsp"
+          rspfile_content = "{{inputs}} {{solibs}} {{libs}} {{rlibs}}"
+        }
+      }
+    }
+
+    # Rust binaries use the custom target's direct GNU LLD ABI. Runtime support
+    # and guest execution remain separate from this native link rule.
+    if (toolchain_has_rust && invoker.cpu == "x86") {
+      assert(gtos_python != "", "Set gtos_python to the reviewed host Python")
+      rustc_wrapper_path =
+          rebase_path("//build/rust/gni_impl/rustc_wrapper.py", root_build_dir)
+      rustc_wrapper = "\"$gtos_python\" -I -B -S \"$rustc_wrapper_path\""
+      rustc_env_and_flags_path =
+          "{{target_out_dir}}/{{label_name}}.rustflags.json"
+      rustc_rsp_path = "{{target_out_dir}}/{{label_name}}.rsp"
+      rustc_wrapper += " --dump-rustc-env-and-flags=$rustc_env_and_flags_path"
+      rustc_wrapper += " --rsp=$rustc_rsp_path"
+      rust_sysroot_relative = rebase_path(rust_sysroot, root_build_dir)
+      rustc_wrapper += " --rustc=$rust_sysroot_relative/bin/rustc"
+
+      tool("rust_rlib") {
+        rlibname =
+            "{{output_dir}}/lib{{target_output_name}}{{output_extension}}"
+        rmetaname = "{{output_dir}}/lib{{target_output_name}}.rmeta"
+        rspfile = rustc_rsp_path
+        depfile = "$rlibname.d"
+        default_output_extension = ".rlib"
+        default_output_dir = "{{target_out_dir}}"
+        description = "GTOS RUST {{output}}"
+        outputs = [
+          rlibname,
+          rmetaname,
+          rustc_env_and_flags_path,
+          "${rspfile}.rust",
+        ]
+        rspfile_content =
+            "$rustc_common_args {{rustdeps}} {{externs}} SOURCES {{sources}}"
+        command = "$rustc_wrapper --depfile=$depfile --emit=dep-info=$depfile,link,metadata=$rmetaname -o $rlibname -- {{source}} LDFLAGS RUSTENV {{rustenv}}"
+        rust_sysroot = rust_sysroot_relative
+        inputs = rustc_wrapper_inputs
+      }
+
+      tool("rust_bin") {
+        exename = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+        depfile = "$exename.d"
+        rspfile = rustc_rsp_path
+        pool = "//build/toolchain:link_pool($default_toolchain)"
+        default_output_extension = ".elf"
+        default_output_dir = "{{root_out_dir}}"
+        description = "GTOS RUST BIN {{output}}"
+        outputs = [
+          exename,
+          rustc_env_and_flags_path,
+          "${rspfile}.rust",
+        ]
+        rspfile_content =
+            "$rustc_common_args {{rustdeps}} {{externs}} SOURCES {{sources}}"
+        command = "$rustc_wrapper --depfile=$depfile --emit=dep-info=$depfile,link -o $exename -- -Clinker=\"$gtos_clang_bin/ld.lld\" {{source}} LDFLAGS {{ldflags}} -m $_elf --no-undefined -z noexecstack --build-id=none RUSTENV {{rustenv}}"
+        rust_sysroot = rust_sysroot_relative
+        inputs = rustc_wrapper_inputs
+      }
+    }
+
+    tool("stamp") {
+      command = "touch {{output}}"
+      description = "GTOS STAMP {{output}}"
+    }
+
+    tool("copy") {
+      command = "cp -af {{source}} {{output}}"
+      description = "GTOS COPY {{source}}"
+    }
+    toolchain_args = {
+      current_os = "gtos"
+      current_cpu = invoker.cpu
+      is_clang = true
+    }
+  }
+}
+
+gtos_freestanding_toolchain("clang_x86") {
+  cpu = "x86"
+  triple = "i686-unknown-none-elf"
+  elf = "elf_i386"
+}
+
+gtos_freestanding_toolchain("clang_x64") {
+  cpu = "x64"
+  triple = "x86_64-unknown-none-elf"
+  elf = "elf_x86_64"
+}

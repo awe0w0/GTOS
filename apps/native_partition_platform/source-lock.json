@@ -1,0 +1,274 @@
+{
+  "chromium": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "v8": "be042d4462bee463c9b785701b8c6ee4576ee0a3",
+  "libcxx": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+  "native_base": "cb82b10724507679e6d99a3af81cec53c29f2e0b",
+  "llvm": "llvmorg-24-init-7747-g62397f8b-57",
+  "copied_files": {
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/build_config.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\build_config.h",
+      "sha256": "600f5e9a24011d5cfc7f64f9e44b6fa6a82e7784cf8a3d5a87787a7b88c2065c"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/BUILD.gn": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\runtime-patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\BUILD.gn",
+      "sha256": "6eb57f5bf6b05f16eb02acd8efd21269cf1c57f0a256d1ccc4f4e56762cf2248"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\log_message.cc",
+      "sha256": "e03abd1289fffb442f8e531dbd13d5f93074d55ca50ccc060225fbcf1bcd9c60"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\log_message.h",
+      "sha256": "84f6ffdbea3f4289c14886943221b9422d5c76f5f5c264c73419affb01d0a8f0"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\write-patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\logging.cc",
+      "sha256": "9dd355bddf775bb66a5bd2d6978b51a1c50265b3df720d70efe82bbbde78fbff"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\runtime-patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\process\\process_handle_gtos.cc",
+      "sha256": "4b3a71a0ea7dd3f1c3215b889a0e727633a72db70bb553febe61a05c34dd7743"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\runtime-patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\process\\process_handle.h",
+      "sha256": "5abd0656731b6750518f547fa38601e7a94d938832c5caab06cd3de14976218a"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/scoped_clear_last_error.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\scoped_clear_last_error.h",
+      "sha256": "ba2d34cee2de89ec7ce5424a0d9c83fa1b85b9f86fbcf6384a362b286e2efaa9"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/cstring_builder.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\runtime-patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\strings\\cstring_builder.cc",
+      "sha256": "f4643876df2893e084ece6fe5764478dd41af47b46a77f1aa4cfa178f07cc607"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\header-patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\strings\\safe_sprintf.h",
+      "sha256": "003b6641f595923721987db57b1bbf718e9f6505cebc189fb6eb32b5ac3887d8"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\threading\\platform_thread_gtos.cc",
+      "sha256": "24e11c6c201c1e81362da557ca2184f0ec3ae4f81479ba7ad497e351460c1cda"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\threading\\platform_thread_ref.h",
+      "sha256": "20c1eaa27b7e2103a5209f2b1f0949fa0dbceecf17d30d2c526983c5fb6270bc"
+    },
+    "overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\base\\allocator\\partition_allocator\\src\\partition_alloc\\partition_alloc_base\\threading\\platform_thread.h",
+      "sha256": "acb19a46d28caf98574e5f7f4a1a12383d9e00335d5e09007c69e116c0cd878c"
+    },
+    "overlay/tools/gtos_native_sdk/native-services.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\tools\\gtos_native_sdk\\native-services.h",
+      "sha256": "2f3c8b2b534cedc98287141b98c74567917b4d57814c49f6672e914689ded6b8"
+    },
+    "overlay/tools/gtos_native_sdk/sdk/process/abi.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\tools\\gtos_native_sdk\\sdk\\process\\abi.h",
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055"
+    },
+    "overlay/tools/gtos_native_sdk/sdk/process/info_abi.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\patch\\tools\\gtos_native_sdk\\sdk\\process\\info_abi.h",
+      "sha256": "ed9828c1c4bb923f7d3aaa892886bd3d681b18bd92ed4355149928aaad158f7d"
+    },
+    "overlay/build/toolchain/gtos/BUILD.gn": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-content-sdk-20261016-a\\patch\\build\\toolchain\\gtos\\BUILD.gn",
+      "sha256": "f9b81f6c67f26a4d40ae32abb9489be201ebef8e19af98b7b6c1d49b03fc651f"
+    },
+    "overlay/build/config/c++/BUILD.gn": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-content-sdk-20261016-a\\patch\\build\\config\\c++\\BUILD.gn",
+      "sha256": "6cb1ca1ead083f99db2a3fe0096e10ba79099b3af2198e7be8fa2e1ba5626f8b"
+    },
+    "overlay/build/config/gtos/native_sdk.gni": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-content-sdk-20261016-a\\patch\\build\\config\\gtos\\native_sdk.gni",
+      "sha256": "c2a6943aec1e4900baaf47f6b4cd8c1ec1f2dfe5c8c77f46549f815cf1c8fadd"
+    },
+    "overlay/tools/gtos_native_sdk/sdk/__external_threading": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-content-sdk-20261016-a\\patch\\tools\\gtos_native_sdk\\sdk\\__external_threading",
+      "sha256": "28a9f56f59109b098d19f4253c81036393ad3212fbe3ea7d71b7875a424fdd4c"
+    },
+    "receipts/compile-checks.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\compile-checks-01\\status.json",
+      "sha256": "f95d0fec11b5687cb19df73a09a397386ab5a6b4cc73582e792cb86f5c4c3946"
+    },
+    "replay/compile-checks-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\compile-checks-v1.py",
+      "sha256": "63996b3d47f563eb53350fa9e53fe50b08bd97a60fd094263a0e9f93c2815b01"
+    },
+    "receipts/compile-fatal.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\compile-fatal-01\\status.json",
+      "sha256": "a6a5860639e0277c5f54efc3dffac674b5e5df728fbcd196ec47112223bd3800"
+    },
+    "replay/compile-fatal-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\compile-fatal-v1.py",
+      "sha256": "cce3ad9fa42042fd8da69253c084405de8d2bf5ddcebc5dcba0b67b7981c2df1"
+    },
+    "receipts/compile-main.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\compile-main-01\\status.json",
+      "sha256": "07e4eca658b12a050cf45fc1e260db0915c37573486c1a5f7b5ef643c8a321e4"
+    },
+    "replay/compile-main-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\compile-main-v1.py",
+      "sha256": "2ee0c60693125ce00e1a5c3027998f079e6fabbe284ccd0f1aaeb6adf9cf09f1"
+    },
+    "receipts/fatal-review.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\fatal-review-01.json",
+      "sha256": "e9b597a7dc19c7944ce79e1c8aa8256e8b5f54d44aa1a3496ba963ba7f441f1c"
+    },
+    "logs/normal-32M-smp4.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-01\\32M-smp4-guest.log",
+      "sha256": "1937f8d6cb4a5ad980af4c5929d431043370c40d193640c5756fd7dc143fe9ed"
+    },
+    "logs/normal-64M-smp1.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-01\\64M-smp1-guest.log",
+      "sha256": "d19d5753684b4b461cf2172e32f02c2564118784c85c02350e83261616d88fb9"
+    },
+    "receipts/guest-normal.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-01\\status.json",
+      "sha256": "39539e7d6b97f7b9c93002619fa93060c5b51598e02cbe670fe1e59a2df9843e"
+    },
+    "logs/fatal-32M-smp4.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-fatal-01\\32M-smp4-guest.log",
+      "sha256": "41b2adb308afecd3e134e7ee7e20e23d6881f0fa673f369648933edce688ff5c"
+    },
+    "logs/fatal-64M-smp1.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-fatal-01\\64M-smp1-guest.log",
+      "sha256": "f9242c927dada3042e7c115206ab434d4f110a1c2aa79fad2a49ac7e8bea8fbb"
+    },
+    "receipts/guest-fatal.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-fatal-01\\status.json",
+      "sha256": "fe9fa945e1b1efb92a4ab23af5e62e1a44a3aac0bbb8cf421e9b5c614ab7af74"
+    },
+    "replay/guest-fatal-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-fatal-v1.py",
+      "sha256": "3e16ae49bbb3cde87bce71e2d51bcecbae78c2bf89590d36441dcdb2c503f6ba"
+    },
+    "replay/guest-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\guest-v1.py",
+      "sha256": "cb2ae84662b67d841cf9fec4338064a855e97da366fe7808524fa084a47b7f7d"
+    },
+    "probe/kernel-fatal-v1.cpp": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\kernel-fatal-v1.cpp",
+      "sha256": "06ce6e29bb0e2691c1ab29c45affe217b04a7305d344e895b45a097c50e6b61f"
+    },
+    "probe/kernel-v1.cpp": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\kernel-v1.cpp",
+      "sha256": "614ddedb687074549ccf587101f3a1899b1b812362966b4e46ef8cd3033d9c98"
+    },
+    "replay/launch-checks-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-checks-v1.py",
+      "sha256": "cc3c8d2e2c324621e86ca7fee759f5774736cde0ab6e60113b6ef90e6fd39004"
+    },
+    "replay/launch-compile-fatal-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-compile-fatal-v1.py",
+      "sha256": "c19c55a62f965fc15085580355bbff61a7a61bb72f4173621dcff7dede6f2713"
+    },
+    "replay/launch-guest-fatal-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-guest-fatal-v1.py",
+      "sha256": "9f0fd16a16a2ad7d28f15ddfdc237231c8330e205f5c78d3742d121e03c6a752"
+    },
+    "replay/launch-guest-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-guest-v1.py",
+      "sha256": "9da590b9b04a81318ecd7ca6b4870cdda78c8a6541528590ddcda9fb62d79180"
+    },
+    "replay/launch-link-fatal-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-link-fatal-v1.py",
+      "sha256": "a9a9bf9d9ce3bd88e90bcf6f3793267b74e8810553ad75d4a39e329ffd1e3ecd"
+    },
+    "replay/launch-link-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-link-v1.py",
+      "sha256": "b9652579e2fc09c664be70d8ebc2a3a3b0af31502dce80d2eb7ef4809ab576a4"
+    },
+    "replay/launch-main-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\launch-main-v1.py",
+      "sha256": "ab5e50d4d90e9b270d98713c8323932853ca8c506539d3af24402749496e37e3"
+    },
+    "receipts/link-normal.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\link-01\\status.json",
+      "sha256": "188e170b3653569f2609d38569af1d9e2311747b5e5106d8ff42c88bab47e120"
+    },
+    "receipts/link-fatal.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\link-fatal-01\\status.json",
+      "sha256": "0d6c1a75c5a61df95e1d6ac860cd0ca55f329568a595285dccb759dc52fdd0b6"
+    },
+    "replay/link-fatal-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\link-fatal-v1.py",
+      "sha256": "9feb5abdc8ef85954fca065d35d4904b9ae19bb64969b975b4a7b8f6d8e318c6"
+    },
+    "replay/link-v1.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\link-v1.py",
+      "sha256": "ff2661cbf01dba84a154e43d94bd3f0f803c41cfdd19b5e5d6bded44d85e7d0e"
+    },
+    "receipts/normal-review.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\normal-review-01.json",
+      "sha256": "532d73028a4cd63697722d14d40708d4b758d8e2d8d5cea12863299b9b6ad629"
+    },
+    "probe/fatal-checks.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\patch\\fatal-checks.cc",
+      "sha256": "3a41f8fc389e2bbcf28d78c523d586c73e87e68ba2dc074dcd5eb1144c58473a"
+    },
+    "probe/main.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\patch\\main.cc",
+      "sha256": "7ff57b86d0c1b9edbeeda07a543cfb2c622554d4259c6254655ae3bb0697db10"
+    },
+    "probe/partition-checks.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-consumer-20261016-a\\patch\\partition-checks.cc",
+      "sha256": "c758b1335f40105733af7bae64bc35b824bbda7cbff33a34208b7fb4fce04bf2"
+    },
+    "provenance/candidate-inputs-03.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\candidate-inputs-03.json",
+      "sha256": "0241d867428a8328d9ec61c7fb8320324c5730e6ef78827b99f0d98b29630f31"
+    },
+    "provenance/pre-edit-inputs-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\pre-edit-inputs-01.json",
+      "sha256": "e2c448304374459e752e65a6e71609f612f94d0d65bea17e768994b07202099b"
+    },
+    "provenance/allocator-base-inputs-02.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\allocator-base-inputs-02.json",
+      "sha256": "aa39ff932b92f16c134dd12dc8e4e72c378e14216b779f94b3c6930d91746189"
+    },
+    "provenance/allocator-headers-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\allocator-headers-01.json",
+      "sha256": "0756f31563f4a9322e72f398ee0265724eaae6fda0b29c80890a131da114f2f5"
+    },
+    "provenance/archive-symbols-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\archive-symbols-01.json",
+      "sha256": "07f7ba66f2d0f13345a871273bd560590af453890bc969f1555c5cabd350bed8"
+    },
+    "provenance/process-source-audit-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\process-source-audit-01.json",
+      "sha256": "72ba41c470b41eb600d3847be7255bf4ff4c2f1e10568a078bff6adbf3ae8ba9"
+    },
+    "provenance/raw-log-source-audit-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\raw-log-source-audit-01.json",
+      "sha256": "e15a8c3467cc737813e000c05ace0dea9028dda67f0815af8c109ae6be9ef5b9"
+    },
+    "receipts/allocator-build.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\allocator-build-02\\status.json",
+      "sha256": "6ee5d53ebf9d21c7b47de654bf7a6bfbee045726a641b5df56a7ce5878fb37c9"
+    },
+    "replay/build-allocator-v2.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\build-allocator-v2.py",
+      "sha256": "7c68feee73f5d8e2c5ac1787f327bafd6ad1c0e73f7f3e6b9816d8e9c9ff2472"
+    },
+    "replay/launch-allocator-v2.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-partition-platform-20261016-a\\launch-allocator-v2.py",
+      "sha256": "ca8ab64e7e7ec4f498870ba779501caa718b1e86540bddf7ab3c5889f2ffed72"
+    },
+    "provenance/sdk-candidate-inputs.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-content-sdk-20261016-a\\candidate-inputs-01.json",
+      "sha256": "84724e78d4422b325e7a6e6c47a0ab8f966f2c1f3c4aac5020f8b3e77917bcb4"
+    },
+    "provenance/sdk-pre-edit-inputs.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-content-sdk-20261016-a\\pre-edit-inputs-01.json",
+      "sha256": "89b1b449ebf14649ea7c6339cbaa0f338ff58f560fbca1b72dfe20b62b24019a"
+    }
+  },
+  "overlay_count": 20,
+  "sdk_base_count": 866,
+  "source_qualification": "Selected complete MD closures and pinned raw Git audits; full Content GN graph directory/generated-metadata qualification remains incomplete.",
+  "source_view": "SDK base from sdk-reuse.json, then overlay; upstream/library inputs from the fixed repositories and qualified receipts.",
+  "chromium_license": {
+    "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b",
+    "path": "CHROMIUM-LICENSE.txt",
+    "blob": "2249a28657f86c645f8978b75babc1bd52aca318"
+  }
+}

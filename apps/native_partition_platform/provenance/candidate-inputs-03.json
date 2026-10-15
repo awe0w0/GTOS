@@ -1,0 +1,96 @@
+{
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "native_revision": "cb82b10724507679e6d99a3af81cec53c29f2e0b",
+  "pre_edit_sha256": "e2c448304374459e752e65a6e71609f612f94d0d65bea17e768994b07202099b",
+  "files": {
+    "base/allocator/partition_allocator/src/partition_alloc/BUILD.gn": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/runtime-patch/base/allocator/partition_allocator/src/partition_alloc/BUILD.gn",
+      "sha256": "6eb57f5bf6b05f16eb02acd8efd21269cf1c57f0a256d1ccc4f4e56762cf2248"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/build_config.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/build_config.h",
+      "sha256": "600f5e9a24011d5cfc7f64f9e44b6fa6a82e7784cf8a3d5a87787a7b88c2065c"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/scoped_clear_last_error.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/scoped_clear_last_error.h",
+      "sha256": "ba2d34cee2de89ec7ce5424a0d9c83fa1b85b9f86fbcf6384a362b286e2efaa9"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h",
+      "sha256": "84f6ffdbea3f4289c14886943221b9422d5c76f5f5c264c73419affb01d0a8f0"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc",
+      "sha256": "e03abd1289fffb442f8e531dbd13d5f93074d55ca50ccc060225fbcf1bcd9c60"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h",
+      "sha256": "20c1eaa27b7e2103a5209f2b1f0949fa0dbceecf17d30d2c526983c5fb6270bc"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h",
+      "sha256": "acb19a46d28caf98574e5f7f4a1a12383d9e00335d5e09007c69e116c0cd878c"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc",
+      "sha256": "24e11c6c201c1e81362da557ca2184f0ec3ae4f81479ba7ad497e351460c1cda"
+    },
+    "tools/gtos_native_sdk/native-services.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/tools/gtos_native_sdk/native-services.h",
+      "sha256": "2f3c8b2b534cedc98287141b98c74567917b4d57814c49f6672e914689ded6b8"
+    },
+    "tools/gtos_native_sdk/sdk/process/abi.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/tools/gtos_native_sdk/sdk/process/abi.h",
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055"
+    },
+    "tools/gtos_native_sdk/sdk/process/info_abi.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/patch/tools/gtos_native_sdk/sdk/process/info_abi.h",
+      "sha256": "ed9828c1c4bb923f7d3aaa892886bd3d681b18bd92ed4355149928aaad158f7d"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h": {
+      "sha256": "003b6641f595923721987db57b1bbf718e9f6505cebc189fb6eb32b5ac3887d8",
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/header-patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/runtime-patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h",
+      "sha256": "5abd0656731b6750518f547fa38601e7a94d938832c5caab06cd3de14976218a"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/runtime-patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc",
+      "sha256": "4b3a71a0ea7dd3f1c3215b889a0e727633a72db70bb553febe61a05c34dd7743"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/cstring_builder.cc": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/runtime-patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/cstring_builder.cc",
+      "sha256": "f4643876df2893e084ece6fe5764478dd41af47b46a77f1aa4cfa178f07cc607"
+    },
+    "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-partition-platform-20261016-a/write-patch/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc",
+      "sha256": "9dd355bddf775bb66a5bd2d6978b51a1c50265b3df720d70efe82bbbde78fbff"
+    }
+  },
+  "platform": "independent GTOS / IA32",
+  "thread_identity": "direct allocation-free native self-query, positive uint32 ID and handle",
+  "errno": "existing fixed native thread-state slots, no emutls allocation",
+  "thread_sleep": "real native monotonic nanosleep provider; link and guest qualification pending",
+  "allocator_flags_changed": false,
+  "posix_or_linux_identity": false,
+  "candidate_private": true,
+  "runtime_qualified": false,
+  "browser_guest_pass": false,
+  "previous_candidate_sha256": "0a2badef5eb14550a883080f6fe2c730a525f81c987913f1fdd234134fc966c6",
+  "additional_patch_base": {
+    "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+    "relative": "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h",
+    "source_proof_sha256": "008c6815e5432a087b6edb32aef3f055d076a3c631d383c9b7038fc78dff10c6",
+    "sha256": "3b0bf924cfc2fcf2b30c928af0369a5f58f8919b8a33cced87276bdbd4c06c8e",
+    "blob": "e1576694d8dc948208a910add72487f1e900f21e"
+  },
+  "candidate_files_total": 16,
+  "kernel_abi_changed": false,
+  "header_fix_reason": "Actual native_log compile found five ssize_t declaration errors. Select the existing native scalar sys/types.h in the shared safe_sprintf header; preserve signed return type and other OS branches.",
+  "process_source_audit_sha256": "72ba41c470b41eb600d3847be7255bf4ff4c2f1e10568a078bff6adbf3ae8ba9",
+  "raw_log_source_audit_sha256": "e15a8c3467cc737813e000c05ace0dea9028dda67f0815af8c109ae6be9ef5b9",
+  "actual_allocator_build01_status_sha256": "c46a51e947d4987747a0ff2758943c3d9adfee205712eb2e0e7a407cb636da07",
+  "new_native_services": "Validated self ProcessId and bounded direct native diagnostic output; no POSIX descriptors, heap/TLS initialization, foreign PID query or fake return values.",
+  "full_target_intent": "Keep every original allocator_base source and add the actual IA32 process provider. Seventeen source rows expected after combined GN replay; no allocator flags, floating formatting, checks or threading removed."
+}

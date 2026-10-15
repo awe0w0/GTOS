@@ -1,0 +1,36 @@
+{
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "native_revision": "cb82b10724507679e6d99a3af81cec53c29f2e0b",
+  "relative": "base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc",
+  "original": {
+    "blob": "de50df4a7a405485c60efa83f424359e161e36eb",
+    "sha256": "21b5cd6712598a793198701d3d3cb475d98165fd88be4e12a5c6afefac820952"
+  },
+  "native_sources": {
+    "include/process/abi.h": {
+      "blob": "9974cbda514168e9db17901a67749a1a5874eb77",
+      "sha256": "deb7cd1be984a1bbc119abbabb27e63ed6fa89e85ca5cff983f4b967b4a3b055"
+    },
+    "src/process/native_runtime.cpp": {
+      "blob": "b864d96566b8e88a9c68dc3b21d0855920ddeb55",
+      "sha256": "f2f101703a00a5a7195ba05faa9e1f027d095983bc7fae80ed252fca38d70c26"
+    },
+    "apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/diagnostic-output.cc": {
+      "blob": "e78aeb1cb02d53faeaaefd7de5da565859c90273",
+      "sha256": "1b094edb1aa4f17f83457b15a021c35f6f2f8242649e3e58266e039895806bb8"
+    }
+  },
+  "native_operation": "GTOS_SYS_WRITE /0x4701,EBX readable user buffer,ECX0..256bytes,EAX written bytes or negative error",
+  "kernel_contract": "Validates and copies whole buffer before visible output. Native diagnostic sink; no POSIX descriptor. Does not touch C errno or use compiler TLS.",
+  "reference": "Existing qualified V8 WriteError chunks at GTOS_NATIVE_WRITE_LIMIT and rejects zero or unsigned result greater than requested bytes.",
+  "edge_review": [
+    "Zero-length text performs no syscall.",
+    "Chunk caps every request at256; a valid short positive result advances only that prefix.",
+    "Zero, negative-as-unsigned or oversized results stop without a retry loop or fake successful byte count.",
+    "Pointer and remaining-length arithmetic advances only after a result in1..chunk.",
+    "Raw diagnostic output must not take a heap lock, initialize TLS or format through stdio. Existing log severity/fatal handling remains unchanged."
+  ],
+  "candidate_private": true,
+  "code_edited": false,
+  "guest_qualified": false
+}
