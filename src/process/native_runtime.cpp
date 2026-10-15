@@ -218,9 +218,9 @@ bool NativeRuntime::Create(const NativeImage& image, uint32_t& id) {
     slot.data[0].end = DataAddress + 4096;
     return true;
 }
-bool NativeRuntime::TrustedImage(const uint8_t* image, uint32_t bytes) const {
+bool NativeRuntime::TrustedImage(const uint8_t* image, uint32_t bytes, uint32_t maximumBytes) const {
     const uint32_t address = (uint32_t)image;
-    if (!address || !bytes || bytes > 2 * 1024 * 1024
+    if (!address || !bytes || bytes > maximumBytes
         || (uint64_t)address + bytes > 0x100000000ULL) return false;
     const uint64_t end = (uint64_t)address + bytes;
     for (uint64_t page = address & ~4095U; page < end; page += 4096) {
@@ -231,11 +231,22 @@ bool NativeRuntime::TrustedImage(const uint8_t* image, uint32_t bytes) const {
     return true;
 }
 bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id) {
+    return CreateElf(image, bytes, id, Elf32MaximumPages);
+}
+bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                              uint32_t imagePageLimit) {
     InterruptGuard guard;
     id = 0;
-    if (!SafeKernelContext() || !nextId || !TrustedImage(image, bytes)) return false;
+    if (!imagePageLimit || imagePageLimit > Elf32MaximumLargePages) return false;
+    const bool large = imagePageLimit > Elf32MaximumPages;
+    const uint32_t fileLimit = large ? Elf32MaximumLargePages * 4096 : 2 * 1024 * 1024;
+    if (!SafeKernelContext() || !nextId || !TrustedImage(image, bytes, fileLimit)) return false;
     Elf32LoadPlan plan;
-    if (!ValidateElf32(image, bytes, plan) || plan.pageCount > ProcessAddressSpace::MaximumPages - 2)
+    Elf32Error validation;
+    if (!ValidateElf32(image, bytes, plan, validation, imagePageLimit)) return false;
+    const uint32_t capacity = large ? plan.pageCount + 2 + ProcessAddressSpace::MaximumPages
+                                    : ProcessAddressSpace::MaximumPages;
+    if (capacity > ProcessAddressSpace::MaximumCapacityPages || plan.pageCount > capacity - 2)
         return false;
     const uint32_t reservedBegin = UserStackBottom - 4096, reservedEnd = UserStackTop + 4096;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
@@ -245,19 +256,17 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
         if (begin < reservedEnd && reservedBegin < end) return false;
     }
     uint32_t index; Slot* target = FreeSlot(index);
-    if (!target || !target->space.Prepare(*paging, *frames)) return false;
+    if (!target || !target->space.Prepare(*paging, *frames, capacity)) return false;
     Slot& slot = *target;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
         const Elf32LoadSegment& segment = plan.segments[i];
         const uint32_t begin = segment.virtualAddress & ~4095U;
         const uint32_t end = (segment.virtualAddress + segment.memorySize + 4095) & ~4095U;
-        for (uint32_t page = begin; page < end; page += 4096)
-            if (!slot.space.MapNewPage(page, true)) goto rollback;
+        if (!slot.space.MapNewRange(begin, end - begin, true)) goto rollback;
         if (segment.fileSize && !slot.space.CopyToUser(segment.virtualAddress,
                 image + segment.fileOffset, segment.fileSize)) goto rollback;
-        if (!(segment.flags & Elf32Write))
-            for (uint32_t page = begin; page < end; page += 4096)
-                if (!slot.space.ProtectPage(page, false)) goto rollback;
+        if (!(segment.flags & Elf32Write) && !slot.space.ProtectRange(begin, end - begin, false))
+            goto rollback;
     }
     if (Admit(slot, index, plan.entry, id)) {
         slot.codeCount = slot.dataCount = 0;
@@ -276,6 +285,14 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
     }
 rollback:
     slot.space.Destroy(); return false;
+}
+bool NativeRuntime::MemoryStatistics(uint32_t id, ProcessMemoryStatistics& result) const {
+    InterruptGuard guard;
+    if (!SafeKernelContext()) return false;
+    for (uint32_t i = 0; i < MaximumProcesses; ++i)
+        if (slots[i].occupied && slots[i].status.id == id && !slots[i].status.reaped)
+            return slots[i].Space().QueryStatistics(result);
+    return false;
 }
 NativeRuntime::Slot* NativeRuntime::Current() {
     if (!enabled) return 0;
@@ -510,10 +527,14 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosProcessInfoResult), true)) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
         }
+        ProcessMemoryStatistics memory;
+        if (!slot->space.QueryStatistics(memory)) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
+        }
         const GtosProcessInfoResult result = {GTOS_PROCESS_INFO_ABI_VERSION,
             slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
-            GTOS_VM_PAGE_BYTES, ProcessAddressSpace::MaximumPages,
+            GTOS_VM_PAGE_BYTES, memory.capacityPages,
             ProcessAddressSpace::MaximumRegions, threadsEnabled ? MaximumProcesses : 1, 1};
         // The request was consumed before any write. IF is clear on BSP, so
         // full output validation also covers aliases and mixed-page failures.

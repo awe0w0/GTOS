@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "scope": "真实静态IA32 V8 ELF的大镜像装载、CPL3执行、权限、失败回滚、故障回收及普通槽位复用",
+  "qualified_runs": {
+    "validation-01": "b06ee54db34672b5fbdde2264eb39d1a869a315a61d01085ab1e5ea78dde1b44",
+    "large-02": "7c58b580d07f45e4edfd7a939ad14386591056f7764704244f5455264c866766",
+    "large-03": "0bfd763cf35949f2a8f2e336b9c93d5c9157ff29025c474245ae18c50f686019",
+    "large-04": "477cf9341a244c7c614e80cf07bc466ebb671b9571f6f89614c64f30c55a7ffa",
+    "large-05": "50ff13ce46eb990987bb8d36384597f515bd7cdd6aee16e00ec22fae0b4a7b39",
+    "default-01": "6556dfe7b0a35512dc9ba72bc8524a191bfee8efe71d94f70558f4849c4bb5dd",
+    "disassembly-01": "a3344a217b256f3ecdf0f80ded69152262a7a5d3a28bd2af33be3c73847f5e98"
+  },
+  "source_sha256": {
+    "include/process/elf32.h": "c04fff5a1e1a314b20cd2da3be81f11752d3dc6725a30e2dc0fced5f19a4549e",
+    "src/process/elf32.cpp": "4f19562c31492dec341b3ff7d38242d8b40ca41f23a544e1853e2f459e74bf3d",
+    "include/memory/process_address_space.h": "b93d41ac2f91c0b1c494fef8cfb3c61b8ef2528306d421ebaf0fbd841984d726",
+    "src/memory/process_address_space.cpp": "44ba762d36aa3e6829a86779d774da8385e3d3df9cb0a8960fb28283d250c89d",
+    "include/process/native_runtime.h": "f1a5b91c17122965e1a65ab21dac90c8d116a6bb6d09f1939583f62f10b60fb5",
+    "src/process/native_runtime.cpp": "e2b12afdf07c8f6dda0d46fc66cd86b7f48736770767bafced568c08a9514386"
+  },
+  "native_admission_run": true,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "production_image_changed": false,
+  "image_pages": 2383,
+  "initial_resident_pages": 2385,
+  "capacity_pages": 2641,
+  "metadata_frames": 11,
+  "private_table_frames": 4,
+  "first_fault": {
+    "stage": 2,
+    "vector": 14,
+    "error": 6,
+    "address": "0x00000000",
+    "instruction": "0x4015e699",
+    "allocation_bytes": 39144,
+    "alignment": 4096,
+    "free_block_measurement_complete": false
+  },
+  "default_regression": {
+    "programs": 44,
+    "contexts": 68,
+    "joins": 24,
+    "reaps": 44,
+    "configurations": 4,
+    "before_final_self_query_fix": true
+  },
+  "final_self_query": {
+    "large_capacity": 2641,
+    "large_observations": 35,
+    "ordinary_capacity": 256,
+    "ordinary_extra_metadata": 0,
+    "slot_reuse_and_exact_recovery": true
+  }
+}

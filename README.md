@@ -166,7 +166,9 @@ i386 非 PAE 目标仍不具备 NX 保护。
 Linux 参考构建逐步推进。Chromium 和网页渲染尚未在 GTOS 中运行。
 当前路线按[真实集成主线](docs/chromium-integration-plan.md)推进：完整 V8 构建与链接、
 GTOS Isolate/JS、本地 Content 网页及交互，再验收 HTTP/HTTPS 和音视频。
-当前交付架构为 IA32，x64 保留为备选；现阶段完整原生 Isolate 尚未运行。
+当前交付架构为 IA32，x64 保留为备选。真实静态 V8 ELF 已通过
+[大镜像装载模块](apps/native_v8_admission/README.md)在 GTOS CPL3 执行到 Isolate 创建；
+当前首错为对齐分配失败后的空指针写入，完整 Isolate/JS 尚未成功。
 
 ## 32 位 Chromium 原生运行库诊断
 

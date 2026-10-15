@@ -35,6 +35,11 @@ The explicit compile-time limits are:
 - 64 program headers and 256 optional section headers
 - User virtual addresses in `[0x40000000, 0xC0000000)`
 
+2026-10-15新增显式预算重载 `ValidateElf32(image, imageSize, plan, error, pageLimit)`：
+pageLimit必须在1–4096之间，原有重载仍使用256。格式、范围、W^X及失败全零计划
+约束保持。该重载只生成计划；实际大镜像映射还须由可信内核选择相应所有权预算，
+详见[装载模块](../apps/native_v8_admission/README.md)。
+
 The validator does not allocate, map, copy executable data, dereference user
 virtual addresses, or read file data beyond supplied bounds. Work depends on the
 bounded header counts, not file size or the amount of BSS. Overlap checking is

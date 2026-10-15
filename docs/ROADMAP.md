@@ -5,7 +5,7 @@ a separately tested x86-64 boot/protection foundation for later browser work.
 This roadmap separates verified capabilities from development targets. Work is reviewed and committed to `dev`;
 `main` is not changed automatically. No prototype is described as production-ready.
 
-## 当前优先级（2026-10-11）
+## 当前优先级（2026-10-15）
 
 依据 [issue #9](https://github.com/awe0w0/GTOS/issues/9)，当前交付架构为 GTOS 原生 IA32。
 开发循环为完整真实目标构建/客体运行、记录首个失败、实现必要服务、重新推进目标。
@@ -13,13 +13,13 @@ This roadmap separates verified capabilities from development targets. Work is r
 运行环境 → Content Shell 本地网页与输入/DOM → HTTP/HTTPS 与安全 → 音视频及
 更丰富的 HTML5。详见[集成主线](chromium-integration-plan.md)。完整原生浏览器仍未运行。
 
-可移植 SDK/平台覆盖及完整目标入口已发布，准备好的 pinned 输入、新输出冷构建
-已到达真实上游服务阻塞。日志立即退出和 GTOS uint32 日志 ID 适配后，完整续编
-已越过熵读取及 futex waiter/mutex 的头依赖，当前首个失败为 zlib/zconf.h:505。
-实际 Abseil 退出及熵消费者的客体矩阵、同伴存活和精确回收通过；熵 O2 对象与
-完整目标逐字一致。实际 waiter 为标准 C++，pthread 原已排除；此前判断已更正，
-条件等待仍无原生提供者。下一步核对 zlib/时区实际契约；完整 ELF 与客体
-Isolate 仍未通过，不以新叶子探针数量代替主线进度。
+完整58已由锁定真实对象缓存链接出静态IA32 V8 ELF，无未定义符号；空白主机
+bootstrap与完整冷构建仍待验收。真实2383页镜像已通过
+[大镜像装载模块](../apps/native_v8_admission/README.md)进入GTOS CPL3并完成全局
+初始化。当前首错是Isolate对齐分配失败后的空指针写入，尚未成功建立Isolate。
+下一步测实际堆存活、空闲及最大对齐块，依据失败处理分配策略，再推进Context/JS；
+网页、网络、视频和HTML5仍待后续主线。大镜像权限、失败回滚与精确回收已验收，
+普通入口限制保持；不以容量常量或叶子探针数量代替真实消费者进度。
 
 保留既有桌面、i386/x64 和组件回归；近期不扩展无真实消费者驱动的能力。
 容量修改须由真实 ELF、映射和堆/栈观测驱动，并同步检查所有权、失败回滚与回收。

@@ -64,7 +64,8 @@ namespace {
     }
 }
 ProcessAddressSpace::ProcessAddressSpace() : kernel(0), frames(0), directory(0),
-    kernelDirectory(0), pageCount(0), pendingPageCount(0), pendingTableCount(0),
+    kernelDirectory(0), pageCount(0), pages(inlinePages), pageLimit(MaximumPages),
+    metadataBase(0), metadataPages(0), pendingPageCount(0), pendingTableCount(0),
     prepared(false), sealed(false), error(ProcessMemoryOk) {
     for (uint32_t i = 0; i < 1024; ++i) tables[i] = 0;
     for (uint32_t i = 0; i < MaximumPages; ++i) {
@@ -107,8 +108,14 @@ bool ProcessAddressSpace::AllocateFrame(uint32_t& address) {
     return true;
 }
 bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator) {
+    return Prepare(sharedKernel, allocator, MaximumPages);
+}
+bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                                  uint32_t capacityPages) {
     InterruptGuard guard;
     if (prepared || directory || frames) return Fail(ProcessMemoryBadState);
+    if (capacityPages < MaximumPages || capacityPages > MaximumCapacityPages)
+        return Fail(ProcessMemoryLimit);
     const PagingStatistics state = sharedKernel.getStatistics();
     if (!state.prepared || !state.enabled || !state.sealedForSharing
         || !sharedKernel.usesAllocator(allocator) || !allocator.getStatistics().initialized)
@@ -147,7 +154,27 @@ bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryMana
         return Fail(ProcessMemoryBadTemplate);
     }
     frames = &allocator;
+    if (capacityPages > MaximumPages) {
+        const uint32_t count = (capacityPages * sizeof(Page) + 4095) / 4096;
+        uint32_t base = 0;
+        if (!frames->allocateContiguous(count, base)) {
+            frames = 0; kernel = 0; kernelDirectory = 0;
+            return Fail(ProcessMemoryNoMemory);
+        }
+        if (!KernelAlias(base, count * 4096, true)) {
+            frames->freeContiguous(base, count);
+            frames = 0; kernel = 0; kernelDirectory = 0;
+            return Fail(ProcessMemoryBadAlias);
+        }
+        for (uint32_t i = 0; i < count; ++i) ClearPage(base + i * 4096);
+        metadataBase = base; metadataPages = count;
+        pages = (Page*)base; pageLimit = capacityPages;
+    }
     if (!AllocateFrame(directory)) {
+        if (metadataBase) {
+            frames->freeContiguous(metadataBase, metadataPages);
+            metadataBase = metadataPages = 0; pages = inlinePages; pageLimit = MaximumPages;
+        }
         frames = 0; kernel = 0; kernelDirectory = 0;
         return false;
     }
@@ -166,8 +193,24 @@ int ProcessAddressSpace::FindRegion(uint32_t handle) const {
         if (regions[i].handle == handle) return (int)i;
     return -1;
 }
+bool ProcessAddressSpace::MetadataLayout() const {
+    if (pageLimit < MaximumPages || pageLimit > MaximumCapacityPages) return false;
+    if (!metadataBase)
+        return pages == inlinePages && !metadataPages && pageLimit == MaximumPages;
+    if (pages != (Page*)metadataBase || (metadataBase & 4095) || pageLimit == MaximumPages
+        || metadataPages != (pageLimit * sizeof(Page) + 4095) / 4096
+        || metadataPages * 4096 > AddressLimit - metadataBase
+        || !KernelAlias(metadataBase, metadataPages * 4096, true)) return false;
+    for (uint32_t i = 0; i < metadataPages; ++i) {
+        const uint32_t frame = metadataBase + i * 4096;
+        if (!frames->isAllocated(frame) || frame == directory || frame == kernelDirectory) return false;
+        for (uint32_t di = 0; di < 1024; ++di)
+            if (frame == tables[di] || frame == (((uint32_t*)kernelDirectory)[di] & AddressMask)) return false;
+    }
+    return true;
+}
 bool ProcessAddressSpace::Layout(bool complete) const {
-    if (!prepared || !kernel || !frames || pageCount > MaximumPages
+    if (!prepared || !kernel || !frames || pageCount > pageLimit
         || pendingPageCount || pendingTableCount)
         return Fail(ProcessMemoryBadState);
     for (uint32_t i = 0; i < MaximumRegions; ++i) {
@@ -192,6 +235,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
         || state.directoryAddress != kernelDirectory) return Fail(ProcessMemoryBadTemplate);
     if (!frames->isAllocated(directory) || !KernelAlias(directory, 4096, true)
         || !KernelAlias(kernelDirectory, 4096, true)) return Fail(ProcessMemoryBadAlias);
+    if (!MetadataLayout()) return Fail(ProcessMemoryBadAlias);
     const uint32_t* shared = (const uint32_t*)kernelDirectory;
     const uint32_t* own = (const uint32_t*)directory;
     for (uint32_t di = 0; di < 1024; ++di) {
@@ -236,6 +280,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
                 return Fail(ProcessMemoryBadMapping);
         const uint32_t table = tables[page.address >> 22];
         if (!UserPage(page.address) || !table || !frames->isAllocated(page.frame)
+            || (metadataBase && page.frame >= metadataBase && page.frame - metadataBase < metadataPages * 4096)
             || !KernelAlias(page.frame, 4096, true)
             || (((uint32_t*)table)[(page.address >> 12) & 1023] & ~(Accessed | Dirty))
                 != (page.present ? PageEntry(page.frame, page.writable) : 0))
@@ -257,12 +302,7 @@ bool ProcessAddressSpace::RuntimeMutable() const {
 #endif
     return Layout(true);
 }
-bool ProcessAddressSpace::MapNewPage(uint32_t address, bool writable) {
-    InterruptGuard guard;
-    if (!Mutable()) return false;
-    if (!UserPage(address)) return Fail(ProcessMemoryBadRange);
-    if (FindPage(address) >= 0) return Fail(ProcessMemoryConflict);
-    if (pageCount == MaximumPages) return Fail(ProcessMemoryLimit);
+bool ProcessAddressSpace::MapOwnedPage(uint32_t address, bool writable) {
     const uint32_t di = address >> 22, ti = (address >> 12) & 1023;
     uint32_t table = tables[di], frame = 0;
     const bool newTable = !table;
@@ -284,16 +324,45 @@ bool ProcessAddressSpace::MapNewPage(uint32_t address, bool writable) {
     error = ProcessMemoryOk;
     return true;
 }
-bool ProcessAddressSpace::ProtectPage(uint32_t address, bool writable) {
+bool ProcessAddressSpace::MapNewPage(uint32_t address, bool writable) {
+    return MapNewRange(address, 4096, writable);
+}
+bool ProcessAddressSpace::MapNewRange(uint32_t address, uint32_t bytes, bool writable) {
     InterruptGuard guard;
     if (!Mutable()) return false;
-    if (!UserPage(address)) return Fail(ProcessMemoryBadRange);
-    const int index = FindPage(address);
-    if (index < 0) return Fail(ProcessMemoryNotMapped);
-    Page& page = pages[index];
-    uint32_t& entry = ((uint32_t*)tables[address >> 22])[(address >> 12) & 1023];
-    entry = writable ? entry | Writable : entry & ~Writable;
-    page.writable = writable;
+    if (!UserPage(address) || !bytes || (bytes & 4095) || bytes > UserLimit - address)
+        return Fail(ProcessMemoryBadRange);
+    if (bytes / 4096 > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
+    const uint32_t end = address + bytes, before = pageCount;
+    for (uint32_t page = address; page < end; page += 4096)
+        if (FindPage(page) >= 0) return Fail(ProcessMemoryConflict);
+    for (uint32_t page = address; page < end; page += 4096) {
+        if (!MapOwnedPage(page, writable)) {
+            while (pageCount > before) RemovePage(pageCount - 1);
+            return false;
+        }
+    }
+    error = ProcessMemoryOk;
+    return true;
+}
+bool ProcessAddressSpace::ProtectPage(uint32_t address, bool writable) {
+    return ProtectRange(address, 4096, writable);
+}
+bool ProcessAddressSpace::ProtectRange(uint32_t address, uint32_t bytes, bool writable) {
+    InterruptGuard guard;
+    if (!Mutable()) return false;
+    if (!UserPage(address) || !bytes || (bytes & 4095) || bytes > UserLimit - address)
+        return Fail(ProcessMemoryBadRange);
+    if (bytes / 4096 > pageLimit) return Fail(ProcessMemoryNotMapped);
+    const uint32_t end = address + bytes;
+    for (uint32_t page = address; page < end; page += 4096)
+        if (FindPage(page) < 0) return Fail(ProcessMemoryNotMapped);
+    for (uint32_t page = address; page < end; page += 4096) {
+        Page& owned = pages[FindPage(page)];
+        uint32_t& entry = ((uint32_t*)tables[page >> 22])[(page >> 12) & 1023];
+        entry = writable ? entry | Writable : entry & ~Writable;
+        owned.writable = writable;
+    }
     error = ProcessMemoryOk;
     return true;
 }
@@ -303,6 +372,12 @@ bool ProcessAddressSpace::UnmapPage(uint32_t address) {
     if (!UserPage(address)) return Fail(ProcessMemoryBadRange);
     const int index = FindPage(address);
     if (index < 0) return Fail(ProcessMemoryNotMapped);
+    RemovePage((uint32_t)index);
+    error = ProcessMemoryOk;
+    return true;
+}
+void ProcessAddressSpace::RemovePage(uint32_t index) {
+    const uint32_t address = pages[index].address;
     const uint32_t di = address >> 22, frame = pages[index].frame;
     ((uint32_t*)tables[di])[(address >> 12) & 1023] = 0;
     pages[index] = pages[--pageCount];
@@ -317,8 +392,6 @@ bool ProcessAddressSpace::UnmapPage(uint32_t address) {
         ((uint32_t*)directory)[di] = 0;
         ClearPage(tables[di]); frames->free(tables[di]); tables[di] = 0;
     }
-    error = ProcessMemoryOk;
-    return true;
 }
 bool ProcessAddressSpace::Seal() {
     InterruptGuard guard;
@@ -416,7 +489,7 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
         uint32_t missing = 0;
         for (uint32_t address = base; address < end; address += 4096)
             if (FindPage(address) < 0) ++missing;
-        if (missing > MaximumPages - pageCount) return Fail(ProcessMemoryLimit);
+        if (missing > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
         for (uint32_t address = base; address < end; address += 4096) {
             if (FindPage(address) >= 0) continue;
             const uint32_t di = address >> 22;
@@ -473,7 +546,7 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
     if (!bytes || ((address | bytes) & 4095) || address < UserBase
         || address >= UserLimit || bytes > UserLimit - address)
         return Fail(ProcessMemoryBadRange);
-    if (bytes / 4096 > MaximumPages) return Fail(ProcessMemoryNotMapped);
+    if (bytes / 4096 > pageLimit) return Fail(ProcessMemoryNotMapped);
     const uint32_t end = address + bytes;
     for (uint32_t page = address; page < end; page += 4096) {
         const int index = FindPage(page);
@@ -600,6 +673,8 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
         if (!kernel->query((uint32_t)current, mapping) || mapping.userAccessible
             || mapping.cacheDisabled || (writable && !mapping.writable)) return Fail(ProcessMemoryBadAlias);
         const uint32_t physical = mapping.physicalAddress;
+        if (metadataBase && physical >= metadataBase && physical - metadataBase < metadataPages * 4096)
+            return Fail(ProcessMemoryBadAlias);
         if (physical == directory || physical == kernelDirectory) return Fail(ProcessMemoryBadAlias);
         for (uint32_t di = 0; di < 1024; ++di)
             if (physical == tables[di]
@@ -659,6 +734,11 @@ bool ProcessAddressSpace::Destroy() {
         ClearPage(tables[i]); frames->free(tables[i]); tables[i] = 0;
     }
     ClearPage(directory); frames->free(directory);
+    if (metadataBase) {
+        for (uint32_t i = 0; i < metadataPages; ++i) ClearPage(metadataBase + i * 4096);
+        frames->freeContiguous(metadataBase, metadataPages);
+        metadataBase = metadataPages = 0; pages = inlinePages; pageLimit = MaximumPages;
+    }
     for (uint32_t i = 0; i < MaximumRegions; ++i)
         regions[i].base = regions[i].bytes = regions[i].handle = 0;
     directory = kernelDirectory = pageCount = 0;
@@ -667,6 +747,15 @@ bool ProcessAddressSpace::Destroy() {
     return true;
 }
 uint32_t ProcessAddressSpace::DirectoryAddress() const { return directory; }
+bool ProcessAddressSpace::QueryStatistics(ProcessMemoryStatistics& info) const {
+    InterruptGuard guard;
+    if (!prepared || !Context(true) || !Layout(false)) return false;
+    ProcessMemoryStatistics result = {pageCount, 0, pageLimit, metadataPages, 0};
+    for (uint32_t i = 0; i < pageCount; ++i) if (pages[i].region) ++result.dynamicPages;
+    for (uint32_t di = 0; di < 1024; ++di) if (tables[di]) ++result.tableFrames;
+    info = result; error = ProcessMemoryOk;
+    return true;
+}
 bool ProcessAddressSpace::Prepared() const { return prepared; }
 bool ProcessAddressSpace::Sealed() const { return sealed; }
 ProcessMemoryError ProcessAddressSpace::GetLastError() const { return error; }

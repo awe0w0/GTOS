@@ -67,9 +67,10 @@ namespace {
 }
 
 bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
-                   Elf32LoadPlan& output, Elf32Error& error) {
+                   Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
     Clear(output);
     error = Elf32Ok;
+    if (!pageLimit || pageLimit > Elf32MaximumLargePages) return Fail(Elf32PageLimit, error);
     if (!image) return Fail(Elf32NullImage, error);
     if (imageSize < HeaderSize) return Fail(Elf32TruncatedHeader, error);
     if (image[0] != 0x7F || image[1] != 'E' || image[2] != 'L' || image[3] != 'F')
@@ -130,7 +131,7 @@ bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
         uint32_t startPage = address & ~PageMask;
         uint32_t endPage = (address + memorySize + PageMask) & ~PageMask;
         uint32_t pages = (endPage - startPage) / Elf32PageSize;
-        if (pages > Elf32MaximumPages - plan.pageCount) return Fail(Elf32PageLimit, error);
+        if (pages > pageLimit - plan.pageCount) return Fail(Elf32PageLimit, error);
         for (uint32_t prior = 0; prior < plan.segmentCount; ++prior) {
             const Elf32LoadSegment& segment = plan.segments[prior];
             uint32_t priorStart = segment.virtualAddress & ~PageMask;
@@ -156,6 +157,11 @@ bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
 bool ValidateElf32(const uint8_t* image, uint32_t imageSize, Elf32LoadPlan& output) {
     Elf32Error error;
     return ValidateElf32(image, imageSize, output, error);
+}
+
+bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
+                   Elf32LoadPlan& output, Elf32Error& error) {
+    return ValidateElf32(image, imageSize, output, error, Elf32MaximumPages);
 }
 
 const char* Elf32ErrorName(Elf32Error error) {

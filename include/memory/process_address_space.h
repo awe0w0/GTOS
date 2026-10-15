@@ -14,6 +14,9 @@ namespace gtos { namespace memory {
         ProcessMemoryNone = 0, ProcessMemoryRead = 1, ProcessMemoryReadWrite = 3
     };
     struct ProcessMemoryRegionInfo { uint32_t base, bytes, residentPages; };
+    struct ProcessMemoryStatistics {
+        uint32_t residentPages, dynamicPages, capacityPages, metadataFrames, tableFrames;
+    };
     // BSP-only, non-PAE private user mappings. KernelPaging must be enabled and
     // permanently sealed; it and its allocator must outlive every process.
     // No destructor tears mappings down. Before Destroy(), remove ALL runnable
@@ -24,11 +27,14 @@ namespace gtos { namespace memory {
         static const uint32_t UserBase = 0x40000000u;
         static const uint32_t UserLimit = 0xC0000000u; // Exclusive.
         static const uint32_t MaximumPages = 256;
+        // Large ELF pages + root stack + the existing runtime-page budget.
+        static const uint32_t MaximumCapacityPages = 4096 + 2 + MaximumPages;
         static const uint32_t DynamicBase = 0x80000000u;
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
     private:
         struct Page { uint32_t address, frame, region; bool writable, present; };
+        static_assert(sizeof(Page) == 16, "ownership record wire-independent size");
         struct Region { uint32_t base, bytes, handle; };
         struct PendingPage { uint32_t address, frame; };
         struct PendingTable { uint32_t index, frame; };
@@ -36,7 +42,9 @@ namespace gtos { namespace memory {
         PhysicalMemoryManager* frames;
         uint32_t directory, kernelDirectory, pageCount;
         uint32_t tables[1024]; // Owned tables only; borrowed tables stay zero.
-        Page pages[MaximumPages]; // Authoritative ownership, never inferred from PTEs.
+        Page inlinePages[MaximumPages];
+        Page* pages; // Authoritative ownership, never inferred from PTEs.
+        uint32_t pageLimit, metadataBase, metadataPages;
         Region regions[MaximumRegions];
         // A readable range can contain at most MaximumPages consecutive pages,
         // hence at most two new tables. Transaction scratch never uses the stack.
@@ -58,6 +66,9 @@ namespace gtos { namespace memory {
         bool RegionRange(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t& base) const;
         uint32_t ConflictEnd(uint32_t base, uint32_t bytes) const;
         bool AllocateFrame(uint32_t& address);
+        bool MetadataLayout() const;
+        bool MapOwnedPage(uint32_t address, bool writable);
+        void RemovePage(uint32_t index);
         void RollbackPending();
         void InvalidatePage(uint32_t address) const;
         void RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes);
@@ -69,10 +80,16 @@ namespace gtos { namespace memory {
         // rejection for ANY present kernel PDE in the entire fixed user arena.
         // The allocator must be the identical instance used by sharedKernel.
         bool Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator);
+        // Kernel-only opt-in. Large ownership storage is allocated from checked
+        // supervisor identity frames, not from the kernel/trap stack or heap.
+        bool Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                     uint32_t capacityPages);
         // New zeroed data frames, never caller-supplied physical aliases.
         // Mapping/protection changes require unsealed state and kernel CR3.
         bool MapNewPage(uint32_t virtualAddress, bool writable);
+        bool MapNewRange(uint32_t address, uint32_t bytes, bool writable);
         bool ProtectPage(uint32_t virtualAddress, bool writable);
+        bool ProtectRange(uint32_t address, uint32_t bytes, bool writable);
         bool UnmapPage(uint32_t virtualAddress);
         // Freeze mappings before exposing the CR3 to a runnable task. Idempotent.
         bool Seal();
@@ -100,6 +117,7 @@ namespace gtos { namespace memory {
         bool Trim(uint32_t handle, uint32_t newBytes);
         // Read-only query also permits kernel CR3. No output on failure.
         bool QueryRegion(uint32_t handle, ProcessMemoryRegionInfo& info) const;
+        bool QueryStatistics(ProcessMemoryStatistics& info) const;
         // Full-range validation precedes all copying. Kernel buffers must be
         // mapped trusted supervisor buffers, disjoint from all owned
         // frames and all paging structures. A valid zero-length user address

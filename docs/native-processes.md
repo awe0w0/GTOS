@@ -110,6 +110,18 @@ Use `docs/elf32-loader.md` for the pure validator contract. Loading from a named
 GRUB module or another external source still requires caller-side lifecycle and
 source selection; this module does not reinterpret the bytecode app store.
 
+### 显式大镜像配置（2026-10-15）
+
+以上256页及2MiB文件上限继续适用于普通入口。可信内核可通过新增的
+`CreateElf(image, bytes, id, imagePageLimit)` 显式选择至多4096镜像页；超过256时，
+文件上限为16MiB，总所有权记录预算为实际镜像页数+两页根栈+256页运行时余量。
+记录容量最多4354，额外存储按需取自仅supervisor可见的物理帧；普通进程不分配它。
+单次VM提交仍最多256页，自查询maximum_pages报告进程真实总容量，wire布局不变。
+
+真实2383页V8镜像在32MiB和64MiB客机中已进入CPL3；中途OOM、PDE跨界、权限、
+故障回收及普通槽位复用通过。当前Isolate创建仍发生空指针页故障，未成功运行JS。
+详细预算、测试范围及原始日志见[大镜像装载模块](../apps/native_v8_admission/README.md)。
+
 The integrated default desktop now receives Catch as GRUB module 0,
 `native-fault.elf` as module 1, `native-peer.elf` as module 2, and the separately
 developed `browser-probe.elf` as module 3. The first two ELF files

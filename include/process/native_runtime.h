@@ -81,7 +81,7 @@ namespace gtos { namespace process {
         bool ExecutableEntry(const Slot&, uint32_t entry) const;
         bool LoadedDataRange(const Slot&, uint32_t address, uint32_t bytes) const;
         bool SafeKernelContext() const;
-        bool TrustedImage(const uint8_t*, uint32_t) const;
+        bool TrustedImage(const uint8_t*, uint32_t, uint32_t) const;
         Slot* FreeSlot(uint32_t& index);
         bool Admit(Slot&, uint32_t index, uint32_t entry, uint32_t& id);
         NativeRuntime(const NativeRuntime&);
@@ -101,10 +101,15 @@ namespace gtos { namespace process {
         // Validated static ET_EXEC only. The trusted source is consumed/copied
         // synchronously and is not retained. Stack+guards cannot overlap loads.
         bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id);
+        // Kernel-selected large-image profile; ordinary callers retain256pages
+        // and2MiB file limits. Runtime VM transactions retain the old256 cap.
+        bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                       uint32_t imagePageLimit);
         // Boot/desktop context only, never from a trap or on a victim stack.
         uint32_t Reap();
         bool RequestExit(uint32_t id, uint32_t code);
         bool Status(uint32_t id, NativeStatus&) const;
+        bool MemoryStatistics(uint32_t id, memory::ProcessMemoryStatistics&) const;
         bool ReadMemory(uint32_t id, uint32_t address, void* out, uint32_t bytes) const;
         NativeStatistics Statistics() const;
         static NativeRuntime* Active();
