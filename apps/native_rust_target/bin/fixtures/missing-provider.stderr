@@ -1,0 +1,23 @@
+error: linking with `/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld` failed: exit status: 1
+  |
+  = note:  "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld" "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/qualify-03/build/rustc5ndTxG/symbols.o" "<1 object files omitted>" "--as-needed" "-Bstatic" "/mnt/f/GTOS-Chromium/artifacts/native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib" "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/builtins-build-01/libcompiler_builtins.rlib" "-L" "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/qualify-03/build/rustc5ndTxG/raw-dylibs" "-Bdynamic" "-z" "noexecstack" "-o" "missing_provider.elf" "--gc-sections" "-O1" "--entry=GtosRustEntry" "-m" "elf_i386" "--no-undefined" "-z" "noexecstack" "--build-id=none" "-Bdynamic"
+  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+  = note: ld.lld: error: undefined symbol: gtos_native_divisor
+          >>> referenced by gtos_rust_entry.9685d7bd0508c09e-cgu.0
+          >>>               missing_provider.gtos_rust_entry.9685d7bd0508c09e-cgu.0.rcgu.o:(GtosRustEntry)
+          >>> referenced by gtos_rust_entry.9685d7bd0508c09e-cgu.0
+          >>>               missing_provider.gtos_rust_entry.9685d7bd0508c09e-cgu.0.rcgu.o:(GtosRustEntry)
+          
+          ld.lld: error: undefined symbol: gtos_native_value
+          >>> referenced by gtos_rust_entry.9685d7bd0508c09e-cgu.0
+          >>>               missing_provider.gtos_rust_entry.9685d7bd0508c09e-cgu.0.rcgu.o:(GtosRustEntry)
+          
+          ld.lld: error: undefined symbol: GtosNativeAdd
+          >>> referenced by gtos_rust_entry.9685d7bd0508c09e-cgu.0
+          >>>               missing_provider.gtos_rust_entry.9685d7bd0508c09e-cgu.0.rcgu.o:(GtosRustEntry)
+          
+
+error: aborting due to 1 previous error
+
+ERROR: `rustc` exited with a non-zero exit code: 1
+NOTE: To apply machine-applicable fix suggestions (if any), run: build/rust/apply_fixes.py ../build rustc obj/tools/gtos_rust_bin_qualification/missing-provider.rustflags.json

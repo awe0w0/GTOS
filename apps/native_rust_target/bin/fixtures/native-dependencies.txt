@@ -1,0 +1,2 @@
+obj/tools/gtos_rust_bin_qualification/native_values.native-values.o: \
+  ../source/tools/gtos_rust_bin_qualification/native-values.c

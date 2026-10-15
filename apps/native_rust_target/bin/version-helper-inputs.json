@@ -1,0 +1,47 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "files": {
+    "chrome/version.gni": {
+      "sha256": "cbb46b14cc6be9b036486d09a83d8f573b8ee5db0d1b56a440c0bbb4281ad9d3",
+      "blob": "934e5d9ea8136fba5be541ec16665dceb9068882"
+    },
+    "chrome/VERSION": {
+      "sha256": "d984ceff6b12e45709bfbb6a0274cadae2105c415d260e8e3352683458ede915",
+      "blob": "ee98ef187c54a6ba76b29495f4cd04aa14485ad4"
+    },
+    "build/util/version.py": {
+      "sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
+      "blob": "a5611af80297492cbbb132cbea99f71f63f3aeed"
+    },
+    "build/util/android_chrome_version.py": {
+      "sha256": "dfbf70b5f92a7abce376a7dc26ddce5fd6fbaa8fe88ab2e59aeb9220dfa2a722",
+      "blob": "3dde8dffb3a8b7dc42f42d1b45eee18690b9e7ea"
+    },
+    "build/util/LASTCHANGE.dummy": {
+      "sha256": "480ae9e79d839221f93e71de882216ce44cf90233ae67ed29f336982629a3ee9",
+      "blob": "21bb3c33c74512d8c9fafd76753a7338a9b9c18b"
+    },
+    "components/policy/tools/generate_policy_source.gni": {
+      "sha256": "f01568f435a6567fccbb544e87dd452ad04d5c8c50f8d375691f3a0a8300e51f",
+      "blob": "9bfa54093379720b2fef4926cdc7f6480203aa0b"
+    },
+    "components/policy/BUILD.gn": {
+      "sha256": "8ef1facfffe1fa18acf9ccc1a45af9ddfebb94366e0596f3045eaf43e9ed39c6",
+      "blob": "f724bf914a934de95d71eda0c17cc475b51a2eae"
+    }
+  },
+  "allowed_callsite": "//chrome/version.gni",
+  "allowed_script": "build/util/version.py",
+  "allowed_arguments": [
+    "-f",
+    "../source/chrome/VERSION",
+    "-t",
+    "full = \"@MAJOR@.@MINOR@.@BUILD@.@PATCH@\" major = \"@MAJOR@\" minor = \"@MINOR@\" build = \"@BUILD@\" patch = \"@PATCH@\" ",
+    "--os",
+    "gtos"
+  ],
+  "expected_output": "full = \"157.0.8089.0\" major = \"157\" minor = \"0\" build = \"8089\" patch = \"0\" \n",
+  "eval_allowed": false,
+  "output_file_allowed": false,
+  "official_build_allowed": false
+}

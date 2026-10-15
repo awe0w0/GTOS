@@ -8913,7 +8913,7 @@
     "complete_cold_build_pass": false,
     "production_image_changed": false
   },
-  "next_required": "审查真实 Content 图的 ui/menus 平台断言及通用实现，继续 libaom GTOS 配置和 Rust std 后端；本地首帧/DOM/关闭回收之后推进受控网络及音视频。",
+  "next_required": "审查 Linux 次级工具链 CUPS 探测；继续真实 Rust std、libxml 线程/fd/ICU、libaom 平台配置与 Content 本地首帧/DOM，之后推进受控网络及音视频。",
   "native_v8_workloads": {
     "module": "apps/native_v8_launch/workloads",
     "proofs": {
@@ -9356,12 +9356,12 @@
   },
   "content_graph_current": {
     "proof": {
-      "sha256": "0bbc58474cfd90a2d00c4bdb8c6445249f3317a6f7781964114696813badc657",
-      "path": "artifacts/native-rust-gtos-20261015-a/graph-13/status.json"
+      "sha256": "2d22521718df135692d8586b26a9878a36fe8aaf8c6181ce48a62c1a68a668af",
+      "path": "artifacts/native-rust-gtos-20261015-a/graph-18/status.json"
     },
-    "driver_sha256": "bdf1f9dff4ceafc258cd1fd2815c3ae0e4fa8a07b2e307b859b56df63bb55da9",
-    "launcher_sha256": "247e43189295ba460e9c7a00e25c8c80669e25823b16e68fd25b977d9a0d4a3e",
-    "dispatcher_sha256": "b7ac8f0ab47f060bff0c704d9a463102740911803090b16df483b83253e3a7bf",
+    "driver_sha256": "74fcdb6abee88591393f25c7042f767624ace74ca539c3e2c57019c6fe92e8ed",
+    "launcher_sha256": "a574f5315a3f7f110d170686dda55c7a73f18a523910478ee7f3091dae430c11",
+    "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
     "diagnostic_complete": true,
     "gn_returncode": 1,
     "gn_generation_pass": false,
@@ -9374,18 +9374,19 @@
     "argv": [
       "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
       "gen",
-      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/build",
-      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/source",
-      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/source/content-diagnostic.gn",
+      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-18/build",
+      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-18/source",
+      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-18/source/content-diagnostic.gn",
       "--root-target=//content/shell:content_shell",
       "--root-pattern=//content/shell:content_shell",
-      "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
+      "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nuse_glib=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
       "--fail-on-unused-args"
     ],
-    "gn_log_sha256": "d126d0e939185156a27eecfc37ea0205e9d3b239c4c9d25bfbd0f384c7504aaa",
+    "gn_log_sha256": "e9c743d1942d507aecec03795d1c8fd8acef8ce7bb1613aa26b267d651cbcb58",
     "exec_script_callsites": [
       "//build/timestamp.gni",
-      "//build/util/branding.gni"
+      "//build/util/branding.gni",
+      "//chrome/version.gni"
     ],
     "timestamp_calls": [
       {
@@ -9395,7 +9396,7 @@
         ],
         "timestamp": 1791090000,
         "script_sha256": "36bb3744127e386475fac3301a8f3911438296658c7bc5aef5aa4ba5362a01a4",
-        "dispatcher_sha256": "b7ac8f0ab47f060bff0c704d9a463102740911803090b16df483b83253e3a7bf",
+        "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
         "proof_sha256": "439241db2103d6f9a3919cf40e6d041327233cb3f2829d3fae8bdf1b2330fae6",
         "bound_inputs_unchanged": true,
         "returncode": 0
@@ -9412,20 +9413,42 @@
         ],
         "output": "full_name = \"Chromium\" short_name = \"Chromium\" bundle_id = \"org.chromium.Chromium\" creator_code = \"Cr24\" installer_full_name = \"Chromium Installer\" installer_short_name = \"Chromium Installer\" team_id = \"\" \n",
         "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
-        "dispatcher_sha256": "b7ac8f0ab47f060bff0c704d9a463102740911803090b16df483b83253e3a7bf",
+        "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
         "proof_sha256": "cd941bb6f1e1d6caaee854f6b3a5b7f7361ab3c0f334fd655ceb7f359cbc8450",
         "bound_inputs_unchanged": true,
         "returncode": 0
       }
     ],
+    "chrome_version_calls": [
+      {
+        "script": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/util/version.py",
+        "arguments": [
+          "-f",
+          "../source/chrome/VERSION",
+          "-t",
+          "full = \"@MAJOR@.@MINOR@.@BUILD@.@PATCH@\" major = \"@MAJOR@\" minor = \"@MINOR@\" build = \"@BUILD@\" patch = \"@PATCH@\" ",
+          "--os",
+          "gtos"
+        ],
+        "output": "full = \"157.0.8089.0\" major = \"157\" minor = \"0\" build = \"8089\" patch = \"0\" \n",
+        "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
+        "dispatcher_sha256": "dea7ac9518bc4761caefe34915a92d654b538c0de8f42d6ad5791185b2d1ffc3",
+        "proof_sha256": "bfc551816002c80c24d4769ecfc9ef96411ab451ce76823a4c6fff9b405e2982",
+        "bound_inputs_unchanged": true,
+        "returncode": 0
+      }
+    ],
+    "helper_eval_option_rejected": true,
+    "helper_output_option_rejected": true,
     "kerberos_enabled": false,
+    "host_glib_enabled": false,
     "official_google_api_keys_enabled": false,
     "internal_key_probe_executed": false,
-    "nasm_ia32_format_candidate": true,
-    "nasm_objects_qualified_at_graph_time": false,
-    "nasm_subsequently_qualified": "apps/native_nasm/qualification.json",
-    "first_blocker": "ui/menus/BUILD.gn:6: platform assertion, included by content/browser/BUILD.gn:376",
-    "next": "Review ui/menus generic code and platform dependencies; retain true libaom GTOS C/OS/thread and Rust std work"
+    "rust_bin_link_qualified": true,
+    "menus_runtime_qualified": false,
+    "libxml_runtime_qualified": false,
+    "first_blocker": "printing/BUILD.gn:482 (build/toolchain/linux:clang_x86): cups_config_helper.py exec_script denied, via Blink printing:metafile",
+    "next": "Review optional host CUPS probe without widening helper permissions; continue real std, libxml pthread/fd/ICU and Content first frame/DOM"
   },
   "native_nasm": {
     "module": "apps/native_nasm",
@@ -9451,5 +9474,109 @@
     "guest_simd_qualified": false,
     "production_image_changed": false,
     "object_scope": "NASM ELF32 format, structural checks, real upstream assembly and static relocation; not guest execution"
+  },
+  "native_rust_bin": {
+    "module": "apps/native_rust_target/bin",
+    "proof": {
+      "sha256": "91a668ae562388c95a061fb4548dd8c958e5481cf2b79492a051ac01c7d6444d",
+      "path": "artifacts/native-rust-bin-20261015-a/qualify-03/status.json"
+    },
+    "patch_sha256": "ca09a4a729a9efd5c01a5682748c25f22996eacfbf66b13ab4cf6137fc858273",
+    "patch_replay_pass": true,
+    "gn_targets": 2,
+    "gn_files": 34,
+    "source_inputs": 102,
+    "rust_bin_link_pass": true,
+    "prior_native_and_rlib_rules_unchanged": true,
+    "undefined_provider_rejected": true,
+    "replayed_elf_bytes_identical": true,
+    "elf": {
+      "sha256": "85518a55a7c514677c929748463496ebb671cd1aa0fea0c9a49e88bf88bec5ca",
+      "bytes": 2076,
+      "entry": 4198640,
+      "symbols": {
+        "__udivdi3": {
+          "value": 4198688,
+          "size": 5,
+          "type": 2,
+          "binding": 0,
+          "visibility": 2
+        },
+        "_RNvNtNtCs9HQj4DNk0un_17compiler_builtins3int19specialized_div_rem11u64_div_rem": {
+          "value": 4198752,
+          "size": 198,
+          "type": 2,
+          "binding": 0,
+          "visibility": 2
+        },
+        "_RNvNtNtCs9HQj4DNk0un_17compiler_builtins3int4udiv9___udivdi3": {
+          "value": 4198704,
+          "size": 43,
+          "type": 2,
+          "binding": 0,
+          "visibility": 2
+        },
+        "GtosRustEntry": {
+          "value": 4198640,
+          "size": 43,
+          "type": 2,
+          "binding": 1,
+          "visibility": 0
+        },
+        "gtos_native_divisor": {
+          "value": 4203080,
+          "size": 8,
+          "type": 1,
+          "binding": 1,
+          "visibility": 0
+        },
+        "gtos_native_value": {
+          "value": 4203072,
+          "size": 4,
+          "type": 1,
+          "binding": 1,
+          "visibility": 0
+        },
+        "GtosNativeAdd": {
+          "value": 4198960,
+          "size": 14,
+          "type": 2,
+          "binding": 1,
+          "visibility": 0
+        }
+      },
+      "imports": [],
+      "rust_to_c_branch_resolved": true,
+      "rust_builtin_division_resolved": true,
+      "native_data_address_resolved": true,
+      "no_host_libraries": true,
+      "no_wx": true,
+      "nonexecuting_stack": true,
+      "residual_relocations": false
+    },
+    "full_std_qualified": false,
+    "guest_executed": false,
+    "production_image_changed": false,
+    "compiler_builtins": {
+      "rlib_bytes": 2902920,
+      "rmeta_bytes": 2130346,
+      "gn_rule_replayed": false,
+      "rmeta_sha256": "609c5aba413e46bbd5a3ec3b0c8422fb1918e7c29ec1d7ef47eb0ba95e38188a",
+      "code_objects": 384,
+      "data_objects": 1,
+      "proof": {
+        "sha256": "04e06c61877a842b0c60efafe5150cf27dc6315c604cbbef24b9674a149b9c59",
+        "path": "artifacts/native-rust-bin-20261015-a/builtins-validate-02/status.json"
+      },
+      "guest_executed": false,
+      "source_members": 395,
+      "build_script_executed": false,
+      "metadata_objects": 2,
+      "rlib_sha256": "086783723a04775915fdf6348efad162139ad47ce63f1a80749a2fa65293d6b1",
+      "actual_dependencies": 181,
+      "standalone_compile_pass": true,
+      "empty_objects": 1
+    },
+    "content_candidates": "Four menus/libxml files published for reviewed graph reproduction; complete runtime unqualified. Actual libxml threads.c requires pthread.h, xmlIO.c requires fcntl.h."
   }
 }

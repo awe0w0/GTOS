@@ -1,0 +1,18 @@
+crate_name = gtos_rust_entry
+crate_type = bin
+output_extension = .elf
+output_dir = .
+rustflags = --edition=2024 -Zunstable-options --target=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/target/i686-unknown-gtos.json -Cpanic=abort -Copt-level=2 -Cdefault-linker-libraries=no --extern=core=/mnt/f/GTOS-Chromium/artifacts/native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib --extern=compiler_builtins=/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/builtins-build-01/libcompiler_builtins.rlib
+rustenv =
+label_name = rust_entry
+root_out_dir = .
+target_out_dir = obj/tools/gtos_rust_bin_qualification
+target_output_name = rust_entry
+
+build ./rust_entry.elf obj/tools/gtos_rust_bin_qualification/rust_entry.rustflags.json obj/tools/gtos_rust_bin_qualification/rust_entry.rsp.rust: rust_bin ../source/tools/gtos_rust_bin_qualification/entry.rs | ../source/tools/gtos_rust_bin_qualification/entry.rs ../../../native-rust-gtos-20261015-a/target/i686-unknown-gtos.json ../../../native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib ../../builtins-build-01/libcompiler_builtins.rlib obj/tools/gtos_rust_bin_qualification/native_values.native-values.o phony/rust_bin_inputs phony/rust_bin_inputs || ../../../native-rust-gtos-20261015-a/target/i686-unknown-gtos.json ../../../native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib ../../builtins-build-01/libcompiler_builtins.rlib phony/tools/gtos_rust_bin_qualification/native_values.linkdeps
+  source_file_part = entry.rs
+  source_name_part = entry
+  externs =
+  rustdeps = -Clink-arg=-Bdynamic -Clink-arg=obj/tools/gtos_rust_bin_qualification/native_values.native-values.o
+  ldflags = --entry=GtosRustEntry
+  sources = ../source/tools/gtos_rust_bin_qualification/entry.rs ../../../native-rust-gtos-20261015-a/target/i686-unknown-gtos.json ../../../native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib ../../builtins-build-01/libcompiler_builtins.rlib

@@ -1,0 +1,55 @@
+rule alink
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/llvm-ar rcs ${out} ${in}
+  description = GTOS AR ${out}
+rule asm
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang --target=i686-unknown-none-elf ${asmflags} -c ${in} -o ${out}
+  description = GTOS ASM ${in}
+rule cc
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang --target=i686-unknown-none-elf -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2 ${defines} ${include_dirs} ${cflags} ${cflags_c} -MD -MF ${out}.d -c ${in} -o ${out}
+  description = GTOS CC ${in}
+  depfile = ${out}.d
+  deps = gcc
+rule copy
+  command = cp -af ${in} ${out}
+  description = GTOS COPY ${in}
+rule cxx
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang -x c++ --target=i686-unknown-none-elf -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2 -fno-exceptions -fno-rtti ${defines} ${include_dirs} ${cflags} ${cflags_cc} -MD -MF ${out}.d -c ${in} -o ${out}
+  description = GTOS CXX ${in}
+  depfile = ${out}.d
+  deps = gcc
+rule link
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld -m elf_i386 ${ldflags} -o ${out} ${in} ${solibs} ${libs}
+  description = GTOS LINK ${out}
+rule rust_bin
+  command = "/usr/bin/python3" -I -B -S "../source/build/rust/gni_impl/rustc_wrapper.py" --dump-rustc-env-and-flags=${target_out_dir}/${label_name}.rustflags.json --rsp=${target_out_dir}/${label_name}.rsp --rustc=../source/third_party/rust-toolchain/bin/rustc --depfile=${output_dir}/${target_output_name}${output_extension}.d --emit=dep-info=${output_dir}/${target_output_name}${output_extension}.d,link -o ${output_dir}/${target_output_name}${output_extension} -- -Clinker="/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld" ${in} LDFLAGS ${ldflags} -m elf_i386 --no-undefined -z noexecstack --build-id=none RUSTENV ${rustenv}
+  description = GTOS RUST BIN ${out}
+  rspfile = ${target_out_dir}/${label_name}.rsp
+  rspfile_content = --crate-name ${crate_name} --crate-type ${crate_type} ${rustflags} ${rustdeps} ${externs} SOURCES ${sources}
+  depfile = ${output_dir}/${target_output_name}${output_extension}.d
+  deps = gcc
+  pool = build_toolchain_link_pool
+build phony/rust_bin_inputs: phony ../source/build/action_helpers.py ../source/build/gn_helpers.py ../source/build/rust/gni_impl/rustc_wrapper.py ../source/build/config/gtos/rust/i686-unknown-gtos.json ../source/third_party/rust-toolchain/bin/rustc
+rule rust_rlib
+  command = "/usr/bin/python3" -I -B -S "../source/build/rust/gni_impl/rustc_wrapper.py" --dump-rustc-env-and-flags=${target_out_dir}/${label_name}.rustflags.json --rsp=${target_out_dir}/${label_name}.rsp --rustc=../source/third_party/rust-toolchain/bin/rustc --depfile=${output_dir}/lib${target_output_name}${output_extension}.d --emit=dep-info=${output_dir}/lib${target_output_name}${output_extension}.d,link,metadata=${output_dir}/lib${target_output_name}.rmeta -o ${output_dir}/lib${target_output_name}${output_extension} -- ${in} LDFLAGS RUSTENV ${rustenv}
+  description = GTOS RUST ${out}
+  rspfile = ${target_out_dir}/${label_name}.rsp
+  rspfile_content = --crate-name ${crate_name} --crate-type ${crate_type} ${rustflags} ${rustdeps} ${externs} SOURCES ${sources}
+  depfile = ${output_dir}/lib${target_output_name}${output_extension}.d
+  deps = gcc
+build phony/rust_rlib_inputs: phony ../source/build/action_helpers.py ../source/build/gn_helpers.py ../source/build/rust/gni_impl/rustc_wrapper.py ../source/build/config/gtos/rust/i686-unknown-gtos.json ../source/third_party/rust-toolchain/bin/rustc
+rule solink
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld -m elf_i386 --shared --no-undefined --fatal-warnings -z text -z noexecstack --build-id=none --soname=${target_output_name}${output_extension} ${ldflags} -o ${output_dir}/${target_output_name}${output_extension} @${output_dir}/${target_output_name}${output_extension}.rsp
+  description = GTOS SHARED ${out}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in} ${solibs} ${libs} ${rlibs}
+rule solink_module
+  command = /mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld -m elf_i386 --shared --no-undefined --fatal-warnings -z text -z noexecstack --build-id=none --soname=${target_output_name}${output_extension} ${ldflags} -o ${output_dir}/${target_output_name}${output_extension} @${output_dir}/${target_output_name}${output_extension}.rsp
+  description = GTOS SHARED ${out}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in} ${solibs} ${libs} ${rlibs}
+rule stamp
+  command = touch ${out}
+  description = GTOS STAMP ${out}
+
+subninja obj/tools/gtos_rust_bin_qualification/native_values.ninja
+subninja obj/tools/gtos_rust_bin_qualification/rust_entry.ninja

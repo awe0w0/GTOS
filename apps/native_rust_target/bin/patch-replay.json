@@ -1,0 +1,8 @@
+{
+  "requires": "Pinned Chromium, existing GTOS/Rust core/shared-link platform overlays",
+  "passed": true,
+  "base_sha256": "1a684360ba2294cc2005556225c79717e8de7f93dcd1e5cda06cd531d07ffc50",
+  "patch_sha256": "ca09a4a729a9efd5c01a5682748c25f22996eacfbf66b13ab4cf6137fc858273",
+  "candidate_sha256": "54470c45c3dd2793233f4640cb0e4b612dca6dff31e1eca86c567286d2474397",
+  "files": 1
+}

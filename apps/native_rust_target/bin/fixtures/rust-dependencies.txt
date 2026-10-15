@@ -1,0 +1,7 @@
+rust_entry.elf.d: ../source/tools/gtos_rust_bin_qualification/entry.rs
+
+
+rust_entry.elf: ../source/tools/gtos_rust_bin_qualification/entry.rs
+
+
+../source/tools/gtos_rust_bin_qualification/entry.rs:

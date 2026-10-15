@@ -19,11 +19,15 @@ Rust能力边界同时保留x64纯C++资格图。详见[GN core模块](../apps/n
 2026-10-15，[NASM格式适配](../apps/native_nasm/README.md)补充GTOS IA32的ELF32分支。
 真实NASM生成调用者/提供者及两份未改libaom SSSE3对象，依赖、符号、重定位及静态
 链接通过，缺失include和ELF64负例被拒绝。没有执行滤波函数或验收完整libaom平台。
-Content Shell精确root-pattern图已越过NASM错误，当前首错为`ui/menus/BUILD.gn:6`
-的平台断言，经`content/browser`依赖触发。完整图仍未通过，不按单个对象推断浏览器可用。
+Content Shell精确root-pattern图继续使用通用菜单模型准入和独立libxml配置候选。
+原始libxml解析器/字符表已编译为IA32，但pthread.h/fcntl.h等接口仍缺，候选运行时未验收。
+2026-10-15，[Rust可执行链接规则](../apps/native_rust_target/bin/README.md)完成真实GN
+两目标/34文件闭合，Rust/C/64位除法静态ELF及缺失提供者负例通过；已有core和本轮
+真实compiler_builtins提供元数据与内建函数。完整图已越过rust_bin错误，当前首错为
+Linux次级工具链`printing/BUILD.gn:482`的CUPS探测限制。GN仍返回1，没有Content产物。
 时间戳和品牌信息仅允许锁定脚本及固定参数；显式`use_kerberos=false`和
 `use_official_google_api_keys=false`用于开源本地首帧准备，未探测内部密钥。完整图仍返回1。
-下一步审查ui/menus通用代码与平台依赖，再处理真实libaom配置及FP/SIMD运行边界；
+下一步审查宿主CUPS探测，再继续完整Rust std、libxml线程/fd/ICU及真实libaom配置；
 不能直接把Linux平台宏当作GTOS能力。旧失败保留，不按测试名字删除目标。
 
 2026-10-15，完整62在同一真实原生V8入口上补验对象/数组、ArrayBuffer/TypedArray/
@@ -46,7 +50,7 @@ Script与退出：两种内存/CPU配置均检查得到GTOS42和3.75，stage4/re
 网页导航、音视频及HTML5。浏览器、视频、HTML5、Wasm和通用用户SMP尚未验收。
 实际Content Shell目标引入Rust；GTOS工具链仍是freestanding资格工具链。
 私有目标图已实际执行，Rust身份候选及必要配置使首错前进，但完整图仍返回1；
-没有通过Content对象构建。继续处理ui/menus、libaom平台配置、共享库运行时边界，并按真实
+没有通过Content对象构建。继续处理宿主工具配置、libxml/libaom、共享库运行时边界，并按真实
 Rust std消费者接入OS后端。未知平台no_threads与target_has_threads的冲突仍未解决。
 
 栈迹/共享边界的源码和必要回归见[对应模块](../apps/native_debug_shared/README.md)：

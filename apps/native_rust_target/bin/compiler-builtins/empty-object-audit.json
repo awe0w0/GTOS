@@ -1,0 +1,72 @@
+{
+  "scope": "Read-only exact member structure; no target execution",
+  "member": "libcompiler_builtins.compiler_builtins.7110b436fa260e6d-cgu.382.rcgu.o",
+  "sections": [
+    {
+      "flags": 0,
+      "name": "",
+      "offset": 0,
+      "bytes": 0,
+      "link": 0,
+      "type": 0
+    },
+    {
+      "flags": 0,
+      "name": ".strtab",
+      "offset": 228,
+      "bytes": 91,
+      "link": 0,
+      "type": 3
+    },
+    {
+      "flags": 6,
+      "name": ".text",
+      "offset": 52,
+      "bytes": 0,
+      "link": 0,
+      "type": 1
+    },
+    {
+      "flags": 48,
+      "name": ".comment",
+      "offset": 52,
+      "bytes": 142,
+      "link": 0,
+      "type": 1
+    },
+    {
+      "flags": 0,
+      "name": ".note.GNU-stack",
+      "offset": 194,
+      "bytes": 0,
+      "link": 0,
+      "type": 1
+    },
+    {
+      "flags": 0,
+      "name": ".symtab",
+      "offset": 196,
+      "bytes": 32,
+      "link": 1,
+      "type": 2
+    }
+  ],
+  "symbols": [
+    {
+      "value": 0,
+      "info": 0,
+      "section": 0,
+      "name": "",
+      "bytes": 0
+    },
+    {
+      "value": 0,
+      "info": 4,
+      "section": 65521,
+      "name": "compiler_builtins.7110b436fa260e6d-cgu.382",
+      "bytes": 0
+    }
+  ],
+  "bytes": 560,
+  "sha256": "459ebe0117706796ca3410b3370a955fbe94d91d67bcee15fd824bc4a9cc9798"
+}

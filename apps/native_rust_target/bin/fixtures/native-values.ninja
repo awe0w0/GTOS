@@ -1,0 +1,15 @@
+defines =
+include_dirs =
+cflags =
+cflags_c =
+label_name = native_values
+root_out_dir = .
+target_out_dir = obj/tools/gtos_rust_bin_qualification
+target_output_name = native_values
+
+build obj/tools/gtos_rust_bin_qualification/native_values.native-values.o: cc ../source/tools/gtos_rust_bin_qualification/native-values.c | ../source/build/config/unsafe_buffers_paths.txt ../source/build/config/raw_ptr_plugin_config.yaml
+  source_file_part = native-values.c
+  source_name_part = native-values
+
+build phony/tools/gtos_rust_bin_qualification/native_values.linkdeps: phony obj/tools/gtos_rust_bin_qualification/native_values.native-values.o
+build phony/tools/gtos_rust_bin_qualification/native_values: phony phony/tools/gtos_rust_bin_qualification/native_values.linkdeps

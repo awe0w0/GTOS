@@ -1,0 +1,18 @@
+ERROR at //printing/BUILD.gn:482:16 (//build/toolchain/linux:clang_x86): Disallowed exec_script call.
+        libs = exec_script("cups_config_helper.py",
+               ^-----------------------------------
+The use of exec_script use is restricted in this build. exec_script
+is discouraged because it can slow down the GN run and is easily
+abused.
+
+Generally nontrivial work should be done as build steps rather than
+when GN is run. For example, if you need to compute a nontrivial
+preprocessor define, it will be better to have an action target
+generate a header containing the define rather than blocking the GN
+run to compute the value.
+
+The allowed callers of exec_script is maintained in the "//.gn" file
+if you need to modify the allowlist.
+See //third_party/blink/renderer/core/BUILD.gn:460:15: which caused the file to be included.
+    deps += [ "//printing:metafile" ]
+              ^--------------------

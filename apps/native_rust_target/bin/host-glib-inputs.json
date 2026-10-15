@@ -1,0 +1,23 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "selected_arg": "use_glib=false",
+  "files": {
+    "build/config/ui.gni": {
+      "sha256": "9e53423f68f869a6110b906749e6d8ea9c8b93b775626b1a742e0570adcd26e1",
+      "blob": "9b879a7e4c080798a79a06c1b54c9b4159781e51"
+    },
+    "build/config/linux/BUILD.gn": {
+      "sha256": "fe86c86eb5e8319df95d82baa51ccfbbf242afc017e1f843592053a8566aedf1",
+      "blob": "e092782740c2d3a6d82ca578a4ef82a5cb1f9733"
+    },
+    "build/config/linux/pkg_config.gni": {
+      "sha256": "8d485d31c13668fda2cb17a69f791fb53f733327e11368fc6400b039da11e1ba",
+      "blob": "d637bd04af5fdd2b99d827026584616719baef9b"
+    },
+    "build/config/compiler/BUILD.gn": {
+      "sha256": "5fd8410dce79947067a656feb24d150bb838269f3f934f3028b00a62fc56b859",
+      "blob": "c106acfca9f331c7e04689d127c1bc42e061c7d1"
+    }
+  },
+  "scope": "Linux host command-line tools do not need GLib GUI integration; GTOS default is already false; no target identity or GTK shim added"
+}

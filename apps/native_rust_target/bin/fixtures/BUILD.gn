@@ -1,0 +1,33 @@
+# The full Content target keeps its standard dependencies. These fixtures
+# isolate the native bin tool and reuse the already qualified real core.
+source_set("native_values") {
+  sources = [ "native-values.c" ]
+  configs = []
+  use_libcxx_modules = false
+}
+
+executable("rust_entry") {
+  sources = [ "entry.rs" ]
+  crate_root = "entry.rs"
+  crate_name = "gtos_rust_entry"
+  configs = []
+  no_default_deps = true
+  use_libcxx_modules = false
+  deps = [ ":native_values" ]
+  rustflags = [
+    "--edition=2024",
+    "-Zunstable-options",
+    "--target=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/target/i686-unknown-gtos.json",
+    "-Cpanic=abort",
+    "-Copt-level=2",
+    "-Cdefault-linker-libraries=no",
+    "--extern=core=/mnt/f/GTOS-Chromium/artifacts/native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib",
+    "--extern=compiler_builtins=/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/builtins-build-01/libcompiler_builtins.rlib",
+  ]
+  inputs = [
+    "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/target/i686-unknown-gtos.json",
+    "/mnt/f/GTOS-Chromium/artifacts/native-rust-gn-core-20261015-a/build-03/build/local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib",
+    "/mnt/f/GTOS-Chromium/artifacts/native-rust-bin-20261015-a/builtins-build-01/libcompiler_builtins.rlib",
+  ]
+  ldflags = [ "--entry=GtosRustEntry" ]
+}

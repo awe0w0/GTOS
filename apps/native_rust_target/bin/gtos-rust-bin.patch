@@ -1,0 +1,42 @@
+diff --git a/build/toolchain/gtos/BUILD.gn b/build/toolchain/gtos/BUILD.gn
+index 9e50560..42391ea 100644
+--- a/build/toolchain/gtos/BUILD.gn
++++ b/build/toolchain/gtos/BUILD.gn
+@@ -84,8 +84,8 @@ template("gtos_freestanding_toolchain") {
+       }
+     }
+ 
+-    # Rlibs do not link a GTOS program. Rust executables and dynamic libraries
+-    # need separate native runtime/link qualification before those tools exist.
++    # Rust binaries use the custom target's direct GNU LLD ABI. Runtime support
++    # and guest execution remain separate from this native link rule.
+     if (toolchain_has_rust && invoker.cpu == "x86") {
+       assert(gtos_python != "", "Set gtos_python to the reviewed host Python")
+       rustc_wrapper_path =
+@@ -120,6 +120,26 @@ template("gtos_freestanding_toolchain") {
+         rust_sysroot = rust_sysroot_relative
+         inputs = rustc_wrapper_inputs
+       }
++
++      tool("rust_bin") {
++        exename = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
++        depfile = "$exename.d"
++        rspfile = rustc_rsp_path
++        pool = "//build/toolchain:link_pool($default_toolchain)"
++        default_output_extension = ".elf"
++        default_output_dir = "{{root_out_dir}}"
++        description = "GTOS RUST BIN {{output}}"
++        outputs = [
++          exename,
++          rustc_env_and_flags_path,
++          "${rspfile}.rust",
++        ]
++        rspfile_content =
++            "$rustc_common_args {{rustdeps}} {{externs}} SOURCES {{sources}}"
++        command = "$rustc_wrapper --depfile=$depfile --emit=dep-info=$depfile,link -o $exename -- -Clinker=\"$gtos_clang_bin/ld.lld\" {{source}} LDFLAGS {{ldflags}} -m $_elf --no-undefined -z noexecstack --build-id=none RUSTENV {{rustenv}}"
++        rust_sysroot = rust_sysroot_relative
++        inputs = rustc_wrapper_inputs
++      }
+     }
+ 
+     tool("stamp") {

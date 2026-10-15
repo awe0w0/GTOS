@@ -1,0 +1,11 @@
+target_os="gtos"
+target_cpu="x86"
+is_debug=false
+is_component_build=false
+is_clang=true
+use_sysroot=false
+symbol_level=0
+action_pool_depth=1
+concurrent_links=1
+gtos_clang_bin="/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin"
+gtos_python="/usr/bin/python3"
