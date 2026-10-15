@@ -23,6 +23,9 @@ TypedArray/DataView、真实 GC、Promise 微任务及异常后的脚本恢复�
 当前是单用户线程、jitless 入口。下一步推进 Chromium Content 本地首帧与 DOM，
 网页浏览、视频和 HTML5 尚未验收。
 
+Content 依赖所需的[GTOS Rust 目标基础](apps/native_rust_target/README.md)已固定工具链、
+目标规格及真实 core 标准库编译证据；完整 Rust std 与 Content 构建仍待接入。
+
 显式测试配置新增[有界原生线程生命周期](apps/native_thread_lifecycle/README.md)：
 在 BSP 上调度共享地址空间的独立 CPL3 上下文，并验证退出、join、FP 和资源回收。
 默认启动及完整 V8 入口仍关闭该能力；TLS、errno、共享锁和 V8 线程桥接的显式

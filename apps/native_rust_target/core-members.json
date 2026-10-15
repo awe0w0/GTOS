@@ -1,0 +1,119 @@
+{
+  "objects": [
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.00.rcgu.o",
+      "bytes": 24912,
+      "sha256": "46386149cba2326063e05cabb326044260b8593bf47803d9958c59c6f2f7b124",
+      "executable_section_bytes": 10034
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.01.rcgu.o",
+      "bytes": 40624,
+      "sha256": "bdb769eb460f7500241b7dff257e77115215e297a0d14e80a75c96d3f338b7de",
+      "executable_section_bytes": 13775
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.02.rcgu.o",
+      "bytes": 35464,
+      "sha256": "805a3752b1727e3bb7fbb4ba24fc0c2fac600e5c9247a07cd680e7f5422b7777",
+      "executable_section_bytes": 18338
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.03.rcgu.o",
+      "bytes": 18960,
+      "sha256": "823452ba1c5429a0e179407059e754fba0f0f2380dbcbcdf35f929a65af89581",
+      "executable_section_bytes": 7922
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.04.rcgu.o",
+      "bytes": 27812,
+      "sha256": "88f9db0022e2394cc1b95678cf9d7d52bb8cc6767e3b009f9604106eb4fbc04c",
+      "executable_section_bytes": 5134
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.05.rcgu.o",
+      "bytes": 32448,
+      "sha256": "6780189cdfdad5c05bf306e0c74b5e4072073f3b61610804c38e6a604fb5fc41",
+      "executable_section_bytes": 8007
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.06.rcgu.o",
+      "bytes": 9832,
+      "sha256": "5c59f7b87cd37f7d6526b21827c5b48b9c125436a58bdc5203a1a4d12c919120",
+      "executable_section_bytes": 4157
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.07.rcgu.o",
+      "bytes": 27120,
+      "sha256": "64b51d9e7ae6f2cac722357d726d54e050547b7d9979bcd4dbfd9a472ff32fbf",
+      "executable_section_bytes": 8204
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.08.rcgu.o",
+      "bytes": 19840,
+      "sha256": "c852e2a9c6d883fdbb7f459b1ee33869454e340f024da1fc9bc2117b40b401a1",
+      "executable_section_bytes": 7282
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.09.rcgu.o",
+      "bytes": 34196,
+      "sha256": "2dfc81bd9a2090424fde14404346ad42f23bf40f9ae0e0561daa5c2f9f32dae2",
+      "executable_section_bytes": 8413
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.10.rcgu.o",
+      "bytes": 19620,
+      "sha256": "b03a65a1572932f36a0f7f024b5620332b0c19b0efce153d522d980a04934d2c",
+      "executable_section_bytes": 8562
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.11.rcgu.o",
+      "bytes": 27888,
+      "sha256": "fd13bac2bee0df5738f15c7dd5e13636d53f2278aaccc448c445f84033ba63a0",
+      "executable_section_bytes": 9546
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.12.rcgu.o",
+      "bytes": 14408,
+      "sha256": "828028902e555aa15fd751fa5a5004805c342a4dd69d41a9ee1befa161ede85f",
+      "executable_section_bytes": 4493
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.13.rcgu.o",
+      "bytes": 19940,
+      "sha256": "93defe0018bdd3cb63edde63bfcf762f8cc5c520578b0e7fe3ca93e59c15414b",
+      "executable_section_bytes": 8274
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.14.rcgu.o",
+      "bytes": 39836,
+      "sha256": "57c769445d4b8a04de92218bebfd5087d06851c3c3a6a09b84585fdae230df9d",
+      "executable_section_bytes": 5853
+    },
+    {
+      "name": "libcore.core.e5b3da6fbd4f48d0-cgu.15.rcgu.o",
+      "bytes": 41936,
+      "sha256": "b7c112bc568d6672f650900003e32f72bc47805f4f977c8ae73b02eb6dcb8dbd",
+      "executable_section_bytes": 9665
+    }
+  ],
+  "metadata": {
+    "lib.rmeta": {
+      "name": "lib.rmeta",
+      "bytes": 65467032,
+      "sha256": "c8f0e37bfc35245241b2dbc4de8ee4a531dfe470c3c4de4969fd2ad09327f4e9",
+      "payload_bytes": 65466725,
+      "payload_sha256": "d03218ea5bf0158df4b17c2762624103d06add1fd1c647c809fc87cb8757178f"
+    },
+    "lib.rmeta-link": {
+      "name": "lib.rmeta-link",
+      "bytes": 1044,
+      "sha256": "17b022f27e30ccd6db206e7d9e80033f51d4a0d12d01e5c7cff12b702e889124",
+      "payload_bytes": 735,
+      "payload_sha256": "488f4e3f06756e32a5a65f25d0d2d703bb649f1eb685849bbd1c4d627cf70084"
+    }
+  },
+  "elf_class": 32,
+  "elf_machine": "i386",
+  "elf_type": "ET_REL"
+}

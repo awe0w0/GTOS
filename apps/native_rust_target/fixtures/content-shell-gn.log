@@ -1,0 +1,9 @@
+ERROR at //build/config/BUILDCONFIG.gn:710:5: This target uses an undefined tool.
+    target(_target_type, _target_name) {
+    ^-----------------------------------
+The target //base/test:immediate_crash_test_helper
+of type "shared_library"
+uses toolchain //build/toolchain/gtos:clang_x86
+which doesn't have the tool "solink" defined.
+
+Alas, I can not continue.

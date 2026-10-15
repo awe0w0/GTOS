@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15T10:56:01.6854870Z",
+  "recorded_utc": "2026-10-15T12:18:54.2365966Z",
   "scope": "完整 IA32 V8 原生工作负载双配置通过；Content/网页/视频/HTML5 尚未验收",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -8913,7 +8913,7 @@
     "complete_cold_build_pass": false,
     "production_image_changed": false
   },
-  "next_required": "建立真实 Content Shell 的 GTOS 目标图并按实际首错补齐依赖，再验收本地 HTML/CSS/JS 首帧、输入、DOM 和窗口关闭/回收；之后推进受控网络与音视频。",
+  "next_required": "继续真实 Content Shell GTOS 图：厘清共享库辅助目标与静态工具链边界，再按真实 Rust std 消费者接入 OS 后端；本地 HTML/CSS/JS 首帧、输入、DOM、关闭/回收之后再推进受控网络与音视频。",
   "native_v8_workloads": {
     "module": "apps/native_v8_launch/workloads",
     "proofs": {
@@ -9025,5 +9025,69 @@
     "complete_cold_build_pass": false,
     "blank_host_bootstrap_pass": false,
     "production_image_changed": false
+  },
+  "native_rust_target": {
+    "module": "apps/native_rust_target",
+    "proofs": {
+      "package": {
+        "sha256": "a93f84d5b512d55d0795a66208ccbd07387c00885d9c651418104f639dd74c27",
+        "path": "artifacts/native-rust-gtos-20261015-a/provenance-01/status.json"
+      },
+      "target_query": {
+        "sha256": "d395450a141856413b330bd65bf63d1f177f53865796001d877ede273823d495",
+        "path": "artifacts/native-rust-gtos-20261015-a/query-04/status.json"
+      },
+      "core": {
+        "sha256": "a398b025a60ddb8d2d74877e875f60ab6c0d69ca2cb3418d1c311bb127ccfffa",
+        "path": "artifacts/native-rust-gtos-20261015-a/core-validate-01/status.json"
+      },
+      "content_graph": {
+        "sha256": "99144a3a44d09760d1f6651b60b7cedfc5580fc1a50e1795a1205a52fbdce402",
+        "path": "artifacts/native-rust-gtos-20261015-a/graph-07/status.json"
+      }
+    },
+    "target_sha256": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
+    "rustc_commit": "1edd55dcfcd573872c727fa3e086369a71661ee0",
+    "core_archive_qualified": true,
+    "authenticated_source_files": 730,
+    "authenticated_source_bytes": 42757995,
+    "actual_dependency_files": 393,
+    "codegen_elf32_i386_objects": 16,
+    "metadata_elf32_i386_objects": 2,
+    "codegen_object_bytes": 434836,
+    "outputs": {
+      "libcore.rlib": {
+        "sha256": "cf5dc4d575a0b3deec4add3daa93a1da98ec83f3d00312dc0556076de368bf7b",
+        "bytes": 65962704
+      },
+      "libcore.rmeta": {
+        "sha256": "d03218ea5bf0158df4b17c2762624103d06add1fd1c647c809fc87cb8757178f",
+        "bytes": 65466725
+      },
+      "core.d": {
+        "sha256": "53af9ec57fe4c96c24e2bc88d0c465f841220121d7957cea9c0fee911f2e6c61",
+        "bytes": 215864
+      },
+      "archive-members.json": {
+        "sha256": "63d1b2b95a935ff2f31de5b18f3f4cadcd3a4ff960685ad2eab251bc4aa01930",
+        "bytes": 4189
+      }
+    },
+    "embedded_metadata_matches_rmeta": true,
+    "retained_compilation_revalidated": true,
+    "recompiled_in_validation": false,
+    "generated_gn_compile_row": false,
+    "full_std_qualified": false,
+    "native_ffi_qualified": false,
+    "rust_guest_pass": false,
+    "content_shell_graph_pass": false,
+    "content_shell_build_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "first_content_blocker": "//base/test:immediate_crash_test_helper shared_library requires undefined solink in //build/toolchain/gtos:clang_x86",
+    "production_image_changed": false,
+    "complete_cold_build_pass": false,
+    "blank_host_bootstrap_pass": false
   }
 }

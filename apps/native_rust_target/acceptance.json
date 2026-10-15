@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "qualification": {
+    "module": "apps/native_rust_target",
+    "proofs": {
+      "package": {
+        "sha256": "a93f84d5b512d55d0795a66208ccbd07387c00885d9c651418104f639dd74c27",
+        "path": "artifacts/native-rust-gtos-20261015-a/provenance-01/status.json"
+      },
+      "target_query": {
+        "sha256": "d395450a141856413b330bd65bf63d1f177f53865796001d877ede273823d495",
+        "path": "artifacts/native-rust-gtos-20261015-a/query-04/status.json"
+      },
+      "core": {
+        "sha256": "a398b025a60ddb8d2d74877e875f60ab6c0d69ca2cb3418d1c311bb127ccfffa",
+        "path": "artifacts/native-rust-gtos-20261015-a/core-validate-01/status.json"
+      },
+      "content_graph": {
+        "sha256": "99144a3a44d09760d1f6651b60b7cedfc5580fc1a50e1795a1205a52fbdce402",
+        "path": "artifacts/native-rust-gtos-20261015-a/graph-07/status.json"
+      }
+    },
+    "target_sha256": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
+    "rustc_commit": "1edd55dcfcd573872c727fa3e086369a71661ee0",
+    "core_archive_qualified": true,
+    "authenticated_source_files": 730,
+    "authenticated_source_bytes": 42757995,
+    "actual_dependency_files": 393,
+    "codegen_elf32_i386_objects": 16,
+    "metadata_elf32_i386_objects": 2,
+    "codegen_object_bytes": 434836,
+    "outputs": {
+      "libcore.rlib": {
+        "sha256": "cf5dc4d575a0b3deec4add3daa93a1da98ec83f3d00312dc0556076de368bf7b",
+        "bytes": 65962704
+      },
+      "libcore.rmeta": {
+        "sha256": "d03218ea5bf0158df4b17c2762624103d06add1fd1c647c809fc87cb8757178f",
+        "bytes": 65466725
+      },
+      "core.d": {
+        "sha256": "53af9ec57fe4c96c24e2bc88d0c465f841220121d7957cea9c0fee911f2e6c61",
+        "bytes": 215864
+      },
+      "archive-members.json": {
+        "sha256": "63d1b2b95a935ff2f31de5b18f3f4cadcd3a4ff960685ad2eab251bc4aa01930",
+        "bytes": 4189
+      }
+    },
+    "embedded_metadata_matches_rmeta": true,
+    "retained_compilation_revalidated": true,
+    "recompiled_in_validation": false,
+    "generated_gn_compile_row": false,
+    "full_std_qualified": false,
+    "native_ffi_qualified": false,
+    "rust_guest_pass": false,
+    "content_shell_graph_pass": false,
+    "content_shell_build_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "first_content_blocker": "//base/test:immediate_crash_test_helper shared_library requires undefined solink in //build/toolchain/gtos:clang_x86",
+    "production_image_changed": false,
+    "complete_cold_build_pass": false,
+    "blank_host_bootstrap_pass": false
+  },
+  "public_files": {
+    "apps/native_rust_target/i686-unknown-gtos.json": "467daff443fad690b310890c644fdfa9aa2fa42906d837f96f4df0bfd86edd33",
+    "apps/native_rust_target/core-members.json": "63d1b2b95a935ff2f31de5b18f3f4cadcd3a4ff960685ad2eab251bc4aa01930",
+    "apps/native_rust_target/fixtures/version.log": "85d3d387642e9857f3e35a79de6701adcb29c918a2aff6102e33fe3a5a5c3e66",
+    "apps/native_rust_target/fixtures/target-cfg.log": "1082f314ce4b534809fa214a1b046fd89d60c1ca4674ea57ebfc8eda73eba540",
+    "apps/native_rust_target/fixtures/canonical-target.json": "033b43cad786055e90360c4c305c78b33487852fb91f2484bd32b6aa43a0dfa1",
+    "apps/native_rust_target/fixtures/content-shell-gn.log": "3271d13cef158987f78b0a34166f80f43717501de0e792d2b40b98b4c9f95b75",
+    "apps/native_rust_target/fixtures/rustc.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "apps/native_rust_target/fixtures/rustc.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "apps/native_rust_target/README.md": "7db16799cbc066550768cf4b4d148cdcc6c40e21fef6500a9866d54f6bbc7ea3",
+    "apps/native_rust_target/self-review.md": "e732365f230aaa545b1da840bcf46529ed36f55638c4c3c56e03dc5ca512a219",
+    "apps/native_rust_target/source-lock.json": "80582f71d47fa2bea89d40edb296ec829c8ca7b9a9d77c9e788f14ca0044c525",
+    "apps/native_rust_target/core-compile.json": "2b4ac92ec579dedabed3de1da17e720c372e933b1c27fe43b99fa333db559f0e"
+  },
+  "input_preservation_sha256": "095453262bb6b3bd7b9a272747d15be3ca91382de16631bdbb6064b96eab9e0b"
+}

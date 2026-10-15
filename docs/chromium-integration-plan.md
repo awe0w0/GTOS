@@ -6,6 +6,12 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 
 ## 当前证据与下一步
 
+2026-10-15，真实Content Shell GN首错从Rust ABI空值前进到GTOS工具链缺少solink：
+`//base/test:immediate_crash_test_helper`共享库辅助目标。独立GTOS Rust规格由固定
+Chromium DEPS中的已认证工具链读取，保留GTOS/x86身份、SSE2和真实多线程目标属性。
+包内未修改的core已用该目标编译并独立核对来源、依赖与ELF32归档；这是编译器基础
+资格，非完整GN、std或客机运行。详见[Rust目标基础](../apps/native_rust_target/README.md)。
+
 2026-10-15，完整62在同一真实原生V8入口上补验对象/数组、ArrayBuffer/TypedArray/
 DataView、MarkSweepCompact GC回调、显式Promise微任务和预期异常后的恢复。两配置
 均要求掩码127、GC回调大于0、stage4/result0/exit0及精确Reap。仅替换main对象，
@@ -24,9 +30,10 @@ Script与退出：两种内存/CPU配置均检查得到GTOS42和3.75，stage4/re
 
 下一步按issue #9推进真实Chromium Content本地首帧和DOM，再接受控网络、
 网页导航、音视频及HTML5。浏览器、视频、HTML5、Wasm和通用用户SMP尚未验收。
-实际Content Shell目标引入Rust；现有GTOS工具链仍是freestanding资格工具链，
-上游Rust配置没有GTOS目标分支。先用完整锁定源码与GTOS覆盖建立真实目标图，
-按实际首错补齐目标/服务。此处是源码检查结论，尚未完成GTOS Content GN图执行。
+实际Content Shell目标引入Rust；GTOS工具链仍是freestanding资格工具链。
+私有目标图已实际执行，Rust身份候选及必要配置使首错前进，但完整图仍返回1；
+没有通过Content对象构建。继续厘清共享库辅助目标与静态GTOS工具链边界，并按真实
+Rust std消费者接入OS后端。未知平台no_threads与target_has_threads的冲突仍未解决。
 
 栈迹/共享边界的源码和必要回归见[对应模块](../apps/native_debug_shared/README.md)：
 真实直接调用者PC、原始地址输出及关闭stderr；共享映射和命名显式失败，误用共享

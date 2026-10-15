@@ -1,0 +1,7 @@
+rustc 1.100.0-nightly (1edd55dcf 2026-09-09) (1edd55dcfcd573872c727fa3e086369a71661ee0-1120-llvmorg-24-init-7747-g62397f8b chromium)
+binary: rustc
+commit-hash: 1edd55dcfcd573872c727fa3e086369a71661ee0
+commit-date: 2026-09-09
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 24.0.0
