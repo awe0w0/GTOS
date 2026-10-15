@@ -1,0 +1,342 @@
+{
+  "passed": true,
+  "scope": "NASM ELF32 objects and static relocation, not guest execution or full libaom",
+  "commands": [
+    {
+      "label": "version",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-v"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "edab01fb04ff6b195f55597cf271f820a27236fe6517c010b92e0c31fc75de25",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "caller",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-felf32",
+        "--reproducible",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/",
+        "-I./",
+        "-I/mnt/f/GTOS-Chromium/sources/chromium-full/src/",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/gen/",
+        "-MD",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/caller.d",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/caller.o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/caller.asm"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "provider",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-felf32",
+        "--reproducible",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/",
+        "-I./",
+        "-I/mnt/f/GTOS-Chromium/sources/chromium-full/src/",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/gen/",
+        "-MD",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/provider.d",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/provider.o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/provider.asm"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "bilinear",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-felf32",
+        "--reproducible",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/assembly-config/",
+        "-I/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/",
+        "-I./",
+        "-I/mnt/f/GTOS-Chromium/sources/chromium-full/src/",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/gen/",
+        "-DCHROMIUM",
+        "-MD",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/bilinear.d",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/bilinear.o",
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_bilinear_ssse3.asm"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "eighttap",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-felf32",
+        "--reproducible",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/assembly-config/",
+        "-I/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/",
+        "-I./",
+        "-I/mnt/f/GTOS-Chromium/sources/chromium-full/src/",
+        "-I/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/gen/",
+        "-DCHROMIUM",
+        "-MD",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/eighttap.d",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/eighttap.o",
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_8t_ssse3.asm"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "link",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld",
+        "-m",
+        "elf_i386",
+        "-static",
+        "--no-undefined",
+        "--build-id=none",
+        "-z",
+        "noexecstack",
+        "-e",
+        "GtosNasmCaller",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/caller-provider.elf",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/caller.o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/provider.o"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "missing-include",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-felf32",
+        "--reproducible",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/missing.o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/missing-include.asm"
+      ],
+      "returncode": 1,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e7fd1f24a4917f0fee0b538731eed7b6e250d69d6db8824bf78c1070748dfa1f"
+    },
+    {
+      "label": "wrong-format",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm",
+        "-felf64",
+        "--reproducible",
+        "-o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-02/wrong-format.o",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/provider.asm"
+      ],
+      "returncode": 0,
+      "shell": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "objects": {
+    "caller": {
+      "sha256": "c2757a72f01317239bf288fb0e85997fe404e50ae64dfe97351cf63d79f0f384",
+      "bytes": 704,
+      "kind": 1,
+      "entry": 0,
+      "exports": {
+        "GtosNasmCaller": {
+          "type": 2,
+          "visibility": 0,
+          "value": 0
+        }
+      },
+      "imports": [
+        "GtosNasmProvider",
+        "gtos_nasm_value"
+      ],
+      "relocations": [
+        {
+          "offset": 6,
+          "type": 1,
+          "symbol": "gtos_nasm_value",
+          "section": ".text"
+        },
+        {
+          "offset": 15,
+          "type": 2,
+          "symbol": "GtosNasmProvider",
+          "section": ".text"
+        }
+      ],
+      "dependencies": [
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/caller.asm",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/constants.inc"
+      ]
+    },
+    "provider": {
+      "sha256": "a5616845a6ab283aac647a6243c4cd416c0ad6f2a1504c76cc96e59eba2b98fd",
+      "bytes": 672,
+      "kind": 1,
+      "entry": 0,
+      "exports": {
+        "GtosNasmProvider": {
+          "type": 2,
+          "visibility": 0,
+          "value": 0
+        },
+        "gtos_nasm_value": {
+          "type": 1,
+          "visibility": 0,
+          "value": 0
+        }
+      },
+      "imports": [],
+      "relocations": [],
+      "dependencies": [
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/provider.asm"
+      ]
+    },
+    "bilinear": {
+      "sha256": "49a62f8ddf9f836850109a2b3f2dfd4f1b5acf1a540562d9bc5f634ccd76ec72",
+      "bytes": 1792,
+      "kind": 1,
+      "entry": 0,
+      "exports": {
+        "aom_filter_block1d4_v2_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 0
+        },
+        "aom_filter_block1d8_v2_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 99
+        },
+        "aom_filter_block1d16_v2_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 202
+        },
+        "aom_filter_block1d4_h2_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 323
+        },
+        "aom_filter_block1d8_h2_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 426
+        },
+        "aom_filter_block1d16_h2_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 533
+        }
+      },
+      "imports": [],
+      "relocations": [],
+      "dependencies": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_bilinear_ssse3.asm",
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_ports/x86_abi_support.asm",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/assembly-config/config/aom_config.asm"
+      ]
+    },
+    "eighttap": {
+      "sha256": "df1afcb9b58d8c4a3e900bd32071a85942f909b399489a0c0bd63b0b98e53e38",
+      "bytes": 4176,
+      "kind": 1,
+      "entry": 0,
+      "exports": {
+        "aom_filter_block1d16_h8_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 0
+        },
+        "aom_filter_block1d8_h8_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 304
+        },
+        "aom_filter_block1d4_h8_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 800
+        },
+        "aom_filter_block1d16_v8_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 1184
+        },
+        "aom_filter_block1d8_v8_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 1568
+        },
+        "aom_filter_block1d4_v8_ssse3": {
+          "type": 2,
+          "visibility": 2,
+          "value": 2048
+        }
+      },
+      "imports": [],
+      "relocations": [],
+      "dependencies": [
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_8t_ssse3.asm",
+        "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/third_party/x86inc/x86inc.asm",
+        "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/assembly-config/config/aom_config.asm"
+      ]
+    }
+  },
+  "host_version": "NASM version 3.01",
+  "static_link": {
+    "sha256": "81f31fea490528ce6d5739da92bae4e217c49ccd61aa23128caeac0d99c47740",
+    "bytes": 1028,
+    "kind": 2,
+    "entry": 4198624,
+    "exports": {
+      "GtosNasmProvider": {
+        "type": 2,
+        "visibility": 0,
+        "value": 4198656
+      },
+      "gtos_nasm_value": {
+        "type": 1,
+        "visibility": 0,
+        "value": 4202760
+      },
+      "GtosNasmCaller": {
+        "type": 2,
+        "visibility": 0,
+        "value": 4198624
+      }
+    },
+    "imports": [],
+    "relocations": []
+  },
+  "wrong_format_rejected": "Target must be ELF32 little endian",
+  "inputs_unchanged": true,
+  "manifest_sha256": "23dda18153af496025dbbeb1c62453418f4371b85ec1e20975ebcbf806445e1b",
+  "missing_include_rejected": true,
+  "target_executed": false,
+  "full_libaom_qualified": false,
+  "content_graph_complete": false,
+  "guard_sha256": "7efe7627c7cd1d4d608f7c7098c89f95515da671a07e2fc2a174009ed41c42bd"
+}

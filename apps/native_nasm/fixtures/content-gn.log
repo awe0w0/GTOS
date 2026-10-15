@@ -1,0 +1,6 @@
+ERROR at //ui/menus/BUILD.gn:6:1: Assertion failed.
+assert(is_win || is_mac || is_linux || is_chromeos || is_android ||
+^-----
+See //content/browser/BUILD.gn:376:5: which caused the file to be included.
+    "//ui/menus",
+    ^-----------

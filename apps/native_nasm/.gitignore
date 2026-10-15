@@ -1,0 +1,5 @@
+# These four depfiles are qualification evidence, not build intermediates.
+!fixtures/caller.d
+!fixtures/provider.d
+!fixtures/bilinear.d
+!fixtures/eighttap.d

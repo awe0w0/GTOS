@@ -8913,7 +8913,7 @@
     "complete_cold_build_pass": false,
     "production_image_changed": false
   },
-  "next_required": "继续真实 Content Shell GTOS 图：厘清共享库辅助目标与静态工具链边界，再按真实 Rust std 消费者接入 OS 后端；本地 HTML/CSS/JS 首帧、输入、DOM、关闭/回收之后再推进受控网络与音视频。",
+  "next_required": "审查真实 Content 图的 ui/menus 平台断言及通用实现，继续 libaom GTOS 配置和 Rust std 后端；本地首帧/DOM/关闭回收之后推进受控网络及音视频。",
   "native_v8_workloads": {
     "module": "apps/native_v8_launch/workloads",
     "proofs": {
@@ -9356,12 +9356,12 @@
   },
   "content_graph_current": {
     "proof": {
-      "sha256": "bfe20bc1c346f803c150f7d7663d02d7febb0fda9703213af2a501de75e62372",
-      "path": "artifacts/native-rust-gtos-20261015-a/graph-12/status.json"
+      "sha256": "0bbc58474cfd90a2d00c4bdb8c6445249f3317a6f7781964114696813badc657",
+      "path": "artifacts/native-rust-gtos-20261015-a/graph-13/status.json"
     },
-    "driver_sha256": "effbc6367229aac3377b585d6b2fee011151b0f828a142f9d844c65e13f786ad",
-    "launcher_sha256": "10150658281fffa4ced5f0be01c04bf4ab17236f7141050f784ac4cf9a0d80bd",
-    "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+    "driver_sha256": "bdf1f9dff4ceafc258cd1fd2815c3ae0e4fa8a07b2e307b859b56df63bb55da9",
+    "launcher_sha256": "247e43189295ba460e9c7a00e25c8c80669e25823b16e68fd25b977d9a0d4a3e",
+    "dispatcher_sha256": "b7ac8f0ab47f060bff0c704d9a463102740911803090b16df483b83253e3a7bf",
     "diagnostic_complete": true,
     "gn_returncode": 1,
     "gn_generation_pass": false,
@@ -9374,15 +9374,15 @@
     "argv": [
       "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
       "gen",
-      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/build",
-      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/source",
-      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/source/content-diagnostic.gn",
+      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/build",
+      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/source",
+      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/source/content-diagnostic.gn",
       "--root-target=//content/shell:content_shell",
       "--root-pattern=//content/shell:content_shell",
       "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
       "--fail-on-unused-args"
     ],
-    "gn_log_sha256": "75677929e2bee1169e5b988d4b3a1f3acf25be56d3d8b192905c113a5d0fba6c",
+    "gn_log_sha256": "d126d0e939185156a27eecfc37ea0205e9d3b239c4c9d25bfbd0f384c7504aaa",
     "exec_script_callsites": [
       "//build/timestamp.gni",
       "//build/util/branding.gni"
@@ -9395,7 +9395,7 @@
         ],
         "timestamp": 1791090000,
         "script_sha256": "36bb3744127e386475fac3301a8f3911438296658c7bc5aef5aa4ba5362a01a4",
-        "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+        "dispatcher_sha256": "b7ac8f0ab47f060bff0c704d9a463102740911803090b16df483b83253e3a7bf",
         "proof_sha256": "439241db2103d6f9a3919cf40e6d041327233cb3f2829d3fae8bdf1b2330fae6",
         "bound_inputs_unchanged": true,
         "returncode": 0
@@ -9412,7 +9412,7 @@
         ],
         "output": "full_name = \"Chromium\" short_name = \"Chromium\" bundle_id = \"org.chromium.Chromium\" creator_code = \"Cr24\" installer_full_name = \"Chromium Installer\" installer_short_name = \"Chromium Installer\" team_id = \"\" \n",
         "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
-        "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+        "dispatcher_sha256": "b7ac8f0ab47f060bff0c704d9a463102740911803090b16df483b83253e3a7bf",
         "proof_sha256": "cd941bb6f1e1d6caaee854f6b3a5b7f7361ab3c0f334fd655ceb7f359cbc8450",
         "bound_inputs_unchanged": true,
         "returncode": 0
@@ -9421,7 +9421,35 @@
     "kerberos_enabled": false,
     "official_google_api_keys_enabled": false,
     "internal_key_probe_executed": false,
-    "first_blocker": "third_party/nasm/nasm_assemble.gni:142: _nasm_flags undefined for GTOS, called by libaom_nasm",
-    "next": "Qualify real GTOS IA32 NASM ELF output and libaom platform configuration; preserve Rust and real dependencies"
+    "nasm_ia32_format_candidate": true,
+    "nasm_objects_qualified_at_graph_time": false,
+    "nasm_subsequently_qualified": "apps/native_nasm/qualification.json",
+    "first_blocker": "ui/menus/BUILD.gn:6: platform assertion, included by content/browser/BUILD.gn:376",
+    "next": "Review ui/menus generic code and platform dependencies; retain true libaom GTOS C/OS/thread and Rust std work"
+  },
+  "native_nasm": {
+    "module": "apps/native_nasm",
+    "proof": {
+      "sha256": "02410b3aa67ab2516e7408635d2e3e36f0b1a9cfa2ed5e27b04192fa1753ec07",
+      "path": "artifacts/native-nasm-20261015-a/qualify-02/status.json"
+    },
+    "input_sha256": "23dda18153af496025dbbeb1c62453418f4371b85ec1e20975ebcbf806445e1b",
+    "input_count": 23,
+    "patch_sha256": "e98f027d91e0c1d4b98a5f4d74e64249afeca2834a9a7fdff1e132689f2b0de3",
+    "patch_replay_sha256": "02f0c7dee302dc2a1c7f285b9970b2a635ba5d3390cc6c3b00810b60d463ccea",
+    "qualification_pass": true,
+    "elf32_objects": 4,
+    "real_libaom_asm_sources": 2,
+    "static_link_pass": true,
+    "missing_include_rejected": true,
+    "elf64_rejected": true,
+    "bound_inputs_unchanged": true,
+    "nasm_host_rebuilt": false,
+    "full_gn_nasm_action_replayed": false,
+    "target_executed": false,
+    "full_libaom_qualified": false,
+    "guest_simd_qualified": false,
+    "production_image_changed": false,
+    "object_scope": "NASM ELF32 format, structural checks, real upstream assembly and static relocation; not guest execution"
   }
 }

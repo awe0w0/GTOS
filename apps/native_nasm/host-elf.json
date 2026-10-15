@@ -1,0 +1,8 @@
+{
+  "sha256": "8ef0ae035d5b9f48fb1f1240e92b7fe83a26f55687a029f28ddb20f217474fc3",
+  "needed": [
+    "libpthread.so.0",
+    "libc.so.6"
+  ],
+  "interpreter": "/lib64/ld-linux-x86-64.so.2"
+}

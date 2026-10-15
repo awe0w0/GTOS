@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "after": "95bc7e163ea7daee3a2408b056d52cc342e2b3477b89003b973797aa1203f3e6",
+  "before": "f19475e0317263e15b6c028732f2638d1e024046931fdb55434ec73f7e73992d",
+  "patch_sha256": "e98f027d91e0c1d4b98a5f4d74e64249afeca2834a9a7fdff1e132689f2b0de3",
+  "revision": "525a09a813be0f75b646ee93fc2a31c27b87d722",
+  "subrepository": "third_party/nasm"
+}

@@ -1,0 +1,95 @@
+{
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "nasm_revision": "525a09a813be0f75b646ee93fc2a31c27b87d722",
+  "libaom_revision": "ae410fe8b7bd45f3cf61dc8f112dc783e2a08089",
+  "files": {
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/DEPS": "161aff1a78eb76cf7912b35850156b01e47478db90a32b0076fa874ac26ccd61",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/compiled_action.gni": "a39777a52a97de64296db76dfd6933f835672b7f4c96f0afc2982a21269a2628",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/libaom_srcs.gni": "37a6d26231c06a66b21ec6ef79ccf643a61249317c1d0198922b35bf8199e935",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/BUILD.gn": "93f98c8f8e9fa67a89afb3d057882850396fb8b3f39528ecce9b833dc2796475",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/nasm/nasm_assemble.gni": "f19475e0317263e15b6c028732f2638d1e024046931fdb55434ec73f7e73992d",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/nasm/BUILD.gn": "22545a5b2dc8df71adae6c162b701c3a556d9034b6682dda06c762c22a966883",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/nasm/nasm_sources.gni": "cefea76c341093660f684850b75e40e5a6fbb849b6da0d761389534d6fe36ac2",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/nasm/version.h": "8700741925885a74e7b1e6630868fc6ae7738b4dd15c1c707ce6c913108b6d7e",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_ports/x86_abi_support.asm": "cfd0c9e9e40f6da19c9257c42d7451e552cf6744f95c2c62df449e8611b75ddf",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/third_party/x86inc/x86inc.asm": "4fa5606ec63bfc9ee946f0b131c8efc2914c69db223637dc96ad19c2b1a579eb",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_bilinear_ssse3.asm": "59beb9ba56b1f9e759202a9867d9a58422518d81130ea02f1b49683b5fec8bad",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_8t_ssse3.asm": "3e605df8fc6eb3906e0996a1b9e44cff3fe3fa2abcd8046caa10631ef5ce20aa",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/patch/third_party/nasm/nasm_assemble.gni": "95bc7e163ea7daee3a2408b056d52cc342e2b3477b89003b973797aa1203f3e6",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/constants.inc": "7f695b2b45156ef8263c00ec51e6dc13712c0dd7f2d74a97fb3f421e74de9b20",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/caller.asm": "b94f2db9220c1057e32fa8c679bd65da989f27c5078037b29c914f1f0e1a5adf",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/provider.asm": "64c2b429c11c5566934af33d02d2f1f00f5b38d046b854f14d3038fdc52486d4",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/missing-include.asm": "ae5e3c32c7e7755d74684bf9e473ef29291eebbfa5561b25fcb43725f7888cae",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/assembly-config/config/aom_config.asm": "f1f8f5398be170df5baaff212cebbd6dcc332036f1ed441c45d3986ea3c2757e",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/nasm": "8ef0ae035d5b9f48fb1f1240e92b7fe83a26f55687a029f28ddb20f217474fc3",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/obj/third_party/nasm/nasm.ninja": "a0485bf668fc7268bb220a1d56d68a1c5913e725fafef891785987166339068b",
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/out/gtos-headless-reference-x64/args.gn": "84a519f950896e0f8b2e7800ae732174714958c037e9704da5cceb09a5b56918",
+    "/mnt/f/GTOS-Chromium/artifacts/chromium-reference-page-20261007T065725Z/chromium-build-status.json": "20777b7950cfb290af6cc1e8485e880dde93e02637e8a78ef300470adedafe2f",
+    "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-13/status.json": "0bbc58474cfd90a2d00c4bdb8c6445249f3317a6f7781964114696813badc657"
+  },
+  "source_git": {
+    "DEPS": {
+      "sha256": "161aff1a78eb76cf7912b35850156b01e47478db90a32b0076fa874ac26ccd61",
+      "blob": "ce98a0973a653ed3a4b01de8c71433db06904355",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "build/compiled_action.gni": {
+      "sha256": "a39777a52a97de64296db76dfd6933f835672b7f4c96f0afc2982a21269a2628",
+      "blob": "7684da79a251b13529ff022d1eee6440d697c569",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "third_party/libaom/libaom_srcs.gni": {
+      "sha256": "37a6d26231c06a66b21ec6ef79ccf643a61249317c1d0198922b35bf8199e935",
+      "blob": "aa5d5e0d7abb45a35c75c9ef739839a9810420e8",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "third_party/libaom/BUILD.gn": {
+      "sha256": "93f98c8f8e9fa67a89afb3d057882850396fb8b3f39528ecce9b833dc2796475",
+      "blob": "6684526a98876311986e5225bd7413ebb0ed4999",
+      "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e"
+    },
+    "third_party/nasm/nasm_assemble.gni": {
+      "sha256": "f19475e0317263e15b6c028732f2638d1e024046931fdb55434ec73f7e73992d",
+      "blob": "dafc88e187e4d098e4377109005f9be3c0dbbc20",
+      "revision": "525a09a813be0f75b646ee93fc2a31c27b87d722"
+    },
+    "third_party/nasm/BUILD.gn": {
+      "sha256": "22545a5b2dc8df71adae6c162b701c3a556d9034b6682dda06c762c22a966883",
+      "blob": "c5411ad3276caecddcb4e1bf6b4d9a76f0104e9f",
+      "revision": "525a09a813be0f75b646ee93fc2a31c27b87d722"
+    },
+    "third_party/nasm/nasm_sources.gni": {
+      "sha256": "cefea76c341093660f684850b75e40e5a6fbb849b6da0d761389534d6fe36ac2",
+      "blob": "2a1935d05944dedbd79035cdef2f74f067cc9c5f",
+      "revision": "525a09a813be0f75b646ee93fc2a31c27b87d722"
+    },
+    "third_party/nasm/version.h": {
+      "sha256": "8700741925885a74e7b1e6630868fc6ae7738b4dd15c1c707ce6c913108b6d7e",
+      "blob": "86e3e9f6fcb53137e8c9d5bf81f2dbc5e47d520f",
+      "revision": "525a09a813be0f75b646ee93fc2a31c27b87d722"
+    },
+    "third_party/libaom/source/libaom/aom_ports/x86_abi_support.asm": {
+      "sha256": "cfd0c9e9e40f6da19c9257c42d7451e552cf6744f95c2c62df449e8611b75ddf",
+      "blob": "a65e760a806c40f2a879fca43ffa0ee819d7129d",
+      "revision": "ae410fe8b7bd45f3cf61dc8f112dc783e2a08089"
+    },
+    "third_party/libaom/source/libaom/third_party/x86inc/x86inc.asm": {
+      "sha256": "4fa5606ec63bfc9ee946f0b131c8efc2914c69db223637dc96ad19c2b1a579eb",
+      "blob": "b0421f51fa7339a7193eba05b6adab49c36db095",
+      "revision": "ae410fe8b7bd45f3cf61dc8f112dc783e2a08089"
+    },
+    "third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_bilinear_ssse3.asm": {
+      "sha256": "59beb9ba56b1f9e759202a9867d9a58422518d81130ea02f1b49683b5fec8bad",
+      "blob": "fd4dad761627a475bd87f23716edcd7c9e0bd607",
+      "revision": "ae410fe8b7bd45f3cf61dc8f112dc783e2a08089"
+    },
+    "third_party/libaom/source/libaom/aom_dsp/x86/aom_subpixel_8t_ssse3.asm": {
+      "sha256": "3e605df8fc6eb3906e0996a1b9e44cff3fe3fa2abcd8046caa10631ef5ce20aa",
+      "blob": "4e76160cd0f223569270b6e1862323794b13ac47",
+      "revision": "ae410fe8b7bd45f3cf61dc8f112dc783e2a08089"
+    }
+  },
+  "host_nasm_sha256": "8ef0ae035d5b9f48fb1f1240e92b7fe83a26f55687a029f28ddb20f217474fc3",
+  "host_tool_scope": "Cached Linux reference NASM, bound to recorded reference metadata and source revisions; not rebuilt in this qualification",
+  "target_scope": "IA32 ELF format and real upstream assembly objects; no libaom C/OS/thread configuration or guest execution"
+}

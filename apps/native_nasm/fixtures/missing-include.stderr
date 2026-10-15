@@ -1,0 +1,1 @@
+/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/fixtures/missing-include.asm:1: error: unable to open include file `gtos-nasm-deliberately-absent.inc': No such file or directory

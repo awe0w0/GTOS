@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-nasm-20261015-a/qualify-v2.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 1.574703297999804,
+  "child_sha256": "143fc8e7f04656495af8c4ed7a49cff38a66f7dba61e9d9d1c55f5cf571a2898",
+  "guard_sha256": "7efe7627c7cd1d4d608f7c7098c89f95515da671a07e2fc2a174009ed41c42bd",
+  "launcher_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

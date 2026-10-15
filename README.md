@@ -26,8 +26,9 @@ TypedArray/DataView、真实 GC、Promise 微任务及异常后的脚本恢复�
 Content 依赖所需的[GTOS Rust 目标基础](apps/native_rust_target/README.md)已固定工具链、
 目标规格及真实 core 标准库编译证据；[真实 GN core 规则](apps/native_rust_target/gn/README.md)
 也已按 O3 参数编译通过。[IA32 共享链接规则](apps/native_shared_link/README.md)已生成并检查
-真实 ELF32 共享库和模块，包含 PIC、符号与拒绝边界。Content 图已推进到 libaom 的
-NASM 平台配置；完整 Rust std、动态加载和 Content 构建仍待接入。
+真实 ELF32 共享库和模块，包含 PIC、符号与拒绝边界。[NASM 格式适配](apps/native_nasm/README.md)
+已验证真实 IA32 汇编对象及拒绝边界，Content 图继续推进到 `ui/menus` 平台断言。
+完整 libaom 平台配置、Rust std、动态加载和 Content 构建仍待接入。
 
 显式测试配置新增[有界原生线程生命周期](apps/native_thread_lifecycle/README.md)：
 在 BSP 上调度共享地址空间的独立 CPL3 上下文，并验证退出、join、FP 和资源回收。
