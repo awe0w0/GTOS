@@ -1,0 +1,626 @@
+{
+  "schema_version": 1,
+  "module": "apps/native_shared_link",
+  "proof": {
+    "sha256": "f8d970f305813786db3506b9eb39abb416b2099781c0359974b82f7e7d3c740b",
+    "path": "artifacts/native-shared-link-20261015-a/qualify-02/status.json"
+  },
+  "driver_sha256": "b5ec39a338617697e52cae08e121733a9d8b78f0c00008655be1a1ead13c127d",
+  "launcher_sha256": "e2423b1b7e2ef3526c5f06650868a077cb36443bf8d777ff206d3f1aa3c682e0",
+  "guard_sha256": "d3779a28143f67933dbac06e6809a9824e9f7a8d2b180e81c19a093406ebf9a1",
+  "input_sha256": "d8b9042ac380af598229bf6489ffa55df5601efc9cb926bcb2b1be0d1ac537f7",
+  "patch_sha256": "816054aafd04294ab6cdb7d89c45c30ca9ed9135cfe328d1b2ed4fba5b07ca2b",
+  "patch_replay_pass": true,
+  "source_inputs": 96,
+  "shared_link_pass": true,
+  "x64_cpp_graph_pass": true,
+  "x64_compiled_this_run": false,
+  "x64_shared_link_qualified": false,
+  "rust_rule_unchanged": true,
+  "nonpic_rejected": true,
+  "undefined_symbol_rejected": true,
+  "complete_md_dependencies": true,
+  "ia32_outputs_equal_before_config_fix": true,
+  "bound_inputs_unchanged": true,
+  "input_symlinks_unchanged": true,
+  "gn_dependencies": [
+    "../source/build/circular_includes_bedrock.gni",
+    "../source/build/circular_includes_untriaged.gni",
+    "../source/build/config/BUILD.gn",
+    "../source/build/config/BUILDCONFIG.gn",
+    "../source/build/config/apple/mobile_config.gni",
+    "../source/build/config/c++/c++.gni",
+    "../source/build/config/cast.gni",
+    "../source/build/config/chrome_build.gni",
+    "../source/build/config/chromeos/args.gni",
+    "../source/build/config/clang/clang.gni",
+    "../source/build/config/compiler/compiler.gni",
+    "../source/build/config/compiler/pgo/pgo.gni",
+    "../source/build/config/coverage/coverage.gni",
+    "../source/build/config/cronet/config.gni",
+    "../source/build/config/dcheck_always_on.gni",
+    "../source/build/config/features.gni",
+    "../source/build/config/gclient_args.gni",
+    "../source/build/config/gtos/BUILD.gn",
+    "../source/build/config/ios/ios_sdk_overrides.gni",
+    "../source/build/config/mac/mac_sdk_overrides.gni",
+    "../source/build/config/ozone.gni",
+    "../source/build/config/ozone_extra.gni",
+    "../source/build/config/pch.gni",
+    "../source/build/config/profiling/profiling.gni",
+    "../source/build/config/rust.gni",
+    "../source/build/config/sanitizers/sanitizers.gni",
+    "../source/build/config/sysroot.gni",
+    "../source/build/config/ui.gni",
+    "../source/build/dotfile_settings.gni",
+    "../source/build/rust/known-target-triples.txt",
+    "../source/build/strict_deps_failures.gni",
+    "../source/build/toolchain/cc_wrapper.gni",
+    "../source/build/toolchain/gtos/BUILD.gn",
+    "../source/build/toolchain/kythe.gni",
+    "../source/build/toolchain/rbe.gni",
+    "../source/build/toolchain/siso.gni",
+    "../source/build/toolchain/sysroot.gni",
+    "../source/build/toolchain/toolchain.gni",
+    "../source/build_overrides/build.gni",
+    "../source/content-diagnostic.gn",
+    "../source/third_party/angle/dotfile_settings.gni",
+    "../source/third_party/rust-toolchain/VERSION",
+    "../source/tools/gtos_shared_link_qualification/BUILD.gn",
+    "./args.gn",
+    "./mobileprovisions.filelist"
+  ],
+  "gn_generated_inputs": [
+    "./args.gn",
+    "./mobileprovisions.filelist"
+  ],
+  "shared_elf_files": {
+    "libshared_values.so": {
+      "sha256": "e37051ba5868bed78bd999daf32454d2b8636146bb89b1d6289dd05a9e57cc4d",
+      "bytes": 1904,
+      "elf_class": 32,
+      "machine": "i386",
+      "type": "ET_DYN",
+      "entry": 0,
+      "soname": "libshared_values.so",
+      "needed": [],
+      "exports": {
+        "GtosSharedAdd": {
+          "name": "GtosSharedAdd",
+          "value": 4592,
+          "bytes": 53,
+          "binding": 1,
+          "type": 2,
+          "visibility": 0,
+          "section": 6
+        },
+        "gtos_shared_counter": {
+          "name": "gtos_shared_counter",
+          "value": 12932,
+          "bytes": 4,
+          "binding": 1,
+          "type": 1,
+          "visibility": 0,
+          "section": 10
+        }
+      },
+      "imports": [],
+      "relocations": [
+        {
+          "address": 8832,
+          "type": 6,
+          "symbol": "gtos_shared_counter"
+        }
+      ],
+      "loads": [
+        {
+          "vaddr": 0,
+          "filesz": 484,
+          "memsz": 484,
+          "flags": 4
+        },
+        {
+          "vaddr": 4592,
+          "filesz": 53,
+          "memsz": 53,
+          "flags": 5
+        },
+        {
+          "vaddr": 8744,
+          "filesz": 92,
+          "memsz": 3544,
+          "flags": 6
+        },
+        {
+          "vaddr": 12932,
+          "filesz": 16,
+          "memsz": 16,
+          "flags": 6
+        }
+      ],
+      "no_interpreter": true,
+      "no_host_libraries": true,
+      "no_textrel": true,
+      "no_wx_load": true,
+      "no_executable_stack": true,
+      "guest_executed": false,
+      "guest_dynamic_loader_qualified": false
+    },
+    "libmodule_consumer.so": {
+      "sha256": "f5486c93273dba17838982f95de8a1d47c05ab19523f9ddadd09ad366555af69",
+      "bytes": 1888,
+      "elf_class": 32,
+      "machine": "i386",
+      "type": "ET_DYN",
+      "entry": 0,
+      "soname": "libmodule_consumer.so",
+      "needed": [
+        "libshared_values.so"
+      ],
+      "exports": {
+        "GtosSharedUse": {
+          "name": "GtosSharedUse",
+          "value": 4592,
+          "bytes": 40,
+          "binding": 1,
+          "type": 2,
+          "visibility": 0,
+          "section": 6
+        }
+      },
+      "imports": [
+        "GtosSharedAdd"
+      ],
+      "relocations": [
+        {
+          "address": 12980,
+          "type": 7,
+          "symbol": "GtosSharedAdd"
+        }
+      ],
+      "loads": [
+        {
+          "vaddr": 0,
+          "filesz": 496,
+          "memsz": 496,
+          "flags": 4
+        },
+        {
+          "vaddr": 4592,
+          "filesz": 80,
+          "memsz": 80,
+          "flags": 5
+        },
+        {
+          "vaddr": 8768,
+          "filesz": 104,
+          "memsz": 3520,
+          "flags": 6
+        },
+        {
+          "vaddr": 12968,
+          "filesz": 16,
+          "memsz": 16,
+          "flags": 6
+        }
+      ],
+      "no_interpreter": true,
+      "no_host_libraries": true,
+      "no_textrel": true,
+      "no_wx_load": true,
+      "no_executable_stack": true,
+      "guest_executed": false,
+      "guest_dynamic_loader_qualified": false
+    },
+    "libmodule_named.so": {
+      "sha256": "19c35ca21f8ed83d1a49d86bb318c57aacd78795e46a5f20f10789ab66752028",
+      "bytes": 1888,
+      "elf_class": 32,
+      "machine": "i386",
+      "type": "ET_DYN",
+      "entry": 0,
+      "soname": "libmodule_named.so",
+      "needed": [
+        "libshared_values.so"
+      ],
+      "exports": {
+        "GtosSharedUse": {
+          "name": "GtosSharedUse",
+          "value": 4592,
+          "bytes": 40,
+          "binding": 1,
+          "type": 2,
+          "visibility": 0,
+          "section": 6
+        }
+      },
+      "imports": [
+        "GtosSharedAdd"
+      ],
+      "relocations": [
+        {
+          "address": 12980,
+          "type": 7,
+          "symbol": "GtosSharedAdd"
+        }
+      ],
+      "loads": [
+        {
+          "vaddr": 0,
+          "filesz": 492,
+          "memsz": 492,
+          "flags": 4
+        },
+        {
+          "vaddr": 4592,
+          "filesz": 80,
+          "memsz": 80,
+          "flags": 5
+        },
+        {
+          "vaddr": 8768,
+          "filesz": 104,
+          "memsz": 3520,
+          "flags": 6
+        },
+        {
+          "vaddr": 12968,
+          "filesz": 16,
+          "memsz": 16,
+          "flags": 6
+        }
+      ],
+      "no_interpreter": true,
+      "no_host_libraries": true,
+      "no_textrel": true,
+      "no_wx_load": true,
+      "no_executable_stack": true,
+      "guest_executed": false,
+      "guest_dynamic_loader_qualified": false
+    }
+  },
+  "commands": [
+    {
+      "name": "gn",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
+        "gen",
+        "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+        "--root=/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/source",
+        "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/source/content-diagnostic.gn",
+        "--root-target=//tools/gtos_shared_link_qualification:qualification",
+        "--root-pattern=//tools/gtos_shared_link_qualification:qualification",
+        "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\n",
+        "--fail-on-unused-args"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/source",
+      "shell": false,
+      "pid": 29295,
+      "process_group": 29295,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "456fc6d9e5e3827b42b0f857128f1632b9144d7ed631f01ccc9efa673783c1e1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-shared_values",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+        "--target=i686-unknown-none-elf",
+        "-ffreestanding",
+        "-fno-stack-protector",
+        "-fno-pic",
+        "-fno-pie",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-mno-mmx",
+        "-mno-sse",
+        "-mno-sse2",
+        "-D__GTOS__=1",
+        "-I../source",
+        "-fPIC",
+        "-MD",
+        "-MF",
+        "obj/tools/gtos_shared_link_qualification/libshared_values.shared-values.o.d",
+        "-c",
+        "../source/tools/gtos_shared_link_qualification/shared-values.c",
+        "-o",
+        "obj/tools/gtos_shared_link_qualification/libshared_values.shared-values.o"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29304,
+      "process_group": 29304,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-module_consumer",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+        "--target=i686-unknown-none-elf",
+        "-ffreestanding",
+        "-fno-stack-protector",
+        "-fno-pic",
+        "-fno-pie",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-mno-mmx",
+        "-mno-sse",
+        "-mno-sse2",
+        "-D__GTOS__=1",
+        "-I../source",
+        "-fPIC",
+        "-MD",
+        "-MF",
+        "obj/tools/gtos_shared_link_qualification/libmodule_consumer.module-consumer.o.d",
+        "-c",
+        "../source/tools/gtos_shared_link_qualification/module-consumer.c",
+        "-o",
+        "obj/tools/gtos_shared_link_qualification/libmodule_consumer.module-consumer.o"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29305,
+      "process_group": 29305,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-module_named",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+        "--target=i686-unknown-none-elf",
+        "-ffreestanding",
+        "-fno-stack-protector",
+        "-fno-pic",
+        "-fno-pie",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-mno-mmx",
+        "-mno-sse",
+        "-mno-sse2",
+        "-D__GTOS__=1",
+        "-I../source",
+        "-fPIC",
+        "-MD",
+        "-MF",
+        "obj/tools/gtos_shared_link_qualification/libmodule_named.module-consumer.o.d",
+        "-c",
+        "../source/tools/gtos_shared_link_qualification/module-consumer.c",
+        "-o",
+        "obj/tools/gtos_shared_link_qualification/libmodule_named.module-consumer.o"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29306,
+      "process_group": 29306,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "link-values",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld",
+        "-m",
+        "elf_i386",
+        "--shared",
+        "--no-undefined",
+        "--fatal-warnings",
+        "-z",
+        "text",
+        "-z",
+        "noexecstack",
+        "--build-id=none",
+        "--soname=libshared_values.so",
+        "-o",
+        "./libshared_values.so",
+        "@./libshared_values.so.rsp"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29307,
+      "process_group": 29307,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "link-consumer",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld",
+        "-m",
+        "elf_i386",
+        "--shared",
+        "--no-undefined",
+        "--fatal-warnings",
+        "-z",
+        "text",
+        "-z",
+        "noexecstack",
+        "--build-id=none",
+        "--soname=libmodule_consumer.so",
+        "-o",
+        "./libmodule_consumer.so",
+        "@./libmodule_consumer.so.rsp"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29324,
+      "process_group": 29324,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "link-named",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld",
+        "-m",
+        "elf_i386",
+        "--shared",
+        "--no-undefined",
+        "--fatal-warnings",
+        "-z",
+        "text",
+        "-z",
+        "noexecstack",
+        "--build-id=none",
+        "--soname=libmodule_named.so",
+        "-L.",
+        "-o",
+        "./libmodule_named.so",
+        "@./libmodule_named.so.rsp"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29341,
+      "process_group": 29341,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-nonpic",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang",
+        "--target=i686-unknown-none-elf",
+        "-ffreestanding",
+        "-fno-stack-protector",
+        "-fno-pic",
+        "-fno-pie",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-mno-mmx",
+        "-mno-sse",
+        "-mno-sse2",
+        "-D__GTOS__=1",
+        "-I../source",
+        "-MD",
+        "-MF",
+        "nonpic.o.d",
+        "-c",
+        "../source/tools/gtos_shared_link_qualification/shared-values.c",
+        "-o",
+        "nonpic.o"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29358,
+      "process_group": 29358,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "reject-nonpic",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld",
+        "-m",
+        "elf_i386",
+        "--shared",
+        "--no-undefined",
+        "--fatal-warnings",
+        "-z",
+        "text",
+        "-z",
+        "noexecstack",
+        "--build-id=none",
+        "--soname=reject-nonpic.so",
+        "-o",
+        "./reject-nonpic.so",
+        "@./reject-nonpic.so.rsp"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29359,
+      "process_group": 29359,
+      "state": "completed",
+      "returncode": 1,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "9a391c0f1df260652e09ffd89d2bb3d0b81e204e0e76713a1ecf9b516872f627"
+    },
+    {
+      "name": "reject-undefined",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/ld.lld",
+        "-m",
+        "elf_i386",
+        "--shared",
+        "--no-undefined",
+        "--fatal-warnings",
+        "-z",
+        "text",
+        "-z",
+        "noexecstack",
+        "--build-id=none",
+        "--soname=reject-undefined.so",
+        "-o",
+        "./reject-undefined.so",
+        "@./reject-undefined.so.rsp"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build",
+      "shell": false,
+      "pid": 29376,
+      "process_group": 29376,
+      "state": "completed",
+      "returncode": 1,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "9b8c892a89b1306c1fe5191d1a17c6ea4c2d00cbc8b99805beca1a4d6e2b73f3"
+    },
+    {
+      "name": "gn-x64",
+      "argv": [
+        "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
+        "gen",
+        "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/build-x64",
+        "--root=/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/source",
+        "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/source/content-diagnostic.gn",
+        "--root-target=//tools/gtos:platform_identity_probe",
+        "--root-pattern=//tools/gtos:platform_identity_probe",
+        "--args=target_os=\"gtos\"\ntarget_cpu=\"x64\"\nis_debug=false\nis_component_build=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\n",
+        "--fail-on-unused-args"
+      ],
+      "cwd": "/mnt/f/GTOS-Chromium/artifacts/native-shared-link-20261015-a/qualify-02/source",
+      "shell": false,
+      "pid": 29393,
+      "process_group": 29393,
+      "state": "completed",
+      "returncode": 0,
+      "stdout_sha256": "3014df52573732236dac8fd73d9480d7f60d965aca132e697b252270adc9aa8e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "replay_mode": "Static reviewed parameter arrays match GN rules; no Ninja, shell or target execution",
+  "gn_helpers_executed": false,
+  "guest_loader_pass": false,
+  "actual_base_helper_built": false,
+  "content_shell_build_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "isolation": {
+    "directory_execute_permissions": false,
+    "network_disabled": true,
+    "executable_files": {
+      "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+      "/mnt/f/GTOS-Chromium/toolchains/gn/gn": "c0dec98e11c4008b165a44bf407e06704710cf76e2af4aea22dd3b7102f0778e",
+      "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7",
+      "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/lld": "99ef321b93b2f3c8214bb592b633b3736d2df70f51e5454920131631f08e3412"
+    },
+    "source_write_denied": true,
+    "landlock_abi": 7
+  },
+  "scope": "Real GN IA32 shared link qualification; no GTOS dynamic loader or full Content acceptance"
+}

@@ -1,0 +1,86 @@
+diff --git a/build/config/BUILD.gn b/build/config/BUILD.gn
+index 91c1e77..993a7c8 100644
+--- a/build/config/BUILD.gn
++++ b/build/config/BUILD.gn
+@@ -365,7 +365,9 @@ config("executable_config") {
+ config("shared_library_config") {
+   configs = []
+ 
+-  if (is_win) {
++  if (is_gtos && current_cpu == "x86") {
++    configs += [ "//build/config/gtos:pic" ]
++  } else if (is_win) {
+     configs += _windows_linker_configs
+   } else if (is_mac) {
+     configs += [ "//build/config/mac:mac_dynamic_flags" ]
+diff --git a/build/config/gtos/BUILD.gn b/build/config/gtos/BUILD.gn
+index 8a36c9c..4dec3ab 100644
+--- a/build/config/gtos/BUILD.gn
++++ b/build/config/gtos/BUILD.gn
+@@ -6,3 +6,10 @@ config("platform") {
+   defines = [ "__GTOS__=1" ]
+   include_dirs = [ "//" ]
+ }
++
++if (current_cpu == "x86") {
++  config("pic") {
++    assert(is_gtos)
++    cflags = [ "-fPIC" ]
++  }
++}
+diff --git a/build/toolchain/gtos/BUILD.gn b/build/toolchain/gtos/BUILD.gn
+index 3fe930b..9e50560 100644
+--- a/build/toolchain/gtos/BUILD.gn
++++ b/build/toolchain/gtos/BUILD.gn
+@@ -22,10 +22,13 @@ template("gtos_freestanding_toolchain") {
+     _clang = "$gtos_clang_bin/clang"
+     _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2"
+ 
++    lib_switch = "-l"
++    lib_dir_switch = "-L"
++
+     tool("cc") {
+       depfile = "{{output}}.d"
+       depsformat = "gcc"
+-      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+       description = "GTOS CC {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+@@ -34,7 +37,7 @@ template("gtos_freestanding_toolchain") {
+     tool("cxx") {
+       depfile = "{{output}}.d"
+       depsformat = "gcc"
+-      command = "$_clang -x c++ $_common -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      command = "$_clang -x c++ $_common -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+       description = "GTOS CXX {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+@@ -64,8 +67,25 @@ template("gtos_freestanding_toolchain") {
+       default_output_extension = ".elf"
+     }
+ 
+-    # Rlibs do not link a GTOS program. Executables and dynamic libraries need
+-    # separate native runtime/link qualification before those tools are added.
++    if (invoker.cpu == "x86") {
++      # Produce real ELF32 shared files. This does not establish a guest loader.
++      foreach(_shared_tool, [ "solink", "solink_module" ]) {
++        tool(_shared_tool) {
++          _sofile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
++          command = "$gtos_clang_bin/ld.lld -m $_elf --shared --no-undefined --fatal-warnings -z text -z noexecstack --build-id=none --soname={{target_output_name}}{{output_extension}} {{ldflags}} -o $_sofile @${_sofile}.rsp"
++          description = "GTOS SHARED {{output}}"
++          outputs = [ _sofile ]
++          default_output_dir = "{{root_out_dir}}"
++          default_output_extension = ".so"
++          output_prefix = "lib"
++          rspfile = "${_sofile}.rsp"
++          rspfile_content = "{{inputs}} {{solibs}} {{libs}} {{rlibs}}"
++        }
++      }
++    }
++
++    # Rlibs do not link a GTOS program. Rust executables and dynamic libraries
++    # need separate native runtime/link qualification before those tools exist.
+     if (toolchain_has_rust && invoker.cpu == "x86") {
+       assert(gtos_python != "", "Set gtos_python to the reviewed host Python")
+       rustc_wrapper_path =

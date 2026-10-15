@@ -1,0 +1,24 @@
+{
+  "patch_sha256": "816054aafd04294ab6cdb7d89c45c30ca9ed9135cfe328d1b2ed4fba5b07ca2b",
+  "qualification_sha256": "f8d970f305813786db3506b9eb39abb416b2099781c0359974b82f7e7d3c740b",
+  "files": {
+    "build/toolchain/gtos/BUILD.gn": {
+      "before": "237284795062a610e38a99ea895149d282c73691ef909ad46bec9db57c406b73",
+      "after": "1a684360ba2294cc2005556225c79717e8de7f93dcd1e5cda06cd531d07ffc50"
+    },
+    "build/config/gtos/BUILD.gn": {
+      "before": "cdbc134649b5deeb2cf4aa87234b637977e78378d6d7e8f3cc0b79cc6faafeac",
+      "after": "437b0f9455e461c94dab739a86ffc989940b9f8d609e34fbe791a8e677cfc603"
+    },
+    "build/config/BUILD.gn": {
+      "before": "76cbe40466e61bcce470230120bbebb526a31123964e870b7e56021ad49b1614",
+      "after": "b1ecfff59d89e22932fd7b2cc1c0dcfae0e1f3482a0ea00d09c5820c653f1018"
+    }
+  },
+  "patch_check_pass": true,
+  "patch_replay_bytes_equal": true,
+  "chromium_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "foundation_required": true,
+  "gn_rust_core_patch_required": true,
+  "guest_loader_qualified": false
+}

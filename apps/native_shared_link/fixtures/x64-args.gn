@@ -1,0 +1,10 @@
+target_os = "gtos"
+target_cpu = "x64"
+is_debug = false
+is_component_build = false
+is_clang = true
+use_sysroot = false
+use_ozone = false
+symbol_level = 0
+gtos_clang_bin =
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin"

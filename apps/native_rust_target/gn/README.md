@@ -45,6 +45,7 @@ Rust 能力只对 GTOS IA32 开放；x64 的原有纯 C++ 资格图保持可生�
 
 本次不验收 alloc、完整 std、OS 线程/TLS/I/O、C ABI、Rust 客机程序或 Content。
 未知平台 std 的 `no_threads` 与实际 `target_has_threads` 冲突仍需真正 GTOS 后端。
-完整 Content 图最新仍因 `net:test_badgssapi` 缺 solink 失败。后续继续核对可选
-Kerberos/GSSAPI 默认值与动态库边界，再处理真实标准库消费者；不关闭 Rust、不用空锁，
+本模块验收时 Content 图因 `net:test_badgssapi` 缺 solink 失败，原始证据保持。
+后续[共享链接模块](../../native_shared_link/README.md)已越过该阻塞，最新图停在
+libaom 的 NASM 平台参数；完整标准库消费者与 OS 后端仍需接入。不关闭 Rust、不用空锁，
 不按测试名称删除依赖。生产镜像未更新，网页、视频和 HTML5 仍未验收。

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15T13:12:22.7997781Z",
+  "recorded_utc": "2026-10-15T13:52:01.8698678Z",
   "scope": "完整 IA32 V8 原生工作负载双配置通过；Content/网页/视频/HTML5 尚未验收",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
@@ -9132,5 +9132,296 @@
       "browser_guest_pass": false,
       "production_image_changed": false
     }
+  },
+  "native_shared_link": {
+    "guest_loader_pass": false,
+    "shared_elf_files": {
+      "libshared_values.so": {
+        "sha256": "e37051ba5868bed78bd999daf32454d2b8636146bb89b1d6289dd05a9e57cc4d",
+        "bytes": 1904,
+        "elf_class": 32,
+        "machine": "i386",
+        "type": "ET_DYN",
+        "entry": 0,
+        "soname": "libshared_values.so",
+        "needed": [],
+        "exports": {
+          "GtosSharedAdd": {
+            "name": "GtosSharedAdd",
+            "value": 4592,
+            "bytes": 53,
+            "binding": 1,
+            "type": 2,
+            "visibility": 0,
+            "section": 6
+          },
+          "gtos_shared_counter": {
+            "name": "gtos_shared_counter",
+            "value": 12932,
+            "bytes": 4,
+            "binding": 1,
+            "type": 1,
+            "visibility": 0,
+            "section": 10
+          }
+        },
+        "imports": [],
+        "relocations": [
+          {
+            "address": 8832,
+            "type": 6,
+            "symbol": "gtos_shared_counter"
+          }
+        ],
+        "loads": [
+          {
+            "vaddr": 0,
+            "filesz": 484,
+            "memsz": 484,
+            "flags": 4
+          },
+          {
+            "vaddr": 4592,
+            "filesz": 53,
+            "memsz": 53,
+            "flags": 5
+          },
+          {
+            "vaddr": 8744,
+            "filesz": 92,
+            "memsz": 3544,
+            "flags": 6
+          },
+          {
+            "vaddr": 12932,
+            "filesz": 16,
+            "memsz": 16,
+            "flags": 6
+          }
+        ],
+        "no_interpreter": true,
+        "no_host_libraries": true,
+        "no_textrel": true,
+        "no_wx_load": true,
+        "no_executable_stack": true,
+        "guest_executed": false,
+        "guest_dynamic_loader_qualified": false
+      },
+      "libmodule_consumer.so": {
+        "sha256": "f5486c93273dba17838982f95de8a1d47c05ab19523f9ddadd09ad366555af69",
+        "bytes": 1888,
+        "elf_class": 32,
+        "machine": "i386",
+        "type": "ET_DYN",
+        "entry": 0,
+        "soname": "libmodule_consumer.so",
+        "needed": [
+          "libshared_values.so"
+        ],
+        "exports": {
+          "GtosSharedUse": {
+            "name": "GtosSharedUse",
+            "value": 4592,
+            "bytes": 40,
+            "binding": 1,
+            "type": 2,
+            "visibility": 0,
+            "section": 6
+          }
+        },
+        "imports": [
+          "GtosSharedAdd"
+        ],
+        "relocations": [
+          {
+            "address": 12980,
+            "type": 7,
+            "symbol": "GtosSharedAdd"
+          }
+        ],
+        "loads": [
+          {
+            "vaddr": 0,
+            "filesz": 496,
+            "memsz": 496,
+            "flags": 4
+          },
+          {
+            "vaddr": 4592,
+            "filesz": 80,
+            "memsz": 80,
+            "flags": 5
+          },
+          {
+            "vaddr": 8768,
+            "filesz": 104,
+            "memsz": 3520,
+            "flags": 6
+          },
+          {
+            "vaddr": 12968,
+            "filesz": 16,
+            "memsz": 16,
+            "flags": 6
+          }
+        ],
+        "no_interpreter": true,
+        "no_host_libraries": true,
+        "no_textrel": true,
+        "no_wx_load": true,
+        "no_executable_stack": true,
+        "guest_executed": false,
+        "guest_dynamic_loader_qualified": false
+      },
+      "libmodule_named.so": {
+        "sha256": "19c35ca21f8ed83d1a49d86bb318c57aacd78795e46a5f20f10789ab66752028",
+        "bytes": 1888,
+        "elf_class": 32,
+        "machine": "i386",
+        "type": "ET_DYN",
+        "entry": 0,
+        "soname": "libmodule_named.so",
+        "needed": [
+          "libshared_values.so"
+        ],
+        "exports": {
+          "GtosSharedUse": {
+            "name": "GtosSharedUse",
+            "value": 4592,
+            "bytes": 40,
+            "binding": 1,
+            "type": 2,
+            "visibility": 0,
+            "section": 6
+          }
+        },
+        "imports": [
+          "GtosSharedAdd"
+        ],
+        "relocations": [
+          {
+            "address": 12980,
+            "type": 7,
+            "symbol": "GtosSharedAdd"
+          }
+        ],
+        "loads": [
+          {
+            "vaddr": 0,
+            "filesz": 492,
+            "memsz": 492,
+            "flags": 4
+          },
+          {
+            "vaddr": 4592,
+            "filesz": 80,
+            "memsz": 80,
+            "flags": 5
+          },
+          {
+            "vaddr": 8768,
+            "filesz": 104,
+            "memsz": 3520,
+            "flags": 6
+          },
+          {
+            "vaddr": 12968,
+            "filesz": 16,
+            "memsz": 16,
+            "flags": 6
+          }
+        ],
+        "no_interpreter": true,
+        "no_host_libraries": true,
+        "no_textrel": true,
+        "no_wx_load": true,
+        "no_executable_stack": true,
+        "guest_executed": false,
+        "guest_dynamic_loader_qualified": false
+      }
+    },
+    "module": "apps/native_shared_link",
+    "patch_sha256": "816054aafd04294ab6cdb7d89c45c30ca9ed9135cfe328d1b2ed4fba5b07ca2b",
+    "qualification_sha256": "fedbaff5392374bd4ce329d76a6695cf7d80bda208a5a68442ddc8880cd1717c",
+    "proof": {
+      "sha256": "f8d970f305813786db3506b9eb39abb416b2099781c0359974b82f7e7d3c740b",
+      "path": "artifacts/native-shared-link-20261015-a/qualify-02/status.json"
+    },
+    "undefined_symbol_rejected": true,
+    "browser_guest_pass": false,
+    "nonpic_rejected": true,
+    "production_image_changed": false,
+    "shared_link_pass": true,
+    "x64_cpp_graph_pass": true
+  },
+  "content_graph_current": {
+    "proof": {
+      "sha256": "bfe20bc1c346f803c150f7d7663d02d7febb0fda9703213af2a501de75e62372",
+      "path": "artifacts/native-rust-gtos-20261015-a/graph-12/status.json"
+    },
+    "driver_sha256": "effbc6367229aac3377b585d6b2fee011151b0f828a142f9d844c65e13f786ad",
+    "launcher_sha256": "10150658281fffa4ced5f0be01c04bf4ab17236f7141050f784ac4cf9a0d80bd",
+    "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+    "diagnostic_complete": true,
+    "gn_returncode": 1,
+    "gn_generation_pass": false,
+    "whole_graph_input_closure_qualified": false,
+    "compiled_objects": false,
+    "browser_guest_pass": false,
+    "bound_inputs_unchanged": true,
+    "input_symlinks_unchanged": true,
+    "root_pattern": "//content/shell:content_shell",
+    "argv": [
+      "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
+      "gen",
+      "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/build",
+      "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/source",
+      "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/source/content-diagnostic.gn",
+      "--root-target=//content/shell:content_shell",
+      "--root-pattern=//content/shell:content_shell",
+      "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
+      "--fail-on-unused-args"
+    ],
+    "gn_log_sha256": "75677929e2bee1169e5b988d4b3a1f3acf25be56d3d8b192905c113a5d0fba6c",
+    "exec_script_callsites": [
+      "//build/timestamp.gni",
+      "//build/util/branding.gni"
+    ],
+    "timestamp_calls": [
+      {
+        "script": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/compute_build_timestamp.py",
+        "arguments": [
+          "default"
+        ],
+        "timestamp": 1791090000,
+        "script_sha256": "36bb3744127e386475fac3301a8f3911438296658c7bc5aef5aa4ba5362a01a4",
+        "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+        "proof_sha256": "439241db2103d6f9a3919cf40e6d041327233cb3f2829d3fae8bdf1b2330fae6",
+        "bound_inputs_unchanged": true,
+        "returncode": 0
+      }
+    ],
+    "branding_calls": [
+      {
+        "script": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/util/version.py",
+        "arguments": [
+          "-f",
+          "../source/chrome/app/theme/chromium/BRANDING",
+          "-t",
+          "full_name = \"@PRODUCT_FULLNAME@\" short_name = \"@PRODUCT_SHORTNAME@\" bundle_id = \"@MAC_BUNDLE_ID@\" creator_code = \"@MAC_CREATOR_CODE@\" installer_full_name = \"@PRODUCT_INSTALLER_FULLNAME@\" installer_short_name = \"@PRODUCT_INSTALLER_SHORTNAME@\" team_id = \"@MAC_TEAM_ID@\" "
+        ],
+        "output": "full_name = \"Chromium\" short_name = \"Chromium\" bundle_id = \"org.chromium.Chromium\" creator_code = \"Cr24\" installer_full_name = \"Chromium Installer\" installer_short_name = \"Chromium Installer\" team_id = \"\" \n",
+        "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
+        "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+        "proof_sha256": "cd941bb6f1e1d6caaee854f6b3a5b7f7361ab3c0f334fd655ceb7f359cbc8450",
+        "bound_inputs_unchanged": true,
+        "returncode": 0
+      }
+    ],
+    "kerberos_enabled": false,
+    "official_google_api_keys_enabled": false,
+    "internal_key_probe_executed": false,
+    "first_blocker": "third_party/nasm/nasm_assemble.gni:142: _nasm_flags undefined for GTOS, called by libaom_nasm",
+    "next": "Qualify real GTOS IA32 NASM ELF output and libaom platform configuration; preserve Rust and real dependencies"
   }
 }

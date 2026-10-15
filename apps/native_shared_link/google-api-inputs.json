@@ -1,0 +1,19 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "selected_arg": "use_official_google_api_keys=false",
+  "internal_key_probe_executed": false,
+  "files": {
+    "google_apis/BUILD.gn": {
+      "sha256": "c79867c3bc117af0a392723878b145cad315756068c03edc011aeb6b82d878ca",
+      "git_blob": "1c8325e022534ec80073f232f362719f19e61627"
+    },
+    "google_apis/config.gni": {
+      "sha256": "0a23272ae58bbed1e1bd78568e33c19cbdfbbbe90c6d74e072578c1090ca2da3",
+      "git_blob": "f0ee976be1017d18476f09c96f4bd3a538b490c1"
+    },
+    "google_apis/build/check_internal.py": {
+      "sha256": "3339dc51f26fe5d242fe78ae0cb124f9d91c7345d9d0b037ae933eabf13f9bf2",
+      "git_blob": "aabd0388c7f64214ea794f631df9ab602e7367a9"
+    }
+  }
+}

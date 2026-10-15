@@ -11,10 +11,17 @@ V8 Isolate/JS，再到 Content 本地首帧与 DOM、受控网络及音视频。
 Rust能力边界同时保留x64纯C++资格图。详见[GN core模块](../apps/native_rust_target/gn/README.md)。
 这只解决一个Content前置，完整std、C互调用与Rust客机程序仍未通过。
 
-Content Shell使用精确root-pattern后，最新真实首错为`//net:test_badgssapi`缺少solink；
-此前`base/test:immediate_crash_test_helper`失败仍保留。GN会检查已加载文件中的目标，
-不能把首错顺序当作实际依赖路径。继续核对GTOS默认启用的可选Kerberos/GSSAPI与
-共享库边界，不按测试名字删除目标，不提供假成功链接工具。
+2026-10-15，[IA32共享链接规则](../apps/native_shared_link/README.md)完成真实GN规则核对、
+三个ELF32共享产物、PIC/GOT/PLT及SONAME/NEEDED检查，非PIC和未定义符号被真实LLD拒绝。
+三文件补丁在新目录实际应用并逐字节核对；x64纯C++图仍可生成。此处仅验收构建能力，
+未构建真实base测试辅助库或验收GTOS动态加载器。
+
+Content Shell精确root-pattern图使用上述同一候选，已越过缺少solink的阻塞。当前首错是
+`third_party/nasm/nasm_assemble.gni:142`的`_nasm_flags`未定义，由libaom的IA32目标触发。
+时间戳和品牌信息仅允许锁定脚本及固定参数；显式`use_kerberos=false`和
+`use_official_google_api_keys=false`用于开源本地首帧准备，未探测内部密钥。完整图仍返回1。
+下一步补真实GTOS IA32 NASM ELF格式和libaom配置，核对汇编对象、依赖及FP/SIMD边界；
+不能直接把Linux平台宏当作GTOS能力。旧失败保留，不按测试名字删除目标。
 
 2026-10-15，完整62在同一真实原生V8入口上补验对象/数组、ArrayBuffer/TypedArray/
 DataView、MarkSweepCompact GC回调、显式Promise微任务和预期异常后的恢复。两配置
@@ -36,7 +43,7 @@ Script与退出：两种内存/CPU配置均检查得到GTOS42和3.75，stage4/re
 网页导航、音视频及HTML5。浏览器、视频、HTML5、Wasm和通用用户SMP尚未验收。
 实际Content Shell目标引入Rust；GTOS工具链仍是freestanding资格工具链。
 私有目标图已实际执行，Rust身份候选及必要配置使首错前进，但完整图仍返回1；
-没有通过Content对象构建。继续厘清共享库辅助目标与静态GTOS工具链边界，并按真实
+没有通过Content对象构建。继续处理NASM/libaom平台配置、共享库运行时边界，并按真实
 Rust std消费者接入OS后端。未知平台no_threads与target_has_threads的冲突仍未解决。
 
 栈迹/共享边界的源码和必要回归见[对应模块](../apps/native_debug_shared/README.md)：

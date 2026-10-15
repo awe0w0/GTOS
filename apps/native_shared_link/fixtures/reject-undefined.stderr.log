@@ -1,0 +1,3 @@
+ld.lld: error: undefined symbol: GtosSharedAdd
+>>> referenced by module-consumer.c
+>>>               obj/tools/gtos_shared_link_qualification/libmodule_consumer.module-consumer.o:(GtosSharedUse)

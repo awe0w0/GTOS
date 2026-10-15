@@ -1,0 +1,16 @@
+target_os="gtos"
+target_cpu="x86"
+is_debug=false
+is_component_build=false
+use_crash_key_stubs=true
+use_kerberos=false
+use_official_google_api_keys=false
+is_clang=true
+use_sysroot=false
+use_ozone=false
+symbol_level=0
+action_pool_depth=1
+concurrent_links=1
+gtos_clang_bin="/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin"
+gtos_python="/usr/bin/python3"
+gtos_compiler_builtins="/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a"

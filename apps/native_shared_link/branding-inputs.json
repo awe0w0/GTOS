@@ -1,0 +1,57 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "files": {
+    "build/util/branding.gni": {
+      "sha256": "bea1ea627b838a56f404e66a50e8fa6c3f3ad2d165d2a326de6f55f0dec2f80d",
+      "git_blob": "1d4ffd68a75daf6d4d812e36b5aa6eee81f6064b"
+    },
+    "build/util/version.py": {
+      "sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
+      "git_blob": "a5611af80297492cbbb132cbea99f71f63f3aeed"
+    },
+    "build/util/android_chrome_version.py": {
+      "sha256": "dfbf70b5f92a7abce376a7dc26ddce5fd6fbaa8fe88ab2e59aeb9220dfa2a722",
+      "git_blob": "3dde8dffb3a8b7dc42f42d1b45eee18690b9e7ea"
+    },
+    "build/util/LASTCHANGE.dummy": {
+      "sha256": "480ae9e79d839221f93e71de882216ce44cf90233ae67ed29f336982629a3ee9",
+      "git_blob": "21bb3c33c74512d8c9fafd76753a7338a9b9c18b"
+    },
+    "build/config/chrome_build.gni": {
+      "sha256": "8c2ab25d5ca26b7761ca9b6ab5830a6c8f9f25dbf2e9d7c0cc369329813c5978",
+      "git_blob": "4163d9806888f00e37201be05bea8a302c8f757f"
+    },
+    "chrome/app/theme/chromium/BRANDING": {
+      "sha256": "15ac20cb8744ebac0815961059231baefa71fd4ed3023cb2094aaf8a34ae423b",
+      "git_blob": "f8363d5b294fe210ebfdd18374e95b54d6ff5c17"
+    },
+    "components/vector_icons/BUILD.gn": {
+      "sha256": "d9a58cc154381a7ffedbdf5e2d751081492a3062884ec2428852a4a0dfdf068d",
+      "git_blob": "27e0703c05fd7001f8a6fdfe505cdb42b2d60b94"
+    }
+  },
+  "allowed_callsite": "//build/util/branding.gni",
+  "allowed_script": "build/util/version.py",
+  "allowed_arguments": [
+    "-f",
+    "../source/chrome/app/theme/chromium/BRANDING",
+    "-t",
+    "full_name = \"@PRODUCT_FULLNAME@\" short_name = \"@PRODUCT_SHORTNAME@\" bundle_id = \"@MAC_BUNDLE_ID@\" creator_code = \"@MAC_CREATOR_CODE@\" installer_full_name = \"@PRODUCT_INSTALLER_FULLNAME@\" installer_short_name = \"@PRODUCT_INSTALLER_SHORTNAME@\" team_id = \"@MAC_TEAM_ID@\" "
+  ],
+  "expected_output": "full_name = \"Chromium\" short_name = \"Chromium\" bundle_id = \"org.chromium.Chromium\" creator_code = \"Cr24\" installer_full_name = \"Chromium Installer\" installer_short_name = \"Chromium Installer\" team_id = \"\" \n",
+  "forbidden_options": [
+    "-e",
+    "--eval",
+    "-o",
+    "--output",
+    "-i",
+    "--input",
+    "--official",
+    "--os",
+    "-a",
+    "--arch",
+    "-x",
+    "--executable",
+    "positional input/output"
+  ]
+}

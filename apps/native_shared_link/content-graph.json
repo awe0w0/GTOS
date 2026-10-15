@@ -1,0 +1,70 @@
+{
+  "proof": {
+    "sha256": "bfe20bc1c346f803c150f7d7663d02d7febb0fda9703213af2a501de75e62372",
+    "path": "artifacts/native-rust-gtos-20261015-a/graph-12/status.json"
+  },
+  "driver_sha256": "effbc6367229aac3377b585d6b2fee011151b0f828a142f9d844c65e13f786ad",
+  "launcher_sha256": "10150658281fffa4ced5f0be01c04bf4ab17236f7141050f784ac4cf9a0d80bd",
+  "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+  "diagnostic_complete": true,
+  "gn_returncode": 1,
+  "gn_generation_pass": false,
+  "whole_graph_input_closure_qualified": false,
+  "compiled_objects": false,
+  "browser_guest_pass": false,
+  "bound_inputs_unchanged": true,
+  "input_symlinks_unchanged": true,
+  "root_pattern": "//content/shell:content_shell",
+  "argv": [
+    "/mnt/f/GTOS-Chromium/toolchains/gn/gn",
+    "gen",
+    "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/build",
+    "--root=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/source",
+    "--dotfile=/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-12/source/content-diagnostic.gn",
+    "--root-target=//content/shell:content_shell",
+    "--root-pattern=//content/shell:content_shell",
+    "--args=target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_crash_key_stubs=true\nuse_kerberos=false\nuse_official_google_api_keys=false\nis_clang=true\nuse_sysroot=false\nuse_ozone=false\nsymbol_level=0\naction_pool_depth=1\nconcurrent_links=1\ngtos_clang_bin=\"/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin\"\ngtos_python=\"/usr/bin/python3\"\ngtos_compiler_builtins=\"/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a\"\n",
+    "--fail-on-unused-args"
+  ],
+  "gn_log_sha256": "75677929e2bee1169e5b988d4b3a1f3acf25be56d3d8b192905c113a5d0fba6c",
+  "exec_script_callsites": [
+    "//build/timestamp.gni",
+    "//build/util/branding.gni"
+  ],
+  "timestamp_calls": [
+    {
+      "script": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/compute_build_timestamp.py",
+      "arguments": [
+        "default"
+      ],
+      "timestamp": 1791090000,
+      "script_sha256": "36bb3744127e386475fac3301a8f3911438296658c7bc5aef5aa4ba5362a01a4",
+      "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+      "proof_sha256": "439241db2103d6f9a3919cf40e6d041327233cb3f2829d3fae8bdf1b2330fae6",
+      "bound_inputs_unchanged": true,
+      "returncode": 0
+    }
+  ],
+  "branding_calls": [
+    {
+      "script": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/util/version.py",
+      "arguments": [
+        "-f",
+        "../source/chrome/app/theme/chromium/BRANDING",
+        "-t",
+        "full_name = \"@PRODUCT_FULLNAME@\" short_name = \"@PRODUCT_SHORTNAME@\" bundle_id = \"@MAC_BUNDLE_ID@\" creator_code = \"@MAC_CREATOR_CODE@\" installer_full_name = \"@PRODUCT_INSTALLER_FULLNAME@\" installer_short_name = \"@PRODUCT_INSTALLER_SHORTNAME@\" team_id = \"@MAC_TEAM_ID@\" "
+      ],
+      "output": "full_name = \"Chromium\" short_name = \"Chromium\" bundle_id = \"org.chromium.Chromium\" creator_code = \"Cr24\" installer_full_name = \"Chromium Installer\" installer_short_name = \"Chromium Installer\" team_id = \"\" \n",
+      "script_sha256": "45cf759de74813c5dc7b4f9c203209e8c44218a52fb008793c38e7dfc875b98a",
+      "dispatcher_sha256": "791cc9292c912f422053f668f489775a2b12cb05acd5d5f543d0215be5baa246",
+      "proof_sha256": "cd941bb6f1e1d6caaee854f6b3a5b7f7361ab3c0f334fd655ceb7f359cbc8450",
+      "bound_inputs_unchanged": true,
+      "returncode": 0
+    }
+  ],
+  "kerberos_enabled": false,
+  "official_google_api_keys_enabled": false,
+  "internal_key_probe_executed": false,
+  "first_blocker": "third_party/nasm/nasm_assemble.gni:142: _nasm_flags undefined for GTOS, called by libaom_nasm",
+  "next": "Qualify real GTOS IA32 NASM ELF output and libaom platform configuration; preserve Rust and real dependencies"
+}

@@ -1,0 +1,20 @@
+defines = -D__GTOS__=1
+include_dirs = -I../source
+cflags = -fPIC
+cflags_c =
+label_name = shared_values
+root_out_dir = .
+target_out_dir = obj/tools/gtos_shared_link_qualification
+target_output_name = libshared_values
+
+build obj/tools/gtos_shared_link_qualification/libshared_values.shared-values.o: cc ../source/tools/gtos_shared_link_qualification/shared-values.c | ../source/build/config/unsafe_buffers_paths.txt ../source/build/config/raw_ptr_plugin_config.yaml
+  source_file_part = shared-values.c
+  source_name_part = shared-values
+
+build ./libshared_values.so: solink obj/tools/gtos_shared_link_qualification/libshared_values.shared-values.o | ../source/build/config/unsafe_buffers_paths.txt ../source/build/config/raw_ptr_plugin_config.yaml
+  ldflags =
+  libs =
+  frameworks =
+  swiftmodules =
+  output_extension = .so
+  output_dir = .

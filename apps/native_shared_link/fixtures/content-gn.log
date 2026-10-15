@@ -1,0 +1,9 @@
+ERROR at //third_party/nasm/nasm_assemble.gni:142:12: Undefined identifier
+    args = _nasm_flags
+           ^----------
+See //third_party/libaom/BUILD.gn:69:3: whence nasm_assemble was called.
+  nasm_assemble("libaom_nasm") {
+  ^-----------------------------
+See //media/video/BUILD.gn:60:22: which caused the file to be included.
+    public_deps += [ "//third_party/libaom" ]
+                     ^---------------------

@@ -1,0 +1,44 @@
+# Real shared-link tool qualification only; no guest dynamic-loader claim.
+shared_library("shared_values") {
+  no_default_deps = true
+  use_libcxx_modules = false
+  configs = []
+  configs = [
+    "//build/config/gtos:platform",
+    "//build/config:shared_library_config",
+  ]
+  sources = [ "shared-values.c" ]
+}
+
+loadable_module("module_consumer") {
+  no_default_deps = true
+  use_libcxx_modules = false
+  configs = []
+  configs = [
+    "//build/config/gtos:platform",
+    "//build/config:shared_library_config",
+  ]
+  sources = [ "module-consumer.c" ]
+  deps = [ ":shared_values" ]
+}
+
+loadable_module("module_named") {
+  no_default_deps = true
+  use_libcxx_modules = false
+  configs = []
+  configs = [
+    "//build/config/gtos:platform",
+    "//build/config:shared_library_config",
+  ]
+  sources = [ "module-consumer.c" ]
+  lib_dirs = [ root_out_dir ]
+  libs = [ "shared_values" ]
+  data_deps = [ ":shared_values" ]
+}
+
+group("qualification") {
+  deps = [
+    ":module_consumer",
+    ":module_named",
+  ]
+}

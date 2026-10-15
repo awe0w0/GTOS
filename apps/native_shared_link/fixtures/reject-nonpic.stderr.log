@@ -1,0 +1,14 @@
+ld.lld: error: relocation R_386_32 cannot be used against symbol 'gtos_shared_counter'; recompile with -fPIC
+>>> defined in nonpic.o
+>>> referenced by shared-values.c
+>>>               nonpic.o:(GtosSharedAdd)
+
+ld.lld: error: relocation R_386_32 cannot be used against symbol 'gtos_shared_counter'; recompile with -fPIC
+>>> defined in nonpic.o
+>>> referenced by shared-values.c
+>>>               nonpic.o:(GtosSharedAdd)
+
+ld.lld: error: relocation R_386_32 cannot be used against symbol 'gtos_shared_counter'; recompile with -fPIC
+>>> defined in nonpic.o
+>>> referenced by shared-values.c
+>>>               nonpic.o:(GtosSharedAdd)

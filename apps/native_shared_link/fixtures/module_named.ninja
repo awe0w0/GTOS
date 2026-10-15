@@ -1,0 +1,20 @@
+defines = -D__GTOS__=1
+include_dirs = -I../source
+cflags = -fPIC
+cflags_c =
+label_name = module_named
+root_out_dir = .
+target_out_dir = obj/tools/gtos_shared_link_qualification
+target_output_name = libmodule_named
+
+build obj/tools/gtos_shared_link_qualification/libmodule_named.module-consumer.o: cc ../source/tools/gtos_shared_link_qualification/module-consumer.c | ../source/build/config/unsafe_buffers_paths.txt ../source/build/config/raw_ptr_plugin_config.yaml
+  source_file_part = module-consumer.c
+  source_name_part = module-consumer
+
+build ./libmodule_named.so: solink_module obj/tools/gtos_shared_link_qualification/libmodule_named.module-consumer.o | ../source/build/config/unsafe_buffers_paths.txt ../source/build/config/raw_ptr_plugin_config.yaml || ./libshared_values.so
+  ldflags = -L.
+  libs = -lshared_values
+  frameworks =
+  swiftmodules =
+  output_extension = .so
+  output_dir = .

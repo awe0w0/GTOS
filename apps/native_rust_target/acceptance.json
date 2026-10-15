@@ -120,7 +120,7 @@
     "apps/native_rust_target/self-review.md": "f69e1ace19f5e71e2a22ba8315548ca485618a80e415ec166acd7766317aaad4",
     "apps/native_rust_target/source-lock.json": "cb57c397ac42ac8f5c86e0d9f1b963764f8a26a447237467cf5e67909a27658d",
     "apps/native_rust_target/core-compile.json": "2b4ac92ec579dedabed3de1da17e720c372e933b1c27fe43b99fa333db559f0e",
-    "apps/native_rust_target/gn/README.md": "7410510af57b75c5442750917ecc4362ede36fdaddc82060f8c1873a0a02dbb1",
+    "apps/native_rust_target/gn/README.md": "7277140ba4cdaebe682714368c7929924ab1d343289862084692e7e8c115f061",
     "apps/native_rust_target/gn/self-review.md": "106fd6e0253e9a607fb7dade0ae9abddb8fb03ebb867a5bd61d7bf1792f4684c",
     "apps/native_rust_target/gn/gtos-rust-core.patch": "fd4d93175e4a9ad209d5f3fd51ce1a81d683078aebace0e04443fedbb21b6d06",
     "apps/native_rust_target/gn/patch-replay.json": "16fe794a45547f712fb9a7d7557b9fa0cef18dfcdf455175436912cd5a01b0ec",
