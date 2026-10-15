@@ -1,0 +1,1299 @@
+{
+  "schema_version": 1,
+  "qualified": true,
+  "scope": "GTOS IA32 platform helpers; private default and BSP four-context consumers",
+  "baseline_dev": "42acdc837c4cdd3da2981dfb429069f486275905",
+  "evidence_packet": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a",
+  "evidence_sha256": {
+    "public-baseline-01.json": "19b814237aeba3a6dabe459a2c9d2da65e0501e0f6e4cffc2664e82bc27b61f0",
+    "probe-sources-02.json": "1f8d6b1f022defeacda717c118c9114aaea11d8c478bb840b3b754de0529583c",
+    "patch/platform-gtos-v1.cc": "c0e89265a2a3c66d683dc0ff51d69f25eed3427b1b7ecd49470e42bc77ab05d7",
+    "provider-02/status.json": "26543438ebab83886883059a999ca672be83d840b5a82e54150e577c02bab77b",
+    "consumers-04/status.json": "077eee9296ddf93074d420737e0ba47f11b8f2b2e9b3f49c59edd8643fa871b1",
+    "guests-01/status.json": "cd3c01e32ea63b5c3c691abd6f4056724a44b2a131d7eb5af05404d38499e61f",
+    "full-link-56/status.json": "87e9413dd472383b809f42c3c68b8ef2ca096f7ac97ddaa1e39c45d202bd61af",
+    "module-README.md": "c9631317039bb28f7ec95e0bcbe224daf5637f5be574fd9360ffc4f29a36464a",
+    "module-self-review.md": "2820994d6753814b19f278bc9ca1ed3a981ae7300cbbc0ae75a0c53a9cb88ca8"
+  },
+  "source_byte_equivalence": {
+    "destination": "apps/native_v8_integration/overlay/src/base/platform/platform-gtos.cc",
+    "source": "patch/platform-gtos-v1.cc",
+    "sha256": "c0e89265a2a3c66d683dc0ff51d69f25eed3427b1b7ecd49470e42bc77ab05d7"
+  },
+  "probe_byte_equivalences": [
+    {
+      "destination": "probe-single/main.cc",
+      "source": "probe-single-v2/main.cc",
+      "sha256": "7db45c11af47feacab452978ef79246f270dbd481be049f56ec80abec21dc041"
+    },
+    {
+      "destination": "probe-single/kernel.cpp",
+      "source": "probe-single-v2/kernel.cpp",
+      "sha256": "76c16a58136643b22727a0c5d8a60cbf5fdc52b714b38653485ef6aacff250fc"
+    },
+    {
+      "destination": "probe-single/kernel_common.h",
+      "source": "probe-single-v2/kernel_common.h",
+      "sha256": "a95231c0e32e1f11d6d1718c9dba4524cdd315c58d4179a6433c12ff509b12f9"
+    },
+    {
+      "destination": "probe-single/fixture-helpers.h",
+      "source": "probe-single-v2/fixture-helpers.h",
+      "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    {
+      "destination": "probe-single/record.h",
+      "source": "probe-single-v2/record.h",
+      "sha256": "12678df6dd89039d440f0a1776fe6a290298de206d9d8ef06a734f50267b6d0a"
+    },
+    {
+      "destination": "probe-single/linker.ld",
+      "source": "probe-single-v2/linker.ld",
+      "sha256": "afb326feb6a1453f8b0d17f7743c83e816d9dec8102a2a746e36e3e206b61569"
+    },
+    {
+      "destination": "probe-single/temporary-cases.h",
+      "source": "probe-single-v2/temporary-cases.h",
+      "sha256": "76116431e12f3696a89eefbd153d08d89a8033817d28b06faf90e252cbb405df"
+    },
+    {
+      "destination": "probe-single/temporary-observer.h",
+      "source": "probe-single-v2/temporary-observer.h",
+      "sha256": "1c7eb974aa8952036c1de9a96db82a2bcff8b6905e61e0ac169e867132ad9fca"
+    },
+    {
+      "destination": "probe-single/platform-helper-cases.h",
+      "source": "probe-single-v2/platform-helper-cases.h",
+      "sha256": "47eb8de19797a0597f24e2058b55f31643cf67a5afeab1c4fb49fe94e115fe45"
+    },
+    {
+      "destination": "probe-single/entry-symbols.h",
+      "source": "guests-01/single/entry-symbols.h",
+      "sha256": "9270764411db23ef49716610a8fd6dbce04ef32f81dcc28f3f91586a9f27b9dd"
+    },
+    {
+      "destination": "probe-thread/main.cc",
+      "source": "probe-thread-v2/main.cc",
+      "sha256": "68754530ba9968b68d9009f4a4896f1ac51afe071bc3851e23e20aff336bef06"
+    },
+    {
+      "destination": "probe-thread/kernel.cpp",
+      "source": "probe-thread-v2/kernel.cpp",
+      "sha256": "b43a39d25f5c139d9c0a940c2bf3c62bbe1e84d4223151edf89508a5d3e3e5bd"
+    },
+    {
+      "destination": "probe-thread/kernel_common.h",
+      "source": "probe-thread-v2/kernel_common.h",
+      "sha256": "0eb78c7ae59dfc4c26967572165e24c280f6094a58b7bbe3ee55187af21e358c"
+    },
+    {
+      "destination": "probe-thread/fixture-helpers.h",
+      "source": "probe-thread-v2/fixture-helpers.h",
+      "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+    },
+    {
+      "destination": "probe-thread/record.h",
+      "source": "probe-thread-v2/record.h",
+      "sha256": "25955ac1e65135889dae3c10afdb2c8f5c1ef9c6d7ebccab435cd8fd32cb059d"
+    },
+    {
+      "destination": "probe-thread/linker.ld",
+      "source": "probe-thread-v2/linker.ld",
+      "sha256": "afb326feb6a1453f8b0d17f7743c83e816d9dec8102a2a746e36e3e206b61569"
+    },
+    {
+      "destination": "probe-thread/temporary-cases.h",
+      "source": "probe-thread-v2/temporary-cases.h",
+      "sha256": "1a6245e31c07f81dbb595529a0c90e120bd737c12898be69c34a4a931b8168a7"
+    },
+    {
+      "destination": "probe-thread/temporary-observer.h",
+      "source": "probe-thread-v2/temporary-observer.h",
+      "sha256": "1c7eb974aa8952036c1de9a96db82a2bcff8b6905e61e0ac169e867132ad9fca"
+    },
+    {
+      "destination": "probe-thread/platform-helper-cases.h",
+      "source": "probe-thread-v2/platform-helper-cases.h",
+      "sha256": "47eb8de19797a0597f24e2058b55f31643cf67a5afeab1c4fb49fe94e115fe45"
+    },
+    {
+      "destination": "probe-thread/entry-symbols.h",
+      "source": "guests-01/thread/entry-symbols.h",
+      "sha256": "e6cf14ffe596294ca596ea621fc3a305f433722a6c014c80060c837c78197ab9"
+    }
+  ],
+  "published_document_sha256": {
+    "README": "c9631317039bb28f7ec95e0bcbe224daf5637f5be574fd9360ffc4f29a36464a",
+    "self_review": "2820994d6753814b19f278bc9ca1ed3a981ae7300cbbc0ae75a0c53a9cb88ca8"
+  },
+  "objects": {
+    "platform": {
+      "path": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/provider-02/build/obj/src/base/platform/libv8_libbase.platform-gtos.o",
+      "sha256": "c4c4693b594d8e6a2bb9be75d2f8febbbbd0a8188fe5b4f5b3f1395f27a133a9",
+      "gn_output": "obj/src/base/platform/libv8_libbase.platform-gtos.o"
+    }
+  },
+  "consumers": {
+    "single": {
+      "elf": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/consumers-04/single/after.elf",
+      "elf_sha256": "83eb0c678d415500afd06ba10362208bd5040fa88067778a2db76fbd26f3ae82",
+      "stripped": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/consumers-04/single/after.stripped.elf",
+      "stripped_sha256": "ffd6525e3a2cb178fd39548fdcaa048874278ff0e1d20306a6fd82e92169d255",
+      "symbols": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/consumers-04/single-symbols.log",
+      "symbols_sha256": "85cc3b20b08f0bd1ed04f1203f17356c57dcc9ee2393393eb5318c95e80bfaa2",
+      "source_sha256": "7db45c11af47feacab452978ef79246f270dbd481be049f56ec80abec21dc041",
+      "full_M_MD": true,
+      "dependencies": 693,
+      "support_substitutions": [
+        {
+          "old": "@WORKSPACE@/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/src/base/platform/libv8_libbase.platform-gtos.o",
+          "new": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/provider-02/build/obj/src/base/platform/libv8_libbase.platform-gtos.o"
+        }
+      ],
+      "prior_support_order_preserved": true
+    },
+    "thread": {
+      "elf": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/consumers-04/thread/after.elf",
+      "elf_sha256": "99532b5892d6beff54db8d38b3c34e6d31d3f00ae26f86482a77cbe74582bd67",
+      "stripped": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/consumers-04/thread/after.stripped.elf",
+      "stripped_sha256": "2e57bda4045a7155fb26ed83a9c28e280d2314cf75fb39d9e5369b0864d32485",
+      "symbols": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/consumers-04/thread-symbols.log",
+      "symbols_sha256": "f1005481ddad32be9bd71a4f24d985b4bd20bbca90801c2104e899a4833add1a",
+      "source_sha256": "68754530ba9968b68d9009f4a4896f1ac51afe071bc3851e23e20aff336bef06",
+      "full_M_MD": true,
+      "dependencies": 734,
+      "support_substitutions": [
+        {
+          "old": "@WORKSPACE@/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/src/base/platform/libv8_libbase.platform-gtos.o",
+          "new": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/provider-02/build/obj/src/base/platform/libv8_libbase.platform-gtos.o"
+        }
+      ],
+      "prior_support_order_preserved": true
+    }
+  },
+  "guests": [
+    {
+      "profile": "single",
+      "configuration": "single-32M-smp1",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 18182,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 7356,
+          "baseline": 7474,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 1,
+          "id": 2,
+          "checks": 18182,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 7356,
+          "baseline": 7474,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 2,
+          "id": 3,
+          "checks": 18176,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 488,
+          "mask": 575,
+          "free": 7339,
+          "baseline": 7474,
+          "open": 2,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 3,
+          "id": 4,
+          "checks": 18174,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2809856,
+          "kernel": 2703360,
+          "calls": 486,
+          "mask": 575,
+          "free": 7339,
+          "baseline": 7474,
+          "open": 3,
+          "error": 0,
+          "ack": 0
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 2,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 3,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 4,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 6,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 7,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 8,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 9,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        },
+        {
+          "mode": 10,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7474,
+          "baseline": 7474,
+          "open": 0
+        }
+      ],
+      "helpers": [
+        {
+          "mode": 0,
+          "calls": 1
+        },
+        {
+          "mode": 1,
+          "calls": 1
+        },
+        {
+          "mode": 2,
+          "calls": 1
+        },
+        {
+          "mode": 3,
+          "calls": 1
+        },
+        {
+          "mode": 4,
+          "calls": 1
+        },
+        {
+          "mode": 5,
+          "calls": 1
+        },
+        {
+          "mode": 6,
+          "calls": 1
+        },
+        {
+          "mode": 7,
+          "calls": 1
+        },
+        {
+          "mode": 8,
+          "calls": 1
+        },
+        {
+          "mode": 9,
+          "calls": 1
+        },
+        {
+          "mode": 10,
+          "calls": 1
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 62778,
+        "free": 7474,
+        "baseline": 7474,
+        "open": 0,
+        "trap_stack": 3048
+      },
+      "log_sha256": "05c0b51431eb1c876761adc27112f23548ae325e742b2095bd7b71e49c86ef57",
+      "disk_sha256": "9b2844ebacaf6bb43669eae4072a71266e3e89bdcd7a3a6da4446d1099c33c82"
+    },
+    {
+      "profile": "single",
+      "configuration": "single-64M-smp4",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 18182,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 15540,
+          "baseline": 15658,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 1,
+          "id": 2,
+          "checks": 18182,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 495,
+          "mask": 575,
+          "free": 15540,
+          "baseline": 15658,
+          "open": 0,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 2,
+          "id": 3,
+          "checks": 18176,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 488,
+          "mask": 575,
+          "free": 15523,
+          "baseline": 15658,
+          "open": 2,
+          "error": 0,
+          "ack": 0
+        },
+        {
+          "mode": 3,
+          "id": 4,
+          "checks": 18174,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2842624,
+          "kernel": 2703360,
+          "calls": 486,
+          "mask": 575,
+          "free": 15523,
+          "baseline": 15658,
+          "open": 3,
+          "error": 0,
+          "ack": 0
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 2,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 3,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 4,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 6,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 7,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 8,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 9,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        },
+        {
+          "mode": 10,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15658,
+          "baseline": 15658,
+          "open": 0
+        }
+      ],
+      "helpers": [
+        {
+          "mode": 0,
+          "calls": 1
+        },
+        {
+          "mode": 1,
+          "calls": 1
+        },
+        {
+          "mode": 2,
+          "calls": 1
+        },
+        {
+          "mode": 3,
+          "calls": 1
+        },
+        {
+          "mode": 4,
+          "calls": 1
+        },
+        {
+          "mode": 5,
+          "calls": 1
+        },
+        {
+          "mode": 6,
+          "calls": 1
+        },
+        {
+          "mode": 7,
+          "calls": 1
+        },
+        {
+          "mode": 8,
+          "calls": 1
+        },
+        {
+          "mode": 9,
+          "calls": 1
+        },
+        {
+          "mode": 10,
+          "calls": 1
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 62571,
+        "free": 15658,
+        "baseline": 15658,
+        "open": 0,
+        "trap_stack": 3048
+      },
+      "log_sha256": "e5b67be4456cada0b8b10345703a090581bd94111de73331f511a793c24db649",
+      "disk_sha256": "9b2844ebacaf6bb43669eae4072a71266e3e89bdcd7a3a6da4446d1099c33c82"
+    },
+    {
+      "profile": "thread",
+      "configuration": "thread-32M-smp1",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 21913,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2830336,
+          "kernel": 2723840,
+          "calls": 555,
+          "mask": 575,
+          "free": 7347,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 1,
+          "id": 5,
+          "checks": 21913,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2830336,
+          "kernel": 2723840,
+          "calls": 555,
+          "mask": 575,
+          "free": 7347,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 2,
+          "id": 9,
+          "checks": 21907,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2830336,
+          "kernel": 2723840,
+          "calls": 548,
+          "mask": 575,
+          "free": 7330,
+          "baseline": 7469,
+          "open": 2
+        },
+        {
+          "mode": 3,
+          "id": 13,
+          "checks": 21905,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2830336,
+          "kernel": 2723840,
+          "calls": 546,
+          "mask": 575,
+          "free": 7330,
+          "baseline": 7469,
+          "open": 3
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 5,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 9,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 13,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 6,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 7,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 8,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 9,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        },
+        {
+          "mode": 10,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 7469,
+          "baseline": 7469,
+          "open": 0
+        }
+      ],
+      "helpers": [
+        {
+          "mode": 0,
+          "calls": 4
+        },
+        {
+          "mode": 1,
+          "calls": 4
+        },
+        {
+          "mode": 2,
+          "calls": 4
+        },
+        {
+          "mode": 3,
+          "calls": 4
+        },
+        {
+          "mode": 4,
+          "calls": 1
+        },
+        {
+          "mode": 5,
+          "calls": 1
+        },
+        {
+          "mode": 6,
+          "calls": 1
+        },
+        {
+          "mode": 7,
+          "calls": 1
+        },
+        {
+          "mode": 8,
+          "calls": 1
+        },
+        {
+          "mode": 9,
+          "calls": 1
+        },
+        {
+          "mode": 10,
+          "calls": 1
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 81485,
+        "free": 7469,
+        "baseline": 7469,
+        "open": 0,
+        "trap_stack": 3268
+      },
+      "log_sha256": "6a3148363f70053e3de628226a60db808bae23efc9f82464a8217c110e9dc209",
+      "disk_sha256": "f93cee22ea144c06f1671a137eb9ee6c6707cd6e66d4c48c91705d7994292fbc"
+    },
+    {
+      "profile": "thread",
+      "configuration": "thread-64M-smp4",
+      "cases": [
+        {
+          "mode": 0,
+          "id": 1,
+          "checks": 21913,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 17,
+          "exit": 17,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2863104,
+          "kernel": 2723840,
+          "calls": 555,
+          "mask": 575,
+          "free": 15531,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 1,
+          "id": 5,
+          "checks": 21913,
+          "stage": 2,
+          "preinit": 1,
+          "events": 7,
+          "global": 2,
+          "cout_sync": 1,
+          "clog_sync": 1,
+          "closed_bad": 0,
+          "entry_stage": 4,
+          "entry_result": 29,
+          "exit": 29,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2863104,
+          "kernel": 2723840,
+          "calls": 555,
+          "mask": 575,
+          "free": 15531,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 2,
+          "id": 9,
+          "checks": 21907,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 1,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 33,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2863104,
+          "kernel": 2723840,
+          "calls": 548,
+          "mask": 575,
+          "free": 15514,
+          "baseline": 15653,
+          "open": 2
+        },
+        {
+          "mode": 3,
+          "id": 13,
+          "checks": 21905,
+          "stage": 7,
+          "preinit": 1,
+          "events": 0,
+          "global": 1,
+          "cout_sync": 0,
+          "clog_sync": 0,
+          "closed_bad": 0,
+          "entry_stage": 2,
+          "entry_result": 4294967295,
+          "exit": 1207959585,
+          "vector": 0,
+          "cs": 35,
+          "cr3": 2863104,
+          "kernel": 2723840,
+          "calls": 546,
+          "mask": 575,
+          "free": 15514,
+          "baseline": 15653,
+          "open": 3
+        }
+      ],
+      "reaps": [
+        {
+          "id": 1,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 5,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 9,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0,
+          "failures": 0
+        },
+        {
+          "id": 13,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0,
+          "failures": 0
+        }
+      ],
+      "stopped": [
+        {
+          "mode": 4,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 5,
+          "exit": 67,
+          "vector": 0,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 6,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 7,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 8,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 9,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        },
+        {
+          "mode": 10,
+          "exit": 2147483654,
+          "vector": 6,
+          "free": 15653,
+          "baseline": 15653,
+          "open": 0
+        }
+      ],
+      "helpers": [
+        {
+          "mode": 0,
+          "calls": 4
+        },
+        {
+          "mode": 1,
+          "calls": 4
+        },
+        {
+          "mode": 2,
+          "calls": 4
+        },
+        {
+          "mode": 3,
+          "calls": 4
+        },
+        {
+          "mode": 4,
+          "calls": 1
+        },
+        {
+          "mode": 5,
+          "calls": 1
+        },
+        {
+          "mode": 6,
+          "calls": 1
+        },
+        {
+          "mode": 7,
+          "calls": 1
+        },
+        {
+          "mode": 8,
+          "calls": 1
+        },
+        {
+          "mode": 9,
+          "calls": 1
+        },
+        {
+          "mode": 10,
+          "calls": 1
+        }
+      ],
+      "heaps": [
+        {
+          "mode": 0,
+          "files": 54
+        },
+        {
+          "mode": 1,
+          "files": 54
+        },
+        {
+          "mode": 2,
+          "files": 54
+        },
+        {
+          "mode": 3,
+          "files": 54
+        }
+      ],
+      "final": {
+        "checks": 81149,
+        "free": 15653,
+        "baseline": 15653,
+        "open": 0,
+        "trap_stack": 3268
+      },
+      "log_sha256": "8a78274671163078b106176fe256c8b57d9e0b87c429a5084a5a25979557214c",
+      "disk_sha256": "f93cee22ea144c06f1671a137eb9ee6c6707cd6e66d4c48c91705d7994292fbc"
+    }
+  ],
+  "processes": 44,
+  "total_contexts": 68,
+  "thread_profile_contexts": 46,
+  "thread_joins": 24,
+  "process_reaps": 44,
+  "helper_context_calls": 68,
+  "invalid_copy_processes": 20,
+  "invalid_copy_destination_preserved": true,
+  "actual_utc_bracketing": true,
+  "virtual_rtc": "2026-10-15T04:05:59 UTC, clock=vm",
+  "directory_byte_cases_per_context": 256,
+  "real_call_alignment_checked": true,
+  "guard_page_copy_checked": true,
+  "existing_file_stream_sync_lifecycle_regression": true,
+  "kernel_isa_audit_pass": true,
+  "actual_gn_order_preserved": true,
+  "exact_archive_members": 38,
+  "archive_members_replaced": 1,
+  "other37_archive_members_unchanged": true,
+  "complete_link_exit_code": 1,
+  "complete_link_status_sha256": "87e9413dd472383b809f42c3c68b8ef2ca096f7ac97ddaa1e39c45d202bd61af",
+  "complete_link_bound_inputs": 9186,
+  "first_undefined_symbol": "ldexp",
+  "undefined_symbols": [
+    "ldexp",
+    "pow",
+    "trunc",
+    "lrint",
+    "strtoul",
+    "fabsf",
+    "__printf_modular",
+    "v8::base::debug::EnableInProcessStackDumping()",
+    "v8::base::debug::StackTrace::StackTrace()",
+    "v8::base::debug::StackTrace::Print() const",
+    "v8::base::debug::DisableSignalStackDump()",
+    "strdup",
+    "v8::base::OS::AllocateShared(void*, unsigned int, v8::base::OS::MemoryPermission, v8::SharedMemoryHandle, unsigned long long)",
+    "v8::base::OS::FreeShared(void*, unsigned int)",
+    "v8::base::OS::SetMemoryRegionName(void const*, unsigned int, char const*)",
+    "isalnum"
+  ],
+  "diagnostics_complete": true,
+  "old_cache_unchanged": true,
+  "source_byte_equivalence_verified": true,
+  "payload_files": 1303,
+  "full_native_elf_exists": false,
+  "native_isolate_pass": false,
+  "browser_guest_pass": false,
+  "video_guest_pass": false,
+  "html5_guest_pass": false,
+  "production_image_changed": false,
+  "user_smp_supported": false,
+  "canonical_gn_reexecuted": false,
+  "canonical_guest_rerun": false,
+  "remote_ci": false
+}

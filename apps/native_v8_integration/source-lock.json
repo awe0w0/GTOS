@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "4f3ad4aa28071c841ab647d5fcf6ddfaa008b5083098924318f55b9b2465a700",
+  "payload_lock_sha256": "c21ffb4ea44b0718e5dfcdb5a0d1a4769b447fa1e1b4437fd33b81b963039964",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1542,5 +1542,8 @@
   "native_iostream_scope": "Real libc++ init/exit, strict UTF8 File and incremental prefixes, bounded native 1/4-context mutex/once/condition; BSP only; full54 GetLastError first; browser pending",
   "native_os_file_guest_qualified": true,
   "native_os_file_qualification": "apps/native_os_file/acceptance.json",
-  "native_os_file_scope": "Real per-thread OS errno, w+ log and immediately unlinked tmpfile;24 processes/48 contexts/24 Reap;BSP only;complete browser pending"
+  "native_os_file_scope": "Real per-thread OS errno, w+ log and immediately unlinked tmpfile;24 processes/48 contexts/24 Reap;BSP only;complete browser pending",
+  "native_platform_helpers_guest_qualified": true,
+  "native_platform_helpers_qualification": "apps/native_platform_helpers/acceptance.json",
+  "native_platform_helpers_scope": "static ELF profiler metadata, IA32 alignment, real UTC and bounded strncpy semantics;44processes/68contexts/44Reap;BSP only;browser pending"
 }

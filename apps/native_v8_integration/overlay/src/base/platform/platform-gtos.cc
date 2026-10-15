@@ -182,6 +182,34 @@ int OS::VSNPrintF(char* str, int length, const char* format, va_list args) {
   return result;
 }
 
+void OS::StrNCpy(char* dest, int length, const char* src, size_t n) {
+  if (length < 0 || n > static_cast<size_t>(length) ||
+      (n != 0 && (dest == nullptr || src == nullptr))) {
+    gtos::UnsupportedService();
+  }
+  size_t i = 0;
+  for (; i < n && src[i] != '\0'; ++i) dest[i] = src[i];
+  for (; i < n; ++i) dest[i] = '\0';
+}
+
+std::vector<OS::SharedLibraryAddress> OS::GetSharedLibraryAddresses() {
+  // The native loader admits static ET_EXEC only and rejects dynamic linking.
+  return {};
+}
+
+void OS::SignalCodeMovingGC() {
+  // This native kernel has no external executable-mapping profiler event stream.
+  // V8's own code-movement log remains responsible for internal profiling.
+}
+
+char OS::DirectorySeparator() { return '/'; }
+bool OS::isDirectorySeparator(const char ch) {
+  return ch == DirectorySeparator();
+}
+
+int OS::ActivationFrameAlignment() { return 16; }
+double OS::TimeCurrentMillis() { return Time::Now().ToJsTime(); }
+
 size_t OS::AllocatePageSize() { return GTOS_VM_PAGE_BYTES; }
 size_t OS::CommitPageSize() { return GTOS_VM_PAGE_BYTES; }
 bool OS::HasLazyCommits() {
