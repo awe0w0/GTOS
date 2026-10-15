@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-10-15 02:44:05 UTC",
-  "scope": "原生平台辅助接口、真实UTC和有界复制已验收；完整V8/浏览器/视频/HTML5尚未运行。",
+  "recorded_utc": "2026-10-15 04:44:54 UTC",
+  "scope": "九项原生libc提供者、统一ldexp错误状态及真实printf已验收；完整V8/浏览器/视频/HTML5尚未运行。",
   "delivery_architecture": "IA32 GTOS",
   "x64_role": "backup kernel foundation, no x64 userspace ABI acceptance",
   "pins": {
@@ -31,7 +31,7 @@
   "complete_build_pass": false,
   "link_pass": false,
   "full_elf_exists": false,
-  "first_build_blocker": "ldexp",
+  "first_build_blocker": "v8::base::debug::EnableInProcessStackDumping()",
   "other_observed_failures": [
     "ld.lld: error: undefined symbol: ceilf",
     "ld.lld: error: undefined symbol: floor",
@@ -503,8 +503,8 @@
       "Replay the same complete native target after the affected checks; record whether asprintf advances and the new first blocker."
     ]
   },
-  "previous_complete_attempt": "@WORKSPACE@/artifacts/native-os-file-20261015-a/full-link-55/status.json",
-  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/full-link-56/status.json",
+  "previous_complete_attempt": "@WORKSPACE@/artifacts/native-platform-helpers-20261015-a/full-link-56/status.json",
+  "latest_complete_attempt": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/full-link-57/status.json",
   "platform_adaptation_evidence": {
     "dynamic_elf": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/abseil-static-elf-01/status.json",
@@ -1200,7 +1200,7 @@
       "sha256": "ff1594bf604c1b024a8b547e0bdc1a037c1f4069a9d50ee47e0e84318d08521d"
     }
   },
-  "previous_first_build_blocker": "v8::base::OS::GetSharedLibraryAddresses()",
+  "previous_first_build_blocker": "ldexp",
   "zlib_filestore_qualification": {
     "canonical_filestore_adopted": true,
     "public_replays": [
@@ -2332,7 +2332,7 @@
     }
   },
   "next_native_consumer_analysis": "真实首错：v8::base::Thread::Thread(v8::base::Thread::Options const&)",
-  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v93.json",
+  "latest_handoff": "@WORKSPACE@/logs/native-v8-integration-handoff-v97.json",
   "post_build_validation_pipeline": {
     "terminal": {
       "path": "@WORKSPACE@/artifacts/native-v8-integration-20261011-a/time-format-publication-packet-01/post-build-pipeline-03/status.json",
@@ -5102,22 +5102,13 @@
     "published_probe_files": 14
   },
   "latest_observed_undefined_symbols": [
-    "ldexp",
-    "pow",
-    "trunc",
-    "lrint",
-    "strtoul",
-    "fabsf",
-    "__printf_modular",
     "v8::base::debug::EnableInProcessStackDumping()",
-    "v8::base::debug::StackTrace::StackTrace()",
-    "v8::base::debug::StackTrace::Print() const",
-    "v8::base::debug::DisableSignalStackDump()",
-    "strdup",
     "v8::base::OS::AllocateShared(void*, unsigned int, v8::base::OS::MemoryPermission, v8::SharedMemoryHandle, unsigned long long)",
     "v8::base::OS::FreeShared(void*, unsigned int)",
     "v8::base::OS::SetMemoryRegionName(void const*, unsigned int, char const*)",
-    "isalnum"
+    "v8::base::debug::StackTrace::StackTrace()",
+    "v8::base::debug::StackTrace::Print() const",
+    "v8::base::debug::DisableSignalStackDump()"
   ],
   "latest_diagnostics_complete": true,
   "native_os_file": {
@@ -7436,6 +7427,1414 @@
     "old_cache_unchanged": true,
     "source_byte_equivalence_verified": true,
     "payload_files": 1303,
+    "full_native_elf_exists": false,
+    "native_isolate_pass": false,
+    "browser_guest_pass": false,
+    "video_guest_pass": false,
+    "html5_guest_pass": false,
+    "production_image_changed": false,
+    "user_smp_supported": false,
+    "canonical_gn_reexecuted": false,
+    "canonical_guest_rerun": false,
+    "remote_ci": false
+  },
+  "native_runtime_gap": {
+    "schema_version": 1,
+    "qualified": true,
+    "baseline_dev": "530d9fbe43317fb01a444af04d0862a4c407f4f4",
+    "evidence_packet": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a",
+    "evidence_sha256": {
+      "public-baseline-01.json": "8eefcc2f9f9ecd429369e70bfa9363fa9556377efd818bab1073b95840762a85",
+      "probe-sources-09.json": "07e36010b7dae9a5407131cf8fb01f908ef0a264d603de5a35e5fd2350151293",
+      "patch/BUILD-v1.gn": "a74b26eaf966c28202f756ae188ac618d7194c6d84d82dd5f08bbc2e08bccc7f",
+      "patch/printf-modular-v1.cpp": "414e9f306e1fa93572f68c6f6acd3cdcfb44cebb20ec13d1a12799557ce26363",
+      "patch/llvm-libc-v2/src/__support/math/ldexp.h": "f8852c3d5a57066fb19870de918dde7b4b95e16243bce695a85e67ec23313785",
+      "provider-05/status.json": "883a3c26d10351b7466affc2a57f069e0bd212ef34651f74f07d73fdce98374f",
+      "consumers-07/status.json": "6daf366c769cb1ba4a7c67971d0cad474497d3b2732bca01896d635a29b23346",
+      "guests-05/status.json": "fd6c4be7f700a322d6475872130e507ac5f4cf4ad9b143c71190b127786287c5",
+      "gn-03/status.json": "296c85d37f9064c1cc3b4060f8585ab4367c94bec964669e1402cb40679dc646",
+      "full-link-57/status.json": "fa4a4a5fe533320ea919d75756fc38499e227a0dbb4cb281d62b3e325fd8e2a6",
+      "module-README.md": "02346a2cb3ec2eefad455b6fb64ddfae612719081c870c8fd0c1aa62cf53492e",
+      "module-self-review.md": "11caa58169b35621f7af5990a80776c103aecac159b11266e92d4b70d5a0d5d7"
+    },
+    "source_byte_equivalences": [
+      {
+        "source": "patch/BUILD-v1.gn",
+        "new": false,
+        "destination": "overlay/tools/gtos_isolate_diagnostic/BUILD.gn",
+        "sha256": "a74b26eaf966c28202f756ae188ac618d7194c6d84d82dd5f08bbc2e08bccc7f"
+      },
+      {
+        "source": "patch/printf-modular-v1.cpp",
+        "new": true,
+        "destination": "overlay/tools/gtos_isolate_diagnostic/native-c-file/printf-modular.cpp",
+        "sha256": "414e9f306e1fa93572f68c6f6acd3cdcfb44cebb20ec13d1a12799557ce26363"
+      },
+      {
+        "source": "patch/llvm-libc-v2/src/__support/math/ldexp.h",
+        "new": true,
+        "destination": "overlay/third_party/llvm-libc/src/src/__support/math/ldexp.h",
+        "sha256": "f8852c3d5a57066fb19870de918dde7b4b95e16243bce695a85e67ec23313785"
+      }
+    ],
+    "probe_byte_equivalences": [
+      {
+        "source": "probe-single-v7/fixture-helpers.h",
+        "destination": "probe-single/fixture-helpers.h",
+        "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+      },
+      {
+        "source": "probe-single-v7/kernel_common.h",
+        "destination": "probe-single/kernel_common.h",
+        "sha256": "a95231c0e32e1f11d6d1718c9dba4524cdd315c58d4179a6433c12ff509b12f9"
+      },
+      {
+        "source": "probe-single-v7/kernel.cpp",
+        "destination": "probe-single/kernel.cpp",
+        "sha256": "76c16a58136643b22727a0c5d8a60cbf5fdc52b714b38653485ef6aacff250fc"
+      },
+      {
+        "source": "probe-single-v7/linker.ld",
+        "destination": "probe-single/linker.ld",
+        "sha256": "852584571ae967c0538064058f9587f8317791dfe577de4cd28aabf817131231"
+      },
+      {
+        "source": "probe-single-v7/main.cc",
+        "destination": "probe-single/main.cc",
+        "sha256": "0d8c3b9386e6532619283e10db95d60292b135807d60141d953aaaaeb833c98f"
+      },
+      {
+        "source": "probe-single-v7/platform-helper-cases.h",
+        "destination": "probe-single/platform-helper-cases.h",
+        "sha256": "38e27fc1cb7fcf711e2099ad8034497d6940e069c696acf13ccc6397343b05a1"
+      },
+      {
+        "source": "probe-single-v7/record.h",
+        "destination": "probe-single/record.h",
+        "sha256": "3f18f1f6c2cb52dc53e04c1664a2a961e68eb508d9a244996d16a0da677d2e20"
+      },
+      {
+        "source": "probe-single-v7/temporary-cases.h",
+        "destination": "probe-single/temporary-cases.h",
+        "sha256": "76116431e12f3696a89eefbd153d08d89a8033817d28b06faf90e252cbb405df"
+      },
+      {
+        "source": "probe-single-v7/temporary-observer.h",
+        "destination": "probe-single/temporary-observer.h",
+        "sha256": "1c7eb974aa8952036c1de9a96db82a2bcff8b6905e61e0ac169e867132ad9fca"
+      },
+      {
+        "source": "probe-thread-v7/fixture-helpers.h",
+        "destination": "probe-thread/fixture-helpers.h",
+        "sha256": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d"
+      },
+      {
+        "source": "probe-thread-v7/kernel_common.h",
+        "destination": "probe-thread/kernel_common.h",
+        "sha256": "0eb78c7ae59dfc4c26967572165e24c280f6094a58b7bbe3ee55187af21e358c"
+      },
+      {
+        "source": "probe-thread-v7/kernel.cpp",
+        "destination": "probe-thread/kernel.cpp",
+        "sha256": "b6308b97f502d1cce95e80b0080e7047a8c4f0aac41b4aa84780549fdf9d943d"
+      },
+      {
+        "source": "probe-thread-v7/linker.ld",
+        "destination": "probe-thread/linker.ld",
+        "sha256": "852584571ae967c0538064058f9587f8317791dfe577de4cd28aabf817131231"
+      },
+      {
+        "source": "probe-thread-v7/main.cc",
+        "destination": "probe-thread/main.cc",
+        "sha256": "8f75e6fb05ffa04a940bf223b848acfac6902a57fbfb1677162870a0e1a7b388"
+      },
+      {
+        "source": "probe-thread-v7/platform-helper-cases.h",
+        "destination": "probe-thread/platform-helper-cases.h",
+        "sha256": "38e27fc1cb7fcf711e2099ad8034497d6940e069c696acf13ccc6397343b05a1"
+      },
+      {
+        "source": "probe-thread-v7/record.h",
+        "destination": "probe-thread/record.h",
+        "sha256": "cc784b9e755927dda0717977c4a059e27a53ed29673f2e0abbd2a7350af698bc"
+      },
+      {
+        "source": "probe-thread-v7/temporary-cases.h",
+        "destination": "probe-thread/temporary-cases.h",
+        "sha256": "1a6245e31c07f81dbb595529a0c90e120bd737c12898be69c34a4a931b8168a7"
+      },
+      {
+        "source": "probe-thread-v7/temporary-observer.h",
+        "destination": "probe-thread/temporary-observer.h",
+        "sha256": "1c7eb974aa8952036c1de9a96db82a2bcff8b6905e61e0ac169e867132ad9fca"
+      },
+      {
+        "source": "runtime-cases-v4.h",
+        "destination": "runtime-cases-v4.h",
+        "sha256": "a8f78755be7b0881e74e21fca9808d95a2b502ae7a1700b0cfdde17b2cfe6d68"
+      },
+      {
+        "source": "pow-reference-v1.h",
+        "destination": "pow-reference-v1.h",
+        "sha256": "74f6f8dbc4655be3d926faa460d1e3ede2ee8de4075f962e5325b35d2f0e3700"
+      },
+      {
+        "source": "pow-reference-v1.json",
+        "destination": "pow-reference-v1.json",
+        "sha256": "d9fa4574032de2eac0c0ae43e419a63c816a9409bb510c0305b795e9518d9a21"
+      },
+      {
+        "source": "prepare-pow-reference-v2.ps1",
+        "destination": "prepare-pow-reference-v2.ps1",
+        "sha256": "be7dd1311ee06dc1ef21dcad362d073747fe98a5572815bc734004ad3a6679c8"
+      },
+      {
+        "source": "guests-05/single/entry-symbols.h",
+        "destination": "probe-single/entry-symbols.h",
+        "sha256": "7fc2c950a26dc75157f68e9b41c67fac02b500c8a6c2d43dfe71ea929ab0ce34"
+      },
+      {
+        "source": "guests-05/thread/entry-symbols.h",
+        "destination": "probe-thread/entry-symbols.h",
+        "sha256": "d033f6aa655358b4f0fc1c3442a9b18c79c3bdce5cca20bfd3dc08b8c7205c4d"
+      }
+    ],
+    "objects": {
+      "pow": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.pow.o",
+        "sha256": "8e920a6933c191efaf000c7500b29f38ea83d8eff6c3538e63184d523a3be0d6",
+        "gn_output": "obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.pow.o"
+      },
+      "trunc": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.trunc.o",
+        "sha256": "8c063de469f0eaf05135964261f7f31ab912faf8c11d641d5a41b83f79b85924",
+        "gn_output": "obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.trunc.o"
+      },
+      "lrint": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.lrint.o",
+        "sha256": "40eb330a70bf8cdfb32bdb7246ae34b9219fa497c05c26b11483f465e2b122ee",
+        "gn_output": "obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.lrint.o"
+      },
+      "fabsf": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.fabsf.o",
+        "sha256": "7a5bc29f3d3cc3cb3af478ad6b25597b430bdf04091a3f2ea475dc416cdd67a6",
+        "gn_output": "obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.fabsf.o"
+      },
+      "strtoul": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtoul.o",
+        "sha256": "fdcd6f4db4059946c841f540594cda332619a43b7a0e246aaa9ea3aea4acf3bc",
+        "gn_output": "obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtoul.o"
+      },
+      "strdup": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/third_party/llvm-libc/src/src/string/native_allocated_string_libc.strdup.o",
+        "sha256": "a5a1f1bf50f3b31404928c383b84a1ff845fd837252a1d9ab081649a47b9e795",
+        "gn_output": "obj/third_party/llvm-libc/src/src/string/native_allocated_string_libc.strdup.o"
+      },
+      "isalnum": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isalnum.o",
+        "sha256": "679e9ad62bcce7d2ef81437f2ace0dfe5216eb67862fd7e124611d5d23ec5a3d",
+        "gn_output": "obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isalnum.o"
+      },
+      "__printf_modular": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_output_libc.printf-modular.o",
+        "sha256": "9188ae3d24a2cd00068cbd3bb7d6e31a4415f6b0508b9cb74375d44f71bfc51a",
+        "gn_output": "obj/tools/gtos_isolate_diagnostic/native-c-file/native_output_libc.printf-modular.o"
+      },
+      "ldexp": {
+        "path": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-05/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.ldexp.o",
+        "sha256": "7d554865a445417b8150ad8f74515fcd0cc1ddcdad1ab25a65657712e8b7c4e1",
+        "gn_output": "obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.ldexp.o"
+      }
+    },
+    "consumers": {
+      "single": {
+        "elf": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/consumers-07/single/after.elf",
+        "elf_sha256": "84d35fff23ecdb8b55e45394c2a4d55e277875f1d4813503485cc5a878bb0033",
+        "stripped": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/consumers-07/single/after.stripped.elf",
+        "stripped_sha256": "5d0d31f4f4174749146dc7ef1f4d59de106f933452f42eb009e0b4e1a0498ff1",
+        "symbols": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/consumers-07/single-symbols.log",
+        "symbols_sha256": "d159574ff6924df65db82c0863be4409f0c52a8ee19de8f899f53b6fa9041195",
+        "source_sha256": "0d8c3b9386e6532619283e10db95d60292b135807d60141d953aaaaeb833c98f",
+        "full_M_MD": true,
+        "dependencies": 700,
+        "support_substitutions": [
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.pow.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.trunc.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.lrint.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.fabsf.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtoul.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/third_party/llvm-libc/src/src/string/native_allocated_string_libc.strdup.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isalnum.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_output_libc.printf-modular.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-05/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.ldexp.o"
+          }
+        ],
+        "prior_support_order_preserved": true
+      },
+      "thread": {
+        "elf": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/consumers-07/thread/after.elf",
+        "elf_sha256": "0888e4b5bc8e826ced134acd7b1f91539c07e4c0c5aee7d16fd91030909dcc66",
+        "stripped": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/consumers-07/thread/after.stripped.elf",
+        "stripped_sha256": "13181b7ab96dd806b15882b4bb1683f9038ee11007a439b33eff12d01088876e",
+        "symbols": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/consumers-07/thread-symbols.log",
+        "symbols_sha256": "71a2b96439993aab76e36b9bf32f9484a713941e0768877173cbdbb59c993cbd",
+        "source_sha256": "8f75e6fb05ffa04a940bf223b848acfac6902a57fbfb1677162870a0e1a7b388",
+        "full_M_MD": true,
+        "dependencies": 741,
+        "support_substitutions": [
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.pow.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.trunc.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.lrint.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.fabsf.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtoul.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/third_party/llvm-libc/src/src/string/native_allocated_string_libc.strdup.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isalnum.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_output_libc.printf-modular.o"
+          },
+          {
+            "new": "@WORKSPACE@/artifacts/native-runtime-gap-20261015-a/provider-05/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.ldexp.o"
+          }
+        ],
+        "prior_support_order_preserved": true
+      }
+    },
+    "guests": [
+      {
+        "profile": "single",
+        "configuration": "single-32M-smp1",
+        "cases": [
+          {
+            "mode": 0,
+            "id": 1,
+            "checks": 20994,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 17,
+            "exit": 17,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2912256,
+            "kernel": 2805760,
+            "calls": 2580,
+            "mask": 575,
+            "free": 7306,
+            "baseline": 7449,
+            "open": 0,
+            "error": 0,
+            "ack": 0
+          },
+          {
+            "mode": 1,
+            "id": 2,
+            "checks": 20994,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 29,
+            "exit": 29,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2912256,
+            "kernel": 2805760,
+            "calls": 2580,
+            "mask": 575,
+            "free": 7306,
+            "baseline": 7449,
+            "open": 0,
+            "error": 0,
+            "ack": 0
+          },
+          {
+            "mode": 2,
+            "id": 3,
+            "checks": 20989,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 1,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 33,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2912256,
+            "kernel": 2805760,
+            "calls": 2573,
+            "mask": 575,
+            "free": 7289,
+            "baseline": 7449,
+            "open": 2,
+            "error": 0,
+            "ack": 0
+          },
+          {
+            "mode": 3,
+            "id": 4,
+            "checks": 20986,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 0,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 1207959585,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2912256,
+            "kernel": 2805760,
+            "calls": 2571,
+            "mask": 575,
+            "free": 7289,
+            "baseline": 7449,
+            "open": 3,
+            "error": 0,
+            "ack": 0
+          }
+        ],
+        "reaps": [
+          {
+            "id": 1,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 2,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 3,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 4,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0,
+            "failures": 0
+          }
+        ],
+        "stopped": [
+          {
+            "mode": 4,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          },
+          {
+            "mode": 5,
+            "exit": 67,
+            "vector": 0,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          },
+          {
+            "mode": 6,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          },
+          {
+            "mode": 7,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          },
+          {
+            "mode": 8,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          },
+          {
+            "mode": 9,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          },
+          {
+            "mode": 10,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7449,
+            "baseline": 7449,
+            "open": 0
+          }
+        ],
+        "helpers": [
+          {
+            "mode": 0,
+            "calls": 1
+          },
+          {
+            "mode": 1,
+            "calls": 1
+          },
+          {
+            "mode": 2,
+            "calls": 1
+          },
+          {
+            "mode": 3,
+            "calls": 1
+          },
+          {
+            "mode": 4,
+            "calls": 1
+          },
+          {
+            "mode": 5,
+            "calls": 1
+          },
+          {
+            "mode": 6,
+            "calls": 1
+          },
+          {
+            "mode": 7,
+            "calls": 1
+          },
+          {
+            "mode": 8,
+            "calls": 1
+          },
+          {
+            "mode": 9,
+            "calls": 1
+          },
+          {
+            "mode": 10,
+            "calls": 1
+          }
+        ],
+        "heaps": [
+          {
+            "mode": 0,
+            "files": 54
+          },
+          {
+            "mode": 1,
+            "files": 54
+          },
+          {
+            "mode": 2,
+            "files": 54
+          },
+          {
+            "mode": 3,
+            "files": 54
+          }
+        ],
+        "final": {
+          "checks": 135683,
+          "free": 7449,
+          "baseline": 7449,
+          "open": 0,
+          "trap_stack": 3048
+        },
+        "log_sha256": "eac0ff67632abfe607affb11303226926488dd3c4f7673c02e29a4a1eee6610e",
+        "disk_sha256": "8aeb611f425767dc7b334bbd51b07e6729fca5bbb24696b2f6767178d7d93526"
+      },
+      {
+        "profile": "single",
+        "configuration": "single-64M-smp4",
+        "cases": [
+          {
+            "mode": 0,
+            "id": 1,
+            "checks": 20994,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 17,
+            "exit": 17,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2945024,
+            "kernel": 2805760,
+            "calls": 2580,
+            "mask": 575,
+            "free": 15490,
+            "baseline": 15633,
+            "open": 0,
+            "error": 0,
+            "ack": 0
+          },
+          {
+            "mode": 1,
+            "id": 2,
+            "checks": 20994,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 29,
+            "exit": 29,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2945024,
+            "kernel": 2805760,
+            "calls": 2580,
+            "mask": 575,
+            "free": 15490,
+            "baseline": 15633,
+            "open": 0,
+            "error": 0,
+            "ack": 0
+          },
+          {
+            "mode": 2,
+            "id": 3,
+            "checks": 20989,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 1,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 33,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2945024,
+            "kernel": 2805760,
+            "calls": 2573,
+            "mask": 575,
+            "free": 15473,
+            "baseline": 15633,
+            "open": 2,
+            "error": 0,
+            "ack": 0
+          },
+          {
+            "mode": 3,
+            "id": 4,
+            "checks": 20986,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 0,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 1207959585,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2945024,
+            "kernel": 2805760,
+            "calls": 2571,
+            "mask": 575,
+            "free": 15473,
+            "baseline": 15633,
+            "open": 3,
+            "error": 0,
+            "ack": 0
+          }
+        ],
+        "reaps": [
+          {
+            "id": 1,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 2,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 3,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 4,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0,
+            "failures": 0
+          }
+        ],
+        "stopped": [
+          {
+            "mode": 4,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          },
+          {
+            "mode": 5,
+            "exit": 67,
+            "vector": 0,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          },
+          {
+            "mode": 6,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          },
+          {
+            "mode": 7,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          },
+          {
+            "mode": 8,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          },
+          {
+            "mode": 9,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          },
+          {
+            "mode": 10,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15633,
+            "baseline": 15633,
+            "open": 0
+          }
+        ],
+        "helpers": [
+          {
+            "mode": 0,
+            "calls": 1
+          },
+          {
+            "mode": 1,
+            "calls": 1
+          },
+          {
+            "mode": 2,
+            "calls": 1
+          },
+          {
+            "mode": 3,
+            "calls": 1
+          },
+          {
+            "mode": 4,
+            "calls": 1
+          },
+          {
+            "mode": 5,
+            "calls": 1
+          },
+          {
+            "mode": 6,
+            "calls": 1
+          },
+          {
+            "mode": 7,
+            "calls": 1
+          },
+          {
+            "mode": 8,
+            "calls": 1
+          },
+          {
+            "mode": 9,
+            "calls": 1
+          },
+          {
+            "mode": 10,
+            "calls": 1
+          }
+        ],
+        "heaps": [
+          {
+            "mode": 0,
+            "files": 54
+          },
+          {
+            "mode": 1,
+            "files": 54
+          },
+          {
+            "mode": 2,
+            "files": 54
+          },
+          {
+            "mode": 3,
+            "files": 54
+          }
+        ],
+        "final": {
+          "checks": 135356,
+          "free": 15633,
+          "baseline": 15633,
+          "open": 0,
+          "trap_stack": 3048
+        },
+        "log_sha256": "a171bf1555d09234eeb645a2cf6333295137934c037c8be98cdf868a2ab819eb",
+        "disk_sha256": "8aeb611f425767dc7b334bbd51b07e6729fca5bbb24696b2f6767178d7d93526"
+      },
+      {
+        "profile": "thread",
+        "configuration": "thread-32M-smp1",
+        "cases": [
+          {
+            "mode": 0,
+            "id": 1,
+            "checks": 26924,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 17,
+            "exit": 17,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2932736,
+            "kernel": 2826240,
+            "calls": 2646,
+            "mask": 575,
+            "free": 7297,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 1,
+            "id": 5,
+            "checks": 26924,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 29,
+            "exit": 29,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2932736,
+            "kernel": 2826240,
+            "calls": 2646,
+            "mask": 575,
+            "free": 7297,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 2,
+            "id": 9,
+            "checks": 26919,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 1,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 33,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2932736,
+            "kernel": 2826240,
+            "calls": 2639,
+            "mask": 575,
+            "free": 7280,
+            "baseline": 7444,
+            "open": 2
+          },
+          {
+            "mode": 3,
+            "id": 13,
+            "checks": 26916,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 0,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 1207959585,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2932736,
+            "kernel": 2826240,
+            "calls": 2637,
+            "mask": 575,
+            "free": 7280,
+            "baseline": 7444,
+            "open": 3
+          }
+        ],
+        "reaps": [
+          {
+            "id": 1,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 5,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 9,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 13,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0,
+            "failures": 0
+          }
+        ],
+        "stopped": [
+          {
+            "mode": 4,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 5,
+            "exit": 67,
+            "vector": 0,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 6,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 7,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 8,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 9,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          },
+          {
+            "mode": 10,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 7444,
+            "baseline": 7444,
+            "open": 0
+          }
+        ],
+        "helpers": [
+          {
+            "mode": 0,
+            "calls": 4
+          },
+          {
+            "mode": 1,
+            "calls": 4
+          },
+          {
+            "mode": 2,
+            "calls": 4
+          },
+          {
+            "mode": 3,
+            "calls": 4
+          },
+          {
+            "mode": 4,
+            "calls": 1
+          },
+          {
+            "mode": 5,
+            "calls": 1
+          },
+          {
+            "mode": 6,
+            "calls": 1
+          },
+          {
+            "mode": 7,
+            "calls": 1
+          },
+          {
+            "mode": 8,
+            "calls": 1
+          },
+          {
+            "mode": 9,
+            "calls": 1
+          },
+          {
+            "mode": 10,
+            "calls": 1
+          }
+        ],
+        "heaps": [
+          {
+            "mode": 0,
+            "files": 54
+          },
+          {
+            "mode": 1,
+            "files": 54
+          },
+          {
+            "mode": 2,
+            "files": 54
+          },
+          {
+            "mode": 3,
+            "files": 54
+          }
+        ],
+        "final": {
+          "checks": 181673,
+          "free": 7444,
+          "baseline": 7444,
+          "open": 0,
+          "trap_stack": 3268
+        },
+        "log_sha256": "6158970bf7262c402747b2685d502869acd96fbe497edc4c19d978549c7ab05c",
+        "disk_sha256": "4ba8f1bbb4a8558baf697a3a0eec72528d5cd88df4a806a547597ff728106751"
+      },
+      {
+        "profile": "thread",
+        "configuration": "thread-64M-smp4",
+        "cases": [
+          {
+            "mode": 0,
+            "id": 1,
+            "checks": 26924,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 17,
+            "exit": 17,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2965504,
+            "kernel": 2826240,
+            "calls": 2646,
+            "mask": 575,
+            "free": 15481,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 1,
+            "id": 5,
+            "checks": 26924,
+            "stage": 2,
+            "preinit": 1,
+            "events": 7,
+            "global": 2,
+            "cout_sync": 1,
+            "clog_sync": 1,
+            "closed_bad": 0,
+            "entry_stage": 4,
+            "entry_result": 29,
+            "exit": 29,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2965504,
+            "kernel": 2826240,
+            "calls": 2646,
+            "mask": 575,
+            "free": 15481,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 2,
+            "id": 9,
+            "checks": 26919,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 1,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 33,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2965504,
+            "kernel": 2826240,
+            "calls": 2639,
+            "mask": 575,
+            "free": 15464,
+            "baseline": 15628,
+            "open": 2
+          },
+          {
+            "mode": 3,
+            "id": 13,
+            "checks": 26916,
+            "stage": 7,
+            "preinit": 1,
+            "events": 0,
+            "global": 1,
+            "cout_sync": 0,
+            "clog_sync": 0,
+            "closed_bad": 0,
+            "entry_stage": 2,
+            "entry_result": 4294967295,
+            "exit": 1207959585,
+            "vector": 0,
+            "cs": 35,
+            "cr3": 2965504,
+            "kernel": 2826240,
+            "calls": 2637,
+            "mask": 575,
+            "free": 15464,
+            "baseline": 15628,
+            "open": 3
+          }
+        ],
+        "reaps": [
+          {
+            "id": 1,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 5,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 9,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0,
+            "failures": 0
+          },
+          {
+            "id": 13,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0,
+            "failures": 0
+          }
+        ],
+        "stopped": [
+          {
+            "mode": 4,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 5,
+            "exit": 67,
+            "vector": 0,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 6,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 7,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 8,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 9,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          },
+          {
+            "mode": 10,
+            "exit": 2147483654,
+            "vector": 6,
+            "free": 15628,
+            "baseline": 15628,
+            "open": 0
+          }
+        ],
+        "helpers": [
+          {
+            "mode": 0,
+            "calls": 4
+          },
+          {
+            "mode": 1,
+            "calls": 4
+          },
+          {
+            "mode": 2,
+            "calls": 4
+          },
+          {
+            "mode": 3,
+            "calls": 4
+          },
+          {
+            "mode": 4,
+            "calls": 1
+          },
+          {
+            "mode": 5,
+            "calls": 1
+          },
+          {
+            "mode": 6,
+            "calls": 1
+          },
+          {
+            "mode": 7,
+            "calls": 1
+          },
+          {
+            "mode": 8,
+            "calls": 1
+          },
+          {
+            "mode": 9,
+            "calls": 1
+          },
+          {
+            "mode": 10,
+            "calls": 1
+          }
+        ],
+        "heaps": [
+          {
+            "mode": 0,
+            "files": 54
+          },
+          {
+            "mode": 1,
+            "files": 54
+          },
+          {
+            "mode": 2,
+            "files": 54
+          },
+          {
+            "mode": 3,
+            "files": 54
+          }
+        ],
+        "final": {
+          "checks": 181400,
+          "free": 15628,
+          "baseline": 15628,
+          "open": 0,
+          "trap_stack": 3268
+        },
+        "log_sha256": "9f3465ff9e2118a6a4db108a31949770afe79a829d67283a457c54ac27dc7703",
+        "disk_sha256": "e16d50735a4aa380c6417cf0d8db560b4ecfbdfef8e2b830a9ff60c9d9211b67"
+      }
+    ],
+    "processes": 44,
+    "total_contexts": 68,
+    "thread_joins": 24,
+    "process_reaps": 44,
+    "ldexp_uniform_gtos_error_profile": true,
+    "ieee_rounding_modes": 4,
+    "exact_integer_pow_references": 5,
+    "llvm_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+    "ldexp_upstream_header_sha256": "c8d0c69b833cb392b170d12f30e98fe3ebe2422f8aa07209c7652bb013ef5c95",
+    "old_file_sync_lifecycle_regression": true,
+    "cpp_and_printf_thread_records_checked": true,
+    "invalid_copy_destination_preserved": true,
+    "kernel_isa_audit_pass": true,
+    "prior_gn_object_commands_preserved": 5187,
+    "new_gn_objects": 9,
+    "prior_link_inputs_preserved": 1101,
+    "complete_link_inputs": 1110,
+    "original_base_archive_unchanged": true,
+    "complete_link_exit_code": 1,
+    "complete_link_bound_inputs": 10418,
+    "first_undefined_symbol": "v8::base::debug::EnableInProcessStackDumping()",
+    "undefined_symbols": [
+      "v8::base::debug::EnableInProcessStackDumping()",
+      "v8::base::OS::AllocateShared(void*, unsigned int, v8::base::OS::MemoryPermission, v8::SharedMemoryHandle, unsigned long long)",
+      "v8::base::OS::FreeShared(void*, unsigned int)",
+      "v8::base::OS::SetMemoryRegionName(void const*, unsigned int, char const*)",
+      "v8::base::debug::StackTrace::StackTrace()",
+      "v8::base::debug::StackTrace::Print() const",
+      "v8::base::debug::DisableSignalStackDump()"
+    ],
+    "diagnostics_complete": true,
+    "source_byte_equivalence_verified": true,
+    "payload_files": 1305,
+    "payload_overlay_files": 432,
+    "old_cache_unchanged": true,
     "full_native_elf_exists": false,
     "native_isolate_pass": false,
     "browser_guest_pass": false,

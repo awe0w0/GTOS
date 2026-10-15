@@ -5979,9 +5979,9 @@
       "bytes": 551
     },
     "README.md": {
-      "sha256": "bd2062f9c548d735a4cb87f7378727bd52ffd0c378d2e7971705ce8e748073e6",
-      "bytes": 17317,
-      "origin": "native platform helpers, real UTC and bounded copy qualification"
+      "sha256": "a152dcda86854225c96f67c6c38c575583594003f247e0eaa65033561ad8d537",
+      "bytes": 18235,
+      "origin": "native runtime-gap qualification; Chinese module documentation"
     },
     "overlay/tools/gtos_isolate_diagnostic/runtime/chrono.cc": {
       "sha256": "8157e162a67eded05caa5eb2e1f1c5494db975b068906312826f18d424b5f267",
@@ -6108,9 +6108,9 @@
       "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
     },
     "overlay/tools/gtos_isolate_diagnostic/BUILD.gn": {
-      "bytes": 22503,
-      "sha256": "c8bf4189ee54406ec9610a10643618d9cf65e37cabb1e759b232dbf7b37a6a59",
-      "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
+      "bytes": 23567,
+      "origin": "qualified native runtime-gap source; original license headers retained",
+      "sha256": "a74b26eaf966c28202f756ae188ac618d7194c6d84d82dd5f08bbc2e08bccc7f"
     },
     "overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp": {
       "sha256": "ea166301180799dcac8e599d167fe743820e3afb4ad1d7d7e5dc9ec9336ed86b",
@@ -6206,11 +6206,21 @@
       "bytes": 1141,
       "sha256": "783296e5ba0cf4e1291ecf1c0f6906f0e2045a0fbdfbabfe9ca4302826286a40",
       "origin": "Qualified GTOS native standard-stream, strict UTF8 and bounded 1/4 context adaptation; fixed upstream bytes retained separately"
+    },
+    "overlay/tools/gtos_isolate_diagnostic/native-c-file/printf-modular.cpp": {
+      "bytes": 2104,
+      "origin": "qualified native runtime-gap source; original license headers retained",
+      "sha256": "414e9f306e1fa93572f68c6f6acd3cdcfb44cebb20ec13d1a12799557ce26363"
+    },
+    "overlay/third_party/llvm-libc/src/src/__support/math/ldexp.h": {
+      "bytes": 1756,
+      "origin": "qualified native runtime-gap source; original license headers retained",
+      "sha256": "f8852c3d5a57066fb19870de918dde7b4b95e16243bce695a85e67ec23313785"
     }
   },
-  "overlay_files": 430,
+  "overlay_files": 432,
   "sdk_files": 430,
-  "total_bytes": 3400435,
+  "total_bytes": 3410786,
   "old_source_or_cache_written": false,
   "native_isolate_pass": false,
   "browser_guest_pass": false,

@@ -89,6 +89,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "//third_party/llvm-libc/src/src/ctype/tolower.cpp",
       "//third_party/llvm-libc/src/src/ctype/isspace.cpp",
       "//third_party/llvm-libc/src/src/ctype/isprint.cpp",
+      "//third_party/llvm-libc/src/src/ctype/isalnum.cpp",
     ]
   }
 }
@@ -522,6 +523,7 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "//third_party/llvm-libc/src/src/stdio/generic/fprintf.cpp",
       "//third_party/llvm-libc/src/src/stdio/generic/vprintf.cpp",
       "//third_party/llvm-libc/src/src/stdio/generic/vfprintf.cpp",
+      "native-c-file/printf-modular.cpp",
       "//src/base/platform/gtos-output.cc",
       "//src/base/platform/gtos-file.cc",
     ]
@@ -555,8 +557,30 @@ if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
       "//third_party/llvm-libc/src/src/stdlib/strtoll.cpp",
       "//third_party/llvm-libc/src/src/math/generic/nearbyint.cpp",
       "//third_party/llvm-libc/src/src/math/generic/exp2.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/ldexp.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/pow.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/trunc.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/lrint.cpp",
+      "//third_party/llvm-libc/src/src/math/generic/fabsf.cpp",
+      "//third_party/llvm-libc/src/src/stdlib/strtoul.cpp",
     ]
     deps = [ ":native_c_clock" ]
+  }
+}
+
+# Full real embedder link, separate from object-only qualification.
+if (gtos_isolate_compile_diagnostic && current_os == "gtos") {
+  v8_source_set("native_allocated_string_libc") {
+    assert(current_cpu == "x86")
+    configs = []
+    include_dirs = [ "//third_party/llvm-libc/src" ]
+    defines = [
+      "LIBC_NAMESPACE=__llvm_libc_cr",
+      "LIBC_COPT_PUBLIC_PACKAGING=1",
+      "LIBC_ERRNO_MODE=3",
+    ]
+    sources = [ "//third_party/llvm-libc/src/src/string/strdup.cpp" ]
+    deps = [ ":native_c_clock", ":native_runtime" ]
   }
 }
 
@@ -593,6 +617,7 @@ executable("native_embedder") {
   sources = [ "native-entry.cc", "native-start.s" ]
   deps = [ ":consumer", "//:v8", "//:v8_libplatform", ":native_stream_libcxx" ]
   deps += [ ":native_string_libc", ":native_printf_libc" ]
+  deps += [ ":native_allocated_string_libc" ]
   deps += [ ":native_cpp_libcxx" ]
   deps += [ ":native_file_libc" ]
   deps += [ ":native_diagnostic_libcxx" ]

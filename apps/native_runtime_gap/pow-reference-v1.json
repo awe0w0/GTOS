@@ -1,0 +1,99 @@
+{
+  "independent_exact_integer_reference": true,
+  "host_float_not_used": true,
+  "target_not_called": true,
+  "mode_order": [
+    "nearest_even",
+    "down",
+    "up",
+    "toward_zero"
+  ],
+  "cases": [
+    {
+      "base": "2.0",
+      "exponent": "0.5",
+      "numerator": 2,
+      "denominator": 1,
+      "root_degree": 2,
+      "low_mantissa": "6369051672525772",
+      "high_mantissa": "6369051672525773",
+      "expected_bits": [
+        "0x3ff6a09e667f3bcdULL",
+        "0x3ff6a09e667f3bccULL",
+        "0x3ff6a09e667f3bcdULL",
+        "0x3ff6a09e667f3bccULL"
+      ],
+      "strict_exact_bracket_verified": true,
+      "exact_midpoint_nearest_even_verified": true
+    },
+    {
+      "base": "3.0",
+      "exponent": "0.5",
+      "numerator": 3,
+      "denominator": 1,
+      "root_degree": 2,
+      "low_mantissa": "7800463371553962",
+      "high_mantissa": "7800463371553963",
+      "expected_bits": [
+        "0x3ffbb67ae8584caaULL",
+        "0x3ffbb67ae8584caaULL",
+        "0x3ffbb67ae8584cabULL",
+        "0x3ffbb67ae8584caaULL"
+      ],
+      "strict_exact_bracket_verified": true,
+      "exact_midpoint_nearest_even_verified": true
+    },
+    {
+      "base": "3.0",
+      "exponent": "0.25",
+      "numerator": 3,
+      "denominator": 1,
+      "root_degree": 4,
+      "low_mantissa": "5927070434324838",
+      "high_mantissa": "5927070434324839",
+      "expected_bits": [
+        "0x3ff50ea39fcbf166ULL",
+        "0x3ff50ea39fcbf166ULL",
+        "0x3ff50ea39fcbf167ULL",
+        "0x3ff50ea39fcbf166ULL"
+      ],
+      "strict_exact_bracket_verified": true,
+      "exact_midpoint_nearest_even_verified": true
+    },
+    {
+      "base": "7.0",
+      "exponent": "0.25",
+      "numerator": 7,
+      "denominator": 1,
+      "root_degree": 4,
+      "low_mantissa": "7325449597151730",
+      "high_mantissa": "7325449597151731",
+      "expected_bits": [
+        "0x3ffa0675250ee9f2ULL",
+        "0x3ffa0675250ee9f2ULL",
+        "0x3ffa0675250ee9f3ULL",
+        "0x3ffa0675250ee9f2ULL"
+      ],
+      "strict_exact_bracket_verified": true,
+      "exact_midpoint_nearest_even_verified": true
+    },
+    {
+      "base": "1.25",
+      "exponent": "1.5",
+      "numerator": 125,
+      "denominator": 64,
+      "root_degree": 2,
+      "low_mantissa": "6293971818901969",
+      "high_mantissa": "6293971818901970",
+      "expected_bits": [
+        "0x3ff65c55827df1d2ULL",
+        "0x3ff65c55827df1d1ULL",
+        "0x3ff65c55827df1d2ULL",
+        "0x3ff65c55827df1d1ULL"
+      ],
+      "strict_exact_bracket_verified": true,
+      "exact_midpoint_nearest_even_verified": true
+    }
+  ],
+  "header_sha256": "74f6f8dbc4655be3d926faa460d1e3ede2ee8de4075f962e5325b35d2f0e3700"
+}

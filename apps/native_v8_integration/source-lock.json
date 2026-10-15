@@ -21,7 +21,7 @@
     "integer_builtins": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528"
   },
   "builder_sha256": "f89f6f11e372cab31e6a984a490cc961049f43d5bc64b0fafcaede1acb2af8fe",
-  "payload_lock_sha256": "c21ffb4ea44b0718e5dfcdb5a0d1a4769b447fa1e1b4437fd33b81b963039964",
+  "payload_lock_sha256": "fb3d0da19ba11ca6dbadeaa8d07015d488c4ddc657f4778d26b160b815951113",
   "clang_resource_files": {
     "__clang_cuda_builtin_vars.h": "32d445ec643c5802efbd54d41e4e8bff952436586d992fc0f91258238cb6e115",
     "__clang_cuda_cmath.h": "e44c1e33315864e0906e901d76257ed1c17c4ffc25cb944e4223248e59adb815",
@@ -1305,7 +1305,7 @@
     "third_party/libc++/src/src/iostream.cpp": "48067e743ca39210e8c2f7ea8ea5946675df3dbff542b49b6dd2b2cbcdcd431e",
     "third_party/llvm-libc/src/src/stdio/generic/getc.cpp": "d02be28d0c4f1601192c6290cecf2ef9798dbf012cb03f46bf522461f07ad5eb"
   },
-  "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n",
+  "gn_args": "target_os=\"gtos\"\ntarget_cpu=\"x86\"\nis_debug=false\nis_component_build=false\nuse_remoteexec=false\nuse_siso=false\nuse_sysroot=false\nuse_custom_libcxx=false\nuse_custom_libcxx_for_host=true\nuse_clang_modules=false\nuse_unified_system_module=false\nsymbol_level=0\nv8_symbol_level=0\nv8_jitless=true\nv8_enable_sparkplug=false\nv8_enable_maglev=false\nv8_enable_turbofan=false\nv8_enable_webassembly=false\nv8_enable_i18n_support=false\nv8_enable_temporal_support=false\nv8_enable_sandbox=false\nv8_enable_pointer_compression=false\nv8_enable_static_roots=false\nv8_use_external_startup_data=false\nv8_use_perfetto=false\nv8_use_metagen_layouts=false\nv8_use_metagen_instance_types=false\ngtos_isolate_compile_diagnostic=true\nuse_glib=false\nhost_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x64\"\nv8_snapshot_toolchain=\"//build/toolchain/gtos_diagnostic_host:linux_x86\"\n\naction_pool_depth=1\n",
   "input_boundary": "Requires an unchanged DEPS-populated upstream checkout, installed Linux x64/IA32 sysroots and pinned host Python package. Git revisions/dirty checks cover tracked source; host runtime and Clang resource payloads are individually hashed. Package sysroots remain prepared checkout prerequisites, not files redistributed by GTOS.",
   "new_runtime_bridges_guest_qualified": false,
   "signal_handlers_supported": false,
@@ -1545,5 +1545,15 @@
   "native_os_file_scope": "Real per-thread OS errno, w+ log and immediately unlinked tmpfile;24 processes/48 contexts/24 Reap;BSP only;complete browser pending",
   "native_platform_helpers_guest_qualified": true,
   "native_platform_helpers_qualification": "apps/native_platform_helpers/acceptance.json",
-  "native_platform_helpers_scope": "static ELF profiler metadata, IA32 alignment, real UTC and bounded strncpy semantics;44processes/68contexts/44Reap;BSP only;browser pending"
+  "native_platform_helpers_scope": "static ELF profiler metadata, IA32 alignment, real UTC and bounded strncpy semantics;44processes/68contexts/44Reap;BSP only;browser pending",
+  "native_runtime_gap_guest_qualified": true,
+  "native_runtime_gap_qualification": "apps/native_runtime_gap/acceptance.json",
+  "native_runtime_gap_scope": "nine real libc providers; ldexp uniform GTOS range-error profile;44processes/68contexts/44Reap;BSP only;browser pending",
+  "native_runtime_gap_targets": [
+    "native_numeric_libc",
+    "native_ctype_libc",
+    "native_allocated_string_libc",
+    "native_output_libc"
+  ],
+  "native_runtime_gap_llvm_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f"
 }
