@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-user-v4.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 237.41802445,
+  "child_sha256": "b1bede27f41a15f986e6de4d9097d662e678a85803a7fc6ce2a0aff272c62908",
+  "guard_sha256": "59547c025e33874cbf6b2d4dab92e9eadf51d9c7cfd4d417cae969a07730481a",
+  "launcher_log_sha256": "ea75069d23aaf1431db59111b4634e6af6ed416311f334adb5722968077af820"
+}

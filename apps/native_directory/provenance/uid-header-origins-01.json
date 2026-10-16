@@ -1,0 +1,17 @@
+{
+  "original_native_header": {
+    "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-33/source/tools/gtos_native_sdk/sdk/sys/types.h",
+    "sha256": "4cbd01b1f8e5518014fa5d122971d19ac68aab914c0a095d0782ea74035335d4",
+    "receipt": "artifacts/native-directory-20261017-a/content-graph-01/status.json",
+    "receipt_sha256": "12c1f279e8766bbbecb83bd80dc19139fbf69acc2c33fa06b044cd8f0762cdd1"
+  },
+  "uid_type": {
+    "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-33/source/tools/gtos_native_sdk/c-sdk/llvm-libc-types/uid_t.h",
+    "sha256": "ceba4b5f9858fd7a4e5e348f3c7abda6a6466956ec3569630ef90a37a5ca8cdd",
+    "revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+    "relative": "include/llvm-libc-types/uid_t.h",
+    "blob": "4f6c6479186bad1348e066ea9072bade3ae47e30",
+    "raw_path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/llvm-libc/src/include/llvm-libc-types/uid_t.h"
+  },
+  "scope": "Only expose the existing raw LLVM32-bit UID scalar type in the native projection; no getuid service or fabricated user identity"
+}

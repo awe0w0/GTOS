@@ -1,0 +1,43 @@
+{
+  "previous_goal_turn": "progress",
+  "canonical_dev": "0392649b664ce5cab342cf527e0e8e6a76117a98",
+  "overlays": {
+    "content/shell/BUILD.gn": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/patch/content-shell-BUILD.gn",
+      "sha256": "68461c0eac30a7598a370d4d1e5cae224c0fd8cd72078291f7aa86ffee9e47dd"
+    },
+    "tools/gtos_native_sdk/runtime/BUILD.gn": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/patch/runtime-BUILD.gn",
+      "sha256": "8cc2fc34145bb62ba67baf08b07abc482d69986f3d616df3514335c0846dcf9b"
+    },
+    "tools/gtos_native_sdk/runtime/directory.cc": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/patch/tools/gtos_native_sdk/runtime/directory.cc",
+      "sha256": "49772b72bce589f20dd9c17588747dbaefef5a09e5f8fc89603ba1bce59bfed9"
+    },
+    "tools/gtos_native_sdk/c-sdk/dirent.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/patch/tools/gtos_native_sdk/c-sdk/dirent.h",
+      "sha256": "480b1b3268f68b71fbc47f49b2487c3bbdb31c68e464217f3067abc86d623e90"
+    },
+    "tools/gtos_native_sdk/c-sdk/unistd.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/patch/tools/gtos_native_sdk/c-sdk/unistd.h",
+      "sha256": "a089a611164f07d740ae1061e3dce4a9e93c1371839cde730bb9e1628eaf777f"
+    },
+    "tools/gtos_native_sdk/sdk/process/file_abi.h": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/patch/tools/gtos_native_sdk/sdk/process/file_abi.h",
+      "sha256": "e974d09146cfb319c06215b8e5e34bfe47281f855bbdd097f06fb0d05019b659"
+    }
+  },
+  "anchors": {
+    "logs/native-v8-integration-handoff-v148.json": "5b5ef61e9f0ba563a6dbe3f906b32f1ea53765607fcf53a9e848b6a7e95f7e0a",
+    "artifacts/native-getenv-20261017-a/content-graph-01/status.json": "454185fe759e962b253a11b05f0d3492187e8ab08a99c0cf8d24095212d5d076",
+    "artifacts/native-getenv-20261017-a/source-qualified-01/status.json": "cf6ae107c025966c18606d133bb65420f120a533b58ea677d8b88eb926c0b055",
+    "artifacts/native-getenv-20261017-a/muxer-preflight-01/status.json": "5c1621e9f94c606fb498d01e7d4eed6ab787c7f731d3f6d2ede3f5db916945e2",
+    "artifacts/native-descriptor-20261017-a/C-api-consumers-01.json": "647f2a06b641e222e8a609f4d1b871264bc2a57ec861057fec5cbfce0ca0607f",
+    "artifacts/native-dup-20261016T213527Z-569/status.json": "230e5df0382cae1cc61177440cf8a023b44f9822f02305aabf3fef3a5de0663f"
+  },
+  "helper_sha256": "b2788c8c1c5e02d91154ea4d8616948d8bce87a6d0cbe23dc3e35aa4c801167d",
+  "dotfile_sha256": "2ed4e6c57367f30e9ec076708716ae94e69938ab7144b3a1278434d583d735f9",
+  "CXX_pass": false,
+  "native_C_API_guest_pass": false,
+  "browser_pass": false
+}

@@ -1,0 +1,56 @@
+{
+  "launcher_sha256": "ac982618813cbedeb7b7cca3d29e1b0328c1aaf4dc52aea1fd7ca01188d35f26",
+  "child_sha256": "9f14a82bb2a1db9ea54ad7c7b61c3f66907531a6c7945d48ed400a1ba980fb2f",
+  "python_path": "/usr/bin/python3",
+  "python_sha256": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+  "executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+    "/mnt/f/GTOS-Chromium/toolchains/gn/gn": "c0dec98e11c4008b165a44bf407e06704710cf76e2af4aea22dd3b7102f0778e",
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/content-helper-v3.py": "fac90a9eb5b716c387ab1f0ca880554a47a360c5924a3d8af2e5b99d574e4eb3"
+  },
+  "elf_loader": "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
+  "directory_execute_permissions": false,
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "workspace_read_only": true,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/content-graph-03",
+  "source_write_denied": true,
+  "source_document_sha256_before": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_sha256_after": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_unchanged": true,
+  "rule_path_handles_retained": true,
+  "artifact_execution_denied": true,
+  "output_artifact_execution_denied": true,
+  "landlock_tcp_denied": true,
+  "landlock_abstract_socket_and_cross_domain_signal_scoped": true,
+  "output_symlink_creation_allowed": true,
+  "device_sink_exception": "/dev/null write-only sink; no IOCTL_DEV granted",
+  "network_disabled": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "minimum_child_environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "namespace_metadata": {
+    "net": {
+      "st_dev": 4,
+      "st_ino": 4026532221
+    },
+    "user": {
+      "st_dev": 4,
+      "st_ino": 4026532220
+    }
+  },
+  "namespace_ids": {
+    "net": 4026532221,
+    "user": 4026532220
+  }
+}

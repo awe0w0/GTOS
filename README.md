@@ -43,7 +43,9 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 
 [原生句柄复制](docs/native-dup.md)提供进程所有权检查、共享文件/目录游标及
 最后引用回收；独立 CPL3/ATA 测试覆盖 worker、边界拒绝和磁盘错误回收。
-这为 C 目录与文件描述符适配提供基础，浏览器首帧仍待接入。
+在此基础上的[C 目录与线程身份适配](apps/native_directory/README.md)已验证
+真实 DIR/FILE 游标、errno、堆失败、ThreadChecker/TLS，以及正常和故障后的
+精确资源回收；完整原始 Muxer 编译通过。浏览器首帧仍待接入。
 
 ## 构建与运行
 

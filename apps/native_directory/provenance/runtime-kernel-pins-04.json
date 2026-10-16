@@ -1,0 +1,7 @@
+{
+  "scope": "Canonical kernel; stable peer baseline measured after actual fopen and before first tested root; explicit admission/reap counters",
+  "files": {
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-probe-05/record.h": "d344a95bbe499decbd3a9cf1877ef57ee7b5dd2a8c9e157d5abc4b9c2eb52b0e",
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-probe-05/kernel.cpp": "fd5177b9311d2f08a6a1dd7ad83535bbe393daa692dee3349cba476a9a64f341"
+  }
+}

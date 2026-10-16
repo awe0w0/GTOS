@@ -1,0 +1,129 @@
+{
+  "scope": "Preserved historical failures, never acceptance receipts",
+  "runs": [
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/content-graph-02/status.json",
+      "sha256": "33e9480565c521e8acc31f713bd119e61ab11882679eef521707d79c550fc8cd",
+      "failure": "Every selected compiled MD alias must be classified",
+      "rejected_targets": [],
+      "partial_objects_qualified": null,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-01/status.json",
+      "sha256": "53f2f6ed615697aaf0b4248161261483d9966c52a8af59349c94378f44f96421",
+      "failure": "Original explicit compiler policy dependencies required",
+      "rejected_targets": [],
+      "partial_objects_qualified": false,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-02/status.json",
+      "sha256": "079d935a2d443e85293b2e829bda79e24eff583cd8e3d66cf5a440613caa7cad",
+      "failure": null,
+      "rejected_targets": [
+        {
+          "target": "tracing_muxer_impl",
+          "stage": "preprocessor",
+          "returncode": 1,
+          "unbound_MD_count": 1
+        }
+      ],
+      "partial_objects_qualified": true,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-03/status.json",
+      "sha256": "80f8b347a136740d991b32e38de848af4e5ed42f73455e10e5e9676db6244c09",
+      "failure": null,
+      "rejected_targets": [
+        {
+          "target": "thread_checker",
+          "stage": "source_qualification",
+          "returncode": null,
+          "unbound_MD_count": 10
+        },
+        {
+          "target": "tracing_muxer_impl",
+          "stage": "source_qualification",
+          "returncode": null,
+          "unbound_MD_count": 58
+        }
+      ],
+      "partial_objects_qualified": false,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-04/status.json",
+      "sha256": "9cf8b27abaeddeecb8c83b2ffb5f42878541054cac7dadc0daff27ba14450c1d",
+      "failure": null,
+      "rejected_targets": [
+        {
+          "target": "thread_checker",
+          "stage": "compiler",
+          "returncode": 1,
+          "unbound_MD_count": 1
+        },
+        {
+          "target": "tracing_muxer_impl",
+          "stage": "compiler",
+          "returncode": 1,
+          "unbound_MD_count": 1
+        }
+      ],
+      "partial_objects_qualified": false,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-05/status.json",
+      "sha256": "4b5da59a21367c09732439462a505dbaf3f871b0d6b85736b53ca52cc0e87097",
+      "failure": null,
+      "rejected_targets": [
+        {
+          "target": "thread_checker",
+          "stage": "source_qualification",
+          "returncode": null,
+          "unbound_MD_count": 1
+        },
+        {
+          "target": "tracing_muxer_impl",
+          "stage": "source_qualification",
+          "returncode": null,
+          "unbound_MD_count": 1
+        }
+      ],
+      "partial_objects_qualified": false,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-user-01/status.json",
+      "sha256": "e7fb1db7651597eab5f998307167cf0ca03f1d51de7c60ee43c17f8d2a59607e",
+      "failure": "Unexpected tool result: user-O0-M",
+      "rejected_targets": [],
+      "partial_objects_qualified": null,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-user-02/status.json",
+      "sha256": "f7a843af8979cb05f8efce6cf1f56976bd36200edfee7c8d0e2a624132f73173",
+      "failure": "Unexpected tool result: user-O0-CXX",
+      "rejected_targets": [],
+      "partial_objects_qualified": null,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-guest-01/status.json",
+      "sha256": "a608956e1881b004d01167a6e2d6c9f3d357c66cb90fccf228f4f9f3f35ac9be",
+      "failure": "Command failed: O0-32M-smp1",
+      "rejected_targets": [],
+      "partial_objects_qualified": null,
+      "full_module_qualified": false
+    },
+    {
+      "path": "F:/GTOS-Chromium/artifacts/native-directory-20261017-a/launch-runtime-user-v3.py",
+      "sha256": "510de0c9babada1125930b49b3c0e61be817c39a6a65cfd49845ba0816a02153",
+      "failure": "Exact launcher self-path still named v2; rejected before output creation or child execution",
+      "qualified": false
+    }
+  ]
+}

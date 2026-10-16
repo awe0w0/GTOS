@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-consumers-v6.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 202.856576659,
+  "child_sha256": "bb7225a724c088eb30cb350883294416835c59cb55b2f67bcd5dd0823ab504ce",
+  "guard_sha256": "fb70806a6b250dc6b0ecbf20db0a5036e2e93eae7af988ba0bba7530848cf83c",
+  "launcher_log_sha256": "08cfb6b3e439fbda7b779ada8d25450017f953fc8f56fb3ec5064dd30abc8b71"
+}

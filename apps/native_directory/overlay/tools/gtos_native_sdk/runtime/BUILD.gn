@@ -1,0 +1,24 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license in LICENSE.
+assert(is_gtos && !is_linux && !is_posix && current_cpu == "x86")
+
+source_set("environment_libc") {
+  include_dirs = [
+    "//third_party/llvm-libc/src",
+    "//tools/gtos_native_sdk/sdk",
+  ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+  ]
+  sources = [
+    "//third_party/llvm-libc/src/src/stdlib/getenv.cpp",
+    "//third_party/llvm-libc/src/src/stdlib/environ_internal.cpp",
+    "environment.cc",
+  ]
+}
+
+source_set("directory_native") {
+  include_dirs = [ "//tools/gtos_native_sdk/sdk" ]
+  sources = [ "directory.cc" ]
+}

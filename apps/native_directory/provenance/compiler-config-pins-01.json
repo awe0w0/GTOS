@@ -1,0 +1,21 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "files": {
+    "build/config/unsafe_buffers_paths.txt": {
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/unsafe_buffers_paths.txt",
+      "sha256": "5d744a2c67b610c9bc5fa1367edaaf5ba0386261db759ffb85ff7cd2432a70a5",
+      "blob": "1bc60565f7163aa799dff23a5833fa9ef2f71afa"
+    },
+    "build/config/raw_ptr_plugin_config.yaml": {
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/raw_ptr_plugin_config.yaml",
+      "sha256": "88c91c1aeecca5e50a375dfd1ab41ec9000e66b7a1931a50a3335ff36ac1dd13",
+      "blob": "3c65fc56da0f363a0c00c80750617f8e2e5e3d43"
+    },
+    "build/config/warning_suppression.txt": {
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/build/config/warning_suppression.txt",
+      "sha256": "8ebd2beed8e9eaa47ea4ff6ea2e35175af961ec2285ff389cf663b7bb2b6e2c9",
+      "blob": "b87837cf288a2329383c9a87d8b85351bc2bb38d"
+    }
+  },
+  "scope": "Original three compiler policy inputs; no changes or extra suppressions"
+}

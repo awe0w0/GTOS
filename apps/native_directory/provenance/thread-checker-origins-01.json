@@ -1,0 +1,34 @@
+{
+  "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+  "files": {
+    "third_party/perfetto/include/perfetto/ext/base/thread_checker.h": {
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/thread_checker.h",
+      "blob": "5a283ac5dcae0308da6fc881ad44054c99af5f3c",
+      "sha256": "c8664a4a3d9ca94a5e740ecb7c388049647edb66d181bbb1fa324c9423af3a77"
+    },
+    "third_party/perfetto/src/base/thread_checker.cc": {
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/base/thread_checker.cc",
+      "blob": "024411df0cfa3b179eef3c7e8631cbe92995a6b4",
+      "sha256": "9a550bb7d2b5b89fc5e6e031f952222077c6ae4bb513ff75c278905464853e35"
+    }
+  },
+  "owner": {
+    "relative": "obj/third_party/perfetto/src/base/base.ninja",
+    "sha256": "deab068246650577ffe03c661e85df1039884fe1d2266dd98aa9a631205fecae",
+    "fields": {
+      "defines": "-D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_FORTIFY_SOURCE=2 -DCR_CLANG_REVISION=\\\"llvmorg-24-init-7747-g62397f8b-57\\\" -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS -D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS -D_LIBCPP_INSTRUMENTED_WITH_ASAN=0 -DCR_LIBCXX_REVISION=97b436da4c33663581d394f4ee0a5977fc38c2f4 -DDCHECK_ALWAYS_ON=1 -D__GTOS__=1 -DNDEBUG -DNVALGRIND -DDYNAMIC_ANNOTATIONS_ENABLED=0 -DPERFETTO_IMPLEMENTATION",
+      "include_dirs": "-I../source -Igen -I../source/tools/gtos_native_sdk/sdk -I../source/third_party/perfetto -I../source/third_party/perfetto/src/profiling/memory/include -I../source/third_party/perfetto/include -Igen/third_party/perfetto/build_config -Igen/third_party/perfetto",
+      "cflags": "-Wall -Wextra -Wimplicit-fallthrough -Wextra-semi -Wunreachable-code-aggressive -Wgnu -Wno-gnu-anonymous-struct -Wno-gnu-conditional-omitted-operand -Wno-gnu-include-next -Wno-gnu-label-as-value -Wno-gnu-redeclared-enum -Wno-gnu-statement-expression -Wno-gnu-zero-variadic-macro-arguments -Wno-zero-length-array -Wthread-safety -Wno-unused-template -Wno-missing-field-initializers -Wno-unused-parameter -Wno-psabi -Wno-stringop-overread -Wloop-analysis -Wno-unneeded-internal-declaration -Wno-cast-function-type -Wno-thread-safety-reference-return -Wno-nontrivial-memcall -Wno-uninitialized-const-pointer -Wno-unused-but-set-global -Wexit-time-destructors -Wshadow -Werror -Werror=\\#pragma-messages -fno-delete-null-pointer-checks -fno-strict-overflow -fno-ident -fno-math-errno -fno-strict-aliasing -fcolor-diagnostics -fdiagnostics-show-inlining-chain -fmerge-all-constants -fcrash-diagnostics-dir=../source/out/clang-crashreports -fno-lifetime-dse -mllvm -instcombine-lower-dbg-declare=0 -mllvm -split-threshold-for-reg-with-hint=0 -ffp-contract=off -fcomplete-member-pointers -Wno-builtin-macro-redefined -D__DATE__= -D__TIME__= -D__TIMESTAMP__= -no-canonical-prefixes --warning-suppression-mappings=../source/build/config/warning_suppression.txt -ftrivial-auto-var-init=pattern -O2 -fdata-sections -ffunction-sections -fno-unique-section-names -fomit-frame-pointer -g0 -fsanitize=array-bounds -fsanitize-trap=array-bounds -fsanitize-ignore-for-ubsan-feature=array-bounds -Wno-unsafe-buffer-usage-in-static-sized-array -fsanitize=return -fsanitize-trap=return -fsanitize-ignore-for-ubsan-feature=return -fsanitize=unreachable -fsanitize-trap=unreachable -fsanitize-ignore-for-ubsan-feature=unreachable -Wheader-hygiene -Wstring-conversion -Wtautological-overlap-compare -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-stack-allocated -Xclang -plugin-arg-find-bad-constructs -Xclang relax-ctor-checks-for-aggregates -Xclang -add-plugin -Xclang raw-ptr-plugin -Xclang -plugin-arg-raw-ptr-plugin -Xclang check-raw-ptr-to-stack-allocated -Xclang -plugin-arg-raw-ptr-plugin -Xclang disable-check-raw-ptr-to-stack-allocated-error -Xclang -plugin-arg-raw-ptr-plugin -Xclang raw-ptr-exclude-path=../source/third_party/dawn/ -Xclang -plugin-arg-raw-ptr-plugin -Xclang raw-ptr-exclude-path=../source/build/config/clang/chrome/test/fuzzing/webidl_fuzzing/ -Xclang -plugin-arg-raw-ptr-plugin -Xclang check-raw-ptr-fields -Xclang -plugin-arg-raw-ptr-plugin -Xclang check-span-fields -Xclang -plugin-arg-raw-ptr-plugin -Xclang check-raw-ref-fields -Xclang -plugin-arg-raw-ptr-plugin -Xclang config-path=../source/build/config/raw_ptr_plugin_config.yaml -Xclang -plugin-arg-raw-ptr-plugin -Xclang no-special-treatment-for-oilpanized-paths -Xclang -plugin-arg-raw-ptr-plugin -Xclang check-raw-ptr-in-blink -DUNSAFE_BUFFERS_BUILD -Wunsafe-buffer-usage -Wno-error=unsafe-buffer-usage -Xclang -add-plugin -Xclang unsafe-buffers -Xclang -plugin-arg-unsafe-buffers -Xclang ../source/build/config/unsafe_buffers_paths.txt",
+      "cflags_cc": "-Wno-invalid-offsetof -Wenum-compare-conditional -Wno-nullability-completeness -std=c++23 -Wno-trigraphs -gsimple-template-names -fno-exceptions -fno-rtti -nostdinc++ -isystem../source/third_party/libc++/src/include -isystem../source/third_party/libc++abi/src/include"
+    },
+    "row": [
+      "build obj/third_party/perfetto/src/base/base.thread_checker.o: cxx ../source/third_party/perfetto/src/base/thread_checker.cc | phony/third_party/perfetto/src/base/base.inputs || phony/third_party/perfetto/gn/gen_buildflags"
+    ]
+  },
+  "scope": "Original ThreadChecker header/implementation before native process-info identity branch; no pthread compatibility declarations",
+  "native_services": {
+    "path": "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-33/source/tools/gtos_native_sdk/native-services.h",
+    "sha256": "2f3c8b2b534cedc98287141b98c74567917b4d57814c49f6672e914689ded6b8",
+    "contract": "CurrentProcessInfo checks real nonzero process/thread IDs, ABI/version/ranges and scheduler scope; no TLS/heap cache"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-guest-v2.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 80.02613890399999,
+  "child_sha256": "52f4c7f9e1fa2d976186c803a7dc314de1f4fddde9c1b3800136ff1e20fd9fab",
+  "guard_sha256": "b3defe835035757b7a7ef4c121dc94ab91139262b4083e065303a443e319cca7",
+  "launcher_log_sha256": "4927670e8141e531fd6881d60ab45dc128cdb57ada5a7ea2824afe25f489188c"
+}

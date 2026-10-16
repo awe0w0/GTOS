@@ -1,0 +1,689 @@
+{
+  "previous_goal_turn": "progress",
+  "prior_consumer": "artifacts/native-os-file-20261015-a/consumers-04/status.json",
+  "prior_consumer_sha256": "e63466ec0f57ca14c31d58357b392ac11ff6ba928d07c0a36094db6584c6eebc",
+  "published_acceptance": "sources/GTOS/apps/native_os_file/acceptance.json",
+  "published_acceptance_sha256": "964d18ab4b25ff5e1589802735046a6a2865ad00f67a9e98404af1cbbff706ac",
+  "prior_guest": "artifacts/native-os-file-20261015-a/guests-04/status.json",
+  "prior_guest_sha256": "542c3cda26f0767a3c07e2889ea831d820013fd764fd787f9e893ac4297ffc6d",
+  "support_inputs": [
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-exit-lifecycle-20261013-a/compile-02/build/obj/tools/gtos_isolate_diagnostic/native_embedder.native-entry.o",
+      "sha256": "30bf0ca1b71062000046c8bb8570bdac8c3728814a5fd2ded921ba3aed843bd9",
+      "name": "native_embedder.native-entry.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/native_embedder.native-start.o",
+      "sha256": "6ab760b42c4d304bc43f1c67e9cac70907c0ba50f8a75d0e0aa1c7189a9cf71f",
+      "name": "native_embedder.native-start.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/libc++/src/src/native_stream_libcxx.ios.instantiations.o",
+      "sha256": "07631ec6bd0eabb628b3054711f55405a6536c17b9bab2f1be5df9e604531e8f",
+      "name": "native_stream_libcxx.ios.instantiations.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/libc++/src/src/native_stream_libcxx.ios.o",
+      "sha256": "488df569a1985bac24711fdd49a70dc1dc34066e181260837abaf9eaad685fe3",
+      "name": "native_stream_libcxx.ios.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-03/build/obj/third_party/libc++/src/src/native_stream_libcxx.iostream.o",
+      "sha256": "9248353a0670fd116fbed72f450919d6e837617d4bc3b787893078f4c17eba3d",
+      "name": "native_stream_libcxx.iostream.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/libc++/src/src/native_stream_libcxx.locale.o",
+      "sha256": "456ee05f20fcd98b5ec123ef502b528811295b10a0011fd435aab6172e083b50",
+      "name": "native_stream_libcxx.locale.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.memcpy.o",
+      "sha256": "a0c4c43932d2b193dcc1d258f0927da85e8f251fdc52714df98c0188606f4f7c",
+      "name": "native_string_libc.memcpy.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.memmove.o",
+      "sha256": "5bbcf3710a0b359e1935332defee0590c8b2e48afb7792feb42613b6dc87b0b6",
+      "name": "native_string_libc.memmove.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.memset.o",
+      "sha256": "5e90ed6c3c0ac19eb9d779df89ab6ca4bcc658509d9559eb77fac52d8b541151",
+      "name": "native_string_libc.memset.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.memcmp.o",
+      "sha256": "d8c1e52bdd7d792f982c4bad6125d97edf0dc4a8e8b8dc8040db08118153ae0d",
+      "name": "native_string_libc.memcmp.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.memchr.o",
+      "sha256": "b016418fd27f5e4e17c9625afe2bb0770b3bdef5290ff6cc6b53473cb99320fa",
+      "name": "native_string_libc.memchr.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strlen.o",
+      "sha256": "dc6cfe99bbd601d02cdf4a5857703f5150e5c8eb808e2c5235d8125ee5147315",
+      "name": "native_string_libc.strlen.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strcmp.o",
+      "sha256": "e12d55d98b2e6b511cb6c0714a057b346d82d444b931741bad389c23a3a62514",
+      "name": "native_string_libc.strcmp.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strncmp.o",
+      "sha256": "1f0bc61015c2da077c40e0d3123e7ea7767a9dce538e0486c138262def23a933",
+      "name": "native_string_libc.strncmp.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strchr.o",
+      "sha256": "82e156b08c23dee8f6025eda91ba462c4ba783241df699f7e231275f7d1664e9",
+      "name": "native_string_libc.strchr.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strstr.o",
+      "sha256": "64db12b1ac89dfc964f0c12e905e8d1ac9ddd274067252c53bd3b9b39a1a8763",
+      "name": "native_string_libc.strstr.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strcpy.o",
+      "sha256": "1c2f0734bd919efa19651320ee5c4db4216a89a5100143a013c3e8998d66e06c",
+      "name": "native_string_libc.strcpy.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/string/native_string_libc.strerror.o",
+      "sha256": "0891decc4dab30e6e1399239cc9410acdde2987f95c2e044a018777dce7e25e3",
+      "name": "native_string_libc.strerror.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/wchar/native_string_libc.wmemchr.o",
+      "sha256": "80ec69b7120a3381b5121d599c972ec551c30f5fcaf68771c885ded4750b4ddf",
+      "name": "native_string_libc.wmemchr.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/wchar/native_string_libc.wcslen.o",
+      "sha256": "ea53510eb9bfdd5a09f31d5beacdd1a70c6877441a9a0da53742a0b4b8b58d8d",
+      "name": "native_string_libc.wcslen.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/stdio/native_printf_libc.snprintf.o",
+      "sha256": "6430dd958a98b0a0496b1b68df768b355c4fa024190c4480cb8cbaee4394fc92",
+      "name": "native_printf_libc.snprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/stdio/native_printf_libc.snprintf_modular.o",
+      "sha256": "664d169f5a1e6c915e9b8e834384bb8286521656feccdb4e0e34f2455ea14bca",
+      "name": "native_printf_libc.snprintf_modular.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/stdio/native_printf_libc.vsnprintf.o",
+      "sha256": "6622158cebf73368b756d05cf903e08c3b137d74804304b06240d8e6499b8eee",
+      "name": "native_printf_libc.vsnprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/stdio/native_printf_libc.vsnprintf_modular.o",
+      "sha256": "51e7f32ece25bacef50a71b6b490fd1054880ccdbf27fe1c85fb99b18723d982",
+      "name": "native_printf_libc.vsnprintf_modular.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/__support/printf_core/native_printf_libc.float_impl.o",
+      "sha256": "38490415169939d61c7422b5b0b94ecdbd19e3ffb5b112a1ad7221f18cc953f2",
+      "name": "native_printf_libc.float_impl.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/__support/StringUtil/native_printf_libc.error_to_string.o",
+      "sha256": "5e84f77335df99a888c2a3706899b0ab516943d186a011552d5f9b075a72a566",
+      "name": "native_printf_libc.error_to_string.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_cpp_libcxx.cpp-no-exceptions.o",
+      "sha256": "c2ce2dae95c248201cf688247969c71ae7cd8ac3b6ccb4de53108e8e8c5af3c0",
+      "name": "native_cpp_libcxx.cpp-no-exceptions.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/libc++/src/src/native_cpp_libcxx.string.o",
+      "sha256": "9fad4a60a19e1acfce89936225f1c4778e8c7ae5392b4ca864f743aa9875b9f5",
+      "name": "native_cpp_libcxx.string.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/libc++/src/src/native_cpp_libcxx.memory.o",
+      "sha256": "31efbe7fa5be84ea77b5c7deb3b600c4bac111d8ad0587432990100640f5c1a2",
+      "name": "native_cpp_libcxx.memory.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-hash-runtime-20261014-a/compile-02/build/obj/third_party/libc++/src/src/native_cpp_libcxx.hash.o",
+      "sha256": "c29fceb4e5f0da629d56b229e044c9256dba122b2a95196ee0a9b82470296e31",
+      "name": "native_cpp_libcxx.hash.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-hash-runtime-20261014-a/compile-02/build/obj/third_party/libc++/src/src/native_cpp_libcxx.functional.o",
+      "sha256": "b2b618ec639afe443893632e360a971a9a71e4989ae1774314f0d0877db545e1",
+      "name": "native_cpp_libcxx.functional.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-hash-runtime-20261014-a/compile-02/build/obj/third_party/libc++/src/src/native_cpp_libcxx.algorithm.o",
+      "sha256": "206e48b53cf376934d3fd984e412774969305791055bff68b03a62d05c142881",
+      "name": "native_cpp_libcxx.algorithm.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-os-file-20261015-a/provider-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/native_file_libc.platform_file.o",
+      "sha256": "bb27e0938a385a9d9a829035db24b697a693f0abc203a91b6afe0dfbac12c6c3",
+      "name": "native_file_libc.platform_file.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fopen.o",
+      "sha256": "b12a4bd82c8980f9ed51f69fcb975741c12b9c41ace8dd672347723d07fdc34c",
+      "name": "native_file_libc.fopen.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fclose.o",
+      "sha256": "030e3c7e519e2e9348cb80395a4f55072628fd47f4991b52fb26d8889458e55f",
+      "name": "native_file_libc.fclose.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fread.o",
+      "sha256": "059ec8ad52ac397decd4fb385d31ee0d1bcc8b4e4f93b495d47730b16acf5f8d",
+      "name": "native_file_libc.fread.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fwrite.o",
+      "sha256": "b64e7eb67f1ae6eac705726aeda23e102832d01b932c310d3ce127963b38d41c",
+      "name": "native_file_libc.fwrite.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fflush.o",
+      "sha256": "c80d9f0789bc3488cd5b099c97991be8240363c4a9b176396ddc3719d466407e",
+      "name": "native_file_libc.fflush.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fseek.o",
+      "sha256": "536964e304c3dfae2e5bd62ca1ea07c2d6ec6cb00534093ad691eab869a1aa17",
+      "name": "native_file_libc.fseek.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.ftell.o",
+      "sha256": "5684749481390fbda692ea5419af8cd9a8313f2ee3881fa37da723cab64524d7",
+      "name": "native_file_libc.ftell.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fseeko.o",
+      "sha256": "7c3cf7fef7e788036a4ecf06ac363a54cc0bdb41fd4ec85aba71077ff8a48ebe",
+      "name": "native_file_libc.fseeko.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.ftello.o",
+      "sha256": "0f73aa5a5645bf272937ec3035c20375e5f31895b3c02ef9ffb73f550f797ddc",
+      "name": "native_file_libc.ftello.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.feof.o",
+      "sha256": "2756470c4f1e28a8f5e80c7dd4396aaeccc35c514d6f55bc5de4fce9b2b52a73",
+      "name": "native_file_libc.feof.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.ferror.o",
+      "sha256": "4dc3f25539c627d0c293019cef2c2d61da44c6ab69f863567ef564e208a95398",
+      "name": "native_file_libc.ferror.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.clearerr.o",
+      "sha256": "0b2b221c498e5b6fbfc161053e8c17783789004569e86b7a4336ee618c23eaf2",
+      "name": "native_file_libc.clearerr.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/native_file_libc.setvbuf.o",
+      "sha256": "15083d42bcf9af890055d58e941eac07acdad16722c4377315d7fd4ea0bce0ab",
+      "name": "native_file_libc.setvbuf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.ungetc.o",
+      "sha256": "846e7c43f151deda7476c7a4343c9436e7be7a1c4d694fcb1b63c51ce35425ba",
+      "name": "native_file_libc.ungetc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fgetc.o",
+      "sha256": "c759784d35a9073bb6ff5378eb257086434deef8186b938a8e1f4a40b4766bb1",
+      "name": "native_file_libc.fgetc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/third_party/llvm-libc/src/src/stdio/generic/native_file_libc.getc.o",
+      "sha256": "91ab84e9e65e96980613efca04633bbb1f0e767d196bc1af4ce4da7c3c48ade1",
+      "name": "native_file_libc.getc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/runtime/native_file_libc.standard-stream-file.o",
+      "sha256": "00dacf073cdab009fa42c0df13cf9872a0a1b0eb19959b2c60b4cc821ccc1ea6",
+      "name": "native_file_libc.standard-stream-file.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fputc.o",
+      "sha256": "d1e0ccdee5102dd210aacf226a37461b468a8ede0e1d49433b13a47781060b92",
+      "name": "native_file_libc.fputc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fgets.o",
+      "sha256": "69ef9e06606d14f3a76a7ef0d2d0512dd62ffb81f33c84967bdf9b1f65e9773e",
+      "name": "native_file_libc.fgets.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fputs.o",
+      "sha256": "df32220c2cb8b810e1ba1401a5d05537850fdf726f53bd94f7e773fe2d95b834",
+      "name": "native_file_libc.fputs.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.rewind.o",
+      "sha256": "b7352804831bbb361e9ae75cb60e375ded6b1370d097d9d61a5aa3bbf51a4b43",
+      "name": "native_file_libc.rewind.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.fileno.o",
+      "sha256": "9c9255fe4f7d79002f80e403cd7b873dd812d2fc71de413f788d9c875b72c5dc",
+      "name": "native_file_libc.fileno.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/generic/native_file_libc.freopen.o",
+      "sha256": "7441ba7396a92ac4824cb41fbfba870f9ebc165434360a583eb066268f8b7009",
+      "name": "native_file_libc.freopen.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-01/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/File/native_file_libc.file.o",
+      "sha256": "90fd7227024fb4933c3cb0c0619cebdabab065215e91c1f7754ca359820d851d",
+      "name": "native_file_libc.file.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/__support/CPP/native_file_libc.new.o",
+      "sha256": "1c8d8fcffae29a89e5d59a9a72759dd925b31ae20f92e6a4530e1f4a82074e57",
+      "name": "native_file_libc.new.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-c-file/llvm-libc/src/stdio/native_file_libc.setbuf.o",
+      "sha256": "29aec16be1acf263fde8ecc981417e8e3374aa29dba497a1f564e010545e2a5c",
+      "name": "native_file_libc.setbuf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/tools/gtos_isolate_diagnostic/runtime/native_diagnostic_libcxx.diagnostic-output.o",
+      "sha256": "d743e17f241eacf00f6b7828d3af2c4f4e4316e6d192593d60c07df27712c537",
+      "name": "native_diagnostic_libcxx.diagnostic-output.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_diagnostic_libcxx.verbose-abort.o",
+      "sha256": "45966c4a8b6731ca1f7e200d1834c4762cc7dacef942be194b64843745dc6cd8",
+      "name": "native_diagnostic_libcxx.verbose-abort.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/runtime/native_once_libcxx.call_once.o",
+      "sha256": "43be985ce7c1467f5cfec2c0d7da2ddf18622982f6f8534c8e6679a2b836e81f",
+      "name": "native_once_libcxx.call_once.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.toupper.o",
+      "sha256": "2b52ac147b0a463a666b3749188d635d61e8aabf4ef041ba8fdf5e8c1e3d5bae",
+      "name": "native_ctype_libc.toupper.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.tolower.o",
+      "sha256": "440e3999be3e13277de2c8359ad9d2081f4d17b193ad84cb8d82a520fe77628d",
+      "name": "native_ctype_libc.tolower.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-text-integer-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isspace.o",
+      "sha256": "ac2aa4eda7948ce2de182bfb2234525cf8963b3b5540e9b10551837da8f8d21b",
+      "name": "native_ctype_libc.isspace.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-text-integer-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/ctype/native_ctype_libc.isprint.o",
+      "sha256": "5c06d4f850a7baa43a5e54a46e066cc9aa94a4b06ac153e8135bcd89fb8b814f",
+      "name": "native_ctype_libc.isprint.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/stdio/native_alloc_printf_libc.asprintf.o",
+      "sha256": "2deafd4dfb8c36184c7f5c00f452e4c4749c00cf97155cb2c53973a0ba3ce060",
+      "name": "native_alloc_printf_libc.asprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/stdio/native_alloc_printf_libc.vasprintf.o",
+      "sha256": "ef247e968cae44de72494de160a12133bac88fdf7b575e0c5793c317535772ef",
+      "name": "native_alloc_printf_libc.vasprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/libc++abi/src/src/native_guard_libcxxabi.cxa_guard.o",
+      "sha256": "f860ebae82c710dbe76c9ef5ae8b52cfa3f508182c1b7711298b85ba919e045e",
+      "name": "native_guard_libcxxabi.cxa_guard.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-cxa-virtual-20261014-a/compile-02/build/obj/third_party/libc++abi/src/src/native_guard_libcxxabi.cxa_virtual.o",
+      "sha256": "9e52301bdbcd7491b37ec8821f8d9de24c44f34d79ad0a90ec8c1930f0fe5428",
+      "name": "native_guard_libcxxabi.cxa_virtual.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_guard_libcxxabi.abi-abort-message.o",
+      "sha256": "4d4ba6ed87f5e054abe8ac7578b2a2a76864641bc0dd114a9c75c6ec817b04c0",
+      "name": "native_guard_libcxxabi.abi-abort-message.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/locale/native_locale_libc.locale.o",
+      "sha256": "7e6832503b0c22d5190e8aa1dbeb6746f776f7858e7c76962eef39484976b28f",
+      "name": "native_locale_libc.locale.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/locale/native_locale_libc.newlocale.o",
+      "sha256": "e491ef8b049c4933e9f92b7fa15e456817731f09d8fac97ebb515db4e95ebc8b",
+      "name": "native_locale_libc.newlocale.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/locale/native_locale_libc.freelocale.o",
+      "sha256": "9cdb5346a1eae37b63a1e1636fcbd9533eb7b917656bf692c9e805250da22406",
+      "name": "native_locale_libc.freelocale.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/time/native_time_format_libc.strftime.o",
+      "sha256": "7d010641212ece29a06c8ec09fd370f2945020eedbe07ff57d7e1cbd063124e2",
+      "name": "native_time_format_libc.strftime.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/time/native_time_format_libc.time_utils.o",
+      "sha256": "749415cacbe805d741fd179cf03b2750742020c654ef0a2d746e6a1359b7f2d6",
+      "name": "native_time_format_libc.time_utils.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_chrono_libcxx.chrono.o",
+      "sha256": "cd8b445a721695f916e90300dd9a5d4901ea71c401bf6260a5b52c8bceb862b5",
+      "name": "native_chrono_libcxx.chrono.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_chrono_libcxx.system-error-no-exceptions.o",
+      "sha256": "898188ce00e1f6124fee9582c270e41c4e9e9969a0b1519f45097dcc91b7e76b",
+      "name": "native_chrono_libcxx.system-error-no-exceptions.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-01/build/obj/third_party/llvm-libc/src/src/wchar/native_wide_libc.mbsrtowcs.o",
+      "sha256": "b2af78e6c80aa29bb7137eab54470544cf0e113e331506147bae0090c4ffbf39",
+      "name": "native_wide_libc.mbsrtowcs.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-01/build/obj/third_party/llvm-libc/src/src/wchar/native_wide_libc.wcsnrtombs.o",
+      "sha256": "5062fca089a3d7b9daf5e08011ae78832332d89ef1fd45a00d77c11b8efe0048",
+      "name": "native_wide_libc.wcsnrtombs.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-01/build/obj/third_party/llvm-libc/src/src/wchar/native_wide_libc.wcrtomb.o",
+      "sha256": "b9b8ae46dec48b3743a24e3b44508d77ce76c004ca1153ac36c208ec0437a5b8",
+      "name": "native_wide_libc.wcrtomb.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-01/build/obj/third_party/llvm-libc/src/src/wchar/native_wide_libc.mbsnrtowcs.o",
+      "sha256": "3813574247c85f589e06736d6da0c314a589eb6f55bbb203e167b82cba0c046a",
+      "name": "native_wide_libc.mbsnrtowcs.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-utf8-03/build/obj/third_party/llvm-libc/src/src/wchar/native_wide_libc.mbrtowc.o",
+      "sha256": "166b9bc7ce071e6bfc9c762aa1b8c5d40b6515fc9227e4d08872082ac4877c39",
+      "name": "native_wide_libc.mbrtowc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-utf8-03/build/obj/third_party/llvm-libc/src/src/wchar/native_wide_libc.mbrlen.o",
+      "sha256": "5f448a27627f8596f324cdf5755836ff630df87a83a091427b8b61549712f3d3",
+      "name": "native_wide_libc.mbrlen.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-utf8-03/build/obj/third_party/llvm-libc/src/src/stdlib/native_wide_libc.mbtowc.o",
+      "sha256": "9fb806ca1d1ec6f0d74750bb3acb537e740db298dc437cc59267f32f1184a44b",
+      "name": "native_wide_libc.mbtowc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-prefix-02/build/obj/third_party/llvm-libc/src/src/__support/wchar/native_wide_libc.mbrtowc.o",
+      "sha256": "5ee7503da8cc0e480ec753ecbeb892aacc6524fdaa85ff7c3966dde1407b4321",
+      "name": "native_wide_libc.mbrtowc.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/runtime-error-prepare-01/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime_error_libcxx.runtime-error-no-exceptions.o",
+      "sha256": "67d7848042e0db8e74d3fb483ab53d773f9747782dec0902e192935084377436",
+      "name": "native_runtime_error_libcxx.runtime-error-no-exceptions.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-float-conversion-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/stdio/native_scanf_libc.sscanf.o",
+      "sha256": "330c2a9cc45227489dfdc2f69027e805ca1031c1726cfcb4f2b2d70780ff6c5e",
+      "name": "native_scanf_libc.sscanf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-condvar-20261013-a/compile-gn-04/build/obj/third_party/libc++/src/src/native_sync_libcxx.mutex.o",
+      "sha256": "9ffbc705169b298275496d2de2c58f81e5561a9ad27906e987733235bd8aa1db",
+      "name": "native_sync_libcxx.mutex.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-condvar-20261013-a/compile-gn-04/build/obj/third_party/libc++/src/src/native_sync_libcxx.mutex_destructor.o",
+      "sha256": "2cc2e8254e48bbc6766526f0617dcdd458b171e0886ad5905e81aa52c840c4e3",
+      "name": "native_sync_libcxx.mutex_destructor.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-condvar-20261013-a/compile-gn-04/build/obj/third_party/libc++/src/src/native_sync_libcxx.condition_variable.o",
+      "sha256": "a36cc46024d8061fa37bc3a54da7a46687a196b47b785f147703bb3b147b2b56",
+      "name": "native_sync_libcxx.condition_variable.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-condvar-20261013-a/compile-gn-04/build/obj/third_party/libc++/src/src/native_sync_libcxx.condition_variable_destructor.o",
+      "sha256": "df5a28ba9db4eefe8c270e39e4cc00149b80a2f23b77ab232c68ade03a08a291",
+      "name": "native_sync_libcxx.condition_variable_destructor.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_sync_libcxx.condition-variable-core.o",
+      "sha256": "4ebae53c810eb4c9b8ec297a0391ef948ff987d50659707e1eeefb5fef89c4d0",
+      "name": "native_sync_libcxx.condition-variable-core.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/third_party/llvm-libc/src/src/stdio/generic/native_output_libc.printf.o",
+      "sha256": "7ffe98e49dcf1ef3642615fc6cb6b6ffedcec06f02a9dbbcd616e307b3215974",
+      "name": "native_output_libc.printf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/third_party/llvm-libc/src/src/stdio/generic/native_output_libc.fprintf.o",
+      "sha256": "f61a054e791fcb2139c85ffdf9e17303ac96e350bcdbe2f1291471791c1e3c33",
+      "name": "native_output_libc.fprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/third_party/llvm-libc/src/src/stdio/generic/native_output_libc.vprintf.o",
+      "sha256": "eda99f9a9b115506ae63637320ac646e068c41af1d1696e365bb01ab7226d085",
+      "name": "native_output_libc.vprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/third_party/llvm-libc/src/src/stdio/generic/native_output_libc.vfprintf.o",
+      "sha256": "980ff41eaad6ab9cdb39f4ac232534b65e5c98b1c6f8ef134f2a7cc81d6cc01c",
+      "name": "native_output_libc.vfprintf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-output-20261013-a/compile-02/build/obj/src/base/platform/native_output_libc.gtos-output.o",
+      "sha256": "58ebc04acb6110baa0f91b7425c0e8dbb2b2b8e1b1424516eac0d9832694631f",
+      "name": "native_output_libc.gtos-output.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-os-file-20261015-a/provider-03/build/obj/src/base/platform/native_output_libc.gtos-file.o",
+      "sha256": "14a5958bdecd1aeeff845fb09667bc132787b12ff8a8ce951b678d2b693ef0c4",
+      "name": "native_output_libc.gtos-file.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-math-20261013-a/compile-03/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.ceilf.o",
+      "sha256": "90123e6a91f278610756293fb393f222ce7433aec120576f7e6eda321170c0eb",
+      "name": "native_numeric_libc.ceilf.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-math-20261013-a/compile-03/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.ceil.o",
+      "sha256": "7d887818d729c9592d12766c408d9b86ac67f2928f83056adf99dca84c78caf1",
+      "name": "native_numeric_libc.ceil.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-math-20261013-a/compile-03/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.floor.o",
+      "sha256": "520a6ea4e7cde8924e3297eed9467a92fcf7c0a6ec0abd2592728aed940c3cdf",
+      "name": "native_numeric_libc.floor.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-math-20261013-a/compile-03/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.fmod.o",
+      "sha256": "f892f65cf8dd641e62601582fe0ca0df8491ae31456208cbac5554760d9e9e12",
+      "name": "native_numeric_libc.fmod.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-math-20261013-a/compile-03/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.abs.o",
+      "sha256": "713d3b41c4d89ed35de5db9acc21b36af37bb893a48a4daef71af392cb66cd35",
+      "name": "native_numeric_libc.abs.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-float-conversion-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtof.o",
+      "sha256": "e1e9784ef808662f55645c376ede3f01a56a6c8c951a87eedf1b0e70e9c22784",
+      "name": "native_numeric_libc.strtof.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-float-conversion-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtod.o",
+      "sha256": "52f92d820af19dc1cc664e48f0815c5d6806606ca1ddf93c0d69a656970a0ba8",
+      "name": "native_numeric_libc.strtod.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-float-conversion-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtold.o",
+      "sha256": "4c1f223dca117a0a8ef0a8d3f65e3091a0205619bb8b771219813f0f4de1ab6d",
+      "name": "native_numeric_libc.strtold.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-text-integer-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtol.o",
+      "sha256": "2b80b6090644aeac45c871f3770e26c33f2e29a44252ca007a77ce50ff68176c",
+      "name": "native_numeric_libc.strtol.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-text-integer-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/stdlib/native_numeric_libc.strtoll.o",
+      "sha256": "0da9f7855a1b2b3c191ea22037f8daa6a919cff6f7397f5500dbde46ffb22210",
+      "name": "native_numeric_libc.strtoll.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-nearbyint-20261014-a/compile-02/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.nearbyint.o",
+      "sha256": "220e0e7e272dcb930ce343fbf87401c5ab623cbf0d8ee5d4f10b0c3f01bbe151",
+      "name": "native_numeric_libc.nearbyint.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-exp2-20261014-a/compile-03/build/obj/third_party/llvm-libc/src/src/math/generic/native_numeric_libc.exp2.o",
+      "sha256": "05427e884abf90ff95117bc2c325ff7126cf867af3c3805f50790d7a80c7ac1f",
+      "name": "native_numeric_libc.exp2.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/native-exit/llvm-libc/src/stdlib/native_exit_libc.atexit.o",
+      "sha256": "c9eefb489e5c38ed50796146e53706cd98f2d6ced7c131742e8fe59dc5c6e8e6",
+      "name": "native_exit_libc.atexit.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/tools/gtos_isolate_diagnostic/runtime/native_exit_libc.process-exit.o",
+      "sha256": "bdedc2dbe50b97067ccb8493d4a74618af62b5784560826bc592912d029c6693",
+      "name": "native_exit_libc.process-exit.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/math/generic/native_math_libc.fabs.o",
+      "sha256": "3b8e7b37a67e5b4b80503b0090bd7e7cf6aa7725aaddbb45065d53224b5d37ea",
+      "name": "native_math_libc.fabs.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/third_party/llvm-libc/src/src/math/generic/native_math_libc.sqrt.o",
+      "sha256": "cdbe5cadb366396c78a4af977c63e269044de48b917cdf35d69b500d3c04edc2",
+      "name": "native_math_libc.sqrt.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/src/base/platform/native_clock_bridge.gtos-clock-bridge.o",
+      "sha256": "de1b8d5e5f6bf1db4de220ca0654916c5a5a798240eafb8189f91105c726bffc",
+      "name": "native_clock_bridge.gtos-clock-bridge.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-thread-heap-20261014-a/compile-01/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.heap.o",
+      "sha256": "a289e95fb33eb75d1f46b2adb06340c17627a5ab64ac66c2eed5b0916c714f69",
+      "name": "native_runtime.heap.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.operators.o",
+      "sha256": "09f12fbe0f31776c6603e5530b6693a32b0102e2512dd57a4d8da45e715c8907",
+      "name": "native_runtime.operators.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.emutls.o",
+      "sha256": "864133adebda86c64c18cf97f4c1b9d4c6106e4c4a94b3cf7d460a9c46f9403e",
+      "name": "native_runtime.emutls.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.abort.o",
+      "sha256": "6c4793c471b6248edc46e8fe917f6d85754535948ad897e317086d74aed0e78e",
+      "name": "native_runtime.abort.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.thread-exit.o",
+      "sha256": "7b9d77a8345f385a2d43cbdc5e2136737cd8ebe635b3423fb8834c77e8c91dfb",
+      "name": "native_runtime.thread-exit.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.thread-context.o",
+      "sha256": "f987c8311d390feabf35fdd11316a05c9d8e02afb3a03436b38f6b366fb36313",
+      "name": "native_runtime.thread-context.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.gtos-thread.o",
+      "sha256": "c8adb957c68178e835c6c84f1fdd8d14cdb7ceac52529fa362dd0ca0ba294943",
+      "name": "native_runtime.gtos-thread.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.gtos-semaphore.o",
+      "sha256": "23038f7dc7abb660f2b239feb860d3ae1d459f523908505931b5f80813aefc51",
+      "name": "native_runtime.gtos-semaphore.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-05/build/obj/tools/gtos_isolate_diagnostic/runtime/native_runtime.thread-core.o",
+      "sha256": "f5e15633ee9edbd636f97db2e44ccd92538763d1f967dfee8cb73fcc9792aea7",
+      "name": "native_runtime.thread-core.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-thread-tls-20261014-a/compile-03/build/obj/tools/gtos_isolate_diagnostic/runtime/native_c_clock.clock-gettime.o",
+      "sha256": "2f4605597508784549771a2eef76ff3bf437ffe2487a37e56413ac96cd757f0d",
+      "name": "native_c_clock.clock-gettime.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-thread-tls-20261014-a/compile-03/build/obj/tools/gtos_isolate_diagnostic/runtime/native_c_clock.nanosleep.o",
+      "sha256": "7c2387eb06b7f0a0795e15f30a945c45f9c1fec1176d011bf31841513d7f3c1f",
+      "name": "native_c_clock.nanosleep.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-thread-tls-20261014-a/compile-03/build/obj/third_party/llvm-libc/src/src/errno/native_c_clock.libc_errno.o",
+      "sha256": "d9b3434fd048280ce64f45fb7a8f2769846759fd213d5e3a512b478aaf07e72b",
+      "name": "native_c_clock.libc_errno.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/src/base/libv8_libbase.once.o",
+      "sha256": "a1875293624bf8bdd98e862675aab477194adf90354c4a90c17a35a69a8b9cd5",
+      "name": "libv8_libbase.once.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/src/base/libv8_libbase.sys-info.o",
+      "sha256": "4a4023b1c15aae598180bf3749c7a3a3751b2fa6d86054307ddb799a9fd79cc6",
+      "name": "libv8_libbase.sys-info.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-iostream-20261014-a/compile-thread-03/build/obj/src/base/platform/libv8_libbase.platform-gtos.o",
+      "sha256": "184b97eeaae431b3e7e121169c5e3783b4383819433fb434327218fe8f891055",
+      "name": "libv8_libbase.platform-gtos.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-v8-integration-20261011-a/wide-runtime-resume-30/build/obj/src/base/platform/libv8_libbase.time.o",
+      "sha256": "11c44402a36cc57773044ca0fb59e9370cde45561e2965b99de14272a77ee3ba",
+      "name": "libv8_libbase.time.o"
+    },
+    {
+      "path": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a",
+      "sha256": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528",
+      "name": "libscalar_integer.a"
+    }
+  ],
+  "probe_sources": {
+    "record.h": "d344a95bbe499decbd3a9cf1877ef57ee7b5dd2a8c9e157d5abc4b9c2eb52b0e",
+    "user.cpp": "43e07b1a064fb370ff0ea40c32c95ff328773d3f779b77a9d48de47bc5c144f8",
+    "user.ld": "eca18428bc42fb81a2b6f6a2b1cc58c4da81301b6009ddf4bb45622ecfac410c"
+  },
+  "notes": [
+    "133 accepted real runtime objects/regular archive retained in original order; no recorded command executed",
+    "Cached runtime is the previously accepted native FILE/allocator/errno/TLS/entry implementation; no malloc/thread/lock stubs",
+    "New fixture must use primitive C interfaces to this diagnostic C++ runtime; do not mix its private STL namespace with current Content C++ objects",
+    "New directory/ThreadChecker objects retain actual original GN fields; fixture must use the current Content STL namespace",
+    "Legacy runtime complete original-MD/cold-bootstrap provenance is not newly certified by this inventory",
+    "No runtime guest executed by this preparation script"
+  ]
+}

@@ -1,0 +1,466 @@
+{
+  "source_observation": "compile-03/status.json",
+  "source_observation_sha256": "80f8b347a136740d991b32e38de848af4e5ed42f73455e10e5e9676db6244c09",
+  "files": {
+    "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/build_config/perfetto_build_flags.h": {
+      "kind": "prior_full_MD",
+      "sha256": "f421fe6877270455d79977dd4b470cd1596d0617c81bb708cdda9a11668a7125",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/utils.h": {
+      "kind": "raw_Git",
+      "sha256": "497f2febd87479c8c7452e712832c7c43352b2af44975e65d0bf0bab3eb53b01",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/base/utils.h",
+      "blob": "23c1a8f3d118d473eee0e47cb3756d1268e986b7"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/stdarg.h": {
+      "kind": "prior_full_MD",
+      "sha256": "ce6e43d79dc89b50208ecf259b1ffd519f5a78cd3a2c7fcaac6386f376b89fef",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_header_macro.h": {
+      "kind": "prior_full_MD",
+      "sha256": "7b3fbcc442af2508f36bb2dc98d9ad2b8a1f5c0f5333394fb2159c8bd5ecd5b8",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg___gnuc_va_list.h": {
+      "kind": "prior_full_MD",
+      "sha256": "feca975bfdfb254d17458a8e3d51f8ad6d9bdc9fd6287727f0f8b2fb81fcb0b0",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_list.h": {
+      "kind": "prior_full_MD",
+      "sha256": "81c3055f7033e26e7f53705653bc9d69b5202f25c2692e03b3a4f77ff44a7d76",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_arg.h": {
+      "kind": "prior_full_MD",
+      "sha256": "274c75a1db86f649439aa3bcc1dead4170725e6f803925c3fc38a2e93307afdc",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg___va_copy.h": {
+      "kind": "prior_full_MD",
+      "sha256": "f0a8d3c963338173f2d57b2cbc209dde38c90536107b15eb0cf78166d4caee1f",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_copy.h": {
+      "kind": "prior_full_MD",
+      "sha256": "bb195f56cb08d4cee6a60bd9f62f34466e8ac4f89f6fed043b044cb2f7ead010",
+      "receipt": "artifacts/native-perfetto-time-20261016-a/progress-02/status.json",
+      "receipt_sha256": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/sys_types.h": {
+      "kind": "raw_Git",
+      "sha256": "8584904a5d461d25cac5f09d68c686219e4fdb5e4494fe70d4125f8c0ede09bb",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/base/sys_types.h",
+      "blob": "a150109ca0dd3795d94c9ae8c976576439a3e3e4"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/tracing/internal/tracing_muxer_impl.h": {
+      "kind": "raw_Git",
+      "sha256": "4e39540b04a7cb8452df44fe563667e5d46ab1269310d88ad34e1488e4baeb88",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "src/tracing/internal/tracing_muxer_impl.h",
+      "blob": "4c57d53b66ddbbdf1d80813e4b9b91286adbcb4f"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/list": {
+      "kind": "raw_Git",
+      "sha256": "a31b5735df1b5a06b25c36b0ca6aa0a173349a477952292b2c0f8898efbdc032",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/list",
+      "blob": "b4fb9191cd7f7d7199384afc03d6effdd7ebb74c"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/scoped_file.h": {
+      "kind": "raw_Git",
+      "sha256": "25208f8ed5b2d064b7d30594e424b452a04111a7e7cac42a4bf505b7f084635c",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/base/scoped_file.h",
+      "blob": "4f9ae4169dc5be2e814b9e0cccfbf5eaca523994"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/basic_types.h": {
+      "kind": "raw_Git",
+      "sha256": "ba3d9d3abdd1649b4593d5d2cea88b53b0d3c50f9c1c74fcab9b93aaaf2e4874",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/basic_types.h",
+      "blob": "73b6f7952e3e78082327c9e568e59c9f238c400a"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/consumer.h": {
+      "kind": "raw_Git",
+      "sha256": "42cb5e7de469db008b0884d00c261dc4877e16ae33f49e025ddc3a876ed90c3d",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/consumer.h",
+      "blob": "d36e10e1135493731e0b2382707af914ef62f2ce"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/observable_events.h": {
+      "kind": "raw_Git",
+      "sha256": "1fb53a71ac21da6540f498e66e2d35f599d92024fe6cf51094b3e533389ea744",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/observable_events.h",
+      "blob": "94595588947d96dd989de8f705594031ddd0d9b1"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/observable_events.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "dfd55ada8d2115c74862c1aefe671bd7129da96a3fa7090b3a14fda7ecb6b247",
+      "receipt": "artifacts/native-perfetto-common-cpp-20261016-a/generate-01/status.json",
+      "receipt_sha256": "7022bcf8c9066d311e03292eefcca9563c3bcd2ce6609433d5becdbde6219fb3",
+      "output": "third_party/perfetto/protos/perfetto/common/observable_events.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/observable_events.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/producer.h": {
+      "kind": "raw_Git",
+      "sha256": "990f176d00061707a69a56b444eea5ae3c61710fbabe0829b652bb0bb72e9922",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/producer.h",
+      "blob": "234c40651bf416cb634d933ce6eb260c387228e2"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/tracing_service.h": {
+      "kind": "raw_Git",
+      "sha256": "64d2f6176f119e46e823137281feabe850c24fde74d9bc327453f73949def761",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/tracing_service.h",
+      "blob": "72ea781824d5e58a61da96c8447cf10d9316e8bb"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/clock_snapshots.h": {
+      "kind": "raw_Git",
+      "sha256": "c9cc6877ba632d0112dcb061dd2894ce9ed9bb205e5cfdb9f282ef8c2815cc09",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/base/clock_snapshots.h",
+      "blob": "704d0c8f1b2ca3175f4c454d336030ed2b8ba7a0"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/shared_memory.h": {
+      "kind": "raw_Git",
+      "sha256": "79c9124e6e575a3bd5a6d9d6abe017dc1a116349211d7dfabcd6d3dd5fd599d2",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/shared_memory.h",
+      "blob": "e9f577afc6b5fe634c05ee23c2c8ff5bd670c7da"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/trace_packet.h": {
+      "kind": "raw_Git",
+      "sha256": "458fb143474ca811aeb027d6aa72d26005cf70a960623c9fad79abe37b51bd6c",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/trace_packet.h",
+      "blob": "c1439ddbfb8aac95abd908aea75735187bcf8f5a"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/slice.h": {
+      "kind": "raw_Git",
+      "sha256": "0b5d068d5ffc03e95fa2d58f345387171f8bbd2b8c041853a27c90a84eccac3c",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/slice.h",
+      "blob": "cdabc394650441ad92a7c637c5f8a8f7b7458525"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/core/data_source_descriptor.h": {
+      "kind": "raw_Git",
+      "sha256": "e88dd0c2faeb09550ef6366f532d78d50f12cbe09d60c37225e47d3dd357b4ba",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/tracing/core/data_source_descriptor.h",
+      "blob": "a9987d6adacf37af042a6f41e76357ae72362620"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/data_source_descriptor.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "cff135c265f253f410e6c325ba612aa8e6ce4e0e083a188113bd54dbe8b247e3",
+      "receipt": "artifacts/native-perfetto-common-cpp-20261016-a/generate-01/status.json",
+      "receipt_sha256": "7022bcf8c9066d311e03292eefcca9563c3bcd2ce6609433d5becdbde6219fb3",
+      "output": "third_party/perfetto/protos/perfetto/common/data_source_descriptor.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/data_source_descriptor.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/core/trace_config.h": {
+      "kind": "raw_Git",
+      "sha256": "afcbd80e08e0a92e2710dd4233e8b10a2fc518adafa90ba7e652e9aee66f6a2d",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/tracing/core/trace_config.h",
+      "blob": "e9807ab56e8259d3bc4d2fc8fb4512a8a4b4156f"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/config/trace_config.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "d03e0994a3cbc5dd97856356faccfa91d5936794e096898fef6c7a4386dd3170",
+      "receipt": "artifacts/native-perfetto-cppgen-20261016-a/generate-01/status.json",
+      "receipt_sha256": "bd44b2abbfd77ad486e1cb15f1121e661036f42c48dc5afc11cc439bd6959d5a",
+      "output": "third_party/perfetto/protos/perfetto/config/trace_config.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-cppgen-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/config/trace_config.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/config/data_source_config.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "991c5c519ad6c7bfc6cb7a6bbc12ecd6d207357f84726d7f3bd3b1f78fc9e911",
+      "receipt": "artifacts/native-perfetto-cppgen-20261016-a/generate-01/status.json",
+      "receipt_sha256": "bd44b2abbfd77ad486e1cb15f1121e661036f42c48dc5afc11cc439bd6959d5a",
+      "output": "third_party/perfetto/protos/perfetto/config/data_source_config.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-cppgen-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/config/data_source_config.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/interceptor_descriptor.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "86c1e9ed12123806bcfb56799e0aac77ebda18fbe997454edd6cd5e5901c151d",
+      "receipt": "artifacts/native-perfetto-common-cpp-20261016-a/generate-01/status.json",
+      "receipt_sha256": "7022bcf8c9066d311e03292eefcca9563c3bcd2ce6609433d5becdbde6219fb3",
+      "output": "third_party/perfetto/protos/perfetto/common/interceptor_descriptor.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/interceptor_descriptor.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/base/task_runner.h": {
+      "kind": "raw_Git",
+      "sha256": "18dd881174f100a1d4dc1e6f50e6f4224f7b4ea05e64565656cc1224912a0da0",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/base/task_runner.h",
+      "blob": "653b0e655917f12020e99c7a7519c004ffcf84e9"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/waitable_event.h": {
+      "kind": "raw_Git",
+      "sha256": "ada4f652b77165800c4433d65f56915f6593e0e7f5862535095cd72ae5196ec6",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/base/waitable_event.h",
+      "blob": "54bfdbd6f2851f93819f179d16083fce5e35bb2e"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/condition_variable": {
+      "kind": "raw_Git",
+      "sha256": "37e48063b254e225b387a60eb3356c704b1ec709655e269d718ff012a66128aa",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/condition_variable",
+      "blob": "0018b89f362af2f50cd7ae0417ab8ebdf0cca30d"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_callback.h": {
+      "kind": "raw_Git",
+      "sha256": "70562802599118d41edb5cc3532ac643596994577617c0c30caa1922e5919496",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/stop_callback.h",
+      "blob": "f9d486b34746c084fb290d7196863aa433182f54"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/intrusive_shared_ptr.h": {
+      "kind": "raw_Git",
+      "sha256": "2ced7c21be622039fea3da64cf53f310a7abb75a0c25aebe393baa094f2165b0",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/intrusive_shared_ptr.h",
+      "blob": "c37317f8c5c7b3b34fec558a9efed51ee5f96694"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_state.h": {
+      "kind": "raw_Git",
+      "sha256": "f913c861b279604cf945a46d8f99d17241bf73b2e66e46d2c05b467436714658",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/stop_state.h",
+      "blob": "762cf203b0af97cae137811e223e4e39c9da4cd3"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/atomic_unique_lock.h": {
+      "kind": "raw_Git",
+      "sha256": "da52e1e5c10bd7c7d5d2a9ee0b7a27cabbc51bfbcf7ff1bbeb17a0ac6c19db25",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/atomic_unique_lock.h",
+      "blob": "99f94b8a789371b4f6806eb0e0049a5d86da7db6"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/intrusive_list_view.h": {
+      "kind": "raw_Git",
+      "sha256": "1421f2d3e70956b7f5e1de6b4074c333db2efa5d0ba97899b0bd60b4526b2981",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/intrusive_list_view.h",
+      "blob": "0198b1756a525a4e25d75c17fab53b16b72a031e"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_token.h": {
+      "kind": "raw_Git",
+      "sha256": "49bf4d2f4dbf6046848d95c66c3917916c7bb722a711346b53309858e82b1d3a",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/stop_token.h",
+      "blob": "c6658f86879d52de2f46e8a560a3cc8c7e7bb174"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/shared_memory_arbiter.h": {
+      "kind": "raw_Git",
+      "sha256": "a3928238f7752b83747acfd906efced4acc1c30b8d9114b1a21a9611252e4270",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/shared_memory_arbiter.h",
+      "blob": "2074c8c6894fd7a5392262e8250c71ed282450f7"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/shared_memory_abi.h": {
+      "kind": "raw_Git",
+      "sha256": "d6023bb8f8681870393d352fe8b63a10d224f6cce9e83ac265e4c5a44a1000c6",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/shared_memory_abi.h",
+      "blob": "47b941a6f97659d3fb70a5b55fbe96fc0e5a7190"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/thread": {
+      "kind": "raw_Git",
+      "sha256": "521e486946e20245f78e5b35a4863eb8774153941d571246b6038f42b7de6e1b",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/thread",
+      "blob": "d79db3dcd7791fb124d08e81a4cc142c2f387b48"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/this_thread.h": {
+      "kind": "raw_Git",
+      "sha256": "0cca6ae42d6677603b28a7c8fd649cc18f536ef0fdd4cce8794203f06ad31b48",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__thread/this_thread.h",
+      "blob": "5a93e4d605027e1e576feae67d010796e51b072f"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/thread.h": {
+      "kind": "raw_Git",
+      "sha256": "c1cf1bef180f8c3eefda86c19f8a08a38c0875f5363c4a2b4416d57252025ec2",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__thread/thread.h",
+      "blob": "4fd51c12a6dc2b06556653398534c0326b703ead"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/jthread.h": {
+      "kind": "raw_Git",
+      "sha256": "ca42647fce330021f005b2a03eb9fdc166a5b5b02ebc92232dace165095b4994",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__thread/jthread.h",
+      "blob": "481ffe296c2712ae13e6adabdb500678199fa239"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_source.h": {
+      "kind": "raw_Git",
+      "sha256": "3f38811b6feda8632fceb5c1496435b84137f2d8be0b6b10d613ac824f001c73",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__stop_token/stop_source.h",
+      "blob": "aea94293888474f0a912a26f94726eca37e3f500"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/formatter.h": {
+      "kind": "raw_Git",
+      "sha256": "768beb1b3bea17152ff01577fdae28742785e681889c4209bfbba812f0d25d84",
+      "repository": "sources/chromium-full/src/third_party/libc++/src",
+      "revision": "97b436da4c33663581d394f4ee0a5977fc38c2f4",
+      "relative": "include/__thread/formatter.h",
+      "blob": "9682798e1df413638bb1965857845768b994f4cd"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/trace_stats.h": {
+      "kind": "raw_Git",
+      "sha256": "a62121aaa06af183b90567aaa132d69c08094e65fb082530f3c2bd11f7bb82b4",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/trace_stats.h",
+      "blob": "b85cb430f96c17080dced029921fc471e092692e"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/trace_stats.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "943279683e253976bb68e6fc59b51ffc5920bc61c5deb4925ba81ab75a73c62b",
+      "receipt": "artifacts/native-perfetto-common-cpp-20261016-a/generate-01/status.json",
+      "receipt_sha256": "7022bcf8c9066d311e03292eefcca9563c3bcd2ce6609433d5becdbde6219fb3",
+      "output": "third_party/perfetto/protos/perfetto/common/trace_stats.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/trace_stats.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/trace_writer.h": {
+      "kind": "raw_Git",
+      "sha256": "353c8d418f7022e4680921221b59fda66899a57f43d04b71a7bbadedae3bbf19",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/ext/tracing/core/trace_writer.h",
+      "blob": "76b4fa6bcac4ed9a156d6884ee8e75a2cf6a5ef9"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/core/tracing_service_state.h": {
+      "kind": "raw_Git",
+      "sha256": "86578ae133c5ca588de81c20021c8ef503eda14736a605c9293bd757faa10ee3",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/tracing/core/tracing_service_state.h",
+      "blob": "094197603961c582b942045c1d0358231addca16"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/tracing_service_state.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "8b8c9dc29cc4bf883e70377df9503105f4a003af92db83a86ea3262a7d2d45fc",
+      "receipt": "artifacts/native-perfetto-common-cpp-20261016-a/generate-01/status.json",
+      "receipt_sha256": "7022bcf8c9066d311e03292eefcca9563c3bcd2ce6609433d5becdbde6219fb3",
+      "output": "third_party/perfetto/protos/perfetto/common/tracing_service_state.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/tracing_service_state.gen.h"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/trace/trace_packet.pbzero.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "c8f342a2afe639383670be655c884b146e50c2e90adf3b9e49394a7aefe7cece",
+      "receipt": "artifacts/native-perfetto-trace-20261016-a/generate-01/status.json",
+      "receipt_sha256": "450eb6d334404dfeaf03082b81258fafd176db092b056a50bbf6fb1d68fb326a",
+      "output": "third_party/perfetto/protos/perfetto/trace/trace_packet.pbzero.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-trace-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/trace/trace_packet.pbzero.h"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/internal/interceptor_trace_writer.h": {
+      "kind": "raw_Git",
+      "sha256": "967833f779c85eeded5b8464ff7004381d2cec58bafcf6c97b80f814a1a67cc6",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/tracing/internal/interceptor_trace_writer.h",
+      "blob": "8799b303ec88b05940d07cbe59f24fb31d788b30"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/internal/tracing_backend_fake.h": {
+      "kind": "raw_Git",
+      "sha256": "2165dbf78347f81b4c3be9c9c91202c44aeb2e7a12d9b0d7eeedef223818599e",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/tracing/internal/tracing_backend_fake.h",
+      "blob": "906ee2e420de00552003792cf4fb62616b37ec5e"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/tracing/core/null_trace_writer.h": {
+      "kind": "raw_Git",
+      "sha256": "c0a984af71334eca041e3d8f6ab41c7e6da4adeacefc49df2a7258219bc9e7bb",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "src/tracing/core/null_trace_writer.h",
+      "blob": "e68ff52198fd938253b42fe1f8f609f3b4e6937d"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/protozero/scattered_stream_null_delegate.h": {
+      "kind": "raw_Git",
+      "sha256": "e004583bfce82f61240727399190c2188f4e3802178c3cc13b40f061ff409ccf",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "include/perfetto/protozero/scattered_stream_null_delegate.h",
+      "blob": "b06b91df70dacd65513153ad88d492606699ac8b"
+    },
+    "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/tracing/internal/tracing_muxer_fake.h": {
+      "kind": "raw_Git",
+      "sha256": "d72211796d8a23e83e73a0065909dbd868c847a37cc81dc3cfeafc9737d076cb",
+      "repository": "sources/chromium-full/src/third_party/perfetto",
+      "revision": "fd9c7de6e0c57bee61ee1a4113e60af975881cee",
+      "relative": "src/tracing/internal/tracing_muxer_fake.h",
+      "blob": "196201a479735343b4feb6781406dfa922cce747"
+    },
+    "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/config/interceptor_config.gen.h": {
+      "kind": "regenerated_bytes",
+      "sha256": "4d86392c25a51528635d9af30d3d47a4b19aaabbf1f4eb6bca9f4e6875a56be7",
+      "receipt": "artifacts/native-perfetto-cppgen-20261016-a/generate-01/status.json",
+      "receipt_sha256": "bd44b2abbfd77ad486e1cb15f1121e661036f42c48dc5afc11cc439bd6959d5a",
+      "output": "third_party/perfetto/protos/perfetto/config/interceptor_config.gen.h",
+      "actual_regenerated_path": "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-cppgen-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/config/interceptor_config.gen.h"
+    }
+  },
+  "receipt_pins": {
+    "artifacts/native-perfetto-time-20261016-a/progress-02/status.json": "360086d599f59126f3b148a31bd76d8fe6a855d1dcef01601e86828f03324ba9",
+    "artifacts/native-perfetto-common-cpp-20261016-a/generate-01/status.json": "7022bcf8c9066d311e03292eefcca9563c3bcd2ce6609433d5becdbde6219fb3",
+    "artifacts/native-perfetto-cppgen-20261016-a/generate-01/status.json": "bd44b2abbfd77ad486e1cb15f1121e661036f42c48dc5afc11cc439bd6959d5a",
+    "artifacts/native-perfetto-trace-20261016-a/generate-01/status.json": "450eb6d334404dfeaf03082b81258fafd176db092b056a50bbf6fb1d68fb326a"
+  },
+  "counts": {
+    "raw_Git": 41,
+    "prior_full_MD": 8,
+    "regenerated_bytes": 9
+  },
+  "scope": "Additional58 full-M inputs qualified by raw Git, prior complete MD or matching real regenerated bytes. Not approval merely from observed SHA."
+}

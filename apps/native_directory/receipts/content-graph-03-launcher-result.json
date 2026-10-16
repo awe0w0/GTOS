@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/content-graph-v3.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 300.51389644799997,
+  "child_sha256": "9f14a82bb2a1db9ea54ad7c7b61c3f66907531a6c7945d48ed400a1ba980fb2f",
+  "guard_sha256": "5f45033e6852c4d941f7f42a8d596f1dabd786f83d1f1e2b8d53bb56563ecee2",
+  "launcher_log_sha256": "253c245f562f21d9186e70532721e1b10ae5c15ddf3d716ed520f3405e0c9484"
+}

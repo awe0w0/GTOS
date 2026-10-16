@@ -1,0 +1,37 @@
+{
+  "status_sha256": "2b26e0319fe8b88dd8fea6ee25cdfa329307ba5548ab9f3c72e43efafcfd794d",
+  "objects": {
+    "directory": {
+      "sha256": "75f74cd2b357338fcb56e33a82842d37fca558a6229b6ffdf58c47967939d36f",
+      "MD_unique": 50,
+      "strong_definitions": 7,
+      "undefined_symbols": 4,
+      "C_functions": [
+        "opendir",
+        "readdir",
+        "closedir",
+        "rewinddir",
+        "dirfd",
+        "dup",
+        "close"
+      ]
+    },
+    "thread_checker": {
+      "sha256": "24cc5be6bb05327569221eac87de234de3be56f8efa6acf5be8e2b6c46b9ae62",
+      "MD_unique": 545,
+      "strong_definitions": 9,
+      "undefined_symbols": 0,
+      "checker_methods": 9
+    },
+    "tracing_muxer_impl": {
+      "sha256": "9ffd03fd7ec996680aef85f8bc2bc275fd8d3f1962c20e6873829c8ea1b7ac3a",
+      "MD_unique": 1020,
+      "strong_definitions": 131,
+      "undefined_symbols": 70,
+      "instance_definition": "_ZN8perfetto8internal12TracingMuxer9instance_E",
+      "instance_bytes": 4,
+      "muxer_methods": 121
+    }
+  },
+  "scope": "Read-only ELF symbol audit of whole-source compiled objects; no object execution or aggregate full-link acceptance"
+}

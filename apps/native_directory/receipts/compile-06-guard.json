@@ -1,0 +1,55 @@
+{
+  "launcher_sha256": "0eb2640641dcfb8cdbc6e46d17886f0580af6d9bf07888504b38bc34f8656310",
+  "child_sha256": "bb7225a724c088eb30cb350883294416835c59cb55b2f67bcd5dd0823ab504ce",
+  "python_path": "/usr/bin/python3",
+  "python_sha256": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+  "executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7"
+  },
+  "elf_loader": "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
+  "directory_execute_permissions": false,
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "workspace_read_only": true,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06",
+  "source_write_denied": true,
+  "source_document_sha256_before": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_sha256_after": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_unchanged": true,
+  "rule_path_handles_retained": true,
+  "artifact_execution_denied": true,
+  "output_artifact_execution_denied": true,
+  "landlock_tcp_denied": true,
+  "landlock_abstract_socket_and_cross_domain_signal_scoped": true,
+  "output_symlink_creation_allowed": true,
+  "device_sink_exception": "/dev/null write-only sink; no IOCTL_DEV granted",
+  "network_disabled": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "minimum_child_environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "namespace_metadata": {
+    "net": {
+      "st_dev": 4,
+      "st_ino": 4026532221
+    },
+    "user": {
+      "st_dev": 4,
+      "st_ino": 4026532220
+    }
+  },
+  "namespace_ids": {
+    "net": 4026532221,
+    "user": 4026532220
+  }
+}

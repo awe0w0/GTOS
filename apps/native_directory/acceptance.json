@@ -1,0 +1,700 @@
+{
+  "scope": "Native IA32 C directory/descriptor wrappers and actual Perfetto ThreadChecker; full raw Muxer compile and actual Content GN source view",
+  "module_boundary_pass": true,
+  "full_Content_execution_pass": false,
+  "browser_pass": false,
+  "native_directory_guest_pass": true,
+  "ThreadChecker_guest_pass": true,
+  "guests": [
+    {
+      "name": "O0-32M-smp1",
+      "log_sha256": "7f0882eddd9e3a8ce74cb6e20c2c343faf2b72a147ef38601fd0b6a36c0d1522",
+      "stops": [
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 469,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 2,
+          "exit": 2147483662,
+          "line": 0,
+          "phase": 5,
+          "checks": 235,
+          "tls_ctor": 3,
+          "tls_dtor": 0
+        }
+      ],
+      "reaps": [
+        {
+          "released": 5,
+          "error": 0,
+          "free": 6776,
+          "expected": 6776
+        },
+        {
+          "released": 5,
+          "error": 4294967291,
+          "free": 6776,
+          "expected": 6776
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 6776,
+          "expected": 6776
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 6776,
+          "expected": 6776
+        }
+      ],
+      "baseline": {
+        "initial": 6911,
+        "admitted": 6793,
+        "ready": 6776
+      },
+      "counts": [
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 6776,
+          "expected": 6776
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 6776,
+          "expected": 6776
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 6776,
+          "expected": 6776
+        },
+        {
+          "reaped": 3,
+          "open": 1,
+          "free": 6776,
+          "expected": 6776
+        }
+      ],
+      "final": {
+        "calls": 292,
+        "success": 272,
+        "errors": 20,
+        "close_errors": 4,
+        "heap_opens": 0,
+        "released": 21,
+        "fp_init": 16,
+        "fp_invalid": 16,
+        "fp_failures": 0,
+        "free": 6911,
+        "expected": 6911
+      },
+      "kernel_sha256": "f17622737a4e155ca4514c1d25467f06d358bb518ed2c303e3ca6feaf6af6f69",
+      "user_sha256": "c5a1acf3b953e5e45d7b62e8342c35db3282cb03cf3fa6e27901b130d77fe25e",
+      "disk_sha256": "e41bd77d9db87cfea1e3e0017a468fbe122b0095ef7a4699e52c7498288cb72e"
+    },
+    {
+      "name": "O0-64M-smp4",
+      "log_sha256": "932550579ebc174ce1fc17cee88b33e55753d733bfdfdf1b953b6f9c9abb4b58",
+      "stops": [
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 469,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 2,
+          "exit": 2147483662,
+          "line": 0,
+          "phase": 5,
+          "checks": 235,
+          "tls_ctor": 3,
+          "tls_dtor": 0
+        }
+      ],
+      "reaps": [
+        {
+          "released": 5,
+          "error": 0,
+          "free": 14960,
+          "expected": 14960
+        },
+        {
+          "released": 5,
+          "error": 4294967291,
+          "free": 14960,
+          "expected": 14960
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 14960,
+          "expected": 14960
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 14960,
+          "expected": 14960
+        }
+      ],
+      "baseline": {
+        "initial": 15095,
+        "admitted": 14977,
+        "ready": 14960
+      },
+      "counts": [
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 14960,
+          "expected": 14960
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 14960,
+          "expected": 14960
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 14960,
+          "expected": 14960
+        },
+        {
+          "reaped": 3,
+          "open": 1,
+          "free": 14960,
+          "expected": 14960
+        }
+      ],
+      "final": {
+        "calls": 292,
+        "success": 272,
+        "errors": 20,
+        "close_errors": 4,
+        "heap_opens": 0,
+        "released": 21,
+        "fp_init": 16,
+        "fp_invalid": 16,
+        "fp_failures": 0,
+        "free": 15095,
+        "expected": 15095
+      },
+      "kernel_sha256": "f17622737a4e155ca4514c1d25467f06d358bb518ed2c303e3ca6feaf6af6f69",
+      "user_sha256": "c5a1acf3b953e5e45d7b62e8342c35db3282cb03cf3fa6e27901b130d77fe25e",
+      "disk_sha256": "e41bd77d9db87cfea1e3e0017a468fbe122b0095ef7a4699e52c7498288cb72e"
+    },
+    {
+      "name": "O2-32M-smp1",
+      "log_sha256": "0bc97433e02d4ec56a29e6eefb516b574e14792edd557b6c5c1c564cf89792ac",
+      "stops": [
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 2,
+          "exit": 2147483662,
+          "line": 0,
+          "phase": 5,
+          "checks": 235,
+          "tls_ctor": 3,
+          "tls_dtor": 0
+        }
+      ],
+      "reaps": [
+        {
+          "released": 5,
+          "error": 0,
+          "free": 6788,
+          "expected": 6788
+        },
+        {
+          "released": 5,
+          "error": 4294967291,
+          "free": 6788,
+          "expected": 6788
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 6788,
+          "expected": 6788
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 6788,
+          "expected": 6788
+        }
+      ],
+      "baseline": {
+        "initial": 6922,
+        "admitted": 6805,
+        "ready": 6788
+      },
+      "counts": [
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 6788,
+          "expected": 6788
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 6788,
+          "expected": 6788
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 6788,
+          "expected": 6788
+        },
+        {
+          "reaped": 3,
+          "open": 1,
+          "free": 6788,
+          "expected": 6788
+        }
+      ],
+      "final": {
+        "calls": 292,
+        "success": 272,
+        "errors": 20,
+        "close_errors": 4,
+        "heap_opens": 0,
+        "released": 21,
+        "fp_init": 16,
+        "fp_invalid": 16,
+        "fp_failures": 0,
+        "free": 6922,
+        "expected": 6922
+      },
+      "kernel_sha256": "d18c7a4fb14f6ae0aac944590b9c42cdf601975899d757620b1d4eed117f6a83",
+      "user_sha256": "5e0a3adad0bc7dccafbc168739c47d4b3d5172fda26b0d1a1099fd7d1343fa4b",
+      "disk_sha256": "e41bd77d9db87cfea1e3e0017a468fbe122b0095ef7a4699e52c7498288cb72e"
+    },
+    {
+      "name": "O2-64M-smp4",
+      "log_sha256": "4e663e744cd2b020c2776514d51e30dc77999bf360483f2cba43d84b232e5967",
+      "stops": [
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 0,
+          "exit": 0,
+          "line": 0,
+          "phase": 6,
+          "checks": 465,
+          "tls_ctor": 4,
+          "tls_dtor": 4
+        },
+        {
+          "mode": 2,
+          "exit": 2147483662,
+          "line": 0,
+          "phase": 5,
+          "checks": 235,
+          "tls_ctor": 3,
+          "tls_dtor": 0
+        }
+      ],
+      "reaps": [
+        {
+          "released": 5,
+          "error": 0,
+          "free": 14972,
+          "expected": 14972
+        },
+        {
+          "released": 5,
+          "error": 4294967291,
+          "free": 14972,
+          "expected": 14972
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 14972,
+          "expected": 14972
+        },
+        {
+          "released": 5,
+          "error": 0,
+          "free": 14972,
+          "expected": 14972
+        }
+      ],
+      "baseline": {
+        "initial": 15106,
+        "admitted": 14989,
+        "ready": 14972
+      },
+      "counts": [
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 14972,
+          "expected": 14972
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 14972,
+          "expected": 14972
+        },
+        {
+          "reaped": 1,
+          "open": 1,
+          "free": 14972,
+          "expected": 14972
+        },
+        {
+          "reaped": 3,
+          "open": 1,
+          "free": 14972,
+          "expected": 14972
+        }
+      ],
+      "final": {
+        "calls": 292,
+        "success": 272,
+        "errors": 20,
+        "close_errors": 4,
+        "heap_opens": 0,
+        "released": 21,
+        "fp_init": 16,
+        "fp_invalid": 16,
+        "fp_failures": 0,
+        "free": 15106,
+        "expected": 15106
+      },
+      "kernel_sha256": "d18c7a4fb14f6ae0aac944590b9c42cdf601975899d757620b1d4eed117f6a83",
+      "user_sha256": "5e0a3adad0bc7dccafbc168739c47d4b3d5172fda26b0d1a1099fd7d1343fa4b",
+      "disk_sha256": "e41bd77d9db87cfea1e3e0017a468fbe122b0095ef7a4699e52c7498288cb72e"
+    }
+  ],
+  "consumer_ELFs": {
+    "O0": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-user-04/user-O0.elf",
+      "sha256": "c5a1acf3b953e5e45d7b62e8342c35db3282cb03cf3fa6e27901b130d77fe25e",
+      "bytes": 571556
+    },
+    "O2": {
+      "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/runtime-user-04/user-O2.elf",
+      "sha256": "5e0a3adad0bc7dccafbc168739c47d4b3d5172fda26b0d1a1099fd7d1343fa4b",
+      "bytes": 566256
+    }
+  },
+  "kernel_C_CXX_objects": 46,
+  "user_and_C_header_objects": 3,
+  "retained_primitive_C_runtime_inputs": 133,
+  "legacy_runtime_cold_provenance_newly_certified": false,
+  "generated_headers_all_regenerated_here": false,
+  "production_image_updated": false,
+  "canonical_base": "0392649b664ce5cab342cf527e0e8e6a76117a98",
+  "QQ_quiet_hours": "Asia/Shanghai 02:00-09:00",
+  "evidence": {
+    "overlay/content/shell/BUILD.gn": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\content-shell-BUILD.gn",
+      "sha256": "68461c0eac30a7598a370d4d1e5cae224c0fd8cd72078291f7aa86ffee9e47dd"
+    },
+    "overlay/tools/gtos_native_sdk/runtime/BUILD.gn": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\runtime-BUILD.gn",
+      "sha256": "8cc2fc34145bb62ba67baf08b07abc482d69986f3d616df3514335c0846dcf9b"
+    },
+    "overlay/tools/gtos_native_sdk/runtime/directory.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\tools\\gtos_native_sdk\\runtime\\directory.cc",
+      "sha256": "49772b72bce589f20dd9c17588747dbaefef5a09e5f8fc89603ba1bce59bfed9"
+    },
+    "overlay/tools/gtos_native_sdk/c-sdk/dirent.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\tools\\gtos_native_sdk\\c-sdk\\dirent.h",
+      "sha256": "480b1b3268f68b71fbc47f49b2487c3bbdb31c68e464217f3067abc86d623e90"
+    },
+    "overlay/tools/gtos_native_sdk/c-sdk/unistd.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\tools\\gtos_native_sdk\\c-sdk\\unistd.h",
+      "sha256": "a089a611164f07d740ae1061e3dce4a9e93c1371839cde730bb9e1628eaf777f"
+    },
+    "overlay/tools/gtos_native_sdk/sdk/process/file_abi.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\tools\\gtos_native_sdk\\sdk\\process\\file_abi.h",
+      "sha256": "e974d09146cfb319c06215b8e5e34bfe47281f855bbdd097f06fb0d05019b659"
+    },
+    "overlay/third_party/perfetto/include/perfetto/ext/base/thread_checker.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\third_party\\perfetto\\include\\perfetto\\ext\\base\\thread_checker.h",
+      "sha256": "c953e9f9d7697a0f3c95d7af7f90177374428261227952a5ab74ed21915d07af"
+    },
+    "overlay/third_party/perfetto/src/base/thread_checker.cc": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\third_party\\perfetto\\src\\base\\thread_checker.cc",
+      "sha256": "ba87b4b9c64a5dc7a03c5c1a7ecd849b3225277b15cc0680f1837bdd57a1f320"
+    },
+    "overlay/tools/gtos_native_sdk/sdk/sys/types.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\patch\\tools\\gtos_native_sdk\\sdk\\sys\\types.h",
+      "sha256": "84cc6a1e25769fbf8cc1d08a5f7f260070d2d1548e596311197243f5234ff35a"
+    },
+    "probe/user.cpp": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-probe-03\\user.cpp",
+      "sha256": "43e07b1a064fb370ff0ea40c32c95ff328773d3f779b77a9d48de47bc5c144f8"
+    },
+    "probe/user.ld": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-probe-03\\user.ld",
+      "sha256": "eca18428bc42fb81a2b6f6a2b1cc58c4da81301b6009ddf4bb45622ecfac410c"
+    },
+    "probe/record.h": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-probe-03\\record.h",
+      "sha256": "d344a95bbe499decbd3a9cf1877ef57ee7b5dd2a8c9e157d5abc4b9c2eb52b0e"
+    },
+    "probe/headers.c": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-probe-03\\headers.c",
+      "sha256": "3d95bd0a9e8da2db08dc660dc656c14291cb7881a00e355fe225637dbc6a6467"
+    },
+    "probe/kernel.cpp": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-probe-05\\kernel.cpp",
+      "sha256": "fd5177b9311d2f08a6a1dd7ad83535bbe393daa692dee3349cba476a9a64f341"
+    },
+    "receipts/content-graph-03.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\content-graph-03\\status.json",
+      "sha256": "27c52ea21a1661cf10ef6a5576509044fb7e48cb0e7a047a4c19362c319f205c"
+    },
+    "receipts/content-graph-03-guard.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\content-graph-03\\guard.json",
+      "sha256": "5f45033e6852c4d941f7f42a8d596f1dabd786f83d1f1e2b8d53bb56563ecee2"
+    },
+    "receipts/content-graph-03-launcher-result.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\content-graph-03\\launcher-result.json",
+      "sha256": "1f24af8552a4eca6b26e6fc084a335b95d45f07e18c90b61524d5d74ebf77ae2"
+    },
+    "receipts/compile-06.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\compile-06\\status.json",
+      "sha256": "2b26e0319fe8b88dd8fea6ee25cdfa329307ba5548ab9f3c72e43efafcfd794d"
+    },
+    "receipts/compile-06-guard.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\compile-06\\guard.json",
+      "sha256": "fb70806a6b250dc6b0ecbf20db0a5036e2e93eae7af988ba0bba7530848cf83c"
+    },
+    "receipts/compile-06-launcher-result.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\compile-06\\launcher-result.json",
+      "sha256": "34846fc3f3b19e2e7bb34d8b965d6c4301ba63222b63680c1b5e5e12351772bc"
+    },
+    "receipts/runtime-user-04.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-user-04\\status.json",
+      "sha256": "626332b78b7545d2eba4fb7e16a7526039525c841971c5b806b82348263eee39"
+    },
+    "receipts/runtime-user-04-guard.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-user-04\\guard.json",
+      "sha256": "59547c025e33874cbf6b2d4dab92e9eadf51d9c7cfd4d417cae969a07730481a"
+    },
+    "receipts/runtime-user-04-launcher-result.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-user-04\\launcher-result.json",
+      "sha256": "57e5653f2d9538a625c736ed4bca5fb646c5b6eeaae41d138a02ee88dfbd0b5f"
+    },
+    "receipts/runtime-guest-02.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\status.json",
+      "sha256": "cc2585a304e0ff62adf70bde8267bcd258191aab69844cbec311fbca7f7b51c8"
+    },
+    "receipts/runtime-guest-02-guard.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\guard.json",
+      "sha256": "b3defe835035757b7a7ef4c121dc94ab91139262b4083e065303a443e319cca7"
+    },
+    "receipts/runtime-guest-02-launcher-result.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\launcher-result.json",
+      "sha256": "395715989831f2f8c453952154aa1c8886bbbe5399d157b22ab5c954d6deeaf5"
+    },
+    "logs/O0-32M-smp1.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\O0-32M-smp1-guest.log",
+      "sha256": "7f0882eddd9e3a8ce74cb6e20c2c343faf2b72a147ef38601fd0b6a36c0d1522"
+    },
+    "logs/O0-64M-smp4.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\O0-64M-smp4-guest.log",
+      "sha256": "932550579ebc174ce1fc17cee88b33e55753d733bfdfdf1b953b6f9c9abb4b58"
+    },
+    "logs/O2-32M-smp1.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\O2-32M-smp1-guest.log",
+      "sha256": "0bc97433e02d4ec56a29e6eefb516b574e14792edd557b6c5c1c564cf89792ac"
+    },
+    "logs/O2-64M-smp4.log": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-02\\O2-64M-smp4-guest.log",
+      "sha256": "4e663e744cd2b020c2776514d51e30dc77999bf360483f2cba43d84b232e5967"
+    },
+    "replay/content-graph-v3.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\content-graph-v3.py",
+      "sha256": "9f14a82bb2a1db9ea54ad7c7b61c3f66907531a6c7945d48ed400a1ba980fb2f"
+    },
+    "replay/content-helper-v3.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\content-helper-v3.py",
+      "sha256": "fac90a9eb5b716c387ab1f0ca880554a47a360c5924a3d8af2e5b99d574e4eb3"
+    },
+    "replay/content-dotfile-v3.gn": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\content-dotfile-v3.gn",
+      "sha256": "d9f174cc6e6c00549e34b95d81f592467cb31269f1d33f867b095f1e096308dc"
+    },
+    "replay/launch-graph-v3.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\launch-graph-v3.py",
+      "sha256": "ac982618813cbedeb7b7cca3d29e1b0328c1aaf4dc52aea1fd7ca01188d35f26"
+    },
+    "replay/compile-consumers-v6.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\compile-consumers-v6.py",
+      "sha256": "bb7225a724c088eb30cb350883294416835c59cb55b2f67bcd5dd0823ab504ce"
+    },
+    "replay/launch-consumers-v6.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\launch-consumers-v6.py",
+      "sha256": "0eb2640641dcfb8cdbc6e46d17886f0580af6d9bf07888504b38bc34f8656310"
+    },
+    "replay/runtime-user-v4.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-user-v4.py",
+      "sha256": "b1bede27f41a15f986e6de4d9097d662e678a85803a7fc6ce2a0aff272c62908"
+    },
+    "replay/launch-runtime-user-v4.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\launch-runtime-user-v4.py",
+      "sha256": "62da8d577c1f07fa46c6b8ef786476b15279a4aeaee477d7c34eaa74b706e4eb"
+    },
+    "replay/runtime-guest-v2.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-guest-v2.py",
+      "sha256": "52f4c7f9e1fa2d976186c803a7dc314de1f4fddde9c1b3800136ff1e20fd9fab"
+    },
+    "replay/launch-runtime-guest-v2.py": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\launch-runtime-guest-v2.py",
+      "sha256": "f4f9e318a7354bb0b63a3e768678cf3408d2898e3f21a87ef9a9aa49f4b77886"
+    },
+    "provenance/source-pins-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\source-pins-01.json",
+      "sha256": "545782856822eedbb6e8c16b2314fa6b166d5c67e1879b0f4370831e759e632c"
+    },
+    "provenance/thread-checker-origins-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\thread-checker-origins-01.json",
+      "sha256": "60a9896c359a16bb694b46c2df68dadd6dca0ca90ead1d2988a5f73122eb3c47"
+    },
+    "provenance/uid-header-origins-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\uid-header-origins-01.json",
+      "sha256": "8e6b31b5f672915ffe68743550e0f218ace33249f6924032796d96a1bba7b927"
+    },
+    "provenance/additional-MD-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\additional-MD-01.json",
+      "sha256": "4e4ff22561ede2d74d072645f2de3a1ab98991e315257d8f1020900269ce9fb9"
+    },
+    "provenance/compiler-config-pins-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\compiler-config-pins-01.json",
+      "sha256": "696d6e6fe21c0cf47cde6ac00e3e58784d344b20a665d08af82acd8d30ac6f2a"
+    },
+    "provenance/runtime-support-03.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-support-03.json",
+      "sha256": "20a9edb4bcbe6f6def75a6d6632e6fa096392aaa0a95a18441292c99f213ff83"
+    },
+    "provenance/runtime-kernel-pins-04.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\runtime-kernel-pins-04.json",
+      "sha256": "f73681d0cbef5af3e24c588778c86fd41bf4b0b5d599f9d7a4bf729483b25efb"
+    },
+    "provenance/object-audit-02.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\object-audit-02.json",
+      "sha256": "5d0ed3748c5f8698349eb679a71693c5d69bcde2770ef9eba5520df5d207fa08"
+    },
+    "provenance/self-review-01.json": {
+      "source": "F:\\GTOS-Chromium\\artifacts\\native-directory-20261017-a\\self-review-01.json",
+      "sha256": "4ad273559416167b653506cb612bb65b71c928434d46eb958432f72a73fda6bc"
+    },
+    "CHROMIUM-LICENSE.txt": {
+      "source": "F:\\GTOS-Chromium\\sources\\chromium-full\\src\\LICENSE",
+      "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b"
+    },
+    "PERFETTO-LICENSE.txt": {
+      "source": "F:\\GTOS-Chromium\\sources\\chromium-full\\src\\third_party\\perfetto\\LICENSE",
+      "sha256": "9b569417be9f195f8ffa709a23836c4e0f880b2752b09653baa8a98d3b02db3a"
+    },
+    "LLVM-LICENSE.txt": {
+      "source": "F:\\GTOS-Chromium\\sources\\GTOS\\apps\\native_v8_integration\\LLVM-LICENSE.txt",
+      "sha256": "ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47"
+    }
+  }
+}

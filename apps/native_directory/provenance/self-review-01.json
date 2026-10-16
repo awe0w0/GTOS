@@ -1,0 +1,253 @@
+{
+  "classification": "progress",
+  "previous_goal_turn": "progress",
+  "review": "selected source/compiler stage complete; native runtime pending",
+  "graph": {
+    "path": "content-graph-01/status.json",
+    "sha256": "12c1f279e8766bbbecb83bd80dc19139fbf69acc2c33fa06b044cd8f0762cdd1",
+    "GN_targets": 21493,
+    "GN_files": 2515,
+    "actual_directory_link_dependency": true,
+    "prior_six_owners_preserved": true,
+    "complete_graph_input_qualification": false
+  },
+  "compiler": {
+    "path": "compile-06/status.json",
+    "sha256": "2b26e0319fe8b88dd8fea6ee25cdfa329307ba5548ab9f3c72e43efafcfd794d",
+    "inputs": 1053,
+    "MD_aliases": 1028,
+    "objects": {
+      "directory": {
+        "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06/build/obj/tools/gtos_native_sdk/runtime/directory_native.directory.o",
+        "sha256": "75f74cd2b357338fcb56e33a82842d37fca558a6229b6ffdf58c47967939d36f",
+        "MD": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06/build/obj/tools/gtos_native_sdk/runtime/directory_native.directory.o.d",
+        "MD_sha256": "0c362fd7b062ef9f66c53fcfeba0f8b731fa638fad8244949bf74a78546c93ed",
+        "MD_unique": 50,
+        "owner": "obj/tools/gtos_native_sdk/runtime/directory_native.ninja"
+      },
+      "thread_checker": {
+        "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06/build/obj/third_party/perfetto/src/base/base.thread_checker.o",
+        "sha256": "24cc5be6bb05327569221eac87de234de3be56f8efa6acf5be8e2b6c46b9ae62",
+        "MD": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06/build/obj/third_party/perfetto/src/base/base.thread_checker.o.d",
+        "MD_sha256": "3371e69e33871a7cd30250fede36f49dce271f7428d5bef17b3cda2aea083380",
+        "MD_unique": 545,
+        "owner": "obj/third_party/perfetto/src/base/base.ninja"
+      },
+      "tracing_muxer_impl": {
+        "path": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06/build/obj/third_party/perfetto/src/tracing/internal/client_api_without_backends.tracing_muxer_impl.o",
+        "sha256": "9ffd03fd7ec996680aef85f8bc2bc275fd8d3f1962c20e6873829c8ea1b7ac3a",
+        "MD": "/mnt/f/GTOS-Chromium/artifacts/native-directory-20261017-a/compile-06/build/obj/third_party/perfetto/src/tracing/internal/client_api_without_backends.tracing_muxer_impl.o.d",
+        "MD_sha256": "7a8843afdcc2a77be33c6af6a2e52cd5584876c3e313c7b6de6b20a746fccc43",
+        "MD_unique": 1020,
+        "owner": "obj/third_party/perfetto/src/tracing/client_api_without_backends.ninja"
+      }
+    },
+    "all_postchecks_pass": true,
+    "original_compiler_policies_bound": true
+  },
+  "object_audit": {
+    "path": "object-audit-02.json",
+    "sha256": "5d0ed3748c5f8698349eb679a71693c5d69bcde2770ef9eba5520df5d207fa08",
+    "C_functions": 7,
+    "ThreadChecker_methods": 9,
+    "whole_Muxer_strong_definitions": 131,
+    "Muxer_implementation_methods": 121,
+    "instance_definition": "_ZN8perfetto8internal12TracingMuxer9instance_E",
+    "instance_bytes": 4,
+    "single_object_external_references": 70,
+    "aggregate_full_link_replayed": false
+  },
+  "source_proofs": {
+    "additional_MD": "additional-MD-01.json",
+    "additional_MD_sha256": "4e4ff22561ede2d74d072645f2de3a1ab98991e315257d8f1020900269ce9fb9",
+    "raw_Git": 41,
+    "prior_full_MD": 8,
+    "real_regenerated_bytes": 9,
+    "uid_raw_Git_revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+    "UID_header_projection_only": true
+  },
+  "reviewed_invariants": [
+    "DIR owns actual native handle and its own bounded name/type buffer; no inode/offset fabrication",
+    "Open failure frees allocation before publishing final errno; close invalidates stream and frees even on native error",
+    "EOF preserves errno; all failures use existing real LLVM errno accessor",
+    "C dup/close use the actual owner-checked kernel ABI; no separate descriptor alias table or stdio0/1/2 synthesis",
+    "Same DIR requires caller serialization; independent streams have no shared user-space mutable table",
+    "ThreadChecker gets actual thread_id from native PROCESS_INFO, preserving atomic/detach/copy methods and zero-detached state",
+    "uid_t is the existing raw32-bit LLVM scalar, not a user-ID query implementation",
+    "Whole original Muxer source and owner fields retained; instance_ was not extracted as a substitute"
+  ],
+  "safety": [
+    "Fixed hashes and argv arrays; no shell/inline code/download execution",
+    "Minimum no-site environment; user/network namespace; Landlock ABI7 only new output writable",
+    "Exact executable whitelist; source write refusal; every bound input and alias rechecked",
+    "Compiler policy files equal raw Git; no warning/hardening/approval/hook/TLS setting changes",
+    "Read-only ELF data parsing only; no generated host artifact execution"
+  ],
+  "history": {
+    "compile-01": {
+      "sha256": "53f2f6ed615697aaf0b4248161261483d9966c52a8af59349c94378f44f96421",
+      "terminal": true,
+      "diagnostic_complete": false,
+      "failure": "Original explicit compiler policy dependencies required",
+      "failed_rows": {},
+      "unbound_MD": 0
+    },
+    "compile-02": {
+      "sha256": "079d935a2d443e85293b2e829bda79e24eff583cd8e3d66cf5a440613caa7cad",
+      "terminal": true,
+      "diagnostic_complete": true,
+      "failure": null,
+      "failed_rows": {
+        "tracing_muxer_impl": {
+          "stage": "preprocessor",
+          "returncode": 1
+        }
+      },
+      "unbound_MD": 0
+    },
+    "compile-03": {
+      "sha256": "80f8b347a136740d991b32e38de848af4e5ed42f73455e10e5e9676db6244c09",
+      "terminal": true,
+      "diagnostic_complete": true,
+      "failure": null,
+      "failed_rows": {
+        "thread_checker": {
+          "stage": "source_qualification",
+          "unbound_MD": [
+            "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/build_config/perfetto_build_flags.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/utils.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/stdarg.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_header_macro.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg___gnuc_va_list.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_list.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_arg.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg___va_copy.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_copy.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/sys_types.h"
+          ]
+        },
+        "tracing_muxer_impl": {
+          "stage": "source_qualification",
+          "unbound_MD": [
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/tracing/internal/tracing_muxer_impl.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/stdarg.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_header_macro.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg___gnuc_va_list.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_list.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_arg.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg___va_copy.h",
+            "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include/__stdarg_va_copy.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/list",
+            "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/build_config/perfetto_build_flags.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/scoped_file.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/utils.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/sys_types.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/basic_types.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/consumer.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/observable_events.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/observable_events.gen.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/producer.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/tracing_service.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/clock_snapshots.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/shared_memory.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/trace_packet.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/slice.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/core/data_source_descriptor.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/data_source_descriptor.gen.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/core/trace_config.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/config/trace_config.gen.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/config/data_source_config.gen.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/interceptor_descriptor.gen.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/base/task_runner.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/base/waitable_event.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/condition_variable",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_callback.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/intrusive_shared_ptr.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_state.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/atomic_unique_lock.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/intrusive_list_view.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_token.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/shared_memory_arbiter.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/shared_memory_abi.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/thread",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/this_thread.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/thread.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/jthread.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__stop_token/stop_source.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include/__thread/formatter.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/trace_stats.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/trace_stats.gen.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/ext/tracing/core/trace_writer.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/core/tracing_service_state.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-perfetto-common-cpp-20261016-a/generate-01/build/gen/third_party/perfetto/protos/perfetto/common/tracing_service_state.gen.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/trace/trace_packet.pbzero.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/internal/interceptor_trace_writer.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/tracing/internal/tracing_backend_fake.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/tracing/core/null_trace_writer.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/include/perfetto/protozero/scattered_stream_null_delegate.h",
+            "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/perfetto/src/tracing/internal/tracing_muxer_fake.h",
+            "/mnt/f/GTOS-Chromium/artifacts/native-base-lock-20261016-a/services-compile-12/build/gen/third_party/perfetto/protos/perfetto/config/interceptor_config.gen.h"
+          ]
+        }
+      },
+      "unbound_MD": 58
+    },
+    "compile-04": {
+      "sha256": "9cf8b27abaeddeecb8c83b2ffb5f42878541054cac7dadc0daff27ba14450c1d",
+      "terminal": true,
+      "diagnostic_complete": true,
+      "failure": null,
+      "failed_rows": {
+        "thread_checker": {
+          "stage": "compiler",
+          "returncode": 1
+        },
+        "tracing_muxer_impl": {
+          "stage": "compiler",
+          "returncode": 1
+        }
+      },
+      "unbound_MD": 0
+    },
+    "compile-05": {
+      "sha256": "4b5da59a21367c09732439462a505dbaf3f871b0d6b85736b53ca52cc0e87097",
+      "terminal": true,
+      "diagnostic_complete": true,
+      "failure": null,
+      "failed_rows": {
+        "thread_checker": {
+          "stage": "source_qualification",
+          "unbound_MD": [
+            "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-33/source/tools/gtos_native_sdk/sdk/llvm-libc-types/uid_t.h"
+          ]
+        },
+        "tracing_muxer_impl": {
+          "stage": "source_qualification",
+          "unbound_MD": [
+            "/mnt/f/GTOS-Chromium/artifacts/native-rust-gtos-20261015-a/graph-33/source/tools/gtos_native_sdk/sdk/llvm-libc-types/uid_t.h"
+          ]
+        }
+      },
+      "unbound_MD": 1
+    },
+    "compile-06": {
+      "sha256": "2b26e0319fe8b88dd8fea6ee25cdfa329307ba5548ab9f3c72e43efafcfd794d",
+      "terminal": true,
+      "diagnostic_complete": true,
+      "failure": null,
+      "failed_rows": {},
+      "unbound_MD": 0
+    }
+  },
+  "runtime_gate": "native-runtime-gate.md",
+  "runtime_pass": false,
+  "Content_runtime_pass": false,
+  "browser_pass": false,
+  "video_pass": false,
+  "HTML5_pass": false,
+  "production_image_changed": false,
+  "canonical_worktree_clean": true,
+  "new_public_commit_this_turn": false,
+  "QQ_sent": false,
+  "QQ_quiet_hours": "02:00-09:00 Asia/Shanghai"
+}
