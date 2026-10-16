@@ -66,11 +66,13 @@ int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t ope
     case GTOS_SYS_FILE_CLOSE:
     case GTOS_SYS_FILE_SYNC:
     case GTOS_SYS_FILE_SIZE:
+    case GTOS_SYS_FILE_DUP:
     case GTOS_SYS_FILE_DIR_REWIND: {
         GtosFileControlRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
         if (operation==GTOS_SYS_FILE_CLOSE) return store.Close(owner,request.handle);
         if (operation==GTOS_SYS_FILE_SYNC) return store.Sync(owner,request.handle);
         if (operation==GTOS_SYS_FILE_SIZE) return store.Size(owner,request.handle);
+        if (operation==GTOS_SYS_FILE_DUP) return store.Duplicate(owner,request.handle);
         return store.RewindDirectory(owner,request.handle);
     }
     case GTOS_SYS_FILE_TRUNCATE: {

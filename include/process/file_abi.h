@@ -19,6 +19,7 @@
 #define GTOS_SYS_FILE_DIR_REWIND 0x472dU
 #define GTOS_SYS_FILE_SIZE 0x472eU
 #define GTOS_SYS_FILE_HANDLE_INFO 0x472fU
+#define GTOS_SYS_FILE_DUP 0x4740U
 #define GTOS_FILE_PATH_LIMIT 512U
 #define GTOS_FILE_TRANSFER_LIMIT 4096U
 #define GTOS_FILE_READ 1U
@@ -65,6 +66,10 @@ typedef struct GtosFileInfo { unsigned version,type,bytes;char name[256]; } Gtos
 // A successful open removes the new directory entry before returning its
 // ordinary owned handle. Existing paths are never overwritten. Close/reap
 // releases the unnamed file; actual I/O failures can have partial disk effects.
+// DUP uses GtosFileControlRequest and returns a new positive owner-scoped handle.
+// It shares the same open resource, offset, directory cursor and access mode.
+// Closing one duplicate invalidates only that handle; the final close releases
+// the real file/directory, even if that close reports an actual I/O error.
 #if defined(__cplusplus)
 static_assert(sizeof(unsigned)==4,"File ABI unsigned");
 static_assert(sizeof(GtosFileOpenRequest)==16,"File open ABI");

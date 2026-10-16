@@ -467,6 +467,7 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     case GTOS_SYS_FILE_DIR_REWIND:
     case GTOS_SYS_FILE_SIZE:
     case GTOS_SYS_FILE_HANDLE_INFO:
+    case GTOS_SYS_FILE_DUP:
         cpu->eax = files ? (uint32_t)files->Call(slot->status.id, slot->space, cpu->eax, cpu->ebx, cpu->ecx)
             : (uint32_t)GTOS_FILE_ERR_UNAVAILABLE;
         break;

@@ -1,0 +1,359 @@
+{
+  "schema": 1,
+  "scope": "canonical-native-dup",
+  "base_dev": "fec27367f30516bce95afb5108b0ff1dd6ea4046",
+  "replay": "artifacts/native-dup-20261016T213527Z-569",
+  "status_sha256": "230e5df0382cae1cc61177440cf8a023b44f9822f02305aabf3fef3a5de0663f",
+  "guard_sha256": "c3ab6c1e6685ce704b95c054e72b122f4dbf0e0624b690e4a87c476f0be72017",
+  "launcher_result_sha256": "25de79778f4b096bb5d432543a111d7d78108a1fce200518ca9370fddebef662",
+  "manifest_sha256": "e8afc6739907fd1fd68b922b56a12c20b31d78020d7cab13c39a888e033cb17d",
+  "launcher_sha256": "a8bd80171560051054ebabc52262d333cfff66c678d3abd6843a0cac2918a168",
+  "driver_sha256": "89428d7ebde6c793cc5d1b17619a7870b9f9a5c57f1cce48d332777e0b4eab67",
+  "complete": true,
+  "CXX_objects": 48,
+  "full_M_MD_qualified": true,
+  "bound_inputs_unchanged": true,
+  "aliases_unchanged": true,
+  "bound_inputs": 137,
+  "landlock_abi": 7,
+  "network_disabled": true,
+  "source_write_denied": true,
+  "guest_returncodes": [
+    33,
+    33,
+    33,
+    33
+  ],
+  "guests": [
+    {
+      "name": "O0-32M-smp1",
+      "log_sha256": "8927113d1c7a59577859c15e3a9202ce71f4093d397bd70faa886a5494862135",
+      "reaps": [
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 4294967291,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        },
+        {
+          "leaked": 5,
+          "released": 5,
+          "error": 0,
+          "free": 7536,
+          "expected": 7536
+        }
+      ],
+      "final": {
+        "calls": 671,
+        "success": 567,
+        "errors": 104,
+        "peak": 64,
+        "reclaims": 9,
+        "released": 34,
+        "failures": 1,
+        "initialized": 32,
+        "invalidated": 32,
+        "saves": 2543,
+        "restores": 2543,
+        "fp_failures": 0,
+        "free": 7544,
+        "expected": 7544
+      },
+      "kernel_sha256": "9ba82cd258827350cb9b21ffd1676f39996f16a25da40e4ff28415f7356af13a",
+      "user_sha256": "391d38d47c5745ff329b949ee3a59d2c16fc57908437689d75a027bf5e1dc9f6",
+      "disk_sha256": "22aae138e3421a30bb41080ae2f80c342d4fcb71f258dc8d998b50a57352dbf7"
+    },
+    {
+      "name": "O0-64M-smp4",
+      "log_sha256": "b221eba43b4788d5515769701a5591457c1f425573d892840221be75df30b0b6",
+      "reaps": [
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 4294967291,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        },
+        {
+          "leaked": 5,
+          "released": 5,
+          "error": 0,
+          "free": 15720,
+          "expected": 15720
+        }
+      ],
+      "final": {
+        "calls": 671,
+        "success": 567,
+        "errors": 104,
+        "peak": 64,
+        "reclaims": 9,
+        "released": 34,
+        "failures": 1,
+        "initialized": 32,
+        "invalidated": 32,
+        "saves": 2550,
+        "restores": 2550,
+        "fp_failures": 0,
+        "free": 15728,
+        "expected": 15728
+      },
+      "kernel_sha256": "9ba82cd258827350cb9b21ffd1676f39996f16a25da40e4ff28415f7356af13a",
+      "user_sha256": "391d38d47c5745ff329b949ee3a59d2c16fc57908437689d75a027bf5e1dc9f6",
+      "disk_sha256": "22aae138e3421a30bb41080ae2f80c342d4fcb71f258dc8d998b50a57352dbf7"
+    },
+    {
+      "name": "O2-32M-smp1",
+      "log_sha256": "da02618308270fe9f749f50be40c1b02f830c763540be1571117c2527b977932",
+      "reaps": [
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 4294967291,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        },
+        {
+          "leaked": 5,
+          "released": 5,
+          "error": 0,
+          "free": 7546,
+          "expected": 7546
+        }
+      ],
+      "final": {
+        "calls": 671,
+        "success": 567,
+        "errors": 104,
+        "peak": 64,
+        "reclaims": 9,
+        "released": 34,
+        "failures": 1,
+        "initialized": 32,
+        "invalidated": 32,
+        "saves": 2546,
+        "restores": 2546,
+        "fp_failures": 0,
+        "free": 7554,
+        "expected": 7554
+      },
+      "kernel_sha256": "9c9f212005c8bd9051a7af05444ac50d7dd7b61d0a04b03e2d9d9483b83392f8",
+      "user_sha256": "2bd8bbb51850419d044856405a3781313a39be2a761408a81cb21d35d58ac795",
+      "disk_sha256": "22aae138e3421a30bb41080ae2f80c342d4fcb71f258dc8d998b50a57352dbf7"
+    },
+    {
+      "name": "O2-64M-smp4",
+      "log_sha256": "dc2ed20ccdc7a3759bc86e52010023919b9d702e7a14b6998dbe72ad6840cb33",
+      "reaps": [
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 4294967291,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 4,
+          "released": 4,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        },
+        {
+          "leaked": 5,
+          "released": 5,
+          "error": 0,
+          "free": 15730,
+          "expected": 15730
+        }
+      ],
+      "final": {
+        "calls": 671,
+        "success": 567,
+        "errors": 104,
+        "peak": 64,
+        "reclaims": 9,
+        "released": 34,
+        "failures": 1,
+        "initialized": 32,
+        "invalidated": 32,
+        "saves": 2539,
+        "restores": 2539,
+        "fp_failures": 0,
+        "free": 15738,
+        "expected": 15738
+      },
+      "kernel_sha256": "9c9f212005c8bd9051a7af05444ac50d7dd7b61d0a04b03e2d9d9483b83392f8",
+      "user_sha256": "2bd8bbb51850419d044856405a3781313a39be2a761408a81cb21d35d58ac795",
+      "disk_sha256": "22aae138e3421a30bb41080ae2f80c342d4fcb71f258dc8d998b50a57352dbf7"
+    }
+  ],
+  "limitations": [
+    "BSP user scheduling only; smp4 is not AP user-thread support",
+    "C dirent/unistd adapters and complete Content/TracingMuxer not covered",
+    "No V8/browser/video/HTML5 workload in this test",
+    "No production image update or blank-host bootstrap"
+  ]
+}

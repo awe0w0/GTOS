@@ -21,13 +21,15 @@ public:
     struct Info { uint32_t type,size;char name[256]; };
     struct ReclaimResult { uint32_t released;int32_t error; };
 private:
-    struct Slot {
-        uint32_t owner,handle,mode,kind;
+    friend struct FileStoreDescriptorFixture;
+    struct Resource {
+        uint32_t references,mode,kind;
         lfs_file_t file;
         lfs_dir_t directory;
         lfs_file_config config;
         uint8_t cache[SectorSize];
     };
+    struct Slot { uint32_t owner,handle;Resource* resource; };
     BlockDevice* disk;
     uint32_t firstSector,volumeSectors,nextHandle;
     bool mounted,readOnly;
@@ -35,12 +37,15 @@ private:
     lfs_config config;
     uint8_t readCache[SectorSize],progCache[SectorSize],lookahead[128],eraseCache[SectorSize];
     Slot slots[MaximumHandles];
+    Resource resources[MaximumHandles];
     FileStore(const FileStore&);
     FileStore& operator=(const FileStore&);
     int32_t Configure(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect);
     static int32_t ValidPath(const char* path);
-    Slot* Find(uint32_t owner,uint32_t handle,uint32_t kind=0);
+    Slot* FindSlot(uint32_t owner,uint32_t handle);
+    Resource* Find(uint32_t owner,uint32_t handle,uint32_t kind=0);
     Slot* FreeSlot();
+    Resource* FreeResource();
     int32_t CloseSlot(Slot& slot);
     static bool ValidRegion(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,lfs_size_t size,const void* buffer);
     static int ReadBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,void* buffer,lfs_size_t size);
@@ -58,6 +63,7 @@ public:
     uint32_t OpenCount() const;
     int32_t Open(uint32_t owner,const char* path,uint32_t flags);
     int32_t OpenDirectory(uint32_t owner,const char* path);
+    int32_t Duplicate(uint32_t owner,uint32_t handle);
     int32_t Close(uint32_t owner,uint32_t handle);
     ReclaimResult Reclaim(uint32_t owner);
     int32_t ReadFile(uint32_t owner,uint32_t handle,void* buffer,uint32_t size);
