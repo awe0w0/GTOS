@@ -1,0 +1,237 @@
+[
+  {
+    "path": "receipts/native-status.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-03\\status.json",
+    "sha256": "903445bb3db71a55bd89d4c952a7ef2616381bcbd477d330e651861dce774961"
+  },
+  {
+    "path": "receipts/link-status.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-link-03\\status.json",
+    "sha256": "f5218569cbfe1f22ab490508ec04f5ff53d07bc90a5f4b976b10801741564846"
+  },
+  {
+    "path": "receipts/class-compile-status.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-compile-04\\status.json",
+    "sha256": "6fe51eee798fd3ab4b5462f5b763b2e1bdb49ab48535b7b71cae392295cc8cfc"
+  },
+  {
+    "path": "receipts/isa-review.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-isa-review-02.json",
+    "sha256": "0aee0b36be62b4e3c0e5338a359b38cb94396c395d7dd344204d6ccea7d9db68"
+  },
+  {
+    "path": "receipts/isa-decode.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-isa-02\\status.json",
+    "sha256": "54c44c24c2eaf1233285b692af2f652e00c78c1067b9cf9fb8df36d49f8e9f50"
+  },
+  {
+    "path": "receipts/guard.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-03\\guard.json",
+    "sha256": "ebb7600802f104d602b5e5d3fd7dde650f445ef00e2401a96d26f2e04138c102"
+  },
+  {
+    "path": "receipts/launcher-result.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-03\\launcher-result.json",
+    "sha256": "34d3cbae9c3356812087253db98625f8ef977931cb6ae378dec5c747f3ad76c4"
+  },
+  {
+    "path": "receipts/positive-kernel-isa.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-02\\classes-ISA.log",
+    "sha256": "787836e4689fd4423c7b24a4267dd05ba41db2d6b8c288748bca099d305067bc"
+  },
+  {
+    "path": "receipts/negative-kernel-isa.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-03\\wrong-length-ISA.log",
+    "sha256": "67414c472ad582cbdf134328641ae6af7e2488a625e776224056db149fa04838"
+  },
+  {
+    "path": "logs/classes-32M-smp1.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-02\\classes-32M-smp1-guest.log",
+    "sha256": "5abf60f591a28a470fe8c72c3f59d435e61d5e26989b41d7f60322b7b1837eff"
+  },
+  {
+    "path": "logs/classes-64M-smp4.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-02\\classes-64M-smp4-guest.log",
+    "sha256": "e65ad1aa80093f4bdd3432f0dea0f6463fd2de8600d2f8cf171d94d5ac647b80"
+  },
+  {
+    "path": "logs/wrong-length-32M-smp1.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-03\\wrong-length-32M-smp1-guest.log",
+    "sha256": "263bbe563835e978311a3d59440d0e6dbcf9d7e286e06c513ab71818e260444e"
+  },
+  {
+    "path": "provenance/source-pins.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-source-pins-01.json",
+    "sha256": "367e29abf4e5f8c6a872acba03e9ab5a7ec11b04de1c41684f10aed186edcb67"
+  },
+  {
+    "path": "provenance/UTF-header-origins.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-header-origins-01.json",
+    "sha256": "039b855a5b7a6aeb104f39a40abc70134a76decfda18cb28a32381319d0efc1f"
+  },
+  {
+    "path": "provenance/platform-delta-origins.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-delta-origins-01.json",
+    "sha256": "a2d6236a07fdb9fe73d6bb7ebd504372100cd115edadcbc9de6994bd5767c166"
+  },
+  {
+    "path": "provenance/system-header-origins.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-system-header-origins-01.json",
+    "sha256": "5bfc20770ac50019540724d1b19bb6d3f0221ea8357745bfff08bdc1fb1f716e"
+  },
+  {
+    "path": "provenance/symbol-audit.json",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-symbol-audit-01.json",
+    "sha256": "99682d8d86161b6c7be4062afe0b080056222e1406d6a7e62fbcb92ca7a6e319"
+  },
+  {
+    "path": "provenance/prior-self-review.md",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\self-review-v9.md",
+    "sha256": "9bafea832c7c724087fdd819695f0a8cb361fd9e530eaef430c0862f1b140c69"
+  },
+  {
+    "path": "provenance/boot-guard-link-failure.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-01\\classes-link.log",
+    "sha256": "9480eaa9ed0ea3c0659029de616aca69f86cdbdf698db7a94bc9283f7a45e0e3"
+  },
+  {
+    "path": "provenance/macro-line-expectation-failure.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-02\\wrong-length-32M-smp1-guest.log",
+    "sha256": "b9ca37d4a230660a06534fc9af2f1f7a9ff7a8daf3f613d0a8843adb37bf8bf3"
+  },
+  {
+    "path": "provenance/testonly-graph-failure.log",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-03\\GN.log",
+    "sha256": "b06114bd2501421660504f7824345f9a20e8bd9d3c0ab14308c1c6bf09e0094a"
+  },
+  {
+    "path": "replay/class-guest-v3.py",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-guest-v3.py",
+    "sha256": "7528e35c5db0dd8709d82d2df54b97b9f1b5583cfcfc246654d6cc204b2741ca"
+  },
+  {
+    "path": "replay/launch-class-guest-v3.py",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\launch-class-guest-v3.py",
+    "sha256": "fc5824528ec08a34b1896d318146076bbdb23357ec3b72bf26f7bff98a728887"
+  },
+  {
+    "path": "replay/class-link-v3.py",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-link-v3.py",
+    "sha256": "2603db733cd990204fcc2039d8db77cb12b851a4c7798c3d0e67e87747666176"
+  },
+  {
+    "path": "replay/launch-class-link-v3.py",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\launch-class-link-v3.py",
+    "sha256": "39826885f2ed1a0371235c006c5d74be2c3c3f2033b6f8b786566ced0022c4cd"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-04\\status.json",
+    "sha256": "ba9da40458d39d85479f9ec2df4bc21c3a9afcb670810b74534fb098ba2dba6f",
+    "path": "receipts/GN-status.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-04\\guard.json",
+    "sha256": "d07e2aed1095981c312f86540252267b85ff1fa9b22e7fe2f9a9bcc7b005e35f",
+    "path": "receipts/GN-guard.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-04\\launcher-result.json",
+    "sha256": "faab6afb4cc1a47f9423d25736b7432de441652b2ddc9f7172d7287edc8b2d97",
+    "path": "receipts/GN-launcher-result.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-04\\GN.log",
+    "sha256": "9f644f29a44098d3f6c85f8581d583d3a021cafc27c493ce483f6556bc9f2420",
+    "path": "receipts/GN-generation.log"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-source-pins-04.json",
+    "sha256": "738283256bbcca58d1b1a92a0e9ef8135914556d8efc5a519ecd7bb5ab86f2d0",
+    "path": "provenance/GN-source-pins.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\gn-class-v2.py",
+    "sha256": "ce8505bca67d7fe9184d9fccacb3ae710050dacd20ff87decd765b493c39cbc6",
+    "path": "replay/gn-class-v2.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\launch-gn-class-v2.py",
+    "sha256": "7bdba9a5cf3e91c4875096cda61c1c345973229358560b58d401b8846b4c3b4a",
+    "path": "replay/launch-gn-class-v2.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\content-helper-v4.py",
+    "sha256": "20be99d3cf942c543ea7f67bc31455413da3ad1bf163964d8dd3518b547cfdfc",
+    "path": "replay/content-helper-v4.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\content-dotfile-v4.gn",
+    "sha256": "c72cb7a54065551d87a5db7eb4771a0307da0e52137bdd2283cf5b64b739db3e",
+    "path": "replay/content-dotfile-v4.gn"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-formal-02\\status.json",
+    "sha256": "5c0bd4beda58acb82a5446151112fe65a47179f78335993ccc574d7b10648d21",
+    "path": "receipts/formal-qualification.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-formal-02\\guard.json",
+    "sha256": "89e93c8ebb73b243b1d604470299d79863776542736866e9c1a21c76b1229566",
+    "path": "receipts/formal-guard.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-formal-02\\launcher-result.json",
+    "sha256": "8264a3f226f5b4f9a422615316c995ec6d6d370d4f6c4217892445407c0bc756",
+    "path": "receipts/formal-launcher-result.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-formal-01\\status.json",
+    "sha256": "05eacc7ea8090058869c6fa06251717e5de77dfb49a039871d55bd8905024121",
+    "path": "receipts/formal-compile-partial.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-formal-01\\start-ASM.log",
+    "sha256": "e0597a9c56e3b40258f3982fa455700d7d3ffd24f97cbb369642f15b335b994f",
+    "path": "receipts/formal-ASM.log"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-formal-01\\guard.json",
+    "sha256": "492f6dd10cc7583c7f18c1869f9a43c8d56da72f6b768c74d05da065eda72fc3",
+    "path": "receipts/formal-compile-guard.json"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\compile-formal-classes-v1.py",
+    "sha256": "8ec8fe7ac0d2f4b4f6bb379ebb008397f151994d463a0173c2504198cfd29b20",
+    "path": "replay/compile-formal-classes-v1.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\launch-compile-formal-classes-v1.py",
+    "sha256": "525e2885ad8076c8dc0e99db546e9b217967f4ced64529fb63b94d94a4a22258",
+    "path": "replay/launch-compile-formal-classes-v1.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\qualify-formal-classes-v1.py",
+    "sha256": "bd6d438c12bb4e6b803af446fd0c1d748d32ffbd2a55e97805bb3258890cfe0c",
+    "path": "replay/qualify-formal-classes-v1.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\launch-qualify-formal-classes-v1.py",
+    "sha256": "ff0ae35175a47c62dc0cb61168802845a5ce6c76d469f26518e909ce8c26f0f8",
+    "path": "replay/launch-qualify-formal-classes-v1.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\compile-classes-v4.py",
+    "sha256": "0793f9b4acafd1de65789df759ccb889a0f21641f66cf991e5bb96c222ab9703",
+    "path": "replay/compile-classes-v4.py"
+  },
+  {
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\launch-compile-classes-v4.py",
+    "sha256": "50f86226aa789ca6aaa68bc2e94daa94a72aedee8def8b160e5a3eb0a714844b",
+    "path": "replay/launch-compile-classes-v4.py"
+  },
+  {
+    "source": "F:/GTOS-Chromium/sources/GTOS/apps/native_environment/source-lock.json",
+    "sha256": "21ac0f2b88dc8e05310b1976b2b610863abea3d1a52d8f9cf16dcc5fc8041d34",
+    "path": "provenance/kernel-source-lock.json"
+  }
+]

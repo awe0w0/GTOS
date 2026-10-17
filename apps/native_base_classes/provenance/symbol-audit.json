@@ -1,0 +1,124 @@
+{
+  "complete": true,
+  "read_only": true,
+  "target_executed": false,
+  "original": {
+    "path": "F:/GTOS-Chromium/artifacts/native-pma-20261017-a/root-link-02/native_embedder.elf",
+    "sha256": "ea63bb7d0045f1bfed3138c92ca782e0ac1eaaeb6fe1cdd307e5586d97a18550",
+    "defined_names": 29287,
+    "duplicates": [
+      {
+        "current": {
+          "value": 1082872104,
+          "size": 40,
+          "info": 33,
+          "other": 0,
+          "section": 1
+        },
+        "previous": {
+          "value": 1083120052,
+          "size": 40,
+          "info": 1,
+          "other": 0,
+          "section": 1
+        },
+        "name": "_ZTCNSt25__gtos_isolate_diagnostic19basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_ostreamIcS2_EE"
+      },
+      {
+        "current": {
+          "value": 1073885856,
+          "size": 76,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "previous": {
+          "value": 1073885664,
+          "size": 76,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "name": "_ZNKSt25__gtos_isolate_diagnostic20__time_get_c_storageIcE3__XEv"
+      },
+      {
+        "current": {
+          "value": 1073885936,
+          "size": 103,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "previous": {
+          "value": 1073885744,
+          "size": 103,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "name": "_ZNKSt25__gtos_isolate_diagnostic20__time_get_c_storageIwE3__XEv"
+      }
+    ]
+  },
+  "classes": {
+    "path": "F:/GTOS-Chromium/artifacts/native-pma-20261017-a/class-link-02/classes.elf",
+    "sha256": "e5ae6c8d28e0436552627beea2b1332352a2ed503a72321feba10a00f3969b5a",
+    "defined_names": 23881,
+    "duplicates": [
+      {
+        "current": {
+          "value": 1081476712,
+          "size": 40,
+          "info": 33,
+          "other": 0,
+          "section": 1
+        },
+        "previous": {
+          "value": 1082079900,
+          "size": 40,
+          "info": 1,
+          "other": 0,
+          "section": 1
+        },
+        "name": "_ZTCNSt25__gtos_isolate_diagnostic19basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_ostreamIcS2_EE"
+      },
+      {
+        "current": {
+          "value": 1073883696,
+          "size": 76,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "previous": {
+          "value": 1073883504,
+          "size": 76,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "name": "_ZNKSt25__gtos_isolate_diagnostic20__time_get_c_storageIcE3__XEv"
+      },
+      {
+        "current": {
+          "value": 1073883776,
+          "size": 103,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "previous": {
+          "value": 1073883584,
+          "size": 103,
+          "info": 18,
+          "other": 0,
+          "section": 1
+        },
+        "name": "_ZNKSt25__gtos_isolate_diagnostic20__time_get_c_storageIwE3__XEv"
+      }
+    ]
+  },
+  "current_duplicate_names_preexisting_in_accepted_original": true,
+  "required_ABI_symbols_have_no_collisions": true,
+  "scope": "The new inspector incorrectly enforced uniqueness across every unselected symbol name. These3 libc++ entries already coexist in the accepted original root. Continue to require unambiguous selected entry, record, constructor/finalizer and provider symbols and zero strong undefined references; no execution/ELF layout/source/ISA guard is relaxed."
+}

@@ -1,0 +1,37 @@
+{
+  "launcher_sha256": "fc5824528ec08a34b1896d318146076bbdb23357ec3b72bf26f7bff98a728887",
+  "child_sha256": "7528e35c5db0dd8709d82d2df54b97b9f1b5583cfcfc246654d6cc204b2741ca",
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "network_disabled": true,
+  "source_write_denied": true,
+  "source_document_sha256": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "directory_execute_permissions": false,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/class-guest-03",
+  "namespace_ids": {
+    "user": 4026532220,
+    "net": 4026532221
+  },
+  "exact_executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7",
+    "/usr/bin/x86_64-linux-gnu-ld.bfd": "476b24d5cc1fef54f80412d06e7430b2dcf4e2b6f1525ee17e6eaaf16b28a00f",
+    "/usr/bin/x86_64-linux-gnu-objdump": "afd9c7433c96cb0f37df99cab98fc860bbbe2bed17f37df66254a8778adfc61d",
+    "/mnt/f/GTOS-Chromium/toolchains/gtos-qemu8-native-files-a/root/usr/bin/qemu-system-i386": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+    "/mnt/f/GTOS-Chromium/toolchains/gtos-qemu8-native-files-a/root/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2": "c20a2dc8917c755f02b94049356320fe1f62ac7d9f8994731f807d9df39302da"
+  },
+  "workspace_read_only": true,
+  "output_execution_denied": true,
+  "output_symlink_creation_allowed": false,
+  "output_delete_and_rename_allowed": false,
+  "no_new_privs": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "rule_path_handles_retained": true
+}

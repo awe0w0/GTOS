@@ -1,0 +1,3 @@
+/usr/bin/x86_64-linux-gnu-ld.bfd: /mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/class-guest-01/classes.o: in function `NativeProcessSmoke':
+class-kernel-v2.cpp:(.text.NativeProcessSmoke+0x240e): undefined reference to `__cxa_guard_acquire'
+/usr/bin/x86_64-linux-gnu-ld.bfd: class-kernel-v2.cpp:(.text.NativeProcessSmoke+0x2430): undefined reference to `__cxa_guard_release'

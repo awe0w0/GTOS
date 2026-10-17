@@ -66,8 +66,13 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 读写锁/once、五槽 TLS、真实退出登记 OOM 与析构重入；122 个正向上下文及
 66 次正常 Join 的资源回收通过。原始 MD5/IA32 汇编另完成 6560 次有效调用、
 内存边界与 ABI 检查。新的 base 扩展根已链接并完成上述真实 V8 运行；完整
-FilePath/PMA 类、文件映射/flush、BoringSSL、Content 首帧、网页、视频和 HTML5
-仍待验收。
+BoringSSL、Content 首帧、网页、视频和 HTML5 仍待验收。
+
+[原生基础类](apps/native_base_classes/README.md)已验证真实 LLVM strnlen 保护页边界、
+完整 FilePath 的路径/UTF 及生命周期、LocalPMA 的匿名 VM 分配/类型/迭代和析构。
+四个正例及两个错误长度控制均完成实际 CPL3 退出与精确回收。正式 GN 图保留
+Content 依赖，六个正式编译对象与原生验收对象逐字节一致；文件映射/flush、其他
+SysInfo 后端和浏览器运行仍待接入。
 
 ## 构建与运行
 

@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/gn-class-v2.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 667.412195681,
+  "child_sha256": "ce8505bca67d7fe9184d9fccacb3ae710050dacd20ff87decd765b493c39cbc6",
+  "guard_sha256": "d07e2aed1095981c312f86540252267b85ff1fa9b22e7fe2f9a9bcc7b005e35f",
+  "launcher_log_sha256": "d7c68792a3c9731e97e77f410bfe875e71c43e4e70d9ff6e8fe3733b111b6dee"
+}

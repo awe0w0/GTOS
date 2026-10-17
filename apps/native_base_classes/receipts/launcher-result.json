@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/class-guest-v3.py"
+  ],
+  "shell": false,
+  "returncode": 0,
+  "seconds": 260.36392577600003,
+  "child_sha256": "7528e35c5db0dd8709d82d2df54b97b9f1b5583cfcfc246654d6cc204b2741ca",
+  "guard_sha256": "ebb7600802f104d602b5e5d3fd7dde650f445ef00e2401a96d26f2e04138c102",
+  "launcher_log_sha256": "6dc99ef16c379a4b4b8964745c6be8c3baebf25977f5b6c6adf857a6b776f7f4"
+}

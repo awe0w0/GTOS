@@ -1,0 +1,2 @@
+PASS integer-only kernel interfaces: 156 source/header files
+PASS integer-only linked code: /mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/class-guest-03/wrong-length.bin: 35 input objects, 20669 instructions, 11 FP instructions inside exact allowances

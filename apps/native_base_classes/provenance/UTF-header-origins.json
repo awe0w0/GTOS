@@ -1,0 +1,15 @@
+{
+  "complete": true,
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "fixed_git_ls_tree_and_hash_object_no_filters_matched": true,
+  "headers": {
+    "base/strings/utf_string_conversion_utils.h": {
+      "blob": "2603ef33138f1b93feb42740cc5871d124b2b05b",
+      "sha256": "e320894fd249bca1ea4bb603d749389753016c9a0287ab0333d8a74f3cbb360e"
+    },
+    "base/third_party/icu/icu_utf.h": {
+      "blob": "0b50b710058a1cf6065563a8961c522a4c5078a9",
+      "sha256": "5250d5680278029c7c53de633c812b91e8aab1fb825036bda26e116b5865d35e"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/qualify-formal-classes-v1.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 50.863581759,
+  "child_sha256": "bd6d438c12bb4e6b803af446fd0c1d748d32ffbd2a55e97805bb3258890cfe0c",
+  "guard_sha256": "89e93c8ebb73b243b1d604470299d79863776542736866e9c1a21c76b1229566",
+  "launcher_log_sha256": "16946baf30d2c618c187f9fb3adf59ed09f8b920e6bc2dbcc5dd3f6e0b9085de"
+}

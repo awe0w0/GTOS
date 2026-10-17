@@ -1,0 +1,37 @@
+# Copyright 2026 The GTOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_os == "gtos" && current_cpu == "x86")
+
+# Compile the real-class consumer through the native default toolchain.
+# Its ELF is linked separately against the qualified real runtime closure.
+source_set("probe") {
+  testonly = true
+  sources = [
+    "api.h",
+    "checks.cc",
+    "entry.cc",
+    "length.cc",
+    "start.s",
+  ]
+  deps = [ "//base" ]
+}
+
+# This control changes only the diagnostic API, never the real libc provider.
+source_set("wrong_length") {
+  testonly = true
+  sources = [
+    "api.h",
+    "wrong-length.cc",
+  ]
+}
+
+group("qualification_root") {
+  testonly = true
+  deps = [
+    ":probe",
+    ":wrong_length",
+    "//content/shell:content_shell",
+  ]
+}

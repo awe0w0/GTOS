@@ -76,5 +76,7 @@ replay 是已执行入口快照，固定引用工作区工具、候选视图、�
 执行文件白名单，仅写新输出。未改生产镜像，未重启生产虚拟机；镜像实际更新时
 再同步可见虚拟机。
 
-后续继续原 strnlen guard 页、完整 FilePath/PMA 类和真实文件映射/flush 后端，
-再接入 Content 本地帧/DOM、HTTP/HTTPS、视频和 HTML5。原生浏览器仍未运行。
+后续[原生基础类模块](../native_base_classes/README.md)已完成 strnlen guard 页、
+完整 FilePath 路径/UTF 及 LocalPMA 匿名后端的实际调用、析构和资源回收验收。
+继续真实文件映射/flush 后端，再接入 Content 本地帧/DOM、HTTP/HTTPS、视频和
+HTML5。原生浏览器仍未运行。

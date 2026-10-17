@@ -1,0 +1,25 @@
+{
+  "ProgramContainsNoV8Main": true,
+  "AuthoredDiagnosticOnly": true,
+  "Files": {
+    "tools/gtos_base_class_probe/length.cc": "bb2c5d1117e2a95c11efcd142e27555e6591f29603b93cdff4bb4bfda55d97c7",
+    "tools/gtos_base_class_probe/entry.cc": "a66a5267fff3ae23194b3be84c1c66beb9f51dba6a451838ffeb0d4306268b94",
+    "tools/gtos_base_class_probe/checks.cc": "b9632959c7adfe945801b59363d6d102546d34b9d7968ac7c17833d380014274",
+    "tools/gtos_base_class_probe/api.h": "fd0699075788a1e63b28353f4e2f5965a879b708bbd4d1d812d2c70e4e2ce115",
+    "tools/gtos_base_class_probe/wrong-length.cc": "53a224c81c2954025eea70c5e7a247f988d4f0b0ec36691d3807078f6ec19987"
+  },
+  "ChromiumRevision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "Complete": true,
+  "FixedGitLsTreeAndHashObjectNoFiltersMatched": true,
+  "WholeRawProviders": {
+    "base/strings/utf_string_conversions.cc": {
+      "SHA256": "cec6c3dfcf2b26d188540d9792d9df25c62cf84cd10fe07ade36330e873edcdf",
+      "Blob": "943a55f9dbc137b669bde89293bf0659b93310c8"
+    },
+    "base/strings/utf_string_conversion_utils.cc": {
+      "SHA256": "3ce10ee9e667ada5527bc4e920d4b54dbdea11dbdfee89f391c004028939e86e",
+      "Blob": "a4dc143c4b3dc0d72550c02f70fc6a8b21e92b7e"
+    }
+  },
+  "NativeClassAcceptance": false
+}

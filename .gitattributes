@@ -15,3 +15,5 @@ apps/native_directory/** -text whitespace=blank-at-eol,blank-at-eof,space-before
 apps/native_events/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Preserve the startup/CPU capsule hashes using the existing event convention.
 apps/native_environment/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Preserve the native base-class sources and qualified evidence bytes.
+apps/native_base_classes/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

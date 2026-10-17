@@ -909,3 +909,23 @@ UD2 故障及外部取消，资源精确恢复。详见 [原生临时文件模�
 完整 V8/Isolate、浏览器、视频和 HTML5 尚未运行。本机执行继续遵守固定脚本、Python
 -I -B -S、无网络及限定写入目录的栅栏；公开 canonical 构建入口未在本轮重跑。
 完整57实际首缺：v8::base::debug::EnableInProcessStackDumping()；本次链接诊断已完整返回。
+
+## 2026-10-18 原生基础类与正式 GN 接入
+
+上述 2026-10-15 条目保留当时状态。当前完整 V8 扩展根已完成四次真实启动和 28 组
+原 JS 工作负载，详见[启动环境与 CPU 模块](../apps/native_environment/README.md)。
+新的[基础类模块](../apps/native_base_classes/README.md)验证完整 FilePath 的路径/UTF
+与 32 轮生命周期、原始 LLVM strnlen 的 14 项保护页边界，以及完整 LocalPMA 的
+1MiB 匿名映射、256 次分配、类型/迭代/清零/耗尽和析构后句柄失效。
+
+四个成功上下文每轮 121 条断言、86 次系统调用；两个错误长度控制精确 exit57。
+正常与控制路径均完成实际 CPL3 退出、物理帧/任务/FP 回收，4vCPU 仍限 BSP 调度。
+SysInfo 页粒度返回真实 GTOS VM ABI，其他后端尚待补齐。
+
+正式 GN 汇总根保留 Content 依赖，完整图为 21498 目标、2517 文件；已有成员、顺序、
+字段及七种原生工具规则保持一致。五个正式 C++ 对象完成完整 M/MD，单输入 `.s`
+按实际编译器不生成 depfile 的行为单独核对。六个正式对象与已验收对象逐字节相同，
+继承既有指令/原生证据，未重复运行。诊断目标的编译通过不构成完整 Content 编译。
+
+下一步补齐真实文件映射/flush 与所需 SysInfo 后端，再推进 Content 本地首帧、DOM、
+HTTP/HTTPS、视频和 HTML5。GTOS 原生浏览器尚未运行；本次未更新生产镜像。

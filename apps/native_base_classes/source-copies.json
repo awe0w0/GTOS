@@ -1,0 +1,117 @@
+[
+  {
+    "sha256": "b348959ce0a111c35f99298d5515303e272e8165f417ef2c27659284a17abcd2",
+    "path": "probe/BUILD.gn",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-gn-v2\\tools\\gtos_base_class_probe\\BUILD.gn"
+  },
+  {
+    "sha256": "fd0699075788a1e63b28353f4e2f5965a879b708bbd4d1d812d2c70e4e2ce115",
+    "path": "probe/api.h",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-v1\\tools\\gtos_base_class_probe\\api.h"
+  },
+  {
+    "sha256": "b9632959c7adfe945801b59363d6d102546d34b9d7968ac7c17833d380014274",
+    "path": "probe/checks.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-v1\\tools\\gtos_base_class_probe\\checks.cc"
+  },
+  {
+    "sha256": "1de165dc3127eba160b73eb9b2c52136dd22b21e2519fb5e558d3e474b1676e6",
+    "path": "probe/entry.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-v2\\tools\\gtos_base_class_probe\\entry.cc"
+  },
+  {
+    "sha256": "bb2c5d1117e2a95c11efcd142e27555e6591f29603b93cdff4bb4bfda55d97c7",
+    "path": "probe/length.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-v1\\tools\\gtos_base_class_probe\\length.cc"
+  },
+  {
+    "sha256": "53a224c81c2954025eea70c5e7a247f988d4f0b0ec36691d3807078f6ec19987",
+    "path": "probe/wrong-length.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-v1\\tools\\gtos_base_class_probe\\wrong-length.cc"
+  },
+  {
+    "sha256": "aed35dc7a00ccbad0f7a350b1af1e25af05bd0532d3be64ab98d1c701b797d56",
+    "path": "probe/start.s",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-class-v2\\tools\\gtos_base_class_probe\\start.s"
+  },
+  {
+    "sha256": "2888acd7e719c11968bd1afe498d859fd2d0bdbb0d16f16768a1e205a9c5278e",
+    "path": "probe/kernel.cpp",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-kernel-v2.cpp"
+  },
+  {
+    "sha256": "4f95888623b0d0b5e401305fb7c2137aa612cea1d07d2b55b6bfc65498025ffe",
+    "path": "probe/class.ld",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\class-v2.ld"
+  },
+  {
+    "sha256": "da7559566cef17af0eed2fcfb57339d4c6256cdee6908bf67d4a4648856aa17e",
+    "path": "patches/base/files/file_path.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-path-v1\\base\\files\\file_path.cc"
+  },
+  {
+    "sha256": "7ec588c459bbd325a69458999f312fbf4873c47075e8ef77292f48f6bcb60212",
+    "path": "patches/base/files/gtos_file_mapping.h",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-pma-v2\\base\\files\\gtos_file_mapping.h"
+  },
+  {
+    "sha256": "b7697cdcd1adde88c43a90adb09a9c65a169908d380775b1f87a2bc1c131033d",
+    "path": "patches/base/memory/gtos_private_mapping.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-local-v3\\base\\memory\\gtos_private_mapping.cc"
+  },
+  {
+    "sha256": "08a9070b525972fbdeea4dc56a1c4dc7d7de5a6027c971d207a9f3e760f2e6f0",
+    "path": "patches/base/memory/gtos_private_mapping.h",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-local-v3\\base\\memory\\gtos_private_mapping.h"
+  },
+  {
+    "sha256": "63d9ddc7962d09b51baf514f8c1e4cb43cb01f1fee405bb0a02cdaac1e04de1d",
+    "path": "patches/base/metrics/persistent_memory_allocator.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-pma-v2\\base\\metrics\\persistent_memory_allocator.cc"
+  },
+  {
+    "sha256": "b416de9e2a514b7266879d8584d92cfadcb2934c00489fbe0a2709301f1a2c6b",
+    "path": "patches/base/system/sys_info.cc",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-system-v1\\base\\system\\sys_info.cc"
+  },
+  {
+    "sha256": "8a38fa88b01e980ff6d8106f4bef8e134521579a587fb1a870f0dca813284872",
+    "path": "patches/base/BUILD.gn",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-root-v1\\base\\BUILD.gn"
+  },
+  {
+    "sha256": "ff47bbcd0ecb97fdff864245fde8b61facbd2bd34b59b839dbe14e11416700ce",
+    "path": "patches/tools/gtos_native_sdk/BUILD.gn",
+    "source": "F:\\GTOS-Chromium\\artifacts\\native-pma-20261017-a\\patch-root-v1\\tools\\gtos_native_sdk\\BUILD.gn"
+  },
+  {
+    "path": "patches/base/files/file_path.h",
+    "sha256": "172696fc602a4a032526637d54e582f1dda3147dd38aac343a551337a0dc2489",
+    "source": "F:/GTOS-Chromium/artifacts/native-content-entry-20261016-a/patch-file-types-v1/base/files/file_path.h"
+  },
+  {
+    "path": "upstream/base/metrics/persistent_memory_allocator.h",
+    "sha256": "2cbaa989dcf75ac9f4648f3989eb15dacaecb580230042112f1594e382ab6815",
+    "source": "F:/GTOS-Chromium/sources/chromium-full/src/base/metrics/persistent_memory_allocator.h"
+  },
+  {
+    "path": "upstream/base/system/sys_info.h",
+    "sha256": "305fbc020bc5d0594ed2676e427bf942e2047622ef107db89c588dbcd324728c",
+    "source": "F:/GTOS-Chromium/sources/chromium-full/src/base/system/sys_info.h"
+  },
+  {
+    "path": "upstream/llvm-libc/strnlen.cpp",
+    "sha256": "48e6eefb96964dd759fbd8e2426061565112c002a3e539c3654f3ce441e34080",
+    "source": "F:/GTOS-Chromium/sources/chromium-full/src/third_party/llvm-libc/src/src/string/strnlen.cpp"
+  },
+  {
+    "path": "licenses/Chromium-LICENSE.txt",
+    "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b",
+    "source": "F:/GTOS-Chromium/sources/chromium-full/src/LICENSE"
+  },
+  {
+    "path": "licenses/LLVM-LICENSE.txt",
+    "sha256": "ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47",
+    "source": "F:/GTOS-Chromium/sources/chromium-full/src/third_party/llvm-libc/src/LICENSE.TXT"
+  }
+]

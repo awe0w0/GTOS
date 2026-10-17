@@ -1,0 +1,10 @@
+ERROR at //tools/gtos_base_class_probe/BUILD.gn:28:1: Test-only dependency not allowed.
+group("qualification_root") {
+^----------------------------
+//tools/gtos_base_class_probe:qualification_root
+which is NOT marked testonly can't depend on
+//content/shell:content_shell
+which is marked testonly. Only targets with "testonly = true"
+can depend on other test-only targets.
+
+Either mark it test-only or don't do this dependency.

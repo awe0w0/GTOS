@@ -1,0 +1,17 @@
+{
+  "complete": true,
+  "method": "Read-only local git ls-tree at fixed revisions and hash-object --no-filters without -w; matching raw blobs. No fetch or network access.",
+  "ChromiumRevision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "ChromiumBlobs": {
+    "LICENSE": "2249a28657f86c645f8978b75babc1bd52aca318",
+    "base/metrics/persistent_memory_allocator.h": "61e7e585bffa3b979c0ea1ca11097f3cb6e0cf66",
+    "base/system/sys_info.h": "72eccc012c008ba1dc4f1f51d1cbda297ed20705"
+  },
+  "LLVMGitlinkMatchesChromium": true,
+  "LLVMLibcRevision": "ebe33e01982dbbf879661e3b6b78450f3020a53f",
+  "LLVMLibcBlobs": {
+    "LICENSE.TXT": "24806ab4c9eb291db4d28e159901f7a0901b9fd1",
+    "src/string/strnlen.cpp": "6bfbb86a5014ed84566af398e443d9717a6bc942"
+  },
+  "RawWorkingFilesMatchFixedBlobs": true
+}

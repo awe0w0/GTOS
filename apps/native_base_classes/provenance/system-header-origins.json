@@ -1,0 +1,20 @@
+{
+  "complete": true,
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "seven_raw_git_ls_tree_and_no_filters_hashes_matched": true,
+  "CommandLine_whole_original_header_retained_with_one_GTOS_string_branch": true,
+  "raw_headers": {
+    "base/base_switches.h": {"blob": "389eecbd79c62d781107b4c1c78cf2e7db9387a2", "sha256": "4d0c0352653c5afe11b09992fbb4f2b442397cbf4d44987028dc397a0c9295af"},
+    "base/command_line.h": {"blob": "49c60f3e12494248d66e3cbdaf324d3a150b5473", "sha256": "973770ed8317caccc46dd194a5f705c0721a8b6a5fbc31149cc44ab7dc94645d"},
+    "base/system/sys_info_internal.h": {"blob": "c4e42c45c38de05d0e74ac43ee0fe0ee1821a6fe", "sha256": "0f5c3c7423c57135af01d9445f70d6632968dde3774969496bc6fd91f59db9af"},
+    "base/task/single_thread_task_runner_thread_mode.h": {"blob": "bed46a30c45b9adaf73ea83087cf651c5565eca4", "sha256": "ce95ccf3112e8be3e69079bd02490dd5dbe528f3c31784e90cd26d6c3e3c6e7c"},
+    "base/task/task_traits.h": {"blob": "3f8d2b377eb6d93f283bd0fa40b44bcca8d8acfa", "sha256": "37754f74d27889497be703cd75bfd71aada50fa14902903617c4e27463fab04f"},
+    "base/task/thread_pool.h": {"blob": "876c921b9b7ad0bc894b7ddf17cd0d65fce90250", "sha256": "57beb9ad92ca929d309fa5d0f8d4294fbbb47ea06b662dfe00ce3d7e996ea268"},
+    "base/task/updateable_sequenced_task_runner.h": {"blob": "a281eb83b16ea3f8fb476e9e1e6553f7048cd8b6", "sha256": "a68bbdcdeda10a6c7ff09992572e8e672f78be56957fb95a1dc9bd9a36886fc2"}
+  },
+  "candidate": {
+    "path": "/mnt/f/GTOS-Chromium/artifacts/native-content-entry-20261016-a/patch-command-line-v1/base/command_line.h",
+    "sha256": "c07ce5bb48c30c295a1f6a7a4ca0529eb60307292f9349db0625c28c3dadbcdd"
+  },
+  "native_class_pass": false
+}

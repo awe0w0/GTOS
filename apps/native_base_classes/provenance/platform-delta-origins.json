@@ -1,0 +1,15 @@
+{
+  "complete": true,
+  "whole_original_SysInfo_body_preserved": true,
+  "raw_revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "raw_blob": "02daeaf7b8bf583a5dd2fe69f85c556b07b7d428",
+  "raw_sha256": "4c3cd0966dc3a67bbe8a12d8cb31471d0d50dc1994263c8737b61ee08f0ebd84",
+  "genuine_exit_result_data_only": true,
+  "accepted_startup_body_preserved_with_diagnostic_symbol_names": true,
+  "files": {
+    "patch-class-v2/tools/gtos_base_class_probe/entry.cc": "1de165dc3127eba160b73eb9b2c52136dd22b21e2519fb5e558d3e474b1676e6",
+    "patch-class-v2/tools/gtos_base_class_probe/start.s": "aed35dc7a00ccbad0f7a350b1af1e25af05bd0532d3be64ab98d1c701b797d56",
+    "patch-system-v1/base/system/sys_info.cc": "b416de9e2a514b7266879d8584d92cfadcb2934c00489fbe0a2709301f1a2c6b"
+  },
+  "native_class_pass": false
+}

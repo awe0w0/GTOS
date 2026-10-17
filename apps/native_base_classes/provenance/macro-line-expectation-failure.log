@@ -1,0 +1,5 @@
+GTOS CLASS BOOT
+CLASS INITIAL wave=00000000 image=000008CD resident=0000094D capacity=00000D4D metadata=0000000E tables=00000004
+CLASS EXECUTION wave=00000000 stage=00000003 result=00000039 error=00000039 exit=00000039 vector=00000000 fault=00000000 checks=00000004 calls=00000043 dynamic=00000001 mask=00000000 cs=00000023 ctor=00000002 exitstage=00000004
+FAILED CLASS wrong diagnostic length rejected at unmapped max0 assertion
+GTOS CLASS RUN FAIL

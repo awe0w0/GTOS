@@ -1,0 +1,19 @@
+{
+  "complete": true,
+  "scope": "Whole original SysInfo with real native VM page granularity and separate compile-only real-class diagnostic targets, alongside complete Content graph",
+  "helper_sha256": "20be99d3cf942c543ea7f67bc31455413da3ad1bf163964d8dd3518b547cfdfc",
+  "dotfile_sha256": "c72cb7a54065551d87a5db7eb4771a0307da0e52137bdd2283cf5b64b739db3e",
+  "expected_GN_targets": 21498,
+  "expected_GN_files": 2517,
+  "file_flush_provider_implemented": false,
+  "files": {
+    "base/system/sys_info.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-system-v1/base/system/sys_info.cc","sha256":"b416de9e2a514b7266879d8584d92cfadcb2934c00489fbe0a2709301f1a2c6b"},
+    "tools/gtos_base_class_probe/BUILD.gn": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-gn-v2/tools/gtos_base_class_probe/BUILD.gn","sha256":"b348959ce0a111c35f99298d5515303e272e8165f417ef2c27659284a17abcd2"},
+    "tools/gtos_base_class_probe/api.h": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-v1/tools/gtos_base_class_probe/api.h","sha256":"fd0699075788a1e63b28353f4e2f5965a879b708bbd4d1d812d2c70e4e2ce115"},
+    "tools/gtos_base_class_probe/checks.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-v1/tools/gtos_base_class_probe/checks.cc","sha256":"b9632959c7adfe945801b59363d6d102546d34b9d7968ac7c17833d380014274"},
+    "tools/gtos_base_class_probe/entry.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-v2/tools/gtos_base_class_probe/entry.cc","sha256":"1de165dc3127eba160b73eb9b2c52136dd22b21e2519fb5e558d3e474b1676e6"},
+    "tools/gtos_base_class_probe/length.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-v1/tools/gtos_base_class_probe/length.cc","sha256":"bb2c5d1117e2a95c11efcd142e27555e6591f29603b93cdff4bb4bfda55d97c7"},
+    "tools/gtos_base_class_probe/wrong-length.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-v1/tools/gtos_base_class_probe/wrong-length.cc","sha256":"53a224c81c2954025eea70c5e7a247f988d4f0b0ec36691d3807078f6ec19987"},
+    "tools/gtos_base_class_probe/start.s": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/patch-class-v2/tools/gtos_base_class_probe/start.s","sha256":"aed35dc7a00ccbad0f7a350b1af1e25af05bd0532d3be64ab98d1c701b797d56"}
+  }
+}
