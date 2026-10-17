@@ -1,0 +1,23 @@
+# Copyright 2026 The GTOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_os == "gtos" && current_cpu == "x86")
+
+source_set("native_math") {
+  visibility = [ "//base:*" ]
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
+  include_dirs = [ "//third_party/llvm-libc/src" ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+    "LIBC_ERRNO_MODE=4",
+  ]
+  cflags_cc = [ "-fmath-errno" ]
+  sources = [
+    "//third_party/llvm-libc/src/src/math/generic/exp.cpp",
+    "//third_party/llvm-libc/src/src/math/generic/log.cpp",
+    "//third_party/llvm-libc/src/src/math/generic/round.cpp",
+  ]
+}

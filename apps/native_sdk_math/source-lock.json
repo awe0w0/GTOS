@@ -1,0 +1,83 @@
+{
+  "files": {
+    "overlay/tools/gtos_native_sdk/BUILD.gn": "035f7fa1a6461bedb842f77c69d9cc91486c4626b62e52710b57325b02d8178c",
+    "overlay/third_party/llvm-libc/src/src/math/generic/exp.cpp": "0c41d7cf47d38cb46ae563b12d961e3768c1ad0a07082d1d4b1ad3fe4dd73bb7",
+    "probe/main.cc": "be8f763f04fcfeacee400b6bbe3093a401f59201c86a746a5d6499275edc4240",
+    "probe/kernel.cpp": "115779c4050919ba5307edf36a047da9aca7570fdce497c60d30ec1a97d7f8d7",
+    "probe/record.h": "24ce8ef43acea8ba4a17358a2d05ebbae1d2ff60bedd79d8010f1e0352ce3409",
+    "probe/fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "probe/linker.ld": "e0bb357ca19e9325dfbac214c67390f333e9823d685f3928d43dca7965f985de",
+    "probe/shared-errno-control.cc": "fc71d3af991795dc1d7414244a09871648552a49df9f1855742a0006d2e6e6bc",
+    "probe/shared-tls-control.cc": "c309c616b49bc805a477f9e6fd693da313f1c2dc212d8e812570bf4367fae9d4",
+    "probe/vectors.h": "4b349a9d3279c982b8fc35f74bd6791346dd1103f713320d2fe650b3e2e199a1",
+    "probe/math-cases.h": "25f714b72db08c23d7eabf23fa08221d5245de358d640c22a52bc71af87a866e",
+    "probe/math-vectors.h": "a6f83231f6d6b9ecce2cd46aaf5f934466c2adfc13888e86de9cb20bd126830f",
+    "probe/math-regression.h": "d010f7fd3d98c36a41de96fbb26e2f4a77d2e1e2f308bf08bfd70ab695c2b320",
+    "fixture-abi/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f",
+    "fixture-abi/process/native_runtime.h": "7b4930a4d2d58cd4d4d8ad9dd4d49d59f48bf3931f0da0061e0f9d10f277fed4",
+    "fixture-abi/memory/process_address_space.h": "2ce07a0f6844a336c3ff0d1aa85cc76579976411f5ca8602fbf02ef296ec8da6",
+    "fixture-abi/process/elf32.h": "dcba49076c64b7397040d952f4a9f47fe8adc7a9bc1aaa1675c45c2f7e3af3ac",
+    "probe/remaining-kernel.cpp": "1c0ba0a6e1255e25f14a42b6756fefed7acfea7aa25fa2f5cd6e91b2f0d40240",
+    "reference-source.py": "2895ec8bec3eb6f202df0898d29dfa143350d8ca225486d2e96f70d3c008fdd2",
+    "README.md": "9f35a73f254735aed0d67a22940fcaa6c8507548f645fbb7ddefad47b746feec",
+    "self-review.md": "4b460004ff1b7c278338074f91f0fd04629de581291830e8dc5348ad785486ce",
+    "base-native-math.patch": "2e77f2dd04411d9f925d54cbf2b011554fc12b62200453fca57c9449f222eae8",
+    "logs/default-32M-smp1.log": "ddd10304adad16b93645bc29d99b7fc2d9f20cf2691a30aa8712800bf7465d5e",
+    "logs/default-64M-smp4.log": "fbd96d4756c9535bb63425cce9a2d4ffcea8dacf435cc1d1a8a6f74c26b27326",
+    "logs/normal-32M-completed-stage.log": "ce50d7c0225d157caad1d9b330d7ab1928f4957ac9d4dc806eac37f21f29df55",
+    "logs/exp-directed-overflow-before.log": "498285c2c356972c5e0b560489ff008d97109cce4e9ff7401771c500030f78cc",
+    "logs/remaining-32M-smp1.log": "b92b4864f5aa88656f430c521382088a5db9bd90b1e1f13385477b66c7ce9423",
+    "logs/after-64M-smp4.log": "a9b6ef43020d2d22ae82f154a2707103bc26c2c013a1ba3362342ab67a2dde8b",
+    "logs/shared-errno-32M.log": "85deab1519cf019680f74a2454181c81700a534eb21ebb2a25156b5c25b771d4",
+    "logs/shared-tls-32M.log": "c629dae12f9514f10bcf71c2d5930aa7b3e63eaa2d2750056ada726c83233d80"
+  },
+  "reference_source_sha256": "2895ec8bec3eb6f202df0898d29dfa143350d8ca225486d2e96f70d3c008fdd2",
+  "upstream": {
+    "third_party/llvm-libc/src/src/math/generic/exp.cpp": {
+      "blob": "dc4d2ca480cb836f1fb41b71f611b05bbd052502",
+      "sha256": "7f466c34362bce2e26edcebce62826049916e94d69194abd159ab723a3d55301",
+      "revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f"
+    },
+    "third_party/llvm-libc/src/src/math/generic/log.cpp": {
+      "blob": "aae0163a1efd6e6e51252e462d2df5fe4551a7ee",
+      "sha256": "26c5f395668a3f08fa5b40377c8dfbf49e0dd4dc4e5b74bf3f2b00fbaddfcc8c",
+      "revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f"
+    },
+    "third_party/llvm-libc/src/src/math/generic/round.cpp": {
+      "blob": "3a9d0e2c18f2dbc36877062c23de44c87fcbdb0e",
+      "sha256": "686b866398e702328d4e7632cdb70893173a19c64cced9b5f7a9d472433034c6",
+      "revision": "ebe33e01982dbbf879661e3b6b78450f3020a53f"
+    }
+  },
+  "provider_objects": {
+    "exp": {
+      "sha256": "fe009472ea788599fec37f3f014e3fd14791f687d3cdf70f7fa855f9997b3d36",
+      "decoded_bytes": 14798,
+      "sections": 8,
+      "complete_executable_section_coverage": true,
+      "IA32_SSE2_and_x87_only": true,
+      "explicit_undefined_trap": "ud1 remains an intentional hardened check trap; no claim that every branch avoids it",
+      "calls": 25
+    },
+    "log": {
+      "sha256": "83fc320132a68177a429247adb9a1b2ed3c40eb597d3d75725299ea1adfa72f2",
+      "decoded_bytes": 13870,
+      "sections": 7,
+      "complete_executable_section_coverage": true,
+      "IA32_SSE2_and_x87_only": true,
+      "explicit_undefined_trap": "ud1 remains an intentional hardened check trap; no claim that every branch avoids it",
+      "calls": 14
+    },
+    "round": {
+      "sha256": "d4079d0562125819545e3a64906c4644e08bcd4274114d628fd81352911536c7",
+      "decoded_bytes": 213,
+      "sections": 1,
+      "complete_executable_section_coverage": true,
+      "IA32_SSE2_and_x87_only": true,
+      "explicit_undefined_trap": "ud1 remains an intentional hardened check trap; no claim that every branch avoids it",
+      "calls": 0
+    }
+  },
+  "scope": "Qualified SDK math source additions for the ongoing Content graph; frozen baseline V8 payload unchanged",
+  "canonical_dev_before_module": "f8f657b7731499246fe8db28f2970afc017ec41c"
+}

@@ -1,0 +1,13 @@
+diff --git a/base/BUILD.gn b/base/BUILD.gn
+--- a/base/BUILD.gn
++++ b/base/BUILD.gn
+@@ -1174,5 +1174,9 @@ component("base") {
+   # Used by metrics/crc32
+   deps += [ "//third_party/zlib" ]
+ 
++  if (is_gtos) {
++    deps += [ "//tools/gtos_native_sdk:native_math" ]
++  }
++
+   deps += [
+     "logging/rust_logger",

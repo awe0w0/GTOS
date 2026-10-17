@@ -1,0 +1,224 @@
+{
+  "root_remaining_undefined": [
+    "ld.lld: error: undefined symbol: MD5",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::Iterator::GetNextOfType(unsigned int, unsigned int*)",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::GetBlockData(unsigned int, unsigned int, unsigned int, unsigned int*) const",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::StringViewAt(void const*, unsigned int, unsigned int)",
+    "ld.lld: error: undefined symbol: base::DelayedPersistentAllocation::DelayedPersistentAllocation(base::PersistentMemoryAllocator*, std::__gtos_isolate_diagnostic::atomic<unsigned int>*, unsigned int, unsigned int, unsigned int)",
+    "ld.lld: error: undefined symbol: base::DelayedPersistentAllocation::~DelayedPersistentAllocation()",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::IsCorrupt() const",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::GetType(unsigned int) const",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::GetAsReference(void const*, unsigned int) const",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::Allocate(unsigned int, unsigned int, unsigned int*)",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::MakeIterable(unsigned int)",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::ChangeType(unsigned int, unsigned int, unsigned int, bool)",
+    "ld.lld: error: undefined symbol: base::DelayedPersistentAllocation::GetUntyped() const",
+    "ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::IsFull() const"
+  ],
+  "whole_call_chain_stack_bound_proven": false,
+  "total_math_calls": 153584,
+  "actual_new_math_calls": 100320,
+  "shared_provider_regression_calls": 1216,
+  "math_cases": {
+    "log": 45,
+    "exp": 72,
+    "round": 48
+  },
+  "baseline_native_V8_JS_previously_passed": true,
+  "all_retained_passed_stage_inputs_requalified": true,
+  "production_image_changed": false,
+  "previous_failed_aggregate_accepted": false,
+  "root_introduced_undefined": [],
+  "remaining_guest_rows": [
+    {
+      "configuration": "remaining-32M-smp1",
+      "rows": [
+        {
+          "mode": 1,
+          "checks": 49880,
+          "contexts": 4,
+          "math_calls": 7136,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7508,
+          "baseline": 7508,
+          "fp_init": 4,
+          "fp_invalid": 4
+        },
+        {
+          "mode": 2,
+          "checks": 49880,
+          "contexts": 4,
+          "math_calls": 7136,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7508,
+          "baseline": 7508,
+          "fp_init": 8,
+          "fp_invalid": 8
+        },
+        {
+          "mode": 3,
+          "checks": 49880,
+          "contexts": 4,
+          "math_calls": 7136,
+          "joins": 0,
+          "reaps": 4,
+          "free": 7508,
+          "baseline": 7508,
+          "fp_init": 12,
+          "fp_invalid": 12
+        }
+      ],
+      "log_sha256": "b92b4864f5aa88656f430c521382088a5db9bd90b1e1f13385477b66c7ce9423",
+      "normal32M_completed_stage_reused": true
+    },
+    {
+      "configuration": "after-64M-smp4",
+      "rows": [
+        {
+          "mode": 0,
+          "checks": 316888,
+          "contexts": 25,
+          "math_calls": 44600,
+          "joins": 24,
+          "reaps": 1,
+          "free": 15692,
+          "baseline": 15692,
+          "fp_init": 25,
+          "fp_invalid": 25
+        },
+        {
+          "mode": 1,
+          "checks": 49880,
+          "contexts": 4,
+          "math_calls": 7136,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15692,
+          "baseline": 15692,
+          "fp_init": 29,
+          "fp_invalid": 29
+        },
+        {
+          "mode": 2,
+          "checks": 49880,
+          "contexts": 4,
+          "math_calls": 7136,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15692,
+          "baseline": 15692,
+          "fp_init": 33,
+          "fp_invalid": 33
+        },
+        {
+          "mode": 3,
+          "checks": 49880,
+          "contexts": 4,
+          "math_calls": 7136,
+          "joins": 0,
+          "reaps": 4,
+          "free": 15692,
+          "baseline": 15692,
+          "fp_init": 37,
+          "fp_invalid": 37
+        }
+      ],
+      "log_sha256": "a9b6ef43020d2d22ae82f154a2707103bc26c2c013a1ba3362342ab67a2dde8b",
+      "normal32M_completed_stage_reused": false
+    }
+  ],
+  "expanded_root_ELF_exists": false,
+  "normal_joins": 48,
+  "qualified_receipts": {
+    "source-pins-02.json": "1702a3ce817edf6650aa6a7b4649aedf2f83709159f464fccf12b516a8f401a3",
+    "gn-02/status.json": "85bbdd83ba313ecb1cb2395c9bfe226a5a48e366eeae583cb79b4129eabb0e73",
+    "preflight-02/status.json": "3d68a509c14350975992b0224216ec5e2c6211e6e91ca206a51019950633bc57",
+    "compile-02/status.json": "6fcec183fe57b2ab33fcbeabda7261d3b5b29c4fe19b725927ae9a065bf09157",
+    "provider-03/status.json": "5299a06f51382c8ee38692a73802de15f33d3714650a25d8662d190c7e727263",
+    "reference-01/status.json": "4b6a5cd8b4ad2616d8eeadb01a6488a4a4425f52ad4061bed4b0a0d0218c453f",
+    "object-audit-03.json": "468fd94c5c496879ad6b312aa7def1178bc36154b7564b75b8c835e8bd33c373",
+    "isa-review-02.json": "214fbe59c87183db9b384e267466f0c1a543da3af40f20051e28a43c1252fd5b",
+    "consumer-04/status.json": "58e62b833c5978ce400ae05c13eba48f81400d2edca1c3dce53055a692d59b28",
+    "fixture-sources-04.json": "93330be8181c0a51508ad56c6feb7e07030cc963bb685c4e0f9c016da75a8875",
+    "fixture-abi-01.json": "24ba6029f3642e8b767b13c68bfca0c1711d1d912abb3e6f5c6aa4e9aabc1fbb",
+    "abnormal-kernel-source-01.json": "640ea447935e6a76ea77d96fe56abd10c79f6c56d630a7a669b9049fb1cd9850",
+    "link-03/status.json": "098cc32b43c511071adb910af8afa21a789b06a285dcc31fa5a3c590696ca5a6",
+    "guest-03/status.json": "5ac6d38b34d6137d2e0706020f905e200cd06650dd8411d39f340198cd45ce08"
+  },
+  "wrong_storage_controls": [
+    {
+      "variant": "shared-errno",
+      "rejected": true,
+      "log_sha256": "85deab1519cf019680f74a2454181c81700a534eb21ebb2a25156b5c25b771d4",
+      "failure_lines": [
+        " error_line=000000E9 math_mode=00000003 seed=00000001 row=00000039 input_hi=FFF80000 input_lo=00001234 actual_hi=FFF80000 actual_lo=00001234 expected_hi=7FF80000 expected_lo=00000000",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    },
+    {
+      "variant": "shared-tls",
+      "rejected": true,
+      "log_sha256": "c629dae12f9514f10bcf71c2d5930aa7b3e63eaa2d2750056ada726c83233d80",
+      "failure_lines": [
+        " error_line=000000EA math_mode=00000003 seed=00000001 row=00000039 input_hi=FFF80000 input_lo=00001234 actual_hi=FFF80000 actual_lo=00001234 expected_hi=7FF80000 expected_lo=00000000",
+        "FAILED THREAD TLS consumer assertions",
+        "NATIVE THREAD TLS FAIL"
+      ]
+    }
+  ],
+  "scope": "Native log/exp/round plus retained exp2 and cached math regressions; not expanded V8/Content runtime",
+  "exact_context_recovery": 76,
+  "root_returncode": 1,
+  "default_guests": [
+    {
+      "configuration": "default-32M-smp1",
+      "checks": 65063,
+      "free": 7509,
+      "contexts": 1,
+      "exact_reaps": 1,
+      "log_sha256": "ddd10304adad16b93645bc29d99b7fc2d9f20cf2691a30aa8712800bf7465d5e"
+    },
+    {
+      "configuration": "default-64M-smp4",
+      "checks": 65063,
+      "free": 15693,
+      "contexts": 1,
+      "exact_reaps": 1,
+      "log_sha256": "fbd96d4756c9535bb63425cce9a2d4ffcea8dacf435cc1d1a8a6f74c26b27326"
+    }
+  ],
+  "public_cold_build_tested": false,
+  "root_retained_inputs": 1246,
+  "Content_browser_video_HTML5_pass": false,
+  "root_new_inputs": 3,
+  "reused_normal_32M_case": {
+    "row": {
+      "mode": 0,
+      "checks": 316888,
+      "contexts": 25,
+      "math_calls": 44600,
+      "joins": 24,
+      "reaps": 1,
+      "free": 7508,
+      "baseline": 7508,
+      "fp_init": 25,
+      "fp_invalid": 25
+    },
+    "log_sha256": "ce50d7c0225d157caad1d9b330d7ab1928f4957ac9d4dc806eac37f21f29df55",
+    "source": "guest-02: completed normal stage before host timeout"
+  },
+  "user_SMP_supported": false,
+  "complete_full_M_MD_source_checks": true,
+  "decimal_precisions": [
+    600,
+    900
+  ],
+  "native_contexts": 76,
+  "all_required_checks_pass": true,
+  "full_kernel_rebuilt_byte_equivalent": true,
+  "actual_exp2_calls": 52048,
+  "expanded_root_guest_pass": false
+}

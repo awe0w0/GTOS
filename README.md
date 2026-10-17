@@ -52,6 +52,12 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 四组 CPL3 客体均精确恢复物理帧及事件资源。服务需在运行时激活前显式安装；
 完整 Chromium 消息泵、Mojo 端点和窗口输入仍待接入。
 
+[SDK 数学提供者](apps/native_sdk_math/README.md)已接入真实 Content GN 配置，
+补齐 log、exp、round，并修复 GTOS IA32 定向溢出的异常标志。76 个 CPL3 上下文、
+153584 次数学调用及正常、取消、OOM、故障后的资源回收通过，错误共享存储对照
+按预期失败。新的 base 扩展根仍缺 MD5 与 PMA 的 14 个符号；既有 V8 JS 基线
+继续成立，Content 首帧、网页、视频和 HTML5 尚未验收。
+
 ## 构建与运行
 
 需要支持 i386 独立环境的 GNU g++/binutils、GRUB i386-pc 工具、

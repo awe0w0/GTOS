@@ -1,0 +1,5 @@
+NATIVE THREAD TLS BOOT
+ error_line=0000003C math_mode=00000001 seed=00000000 row=02000049 input_hi=40862E42 input_lo=FEFA39F0 actual_hi=7FEFFFFF actual_lo=FFFFFFFF expected_hi=7FEFFFFF expected_lo=FFFFFFFF
+ cw=0000077F sw=00000000 mx=00003FA0 errno=00004269 required=00000008 calls=00000049
+FAILED THREAD TLS consumer assertions
+NATIVE THREAD TLS FAIL

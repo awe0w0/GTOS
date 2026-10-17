@@ -1,0 +1,8 @@
+NATIVE THREAD TLS BOOT
+EXP2 PROGRESS ticks=00000100 calls=000003D9 mode=00000003 row=030000A0 stage=00000000 wave=00000000 worker_stage=00000000 worker_stage=00000000 worker_stage=00000000
+EXP2 PROGRESS ticks=00000200 calls=00000750 mode=00000002 row=02000058 stage=00000000 wave=00000000 worker_stage=00000000 worker_stage=00000000 worker_stage=00000000
+EXP2 PROGRESS ticks=00000300 calls=00000B26 mode=00000001 row=02000050 stage=00000000 wave=00000000 worker_stage=00000000 worker_stage=00000000 worker_stage=00000000
+ error_line=000000E9 math_mode=00000003 seed=00000001 row=00000039 input_hi=FFF80000 input_lo=00001234 actual_hi=FFF80000 actual_lo=00001234 expected_hi=7FF80000 expected_lo=00000000
+ cw=00000F7F sw=00000001 mx=00007F81 errno=000036B2 required=00000000 calls=00000DF0
+FAILED THREAD TLS consumer assertions
+NATIVE THREAD TLS FAIL
