@@ -1,0 +1,77 @@
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::Iterator::GetNextOfType(unsigned int, unsigned int*)
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::Iterator::GetNextWithIgnore(unsigned int))
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::GetNextPersistentRecord(base::PersistentMemoryAllocator::Iterator&, unsigned long long*, int*))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::GetBlockData(unsigned int, unsigned int, unsigned int, unsigned int*) const
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::GetHistogram(unsigned int))
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::CreateHistogram(base::PersistentHistogramAllocator::PersistentHistogramData*, base::StrongAlias<base::DurableTag, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>>, unsigned long long))
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::CreateHistogram(base::PersistentHistogramAllocator::PersistentHistogramData*, base::StrongAlias<base::DurableTag, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>>, unsigned long long))
+>>> referenced 5 more times
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::StringViewAt(void const*, unsigned int, unsigned int)
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::GetHistogram(unsigned int))
+
+ld.lld: error: undefined symbol: base::DelayedPersistentAllocation::DelayedPersistentAllocation(base::PersistentMemoryAllocator*, std::__gtos_isolate_diagnostic::atomic<unsigned int>*, unsigned int, unsigned int, unsigned int)
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::CreateHistogram(base::PersistentHistogramAllocator::PersistentHistogramData*, base::StrongAlias<base::DurableTag, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>>, unsigned long long))
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::CreateHistogram(base::PersistentHistogramAllocator::PersistentHistogramData*, base::StrongAlias<base::DurableTag, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>>, unsigned long long))
+
+ld.lld: error: undefined symbol: base::DelayedPersistentAllocation::~DelayedPersistentAllocation()
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::CreateHistogram(base::PersistentHistogramAllocator::PersistentHistogramData*, base::StrongAlias<base::DurableTag, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>>, unsigned long long))
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::CreateHistogram(base::PersistentHistogramAllocator::PersistentHistogramData*, base::StrongAlias<base::DurableTag, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>>, unsigned long long))
+>>> referenced by sample_vector.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/sample-vector-compile-01/build/obj/base/metrics/libbase.sample_vector.o:(base::PersistentSampleVector::~PersistentSampleVector())
+>>> referenced 1 more times
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::IsCorrupt() const
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::AllocateHistogram(base::HistogramType, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>, unsigned long long, int, int, base::BucketRanges const*, int, unsigned int*))
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::CreatePersistentRecord(base::PersistentMemoryAllocator*, unsigned long long, int))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::GetType(unsigned int) const
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::AllocateHistogram(base::HistogramType, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>, unsigned long long, int, int, base::BucketRanges const*, int, unsigned int*))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::GetAsReference(void const*, unsigned int) const
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::AllocateHistogram(base::HistogramType, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>, unsigned long long, int, int, base::BucketRanges const*, int, unsigned int*))
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::GetNextPersistentRecord(base::PersistentMemoryAllocator::Iterator&, unsigned long long*, int*))
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::CreatePersistentRecord(base::PersistentMemoryAllocator*, unsigned long long, int))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::Allocate(unsigned int, unsigned int, unsigned int*)
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::AllocateHistogram(base::HistogramType, std::__gtos_isolate_diagnostic::basic_string_view<char, std::__gtos_isolate_diagnostic::char_traits<char>>, unsigned long long, int, int, base::BucketRanges const*, int, unsigned int*))
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::PersistentHistogramData* base::PersistentMemoryAllocator::New<base::PersistentHistogramAllocator::PersistentHistogramData>(unsigned int))
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::CreatePersistentRecord(base::PersistentMemoryAllocator*, unsigned long long, int))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::MakeIterable(unsigned int)
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::FinalizeHistogram(unsigned int, bool))
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::CreatePersistentRecord(base::PersistentMemoryAllocator*, unsigned long long, int))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::ChangeType(unsigned int, unsigned int, unsigned int, bool)
+>>> referenced by persistent_histogram_allocator.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/compile-02/build/obj/base/metrics/libbase.persistent_histogram_allocator.o:(base::PersistentHistogramAllocator::FinalizeHistogram(unsigned int, bool))
+
+ld.lld: error: undefined symbol: base::PersistentMemoryAllocator::IsFull() const
+>>> referenced by persistent_sample_map.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-base-closure-20261017-c/compile-01/build/obj/base/metrics/libbase.persistent_sample_map.o:(base::PersistentSampleMap::CreatePersistentRecord(base::PersistentMemoryAllocator*, unsigned long long, int))
+
+ld.lld: error: undefined symbol: base::DelayedPersistentAllocation::GetUntyped() const
+>>> referenced by sample_vector.cc
+>>>               /mnt/f/GTOS-Chromium/artifacts/native-histogram-support-20261016-a/sample-vector-compile-01/build/obj/base/metrics/libbase.sample_vector.o:(base::span<int, 4294967295u, int*> base::DelayedPersistentAllocation::Get<int>() const)

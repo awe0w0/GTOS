@@ -55,8 +55,13 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 [SDK 数学提供者](apps/native_sdk_math/README.md)已接入真实 Content GN 配置，
 补齐 log、exp、round，并修复 GTOS IA32 定向溢出的异常标志。76 个 CPL3 上下文、
 153584 次数学调用及正常、取消、OOM、故障后的资源回收通过，错误共享存储对照
-按预期失败。新的 base 扩展根仍缺 MD5 与 PMA 的 14 个符号；既有 V8 JS 基线
-继续成立，Content 首帧、网页、视频和 HTML5 尚未验收。
+按预期失败。
+
+[原生 BoringSSL 线程与 MD5](apps/native_boringssl/README.md)已在 GTOS CPL3 验证
+读写锁/once、五槽 TLS、真实退出登记 OOM 与析构重入；122 个正向上下文及
+66 次正常 Join 的资源回收通过。原始 MD5/IA32 汇编另完成 6560 次有效调用、
+内存边界与 ABI 检查。新的 base 扩展根剩余 PMA 的 13 个符号；既有 V8 JS
+基线继续成立，完整 BoringSSL、Content 首帧、网页、视频和 HTML5 尚未验收。
 
 ## 构建与运行
 

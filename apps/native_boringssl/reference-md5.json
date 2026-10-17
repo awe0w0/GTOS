@@ -1,0 +1,114 @@
+{
+  "fixed_RFC_cases": [
+    {
+      "length": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "message": ""
+    },
+    {
+      "length": 1,
+      "digest": "0cc175b9c0f1b6a831c399e269772661",
+      "message": "a"
+    },
+    {
+      "length": 3,
+      "digest": "900150983cd24fb0d6963f7d28e17f72",
+      "message": "abc"
+    },
+    {
+      "length": 14,
+      "digest": "f96b697d7cb7938d525a2f31aaf161d0",
+      "message": "message digest"
+    },
+    {
+      "length": 26,
+      "digest": "c3fcd3d76192e4007dfb496cca67e13b",
+      "message": "abcdefghijklmnopqrstuvwxyz"
+    },
+    {
+      "length": 62,
+      "digest": "d174ab98d277d9f5a5611c2c9f419d9f",
+      "message": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    },
+    {
+      "length": 80,
+      "digest": "57edf4a22be3c955ac49da2e2107b67a",
+      "message": "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+    }
+  ],
+  "binary_boundary_cases": [
+    {
+      "length": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "length": 1,
+      "digest": "13c8ffd977013703a701cf8e11deac65"
+    },
+    {
+      "length": 55,
+      "digest": "d872aa0473a24da995ce4ac518ade767"
+    },
+    {
+      "length": 56,
+      "digest": "e23567645846677c205de80f9779081b"
+    },
+    {
+      "length": 63,
+      "digest": "4775b66278a8fc132ff80923378216cd"
+    },
+    {
+      "length": 64,
+      "digest": "71e123b70c7aa64826fcfe472694cd1c"
+    },
+    {
+      "length": 65,
+      "digest": "5949948f26e35203661075214faa3966"
+    },
+    {
+      "length": 127,
+      "digest": "520bdc2dbab7c25d64263ffb242d9e98"
+    },
+    {
+      "length": 128,
+      "digest": "3e93b378458b77da96b2357c3bda8cc2"
+    },
+    {
+      "length": 129,
+      "digest": "d1ae06bbf9128955a34bedb6231eee62"
+    },
+    {
+      "length": 255,
+      "digest": "e69ce3a96f27a14cc830d6b8b44b1c74"
+    },
+    {
+      "length": 256,
+      "digest": "d2fc7db3ff87e1ebaabbcb16c0c92ea2"
+    },
+    {
+      "length": 257,
+      "digest": "de795cc04890f2dd3e653c88a67f3e68"
+    },
+    {
+      "length": 4095,
+      "digest": "4a34dfb19ddffddbdf55bb4663d578d5"
+    },
+    {
+      "length": 4096,
+      "digest": "efc404fa609a799c7801273de6d65e84"
+    },
+    {
+      "length": 4097,
+      "digest": "82b1834165b5032bacc5f34d594f6a36"
+    }
+  ],
+  "source_URL": "https://www.rfc-editor.org/rfc/rfc1321.html#appendix-A.5",
+  "scope": "Prepared expected data only; planned one-shot, incremental, unaligned, readonly/guard and interleaved native context checks must still call actual GTOS BoringSSL provider. No target execution.",
+  "provider_verified_against_RFC": true,
+  "target_called": false,
+  "independent_provider": "System.Security.Cryptography.MD5+Implementation",
+  "reference_data_pass": true,
+  "binary_pattern": "byte i = (i * 37 + 11) & 255",
+  "vector_sha256": "465d6c27cda75655804d4cde8e59660321aef8f17f9d58d9e27ce1a149f7cf20",
+  "guest_pass": false
+}

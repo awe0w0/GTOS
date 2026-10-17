@@ -1,0 +1,83 @@
+{
+  "files": {
+    "README.md": "d6a51fdf5ca71786bc4410d16b9ed1ef00da8175cb386ef1715431663d4571f0",
+    "self-review.md": "4c4eea4c912ea7c4a8413cccdeccfbc6e87cea5540957b4761e68219d78a2b6a",
+    ".gitattributes": "5eb3907c30d0d343b9bea34f22d230a24697ad286b547bc5ac1a8de2cc9c8179",
+    "boringssl-native.patch": "095f3bc6add61f0a8372a570bca1baeef7d7fa4a3f4a0b9b1d75f463c8d3c02f",
+    "gtos-asm.patch": "430200169a42b9829a7ad1021d34fc1961b01eeb6e27fa7698e9347394c07054",
+    "overlay/third_party/boringssl/src/crypto/thread_gtos.cc": "38b3827787f1c29d32b072c1e64fb59c8f16e19397367231276a7ceddcb14099",
+    "probe-thread/api.h": "6a303978cde34d2b3d0e612b6ded2dd1e21eb9b13d71f8bf5009b7c1a934b992",
+    "probe-thread/adapter.cc": "9929ee4b94ee76e4f833d978c7c6592a0f6d18c91f1df4f03e78a94d63e24d24",
+    "probe-thread/main.cc": "eea79da1ddc5a04dfcb27307163b4151fc4267bc6238a48e581221d5f69e0fe8",
+    "probe-thread/once-control.cc": "a5be9dd89d822493264e74ad9b6a4b1e7a7a4631dc7e7edeba97e77cd1bb6aa7",
+    "probe-thread/tls-control.cc": "9d0d1916354bd0d4667e58aef87c941e37f64a36c5d6a763314b6dac25afaff7",
+    "probe-thread/record.h": "1a8ecfc789d6138aef10e609e8af1c332cc46930cee9df655d44639b4ae9c4c3",
+    "probe-thread/linker.ld": "b94781161768dcbbe0da9b95d0c7769cd21d0ba77c4de2f55868a7cea054dfc3",
+    "probe-thread/kernel.cpp": "b9455c7006f1176752710636a275a52100d43adeaccea3195c4dc7b56df5f1b3",
+    "probe-md5/adapter.cc": "6902389f9806807db5180b72288b840d0662661096904142680f86baf72222c4",
+    "probe-md5/bridge.s": "e7f2be8e07111e9317e34f6c747e9c1ee348ffa665a3a142ed576a56d5f3af4e",
+    "probe-md5/abi-control.s": "dd87fdcba5acc264678188ce792650a26f52e415ecd0c29b083f61b42febb07a",
+    "probe-md5/digest-control.cc": "ab961cd7433a2d80ddb6fbf4bb6dbc8f854349ebbb1287ce1150f8f779ec1060",
+    "probe-md5/record.h": "80a95f7372aa45bf0c4de3de1466ebbea2a5dcc4e0ac4133fc572e506de0167d",
+    "probe-md5/linker.ld": "06ec44fd9e3567129bc4d542c468bd3a89a6d9538f62e98de89e3290c2965182",
+    "probe-md5/main.cc": "d602207b446c5b40d8e9591207cc288dbded6cbdc560fe09db57576b75ba656e",
+    "probe-md5/kernel.cpp": "b72d97bb6b5143cdc15f8b5434af5394eaabbac54b6209c6c501e259afb91c87",
+    "probe-md5/md5-vectors.h": "465d6c27cda75655804d4cde8e59660321aef8f17f9d58d9e27ce1a149f7cf20",
+    "reference-md5.json": "8fe4a6db5adbeac6a1321b99612a593fcdb05f13d9bde1189c545ecd7384720a",
+    "probe-common/fixture-helpers.h": "0b568f334c0714ca8ba676338b03e35daa151bfdf95b8a34c081d40821da029d",
+    "BORINGSSL-LICENSE.txt": "827c8d8fc207c2392794eef9e00fe246f9f61fdcc132556c275be3dd8c3cd97f",
+    "CHROMIUM-LICENSE.txt": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b",
+    "logs/thread-default-32M.log": "4db5c38c9a8ef4d7bd0d914fc160c57f4b5a6bae1f7e585fae94aca5c3658134",
+    "logs/thread-default-64M.log": "d8e9fc6c1054cebce4d8309a830d7b729a832fb453d25263a5b96545acc13590",
+    "logs/thread-after-32M.log": "f11ded3b6da637724d22b774b0c702073cb99649b68f398fcbd9a9449652edfa",
+    "logs/thread-after-64M.log": "d3aae5f116d0829031d372c65168650341aca8a9b349d6f16eef19f92f6fb21a",
+    "logs/thread-once-control-32M.log": "46465a0c951591a118d65f573d5d579901b7605fa910d01e3bc6aac63aabc5e9",
+    "logs/thread-tls-control-32M.log": "4f74ddf93551b9889bfc977c82022d12c0471e24b2228a2fdd4aa4a1be010508",
+    "logs/md5-after-32M-smp1.log": "1baf950a0b7d5ed51eee180bb6916ab03d01478ef5210d2836c8520ab9e20d91",
+    "logs/md5-after-64M-smp4.log": "79482179859e453526c9f2570466dae31c65632f9a1e91ff82d23343879938f5",
+    "logs/md5-digest-control-32M.log": "ceba3d89d50300b831ae07a6a7c21c9dbb022f2dee8833fafa459237d4f945eb",
+    "logs/md5-abi-control-32M.log": "68f537ce0694e3b00910d279f4e73c806dcf3f509bcdcdfac00b2d0b91728a90",
+    "logs/expanded-root-link.log": "e7b51005a30c805b868f5734af1a580267e037361415597c938d49de99d319b9",
+    "acceptance.json": "926f4152b96692e030614c85c932253a051b42396b984dc28aef6380138ca42a"
+  },
+  "historical_small_kernel_ABI_files": {
+    "../native_sdk_math/fixture-abi/heap.h": "febc934e8d7557e02f2fde904c8f5c539b8b987d74692030aa09d4bc3323a46f",
+    "../native_sdk_math/fixture-abi/process/native_runtime.h": "7b4930a4d2d58cd4d4d8ad9dd4d49d59f48bf3931f0da0061e0f9d10f277fed4",
+    "../native_sdk_math/fixture-abi/memory/process_address_space.h": "2ce07a0f6844a336c3ff0d1aa85cc76579976411f5ca8602fbf02ef296ec8da6",
+    "../native_sdk_math/fixture-abi/process/elf32.h": "dcba49076c64b7397040d952f4a9f47fe8adc7a9bc1aaa1675c45c2f7e3af3ac"
+  },
+  "upstream_BoringSSL_revision": "5e1bfb45c353b2bb36bdf26b006ea8f5566c82d5",
+  "patch_preimages": {
+    "third_party/boringssl/BUILD.gn": "63efa6ff4bc649e7b4cf161a72ac747719ff697a6ae933742efb82cbc06bc3f5",
+    "third_party/boringssl/src/crypto/internal.h": "54cd27bea4b886a6844d5df6964eece3cd0c965201df965fd9850b89940ae1bf",
+    "build/toolchain/gtos/BUILD.gn": "f9b81f6c67f26a4d40ae32abb9489be201ebef8e19af98b7b6c1d49b03fc651f"
+  },
+  "patch_results": {
+    "third_party/boringssl/BUILD.gn": "0ad2b22ca9309249eea553eb7a62667981ca5292dde72c01f15f76d7f1861ed5",
+    "third_party/boringssl/src/crypto/internal.h": "63f41f9d511be85d3f9ad9669e839a1e97d78a5c7a4f486ff5cfa3b9d7835e70",
+    "build/toolchain/gtos/BUILD.gn": "068eb459c94d6d38fd7186950bf1a202a5b630e96f9ad72fb0f6c70e36c0f9fa"
+  },
+  "unchanged_upstream_MD5_source_sha256": "5145083380673c9e54ebc2f5cae7c78480a640d58f8034d67a2651762874f0cc",
+  "unchanged_upstream_MD5_ASM_sha256": "631828aeb527dd203153fb1d467af3e85f9e2a4042cc41cb2fb202971f356025",
+  "provider_objects": {
+    "md5": "2f546e7c6139b88bacad6ce8a4af608d0696ce2b35bf4aaca29e3efc94a4e1c5",
+    "thread_gtos": "1c04769d70ac1153ff71e6a45abffebfcf4b5f679b75353ad3e34e2bc2d57e32",
+    "md5_ASM": "58917879ad2a24f57ef564f49636f8caaf6b0f4df2f1c11f6c3dd08b8a33e37e"
+  },
+  "proof_receipts": {
+    "formal_GN": "a7da5f3e8de34d658726efc56e6338e99b6f7bb995c3697e39f73a145688b92a",
+    "full_CXX": "593d25c4a04e67c1edd4448d63b95c84b3ca43dcaab31523c31dc2728a8a5e02",
+    "full_ASM": "bcee7b729045ee4de2ae7dcd043a9c8d62b31b885c2772217c66c0fe01b3a21e",
+    "CXX_ISA": "47ae8c503aaa516f126596e8246766c6b4b30c39f5f389401ff5ed0fb476fbbf",
+    "ASM_ISA": "c42f8c2892d93c431bae42e7009a4916c6694c879b20b043f2087f769a07f39d",
+    "thread_ELF": "36080883adcb1ddaf0bcd84770e98ac08748e87f6c55ac7c07c3dd43cd065499",
+    "thread_guest": "c058883e1c4888dac613ab8326c27b215deaf6ec0ef898efe802f4378cd8b966",
+    "MD5_guest": "e66fb2cc7c5b840edc351299d977dcf2bd6182c0a5aca6a62a70eeadfc60a313",
+    "portable_patch_check": "9d6915150754ed91a8f7a6ca37fdd917aab462dad0ed0e0915ac709639bbb685"
+  },
+  "OPENSSL_THREADS_preserved": true,
+  "ASM_preserved": true,
+  "old_V8_payload_and_locks_unchanged": true,
+  "public_source_copies_byte_identical": true,
+  "scope": "Accepted incremental native BoringSSL thread/once/TLS and MD5 providers plus exact tests. Not a whole archive, blank-host cold build, actual expanded-root or browser acceptance."
+}

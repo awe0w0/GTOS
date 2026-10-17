@@ -1,0 +1,15 @@
+diff --git a/build/toolchain/gtos/BUILD.gn b/build/toolchain/gtos/BUILD.gn
+--- a/build/toolchain/gtos/BUILD.gn
++++ b/build/toolchain/gtos/BUILD.gn
+@@ -59,8 +59,10 @@ template("gtos_freestanding_toolchain") {
+     }
+ 
+     tool("asm") {
++      depfile = "{{output}}.d"
++      depsformat = "gcc"
+       command =
+-          "$_clang --target=$_triple {{asmflags}} -c {{source}} -o {{output}}"
++          "$_clang --target=$_triple -nostdinc {{defines}} {{include_dirs}} {{asmflags}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+       description = "GTOS ASM {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]

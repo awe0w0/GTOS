@@ -1,0 +1,4 @@
+NATIVE CRYPTO THREAD BOOT
+ error_line=000000EE scenario=00000003 wave=00000000 next=00000002 serving=FFFFFFFE readers=00000000 worker_stage=00000001 worker_stage=00000001 worker_stage=00000001
+FAILED CRYPTO THREAD consumer assertions
+NATIVE CRYPTO THREAD FAIL

@@ -1,0 +1,71 @@
+diff --git a/third_party/boringssl/BUILD.gn b/third_party/boringssl/BUILD.gn
+--- a/third_party/boringssl/BUILD.gn
++++ b/third_party/boringssl/BUILD.gn
+@@ -160,6 +160,9 @@ if (is_msan) {
+ 
+ component("boringssl") {
+   sources = rebase_path(all_sources, ".", "src")
++  if (is_gtos) {
++    sources += [ "src/crypto/thread_gtos.cc" ]
++  }
+   public = rebase_path(all_headers, ".", "src")
+   friend = [ ":*" ]
+   deps = [ "//third_party/boringssl/src/third_party/fiat:fiat_license" ]
+diff --git a/third_party/boringssl/src/crypto/internal.h b/third_party/boringssl/src/crypto/internal.h
+--- a/third_party/boringssl/src/crypto/internal.h
++++ b/third_party/boringssl/src/crypto/internal.h
+@@ -35,13 +35,16 @@
+ #include <stdlib.h>
+ #endif
+ 
+-#if defined(OPENSSL_THREADS) && \
++#if defined(OPENSSL_THREADS) && defined(__GTOS__)
++#define OPENSSL_GTOS_THREADS
++#elif defined(OPENSSL_THREADS) && \
+     (!defined(OPENSSL_WINDOWS) || defined(__MINGW32__))
+ #include <pthread.h>
+ #define OPENSSL_PTHREADS
+ #endif
+ 
+-#if defined(OPENSSL_THREADS) && !defined(OPENSSL_PTHREADS) && \
++#if defined(OPENSSL_THREADS) && !defined(OPENSSL_GTOS_THREADS) && \
++    !defined(OPENSSL_PTHREADS) && \
+     defined(OPENSSL_WINDOWS)
+ #define OPENSSL_WINDOWS_THREADS
+ #endif
+@@ -541,6 +544,9 @@ inline int constant_time_declassify_int(int v) {
+ #if !defined(OPENSSL_THREADS)
+ typedef uint32_t CRYPTO_once_t;
+ #define CRYPTO_ONCE_INIT 0
++#elif defined(OPENSSL_GTOS_THREADS)
++typedef std::atomic<uint32_t> CRYPTO_once_t;
++#define CRYPTO_ONCE_INIT 0
+ #elif defined(OPENSSL_WINDOWS_THREADS)
+ typedef INIT_ONCE CRYPTO_once_t;
+ #define CRYPTO_ONCE_INIT INIT_ONCE_STATIC_INIT
+@@ -639,6 +645,16 @@ OPENSSL_EXPORT int CRYPTO_refcount_dec_and_test_zero(CRYPTO_refcount_t *count);
+ // A Mutex is a read/write lock. It can be constant-initialized, but has a
+ // destructor. To allocate a global one, use StaticMutex, which skips the
+ // destructor.
++#if defined(OPENSSL_GTOS_THREADS)
++struct GtosReadWriteLock {
++  std::atomic<uint32_t> gate{0};
++  uint32_t next_ticket = 0, serving_ticket = 0, writer = 0;
++  struct Reader {
++    uint32_t owner = 0, depth = 0;
++  } readers[4] = {};
++};
++#endif
++
+ class OPENSSL_EXPORT StaticMutex {
+  public:
+   constexpr StaticMutex() = default;
+@@ -660,6 +676,8 @@ class OPENSSL_EXPORT StaticMutex {
+ protected:
+ #if !defined(OPENSSL_THREADS)
+   // Nothing.
++#elif defined(OPENSSL_GTOS_THREADS)
++  GtosReadWriteLock lock_;
+ #elif defined(OPENSSL_WINDOWS_THREADS)
+   SRWLOCK lock_ = SRWLOCK_INIT;
+ #elif defined(OPENSSL_PTHREADS)
