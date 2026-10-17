@@ -177,7 +177,7 @@ NativeRuntime::Slot* NativeRuntime::FreeSlot(uint32_t& index) {
     return 0;
 }
 bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& id,
-                           uint32_t stackPages) {
+                           uint32_t stackPages, const NativeEnvironment* environment) {
     const uint32_t stackBottom = UserStackTop - stackPages * 4096;
     if (!slot.space.MapNewRange(stackBottom, stackPages * 4096, true)
         || !slot.space.Seal()) return false;
@@ -194,7 +194,9 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     slot.task.userMode = true; slot.task.directoryAddress = slot.space.DirectoryAddress();
     slot.task.kernelStackTop = top;
     if (!fp.Initialize(slot.fp, nextId)) return false;
-    if (!scheduler->AddTask(&slot.task)) { fp.Invalidate(slot.fp); return false; }
+    if (environment) slot.environment = *environment;
+    else slot.environment.Clear();
+    if (!scheduler->AddTask(&slot.task)) { fp.Invalidate(slot.fp); slot.environment.Clear(); return false; }
     Zero(&slot.status, sizeof(slot.status));
     id = slot.status.id = nextId++; slot.status.directory = slot.space.DirectoryAddress();
     slot.status.live = slot.occupied = true; ++statistics.created;
@@ -242,6 +244,10 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
     return CreateElf(image, bytes, id, Elf32MaximumPages);
 }
 bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                              const NativeEnvironment& environment) {
+    return CreateElfWithBudget(image, bytes, id, Elf32MaximumPages, 2, 0, &environment);
+}
+bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
                               uint32_t imagePageLimit) {
     return CreateElfWithBudget(image, bytes, id, imagePageLimit, 2,
         imagePageLimit > Elf32MaximumPages ? ProcessAddressSpace::MaximumPages : 0);
@@ -254,9 +260,17 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
     return CreateElfWithBudget(image, bytes, id, profile.imagePageLimit,
         profile.stackPages, profile.runtimePages);
 }
+bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                              const NativeElfLaunchProfile& profile, const NativeEnvironment& environment) {
+    id = 0;
+    if (profile.stackPages < 2 || profile.stackPages > 128
+        || !profile.runtimePages || profile.runtimePages > 1024) return false;
+    return CreateElfWithBudget(image, bytes, id, profile.imagePageLimit,
+        profile.stackPages, profile.runtimePages, &environment);
+}
 bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, uint32_t& id,
                                         uint32_t imagePageLimit, uint32_t stackPages,
-                                        uint32_t runtimePages) {
+                                        uint32_t runtimePages, const NativeEnvironment* environment) {
     InterruptGuard guard;
     id = 0;
     if (!imagePageLimit || imagePageLimit > Elf32MaximumLargePages) return false;
@@ -292,7 +306,7 @@ bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, ui
         if (!(segment.flags & Elf32Write) && !slot.space.ProtectRange(begin, end - begin, false))
             goto rollback;
     }
-    if (Admit(slot, index, plan.entry, id, stackPages)) {
+    if (Admit(slot, index, plan.entry, id, stackPages, environment)) {
         slot.codeCount = slot.dataCount = 0;
         for (uint32_t i = 0; i < plan.segmentCount; ++i) {
             const Elf32LoadSegment& segment = plan.segments[i];
@@ -409,6 +423,7 @@ int NativeRuntime::CreateThread(Slot& caller, const GtosThreadCreateRequest& req
     cpu.eip = request.entry; cpu.esp = esp; cpu.eflags = 0x202;
     target->task.userMode = true; target->task.directoryAddress = space.DirectoryAddress();
     target->task.kernelStackTop = top;
+    target->task.cpuProcess = &process.task;
     if (!fp.Initialize(target->fp, nextId)) return GTOS_THREAD_ERR_BAD_STATE;
     if (!scheduler->AddTask(&target->task)) {
         fp.Invalidate(target->fp); return GTOS_THREAD_ERR_LIMIT;
@@ -524,6 +539,27 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     Observe(*thread, *cpu); ++thread->status.systemCalls;
     cpu->eflags = (cpu->eflags & 0xCD5U) | 0x202U;
     switch (cpu->eax) {
+    case GTOS_SYS_ENVIRONMENT_READ: {
+        if (cpu->ecx != GTOS_ENVIRONMENT_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_SIZE; break;
+        }
+        GtosEnvironmentReadRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_ENVIRONMENT_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_ENVIRONMENT_ERR_UNSUPPORTED; break;
+        }
+        if (request.flags || request.result_bytes != GTOS_ENVIRONMENT_RESULT_BYTES) {
+            cpu->eax = (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_SIZE; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result_va, request.result_bytes, true)) {
+            cpu->eax = (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_ADDRESS; break;
+        }
+        cpu->eax = slot->space.CopyToUser(request.result_va, &slot->environment.Snapshot(),
+            sizeof(GtosEnvironmentReadResult)) ? 0 : (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_ADDRESS;
+        break;
+    }
     case GTOS_SYS_EVENT_CREATE:
     case GTOS_SYS_EVENT_DUP:
     case GTOS_SYS_EVENT_CLOSE:
@@ -555,6 +591,33 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         break;
     case GTOS_SYS_ABI: cpu->eax = GTOS_NATIVE_ABI_VERSION; break;
     case GTOS_SYS_TICKS: cpu->eax = scheduler->Ticks(); break;
+    case GTOS_SYS_CPU_CLOCK_READ: {
+        if (cpu->ecx != GTOS_CPU_CLOCK_REQUEST_BYTES) {
+            cpu->eax = (uint32_t)GTOS_CPU_CLOCK_ERR_BAD_SIZE; break;
+        }
+        GtosCpuClockReadRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_CPU_CLOCK_ERR_BAD_ADDRESS; break;
+        }
+        if (request.version != GTOS_CPU_CLOCK_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_CPU_CLOCK_ERR_UNSUPPORTED; break;
+        }
+        if (request.flags || request.result_bytes != GTOS_CPU_CLOCK_RESULT_BYTES) {
+            cpu->eax = (uint32_t)GTOS_CPU_CLOCK_ERR_BAD_SIZE; break;
+        }
+        if (request.scope != GTOS_CPU_CLOCK_THREAD && request.scope != GTOS_CPU_CLOCK_PROCESS) {
+            cpu->eax = (uint32_t)GTOS_CPU_CLOCK_ERR_UNSUPPORTED; break;
+        }
+        if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosCpuClockReadResult), true)) {
+            cpu->eax = (uint32_t)GTOS_CPU_CLOCK_ERR_BAD_ADDRESS; break;
+        }
+        GtosCpuClockReadResult result;
+        const int status = scheduler->ReadCpuClock(request.scope, result);
+        if (status < 0) cpu->eax = (uint32_t)status;
+        else cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
+            ? 0 : (uint32_t)GTOS_CPU_CLOCK_ERR_BAD_ADDRESS;
+        break;
+    }
     case GTOS_SYS_CLOCK_READ: {
         if (cpu->ecx != GTOS_CLOCK_READ_REQUEST_BYTES) {
             cpu->eax = (uint32_t)GTOS_CLOCK_ERR_BAD_SIZE; break;
@@ -944,6 +1007,7 @@ uint32_t NativeRuntime::Reap() {
             if (!member.occupied || member.process != &process) continue;
             member.occupied = false; member.status.reaped = true; member.stackHandle = 0;
             member.eventWaitCount = 0; member.eventWaitFrame = 0;
+            member.environment.Clear();
             member.process = &member; ++statistics.reaped; ++reaped;
         }
     }

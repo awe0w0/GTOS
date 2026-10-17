@@ -1,0 +1,2 @@
+PASS integer-only kernel interfaces: 152 source/header files
+PASS integer-only linked code: /mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/merge-guest-02/events.bin: 35 input objects, 21183 instructions, 11 FP instructions inside exact allowances

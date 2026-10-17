@@ -1,0 +1,215 @@
+{
+  "SourcePromotionByteVerified": true,
+  "RecompiledObservers": 2,
+  "ProductionImageChanged": false,
+  "Configurations": [
+    "32M/1vCPU",
+    "64M/4vCPU"
+  ],
+  "BrowserPass": false,
+  "Inputs": 1252,
+  "Aliases": 1313,
+  "ActualOriginalRoot": {
+    "ELFSHA256": "ea63bb7d0045f1bfed3138c92ca782e0ac1eaaeb6fe1cdd307e5586d97a18550",
+    "UnchangedLinkInputs": 1256,
+    "WorkloadMask": 127,
+    "RealNativeEntryLaunches": 4,
+    "FramesTasksAndFPExactlyReclaimed": true,
+    "FiniArrayEntries": 0,
+    "RetainedConstructors": 2,
+    "OriginalJSWorkloads": 28,
+    "ReceiptSHA256": "05df29b1b27b72401e959b8a680cd6418fe9fcc647763c60bf9193dcdcca3549",
+    "GCPerLaunch": 2
+  },
+  "Optimization": "O2",
+  "CanonicalBaseline": "a2097417435ce51dfa870fc1b8089db62d7b8d93",
+  "FPInstructionsOnlyInOriginalExactAllowances": 11,
+  "Observations": [
+    {
+      "Final": {
+        "peak": 4,
+        "calls": 14557,
+        "errors": 112,
+        "identities": 32,
+        "free": 7557,
+        "expected": 7557
+      },
+      "SDKCases": [
+        {
+          "case": 0,
+          "ctor": 1
+        },
+        {
+          "case": 2,
+          "ctor": 1
+        },
+        {
+          "case": 3,
+          "ctor": 1
+        },
+        {
+          "case": 4,
+          "ctor": 1
+        },
+        {
+          "case": 5,
+          "ctor": 1
+        },
+        {
+          "case": 6,
+          "ctor": 1
+        },
+        {
+          "case": 7,
+          "ctor": 1
+        },
+        {
+          "case": 7,
+          "ctor": 1
+        }
+      ],
+      "Name": "envcpu-32M-smp1",
+      "KernelSHA256": "f10e3d4266f5ae337a0f873fe64b822f5aa97faff6959afecb460ba478ef6326",
+      "Environment": {
+        "calls": 361,
+        "errors": 126,
+        "bootstraps": 9
+      },
+      "LogSHA256": "3ad98861d6d2befd97912bd576fcf45492d6eb3e3c97375c246d243f8cf595ad",
+      "UserSHA256": "bb6f1254c8423b68ab27341a7be3dc52fb68df81efe14c2032138adf2992ab9a",
+      "FP": {
+        "initialized": 32,
+        "invalidated": 32,
+        "saves": 15794,
+        "restores": 15794,
+        "failures": 0
+      }
+    },
+    {
+      "Final": {
+        "peak": 4,
+        "calls": 14015,
+        "errors": 112,
+        "identities": 32,
+        "free": 15741,
+        "expected": 15741
+      },
+      "SDKCases": [
+        {
+          "case": 0,
+          "ctor": 1
+        },
+        {
+          "case": 2,
+          "ctor": 1
+        },
+        {
+          "case": 3,
+          "ctor": 1
+        },
+        {
+          "case": 4,
+          "ctor": 1
+        },
+        {
+          "case": 5,
+          "ctor": 1
+        },
+        {
+          "case": 6,
+          "ctor": 1
+        },
+        {
+          "case": 7,
+          "ctor": 1
+        },
+        {
+          "case": 7,
+          "ctor": 1
+        }
+      ],
+      "Name": "envcpu-64M-smp4",
+      "KernelSHA256": "f10e3d4266f5ae337a0f873fe64b822f5aa97faff6959afecb460ba478ef6326",
+      "Environment": {
+        "calls": 361,
+        "errors": 126,
+        "bootstraps": 9
+      },
+      "LogSHA256": "d8969b6d627b5081887698ed27cdc42c5b37a478c43f424f5d4399aacc7ea1bc",
+      "UserSHA256": "bb6f1254c8423b68ab27341a7be3dc52fb68df81efe14c2032138adf2992ab9a",
+      "FP": {
+        "initialized": 32,
+        "invalidated": 32,
+        "saves": 15252,
+        "restores": 15252,
+        "failures": 0
+      }
+    },
+    {
+      "Final": {
+        "parks": 15,
+        "immediate": 80,
+        "fp_init": 9,
+        "fp_invalid": 9,
+        "free": 7065,
+        "expected": 7065,
+        "handles": 0,
+        "objects": 0
+      },
+      "SDKCases": null,
+      "Name": "events-32M-smp1",
+      "KernelSHA256": "496bab955f7a2f429c45e038a2d8a67d7cdd59a049a803f8bef795dfc4e7dd66",
+      "Environment": null,
+      "LogSHA256": "c5f6ee9e2170d15ebcbbb9e7f5cb2a7584a2ae3240ac5aebb4673e2368abe76f",
+      "UserSHA256": "49b8d9355feb129c20915401e0f5b91973776b9e6cde09d6a94f8d8deccc08e0",
+      "FP": null
+    },
+    {
+      "Final": {
+        "parks": 15,
+        "immediate": 80,
+        "fp_init": 9,
+        "fp_invalid": 9,
+        "free": 15249,
+        "expected": 15249,
+        "handles": 0,
+        "objects": 0
+      },
+      "SDKCases": null,
+      "Name": "events-64M-smp4",
+      "KernelSHA256": "496bab955f7a2f429c45e038a2d8a67d7cdd59a049a803f8bef795dfc4e7dd66",
+      "Environment": null,
+      "LogSHA256": "6d8787a178c152f9394bccf4504db6de444b16c337ea05a6a978e6409f85ae1b",
+      "UserSHA256": "49b8d9355feb129c20915401e0f5b91973776b9e6cde09d6a94f8d8deccc08e0",
+      "FP": null
+    }
+  ],
+  "KernelObjectsAuditedEach": 35,
+  "CoreFiles": {
+    "include/process/native_runtime.h": "81c8d4edb1ed52849c004b7feac5edef31ff33532138e359d61483c46444b597",
+    "src/process/native_runtime.cpp": "312a1802a2b2e4c5c47e5e5db87d6e62e00a0d554a5fc151cb7605529be3f682",
+    "include/process/environment_abi.h": "786c7b4384e796f98135da4f8ffc8d1ce7fe39928c122b0b746b4d5d3ace9e40",
+    "include/process/native_environment.h": "5ebfd8d02050e1673c78243942e4378963dfc72af5c716135453ee31916f24a3",
+    "include/multitasking.h": "9db2b4a83d872d62f99a289ea69c7ce6c0a87ead78930b245d21b5cb7e11314d",
+    "src/multitasking.cpp": "aca45e32461925b494542d98e53614ea0a3ac4a2c39f7df2aaeafc79df2d15e2",
+    "include/process/cpu_clock_abi.h": "842f44ca9e0ea8214591fd1e68fc93db3d65cb40cbdab29b724ec1f3c334250b",
+    "include/process/native_cpu_clock.h": "6e84da46ada781dce5d3452e2b37b4a3ccf8b398919c9fcfa458917744902563"
+  },
+  "InputAliasCacheAndOutputPostchecks": true,
+  "BSPSchedulerOnly": true,
+  "FileFlushImplemented": false,
+  "ActualNativeContextsIncludingExpectedFaults": 82,
+  "OriginalNonLoggingObserverLogicPreserved": true,
+  "NativeMergedEnvironmentCPUEventsPass": true,
+  "KernelInstructions": {
+    "EnvironmentCPU": 21124,
+    "Events": 21183
+  },
+  "IntegerOriginalMembersExplicitlyAudited": 14,
+  "ReceiptSHA256": "57a3c24298b422b25a1b9ecd3b698c0f5c9db2bf9302afb9e80c88ceafbc6e75",
+  "Module": "原生启动环境与CPU计时合并事件内核",
+  "EvidenceReplayRequiresExistingQualifiedWorkspace": true,
+  "FilePathPMAClassAcceptance": false,
+  "FreshCoreCXXObjects": 17,
+  "ReusedUnchangedCPUStateASMObjects": 3
+}

@@ -7,6 +7,7 @@
 #include <process/native_realtime.h>
 #include <process/native_file_endpoint.h>
 #include <process/native_event_endpoint.h>
+#include <process/native_environment.h>
 #include <process/thread_abi.h>
 #include <process/elf32.h>
 namespace gtos { namespace process {
@@ -50,6 +51,7 @@ namespace gtos { namespace process {
             memory::ProcessAddressSpace space;
             NativeStatus status;
             NativeFpRecord fp;
+            NativeEnvironment environment;
             uint32_t stackFrames[KernelStackPages];
             Slot* process;
             uint32_t userStackBegin, userStackEnd, stackHandle;
@@ -95,9 +97,11 @@ namespace gtos { namespace process {
         bool SafeKernelContext() const;
         bool TrustedImage(const uint8_t*, uint32_t, uint32_t) const;
         Slot* FreeSlot(uint32_t& index);
-        bool Admit(Slot&, uint32_t index, uint32_t entry, uint32_t& id, uint32_t stackPages = 2);
+        bool Admit(Slot&, uint32_t index, uint32_t entry, uint32_t& id, uint32_t stackPages = 2,
+                   const NativeEnvironment* environment = 0);
         bool CreateElfWithBudget(const uint8_t*, uint32_t bytes, uint32_t& id,
-                                 uint32_t imagePageLimit, uint32_t stackPages, uint32_t runtimePages);
+                                 uint32_t imagePageLimit, uint32_t stackPages, uint32_t runtimePages,
+                                 const NativeEnvironment* environment = 0);
         NativeRuntime(const NativeRuntime&);
         NativeRuntime& operator=(const NativeRuntime&);
     public:
@@ -116,6 +120,8 @@ namespace gtos { namespace process {
         // Validated static ET_EXEC only. The trusted source is consumed/copied
         // synchronously and is not retained. Stack+guards cannot overlap loads.
         bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id);
+        bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                       const NativeEnvironment& environment);
         // Kernel-selected large-image profile; ordinary callers retain256pages
         // and2MiB file limits. Runtime VM transactions retain the old256 cap.
         bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
@@ -125,6 +131,8 @@ namespace gtos { namespace process {
         // Both guards remain unmapped and excluded from runtime reservations.
         bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
                        const NativeElfLaunchProfile& profile);
+        bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                       const NativeElfLaunchProfile& profile, const NativeEnvironment& environment);
         // Boot/desktop context only, never from a trap or on a victim stack.
         uint32_t Reap();
         bool RequestExit(uint32_t id, uint32_t code);

@@ -52,6 +52,11 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 四组 CPL3 客体均精确恢复物理帧及事件资源。服务需在运行时激活前显式安装；
 完整 Chromium 消息泵、Mojo 端点和窗口输入仍待接入。
 
+[原生启动环境与 CPU 计时](apps/native_environment/README.md)已并入事件内核，
+补齐真实入口所需的环境读取、不可变进程快照及 BSP 运行计时。新 ABI 的四组
+独立回归覆盖 82 个原生上下文，物理帧、FP 和事件资源精确恢复；同一扩展根另完成
+四次真实 V8 启动、28 组原 JS 工作负载及回收。默认环境为空，不导入宿主变量。
+
 [SDK 数学提供者](apps/native_sdk_math/README.md)已接入真实 Content GN 配置，
 补齐 log、exp、round，并修复 GTOS IA32 定向溢出的异常标志。76 个 CPL3 上下文、
 153584 次数学调用及正常、取消、OOM、故障后的资源回收通过，错误共享存储对照
@@ -60,8 +65,9 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 [原生 BoringSSL 线程与 MD5](apps/native_boringssl/README.md)已在 GTOS CPL3 验证
 读写锁/once、五槽 TLS、真实退出登记 OOM 与析构重入；122 个正向上下文及
 66 次正常 Join 的资源回收通过。原始 MD5/IA32 汇编另完成 6560 次有效调用、
-内存边界与 ABI 检查。新的 base 扩展根剩余 PMA 的 13 个符号；既有 V8 JS
-基线继续成立，完整 BoringSSL、Content 首帧、网页、视频和 HTML5 尚未验收。
+内存边界与 ABI 检查。新的 base 扩展根已链接并完成上述真实 V8 运行；完整
+FilePath/PMA 类、文件映射/flush、BoringSSL、Content 首帧、网页、视频和 HTML5
+仍待验收。
 
 ## 构建与运行
 

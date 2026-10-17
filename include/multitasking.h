@@ -4,6 +4,7 @@
 #include <common/types.h>
 #include <gdt.h>
 #include <process/native_clock.h>
+#include <process/native_cpu_clock.h>
 
 namespace gtos {
     namespace process { class NativeRuntime; }
@@ -43,6 +44,7 @@ namespace gtos {
     class Task {
         friend class TaskManager;
         friend class process::NativeRuntime;
+        friend struct NativeCpuClockFixture;
         private:
             uint8_t stack[4096] __attribute__((aligned(16)));
             CPUState* cpustate;
@@ -52,6 +54,8 @@ namespace gtos {
             uint32_t wakeTick;
             uint32_t affinityMask;
             TaskStatistics statistics;
+            process::NativeCpuClockCounter cpuClock, processCpuClock;
+            Task* cpuProcess;
             bool userMode;
             uint32_t directoryAddress, kernelStackTop;
             void Initialize(uint16_t codeSelector, void (*entry)());
@@ -74,6 +78,7 @@ namespace gtos {
         friend class Task;
         friend class process::NativeRuntime;
         friend struct NativeClockFixture;
+        friend struct NativeCpuClockFixture;
         private:
             Task* tasks[256];
             int numTasks;
@@ -113,6 +118,7 @@ namespace gtos {
             uint32_t Ticks() const;
             // BSP-only, preserves entering IF. Returns 0, BAD_STATE or OVERFLOW.
             int ReadClock(GtosClockReadResult& result) const;
+            int ReadCpuClock(uint32_t scope, GtosCpuClockReadResult& result) const;
             uint32_t BootTicks() const;
             uint32_t ContextSwitches() const;
             int TaskCount() const;

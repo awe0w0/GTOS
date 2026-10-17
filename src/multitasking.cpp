@@ -74,6 +74,7 @@ void Task::Initialize(uint16_t codeSelector, void (*entry)()) {
     affinityMask = 1;
     statistics.runTicks = statistics.dispatches = 0;
     statistics.yields = statistics.sleeps = 0;
+    cpuClock.Reset(); processCpuClock.Reset(); cpuProcess = this;
 }
 
 Task::Task(GlobalDescriptorTable* gdt, void entry()) {
@@ -215,6 +216,10 @@ CPUState* TaskManager::Dispatch(CPUState* cpustate, bool timer) {
         Task* task = tasks[currentTask];
         task->cpustate = cpustate;
         if (timer) ++task->statistics.runTicks;
+        if (timer && task->userMode && task->state == TaskRunning) {
+            task->cpuClock.Advance();
+            task->cpuProcess->processCpuClock.Advance();
+        }
         if (task->state == TaskRunning) task->state = TaskReady;
     } else {
         bootContext = cpustate;
@@ -250,6 +255,17 @@ int TaskManager::ReadClock(GtosClockReadResult& result) const {
     InterruptGuard guard;
     if (!ClockBootstrapProcessor()) return GTOS_CLOCK_ERR_BAD_STATE;
     return clock.Read(result);
+}
+int TaskManager::ReadCpuClock(uint32_t scope, GtosCpuClockReadResult& result) const {
+    InterruptGuard guard;
+    if (scope != GTOS_CPU_CLOCK_THREAD && scope != GTOS_CPU_CLOCK_PROCESS)
+        return GTOS_CPU_CLOCK_ERR_UNSUPPORTED;
+    Task* task = CurrentTask();
+    if (!ClockBootstrapProcessor() || !task || !task->userMode || task->state != TaskRunning
+        || task->owner != this || !task->cpuProcess->userMode || task->cpuProcess->owner != this)
+        return GTOS_CPU_CLOCK_ERR_BAD_STATE;
+    return scope == GTOS_CPU_CLOCK_THREAD ? task->cpuClock.Read(scope, result)
+        : task->cpuProcess->processCpuClock.Read(scope, result);
 }
 uint32_t TaskManager::BootTicks() const { return bootTicks; }
 uint32_t TaskManager::ContextSwitches() const { return switches; }

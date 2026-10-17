@@ -1,0 +1,78 @@
+{
+  "ArchiveSHA256": "f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528",
+  "Archive": "F:/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a",
+  "ExtractedOrExecuted": false,
+  "ObjectCount": 14,
+  "Members": [
+    {
+      "SHA256": "c03aa02320a4ab9fd943ecc9a6a70cf073f0ade5c05fbcfc87f25c791e9cb4fd",
+      "Name": "libscalar_integer.ashldi3.o",
+      "Bytes": 696
+    },
+    {
+      "SHA256": "d73b283c4a0bbc139f9a1d87fe346841e216b37c9ea46240d0eb0e8cded4b261",
+      "Name": "libscalar_integer.ashrdi3.o",
+      "Bytes": 700
+    },
+    {
+      "SHA256": "dee4472a66a3dea5e66075cd3712439613bf9b2f5e747a4f028ece6fbf7e1cf9",
+      "Name": "libscalar_integer.lshrdi3.o",
+      "Bytes": 696
+    },
+    {
+      "SHA256": "000344f377bc109afcb3d1f42bea931740a71340c313c064e89d38fc7d1ede6b",
+      "Name": "libscalar_integer.muldi3.o",
+      "Bytes": 764
+    },
+    {
+      "SHA256": "1c6ace6dbb14560a6fd6f01c93648d288502c957f9b9b7704f0f7d149ae5866a",
+      "Name": "libscalar_integer.udivdi3.o",
+      "Bytes": 1060
+    },
+    {
+      "SHA256": "e16f972c9e939e8eb7306bc6363186c8da844218cbd54e932ae9901f3567fbd8",
+      "Name": "libscalar_integer.umoddi3.o",
+      "Bytes": 1024
+    },
+    {
+      "SHA256": "b7db1cc3dd02c0b7f00567de1ab5a699ee2f09e60dcaec4b99837c002630e9b2",
+      "Name": "libscalar_integer.udivmoddi4.o",
+      "Bytes": 1276
+    },
+    {
+      "SHA256": "7fef43ec119b1a999a991d9296c62c3dcd7b1160cf2a5c654fa79dac74943b05",
+      "Name": "libscalar_integer.divdi3.o",
+      "Bytes": 824
+    },
+    {
+      "SHA256": "14d118f219bf0424aabe6871ec09fb50bddda271ae8cab1a0c1ab3aca7c09ef6",
+      "Name": "libscalar_integer.moddi3.o",
+      "Bytes": 844
+    },
+    {
+      "SHA256": "6785a2cc628d1fd2f2423ab7ae52b9ba6eb086ade09d307bc00f9f6dc4f0f622",
+      "Name": "libscalar_integer.clzdi2.o",
+      "Bytes": 692
+    },
+    {
+      "SHA256": "995f9a6b1f49ec7356e4910d10877016aea21df66d39a055c32fb2ef6f5b7163",
+      "Name": "libscalar_integer.ctzdi2.o",
+      "Bytes": 680
+    },
+    {
+      "SHA256": "0abdded54616f20d7d6b025ef4e775612547cfe5b17654d34cc5e43c954c4ee7",
+      "Name": "libscalar_integer.popcountdi2.o",
+      "Bytes": 764
+    },
+    {
+      "SHA256": "d0808c442f6e2cfd47e372790af899d603e496b5e41d0870588219954564ea32",
+      "Name": "libscalar_integer.paritydi2.o",
+      "Bytes": 704
+    },
+    {
+      "SHA256": "6d941fe2c10dcc28861348eb9d5bc583ed987280787cd1e01ad2075c42475ff1",
+      "Name": "libscalar_integer.bswapdi2.o",
+      "Bytes": 672
+    }
+  ]
+}

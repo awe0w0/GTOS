@@ -1,0 +1,42 @@
+[
+  {
+    "Source": "F:/GTOS-Chromium/sources/GTOS/include/process/native_runtime.h",
+    "SHA": "65f57307a6313a71841c96afeb97b9ab4fec57ebdd3c6a14cadc9825c8f018f3",
+    "Destination": "include/process/native_runtime.h"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/sources/GTOS/src/process/native_runtime.cpp",
+    "SHA": "761039a61fc40dc5e564406ac9523cbc1002c23da463c5d1684ca02d80be365c",
+    "Destination": "src/process/native_runtime.cpp"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/artifacts/native-environment-20261017-a/source/include/process/environment_abi.h",
+    "SHA": "786c7b4384e796f98135da4f8ffc8d1ce7fe39928c122b0b746b4d5d3ace9e40",
+    "Destination": "include/process/environment_abi.h"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/artifacts/native-environment-20261017-a/source/include/process/native_environment.h",
+    "SHA": "5ebfd8d02050e1673c78243942e4378963dfc72af5c716135453ee31916f24a3",
+    "Destination": "include/process/native_environment.h"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/artifacts/native-cpu-clock-20261016-a/source/include/multitasking.h",
+    "SHA": "9db2b4a83d872d62f99a289ea69c7ce6c0a87ead78930b245d21b5cb7e11314d",
+    "Destination": "include/multitasking.h"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/artifacts/native-cpu-clock-20261016-a/source/src/multitasking.cpp",
+    "SHA": "aca45e32461925b494542d98e53614ea0a3ac4a2c39f7df2aaeafc79df2d15e2",
+    "Destination": "src/multitasking.cpp"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/artifacts/native-cpu-clock-20261016-a/source/include/process/cpu_clock_abi.h",
+    "SHA": "842f44ca9e0ea8214591fd1e68fc93db3d65cb40cbdab29b724ec1f3c334250b",
+    "Destination": "include/process/cpu_clock_abi.h"
+  },
+  {
+    "Source": "F:/GTOS-Chromium/artifacts/native-cpu-clock-20261016-a/source/include/process/native_cpu_clock.h",
+    "SHA": "6e84da46ada781dce5d3452e2b37b4a3ccf8b398919c9fcfa458917744902563",
+    "Destination": "include/process/native_cpu_clock.h"
+  }
+]

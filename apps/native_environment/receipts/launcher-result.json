@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-pma-20261017-a/merge-guest-v2.py"
+  ],
+  "shell": false,
+  "returncode": 0,
+  "seconds": 120.346126027,
+  "child_sha256": "8975fda7cc3a8edcb15fb3ddcf33c5fa5180ada9da5197add09a2dd3ce8e7a9e",
+  "guard_sha256": "7a51f44a6c9e5f94a83a29eff5f1453090dd9b5ee7fab20c54a60b96c9b3a18f",
+  "launcher_log_sha256": "57dfca1ab473f2b30d8b14054d328d26e5c909500bc6d26f274b1e852529e84c"
+}
