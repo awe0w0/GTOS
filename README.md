@@ -47,6 +47,11 @@ BSP 多上下文验收见各原生模块，不构成通用 SMP 或浏览器多�
 真实 DIR/FILE 游标、errno、堆失败、ThreadChecker/TLS，以及正常和故障后的
 精确资源回收；完整原始 Muxer 编译通过。浏览器首帧仍待接入。
 
+[原生事件与内核等待](apps/native_events/README.md)已验证有所有权的事件别名、
+手动/自动复位、WaitAny、真实睡眠/唤醒、关闭取消、tick 回绕和故障回收，
+四组 CPL3 客体均精确恢复物理帧及事件资源。服务需在运行时激活前显式安装；
+完整 Chromium 消息泵、Mojo 端点和窗口输入仍待接入。
+
 ## 构建与运行
 
 需要支持 i386 独立环境的 GNU g++/binutils、GRUB i386-pc 工具、

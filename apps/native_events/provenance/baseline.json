@@ -1,0 +1,7 @@
+{
+  "canonical_dev": "7391ed6817e09c29b71d29fbef22fe2e94153173",
+  "files": {
+    "include/process/native_runtime.h": "de8f0c117013024528eda6d9ca0c8b0dc8c16ea4c2d90185935bd7542d8fa40a",
+    "src/process/native_runtime.cpp": "69aa2c76ccab909b449154d02b9892ad8cb1b4e6e1d2298ebc300daf9eb6994c"
+  }
+}

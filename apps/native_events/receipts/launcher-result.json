@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/guest-v2.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 42.855270883,
+  "child_sha256": "cf1bffc5dd321b5c9624e37f4669b0291244e9b7a85c5c3c687e008617b932dc",
+  "guard_sha256": "c6059f8139a50ed71480ff98533aab6a4120ddaac466daa48d88fa1c592cfb17",
+  "launcher_log_sha256": "5674ae12c757d3747f72fe20375f93f886fa2947400ef40d82bae37c306da7f7"
+}

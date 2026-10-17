@@ -1,0 +1,84 @@
+{
+  "module": "Native IA32 owned events and real blocking waits",
+  "canonical_baseline": "7391ed6817e09c29b71d29fbef22fe2e94153173",
+  "native_events_CPL3_pass": true,
+  "browser_pass": false,
+  "status_sha256": "ca8c5b0444299a53bb9b7c5a811e2760fd63d0458dcd773c14a90c522324cd0d",
+  "core_files": {
+    "include/process/event_abi.h": "585ca0df36de2c4715be67d2c3abb41ef160e5b332e82e98477d7ec5f9bc102f",
+    "include/process/native_event_endpoint.h": "7831c6773c0f0b6a0f5d5916a0e99ecf42ed54cd2e2e18e5f2ad1ebc67140005",
+    "include/process/native_events.h": "fa31fdafd7e34e8b186e2fc4f170c686e568de9b2826354b3d1af64ad149e6bf",
+    "include/process/native_runtime.h": "65f57307a6313a71841c96afeb97b9ab4fec57ebdd3c6a14cadc9825c8f018f3",
+    "src/process/native_events.cpp": "fd812bf84a773c57631896cc9f2e4efbc10af4345c01695bb9b388e8d423b381",
+    "src/process/native_runtime.cpp": "761039a61fc40dc5e564406ac9523cbc1002c23da463c5d1684ca02d80be365c"
+  },
+  "observations": [
+    {
+      "name": "O0-32M-smp1",
+      "values": {
+        "parks": 15,
+        "immediate": 80,
+        "fp_init": 9,
+        "fp_invalid": 9,
+        "free": 7062,
+        "expected": 7062,
+        "handles": 0,
+        "objects": 0
+      },
+      "kernel_sha256": "7a109c6f9ef716f8921ae530b947eb8f69b2444ca0e0d8f7c59fe5a4f3d3e3e0",
+      "user_sha256": "c931064b3c9f1d579a1417120ea31695a4cfb47e8405b4d0576abb2dba39badd",
+      "log_sha256": "678cdbe73ec5207af598d855280e834adced13f537705b74204c6c5e5b51f375"
+    },
+    {
+      "name": "O0-64M-smp4",
+      "values": {
+        "parks": 15,
+        "immediate": 80,
+        "fp_init": 9,
+        "fp_invalid": 9,
+        "free": 15246,
+        "expected": 15246,
+        "handles": 0,
+        "objects": 0
+      },
+      "kernel_sha256": "7a109c6f9ef716f8921ae530b947eb8f69b2444ca0e0d8f7c59fe5a4f3d3e3e0",
+      "user_sha256": "c931064b3c9f1d579a1417120ea31695a4cfb47e8405b4d0576abb2dba39badd",
+      "log_sha256": "65a7754b14c2445d3161d182851e2d10359944a2a37fc5bba812c71e4d34be8b"
+    },
+    {
+      "name": "O2-32M-smp1",
+      "values": {
+        "parks": 15,
+        "immediate": 80,
+        "fp_init": 9,
+        "fp_invalid": 9,
+        "free": 7065,
+        "expected": 7065,
+        "handles": 0,
+        "objects": 0
+      },
+      "kernel_sha256": "8de7b077c59dc2fe70bfdc9891e8a0d4009dc2e283206f3298e9d0a7d068b78e",
+      "user_sha256": "49b8d9355feb129c20915401e0f5b91973776b9e6cde09d6a94f8d8deccc08e0",
+      "log_sha256": "c5f6ee9e2170d15ebcbbb9e7f5cb2a7584a2ae3240ac5aebb4673e2368abe76f"
+    },
+    {
+      "name": "O2-64M-smp4",
+      "values": {
+        "parks": 15,
+        "immediate": 80,
+        "fp_init": 9,
+        "fp_invalid": 9,
+        "free": 15249,
+        "expected": 15249,
+        "handles": 0,
+        "objects": 0
+      },
+      "kernel_sha256": "8de7b077c59dc2fe70bfdc9891e8a0d4009dc2e283206f3298e9d0a7d068b78e",
+      "user_sha256": "49b8d9355feb129c20915401e0f5b91973776b9e6cde09d6a94f8d8deccc08e0",
+      "log_sha256": "6d8787a178c152f9394bccf4504db6de444b16c337ea05a6a978e6409f85ae1b"
+    }
+  ],
+  "explicit_install_required": true,
+  "production_image_updated": false,
+  "replay_scope": "Fixed private paths and qualified dependencies retained; no empty-host cold-build claim"
+}

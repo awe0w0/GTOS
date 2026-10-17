@@ -87,7 +87,7 @@ namespace {
 }
 NativeRuntime* NativeRuntime::active = 0;
 NativeRuntime::NativeRuntime() : paging(0), frames(0), scheduler(0), gdt(0),
-    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0) {
+    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), events(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
@@ -99,6 +99,12 @@ bool NativeRuntime::AttachFiles(NativeFileEndpoint& endpoint) {
     InterruptGuard guard;
     if (enabled || files) return false;
     files = &endpoint;
+    return true;
+}
+bool NativeRuntime::AttachEvents(NativeEventEndpoint& endpoint) {
+    InterruptGuard guard;
+    if (enabled || events || !endpoint.SetNotifier(EventNotification, this)) return false;
+    events = &endpoint;
     return true;
 }
 bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& allocator) {
@@ -193,6 +199,7 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     id = slot.status.id = nextId++; slot.status.directory = slot.space.DirectoryAddress();
     slot.status.live = slot.occupied = true; ++statistics.created;
     slot.process = &slot; slot.stackHandle = 0;
+    slot.eventWaitCount = 0; slot.eventWaitFrame = 0;
     slot.userStackBegin = stackBottom; slot.userStackEnd = UserStackTop;
     return true;
 }
@@ -334,6 +341,7 @@ void NativeRuntime::StopGroup(Slot& process, uint32_t code) {
         Slot& member = slots[i];
         if (!member.occupied || member.process != &process || !member.status.live) continue;
         member.status.live = false; member.status.exitCode = code;
+        member.eventWaitCount = 0; member.eventWaitFrame = 0;
         scheduler->TerminateTask(&member.task);
     }
 }
@@ -415,6 +423,7 @@ int NativeRuntime::CreateThread(Slot& caller, const GtosThreadCreateRequest& req
     }
     Zero(&target->status, sizeof(target->status));
     target->process = &process; target->stackHandle = request.stack_handle;
+    target->eventWaitCount = 0; target->eventWaitFrame = 0;
     target->userStackBegin = begin; target->userStackEnd = end;
     target->status.id = nextId++; target->status.directory = space.DirectoryAddress();
     target->status.live = target->occupied = true; ++statistics.created;
@@ -439,18 +448,91 @@ int NativeRuntime::TryJoin(Slot& caller, const GtosThreadJoinRequest& request) {
         if (!space.CopyToUser(request.result_va, &target.status.exitCode, sizeof(uint32_t)))
             return GTOS_THREAD_ERR_BAD_ADDRESS;
         target.status.reaped = true; target.occupied = false; target.stackHandle = 0;
+        target.eventWaitCount = 0; target.eventWaitFrame = 0;
         target.process = &target; ++statistics.reaped;
         return 0;
     }
     return GTOS_THREAD_ERR_NO_THREAD;
 }
+void NativeRuntime::EventNotification(void* context) {
+    ((NativeRuntime*)context)->WakeEventWaiters();
+}
+void NativeRuntime::WakeEventWaiters() {
+    InterruptGuard guard;
+    if (!enabled || !scheduler || !events) return;
+    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+        Slot& thread = slots[i];
+        if (!thread.occupied || !thread.status.live || !thread.eventWaitCount
+            || !thread.eventWaitFrame || thread.task.State() != TaskSleeping) continue;
+        // A kernel manager can wake a timed-out/parked task and put it into
+        // another sleep before it returns to userspace. That sleep is not
+        // this event transaction and must not consume its signal or frame.
+        if (thread.task.Statistics().sleeps != thread.eventWaitSleepCount) {
+            thread.eventWaitCount = 0; thread.eventWaitFrame = 0; continue;
+        }
+        const int32_t result = events->Select(thread.process->status.id,
+            thread.eventWaitHandles, thread.eventWaitCount);
+        if (result == GTOS_EVENT_ERR_PENDING) continue;
+        // A timer timeout changes Sleeping to Ready first. Never write a
+        // resumed task's frame, nor retain pointers to its mutable user pages.
+        thread.eventWaitFrame->eax = (uint32_t)result;
+        thread.eventWaitCount = 0; thread.eventWaitFrame = 0;
+        scheduler->WakeTask(&thread.task);
+    }
+}
+CPUState* NativeRuntime::WaitForEvents(Slot& thread, CPUState* cpu) {
+    InterruptGuard guard;
+    if (!events) { cpu->eax = (uint32_t)GTOS_EVENT_ERR_UNAVAILABLE; return cpu; }
+    if (cpu->ecx != sizeof(GtosEventWaitRequest)) {
+        cpu->eax = (uint32_t)GTOS_EVENT_ERR_INVALID; return cpu;
+    }
+    GtosEventWaitRequest request;
+    ProcessAddressSpace& space = thread.Space();
+    if (!space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+        cpu->eax = (uint32_t)GTOS_EVENT_ERR_BAD_ADDRESS; return cpu;
+    }
+    if (request.version != GTOS_EVENT_ABI_VERSION) {
+        cpu->eax = (uint32_t)GTOS_EVENT_ERR_UNAVAILABLE; return cpu;
+    }
+    if (!request.count || request.count > GTOS_EVENT_WAIT_LIMIT
+        || request.timeout_ticks > GTOS_EVENT_TIMEOUT_LIMIT) {
+        cpu->eax = (uint32_t)GTOS_EVENT_ERR_INVALID; return cpu;
+    }
+    uint32_t handles[GTOS_EVENT_WAIT_LIMIT];
+    if (!space.CopyFromUser(handles, request.handles_va, request.count * sizeof(uint32_t))) {
+        cpu->eax = (uint32_t)GTOS_EVENT_ERR_BAD_ADDRESS; return cpu;
+    }
+    int32_t result = events->Select(thread.process->status.id, handles, request.count);
+    if (result != GTOS_EVENT_ERR_PENDING) { cpu->eax = (uint32_t)result; return cpu; }
+    cpu->eax = (uint32_t)GTOS_EVENT_ERR_TIMEOUT;
+    if (!request.timeout_ticks) return cpu;
+    if (!scheduler->SleepTask(&thread.task, request.timeout_ticks)) {
+        cpu->eax = (uint32_t)GTOS_EVENT_ERR_UNAVAILABLE; return cpu;
+    }
+    for (uint32_t i = 0; i < request.count; ++i) thread.eventWaitHandles[i] = handles[i];
+    thread.eventWaitCount = request.count; thread.eventWaitFrame = cpu;
+    thread.eventWaitSleepCount = thread.task.Statistics().sleeps;
+    // State check, sleep publication and rescheduling are one BSP IF0 action.
+    // Timeout IRQs return the prewritten TIMEOUT; Set/Close replace it on wake.
+    return scheduler->Reschedule(cpu);
+}
 CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     Slot* thread = Current();
     if (!cpu || (cpu->cs & 3) != 3 || !thread) return 0;
+    thread->eventWaitCount = 0; thread->eventWaitFrame = 0;
     Slot* slot = thread->process;
     Observe(*thread, *cpu); ++thread->status.systemCalls;
     cpu->eflags = (cpu->eflags & 0xCD5U) | 0x202U;
     switch (cpu->eax) {
+    case GTOS_SYS_EVENT_CREATE:
+    case GTOS_SYS_EVENT_DUP:
+    case GTOS_SYS_EVENT_CLOSE:
+    case GTOS_SYS_EVENT_SET:
+    case GTOS_SYS_EVENT_RESET:
+        cpu->eax = events ? (uint32_t)events->Call(slot->status.id, slot->space, cpu->eax, cpu->ebx, cpu->ecx)
+            : (uint32_t)GTOS_EVENT_ERR_UNAVAILABLE;
+        break;
+    case GTOS_SYS_EVENT_WAIT: return WaitForEvents(*thread, cpu);
     case GTOS_SYS_FILE_OPEN:
     case GTOS_SYS_FILE_READ:
     case GTOS_SYS_FILE_WRITE:
@@ -855,11 +937,13 @@ uint32_t NativeRuntime::Reap() {
         if (!removed) continue;
         NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
         if (files) files->ReclaimOwner(process.status.id);
+        if (events) events->ReclaimOwner(process.status.id);
         if (!process.space.Destroy()) continue;
         for (uint32_t j = 0; j < MaximumProcesses; ++j) {
             Slot& member = slots[j];
             if (!member.occupied || member.process != &process) continue;
             member.occupied = false; member.status.reaped = true; member.stackHandle = 0;
+            member.eventWaitCount = 0; member.eventWaitFrame = 0;
             member.process = &member; ++statistics.reaped; ++reaped;
         }
     }

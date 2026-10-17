@@ -11,3 +11,5 @@ tools/native_dup/inputs.json -text whitespace=blank-at-eol,blank-at-eof,space-be
 tests/native_dup/verification.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Preserve the qualified directory capsule and original evidence bytes.
 apps/native_directory/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Preserve event capsule hashes, including CRLF JSON manifests.
+apps/native_events/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

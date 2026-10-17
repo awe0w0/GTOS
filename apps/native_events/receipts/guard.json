@@ -1,0 +1,58 @@
+{
+  "launcher_sha256": "a441fb66bdce1069464820cb1c8884dfcc8f40a6749054317df226d588740c09",
+  "child_sha256": "cf1bffc5dd321b5c9624e37f4669b0291244e9b7a85c5c3c687e008617b932dc",
+  "python_path": "/usr/bin/python3",
+  "python_sha256": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+  "executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/lld": "99ef321b93b2f3c8214bb592b633b3736d2df70f51e5454920131631f08e3412",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7",
+    "/mnt/f/GTOS-Chromium/toolchains/gtos-qemu8-native-files-a/root/usr/bin/qemu-system-i386": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+    "/mnt/f/GTOS-Chromium/toolchains/gtos-qemu8-native-files-a/root/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2": "c20a2dc8917c755f02b94049356320fe1f62ac7d9f8994731f807d9df39302da"
+  },
+  "elf_loader": "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
+  "directory_execute_permissions": false,
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "workspace_read_only": true,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/guest-02",
+  "source_write_denied": true,
+  "source_document_sha256_before": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_sha256_after": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_unchanged": true,
+  "rule_path_handles_retained": true,
+  "artifact_execution_denied": true,
+  "output_artifact_execution_denied": true,
+  "landlock_tcp_denied": true,
+  "landlock_abstract_socket_and_cross_domain_signal_scoped": true,
+  "output_symlink_creation_allowed": true,
+  "device_sink_exception": "/dev/null write-only sink; no IOCTL_DEV granted",
+  "network_disabled": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "minimum_child_environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "namespace_metadata": {
+    "net": {
+      "st_dev": 4,
+      "st_ino": 4026532221
+    },
+    "user": {
+      "st_dev": 4,
+      "st_ino": 4026532220
+    }
+  },
+  "namespace_ids": {
+    "net": 4026532221,
+    "user": 4026532220
+  }
+}

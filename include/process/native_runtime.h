@@ -6,6 +6,7 @@
 #include <process/native_fp.h>
 #include <process/native_realtime.h>
 #include <process/native_file_endpoint.h>
+#include <process/native_event_endpoint.h>
 #include <process/thread_abi.h>
 #include <process/elf32.h>
 namespace gtos { namespace process {
@@ -52,12 +53,15 @@ namespace gtos { namespace process {
             uint32_t stackFrames[KernelStackPages];
             Slot* process;
             uint32_t userStackBegin, userStackEnd, stackHandle;
+            uint32_t eventWaitHandles[GTOS_EVENT_WAIT_LIMIT], eventWaitCount, eventWaitSleepCount;
+            CPUState* eventWaitFrame;
             struct CodeRange { uint32_t begin, end; } code[Elf32MaximumSegments];
             struct DataRange { uint32_t begin, end; } data[Elf32MaximumSegments];
             uint32_t codeCount, dataCount;
             bool occupied;
             Slot() : task((uint16_t)0, 0), process(this), userStackBegin(UserStackBottom),
-                userStackEnd(UserStackTop), stackHandle(0), codeCount(0), dataCount(0), occupied(false) {}
+                userStackEnd(UserStackTop), stackHandle(0), eventWaitCount(0), eventWaitSleepCount(0), eventWaitFrame(0),
+                codeCount(0), dataCount(0), occupied(false) {}
             memory::ProcessAddressSpace& Space() { return process->space; }
             const memory::ProcessAddressSpace& Space() const { return process->space; }
         };
@@ -73,6 +77,7 @@ namespace gtos { namespace process {
         NativeFp fp;
         NativeRealtimeClock realtime;
         NativeFileEndpoint* files;
+        NativeEventEndpoint* events;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
         static NativeRuntime* active;
         Slot* Current();
@@ -81,6 +86,9 @@ namespace gtos { namespace process {
         void StopGroup(Slot&, uint32_t code);
         int CreateThread(Slot&, const GtosThreadCreateRequest&);
         int TryJoin(Slot&, const GtosThreadJoinRequest&);
+        CPUState* WaitForEvents(Slot&, CPUState*);
+        void WakeEventWaiters();
+        static void EventNotification(void*);
         bool StackPinned(const Slot&, uint32_t handle) const;
         bool ExecutableEntry(const Slot&, uint32_t entry) const;
         bool LoadedDataRange(const Slot&, uint32_t address, uint32_t bytes) const;
@@ -96,6 +104,7 @@ namespace gtos { namespace process {
         NativeRuntime();
         // Non-owning endpoint must outlive activation; attach only once, before Activate.
         bool AttachFiles(NativeFileEndpoint& endpoint);
+        bool AttachEvents(NativeEventEndpoint& endpoint);
         // Call after prepareIdentity, before enable/AP sharing. Guard aliases
         // are retained permanently; no alias changes after sealing.
         bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&);

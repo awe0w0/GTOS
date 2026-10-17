@@ -1,0 +1,16 @@
+{
+  "canonical_dev": "7391ed6817e09c29b71d29fbef22fe2e94153173",
+  "scope": "Authored private event service/runtime integration and independent CPL3 guest fixtures; not acceptance",
+  "files": {
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/candidate-v2/include/process/event_abi.h": "585ca0df36de2c4715be67d2c3abb41ef160e5b332e82e98477d7ec5f9bc102f",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/candidate-v2/include/process/native_event_endpoint.h": "7831c6773c0f0b6a0f5d5916a0e99ecf42ed54cd2e2e18e5f2ad1ebc67140005",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/candidate-v2/include/process/native_events.h": "fa31fdafd7e34e8b186e2fc4f170c686e568de9b2826354b3d1af64ad149e6bf",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/candidate-v2/include/process/native_runtime.h": "65f57307a6313a71841c96afeb97b9ab4fec57ebdd3c6a14cadc9825c8f018f3",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/candidate-v2/src/process/native_events.cpp": "fd812bf84a773c57631896cc9f2e4efbc10af4345c01695bb9b388e8d423b381",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/candidate-v2/src/process/native_runtime.cpp": "761039a61fc40dc5e564406ac9523cbc1002c23da463c5d1684ca02d80be365c",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/probe-v2/record.h": "3be0ea91b6ee8f7fe3117aee78798e8c82e2e123872b05091476477fba88582c",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/probe-v2/user.cpp": "4578db5edd157bda834b32790581a3de24b12c407ea2f32fb8414c999e4f2264",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/probe-v2/kernel.cpp": "1d7871e1e039c1222fdb5c8187e095d4a0e1c6cb610cc1afcd183940d741e79b",
+    "/mnt/f/GTOS-Chromium/artifacts/native-events-20261017-a/probe-v2/user.ld": "02567597fa9516aff535ea78d218529313ba79ee477b61b41527575a95dc0284"
+  }
+}
