@@ -1,0 +1,57 @@
+{
+  "launcher_sha256": "692e67202dcfdf2489b4437aa82c9da7bf278fa2be3d1b9760c5b7adea516482",
+  "child_sha256": "49f0313fb93367218be1e1bc3f4fa48e67913ccb5d691d4b1d39f6b2ac2907b5",
+  "worker_sha256": "43db110f3d8116ecab9b4e673c2e5b64f77997a649e8791ba11ebf9c32c31469",
+  "python_path": "/usr/bin/python3",
+  "python_sha256": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+  "executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06"
+  },
+  "elf_loader": "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
+  "directory_execute_permissions": false,
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "workspace_read_only": true,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01",
+  "source_write_denied": true,
+  "source_document_sha256_before": "ff3288a5b034217d344f74869d9cd652f03e13e1498ab2a27c6412715661c70e",
+  "source_document_sha256_after": "ff3288a5b034217d344f74869d9cd652f03e13e1498ab2a27c6412715661c70e",
+  "source_document_unchanged": true,
+  "rule_path_handles_retained": true,
+  "artifact_execution_denied": true,
+  "output_artifact_execution_denied": true,
+  "landlock_tcp_denied": true,
+  "landlock_abstract_socket_and_cross_domain_signal_scoped": true,
+  "output_symlink_creation_allowed": false,
+  "device_sink_exception": "/dev/null write-only sink; no IOCTL_DEV granted",
+  "network_disabled": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "minimum_child_environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "namespace_metadata": {
+    "net": {
+      "st_dev": 4,
+      "st_ino": 4026532219
+    },
+    "user": {
+      "st_dev": 4,
+      "st_ino": 4026532218
+    }
+  },
+  "own_child_subreaper": true,
+  "controller_starts_new_session": true,
+  "namespace_ids": {
+    "net": 4026532219,
+    "user": 4026532218
+  }
+}

@@ -1,0 +1,10 @@
+
+/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-01/build/obj/tools/gtos_clipboard_format_probe/probe.start.o:     file format elf32-i386
+
+
+Disassembly of section .text.entry:
+
+00000000 <NativeClipboardStart>:
+   0:	83 e4 f0                                        	and    $0xfffffff0,%esp
+   3:	e8 fc ff ff ff                                  	call   4 <NativeClipboardStart+0x4>
+   8:	0f 0b                                           	ud2    

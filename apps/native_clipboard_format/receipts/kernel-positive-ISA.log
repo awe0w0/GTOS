@@ -1,0 +1,2 @@
+PASS integer-only kernel interfaces: 156 source/header files
+PASS integer-only linked code: /mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/positive.bin: 35 input objects, 21393 instructions, 11 FP instructions inside exact allowances

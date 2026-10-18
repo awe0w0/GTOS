@@ -1,0 +1,262 @@
+{
+  "receipts/gn-probe-01-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/gn-probe-01/status.json",
+    "sha256": "4432e32ab77e8c01d1a5e8d919176efc5745d37960523ace5ca7461e336523f2"
+  },
+  "receipts/gn-probe-01-guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/gn-probe-01/guard.json",
+    "sha256": "3be8e259bab6139d1cc378534228bce0c8cde62262e97dc19ed5ca463ca6c2aa"
+  },
+  "receipts/gn-probe-01-launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/gn-probe-01/launcher-result.json",
+    "sha256": "78ae4afbf3624d3a6b733ac1fb11e3d082981f0eb71004d36c3df7e862c59adf"
+  },
+  "replay/gn-probe-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/gn-probe-v1.py",
+    "sha256": "db1a4a8a44b4a9f52b099ec8c655eb5ceaceae662fe7280790d0fe5a88be93e4"
+  },
+  "replay/launch-gn-probe-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/launch-gn-probe-v1.py",
+    "sha256": "408c64acf3697734afc36b94908b71117f86a46b96433b6883602156dfaeef1a"
+  },
+  "receipts/compile-01-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-01/status.json",
+    "sha256": "9dd79f17f71913ddbda48f794aad708bca2990c299b6086ee01385e0b043141c"
+  },
+  "receipts/compile-01-guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-01/guard.json",
+    "sha256": "1a2477d3bc91d899145e7d50b40e3d30ea1d6e5fb84a9d531bad22a0a229fc7a"
+  },
+  "receipts/compile-01-launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-01/launcher-result.json",
+    "sha256": "f4c8e1c77ec810e0a3aff0861519875e183befb0df6723d998b98d8349bfae61"
+  },
+  "replay/compile-probe-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-probe-v1.py",
+    "sha256": "17eccb856ace03de62562ff4187b3baeeccf15be82d02560c568325284f0af66"
+  },
+  "replay/launch-compile-probe-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/launch-compile-probe-v1.py",
+    "sha256": "213928481f97b8a19d6fcaee6faae580f2c38c7b5e2e039beea03390756237d1"
+  },
+  "receipts/provider-source-05-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/provider-source-05/status.json",
+    "sha256": "49223f63db9194e80f1ab27d4a4f0b99bc11d9f4623a6a28f07864a44ee2f2cf"
+  },
+  "receipts/provider-source-05-guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/provider-source-05/guard.json",
+    "sha256": "d1697744d8b3dcf3bd2a9be9929dc89b381cc9a20db283cf518da017995aaeac"
+  },
+  "receipts/provider-source-05-launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/provider-source-05/launcher-result.json",
+    "sha256": "f2f725ba3b9e0387498cebd357ba597b237e796c7fe755175e485aa2e5350f67"
+  },
+  "replay/provider-source-v5.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/provider-source-v5.py",
+    "sha256": "062c638b18ab26af0a62a9e3eeac559cd39d51f32fc44c006a42cbdc70f05dc8"
+  },
+  "replay/launch-provider-source-v5.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/launch-provider-source-v5.py",
+    "sha256": "4f3fbc19cca9433f8d8898dd9d8a0dd299265efa08a7748b7938622e281c6f27"
+  },
+  "receipts/link-02-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/link-02/status.json",
+    "sha256": "00a1404d4177975589c9072335e21fc578aeb11622380f35dc5699b6b7bf2bd0"
+  },
+  "receipts/link-02-guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/link-02/guard.json",
+    "sha256": "d42c16e602fa145c590a6017f52f85a2502eb22fc222e702f8486fc9c35ac66c"
+  },
+  "receipts/link-02-launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/link-02/launcher-result.json",
+    "sha256": "1c59a5e1ec5b482314887ed00e474de428de4ddd0cd2b0684e89c6954a712adf"
+  },
+  "replay/link-probe-v2.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/link-probe-v2.py",
+    "sha256": "e4e24a18b523af229c1569d651a2a009597b5480bcaf011127075a5b7b782655"
+  },
+  "replay/launch-link-probe-v2.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/launch-link-probe-v2.py",
+    "sha256": "8de9b43849bed2392ccf57b6dae8e0f044960692e067acc968e5f3058fdfae6d"
+  },
+  "receipts/isa-01-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/status.json",
+    "sha256": "39679642eae38c2880a9bed51adaff40747f1f5896542c61fe82f1ce10eb64ae"
+  },
+  "receipts/isa-01-guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/guard.json",
+    "sha256": "790a02f21cb65c2079ee4a07b3393f1f31d6fe76a98786764eb1063e6dcc465a"
+  },
+  "receipts/isa-01-launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/launcher-result.json",
+    "sha256": "ca9f57b3cdcddcd6cee9d31938ecb3c028b8da8b5b1756d2661471a3fec2d68f"
+  },
+  "replay/isa-review-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-review-v1.py",
+    "sha256": "daf04c171966b6272215ccf4ebf67c6f16ce9615969c2152edb834d3d29f0aea"
+  },
+  "replay/launch-isa-review-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/launch-isa-review-v1.py",
+    "sha256": "74190c975f83f911e073e69dd37911f850a9dd10461eeeb8ca0bcd5b90616c05"
+  },
+  "receipts/guest-01-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/status.json",
+    "sha256": "dafe9243d58f70eaedfb199ffa49e2a4c5f21d4997d7308ab5e50f5b5e3702d0"
+  },
+  "receipts/guest-01-guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/guard.json",
+    "sha256": "9d66b6874f5e195a53272d6de92ffbe40fd6ad3d579ba0ff13206b0a8298b1ce"
+  },
+  "receipts/guest-01-launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/launcher-result.json",
+    "sha256": "36f328e2006f129dd2f3beabbd370e782d2f68ceaaaa0bba5391307705f2c9bb"
+  },
+  "replay/guest-probe-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-probe-v1.py",
+    "sha256": "5ccdba9ffdbe5f3a87534d5d3da7b91f8aae638b0026b4398cc63d0ef165960e"
+  },
+  "replay/launch-guest-probe-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/launch-guest-probe-v1.py",
+    "sha256": "ef558ef1523041ee461d2444cf2ff9c54d879d122da89de5a8cb8b4d0a9d3ab1"
+  },
+  "provenance/canonical-kernel-source-lock.json": {
+    "source": "/mnt/f/GTOS-Chromium/sources/GTOS/apps/native_environment/source-lock.json",
+    "sha256": "21ac0f2b88dc8e05310b1976b2b610863abea3d1a52d8f9cf16dcc5fc8041d34"
+  },
+  "provenance/clipboard-source-lock.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-source-lock-01.json",
+    "sha256": "9520e54015c69f1f06cd7db6974be013279585fcab18585a4415f1f6d73c1d94"
+  },
+  "provenance/probe-source-pins.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/probe-source-pins-01.json",
+    "sha256": "2cdcd9bfaa37bde63741ec2cd25994492ba1e3333ccd72082058104274d70749"
+  },
+  "replay/content-helper-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/content-helper-v1.py",
+    "sha256": "71cde6317ac58a201c3a467e3dd1d8bfbb9eee95973bc465180235058f296e9f"
+  },
+  "replay/content-dotfile-v1.gn": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/content-dotfile-v1.gn",
+    "sha256": "b876d7255675f80d2c47c43db3abfd0be5413be9927deb2c2257c9f266e25bef"
+  },
+  "receipts/original-format-compile-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-format-compile-02/status.json",
+    "sha256": "0b7e704222a57503715e3d09d979e714d80665db43ebc22ef40ffaab33e58d11"
+  },
+  "logs/positive-32M-smp1.log": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/positive-32M-smp1-guest.log",
+    "sha256": "f7fb91aae36745b081cb94206272273b10394bb79099f343bef672bfba753f5a"
+  },
+  "logs/positive-64M-smp4.log": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/positive-64M-smp4-guest.log",
+    "sha256": "e5495f9fe5e1f05ea80352abeaf405519121451866e418ed22d68971bbd8c1bc"
+  },
+  "logs/negative-32M-smp1.log": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/negative-32M-smp1-guest.log",
+    "sha256": "d55c8abe7ce0c8983f9da38c11ac7d97c94b404d5b0793d42266c189c6e91fc8"
+  },
+  "receipts/kernel-positive-ISA.log": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/positive-ISA.log",
+    "sha256": "1cb3d00f9f8fb7e698f1cec5e3dcb783dd70361a5b2dcc5882bb800414a29167"
+  },
+  "receipts/kernel-negative-ISA.log": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/guest-01/negative-ISA.log",
+    "sha256": "c44843522079e3c18178760c63d668bad5cf47ec41f92e625ff4cec104d683a1"
+  },
+  "receipts/user-checks.disassembly.txt": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/checks.disassembly.txt",
+    "sha256": "66278be34e16624cbdca94ee5999af7c1094e11800b475260b380d7897396d42"
+  },
+  "receipts/user-positive-entry.disassembly.txt": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/positive-entry.disassembly.txt",
+    "sha256": "192a25b262462faff76394ed2f2311ce10fb99d32e3b2319755891cfc2f6aa39"
+  },
+  "receipts/user-negative-entry.disassembly.txt": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/negative-entry.disassembly.txt",
+    "sha256": "da36b27dd14783d9ccdd0c18ecdc925288362f71bdf566a14573f392d8579fb8"
+  },
+  "receipts/user-start.disassembly.txt": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/start.disassembly.txt",
+    "sha256": "03af843a35058ad56a7bfaab87bf6691a4f6b0bc8c8296f2cc5dc5931389853a"
+  },
+  "receipts/user-original-format.disassembly.txt": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-01/original-format.disassembly.txt",
+    "sha256": "69a69c6a56cdb4e9ce3b1be37208066f77ceadca63d3900a63fe29c881b57f3e"
+  },
+  "licenses/Chromium-LICENSE.txt": {
+    "source": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/LICENSE",
+    "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b"
+  },
+  "provenance/blink-enums/status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/status.json",
+    "sha256": "59b508a4fe90b8dfa7cc08b666bcda6e112320b9bb444ed13b5d02007c7d432f"
+  },
+  "provenance/blink-enums/guard.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/guard.json",
+    "sha256": "215f99dc52314289e2a1bc8d2630d3451007e8b9523f4a6573a7ef3410d40708"
+  },
+  "provenance/blink-enums/launcher-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/launcher-result.json",
+    "sha256": "4ac238ab13201ce16d84b757be1865a83adddc321f00b703168b8406220bf4b6"
+  },
+  "provenance/blink-enums/producer-source-pins.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/pins-01.json",
+    "sha256": "ff3288a5b034217d344f74869d9cd652f03e13e1498ab2a27c6412715661c70e"
+  },
+  "provenance/blink-enums/preparation-result.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/preparation-result-01.json",
+    "sha256": "4b6500f61518afa92a67b5669764bd4ff52e6f5a1b31011f50da1f0a2b6a6478"
+  },
+  "replay/blink-enums/generate-enums-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/generate-enums-v1.py",
+    "sha256": "49f0313fb93367218be1e1bc3f4fa48e67913ccb5d691d4b1d39f6b2ac2907b5"
+  },
+  "replay/blink-enums/enum-worker-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/enum-worker-v1.py",
+    "sha256": "43db110f3d8116ecab9b4e673c2e5b64f77997a649e8791ba11ebf9c32c31469"
+  },
+  "replay/blink-enums/launch-enums-v1.py": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/launch-enums-v1.py",
+    "sha256": "692e67202dcfdf2489b4437aa82c9da7bf278fa2be3d1b9760c5b7adea516482"
+  },
+  "replay/blink-enums/prepare-pins-v1.ps1": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/prepare-pins-v1.ps1",
+    "sha256": "48313fc3ed41d5e61270e5e6daa088d58c245924d7fe85f36f4824d509a49f0d"
+  },
+  "provenance/blink-enums/generated/origin_trial_feature.mojom": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/origin-trials/build/gen/third_party/blink/public/mojom/origin_trials/origin_trial_feature.mojom",
+    "sha256": "ecd851683355b56abc006a8441de2cf6de9c1f9364364bda99477743ec51ffc6"
+  },
+  "provenance/blink-enums/origin-trials-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/origin-trials/worker-status.json",
+    "sha256": "931b671ad67921ca5506cbf52af2ab3d387553d85a1b83d97c3e8de093ee8865"
+  },
+  "provenance/blink-enums/origin-trials-job.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/origin-trials/worker-job.json",
+    "sha256": "eda0763bc7af6034153cd5e2deab62b64bd347ebfa8ca0842556ad4b6c93f9a8"
+  },
+  "provenance/blink-enums/generated/runtime_feature.mojom": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/runtime-feature/build/gen/third_party/blink/public/mojom/runtime_feature_state/runtime_feature.mojom",
+    "sha256": "cb0cace59830a3fb7b0088c31b639e5974ccd9e03d0499606114e888a96608dc"
+  },
+  "provenance/blink-enums/runtime-feature-status.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/runtime-feature/worker-status.json",
+    "sha256": "87998541acbe0f6b15b0a350cf82e4842a01e97ab109742a7aa0e8b49e0bf00f"
+  },
+  "provenance/blink-enums/runtime-feature-job.json": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/run-01/runtime-feature/worker-job.json",
+    "sha256": "fcaaf9cb6cae9206ac29e79a27d96d0070eac5c509a8e6e61f96c3220908b666"
+  },
+  "provenance/execution-review.md": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/execution-review-v1.md",
+    "sha256": "20790bc2a52616a3e1f676676904bff31bda08e7412ca9b706bf1764ee089bab"
+  },
+  "provenance/qualification-review.md": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/qualification-review-v1.md",
+    "sha256": "b171549e34554bef3d121e8449b80765aef70bc62ec82d653c925fabd6431deb"
+  },
+  "replay/publish-module-v1.ps1": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/publish-module-v1.ps1",
+    "sha256": "2c2fb19ca580806f40d0a1cee2145c1e401622f99dccff9e20fe522825b8137b"
+  }
+}

@@ -1,0 +1,42 @@
+
+/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-01/build/obj/tools/gtos_clipboard_format_probe/negative_entry.entry.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00000000 <NativeClipboardEntry>:
+   0:	56                                              	push   %esi
+   1:	c7 05 08 00 00 00 01 00 00 00                   	movl   $0x1,0x8
+   b:	e8 fc ff ff ff                                  	call   c <NativeClipboardEntry+0xc>
+  10:	ba 01 00 00 00                                  	mov    $0x1,%edx
+  15:	be 0c 00 00 00                                  	mov    $0xc,%esi
+  1a:	85 c0                                           	test   %eax,%eax
+  1c:	75 5d                                           	jne    7b <NativeClipboardEntry+0x7b>
+  1e:	e8 fc ff ff ff                                  	call   1f <NativeClipboardEntry+0x1f>
+  23:	89 c1                                           	mov    %eax,%ecx
+  25:	ba 02 00 00 00                                  	mov    $0x2,%edx
+  2a:	b8 02 00 00 00                                  	mov    $0x2,%eax
+  2f:	85 c9                                           	test   %ecx,%ecx
+  31:	75 4d                                           	jne    80 <NativeClipboardEntry+0x80>
+  33:	be 00 00 00 00                                  	mov    $0x0,%esi
+  38:	81 fe 00 00 00 00                               	cmp    $0x0,%esi
+  3e:	74 13                                           	je     53 <NativeClipboardEntry+0x53>
+  40:	ff 16                                           	call   *(%esi)
+  42:	ff 05 1c 00 00 00                               	incl   0x1c
+  48:	83 c6 04                                        	add    $0x4,%esi
+  4b:	81 fe 00 00 00 00                               	cmp    $0x0,%esi
+  51:	75 ed                                           	jne    40 <NativeClipboardEntry+0x40>
+  53:	c7 05 08 00 00 00 02 00 00 00                   	movl   $0x2,0x8
+  5d:	68 00 00 00 00                                  	push   $0x0
+  62:	e8 fc ff ff ff                                  	call   63 <NativeClipboardEntry+0x63>
+  67:	83 c4 04                                        	add    $0x4,%esp
+  6a:	a3 18 00 00 00                                  	mov    %eax,0x18
+  6f:	ba 03 00 00 00                                  	mov    $0x3,%edx
+  74:	be 08 00 00 00                                  	mov    $0x8,%esi
+  79:	eb 05                                           	jmp    80 <NativeClipboardEntry+0x80>
+  7b:	b8 01 00 00 00                                  	mov    $0x1,%eax
+  80:	89 16                                           	mov    %edx,(%esi)
+  82:	50                                              	push   %eax
+  83:	e8 fc ff ff ff                                  	call   84 <NativeClipboardEntry+0x84>
+  88:	83 c4 04                                        	add    $0x4,%esp
+  8b:	0f b9 40 01                                     	ud1    0x1(%eax),%eax

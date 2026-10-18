@@ -1,0 +1,18 @@
+{
+  "complete": true,
+  "preparation_script_sha256": "48313fc3ed41d5e61270e5e6daa088d58c245924d7fe85f36f4824d509a49f0d",
+  "pins_sha256": "ff3288a5b034217d344f74869d9cd652f03e13e1498ab2a27c6412715661c70e",
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "Git_original_blobs_verified": 56,
+  "production_import_files": 51,
+  "direct_declarations": 5,
+  "reused_original_runtime_files": 29,
+  "new_production_files": 22,
+  "new_declaration_files": 5,
+  "new_snapshot_files": 27,
+  "actual_GN_producer_stages": 2,
+  "inputs_unchanged": true,
+  "executed_project_scripts": false,
+  "network_operations": false,
+  "old_packages_modified": false
+}

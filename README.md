@@ -74,6 +74,12 @@ BoringSSL、Content 首帧、网页、视频和 HTML5 仍待验收。
 Content 依赖，六个正式编译对象与原生验收对象逐字节一致；文件映射/flush、其他
 SysInfo 后端和浏览器运行仍待接入。
 
+[原生剪贴板格式类型](apps/native_clipboard_format/README.md)已接入完整原始 MIME 字符串实现，
+四次 CPL3 正例各完成 289 项检查，覆盖序列化、比较、复制、生命周期和自定义格式边界。
+两次非 ASCII 自定义格式负例均经真实 CHECK/abort，以 `0x48000021` 退出；六次运行后
+物理帧、任务与 FP 上下文资源均恢复。另已通过两个原始 Blink 枚举 schema 生成器；
+桌面剪贴板数据服务、Mojo C++、Content 首帧和浏览器运行仍待接入。
+
 ## 构建与运行
 
 需要支持 i386 独立环境的 GNU g++/binutils、GRUB i386-pc 工具、

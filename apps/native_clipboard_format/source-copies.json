@@ -1,0 +1,46 @@
+{
+  "patches/ui/base/clipboard/clipboard_format_type.h": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-source-v1/ui/base/clipboard/clipboard_format_type.h",
+    "sha256": "7998bbddddc87f6e138a273e5afbe2628b8dfdc369fb7a9f2c66c840f6e17056"
+  },
+  "patches/ui/base/clipboard/clipboard_format_type_aura.cc": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-source-v1/ui/base/clipboard/clipboard_format_type_aura.cc",
+    "sha256": "b5967089268802856da989a00b44c3ca60af5a374314b533a4577bb21dc4aed8"
+  },
+  "patches/ui/base/clipboard/BUILD.gn": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-source-v1/ui/base/clipboard/BUILD.gn",
+    "sha256": "a85375dc99f6c7dce5888811528808847cc2e5ef0e7cc75d54bdef0cadb4579c"
+  },
+  "probe/BUILD.gn": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/gn-probe-source-v1/tools/gtos_clipboard_format_probe/BUILD.gn",
+    "sha256": "9fd71d683022756d3e5f13d4e4416184fbbc80869e22eaf315cd7db599b756fc"
+  },
+  "probe/api.h": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/api.h",
+    "sha256": "5d2a6be3d586bbbc1a3afc39a82321efedbd34cb84e51bb485334640ed600ae9"
+  },
+  "probe/checks.cc": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/checks.cc",
+    "sha256": "7304618ddcbc0da463f92feb50667eda634fcaac8dcddaa61233027a7c62f930"
+  },
+  "probe/entry.cc": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/entry.cc",
+    "sha256": "ff5caeaa2b40d01b5bd79e5f89afb556153dcf188ba11897fd5607aecc9773b3"
+  },
+  "probe/start.s": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/start.s",
+    "sha256": "1cf224759251a5608775a8c5ac0ea60179da8dd86e8682503537b3897a7f505b"
+  },
+  "probe/clipboard.ld": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/clipboard-v1.ld",
+    "sha256": "83bdb170fe2d18c6164d9490409a3696e481397a0b29b973736f78675e72fca9"
+  },
+  "probe/kernel.cpp": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/clipboard-kernel-v1.cpp",
+    "sha256": "ab9add5faa19abfb56a4046a4f4a3dca11cdeab8fa06bdfaa9c34ceaf5a76517"
+  },
+  "README.md": {
+    "source": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/public-README-draft.md",
+    "sha256": "68ac7b12c1d3bfe28bdcb7c1ae466e35736219c142a76fc978ec52d9c528f2c0"
+  }
+}

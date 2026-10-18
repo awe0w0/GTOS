@@ -1,0 +1,30 @@
+{
+  "revision": "04bca2584cddb39e134fc7c16bb2886e02863d0e",
+  "raw_root": "/mnt/f/GTOS-Chromium/sources/chromium-full/src",
+  "snapshot_root": "/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-source-v1",
+  "identity_method": "Fixed revision ls-tree and hash-object --no-filters -- with three literal relative paths; matching 100644 blobs. No object writes or lazy fetch.",
+  "files": {
+    "ui/base/clipboard/clipboard_format_type.h": {
+      "mode": "100644",
+      "blob": "7f278ce17a7a9f0a74c6e0d2d3dd856e4150c16b",
+      "raw_sha256": "790997679bee4cb9fa79030bc040cced57270424d33b1b76d949733f8e44cbb0",
+      "snapshot_sha256": "7998bbddddc87f6e138a273e5afbe2628b8dfdc369fb7a9f2c66c840f6e17056",
+      "delta": "Only add IS_GTOS to existing string storage/private constructor platform branch."
+    },
+    "ui/base/clipboard/BUILD.gn": {
+      "mode": "100644",
+      "blob": "3c7a17dbeedc842c9d1073b0857af82e3afe3256",
+      "raw_sha256": "ec0982755cef40d53b7e76f981e916ef97983a1b1bb2e870bbdb8ff369f683d8",
+      "snapshot_sha256": "a85375dc99f6c7dce5888811528808847cc2e5ef0e7cc75d54bdef0cadb4579c",
+      "delta": "Only select existing Aura source when use_aura or is_gtos, and not is_win."
+    },
+    "ui/base/clipboard/clipboard_format_type_aura.cc": {
+      "mode": "100644",
+      "blob": "73accd10b5eafff97865a732129149ea1a8afb10",
+      "raw_sha256": "b5967089268802856da989a00b44c3ca60af5a374314b533a4577bb21dc4aed8",
+      "snapshot_sha256": "b5967089268802856da989a00b44c3ca60af5a374314b533a4577bb21dc4aed8",
+      "delta": "None: whole original MIME string implementation retained."
+    }
+  },
+  "scope": "Source identity and minimal private candidate only. GN/complete CXX/MD/native lifetime and negative ASCII CHECK gates are separate. No desktop clipboard data provider or browser acceptance."
+}

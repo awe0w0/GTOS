@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-blink-enums-20261018-a/generate-enums-v1.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 24.218867446999994,
+  "child_sha256": "49f0313fb93367218be1e1bc3f4fa48e67913ccb5d691d4b1d39f6b2ac2907b5",
+  "all_own_descendants_reaped": true,
+  "adopted_descendants": [],
+  "failure": null,
+  "guard_sha256": "215f99dc52314289e2a1bc8d2630d3451007e8b9523f4a6573a7ef3410d40708",
+  "launcher_log_sha256": "11eda573ebec6a1d7a304a96a3b6c99535462604c73edd876a3cc11124fee4fd"
+}

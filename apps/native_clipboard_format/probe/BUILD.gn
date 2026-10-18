@@ -1,0 +1,37 @@
+# Copyright 2026 The GTOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_os == "gtos" && current_cpu == "x86")
+
+# Keep the complete real format implementation in its production owner.
+# Only the scalar C ABI fixture is a separate native diagnostic source set.
+source_set("probe") {
+  testonly = true
+  sources = [
+    "api.h",
+    "checks.cc",
+    "entry.cc",
+    "start.s",
+  ]
+  deps = [ "//ui/base/clipboard:clipboard_types" ]
+}
+
+source_set("negative_entry") {
+  testonly = true
+  sources = [
+    "api.h",
+    "entry.cc",
+  ]
+  defines = [ "GTOS_CLIPBOARD_MODE=1" ]
+  deps = [ "//ui/base/clipboard:clipboard_types" ]
+}
+
+group("qualification_root") {
+  testonly = true
+  deps = [
+    ":probe",
+    ":negative_entry",
+    "//tools/gtos_base_class_probe:qualification_root",
+  ]
+}

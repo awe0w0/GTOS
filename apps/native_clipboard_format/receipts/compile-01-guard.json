@@ -1,0 +1,59 @@
+{
+  "launcher_sha256": "213928481f97b8a19d6fcaee6faae580f2c38c7b5e2e039beea03390756237d1",
+  "child_sha256": "17eccb856ace03de62562ff4187b3baeeccf15be82d02560c568325284f0af66",
+  "python_path": "/usr/bin/python3",
+  "python_sha256": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+  "executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/llvm-nm": "629e43f674d383d8c54d43f3254f80895a380c05a4afcdec27bb03dbb72b74bc"
+  },
+  "elf_loader": "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
+  "directory_execute_permissions": false,
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "workspace_read_only": true,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-01",
+  "source_write_denied": true,
+  "source_document_sha256_before": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_sha256_after": "810bd0f619b391dceb0242f04d2d2aadea03301fda0717feaf10519127b63f85",
+  "source_document_unchanged": true,
+  "rule_path_handles_retained": true,
+  "artifact_execution_denied": true,
+  "output_artifact_execution_denied": true,
+  "landlock_tcp_denied": true,
+  "landlock_abstract_socket_and_cross_domain_signal_scoped": true,
+  "output_symlink_creation_allowed": true,
+  "device_sink_exception": "/dev/null write-only sink; no IOCTL_DEV granted",
+  "network_disabled": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "minimum_child_environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "namespace_metadata": {
+    "net": {
+      "st_dev": 4,
+      "st_ino": 4026532221
+    },
+    "user": {
+      "st_dev": 4,
+      "st_ino": 4026532220
+    }
+  },
+  "namespace_ids": {
+    "net": 4026532221,
+    "user": 4026532220
+  },
+  "child_new_session_and_process_group": true,
+  "own_child_subreaper": true,
+  "cleanup_scope": "Only the new child-owned process group; no process enumeration"
+}

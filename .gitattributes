@@ -17,3 +17,10 @@ apps/native_events/** -text whitespace=blank-at-eol,blank-at-eof,space-before-ta
 apps/native_environment/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Preserve the native base-class sources and qualified evidence bytes.
 apps/native_base_classes/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Preserve the native clipboard-format sources and qualified evidence bytes.
+apps/native_clipboard_format/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Keep original CHECK/objdump output bytes, including the tools' trailing spaces.
+apps/native_clipboard_format/logs/negative-32M-smp1.log -text -whitespace
+apps/native_clipboard_format/receipts/user-checks.disassembly.txt -text -whitespace
+apps/native_clipboard_format/receipts/user-original-format.disassembly.txt -text -whitespace
+apps/native_clipboard_format/receipts/user-start.disassembly.txt -text -whitespace

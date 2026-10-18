@@ -1,0 +1,57 @@
+{
+  "launcher_sha256": "8de9b43849bed2392ccf57b6dae8e0f044960692e067acc968e5f3058fdfae6d",
+  "child_sha256": "e4e24a18b523af229c1569d651a2a009597b5480bcaf011127075a5b7b782655",
+  "python_path": "/usr/bin/python3",
+  "python_sha256": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+  "executable_files": {
+    "/usr/bin/python3.8": "298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06",
+    "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/bin/lld": "99ef321b93b2f3c8214bb592b633b3736d2df70f51e5454920131631f08e3412"
+  },
+  "elf_loader": "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
+  "directory_execute_permissions": false,
+  "landlock_applied": true,
+  "landlock_abi": 7,
+  "landlock_handled_access_fs": 65535,
+  "landlock_handled_access_net": 3,
+  "landlock_scoped": 3,
+  "workspace_read_only": true,
+  "writable_output": "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/link-02",
+  "source_write_denied": true,
+  "source_document_sha256_before": "83bdb170fe2d18c6164d9490409a3696e481397a0b29b973736f78675e72fca9",
+  "source_document_sha256_after": "83bdb170fe2d18c6164d9490409a3696e481397a0b29b973736f78675e72fca9",
+  "source_document_unchanged": true,
+  "rule_path_handles_retained": true,
+  "artifact_execution_denied": true,
+  "output_artifact_execution_denied": true,
+  "landlock_tcp_denied": true,
+  "landlock_abstract_socket_and_cross_domain_signal_scoped": true,
+  "output_symlink_creation_allowed": false,
+  "device_sink_exception": "/dev/null write-only sink; no IOCTL_DEV granted",
+  "network_disabled": true,
+  "outer_user_namespace_uid_map": [
+    "0",
+    "1000",
+    "1"
+  ],
+  "minimum_child_environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TZ": "UTC"
+  },
+  "namespace_metadata": {
+    "net": {
+      "st_dev": 4,
+      "st_ino": 4026532221
+    },
+    "user": {
+      "st_dev": 4,
+      "st_ino": 4026532220
+    }
+  },
+  "own_child_subreaper": true,
+  "controller_starts_new_session": true,
+  "namespace_ids": {
+    "net": 4026532221,
+    "user": 4026532220
+  }
+}

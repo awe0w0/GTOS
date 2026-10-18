@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/link-probe-v2.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 456.132524404,
+  "child_sha256": "e4e24a18b523af229c1569d651a2a009597b5480bcaf011127075a5b7b782655",
+  "all_own_descendants_reaped": true,
+  "adopted_descendants": [],
+  "failure": null,
+  "guard_sha256": "d42c16e602fa145c590a6017f52f85a2502eb22fc222e702f8486fc9c35ac66c",
+  "launcher_log_sha256": "f3488d09dd39256fc7a57231a312d3edcb8af827fbe782905c4681b18a93166c"
+}

@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""Offline fixed tools for clipboard CPL3 semantics and exact task teardown."""
+import atexit
+import ctypes
+import hashlib
+import json
+import os
+import pathlib
+import signal
+import subprocess
+import sys
+import time
+
+
+WORKSPACE = pathlib.Path('/mnt/f/GTOS-Chromium')
+PACKET = WORKSPACE / 'artifacts/native-clipboard-format-20261018-a'
+CHILD = PACKET / 'guest-probe-v1.py'
+CHILD_SHA = '5ccdba9ffdbe5f3a87534d5d3da7b91f8aae638b0026b4398cc63d0ef165960e'
+PYTHON = pathlib.Path('/usr/bin/python3')
+PYTHON_SHA = '298a9e830ed52f36c299427565485d717d1ce0179c0597cc16560513eb780b06'
+EXECUTABLES = {
+    PYTHON: PYTHON_SHA,
+    WORKSPACE / 'toolchains/chromium-clang-llvm24-62397f8b-57/bin/clang': '656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7',
+    pathlib.Path('/usr/bin/x86_64-linux-gnu-ld.bfd'): '476b24d5cc1fef54f80412d06e7430b2dcf4e2b6f1525ee17e6eaaf16b28a00f',
+    pathlib.Path('/usr/bin/x86_64-linux-gnu-objdump'): 'afd9c7433c96cb0f37df99cab98fc860bbbe2bed17f37df66254a8778adfc61d',
+    WORKSPACE / 'toolchains/gtos-qemu8-native-files-a/root/usr/bin/qemu-system-i386': '28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5',
+    WORKSPACE / 'toolchains/gtos-qemu8-native-files-a/root/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2': 'c20a2dc8917c755f02b94049356320fe1f62ac7d9f8994731f807d9df39302da',
+}
+OUT = PACKET / 'guest-01'
+SOURCE_DOCUMENT = WORKSPACE / 'sources/GTOS/docs/native-command-execution.md'
+ENVIRONMENT = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'TZ': 'UTC'}
+RULE_PATH_HANDLES = []
+
+
+def close_rule_path_handles():
+    while RULE_PATH_HANDLES:
+        os.close(RULE_PATH_HANDLES.pop())
+
+
+atexit.register(close_rule_path_handles)
+
+
+def reap_own_group(process, force):
+    if force:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    result = process.wait()
+    adopted = []
+    while True:
+        try:
+            child, status = os.waitpid(-process.pid, os.WNOHANG)
+        except ChildProcessError:
+            break
+        if child == 0:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            child, status = os.waitpid(-process.pid, 0)
+        adopted.append({'pid': child, 'wait_status': status})
+    return result, adopted
+
+
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+
+def sha(path):
+    digest = hashlib.sha256()
+    with pathlib.Path(path).open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def emit(path, value):
+    path.write_text(json.dumps(value, indent=2) + '\n')
+
+
+class RulesetAttr(ctypes.Structure):
+    _fields_ = [('handled_access_fs', ctypes.c_uint64),
+                ('handled_access_net', ctypes.c_uint64), ('scoped', ctypes.c_uint64)]
+
+
+class PathBeneathAttr(ctypes.Structure):
+    _pack_ = 1
+    _fields_ = [('allowed_access', ctypes.c_uint64), ('parent_fd', ctypes.c_int32)]
+
+
+def landlock():
+    require(os.uname().machine == 'x86_64', 'Only reviewed Linux x86_64 syscall ABI is supported')
+    libc = ctypes.CDLL('/lib/x86_64-linux-gnu/libc.so.6', use_errno=True)
+    libc.syscall.restype = ctypes.c_long
+    abi = libc.syscall(ctypes.c_long(444), ctypes.c_void_p(), ctypes.c_size_t(0), ctypes.c_uint(1))
+    require(abi >= 6, 'Landlock ABI >= 6 required; do not lower isolation or retry without it')
+    # ABI >= 6 supports all sixteen handled FS rights, including REFER,
+    # TRUNCATE and IOCTL_DEV. Only this fresh output gets mutation rights.
+    handled = (1 << 16) - 1
+    read_only = (1 << 2) | (1 << 3)
+    # Fresh ordinary output files only; no symlink/delete/rename/execute rights.
+    output_access = read_only | (1 << 1) | (1 << 7) | (1 << 8) | (1 << 14)
+    # Deny TCP bind/connect and cross-domain abstract sockets/signals too.
+    ruleset = RulesetAttr(handled, 3, 3)
+    descriptor = libc.syscall(ctypes.c_long(444), ctypes.byref(ruleset), ctypes.sizeof(ruleset), ctypes.c_uint(0))
+    require(descriptor >= 0, 'Cannot create Landlock ruleset: errno ' + str(ctypes.get_errno()))
+    try:
+        # No /proc data-read rights. The child checks its own namespace inode
+        # metadata, no_new_privs through prctl, and mapped uid through getuid.
+        paths = [(WORKSPACE, read_only),
+                 (pathlib.Path('/usr/bin'), read_only), (pathlib.Path('/usr/lib'), read_only),
+                 (OUT, output_access), (pathlib.Path('/dev/null'), (1 << 1) | (1 << 2)),
+                 (pathlib.Path('/etc/ld.so.cache'), 1 << 2),
+                 (pathlib.Path('/dev/urandom'), 1 << 2), (pathlib.Path('/dev/random'), 1 << 2),
+                 (pathlib.Path('/dev/zero'), 1 << 2)]
+        for path in (pathlib.Path('/bin'), pathlib.Path('/lib'), pathlib.Path('/lib64')):
+            paths.append((path.resolve(strict=True), read_only))
+        for path in EXECUTABLES:
+            paths.append((path.resolve(strict=True), (1 << 0) | (1 << 2)))
+        # Fixed ELF loader, not a directory-wide execution exception.
+        paths.append((pathlib.Path('/lib64/ld-linux-x86-64.so.2').resolve(strict=True), (1 << 0) | (1 << 2)))
+        for path, rights in paths:
+            fd = os.open(str(path), os.O_PATH | os.O_CLOEXEC)
+            retained = False
+            try:
+                rule = PathBeneathAttr(rights, fd)
+                result = libc.syscall(ctypes.c_long(445), ctypes.c_int(descriptor), ctypes.c_int(1),
+                                      ctypes.byref(rule), ctypes.c_uint(0))
+                require(result == 0, 'Cannot add Landlock path rule: errno ' + str(ctypes.get_errno()))
+                # DrvFs requires a live path reference for the rule's inode.
+                # Keep these O_PATH references in this parent until child exit.
+                RULE_PATH_HANDLES.append(fd)
+                retained = True
+            finally:
+                if not retained:
+                    os.close(fd)
+        libc.prctl.restype = ctypes.c_int
+        require(libc.prctl(ctypes.c_int(38), ctypes.c_ulong(1), ctypes.c_ulong(0), ctypes.c_ulong(0), ctypes.c_ulong(0)) == 0,
+                'Cannot set no_new_privs')
+        require(libc.syscall(ctypes.c_long(446), ctypes.c_int(descriptor), ctypes.c_uint(0)) == 0,
+                'Cannot apply Landlock restrictions: errno ' + str(ctypes.get_errno()))
+    finally:
+        os.close(descriptor)
+    return abi
+
+
+require(len(sys.argv) == 1, 'This launcher accepts no path, tool, output or guard overrides')
+require(sys.flags.isolated and sys.flags.dont_write_bytecode and sys.flags.no_site and
+        pathlib.Path(sys.executable).resolve() == pathlib.Path('/usr/bin/python3.8') and sha(PYTHON) == PYTHON_SHA,
+        'Fixed qualified /usr/bin/python3 -I -B required')
+require(set(os.environ) <= {'PATH', 'LANG', 'TZ', 'LC_CTYPE'} and
+        all(os.environ.get(key) == value for key, value in ENVIRONMENT.items()), 'Minimum reviewed environment required')
+interfaces = [line.split(':', 1)[0].strip() for line in pathlib.Path('/proc/self/net/dev').read_text().splitlines()[2:]
+              if ':' in line]
+require(interfaces == ['lo'] and not pathlib.Path('/proc/self/net/route').read_text().splitlines()[1:],
+        'Outer unshare --user --map-root-user --net required; no network fallback')
+mapping = pathlib.Path('/proc/self/uid_map').read_text().split()
+require(len(mapping) == 3 and mapping[0] == '0' and mapping[2] == '1' and os.getuid() == 0,
+        'Fresh outer user namespace with mapped root required')
+require(WORKSPACE.is_dir() and PACKET.is_dir() and PACKET.resolve() == PACKET and
+        pathlib.Path(__file__).resolve() == PACKET / 'launch-guest-probe-v1.py', 'Fixed reviewed workspace packet required')
+require(len(CHILD_SHA) == 64 and all(character in '0123456789abcdef' for character in CHILD_SHA),
+        'Reviewed child SHA256 is pending; stop for source review')
+require(CHILD.is_file() and not CHILD.is_symlink() and CHILD.resolve() == CHILD and sha(CHILD) == CHILD_SHA,
+        'Reviewed child changed; stop for source review')
+for path, digest in EXECUTABLES.items():
+    require(path.is_file() and sha(path) == digest, 'Reviewed executable changed; stop for source review')
+require(not OUT.exists() and not OUT.is_symlink(), 'Fresh output required; preserve previous runs')
+libc = ctypes.CDLL('/lib/x86_64-linux-gnu/libc.so.6', use_errno=True)
+require(libc.prctl(ctypes.c_int(36), ctypes.c_ulong(1), ctypes.c_ulong(0),
+                   ctypes.c_ulong(0), ctypes.c_ulong(0)) == 0, 'Own-descendant subreaper required')
+subreaper = ctypes.c_int(0)
+require(libc.prctl(ctypes.c_int(37), ctypes.byref(subreaper), ctypes.c_ulong(0),
+                   ctypes.c_ulong(0), ctypes.c_ulong(0)) == 0 and subreaper.value == 1,
+        'Own-descendant subreaper verification failed')
+source_document_sha256_before = sha(SOURCE_DOCUMENT)
+namespace_metadata = {}
+for name in ('net', 'user'):
+    metadata = os.stat('/proc/self/ns/' + name)
+    namespace_metadata[name] = {'st_dev': metadata.st_dev, 'st_ino': metadata.st_ino}
+OUT.mkdir()
+abi = landlock()
+
+# Open without O_TRUNC or writes: prove source mutation remains forbidden.
+try:
+    source_fd = os.open(str(SOURCE_DOCUMENT), os.O_WRONLY)
+except PermissionError:
+    source_write_denied = True
+else:
+    os.close(source_fd)
+    raise RuntimeError('Source write restriction was not enforced')
+source_document_sha256_after = sha(SOURCE_DOCUMENT)
+require(source_document_sha256_after == source_document_sha256_before,
+        'Source document changed during refusal check')
+guard = {
+    'launcher_sha256': sha(__file__), 'child_sha256': CHILD_SHA,
+    'python_path': str(PYTHON), 'python_sha256': PYTHON_SHA,
+    'executable_files': {str(path.resolve(strict=True)): digest for path, digest in EXECUTABLES.items()},
+    'elf_loader': str(pathlib.Path('/lib64/ld-linux-x86-64.so.2').resolve(strict=True)),
+    'directory_execute_permissions': False,
+    'landlock_applied': True, 'landlock_abi': abi,
+    'landlock_handled_access_fs': 65535, 'landlock_handled_access_net': 3, 'landlock_scoped': 3,
+    'workspace_read_only': True, 'writable_output': str(OUT),
+    'source_write_denied': source_write_denied,
+    'source_document_sha256_before': source_document_sha256_before,
+    'source_document_sha256_after': source_document_sha256_after,
+    'source_document_unchanged': True,
+    'rule_path_handles_retained': True,
+    'artifact_execution_denied_except_fixed_tools': True,
+    'output_artifact_execution_denied': True,
+    'landlock_tcp_denied': True,
+    'landlock_abstract_socket_and_cross_domain_signal_scoped': True,
+    'output_symlink_creation_allowed': False,
+    'device_sink_exception': '/dev/null write-only sink; no IOCTL_DEV granted',
+    'network_disabled': True, 'outer_user_namespace_uid_map': mapping,
+    'minimum_child_environment': ENVIRONMENT,
+    'own_child_subreaper': True, 'controller_starts_new_session': True,
+    'namespace_metadata': namespace_metadata,
+    'namespace_ids': {name: metadata['st_ino'] for name, metadata in namespace_metadata.items()},
+}
+emit(OUT / 'guard.json', guard)
+argv = [str(PYTHON), '-I', '-B', '-S', str(CHILD)]
+began = time.monotonic()
+adopted = []
+failure = None
+with (OUT / 'launcher.log').open('wb') as stream:
+    process = subprocess.Popen(argv, cwd=WORKSPACE, env=ENVIRONMENT, shell=False, close_fds=True,
+                               start_new_session=True, stdin=subprocess.DEVNULL,
+                               stdout=stream, stderr=subprocess.STDOUT)
+    try:
+        emit(OUT / 'job.json', {'state': 'running', 'child_pid': process.pid, 'launcher_pid': os.getpid(),
+                              'own_process_group': process.pid,
+                              'child_sha256': CHILD_SHA, 'namespace_ids': guard['namespace_ids']})
+        try:
+            result = process.wait(timeout=3600)
+        except subprocess.TimeoutExpired:
+            ignored, adopted = reap_own_group(process, True)
+            result = 124
+        else:
+            ignored, adopted = reap_own_group(process, False)
+            if adopted:
+                result = 1
+    except BaseException as error:
+        ignored, adopted = reap_own_group(process, True)
+        result = 1
+        failure = type(error).__name__ + ': ' + str(error)
+    emit(OUT / 'job.json', {'state': 'completed', 'child_pid': process.pid, 'launcher_pid': os.getpid(),
+                          'child_sha256': CHILD_SHA, 'namespace_ids': guard['namespace_ids'],
+                          'own_process_group': process.pid, 'all_own_descendants_reaped': True,
+                          'adopted_descendants': adopted, 'returncode': result, 'failure': failure})
+emit(OUT / 'launcher-result.json', {'argv': argv, 'cwd': str(WORKSPACE), 'shell': False,
+     'returncode': result, 'seconds': time.monotonic() - began, 'child_sha256': sha(CHILD),
+     'all_own_descendants_reaped': True, 'adopted_descendants': adopted, 'failure': failure,
+     'guard_sha256': sha(OUT / 'guard.json'), 'launcher_log_sha256': sha(OUT / 'launcher.log')})
+print(json.dumps({'returncode': result, 'output': str(OUT), 'landlock_abi': abi,
+                  'launcher_log': str(OUT / 'launcher.log')}, indent=2), flush=True)
+close_rule_path_handles()
+sys.exit(result)

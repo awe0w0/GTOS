@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/isa-review-v1.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 226.20828632500002,
+  "child_sha256": "daf04c171966b6272215ccf4ebf67c6f16ce9615969c2152edb834d3d29f0aea",
+  "all_own_descendants_reaped": true,
+  "adopted_descendants": [],
+  "failure": null,
+  "timed_out": false,
+  "guard_sha256": "790a02f21cb65c2079ee4a07b3393f1f31d6fe76a98786764eb1063e6dcc465a",
+  "launcher_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

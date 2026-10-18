@@ -1,0 +1,1371 @@
+
+/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-format-compile-02/build/obj/ui/base/clipboard/libui_base_clipboard_types.clipboard_format_type_aura.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	8b 44 24 04                                     	mov    0x4(%esp),%eax
+   4:	0f 57 c0                                        	xorps  %xmm0,%xmm0
+   7:	f2 0f 11 00                                     	movsd  %xmm0,(%eax)
+   b:	c7 40 08 00 00 00 00                            	movl   $0x0,0x8(%eax)
+  12:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	8b 44 24 04                                     	mov    0x4(%esp),%eax
+   4:	f6 00 01                                        	testb  $0x1,(%eax)
+   7:	74 11                                           	je     1a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1a>
+   9:	8b 08                                           	mov    (%eax),%ecx
+   b:	83 e1 fe                                        	and    $0xfffffffe,%ecx
+   e:	51                                              	push   %ecx
+   f:	ff 70 08                                        	pushl  0x8(%eax)
+  12:	e8 fc ff ff ff                                  	call   13 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x13>
+  17:	83 c4 08                                        	add    $0x8,%esp
+  1a:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 5c 24 1c                                     	mov    0x1c(%esp),%ebx
+   8:	83 fb fb                                        	cmp    $0xfffffffb,%ebx
+   b:	73 68                                           	jae    75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+   d:	8b 74 24 14                                     	mov    0x14(%esp),%esi
+  11:	8b 7c 24 18                                     	mov    0x18(%esp),%edi
+  15:	83 fb 0a                                        	cmp    $0xa,%ebx
+  18:	77 09                                           	ja     23 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x23>
+  1a:	89 d8                                           	mov    %ebx,%eax
+  1c:	00 d8                                           	add    %bl,%al
+  1e:	88 06                                           	mov    %al,(%esi)
+  20:	46                                              	inc    %esi
+  21:	eb 27                                           	jmp    4a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x4a>
+  23:	89 d8                                           	mov    %ebx,%eax
+  25:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  28:	83 c0 04                                        	add    $0x4,%eax
+  2b:	83 f8 0c                                        	cmp    $0xc,%eax
+  2e:	bd 0e 00 00 00                                  	mov    $0xe,%ebp
+  33:	0f 45 e8                                        	cmovne %eax,%ebp
+  36:	55                                              	push   %ebp
+  37:	e8 fc ff ff ff                                  	call   38 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x38>
+  3c:	83 c4 04                                        	add    $0x4,%esp
+  3f:	45                                              	inc    %ebp
+  40:	89 2e                                           	mov    %ebp,(%esi)
+  42:	89 5e 04                                        	mov    %ebx,0x4(%esi)
+  45:	89 46 08                                        	mov    %eax,0x8(%esi)
+  48:	89 c6                                           	mov    %eax,%esi
+  4a:	8d 04 1e                                        	lea    (%esi,%ebx,1),%eax
+  4d:	39 f0                                           	cmp    %esi,%eax
+  4f:	72 22                                           	jb     73 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x73>
+  51:	39 fe                                           	cmp    %edi,%esi
+  53:	0f 97 c1                                        	seta   %cl
+  56:	39 f8                                           	cmp    %edi,%eax
+  58:	0f 96 c0                                        	setbe  %al
+  5b:	08 c8                                           	or     %cl,%al
+  5d:	74 14                                           	je     73 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x73>
+  5f:	53                                              	push   %ebx
+  60:	57                                              	push   %edi
+  61:	56                                              	push   %esi
+  62:	e8 fc ff ff ff                                  	call   63 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x63>
+  67:	83 c4 0c                                        	add    $0xc,%esp
+  6a:	c6 04 1e 00                                     	movb   $0x0,(%esi,%ebx,1)
+  6e:	5e                                              	pop    %esi
+  6f:	5f                                              	pop    %edi
+  70:	5b                                              	pop    %ebx
+  71:	5d                                              	pop    %ebp
+  72:	c3                                              	ret    
+  73:	0f 0b                                           	ud2    
+  75:	e8 fc ff ff ff                                  	call   76 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x76>
+  7a:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	56                                              	push   %esi
+   1:	8b 74 24 08                                     	mov    0x8(%esp),%esi
+   5:	8b 44 24 0c                                     	mov    0xc(%esp),%eax
+   9:	f6 00 01                                        	testb  $0x1,(%eax)
+   c:	74 11                                           	je     1f <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1f>
+   e:	ff 70 04                                        	pushl  0x4(%eax)
+  11:	ff 70 08                                        	pushl  0x8(%eax)
+  14:	56                                              	push   %esi
+  15:	e8 fc ff ff ff                                  	call   16 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x16>
+  1a:	83 c4 0c                                        	add    $0xc,%esp
+  1d:	eb 0e                                           	jmp    2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  1f:	8b 48 08                                        	mov    0x8(%eax),%ecx
+  22:	89 4e 08                                        	mov    %ecx,0x8(%esi)
+  25:	f2 0f 10 00                                     	movsd  (%eax),%xmm0
+  29:	f2 0f 11 06                                     	movsd  %xmm0,(%esi)
+  2d:	89 f0                                           	mov    %esi,%eax
+  2f:	5e                                              	pop    %esi
+  30:	c2 04 00                                        	ret    $0x4
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 5c 24 1c                                     	mov    0x1c(%esp),%ebx
+   8:	83 fb fb                                        	cmp    $0xfffffffb,%ebx
+   b:	73 76                                           	jae    83 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x83>
+   d:	8b 74 24 14                                     	mov    0x14(%esp),%esi
+  11:	8b 6c 24 18                                     	mov    0x18(%esp),%ebp
+  15:	83 fb 0a                                        	cmp    $0xa,%ebx
+  18:	77 0b                                           	ja     25 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x25>
+  1a:	89 d8                                           	mov    %ebx,%eax
+  1c:	00 d8                                           	add    %bl,%al
+  1e:	88 06                                           	mov    %al,(%esi)
+  20:	8d 7e 01                                        	lea    0x1(%esi),%edi
+  23:	eb 2f                                           	jmp    54 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x54>
+  25:	89 d8                                           	mov    %ebx,%eax
+  27:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  2a:	83 c0 04                                        	add    $0x4,%eax
+  2d:	83 f8 0c                                        	cmp    $0xc,%eax
+  30:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  35:	0f 45 f0                                        	cmovne %eax,%esi
+  38:	56                                              	push   %esi
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	89 c7                                           	mov    %eax,%edi
+  43:	46                                              	inc    %esi
+  44:	8b 44 24 14                                     	mov    0x14(%esp),%eax
+  48:	89 30                                           	mov    %esi,(%eax)
+  4a:	8b 74 24 14                                     	mov    0x14(%esp),%esi
+  4e:	89 5e 04                                        	mov    %ebx,0x4(%esi)
+  51:	89 7e 08                                        	mov    %edi,0x8(%esi)
+  54:	8d 04 1f                                        	lea    (%edi,%ebx,1),%eax
+  57:	39 f8                                           	cmp    %edi,%eax
+  59:	72 26                                           	jb     81 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x81>
+  5b:	39 ef                                           	cmp    %ebp,%edi
+  5d:	0f 97 c1                                        	seta   %cl
+  60:	39 e8                                           	cmp    %ebp,%eax
+  62:	0f 96 c0                                        	setbe  %al
+  65:	08 c8                                           	or     %cl,%al
+  67:	74 18                                           	je     81 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x81>
+  69:	53                                              	push   %ebx
+  6a:	55                                              	push   %ebp
+  6b:	57                                              	push   %edi
+  6c:	e8 fc ff ff ff                                  	call   6d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x6d>
+  71:	83 c4 0c                                        	add    $0xc,%esp
+  74:	c6 04 1f 00                                     	movb   $0x0,(%edi,%ebx,1)
+  78:	89 f0                                           	mov    %esi,%eax
+  7a:	5e                                              	pop    %esi
+  7b:	5f                                              	pop    %edi
+  7c:	5b                                              	pop    %ebx
+  7d:	5d                                              	pop    %ebp
+  7e:	c2 04 00                                        	ret    $0x4
+  81:	0f 0b                                           	ud2    
+  83:	e8 fc ff ff ff                                  	call   84 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x84>
+  88:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	56                                              	push   %esi
+   1:	8b 74 24 08                                     	mov    0x8(%esp),%esi
+   5:	8b 44 24 0c                                     	mov    0xc(%esp),%eax
+   9:	f6 00 01                                        	testb  $0x1,(%eax)
+   c:	74 11                                           	je     1f <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1f>
+   e:	ff 70 04                                        	pushl  0x4(%eax)
+  11:	ff 70 08                                        	pushl  0x8(%eax)
+  14:	56                                              	push   %esi
+  15:	e8 fc ff ff ff                                  	call   16 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x16>
+  1a:	83 c4 0c                                        	add    $0xc,%esp
+  1d:	eb 0e                                           	jmp    2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  1f:	8b 48 08                                        	mov    0x8(%eax),%ecx
+  22:	89 4e 08                                        	mov    %ecx,0x8(%esi)
+  25:	f2 0f 10 00                                     	movsd  (%eax),%xmm0
+  29:	f2 0f 11 06                                     	movsd  %xmm0,(%esi)
+  2d:	89 f0                                           	mov    %esi,%eax
+  2f:	5e                                              	pop    %esi
+  30:	c2 04 00                                        	ret    $0x4
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	53                                              	push   %ebx
+   1:	56                                              	push   %esi
+   2:	8b 4c 24 10                                     	mov    0x10(%esp),%ecx
+   6:	8b 44 24 0c                                     	mov    0xc(%esp),%eax
+   a:	0f b6 10                                        	movzbl (%eax),%edx
+   d:	f6 c2 01                                        	test   $0x1,%dl
+  10:	74 08                                           	je     1a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1a>
+  12:	8b 50 04                                        	mov    0x4(%eax),%edx
+  15:	8b 40 08                                        	mov    0x8(%eax),%eax
+  18:	eb 03                                           	jmp    1d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1d>
+  1a:	40                                              	inc    %eax
+  1b:	d1 ea                                           	shr    %edx
+  1d:	0f b6 19                                        	movzbl (%ecx),%ebx
+  20:	f6 c3 01                                        	test   $0x1,%bl
+  23:	74 08                                           	je     2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  25:	8b 59 04                                        	mov    0x4(%ecx),%ebx
+  28:	8b 49 08                                        	mov    0x8(%ecx),%ecx
+  2b:	eb 03                                           	jmp    30 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x30>
+  2d:	41                                              	inc    %ecx
+  2e:	d1 eb                                           	shr    %ebx
+  30:	39 d3                                           	cmp    %edx,%ebx
+  32:	89 d6                                           	mov    %edx,%esi
+  34:	0f 42 d3                                        	cmovb  %ebx,%edx
+  37:	52                                              	push   %edx
+  38:	51                                              	push   %ecx
+  39:	50                                              	push   %eax
+  3a:	e8 fc ff ff ff                                  	call   3b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3b>
+  3f:	83 c4 0c                                        	add    $0xc,%esp
+  42:	85 c0                                           	test   %eax,%eax
+  44:	75 13                                           	jne    59 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x59>
+  46:	31 c0                                           	xor    %eax,%eax
+  48:	39 de                                           	cmp    %ebx,%esi
+  4a:	74 0d                                           	je     59 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x59>
+  4c:	0f 93 c0                                        	setae  %al
+  4f:	0f b6 c0                                        	movzbl %al,%eax
+  52:	8d 04 45 ff ff ff ff                            	lea    -0x1(,%eax,2),%eax
+  59:	c1 e8 1f                                        	shr    $0x1f,%eax
+  5c:	5e                                              	pop    %esi
+  5d:	5b                                              	pop    %ebx
+  5e:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	53                                              	push   %ebx
+   1:	57                                              	push   %edi
+   2:	56                                              	push   %esi
+   3:	8b 4c 24 14                                     	mov    0x14(%esp),%ecx
+   7:	8b 74 24 10                                     	mov    0x10(%esp),%esi
+   b:	0f b6 1e                                        	movzbl (%esi),%ebx
+   e:	f6 c3 01                                        	test   $0x1,%bl
+  11:	74 05                                           	je     18 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x18>
+  13:	8b 56 04                                        	mov    0x4(%esi),%edx
+  16:	eb 04                                           	jmp    1c <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1c>
+  18:	89 da                                           	mov    %ebx,%edx
+  1a:	d1 ea                                           	shr    %edx
+  1c:	0f b6 01                                        	movzbl (%ecx),%eax
+  1f:	a8 01                                           	test   $0x1,%al
+  21:	74 0b                                           	je     2e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2e>
+  23:	8b 79 04                                        	mov    0x4(%ecx),%edi
+  26:	39 fa                                           	cmp    %edi,%edx
+  28:	74 0c                                           	je     36 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x36>
+  2a:	31 c0                                           	xor    %eax,%eax
+  2c:	eb 2f                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  2e:	89 c7                                           	mov    %eax,%edi
+  30:	d1 ef                                           	shr    %edi
+  32:	39 fa                                           	cmp    %edi,%edx
+  34:	75 f4                                           	jne    2a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2a>
+  36:	f6 c3 01                                        	test   $0x1,%bl
+  39:	74 0a                                           	je     45 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x45>
+  3b:	8b 76 08                                        	mov    0x8(%esi),%esi
+  3e:	a8 01                                           	test   $0x1,%al
+  40:	75 08                                           	jne    4a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x4a>
+  42:	41                                              	inc    %ecx
+  43:	eb 08                                           	jmp    4d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x4d>
+  45:	46                                              	inc    %esi
+  46:	a8 01                                           	test   $0x1,%al
+  48:	74 f8                                           	je     42 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x42>
+  4a:	8b 49 08                                        	mov    0x8(%ecx),%ecx
+  4d:	52                                              	push   %edx
+  4e:	51                                              	push   %ecx
+  4f:	56                                              	push   %esi
+  50:	e8 fc ff ff ff                                  	call   51 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x51>
+  55:	83 c4 0c                                        	add    $0xc,%esp
+  58:	85 c0                                           	test   %eax,%eax
+  5a:	0f 94 c0                                        	sete   %al
+  5d:	5e                                              	pop    %esi
+  5e:	5f                                              	pop    %edi
+  5f:	5b                                              	pop    %ebx
+  60:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	89 e5                                           	mov    %esp,%ebp
+   3:	53                                              	push   %ebx
+   4:	57                                              	push   %edi
+   5:	56                                              	push   %esi
+   6:	83 e4 f8                                        	and    $0xfffffff8,%esp
+   9:	83 ec 10                                        	sub    $0x10,%esp
+   c:	8b 45 0c                                        	mov    0xc(%ebp),%eax
+   f:	8b 4d 10                                        	mov    0x10(%ebp),%ecx
+  12:	89 4c 24 04                                     	mov    %ecx,0x4(%esp)
+  16:	89 04 24                                        	mov    %eax,(%esp)
+  19:	83 ec 08                                        	sub    $0x8,%esp
+  1c:	f2 0f 10 44 24 08                               	movsd  0x8(%esp),%xmm0
+  22:	f2 0f 11 04 24                                  	movsd  %xmm0,(%esp)
+  27:	e8 fc ff ff ff                                  	call   28 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x28>
+  2c:	83 c4 08                                        	add    $0x8,%esp
+  2f:	84 c0                                           	test   %al,%al
+  31:	0f 84 87 00 00 00                               	je     be <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xbe>
+  37:	8d 45 0c                                        	lea    0xc(%ebp),%eax
+  3a:	8b 58 04                                        	mov    0x4(%eax),%ebx
+  3d:	83 fb fb                                        	cmp    $0xfffffffb,%ebx
+  40:	0f 83 90 00 00 00                               	jae    d6 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xd6>
+  46:	8b 75 08                                        	mov    0x8(%ebp),%esi
+  49:	8b 10                                           	mov    (%eax),%edx
+  4b:	83 fb 0a                                        	cmp    $0xa,%ebx
+  4e:	77 0b                                           	ja     5b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5b>
+  50:	89 d8                                           	mov    %ebx,%eax
+  52:	00 d8                                           	add    %bl,%al
+  54:	88 06                                           	mov    %al,(%esi)
+  56:	8d 7e 01                                        	lea    0x1(%esi),%edi
+  59:	eb 31                                           	jmp    8c <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x8c>
+  5b:	89 d8                                           	mov    %ebx,%eax
+  5d:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  60:	83 c0 04                                        	add    $0x4,%eax
+  63:	83 f8 0c                                        	cmp    $0xc,%eax
+  66:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  6b:	0f 45 f0                                        	cmovne %eax,%esi
+  6e:	56                                              	push   %esi
+  6f:	89 d7                                           	mov    %edx,%edi
+  71:	e8 fc ff ff ff                                  	call   72 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x72>
+  76:	89 fa                                           	mov    %edi,%edx
+  78:	83 c4 04                                        	add    $0x4,%esp
+  7b:	89 c7                                           	mov    %eax,%edi
+  7d:	46                                              	inc    %esi
+  7e:	8b 45 08                                        	mov    0x8(%ebp),%eax
+  81:	89 30                                           	mov    %esi,(%eax)
+  83:	8b 75 08                                        	mov    0x8(%ebp),%esi
+  86:	89 5e 04                                        	mov    %ebx,0x4(%esi)
+  89:	89 7e 08                                        	mov    %edi,0x8(%esi)
+  8c:	8d 04 1f                                        	lea    (%edi,%ebx,1),%eax
+  8f:	39 f8                                           	cmp    %edi,%eax
+  91:	72 29                                           	jb     bc <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xbc>
+  93:	39 d7                                           	cmp    %edx,%edi
+  95:	0f 97 c1                                        	seta   %cl
+  98:	39 d0                                           	cmp    %edx,%eax
+  9a:	0f 96 c0                                        	setbe  %al
+  9d:	08 c8                                           	or     %cl,%al
+  9f:	74 1b                                           	je     bc <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xbc>
+  a1:	53                                              	push   %ebx
+  a2:	52                                              	push   %edx
+  a3:	57                                              	push   %edi
+  a4:	e8 fc ff ff ff                                  	call   a5 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xa5>
+  a9:	83 c4 0c                                        	add    $0xc,%esp
+  ac:	c6 04 1f 00                                     	movb   $0x0,(%edi,%ebx,1)
+  b0:	89 f0                                           	mov    %esi,%eax
+  b2:	8d 65 f4                                        	lea    -0xc(%ebp),%esp
+  b5:	5e                                              	pop    %esi
+  b6:	5f                                              	pop    %edi
+  b7:	5b                                              	pop    %ebx
+  b8:	5d                                              	pop    %ebp
+  b9:	c2 04 00                                        	ret    $0x4
+  bc:	0f 0b                                           	ud2    
+  be:	8d 74 24 08                                     	lea    0x8(%esp),%esi
+  c2:	89 f1                                           	mov    %esi,%ecx
+  c4:	e8 fc ff ff ff                                  	call   c5 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xc5>
+  c9:	56                                              	push   %esi
+  ca:	e8 fc ff ff ff                                  	call   cb <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xcb>
+  cf:	83 c4 04                                        	add    $0x4,%esp
+  d2:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+  d6:	e8 fc ff ff ff                                  	call   d7 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xd7>
+  db:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	57                                              	push   %edi
+   1:	56                                              	push   %esi
+   2:	83 ec 10                                        	sub    $0x10,%esp
+   5:	89 ce                                           	mov    %ecx,%esi
+   7:	89 e7                                           	mov    %esp,%edi
+   9:	6a 34                                           	push   $0x34
+   b:	68 c0 00 00 00                                  	push   $0xc0
+  10:	57                                              	push   %edi
+  11:	e8 fc ff ff ff                                  	call   12 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x12>
+  16:	83 c4 08                                        	add    $0x8,%esp
+  19:	57                                              	push   %edi
+  1a:	68 9d 00 00 00                                  	push   $0x9d
+  1f:	56                                              	push   %esi
+  20:	e8 fc ff ff ff                                  	call   21 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x21>
+  25:	83 c4 08                                        	add    $0x8,%esp
+  28:	89 f0                                           	mov    %esi,%eax
+  2a:	83 c4 10                                        	add    $0x10,%esp
+  2d:	5e                                              	pop    %esi
+  2e:	5f                                              	pop    %edi
+  2f:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	57                                              	push   %edi
+   1:	56                                              	push   %esi
+   2:	83 ec 2c                                        	sub    $0x2c,%esp
+   5:	8b 74 24 38                                     	mov    0x38(%esp),%esi
+   9:	8b 7c 24 3c                                     	mov    0x3c(%esp),%edi
+   d:	c7 44 24 14 00 00 00 00                         	movl   $0x0,0x14(%esp)
+  15:	68 00 00 00 00                                  	push   $0x0
+  1a:	e8 fc ff ff ff                                  	call   1b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1b>
+  1f:	83 c4 04                                        	add    $0x4,%esp
+  22:	89 44 24 18                                     	mov    %eax,0x18(%esp)
+  26:	89 e0                                           	mov    %esp,%eax
+  28:	57                                              	push   %edi
+  29:	50                                              	push   %eax
+  2a:	e8 fc ff ff ff                                  	call   2b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2b>
+  2f:	83 c4 04                                        	add    $0x4,%esp
+  32:	0f b6 04 24                                     	movzbl (%esp),%eax
+  36:	a8 01                                           	test   $0x1,%al
+  38:	74 0a                                           	je     44 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x44>
+  3a:	8b 4c 24 08                                     	mov    0x8(%esp),%ecx
+  3e:	8b 44 24 04                                     	mov    0x4(%esp),%eax
+  42:	eb 06                                           	jmp    4a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x4a>
+  44:	8d 4c 24 01                                     	lea    0x1(%esp),%ecx
+  48:	d1 e8                                           	shr    %eax
+  4a:	89 4c 24 1c                                     	mov    %ecx,0x1c(%esp)
+  4e:	89 44 24 20                                     	mov    %eax,0x20(%esp)
+  52:	c7 44 24 24 24 00 00 00                         	movl   $0x24,0x24(%esp)
+  5a:	68 24 00 00 00                                  	push   $0x24
+  5f:	e8 fc ff ff ff                                  	call   60 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x60>
+  64:	83 c4 04                                        	add    $0x4,%esp
+  67:	89 44 24 28                                     	mov    %eax,0x28(%esp)
+  6b:	8d 44 24 14                                     	lea    0x14(%esp),%eax
+  6f:	89 44 24 0c                                     	mov    %eax,0xc(%esp)
+  73:	c7 44 24 10 03 00 00 00                         	movl   $0x3,0x10(%esp)
+  7b:	83 ec 0c                                        	sub    $0xc,%esp
+  7e:	f2 0f 10 44 24 18                               	movsd  0x18(%esp),%xmm0
+  84:	f2 0f 11 44 24 04                               	movsd  %xmm0,0x4(%esp)
+  8a:	89 34 24                                        	mov    %esi,(%esp)
+  8d:	e8 fc ff ff ff                                  	call   8e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x8e>
+  92:	83 c4 08                                        	add    $0x8,%esp
+  95:	f6 04 24 01                                     	testb  $0x1,(%esp)
+  99:	74 13                                           	je     ae <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xae>
+  9b:	8b 04 24                                        	mov    (%esp),%eax
+  9e:	83 e0 fe                                        	and    $0xfffffffe,%eax
+  a1:	50                                              	push   %eax
+  a2:	ff 74 24 0c                                     	pushl  0xc(%esp)
+  a6:	e8 fc ff ff ff                                  	call   a7 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xa7>
+  ab:	83 c4 08                                        	add    $0x8,%esp
+  ae:	89 f0                                           	mov    %esi,%eax
+  b0:	83 c4 2c                                        	add    $0x2c,%esp
+  b3:	5e                                              	pop    %esi
+  b4:	5f                                              	pop    %edi
+  b5:	c2 04 00                                        	ret    $0x4
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 26 00 00 00                                  	push   $0x26
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	0f b6 05 00 00 00 00                            	movzbl 0x0,%eax
+   7:	84 c0                                           	test   %al,%al
+   9:	74 06                                           	je     11 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x11>
+   b:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  10:	c3                                              	ret    
+  11:	68 00 00 00 00                                  	push   $0x0
+  16:	e8 fc ff ff ff                                  	call   17 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x17>
+  1b:	83 c4 04                                        	add    $0x4,%esp
+  1e:	85 c0                                           	test   %eax,%eax
+  20:	74 e9                                           	je     b <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xb>
+  22:	68 00 00 00 00                                  	push   $0x0
+  27:	68 00 00 00 00                                  	push   $0x0
+  2c:	e8 fc ff ff ff                                  	call   2d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x2d>
+  31:	83 c4 08                                        	add    $0x8,%esp
+  34:	68 00 00 00 00                                  	push   $0x0
+  39:	e8 fc ff ff ff                                  	call   3a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x3a>
+  3e:	83 c4 04                                        	add    $0x4,%esp
+  41:	b8 00 00 00 00                                  	mov    $0x0,%eax
+  46:	c3                                              	ret    
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	55                                              	push   %ebp
+   1:	53                                              	push   %ebx
+   2:	57                                              	push   %edi
+   3:	56                                              	push   %esi
+   4:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+   8:	85 f6                                           	test   %esi,%esi
+   a:	74 7a                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+   c:	56                                              	push   %esi
+   d:	e8 fc ff ff ff                                  	call   e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xe>
+  12:	83 c4 04                                        	add    $0x4,%esp
+  15:	83 f8 fb                                        	cmp    $0xfffffffb,%eax
+  18:	73 6e                                           	jae    88 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x88>
+  1a:	89 c3                                           	mov    %eax,%ebx
+  1c:	8b 6c 24 14                                     	mov    0x14(%esp),%ebp
+  20:	89 c7                                           	mov    %eax,%edi
+  22:	83 f8 0a                                        	cmp    $0xa,%eax
+  25:	77 0a                                           	ja     31 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x31>
+  27:	89 d8                                           	mov    %ebx,%eax
+  29:	00 d8                                           	add    %bl,%al
+  2b:	88 45 00                                        	mov    %al,0x0(%ebp)
+  2e:	45                                              	inc    %ebp
+  2f:	eb 2c                                           	jmp    5d <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x5d>
+  31:	89 d8                                           	mov    %ebx,%eax
+  33:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  36:	83 c0 04                                        	add    $0x4,%eax
+  39:	83 f8 0c                                        	cmp    $0xc,%eax
+  3c:	be 0e 00 00 00                                  	mov    $0xe,%esi
+  41:	0f 45 f0                                        	cmovne %eax,%esi
+  44:	56                                              	push   %esi
+  45:	e8 fc ff ff ff                                  	call   46 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x46>
+  4a:	83 c4 04                                        	add    $0x4,%esp
+  4d:	46                                              	inc    %esi
+  4e:	89 75 00                                        	mov    %esi,0x0(%ebp)
+  51:	8b 74 24 18                                     	mov    0x18(%esp),%esi
+  55:	89 7d 04                                        	mov    %edi,0x4(%ebp)
+  58:	89 45 08                                        	mov    %eax,0x8(%ebp)
+  5b:	89 c5                                           	mov    %eax,%ebp
+  5d:	01 eb                                           	add    %ebp,%ebx
+  5f:	39 eb                                           	cmp    %ebp,%ebx
+  61:	72 23                                           	jb     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  63:	39 f5                                           	cmp    %esi,%ebp
+  65:	0f 97 c0                                        	seta   %al
+  68:	39 f3                                           	cmp    %esi,%ebx
+  6a:	0f 96 c1                                        	setbe  %cl
+  6d:	08 c1                                           	or     %al,%cl
+  6f:	74 15                                           	je     86 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x86>
+  71:	57                                              	push   %edi
+  72:	56                                              	push   %esi
+  73:	55                                              	push   %ebp
+  74:	e8 fc ff ff ff                                  	call   75 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x75>
+  79:	83 c4 0c                                        	add    $0xc,%esp
+  7c:	c6 44 3d 00 00                                  	movb   $0x0,0x0(%ebp,%edi,1)
+  81:	5e                                              	pop    %esi
+  82:	5f                                              	pop    %edi
+  83:	5b                                              	pop    %ebx
+  84:	5d                                              	pop    %ebp
+  85:	c3                                              	ret    
+  86:	0f 0b                                           	ud2    
+  88:	e8 fc ff ff ff                                  	call   89 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x89>
+  8d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	68 4e 00 00 00                                  	push   $0x4e
+   5:	e8 fc ff ff ff                                  	call   6 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x6>
+   a:	83 c4 04                                        	add    $0x4,%esp
+   d:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	ff 74 24 04                                     	pushl  0x4(%esp)
+   4:	68 5b 00 00 00                                  	push   $0x5b
+   9:	e8 fc ff ff ff                                  	call   a <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0xa>
+   e:	83 c4 08                                        	add    $0x8,%esp
+  11:	0f b9 40 01                                     	ud1    0x1(%eax),%eax
+
+Disassembly of section .text:
+
+00000000 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE>:
+   0:	53                                              	push   %ebx
+   1:	57                                              	push   %edi
+   2:	56                                              	push   %esi
+   3:	8b 5c 24 18                                     	mov    0x18(%esp),%ebx
+   7:	83 fb fb                                        	cmp    $0xfffffffb,%ebx
+   a:	73 65                                           	jae    71 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x71>
+   c:	8b 74 24 10                                     	mov    0x10(%esp),%esi
+  10:	83 fb 0a                                        	cmp    $0xa,%ebx
+  13:	77 09                                           	ja     1e <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x1e>
+  15:	89 d8                                           	mov    %ebx,%eax
+  17:	00 d8                                           	add    %bl,%al
+  19:	88 06                                           	mov    %al,(%esi)
+  1b:	46                                              	inc    %esi
+  1c:	eb 27                                           	jmp    45 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x45>
+  1e:	89 d8                                           	mov    %ebx,%eax
+  20:	83 e0 fc                                        	and    $0xfffffffc,%eax
+  23:	83 c0 04                                        	add    $0x4,%eax
+  26:	83 f8 0c                                        	cmp    $0xc,%eax
+  29:	bf 0e 00 00 00                                  	mov    $0xe,%edi
+  2e:	0f 45 f8                                        	cmovne %eax,%edi
+  31:	57                                              	push   %edi
+  32:	e8 fc ff ff ff                                  	call   33 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x33>
+  37:	83 c4 04                                        	add    $0x4,%esp
+  3a:	47                                              	inc    %edi
+  3b:	89 3e                                           	mov    %edi,(%esi)
+  3d:	89 5e 04                                        	mov    %ebx,0x4(%esi)
+  40:	89 46 08                                        	mov    %eax,0x8(%esi)
+  43:	89 c6                                           	mov    %eax,%esi
+  45:	8d 0c 1e                                        	lea    (%esi,%ebx,1),%ecx
+  48:	41                                              	inc    %ecx
+  49:	39 f1                                           	cmp    %esi,%ecx
+  4b:	72 22                                           	jb     6f <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x6f>
+  4d:	8b 44 24 14                                     	mov    0x14(%esp),%eax
+  51:	39 f0                                           	cmp    %esi,%eax
+  53:	0f 92 c2                                        	setb   %dl
+  56:	39 c8                                           	cmp    %ecx,%eax
+  58:	0f 93 c1                                        	setae  %cl
+  5b:	08 d1                                           	or     %dl,%cl
+  5d:	74 10                                           	je     6f <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x6f>
+  5f:	43                                              	inc    %ebx
+  60:	53                                              	push   %ebx
+  61:	50                                              	push   %eax
+  62:	56                                              	push   %esi
+  63:	e8 fc ff ff ff                                  	call   64 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x64>
+  68:	83 c4 0c                                        	add    $0xc,%esp
+  6b:	5e                                              	pop    %esi
+  6c:	5f                                              	pop    %edi
+  6d:	5b                                              	pop    %ebx
+  6e:	c3                                              	ret    
+  6f:	0f 0b                                           	ud2    
+  71:	e8 fc ff ff ff                                  	call   72 <_ZN2ui19ClipboardFormatType18CustomPlatformTypeENSt25__gtos_isolate_diagnostic17basic_string_viewIcNS1_11char_traitsIcEEEE+0x72>
+  76:	0f b9 40 01                                     	ud1    0x1(%eax),%eax

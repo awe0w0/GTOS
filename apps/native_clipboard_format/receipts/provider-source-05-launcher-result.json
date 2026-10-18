@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/provider-source-v5.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 43.95557919,
+  "child_sha256": "062c638b18ab26af0a62a9e3eeac559cd39d51f32fc44c006a42cbdc70f05dc8",
+  "all_own_descendants_reaped": true,
+  "adopted_descendants": [],
+  "failure": null,
+  "guard_sha256": "d1697744d8b3dcf3bd2a9be9929dc89b381cc9a20db283cf518da017995aaeac",
+  "launcher_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,17 @@
+{
+  "authored_fixture_only": true,
+  "native_runtime_qualified": false,
+  "record_bytes": 256,
+  "mode0_expected": {"checks":289,"mask":63,"result":0,"format_cases":12,"serialization_cases":14,"comparison_cases":100,"lifetime_waves":32,"custom_cases":4,"web_custom_cases":4,"retained_bytes":66272,"ascii_rejection_attempts":0},
+  "mode1_expected_before_CHECK": {"stage":10,"result":4294967295,"error":0,"checks":0,"mask":0,"ascii_rejection_attempts":1},
+  "expected_GN_targets": 21501,
+  "expected_GN_files": 2518,
+  "files": {
+    "tools/gtos_clipboard_format_probe/BUILD.gn": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/gn-probe-source-v1/tools/gtos_clipboard_format_probe/BUILD.gn","sha256":"9fd71d683022756d3e5f13d4e4416184fbbc80869e22eaf315cd7db599b756fc"},
+    "tools/gtos_clipboard_format_probe/api.h": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/api.h","sha256":"5d2a6be3d586bbbc1a3afc39a82321efedbd34cb84e51bb485334640ed600ae9"},
+    "tools/gtos_clipboard_format_probe/checks.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/checks.cc","sha256":"7304618ddcbc0da463f92feb50667eda634fcaac8dcddaa61233027a7c62f930"},
+    "tools/gtos_clipboard_format_probe/entry.cc": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/entry.cc","sha256":"ff5caeaa2b40d01b5bd79e5f89afb556153dcf188ba11897fd5607aecc9773b3"},
+    "tools/gtos_clipboard_format_probe/start.s": {"path":"/mnt/f/GTOS-Chromium/artifacts/native-content-frontier-20261018-a/clipboard-probe-v1/start.s","sha256":"1cf224759251a5608775a8c5ac0ea60179da8dd86e8682503537b3897a7f505b"}
+  },
+  "scope": "Reviewed scalar-C-ABI diagnostic fixtures and separate explicit negative-entry mode. No runtime acceptance or original ClipboardFormatType replacement. Formal source/config/M/MD and native checks remain separate."
+}

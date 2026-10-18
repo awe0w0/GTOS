@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/mnt/f/GTOS-Chromium/artifacts/native-clipboard-format-20261018-a/compile-probe-v1.py"
+  ],
+  "cwd": "/mnt/f/GTOS-Chromium",
+  "shell": false,
+  "returncode": 0,
+  "seconds": 238.37974211300002,
+  "child_sha256": "17eccb856ace03de62562ff4187b3baeeccf15be82d02560c568325284f0af66",
+  "guard_sha256": "1a2477d3bc91d899145e7d50b40e3d30ea1d6e5fb84a9d531bad22a0a229fc7a",
+  "launcher_log_sha256": "9dfe49716162b8088940dd2ab0531b5fc7bf61bf62d82fd96981623eda9dcdb6",
+  "owned_group_cleanup_completed": true,
+  "all_own_descendants_reaped": true,
+  "adopted_descendants": [],
+  "failure": null
+}
