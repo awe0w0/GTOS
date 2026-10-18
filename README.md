@@ -250,11 +250,13 @@ new/delete、emutls、C++ TLS 析构、GTOS 单调时钟，以及 libc++ 单任�
 
 已验收的[通用文件存储后端](docs/littlefs/README.md)保留完整 littlefs 读写算法，覆盖真实 ATA 持久化、文件和目录操作、所有者句柄回收、满盘及中断恢复；已验收的[原生文件 ABI](apps/native_files/README.md)接入真实 CPL3 用户页检查、文件和目录操作及延迟退出回收。
 
-已验收的[原生 C 文件流组件](apps/native_c_file/README.md)提供固定 LLVM libc 的 21 个普通文件字节流接口，覆盖实际 ATA 读写、错误/EOF、缓冲失败、进程故障/取消及精确回收。标准流、完整 stdio/libc++ fstream、生产文件服务挂载、磁盘 PNG 到桌面窗口及完整 V8/浏览器仍待集成。
+已验收的[原生 C 文件流组件](apps/native_c_file/README.md)提供固定 LLVM libc 的 21 个普通文件字节流接口，覆盖实际 ATA 读写、错误/EOF、缓冲失败、进程故障/取消及精确回收。本组件的标准流、完整 stdio/libc++ fstream、生产文件服务挂载、磁盘 PNG 到桌面窗口，以及这些文件流能力与完整 V8/浏览器的集成仍待闭合。
 
 完整 V8 构建驱动的[真实 Abseil 退出验证](apps/native_v8_exit_probe/README.md)已在
 GTOS CPL3 验证正常返回、立即退出、明确拒绝信号安装及精确回收；完整目标越过
 日志消费者后，[实际熵消费者](apps/native_v8_seed_probe/README.md)通过 O0/O2 的
 RDRAND 开关、边界、用户故障及回收验证。修复未用 POSIX 头条件后，完整目标
-越过 futex waiter/mutex，当前首个阻塞为 zlib/zconf.h:505；实际 waiter 为标准
-C++，条件等待原生提供者仍缺。完整 Isolate/JS 和网页运行仍待验收。
+越过 futex waiter/mutex，当时首个阻塞为 zlib/zconf.h:505；该阶段的 waiter 选择标准
+C++ 分支，条件等待原生提供者仍缺，完整 Isolate/JS 和网页运行尚未验收。最新的
+[启动环境与 CPU 验收](apps/native_environment/README.md)已完成四次真实 V8 启动和
+28 组原 JS 工作负载；Content 本地首帧与 DOM 仍待闭合，网页、视频和 HTML5 尚未验收。
