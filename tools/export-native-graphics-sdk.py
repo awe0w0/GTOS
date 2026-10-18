@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Export the two native graphics ABI headers into a narrow SDK overlay.
+
+The overlay is a *additive* directory that can be placed ahead of the existing
+`tools/gtos_native_sdk/sdk` search root. It contains exactly the headers that
+`apps/png_surface_probe` includes but that the existing SDK does not provide:
+`process/resource_abi.h` and `process/surface_abi.h`.
+
+Nothing else is exported. The six headers the existing SDK already provides
+(`abi.h`, `environment_abi.h`, `file_abi.h`, `info_abi.h`, `tls.h`, `vm_abi.h`)
+continue to resolve from the original SDK, unmodified.
+
+The source bytes are copied verbatim: this tool does not rewrite, reformat or
+regenerate any header, and it never touches the original SDK or the repository
+headers. An existing output directory is refused rather than overwritten.
+"""
+import argparse
+import hashlib
+import json
+import pathlib
+import sys
+
+MEMBERS = (
+    'include/process/resource_abi.h',
+    'include/process/surface_abi.h',
+)
+
+
+def require(condition, message):
+    if not condition:
+        raise SystemExit('refused: ' + message)
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def repository_root():
+    return pathlib.Path(__file__).resolve().parent.parent
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        description='Export the fixed native graphics ABI header subset.')
+    parser.add_argument('output', help='a new directory to create; must not exist')
+    args = parser.parse_args(argv)
+
+    root = repository_root()
+    require((root / 'include/process').is_dir(),
+            'not inside a GTOS checkout: ' + str(root))
+    output = pathlib.Path(args.output)
+
+    # Every member is validated before anything is written.
+    plan = []
+    for relative in MEMBERS:
+        source = root / relative
+        require(source.is_file() and not source.is_symlink(),
+                'source is not a regular file: ' + relative)
+        resolved = source.resolve()
+        root_resolved = root.resolve()
+        require(resolved == root_resolved
+                or root_resolved in resolved.parents,
+                'source escapes the checkout: ' + relative)
+        name = pathlib.PurePosixPath(relative).name
+        target = output / 'sdk/process' / name
+        plan.append({'logical': 'process/' + name,
+                     'source': str(source), 'target': str(target),
+                     'bytes': source.stat().st_size,
+                     'sha256': sha256(source)})
+
+    require(not output.exists() and not output.is_symlink(),
+            'the output already exists; a fresh directory is required: ' + str(output))
+    (output / 'sdk/process').mkdir(parents=True)
+    require(not (output / 'sdk/process').is_symlink(),
+            'the output process directory must be a real directory')
+
+    written = []
+    for item in plan:
+        source = pathlib.Path(item['source'])
+        target = pathlib.Path(item['target'])
+        require(not target.exists() and not target.is_symlink(),
+                'the target already exists: ' + item['logical'])
+        target.write_bytes(source.read_bytes())
+        require(target.is_file() and not target.is_symlink(),
+                'the exported member is not a regular file: ' + item['logical'])
+        actual = sha256(target)
+        require(actual == item['sha256'],
+                'the exported member differs from its source: ' + item['logical'])
+        written.append({'logical': item['logical'], 'target': str(target),
+                        'bytes': target.stat().st_size, 'sha256': actual})
+
+    manifest = {'schema_version': 1,
+                'checkout': str(root),
+                'members': written,
+                'not_exported': [
+                    'process/abi.h', 'process/environment_abi.h',
+                    'process/file_abi.h', 'process/info_abi.h',
+                    'process/tls.h', 'process/vm_abi.h'],
+                'note': 'The six headers above already resolve from the original '
+                        'tools/gtos_native_sdk/sdk and are intentionally not '
+                        'duplicated here.'}
+    (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    print(json.dumps({'output': str(output),
+                      'members': [item['logical'] for item in written],
+                      'total_bytes': sum(item['bytes'] for item in written)},
+                     indent=2))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
