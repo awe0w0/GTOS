@@ -11,6 +11,7 @@
 #include <process/abi.h>
 #include <process/resource_abi.h>
 #include <process/window_abi.h>
+#include <process/window_client.h>
 #include <process/vm_abi.h>
 #include "png_pixel.h"
 #include "resource_oracles.h"
@@ -108,22 +109,63 @@ static uint32_t crc32(const unsigned char *p, unsigned n) {
 }
 
 // ---- window syscall wrappers -------------------------------------------------
+// Normal window calls go through the exported SDK wrapper in
+// <process/window_client.h>. That header adds no validation: it passes the
+// caller's request pointer and byte count straight to `int $0x80`, so a request
+// the kernel should refuse is still refused by the kernel.
+//
+// The deliberately malformed requests - bad version, bad request size, bad
+// destination pointer - must NOT travel through any wrapper, because a wrapper
+// that ever grew a pre-check would quietly turn a kernel negative test into a
+// user-space test that proves nothing. Those three classes use the `raw*`
+// helpers below, which are the bare `int $0x80` and nothing else. Every other
+// negative in this file (BAD_STATE, BAD_HANDLE, BAD_PIXELS, RANGE, LIMIT,
+// second CLOSE) is a well-formed request that the kernel refuses on policy, so
+// it keeps using the wrapper.
+static unsigned sdkCalls, rawCalls;
 static int wcreate(const GtosWindowCreateRequest *q, unsigned bytes = sizeof(*q)) {
-    return call(GTOS_SYS_WINDOW_CREATE, (unsigned)q, bytes);
+    ++sdkCalls;
+    return gtos::process::WindowCreate(q, bytes);
 }
 static int wsubmit(const GtosWindowSubmitRequest *q, unsigned bytes = sizeof(*q)) {
-    return call(GTOS_SYS_WINDOW_SUBMIT, (unsigned)q, bytes);
+    ++sdkCalls;
+    return gtos::process::WindowSubmit(q, bytes);
 }
 static int wpresent(const GtosWindowControlRequest *q, unsigned bytes = sizeof(*q)) {
-    return call(GTOS_SYS_WINDOW_PRESENT, (unsigned)q, bytes);
+    ++sdkCalls;
+    return gtos::process::WindowPresent(q, bytes);
 }
 static int wclose(const GtosWindowControlRequest *q, unsigned bytes = sizeof(*q)) {
-    return call(GTOS_SYS_WINDOW_CLOSE, (unsigned)q, bytes);
+    ++sdkCalls;
+    return gtos::process::WindowClose(q, bytes);
 }
 static int winfo(const GtosWindowInfoRequest *q, unsigned bytes = sizeof(*q)) {
-    return call(GTOS_SYS_WINDOW_INFO, (unsigned)q, bytes);
+    ++sdkCalls;
+    return gtos::process::WindowInfo(q, bytes);
 }
 static int iread(const GtosInputReadRequest *q, unsigned bytes = sizeof(*q)) {
+    ++sdkCalls;
+    return gtos::process::WindowInputRead(q, bytes);
+}
+// Raw path: the bare ABI call, used only by the three malformed-request classes.
+static int rawcreate(const GtosWindowCreateRequest *q, unsigned bytes = sizeof(*q)) {
+    ++rawCalls;
+    return call(GTOS_SYS_WINDOW_CREATE, (unsigned)q, bytes);
+}
+static int rawsubmit(const GtosWindowSubmitRequest *q, unsigned bytes = sizeof(*q)) {
+    ++rawCalls;
+    return call(GTOS_SYS_WINDOW_SUBMIT, (unsigned)q, bytes);
+}
+static int rawpresent(const GtosWindowControlRequest *q, unsigned bytes = sizeof(*q)) {
+    ++rawCalls;
+    return call(GTOS_SYS_WINDOW_PRESENT, (unsigned)q, bytes);
+}
+static int rawinfo(const GtosWindowInfoRequest *q, unsigned bytes = sizeof(*q)) {
+    ++rawCalls;
+    return call(GTOS_SYS_WINDOW_INFO, (unsigned)q, bytes);
+}
+static int rawiread(const GtosInputReadRequest *q, unsigned bytes = sizeof(*q)) {
+    ++rawCalls;
     return call(GTOS_SYS_INPUT_READ, (unsigned)q, bytes);
 }
 
@@ -132,18 +174,18 @@ static int rejected_creates() {
     const unsigned limit = (unsigned)&resource_oracles_rw_limit;
     GtosWindowCreateRequest good = {GTOS_WINDOW_ABI_VERSION, 16, 16, 64,
                                     GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED};
-    CHECK(wcreate(&good, 19) == GTOS_WINDOW_ERR_BAD_SIZE, 301);
-    CHECK(wcreate(&good, 21) == GTOS_WINDOW_ERR_BAD_SIZE, 302);
+    CHECK(rawcreate(&good, 19) == GTOS_WINDOW_ERR_BAD_SIZE, 301);
+    CHECK(rawcreate(&good, 21) == GTOS_WINDOW_ERR_BAD_SIZE, 302);
     CHECK(call(GTOS_SYS_WINDOW_CREATE, 0, 0) == GTOS_WINDOW_ERR_BAD_SIZE, 303);
     CHECK(call(GTOS_SYS_WINDOW_CREATE, 0, sizeof(good)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 304);
     CHECK(call(GTOS_SYS_WINDOW_CREATE, 0x100000U, sizeof(good)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 305);
     CHECK(call(GTOS_SYS_WINDOW_CREATE, limit, sizeof(good)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 306);
     GtosWindowCreateRequest q = good;
     q.version = 0;
-    CHECK(wcreate(&q) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 307);
+    CHECK(rawcreate(&q) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 307);
     q = good;
     q.version = 2;
-    CHECK(wcreate(&q) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 308);
+    CHECK(rawcreate(&q) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 308);
     q = good;
     q.width = 0;
     CHECK(wcreate(&q) == GTOS_WINDOW_ERR_RANGE, 309);
@@ -315,7 +357,7 @@ static int input_copy_stage(unsigned h) {
     // (a) A read-only page must refuse the copy.
     GtosInputReadRequest read = {GTOS_WINDOW_ABI_VERSION, h, 1,
                                  vmBase + 2 * GTOS_VM_PAGE_BYTES};
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 435);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 435);
     // A refused copy must not consume: the depth may only grow from a later
     // arrival, never shrink.
     CHECK(query_info(h, depth, lifecycle) == 0 && depth >= depth0, 436);
@@ -324,7 +366,7 @@ static int input_copy_stage(unsigned h) {
     // (b) A destination that crosses into an unmapped page must refuse it. One
     // record is 16 bytes, so starting 8 bytes before the page end crosses.
     read.destination = vmBase + GTOS_VM_PAGE_BYTES - 8;
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 437);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 437);
     CHECK(query_info(h, depth, lifecycle) == 0 && depth >= depth0, 438);
     cases += 2;
 
@@ -335,7 +377,7 @@ static int input_copy_stage(unsigned h) {
     for (unsigned i = 4088; i < GTOS_VM_PAGE_BYTES; ++i) third[i] = 0x5a;
     read.count = multi;
     read.destination = vmBase + 4 * GTOS_VM_PAGE_BYTES - 8;
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 439);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 439);
     CHECK(query_info(h, depth, lifecycle) == 0 && depth >= depth0, 440);
     // The refused copy would have covered multi * 16 bytes: 8 of them in the
     // writable page and the rest in the read-only page. Both parts are verified
@@ -458,10 +500,10 @@ static int reset_copy_stage(unsigned h) {
     CHECK(lifecycle == GTOS_WINDOW_LIVE, 474);
 
     GtosInputReadRequest read = {GTOS_WINDOW_ABI_VERSION, h, 1, 0};
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 475);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 475);
     CHECK(query_info(h, depth, lifecycle) == 0 && depth == depth0, 476);
     read.destination = (unsigned)&resource_oracles_rw_limit;
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 477);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 477);
     CHECK(query_info(h, depth, lifecycle) == 0 && depth == depth0, 478);
     cases += 4;
 
@@ -498,7 +540,7 @@ static int close_copy_stage(unsigned h) {
     CHECK(depth == 1, 493);
 
     GtosInputReadRequest read = {GTOS_WINDOW_ABI_VERSION, h, 1, 0};
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 494);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_BAD_ADDRESS, 494);
     CHECK(query_info(h, depth, lifecycle) == 0 && depth == 1 &&
           lifecycle == GTOS_WINDOW_CLOSING, 495);
     cases += 2;
@@ -535,11 +577,11 @@ static int window_requests() {
 
     // --- SUBMIT rejections ---------------------------------------------------
     GtosWindowSubmitRequest submit = {GTOS_WINDOW_ABI_VERSION, h, 0, 0, 0};
-    CHECK(wsubmit(&submit, 19) == GTOS_WINDOW_ERR_BAD_SIZE, 340);
-    CHECK(wsubmit(&submit, 21) == GTOS_WINDOW_ERR_BAD_SIZE, 341);
+    CHECK(rawsubmit(&submit, 19) == GTOS_WINDOW_ERR_BAD_SIZE, 340);
+    CHECK(rawsubmit(&submit, 21) == GTOS_WINDOW_ERR_BAD_SIZE, 341);
     CHECK(call(GTOS_SYS_WINDOW_SUBMIT, 0, sizeof(submit)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 342);
     submit.version = 0;
-    CHECK(wsubmit(&submit) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 343);
+    CHECK(rawsubmit(&submit) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 343);
     submit.version = GTOS_WINDOW_ABI_VERSION;
     submit.handle = h + 97;
     submit.length = GTOS_WINDOW_WRITE_LIMIT;
@@ -557,11 +599,11 @@ static int window_requests() {
     CHECK(wsubmit(&submit) == GTOS_WINDOW_ERR_BAD_STATE, 347);
     submit.offset = 0;
     submit.source = 0;
-    CHECK(wsubmit(&submit) == GTOS_WINDOW_ERR_BAD_ADDRESS, 348);
+    CHECK(rawsubmit(&submit) == GTOS_WINDOW_ERR_BAD_ADDRESS, 348);
     submit.source = 0x100000U;
-    CHECK(wsubmit(&submit) == GTOS_WINDOW_ERR_BAD_ADDRESS, 349);
+    CHECK(rawsubmit(&submit) == GTOS_WINDOW_ERR_BAD_ADDRESS, 349);
     submit.source = limit - 8;
-    CHECK(wsubmit(&submit) == GTOS_WINDOW_ERR_BAD_ADDRESS, 350);
+    CHECK(rawsubmit(&submit) == GTOS_WINDOW_ERR_BAD_ADDRESS, 350);
     // A non-sequential offset is a state error, not a range error.
     submit.source = (unsigned)chunk;
     submit.offset = GTOS_WINDOW_WRITE_LIMIT;
@@ -579,10 +621,10 @@ static int window_requests() {
     CHECK(wsubmit(&submit) == (int)GTOS_WINDOW_WRITE_LIMIT, 358);
     // PRESENT before a complete draft is a state error.
     CHECK(wpresent(&control) == GTOS_WINDOW_ERR_BAD_STATE, 352);
-    CHECK(wpresent(&control, 7) == GTOS_WINDOW_ERR_BAD_SIZE, 353);
+    CHECK(rawpresent(&control, 7) == GTOS_WINDOW_ERR_BAD_SIZE, 353);
     CHECK(call(GTOS_SYS_WINDOW_PRESENT, 0, sizeof(control)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 354);
     control.version = 0;
-    CHECK(wpresent(&control) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 355);
+    CHECK(rawpresent(&control) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 355);
     control.version = GTOS_WINDOW_ABI_VERSION;
     control.handle = h + 97;
     CHECK(wpresent(&control) == GTOS_WINDOW_ERR_BAD_HANDLE, 356);
@@ -618,21 +660,21 @@ static int window_requests() {
     CHECK(crc32(first, sizeof(first)) != crc32(frame, sizeof(frame)), 372);
 
     // --- INFO and INPUT_READ rejections --------------------------------------
-    CHECK(winfo(&info, 11) == GTOS_WINDOW_ERR_BAD_SIZE, 380);
-    CHECK(winfo(&info, 13) == GTOS_WINDOW_ERR_BAD_SIZE, 381);
+    CHECK(rawinfo(&info, 11) == GTOS_WINDOW_ERR_BAD_SIZE, 380);
+    CHECK(rawinfo(&info, 13) == GTOS_WINDOW_ERR_BAD_SIZE, 381);
     CHECK(call(GTOS_SYS_WINDOW_INFO, 0, sizeof(info)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 382);
     info.version = 0;
-    CHECK(winfo(&info) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 383);
+    CHECK(rawinfo(&info) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 383);
     info.version = GTOS_WINDOW_ABI_VERSION;
     info.handle = h + 97;
     CHECK(winfo(&info) == GTOS_WINDOW_ERR_BAD_HANDLE, 384);
     info.handle = h;
     info.result_va = 0;
-    CHECK(winfo(&info) == GTOS_WINDOW_ERR_BAD_ADDRESS, 385);
+    CHECK(rawinfo(&info) == GTOS_WINDOW_ERR_BAD_ADDRESS, 385);
     info.result_va = 0x100000U;
-    CHECK(winfo(&info) == GTOS_WINDOW_ERR_BAD_ADDRESS, 386);
+    CHECK(rawinfo(&info) == GTOS_WINDOW_ERR_BAD_ADDRESS, 386);
     info.result_va = limit;
-    CHECK(winfo(&info) == GTOS_WINDOW_ERR_BAD_ADDRESS, 387);
+    CHECK(rawinfo(&info) == GTOS_WINDOW_ERR_BAD_ADDRESS, 387);
     // Restore a valid output address. Leaving this at `limit` made every later
     // INFO fail, which silently skipped the copy cases that depend on it.
     info.result_va = (unsigned)boundary;
@@ -643,11 +685,11 @@ static int window_requests() {
     memset(inbox, 0xa5, sizeof(inbox));
     CHECK(iread(&read) == 0, 390);
     CHECK(untouched(inbox, sizeof(inbox), 0xa5), 391);
-    CHECK(iread(&read, 15) == GTOS_WINDOW_ERR_BAD_SIZE, 392);
-    CHECK(iread(&read, 17) == GTOS_WINDOW_ERR_BAD_SIZE, 393);
+    CHECK(rawiread(&read, 15) == GTOS_WINDOW_ERR_BAD_SIZE, 392);
+    CHECK(rawiread(&read, 17) == GTOS_WINDOW_ERR_BAD_SIZE, 393);
     CHECK(call(GTOS_SYS_INPUT_READ, 0, sizeof(read)) == GTOS_WINDOW_ERR_BAD_ADDRESS, 394);
     read.version = 0;
-    CHECK(iread(&read) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 395);
+    CHECK(rawiread(&read) == GTOS_WINDOW_ERR_UNSUPPORTED_VERSION, 395);
     read.version = GTOS_WINDOW_ABI_VERSION;
     read.handle = h + 97;
     CHECK(iread(&read) == GTOS_WINDOW_ERR_BAD_HANDLE, 396);
@@ -747,6 +789,15 @@ extern "C" int png_guest_main(void) {
 
     const int windows = window_requests();
     if (windows) return windows;
+    // Both paths really ran: the normal calls went through the exported SDK
+    // wrapper and the malformed-request negatives went raw. A zero on either
+    // side would mean this build proved only half of the claim.
+    CHECK(sdkCalls > 0 && rawCalls > 0, 15);
+    SAY("GTOS NATIVE WINDOW SDK CALLS V1 ");
+    sayNumber(sdkCalls);
+    SAY(" ");
+    sayNumber(rawCalls);
+    SAY("\n");
     CHECK(call(GTOS_SYS_WRITE, (unsigned)pass, sizeof(pass) - 1) == (int)sizeof(pass) - 1, 14);
     return 0;
 }

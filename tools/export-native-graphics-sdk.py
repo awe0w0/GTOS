@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Export the two native graphics ABI headers into a narrow SDK overlay.
+"""Export a narrow native ABI overlay ahead of the existing SDK search root.
 
-The overlay is a *additive* directory that can be placed ahead of the existing
-`tools/gtos_native_sdk/sdk` search root. It contains exactly the headers that
-`apps/png_surface_probe` includes but that the existing SDK does not provide:
-`process/resource_abi.h` and `process/surface_abi.h`.
+Two modes, and only two:
 
-Nothing else is exported. The six headers the existing SDK already provides
-(`abi.h`, `environment_abi.h`, `file_abi.h`, `info_abi.h`, `tls.h`, `vm_abi.h`)
-continue to resolve from the original SDK, unmodified.
+* default - exactly the two graphics headers that
+  `apps/png_surface_probe` includes but the existing SDK does not provide:
+  `process/resource_abi.h` and `process/surface_abi.h`.
+* `--with-window` - the same two, plus `process/window_abi.h` and
+  `process/window_client.h`, so a window consumer can resolve its wire header and
+  its six-call wrapper from the overlay.
+
+The six headers the existing SDK already provides (`abi.h`,
+`environment_abi.h`, `file_abi.h`, `info_abi.h`, `tls.h`, `vm_abi.h`) continue to
+resolve from the original SDK in both modes, unmodified. The kernel-side
+`native_windows.h`, the GUI provider and the C++ kernel classes are never
+exported: they are not application interfaces.
 
 The source bytes are copied verbatim: this tool does not rewrite, reformat or
 regenerate any header, and it never touches the original SDK or the repository
@@ -20,10 +26,20 @@ import json
 import pathlib
 import sys
 
-MEMBERS = (
+GRAPHICS_MEMBERS = (
     'include/process/resource_abi.h',
     'include/process/surface_abi.h',
 )
+# Only added by --with-window. The wire header carries the layout; the client
+# header carries the six thin calls. Nothing else about the window path is
+# exported.
+WINDOW_MEMBERS = (
+    'include/process/window_abi.h',
+    'include/process/window_client.h',
+)
+SDK_PROVIDED = ('process/abi.h', 'process/environment_abi.h',
+                'process/file_abi.h', 'process/info_abi.h',
+                'process/tls.h', 'process/vm_abi.h')
 
 
 def require(condition, message):
@@ -47,16 +63,21 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description='Export the fixed native graphics ABI header subset.')
     parser.add_argument('output', help='a new directory to create; must not exist')
+    parser.add_argument('--with-window', action='store_true',
+                        help='also export process/window_abi.h and '
+                             'process/window_client.h (opt-in; the default stays '
+                             'the two graphics headers)')
     args = parser.parse_args(argv)
 
     root = repository_root()
     require((root / 'include/process').is_dir(),
             'not inside a GTOS checkout: ' + str(root))
     output = pathlib.Path(args.output)
+    members = GRAPHICS_MEMBERS + (WINDOW_MEMBERS if args.with_window else ())
 
     # Every member is validated before anything is written.
     plan = []
-    for relative in MEMBERS:
+    for relative in members:
         source = root / relative
         require(source.is_file() and not source.is_symlink(),
                 'source is not a regular file: ' + relative)
@@ -95,16 +116,17 @@ def main(argv):
 
     manifest = {'schema_version': 1,
                 'checkout': str(root),
+                'mode': 'with-window' if args.with_window else 'graphics-only',
                 'members': written,
-                'not_exported': [
-                    'process/abi.h', 'process/environment_abi.h',
-                    'process/file_abi.h', 'process/info_abi.h',
-                    'process/tls.h', 'process/vm_abi.h'],
+                'not_exported': list(SDK_PROVIDED),
                 'note': 'The six headers above already resolve from the original '
                         'tools/gtos_native_sdk/sdk and are intentionally not '
-                        'duplicated here.'}
+                        'duplicated here. The kernel-side native_windows.h, the '
+                        'GUI provider and the C++ kernel classes are never '
+                        'exported.'}
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(json.dumps({'output': str(output),
+                      'mode': manifest['mode'],
                       'members': [item['logical'] for item in written],
                       'total_bytes': sum(item['bytes'] for item in written)},
                      indent=2))

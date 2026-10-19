@@ -7,24 +7,36 @@
 # against the qualified manifest before the link, so nothing here is "trusted"
 # because it happens to be on disk.
 #
-#   build-native-window-probe.sh FRESH_OUT QUALIFIED_PNG_DIR CLANG_DIR
+# The `<process/...>` headers are resolved the way a real application would see
+# them: from the SDK overlay produced by `tools/export-native-graphics-sdk.py
+# --with-window` plus the original `gtos_native_sdk`, never from the repository
+# include tree. The `-H` log is kept and checked, so a header that quietly fell
+# back to `include/` is a build failure rather than a hidden success.
+#
+#   build-native-window-probe.sh FRESH_OUT QUALIFIED_PNG_DIR CLANG_DIR [SDK_ROOT]
 set -euo pipefail
-if [ "$#" -ne 3 ]; then
-  echo "usage: build-native-window-probe.sh FRESH_OUT QUALIFIED_PNG_DIR CLANG_DIR" >&2
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+  echo "usage: build-native-window-probe.sh FRESH_OUT QUALIFIED_PNG_DIR CLANG_DIR [SDK_ROOT]" >&2
   exit 2
 fi
 repo=/mnt/f/GTOS-Chromium/sources/GTOS
 out="$1"
 reference="$2"
 clangdir="$3"
+sdk="${4:-/mnt/f/GTOS-Chromium/artifacts/native-platform-file-handle-20261017-a/gn-01/source/tools/gtos_native_sdk}"
 if [ -e "$out" ]; then
   echo "Choose a fresh output directory: $out" >&2
+  exit 2
+fi
+if [ ! -d "$sdk/sdk/process" ]; then
+  echo "SDK_ROOT has no sdk/process: $sdk" >&2
   exit 2
 fi
 mkdir -p "$out/source-snapshot"
 out="$(realpath "$out")"
 reference="$(realpath "$reference")"
 clangdir="$(realpath "$clangdir")"
+sdk="$(realpath "$sdk")"
 cd "$repo"
 clang="$clangdir/bin/clang"
 linker="$clangdir/bin/ld.lld"
@@ -87,10 +99,62 @@ common=(--target=i686-unknown-none-elf -Oz -Wall -Wextra -Werror -ffreestanding
   -fno-builtin -fno-pic -fno-pie -fno-stack-protector -fno-unwind-tables
   -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2
   -ffunction-sections -fdata-sections -fstack-usage -DGTOS_NATIVE_COMPONENT=1
-  "-I$repo/include" "-I$app" "-I$resource_app" "-I$png"
+  "-I$app" "-I$resource_app" "-I$png"
   "-I$repo/apps/wuffs_gif_probe/freestanding")
+
+# The window headers must come from the exported overlay, exactly as an
+# application that consumes the SDK would see them. The overlay is built here,
+# into this OUT, so the build is reproducible from the two committed headers.
+python3 tools/export-native-graphics-sdk.py --with-window "$out/sdk-overlay" \
+  > "$out/sdk-overlay.log" 2>&1
+[ -f "$out/sdk-overlay/sdk/process/window_client.h" ] || {
+  echo "the SDK overlay is missing process/window_client.h" >&2; exit 1; }
+[ -f "$out/sdk-overlay/sdk/process/window_abi.h" ] || {
+  echo "the SDK overlay is missing process/window_abi.h" >&2; exit 1; }
+# Byte-for-byte the committed headers, or the build below would prove nothing
+# about the headers that are actually going to be reviewed.
+for member in window_abi.h window_client.h resource_abi.h surface_abi.h; do
+  a="$(sha256sum "$out/sdk-overlay/sdk/process/$member" | cut -d' ' -f1)"
+  b="$(sha256sum "$repo/include/process/$member" | cut -d' ' -f1)"
+  [ "$a" = "$b" ] || { echo "overlay $member differs from the committed header" >&2; exit 1; }
+done
+{
+  printf 'sdk_root=%s\n' "$sdk"
+  sha256sum "$sdk/sdk/process/abi.h" "$sdk/sdk/process/vm_abi.h" \
+    "$sdk/sdk/process/environment_abi.h" "$sdk/sdk/process/file_abi.h" \
+    "$sdk/sdk/process/info_abi.h" "$sdk/sdk/process/tls.h"
+} > "$out/sdk-binding.txt"
+
+sdk_flags=(-isystem "$out/sdk-overlay/sdk" -isystem "$sdk/sdk" -isystem "$sdk/c-sdk")
 "$clang" -std=c++11 -fno-exceptions -fno-rtti -fno-threadsafe-statics "${common[@]}" \
-  -c "$app/native_main.cc" -o "$out/main.o" > "$out/native-main.log" 2>&1
+  "${sdk_flags[@]}" -H \
+  -c "$app/native_main.cc" -o "$out/main.o" \
+  > "$out/native-main.log" 2> "$out/native-main-include.log"
+# Every <process/...> header the consumer opened, and where it came from.
+grep -E '^\.+ /.*/process/[a-z_]+\.h$' "$out/native-main-include.log" \
+  > "$out/native-main-origins.log" || true
+if [ ! -s "$out/native-main-origins.log" ]; then
+  echo "the consumer opened no <process/...> header; the -H check proved nothing" >&2
+  cat "$out/native-main-include.log" >&2
+  exit 1
+fi
+if grep -q "$repo/include" "$out/native-main-origins.log"; then
+  echo "a production header was resolved from the repository include tree" >&2
+  grep "$repo/include" "$out/native-main-origins.log" >&2
+  exit 1
+fi
+for header in window_abi.h window_client.h; do
+  grep -F " $out/sdk-overlay/sdk/process/$header" "$out/native-main-origins.log" \
+    > /dev/null || {
+      echo "process/$header did not come from the exported overlay" >&2
+      cat "$out/native-main-origins.log" >&2; exit 1; }
+done
+for header in abi.h vm_abi.h; do
+  grep -F " $sdk/sdk/process/$header" "$out/native-main-origins.log" \
+    > /dev/null || {
+      echo "process/$header did not come from the original SDK" >&2
+      cat "$out/native-main-origins.log" >&2; exit 1; }
+done
 "$clang" --target=i686-unknown-none-elf -c "$png/start.s" -o "$out/start.o" \
   > "$out/native-start.log" 2>&1
 "$clang" --target=i686-unknown-none-elf -c "$resource_app/register_probe.s" \
@@ -159,7 +223,9 @@ grep -q 'REAL GTOS ELF32 VALIDATOR PASS' "$out/actual-elf32-validation.log"
 manifest="$app/native_main.cc $png/start.s $resource_app/register_probe.s \
  $png/linker.ld $png/png_decode.h $png/png_pixel.h $resource_app/resource_oracles.h \
  $repo/include/process/abi.h $repo/include/process/resource_abi.h \
- $repo/include/process/window_abi.h $repo/include/process/vm_abi.h \
+ $repo/include/process/window_abi.h $repo/include/process/window_client.h \
+ $repo/include/process/vm_abi.h \
+ $repo/tools/export-native-graphics-sdk.py \
  $repo/tools/audit-kernel-instructions.py \
  $repo/tools/browser_artifact.py $repo/tests/native_window_probe_audit.py \
  $repo/tests/native_window_probe_build.sh"
