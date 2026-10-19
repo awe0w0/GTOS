@@ -9,6 +9,7 @@
 // the pixel source are real user pages, and every byte crosses the kernel's
 // checked copy. Nothing is a host simulation.
 #include <process/abi.h>
+#include <process/native_window_adapter.h>
 #include <process/resource_abi.h>
 #include <process/window_abi.h>
 #include <process/window_client.h>
@@ -21,7 +22,7 @@ extern "C" int resource_probe_registers(unsigned, unsigned, unsigned);
 // Linker-derived exclusive end of this process's RW pages. This diagnostic
 // symbol describes our own ELF and never appears in the window ABI.
 extern "C" unsigned char resource_oracles_rw_limit;
-#if !defined(__i386__) || defined(__linux__) || defined(_WIN32)
+#if !defined(__i386__) || !defined(__GTOS__) || defined(__linux__) || defined(_WIN32)
 #error A real freestanding GTOS i386 application is required
 #endif
 static_assert(sizeof(void *) == 4, "GTOS i386 ABI1");
@@ -55,6 +56,7 @@ static volatile unsigned initialized = 0x47544f53U;
 #define REQ_INPUT_COPY 1U
 #define REQ_RESET_COPY 2U
 #define REQ_CLOSE_COPY 4U
+#define REQ_ADAPTER 8U
 #define REQ_ALL (REQ_INPUT_COPY | REQ_RESET_COPY | REQ_CLOSE_COPY)
 static volatile unsigned requiredMask = 0;
 // Real records the desktop delivered, counted per type.
@@ -84,11 +86,30 @@ static void sayNumber(unsigned value) {
 }
 // A stage is only "done" when it reports the number of cases it executed, and
 // the harness waits for that line before it drives the next piece of input.
-#define STAGE(name, cases) do { \
-    SAY("GTOS NATIVE WINDOW STAGE " name " V1 "); \
-    sayNumber(cases); \
-    SAY("\n"); \
-} while (false)
+// The line is composed in one buffer and written once: composing it from three
+// writes let the desktop's own console output land between the "V1 " and the
+// count, which split one stage line into two and made the harness read the stage
+// as never reported. The buffer holds the longest prefix, the longest stage name
+// and ten digits with room to spare.
+#define STAGE_PREFIX "GTOS NATIVE WINDOW STAGE "
+#define STAGE_VERSION " V1 "
+static void stageLine(const char *name, unsigned nameLength, unsigned cases) {
+    char line[64];
+    unsigned used = 0;
+    for (unsigned i = 0; i < sizeof(STAGE_PREFIX) - 1; ++i) line[used++] = STAGE_PREFIX[i];
+    for (unsigned i = 0; i < nameLength; ++i) line[used++] = name[i];
+    for (unsigned i = 0; i < sizeof(STAGE_VERSION) - 1; ++i) line[used++] = STAGE_VERSION[i];
+    char digits[10];
+    unsigned count = 0;
+    do {
+        digits[count++] = (char)('0' + cases % 10U);
+        cases /= 10U;
+    } while (cases);
+    for (unsigned i = 0; i < count; ++i) line[used++] = digits[count - 1 - i];
+    line[used++] = '\n';
+    say(line, used);
+}
+#define STAGE(name, cases) stageLine(name, (unsigned)(sizeof(name) - 1), cases)
 static bool equal(const unsigned char *a, const unsigned char *b, unsigned n) {
     for (unsigned i = 0; i < n; ++i)
         if (a[i] != b[i]) return false;
@@ -122,6 +143,10 @@ static uint32_t crc32(const unsigned char *p, unsigned n) {
 // negative in this file (BAD_STATE, BAD_HANDLE, BAD_PIXELS, RANGE, LIMIT,
 // second CLOSE) is a well-formed request that the kernel refuses on policy, so
 // it keeps using the wrapper.
+//
+// `rawclose` is the one well-formed raw call: the adapter lifecycle stage needs
+// a CLOSE that does not travel through the adapter, because it is standing in
+// for somebody else destroying the window behind the object's back.
 static unsigned sdkCalls, rawCalls;
 static int wcreate(const GtosWindowCreateRequest *q, unsigned bytes = sizeof(*q)) {
     ++sdkCalls;
@@ -159,6 +184,12 @@ static int rawsubmit(const GtosWindowSubmitRequest *q, unsigned bytes = sizeof(*
 static int rawpresent(const GtosWindowControlRequest *q, unsigned bytes = sizeof(*q)) {
     ++rawCalls;
     return call(GTOS_SYS_WINDOW_PRESENT, (unsigned)q, bytes);
+}
+// A CLOSE that must not pass through the adapter: it plays the part of another
+// holder of the same owner destroying the window behind the object's back.
+static int rawclose(const GtosWindowControlRequest *q, unsigned bytes = sizeof(*q)) {
+    ++rawCalls;
+    return call(GTOS_SYS_WINDOW_CLOSE, (unsigned)q, bytes);
 }
 static int rawinfo(const GtosWindowInfoRequest *q, unsigned bytes = sizeof(*q)) {
     ++rawCalls;
@@ -748,6 +779,299 @@ static int window_requests() {
     return 0;
 }
 
+// ---- the user-space adapter, driven end to end -----------------------------
+// Everything here goes through gtos::process::NativeWindowAdapter, so the six
+// calls are reached through the object a UI layer would actually hold. The
+// wire-level negatives above stay on the raw path; this stage is about object
+// identity, ownership and lifecycle.
+static unsigned char adapterFrame[16 * 16 * 4];
+static GtosWindowInfoResponse adapterInfo;
+static GtosInputEvent adapterEvents[4];
+
+// Bounds for the two waits the harness drives. Both are ticks of the kernel's own
+// counter, so a run that never receives the request-close fails instead of
+// hanging, and the hold cannot be confused with an unbounded sleep. The wait is
+// generous because the harness may need a couple of presses before the desktop
+// has bound the new object to a window; a repeat press on an already-closing
+// window is a no-op in the desktop, so extra presses cannot corrupt the state.
+#define ADAPTER_CLOSE_WAIT 3000
+#define ADAPTER_CLOSE_HOLD 300
+
+static void adapter_fill(void) {
+    for (unsigned i = 0; i < sizeof(adapterFrame); i += 4) {
+        adapterFrame[i + 0] = 0x20;
+        adapterFrame[i + 1] = 0x40;
+        adapterFrame[i + 2] = 0x60;
+        adapterFrame[i + 3] = 0xff;
+    }
+}
+
+// One object whose window somebody else destroys. The adapter cannot know that
+// happened, so it must still claim the handle until a call comes back BAD_HANDLE;
+// that answer - and only that answer - drops the local claim.
+static int adapter_stage(void) {
+    gtos::process::NativeWindowAdapter window;
+    unsigned cases = 0;
+    // A default adapter holds nothing: no window was created by construction.
+    CHECK(!window.valid() && window.handle() == 0, 600);
+    CHECK(window.destroyed(), 601);
+    // The root content view shares this object's identity. There is no tree, so
+    // there is exactly one view and it is this window.
+    CHECK(window.root_view() == &window, 602);
+
+    // With no handle the kernel - not the adapter - refuses the call.
+    CHECK(window.Present() == GTOS_WINDOW_ERR_BAD_HANDLE, 603);
+    CHECK(window.ReadInput(adapterEvents, 4) == GTOS_WINDOW_ERR_BAD_HANDLE, 604);
+
+    CHECK(window.Create(16, 16) > 0, 605);
+    CHECK(window.valid() && window.width() == 16 && window.height() == 16, 606);
+    const unsigned stale = window.kernel_handle();
+    CHECK(stale != 0, 607);
+    cases += 8;
+
+    adapter_fill();
+
+    // --- BAD_STATE is not a lifecycle signal ---------------------------------
+    // The kernel returns it for an incomplete draft just as it does for a window
+    // that is no longer LIVE, so none of these may set closing.
+    CHECK(window.Present() == GTOS_WINDOW_ERR_BAD_STATE, 608);
+    CHECK(window.valid() && !window.closing(), 609);
+    CHECK(window.Submit(adapterFrame, GTOS_WINDOW_WRITE_LIMIT, 0) ==
+              (int)GTOS_WINDOW_WRITE_LIMIT, 610);
+    CHECK(window.Present() == GTOS_WINDOW_ERR_BAD_STATE, 611);
+    CHECK(window.valid() && !window.closing(), 612);
+    // The refused publish did not discard the chunk that was already accepted.
+    memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+    CHECK(window.Info(&adapterInfo) == 0 &&
+              adapterInfo.progress == GTOS_WINDOW_WRITE_LIMIT, 613);
+    CHECK(adapterInfo.lifecycle == GTOS_WINDOW_LIVE &&
+              adapterInfo.show == GTOS_WINDOW_SHOW_DRAFTING, 614);
+    // An offset that is not the exact next position is refused, not restarted.
+    CHECK(window.Submit(adapterFrame, GTOS_WINDOW_WRITE_LIMIT,
+                        sizeof(adapterFrame)) == GTOS_WINDOW_ERR_BAD_STATE, 615);
+    CHECK(window.valid() && !window.closing(), 616);
+    cases += 7;
+
+    // The rest of the frame, still in the order the ABI requires.
+    for (unsigned offset = GTOS_WINDOW_WRITE_LIMIT; offset < sizeof(adapterFrame);
+         offset += GTOS_WINDOW_WRITE_LIMIT) {
+        CHECK(window.Submit(adapterFrame + offset, GTOS_WINDOW_WRITE_LIMIT,
+                            offset) == (int)GTOS_WINDOW_WRITE_LIMIT, 617);
+        ++cases;
+    }
+    CHECK(window.Present() == 0, 618);
+    // Publishing again with no fresh draft is the same BAD_STATE on a LIVE window.
+    CHECK(window.Present() == GTOS_WINDOW_ERR_BAD_STATE, 619);
+    CHECK(window.valid() && !window.closing(), 620);
+    cases += 3;
+
+    // Every refusal above left the published frame and the window intact.
+    memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+    CHECK(window.Info(&adapterInfo) == 0, 621);
+    CHECK(adapterInfo.handle == stale, 622);
+    CHECK(adapterInfo.width == 16 && adapterInfo.height == 16, 623);
+    CHECK(adapterInfo.lifecycle == GTOS_WINDOW_LIVE, 624);
+    CHECK(adapterInfo.show == GTOS_WINDOW_SHOW_PUBLISHED &&
+              adapterInfo.frame_generation == 1 && adapterInfo.progress == 0, 625);
+    CHECK(!window.closing(), 626);
+    cases += 6;
+
+    // --- a failed INFO must not adopt the caller's stale bytes --------------
+    // The buffer is poisoned with what a wrong adoption would show, so the two
+    // checks below can tell "did not read out" from "read out and happened to
+    // agree". 0x100000 is an address this process does not own; the wire tests
+    // above already prove the kernel refuses it.
+    memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+    adapterInfo.lifecycle = GTOS_WINDOW_CLOSING;
+    CHECK(window.Info((GtosWindowInfoResponse *)0x100000U) ==
+              GTOS_WINDOW_ERR_BAD_ADDRESS, 627);
+    CHECK(!window.closing() && window.valid() && window.handle() == (int)stale, 628);
+    memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+    CHECK(window.Info(&adapterInfo) == 0 &&
+              adapterInfo.lifecycle == GTOS_WINDOW_LIVE, 629);
+    CHECK(!window.closing(), 630);
+    cases += 4;
+
+    // --- INPUT_READ into caller-owned storage --------------------------------
+    memset(adapterEvents, 0xa5, sizeof(adapterEvents));
+    const int events = window.ReadInput(adapterEvents, 4);
+    CHECK(events >= 0 && events <= 4, 631);
+    for (int index = 0; index < events; ++index) {
+        CHECK(adapterEvents[index].type <= GTOS_INPUT_RESET, 632);
+        ++cases;
+    }
+    ++cases;
+
+    // --- the real desktop asks this very window to close ---------------------
+    // The harness presses the same title-bar button it already uses for the wire
+    // stage; the window it hits is this adapter's, in the same slot.
+    SAY("GTOS NATIVE WINDOW ADAPTER CLOSE WAIT V1\n");
+    {
+        const int started = call(GTOS_SYS_TICKS);
+        CHECK(started >= 0, 633);
+        for (;;) {
+            CHECK(call(GTOS_SYS_TICKS) - started < ADAPTER_CLOSE_WAIT, 634);
+            memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+            CHECK(window.Info(&adapterInfo) == 0, 635);
+            if (adapterInfo.lifecycle == GTOS_WINDOW_CLOSING) break;
+            // Anything other than LIVE here would mean the window died instead of
+            // being asked to close, which is a different event.
+            CHECK(adapterInfo.lifecycle == GTOS_WINDOW_LIVE, 636);
+            call(GTOS_SYS_YIELD);
+        }
+        // CLOSING is a state, not a destruction: the handle is still ours and the
+        // object says so only because a successful INFO said so.
+        CHECK(window.valid() && window.closing() && window.handle() == (int)stale, 637);
+        CHECK(adapterInfo.handle == stale, 638);
+        // The last frame is still the published one: the request did not throw the
+        // front buffer away, and it did not leave a half-written draft behind.
+        CHECK(adapterInfo.show == GTOS_WINDOW_SHOW_PUBLISHED &&
+                  adapterInfo.frame_generation == 1 && adapterInfo.progress == 0, 639);
+        cases += 7;
+
+        // Writing and publishing are refused, and the refusals change nothing.
+        CHECK(window.Submit(adapterFrame, GTOS_WINDOW_WRITE_LIMIT, 0) ==
+                  GTOS_WINDOW_ERR_BAD_STATE, 640);
+        CHECK(window.Present() == GTOS_WINDOW_ERR_BAD_STATE, 641);
+        CHECK(window.valid() && window.closing(), 642);
+        memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+        CHECK(window.Info(&adapterInfo) == 0 &&
+                  adapterInfo.lifecycle == GTOS_WINDOW_CLOSING, 643);
+        cases += 4;
+
+        // The single CLOSE record the desktop queued is delivered exactly once.
+        memset(adapterEvents, 0xa5, sizeof(adapterEvents));
+        CHECK(window.ReadInput(adapterEvents, 4) == 1, 644);
+        CHECK(adapterEvents[0].type == GTOS_INPUT_CLOSE, 645);
+        CHECK(window.valid() && window.closing(), 646);
+        cases += 3;
+    }
+
+    // Hold the closing window while the harness screenshots the last frame. The
+    // loop keeps polling, so this is still an observation and not a blind sleep.
+    SAY("GTOS NATIVE WINDOW ADAPTER CLOSING V1\n");
+    {
+        const int held = call(GTOS_SYS_TICKS);
+        CHECK(held >= 0, 647);
+        for (;;) {
+            memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+            CHECK(window.Info(&adapterInfo) == 0 &&
+                      adapterInfo.lifecycle == GTOS_WINDOW_CLOSING, 648);
+            if (call(GTOS_SYS_TICKS) - held >= ADAPTER_CLOSE_HOLD) break;
+            CHECK(call(GTOS_SYS_TICKS) - held < ADAPTER_CLOSE_HOLD + 120, 649);
+            call(GTOS_SYS_YIELD);
+        }
+        cases += 2;
+    }
+
+    // Only the application's own CLOSE destroys it.
+    CHECK(window.Close() == 0, 650);
+    CHECK(!window.valid() && window.handle() == 0, 651);
+    CHECK(window.destroyed() && !window.closing(), 652);
+    // The old identifier is refused by the kernel, not quietly accepted.
+    GtosWindowControlRequest staleRequest = {GTOS_WINDOW_ABI_VERSION, stale};
+    CHECK(wpresent(&staleRequest) == GTOS_WINDOW_ERR_BAD_HANDLE, 653);
+    // A second CLOSE through the adapter is BAD_HANDLE and stays cleared.
+    CHECK(window.Close() == GTOS_WINDOW_ERR_BAD_HANDLE, 654);
+    CHECK(!window.valid(), 655);
+    cases += 6;
+
+    // --- somebody else destroys the window behind the object's back ----------
+    // Five separate objects, each closed before the next is created, because the
+    // bank allows one window per owner. Each is revoked through a different call,
+    // so no single method can carry the claim for the others.
+    {
+        gtos::process::NativeWindowAdapter lost;
+        CHECK(lost.Create(16, 16) > 0, 656);
+        GtosWindowControlRequest external = {GTOS_WINDOW_ABI_VERSION,
+                                             lost.kernel_handle()};
+        CHECK(rawclose(&external) == 0, 657);
+        // The object cannot know yet, and must not pretend it does.
+        CHECK(lost.valid(), 658);
+        CHECK(lost.Submit(adapterFrame, GTOS_WINDOW_WRITE_LIMIT, 0) ==
+                  GTOS_WINDOW_ERR_BAD_HANDLE, 659);
+        CHECK(!lost.valid() && lost.handle() == 0 && lost.destroyed(), 660);
+        cases += 5;
+    }
+    {
+        gtos::process::NativeWindowAdapter lost;
+        CHECK(lost.Create(16, 16) > 0, 661);
+        GtosWindowControlRequest external = {GTOS_WINDOW_ABI_VERSION,
+                                             lost.kernel_handle()};
+        CHECK(rawclose(&external) == 0, 662);
+        CHECK(lost.Present() == GTOS_WINDOW_ERR_BAD_HANDLE, 663);
+        CHECK(!lost.valid() && lost.handle() == 0, 664);
+        cases += 4;
+    }
+    {
+        gtos::process::NativeWindowAdapter lost;
+        CHECK(lost.Create(16, 16) > 0, 665);
+        GtosWindowControlRequest external = {GTOS_WINDOW_ABI_VERSION,
+                                             lost.kernel_handle()};
+        CHECK(rawclose(&external) == 0, 666);
+        memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+        adapterInfo.lifecycle = GTOS_WINDOW_CLOSING;
+        CHECK(lost.Info(&adapterInfo) == GTOS_WINDOW_ERR_BAD_HANDLE, 667);
+        CHECK(!lost.valid() && lost.handle() == 0 && !lost.closing(), 668);
+        cases += 4;
+    }
+    {
+        gtos::process::NativeWindowAdapter lost;
+        CHECK(lost.Create(16, 16) > 0, 669);
+        GtosWindowControlRequest external = {GTOS_WINDOW_ABI_VERSION,
+                                             lost.kernel_handle()};
+        CHECK(rawclose(&external) == 0, 670);
+        CHECK(lost.ReadInput(adapterEvents, 4) == GTOS_WINDOW_ERR_BAD_HANDLE, 671);
+        CHECK(!lost.valid() && lost.handle() == 0, 672);
+        cases += 4;
+    }
+    {
+        gtos::process::NativeWindowAdapter lost;
+        CHECK(lost.Create(16, 16) > 0, 673);
+        GtosWindowControlRequest external = {GTOS_WINDOW_ABI_VERSION,
+                                             lost.kernel_handle()};
+        CHECK(rawclose(&external) == 0, 674);
+        CHECK(lost.Close() == GTOS_WINDOW_ERR_BAD_HANDLE, 675);
+        CHECK(!lost.valid() && lost.handle() == 0 && lost.destroyed(), 676);
+        cases += 4;
+    }
+
+    // --- a dead object can hold a new window; the old handle stays dead ------
+    {
+        gtos::process::NativeWindowAdapter again;
+        CHECK(again.Create(16, 16) > 0, 677);
+        const unsigned first = again.kernel_handle();
+        GtosWindowControlRequest external = {GTOS_WINDOW_ABI_VERSION, first};
+        CHECK(rawclose(&external) == 0, 678);
+        CHECK(again.Present() == GTOS_WINDOW_ERR_BAD_HANDLE, 679);
+        CHECK(!again.valid(), 680);
+        const int fresh = again.Create(16, 16);
+        CHECK(fresh > 0, 681);
+        CHECK(again.valid() && again.kernel_handle() == (unsigned)fresh, 682);
+        CHECK(again.kernel_handle() != first, 683);
+        // The handle that was destroyed does not come back with the new window.
+        GtosWindowControlRequest old = {GTOS_WINDOW_ABI_VERSION, first};
+        CHECK(rawpresent(&old) == GTOS_WINDOW_ERR_BAD_HANDLE, 684);
+        // The lifecycle really is LIVE again, not merely "valid".
+        memset(&adapterInfo, 0xa5, sizeof(adapterInfo));
+        CHECK(again.Info(&adapterInfo) == 0 &&
+                  adapterInfo.lifecycle == GTOS_WINDOW_LIVE, 685);
+        CHECK(!again.closing() && again.handle() == fresh, 686);
+        // A refused duplicate CREATE keeps the window it already has.
+        CHECK(again.Create(32, 32) == GTOS_WINDOW_ERR_LIMIT, 687);
+        CHECK(again.valid() && again.kernel_handle() == (unsigned)fresh, 688);
+        CHECK(again.width() == 16 && again.height() == 16, 689);
+        CHECK(again.Close() == 0, 690);
+        CHECK(!again.valid(), 691);
+        cases += 15;
+    }
+
+    requiredMask |= REQ_ADAPTER;
+    STAGE("ADAPTER_LIFECYCLE_DONE", cases);
+    SAY("GTOS NATIVE WINDOW ADAPTER PASS V1\n");
+    return 0;
+}
+
 extern "C" int png_guest_main(void) {
     static const char begin[] = "GTOS NATIVE WINDOW START V1\n";    static const char pass[] = "GTOS NATIVE WINDOW PASS CREATE SUBMIT PRESENT INPUT CLOSE V1\n";
     CHECK(call(GTOS_SYS_ABI) == GTOS_NATIVE_ABI_VERSION, 1);
@@ -789,6 +1113,13 @@ extern "C" int png_guest_main(void) {
 
     const int windows = window_requests();
     if (windows) return windows;
+    // The adapter stage drives the same six calls through the user-space object,
+    // so it must run before the call counters are reported.
+    const int adapter = adapter_stage();
+    if (adapter) return adapter;
+    // The adapter stage declares its own bit, so a run that reached PASS without
+    // executing it is impossible even though it runs after the mask check above.
+    CHECK((requiredMask & REQ_ADAPTER) != 0, 692);
     // Both paths really ran: the normal calls went through the exported SDK
     // wrapper and the malformed-request negatives went raw. A zero on either
     // side would mean this build proved only half of the claim.

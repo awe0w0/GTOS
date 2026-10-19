@@ -10,7 +10,7 @@
 #
 # What is proven, in order:
 #   1. the default export still produces exactly the two graphics headers;
-#   2. the opt-in export produces exactly those two plus the window pair;
+#   2. the opt-in export produces exactly those two plus the window three;
 #   3. an existing output is refused before anything is written, and the
 #      already-exported bytes are unchanged afterwards;
 #   4. every exported member is byte-identical to its repository source;
@@ -18,8 +18,10 @@
 #   6. a C++ consumer compiles against the overlay plus the original SDK, its
 #      `-H` output shows the window headers came from the overlay and the base
 #      ABI from the original SDK, and no repository `include/` path is used;
-#   7. the emitted machine code contains six `int $0x80` calls carrying the six
-#      exported opcodes, so the wrapper really reaches the ABI.
+#   7. the emitted machine code contains six `int $0x80` calls, and each opcode
+#      carries its own exact request byte count (see native_window_sdk_calls.py);
+#   8. the target identity gate really refuses a build without `-D__GTOS__=1`
+#      and a build that also defines a host OS macro.
 set -euo pipefail
 if [ "$#" -ne 3 ]; then
   echo "usage: native_window_sdk_test.sh FRESH_OUT SDK_ROOT CLANG_DIR" >&2
@@ -49,9 +51,10 @@ tool="$repo/tools/export-native-graphics-sdk.py"
 # The exact bytes that decide the result, kept next to the result.
 snapshot="tools/export-native-graphics-sdk.py \
  include/process/window_abi.h include/process/window_client.h \
+ include/process/native_window_adapter.h \
  include/process/resource_abi.h include/process/surface_abi.h \
  tests/native_window_sdk_wire_c11.c tests/native_window_sdk_client_tu.cc \
- tests/native_window_sdk_test.sh"
+ tests/native_window_sdk_calls.py tests/native_window_sdk_test.sh"
 sha256sum $snapshot > "$out/source-hashes.txt"
 for f in $snapshot; do
   cp "$f" "$out/source-snapshot/$(basename "$f")"
@@ -76,12 +79,12 @@ members_default="$(find "$out/default/sdk/process" -type f -printf '%f\n' | sort
 grep -q '"mode": "graphics-only"' "$out/default/manifest.json" || {
   echo "default manifest mode is not graphics-only" >&2; exit 1; }
 
-# --- 2. opt-in export: the same two plus the window pair ----------------------
+# --- 2. opt-in export: the same two plus the window three ---------------------
 python3 "$tool" --with-window "$out/with-window" > "$out/window-export.log" 2>&1
 members_window="$(find "$out/with-window/sdk/process" -type f -printf '%f\n' | sort | tr '\n' ' ')"
-[ "$members_window" = "resource_abi.h surface_abi.h window_abi.h window_client.h " ] || {
+[ "$members_window" = "native_window_adapter.h resource_abi.h surface_abi.h window_abi.h window_client.h " ] || {
   echo "opt-in export members changed: $members_window" >&2; exit 1; }
-[ "$(find "$out/with-window" -type f | wc -l)" -eq 5 ] || {
+[ "$(find "$out/with-window" -type f | wc -l)" -eq 6 ] || {
   echo "opt-in export wrote an unexpected file" >&2
   find "$out/with-window" -type f >&2; exit 1; }
 grep -q '"mode": "with-window"' "$out/with-window/manifest.json" || {
@@ -101,15 +104,17 @@ cmp "$out/with-window.before" "$out/with-window.after" || {
   echo "the refused run changed the existing overlay" >&2; exit 1; }
 
 # --- 4. every exported member equals its repository source --------------------
-for member in resource_abi.h surface_abi.h window_abi.h window_client.h; do
+for member in resource_abi.h surface_abi.h window_abi.h window_client.h \
+              native_window_adapter.h; do
   a="$(sha256sum "$out/with-window/sdk/process/$member" | cut -d' ' -f1)"
   b="$(sha256sum "$repo/include/process/$member" | cut -d' ' -f1)"
   [ "$a" = "$b" ] || { echo "exported $member differs from the repository source" >&2; exit 1; }
   printf '%s %s\n' "$member" "$a"
 done > "$out/member-digests.txt"
-# The default overlay must not have gained the window pair by accident.
+# The default overlay must not have gained a window header by accident.
 [ ! -e "$out/default/sdk/process/window_abi.h" ] &&
-  [ ! -e "$out/default/sdk/process/window_client.h" ] || {
+  [ ! -e "$out/default/sdk/process/window_client.h" ] &&
+  [ ! -e "$out/default/sdk/process/native_window_adapter.h" ] || {
   echo "the default overlay contains a window header" >&2; exit 1; }
 
 # --- 5. the wire header compiles as freestanding C11 --------------------------
@@ -126,9 +131,11 @@ grep -q 'gtos_window_sdk_wire_c11_check' "$out/wire-c11-nm.log" || {
   echo "the C11 wire object is empty" >&2; exit 1; }
 
 # --- 6. a C++ consumer against the overlay plus the original SDK --------------
+# -D__GTOS__=1 states the target identity the client header now requires; it is
+# not a host macro, and the object still targets i686-unknown-none-elf.
 "$clang" --target=i686-unknown-none-elf -std=c++11 -Oz -Wall -Wextra -Werror \
   -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-threadsafe-statics \
-  -fno-pic -fno-pie -nostdinc -nostdinc++ \
+  -fno-pic -fno-pie -nostdinc -nostdinc++ -D__GTOS__=1 \
   -isystem "$out/with-window/sdk" -isystem "$sdk/sdk" -isystem "$sdk/c-sdk" \
   -H -c tests/native_window_sdk_client_tu.cc -o "$out/client-tu.o" \
   > "$out/client-tu.log" 2>&1
@@ -161,6 +168,7 @@ for line in text.splitlines():
 required = {
     'process/window_abi.h': 'overlay',
     'process/window_client.h': 'overlay',
+    'process/native_window_adapter.h': 'overlay',
     'process/abi.h': 'sdk',
     'process/vm_abi.h': 'sdk',
 }
@@ -186,86 +194,46 @@ if problems:
 print('ORIGINS PASS')
 PY
 
-# --- 7. the six real calls are in the machine code ----------------------------
+# --- 7. the six real calls, each bound to its own request byte count ---------
 objdump -d "$out/client-tu.o" > "$out/client-tu-disassembly.log"
-python3 - "$out" <<'PY'
-import pathlib, re, sys
-out = pathlib.Path(sys.argv[1])
-text = (out / 'client-tu-disassembly.log').read_text()
+# The pairing helper is also its own counterexample generator: --self-test runs
+# the two swaps that used to be invisible (INFO carrying 20, INPUT_READ
+# carrying 8) through the same analyse() the real disassembly goes through.
+python3 tests/native_window_sdk_calls.py --self-test > "$out/call-pairing-self-test.log" 2>&1
+python3 tests/native_window_sdk_calls.py "$out/client-tu-disassembly.log" \
+  > "$out/client-tu-calls.log" 2>&1
 
-# Only the mnemonic column is inspected. The raw byte column also contains the
-# encoding (cd 80) of the same instruction, so matching the whole line would
-# count every trap twice.
-mnemonics = []
-for line in text.splitlines():
-    match = re.match(r'^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2} )+\s*(\S.*)$', line)
-    if match:
-        mnemonics.append(' '.join(match.group(1).split()))
-
-def writes(instruction, register):
-    """True when the instruction's destination operand is `register`."""
-    if instruction.startswith('pop '):
-        return instruction.split()[-1] == register
-    operands = instruction.split(None, 1)
-    if len(operands) != 2:
-        return False
-    return operands[1].split(',')[-1].strip() == register
-
-def immediate(instruction):
-    match = re.match(r'^mov\s+\$(0x[0-9a-f]+),', instruction)
-    if match:
-        return match.group(1)
-    match = re.match(r'^push\s+\$(0x[0-9a-f]+)$', instruction)
-    return match.group(1) if match else None
-
-traps = [index for index, text_ in enumerate(mnemonics)
-         if re.fullmatch(r'int \$0x80', text_)]
-if len(traps) != 6:
-    print('expected six int $0x80 traps, found %d' % len(traps))
-    sys.exit(1)
-
-opcodes = []
-problems = []
-allowed_counts = {'0x14', '0x8', '0xc', '0x10'}
-for index, trap in enumerate(traps):
-    opcode = count = None
-    for back in range(trap - 1, max(trap - 16, -1), -1):
-        instruction = mnemonics[back]
-        if opcode is None and writes(instruction, '%eax'):
-            opcode = immediate(instruction)
-        if count is None and writes(instruction, '%ecx'):
-            count = immediate(instruction)
-            if count is None and instruction.startswith('pop'):
-                # A small constant is cheaper as push/pop than as a mov.
-                for deeper in range(back - 1, max(back - 4, -1), -1):
-                    if mnemonics[deeper].startswith('push $'):
-                        count = immediate(mnemonics[deeper])
-                        break
-        if opcode is not None and count is not None:
-            break
-    if opcode is None:
-        problems.append('trap %d has no opcode in %%eax' % index)
-    else:
-        opcodes.append(opcode)
-    if count not in allowed_counts:
-        problems.append('trap %d does not carry an exact request byte count '
-                        '(got %r)' % (index, count))
-    # The request pointer must travel in ebx, never on the stack or in a host
-    # register, because the ABI names ebx.
-    if not any(writes(mnemonics[back], '%ebx')
-               for back in range(trap - 1, max(trap - 16, -1), -1)):
-        problems.append('trap %d has no request pointer in %%ebx' % index)
-
-expected = ['0x4750', '0x4751', '0x4752', '0x4753', '0x4754', '0x4755']
-if sorted(opcodes) != expected:
-    problems.append('emitted opcodes are %s, expected the six window calls'
-                    % (opcodes,))
-if problems:
-    for problem in problems:
-        print('CALL SITE FAIL: ' + problem)
-    sys.exit(1)
-print('CALL SITES PASS: %d traps, opcodes %s, ebx/ecx arguments'
-      % (len(traps), ' '.join(opcodes)))
-PY
+# --- 8. the target identity gate is a real compile-time refusal --------------
+# The client header now requires -D__GTOS__=1. Two negatives, both from the same
+# translation unit that just compiled: no identity, and identity plus a host OS
+# macro. A build that silently accepted either would be claiming a GTOS target it
+# does not have.
+set +e
+"$clang" --target=i686-unknown-none-elf -std=c++11 -Oz -Wall -Wextra -Werror \
+  -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-threadsafe-statics \
+  -fno-pic -fno-pie -nostdinc -nostdinc++ \
+  -isystem "$out/with-window/sdk" -isystem "$sdk/sdk" -isystem "$sdk/c-sdk" \
+  -c tests/native_window_sdk_client_tu.cc -o "$out/neg-no-identity.o" \
+  > "$out/neg-no-identity.log" 2>&1
+no_identity_rc=$?
+"$clang" --target=i686-unknown-none-elf -std=c++11 -Oz -Wall -Wextra -Werror \
+  -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-threadsafe-statics \
+  -fno-pic -fno-pie -nostdinc -nostdinc++ -D__GTOS__=1 -D__linux__=1 \
+  -isystem "$out/with-window/sdk" -isystem "$sdk/sdk" -isystem "$sdk/c-sdk" \
+  -c tests/native_window_sdk_client_tu.cc -o "$out/neg-host-macro.o" \
+  > "$out/neg-host-macro.log" 2>&1
+host_macro_rc=$?
+set -e
+[ "$no_identity_rc" -ne 0 ] || {
+  echo "the client header compiled without -D__GTOS__=1" >&2; exit 1; }
+[ "$host_macro_rc" -ne 0 ] || {
+  echo "the client header compiled with a host OS macro defined" >&2; exit 1; }
+grep -q "requires the GTOS target identity" "$out/neg-no-identity.log" || {
+  echo "the no-identity refusal did not name the missing identity" >&2
+  cat "$out/neg-no-identity.log" >&2; exit 1; }
+grep -q "must not be compiled for a host OS" "$out/neg-host-macro.log" || {
+  echo "the host-macro refusal did not name the host OS" >&2
+  cat "$out/neg-host-macro.log" >&2; exit 1; }
+printf 'identity negatives refused: 2\n' > "$out/identity-gate.txt"
 
 printf 'NATIVE WINDOW SDK BATCH PASS\n' | tee "$out/result.txt"

@@ -16,10 +16,17 @@ claims to:
     count on both sides. A zero on either side means one of the two paths never
     ran, which would make the claim half-true rather than false.
   * `<raw>` must equal the number of raw call sites the probe source contains, so
-    the counter cannot drift away from the code it is describing.
+    the counter cannot drift away from the code it is describing. That number is
+    derived from the source in front of us, not remembered: the five `raw*`
+    helpers are defined once each and every other occurrence is a call site.
   * The full-target copy refusal must still report `48 8 40`, because the wrapper
     must not have changed what the kernel sees.
   * The PASS line must appear exactly once and no runtime failure may appear.
+  * The adapter stage's own completion line must appear exactly once, so the
+    user-space object path is known to have finished rather than merely compiled.
+  * The adapter's lifecycle stage must report a positive case count. It is the
+    stage that covers the BAD_STATE, failed-INFO and externally-revoked-handle
+    sequences, so a run that skipped it cannot pass on the older checks.
 """
 import json
 import pathlib
@@ -28,8 +35,33 @@ import sys
 
 # The probe source has exactly this many raw call sites. They are the deliberately
 # malformed requests - bad request size, bad version, bad destination pointer -
-# that must reach the kernel instead of being screened in user space.
-EXPECTED_RAW_SITES = 27
+# that must reach the kernel instead of being screened in user space, plus the
+# bare CLOSEs and the one bare PRESENT the adapter lifecycle stage uses to revoke a
+# window behind the object's back. The list is pinned here AND re-derived from the
+# source below, so neither a silent edit nor a stale constant can pass.
+#
+# 34 = 40 occurrences of the six helper names minus their six definitions. The
+# earlier pin of 33 was wrong by one: it was written when the lifecycle stage was
+# planned rather than counted, and the guest run itself reported 34, so the pin -
+# not the source - was the stale number.
+EXPECTED_RAW_SITES = 34
+RAW_HELPERS = ('rawcreate', 'rawsubmit', 'rawpresent', 'rawinfo', 'rawiread',
+               'rawclose')
+PROBE_SOURCE = pathlib.Path(__file__).resolve().parent / '..' / 'apps' / \
+    'native_window_probe' / 'native_main.cc'
+
+
+def raw_sites():
+    """Count raw call sites in the probe source: uses minus the definitions."""
+    text = PROBE_SOURCE.read_text()
+    total = 0
+    for name in RAW_HELPERS:
+        occurrences = len(re.findall(r'\b%s\s*\(' % name, text))
+        # One occurrence per helper is its own definition.
+        if occurrences < 1:
+            return None, 'the probe source no longer mentions ' + name
+        total += occurrences - 1
+    return total, None
 
 
 def fail(message):
@@ -53,6 +85,12 @@ def main(argv):
     text = debug_path.read_text()
 
     problems = []
+    derived, why = raw_sites()
+    if derived is None:
+        problems.append(why)
+    elif derived != EXPECTED_RAW_SITES:
+        problems.append('the probe source now has %d raw call sites, the checker '
+                        'pins %d' % (derived, EXPECTED_RAW_SITES))
     if results.get('guest_pass') is not True:
         problems.append('the runner did not report guest_pass')
     missing = results.get('missing_checks') or []
@@ -81,10 +119,15 @@ def main(argv):
 
     if text.count('GTOS NATIVE WINDOW PASS') != 1:
         problems.append('the PASS line does not appear exactly once')
+    # The adapter stage prints this after its final CHECK. It is a separate line
+    # from the window PASS, because the two paths are separate claims.
+    if text.count('GTOS NATIVE WINDOW ADAPTER PASS V1') != 1:
+        problems.append('the adapter stage did not report its completion line')
     if 'NATIVE RUNTIME FAIL' in text or 'NATIVE WINDOW FAIL' in text:
         problems.append('a runtime failure is present in the log')
 
-    for name in ('INPUT_COPY_DONE', 'RESET_COPY_DONE', 'CLOSE_COPY_DONE'):
+    for name in ('INPUT_COPY_DONE', 'RESET_COPY_DONE', 'CLOSE_COPY_DONE',
+                 'ADAPTER_LIFECYCLE_DONE'):
         found = re.search(r'GTOS NATIVE WINDOW STAGE %s V1 (\d+)' % name, text)
         if not found or int(found.group(1)) <= 0:
             problems.append('stage %s did not report a positive case count' % name)

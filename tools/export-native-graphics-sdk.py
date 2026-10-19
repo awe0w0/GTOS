@@ -6,9 +6,10 @@ Two modes, and only two:
 * default - exactly the two graphics headers that
   `apps/png_surface_probe` includes but the existing SDK does not provide:
   `process/resource_abi.h` and `process/surface_abi.h`.
-* `--with-window` - the same two, plus `process/window_abi.h` and
-  `process/window_client.h`, so a window consumer can resolve its wire header and
-  its six-call wrapper from the overlay.
+* `--with-window` - the same two, plus `process/window_abi.h`,
+  `process/window_client.h` and `process/native_window_adapter.h`, so a window
+  consumer can resolve its wire header, its six-call wrapper and its small
+  user-space window object from the overlay.
 
 The six headers the existing SDK already provides (`abi.h`,
 `environment_abi.h`, `file_abi.h`, `info_abi.h`, `tls.h`, `vm_abi.h`) continue to
@@ -30,12 +31,14 @@ GRAPHICS_MEMBERS = (
     'include/process/resource_abi.h',
     'include/process/surface_abi.h',
 )
-# Only added by --with-window. The wire header carries the layout; the client
-# header carries the six thin calls. Nothing else about the window path is
-# exported.
+# Only added by --with-window. The wire header carries the layout, the client
+# header carries the six thin calls, and the adapter header carries the small
+# user-space window object built on those calls. Nothing else about the window
+# path is exported.
 WINDOW_MEMBERS = (
     'include/process/window_abi.h',
     'include/process/window_client.h',
+    'include/process/native_window_adapter.h',
 )
 SDK_PROVIDED = ('process/abi.h', 'process/environment_abi.h',
                 'process/file_abi.h', 'process/info_abi.h',

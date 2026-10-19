@@ -99,6 +99,7 @@ common=(--target=i686-unknown-none-elf -Oz -Wall -Wextra -Werror -ffreestanding
   -fno-builtin -fno-pic -fno-pie -fno-stack-protector -fno-unwind-tables
   -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2
   -ffunction-sections -fdata-sections -fstack-usage -DGTOS_NATIVE_COMPONENT=1
+  -D__GTOS__=1
   "-I$app" "-I$resource_app" "-I$png"
   "-I$repo/apps/wuffs_gif_probe/freestanding")
 
@@ -109,11 +110,14 @@ python3 tools/export-native-graphics-sdk.py --with-window "$out/sdk-overlay" \
   > "$out/sdk-overlay.log" 2>&1
 [ -f "$out/sdk-overlay/sdk/process/window_client.h" ] || {
   echo "the SDK overlay is missing process/window_client.h" >&2; exit 1; }
+[ -f "$out/sdk-overlay/sdk/process/native_window_adapter.h" ] || {
+  echo "the SDK overlay is missing process/native_window_adapter.h" >&2; exit 1; }
 [ -f "$out/sdk-overlay/sdk/process/window_abi.h" ] || {
   echo "the SDK overlay is missing process/window_abi.h" >&2; exit 1; }
 # Byte-for-byte the committed headers, or the build below would prove nothing
 # about the headers that are actually going to be reviewed.
-for member in window_abi.h window_client.h resource_abi.h surface_abi.h; do
+for member in window_abi.h window_client.h native_window_adapter.h \
+              resource_abi.h surface_abi.h; do
   a="$(sha256sum "$out/sdk-overlay/sdk/process/$member" | cut -d' ' -f1)"
   b="$(sha256sum "$repo/include/process/$member" | cut -d' ' -f1)"
   [ "$a" = "$b" ] || { echo "overlay $member differs from the committed header" >&2; exit 1; }
@@ -143,7 +147,7 @@ if grep -q "$repo/include" "$out/native-main-origins.log"; then
   grep "$repo/include" "$out/native-main-origins.log" >&2
   exit 1
 fi
-for header in window_abi.h window_client.h; do
+for header in window_abi.h window_client.h native_window_adapter.h; do
   grep -F " $out/sdk-overlay/sdk/process/$header" "$out/native-main-origins.log" \
     > /dev/null || {
       echo "process/$header did not come from the exported overlay" >&2
@@ -224,6 +228,7 @@ manifest="$app/native_main.cc $png/start.s $resource_app/register_probe.s \
  $png/linker.ld $png/png_decode.h $png/png_pixel.h $resource_app/resource_oracles.h \
  $repo/include/process/abi.h $repo/include/process/resource_abi.h \
  $repo/include/process/window_abi.h $repo/include/process/window_client.h \
+ $repo/include/process/native_window_adapter.h \
  $repo/include/process/vm_abi.h \
  $repo/tools/export-native-graphics-sdk.py \
  $repo/tools/audit-kernel-instructions.py \

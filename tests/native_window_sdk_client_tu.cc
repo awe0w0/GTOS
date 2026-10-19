@@ -11,6 +11,7 @@
  * away and each call has to be emitted.
  */
 #include <process/abi.h>
+#include <process/native_window_adapter.h>
 #include <process/window_client.h>
 #include <process/vm_abi.h>
 
@@ -50,6 +51,19 @@ static_assert(Same<decltype(&gtos::process::WindowInputRead),
 // The base ABI must still resolve: these two come from the original SDK.
 static_assert(GTOS_NATIVE_ABI_VERSION >= 1, "base ABI present");
 static_assert(GTOS_VM_PAGE_BYTES == 4096U, "vm page bytes");
+
+// The adapter is a plain user-space object: it holds no reference member, no
+// virtual table and no padding tricks, so its size is the state it declares and
+// its address is stable for as long as the caller keeps it alive.
+using Adapter = gtos::process::NativeWindowAdapter;
+static_assert(!__is_polymorphic(Adapter), "the adapter must have no vtable");
+static_assert(!__is_empty(Adapter), "the adapter must carry real state");
+// It must not be copyable or movable: publishing its address to a widget layer
+// is only safe while exactly one object owns that identity.
+static_assert(!__is_constructible(Adapter, const Adapter &),
+              "the adapter must not be copy-constructible");
+static_assert(!__is_assignable(Adapter &, const Adapter &),
+              "the adapter must not be copy-assignable");
 
 }  // namespace
 

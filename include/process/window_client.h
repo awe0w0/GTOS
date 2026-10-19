@@ -20,14 +20,19 @@
 //     is the kernel's BAD_HANDLE, not a silent success.
 //   * no transport, no allocation, no exceptions, no threads, no waiting.
 //
-// Only i386 GTOS is supported. Building this for a host operating system is a
-// compile-time error, because `int $0x80` would then mean a different syscall
-// table entirely.
+// Only i386 GTOS is supported, and the target identity must be stated rather
+// than inferred. Building this for a host operating system is a compile-time
+// error, because `int $0x80` would then mean a different syscall table entirely;
+// building it without the GTOS identity is refused as well, so a target that
+// merely happens to be i386 cannot silently pick up this header.
 
 #include <process/window_abi.h>
 
 #if !defined(__cplusplus)
 #error "window_client.h is a C++ user-space wrapper; include window_abi.h for the wire layout"
+#endif
+#if !defined(__GTOS__)
+#error "window_client.h requires the GTOS target identity: compile with -D__GTOS__=1"
 #endif
 #if !defined(__i386__)
 #error "window_client.h is a GTOS i386 user-space wrapper; only __i386__ is supported"

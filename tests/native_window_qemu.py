@@ -9,6 +9,9 @@ desktop through QMP (the same PS/2 path a user would use), and proves:
   * a real focus change produces exactly one RESET, and a refused read of it
     does not consume it,
   * the desktop's own close request produces exactly one CLOSE, same rule,
+  * the user-space adapter's window is closed by the same desktop button, is
+    observed as CLOSING while its last published frame is still painted exactly,
+    and only the application's own CLOSE destroys it,
   * the object is closed once, the owner is reaped, and the window disappears.
 
 The run is driven by the probe's own stage lines. Nothing here drives the next
@@ -53,6 +56,9 @@ REQUIRED_CHECKS = (
     'reset_copy_stage',
     'close_copy_stage',
     'probe_pass',
+    'adapter_pass',
+    'adapter_lifecycle_stage',
+    'adapter_closing_frame',
     'reaped',
     'checker_gone',
     'content_changed_after_close',
@@ -66,10 +72,19 @@ REQUIRED_CHECKS = (
 )
 
 # The three stages the probe must reach, in order, each with its own case count.
-STAGES = ('INPUT_COPY_DONE', 'RESET_COPY_DONE', 'CLOSE_COPY_DONE')
+STAGES = ('INPUT_COPY_DONE', 'RESET_COPY_DONE', 'CLOSE_COPY_DONE',
+          'ADAPTER_LIFECYCLE_DONE')
 STAGE_PREFIX = 'GTOS NATIVE WINDOW STAGE %s V1 '
 STAGE_LINE = STAGE_PREFIX + '%d'
 PROBE_EXIT = 'BROWSER PROBE EXIT 00000000'
+# The adapter stage's own completion line, printed after its last CHECK passed.
+ADAPTER_PASS = 'GTOS NATIVE WINDOW ADAPTER PASS V1'
+# The adapter's second real desktop request-close. The probe announces that it has
+# created the window and is polling INFO; the harness presses the same title-bar
+# button it already used for the wire stage, then the probe reports the observed
+# CLOSING state and holds the last frame while a screenshot is taken.
+ADAPTER_CLOSE_WAIT = 'GTOS NATIVE WINDOW ADAPTER CLOSE WAIT V1'
+ADAPTER_CLOSING = 'GTOS NATIVE WINDOW ADAPTER CLOSING V1'
 
 # The framebuffer size the kernel boots the desktop with, and the pointer the
 # desktop starts at (ModernDesktop ctor: mouseX = width - 30, mouseY = 16).
@@ -252,6 +267,39 @@ def expected_framebuffer(premul, tone):
     return pixels
 
 
+def parse_adapter_fill():
+    """The one solid colour the adapter publishes, read from the probe source.
+
+    The lifecycle stage fills its whole frame with a single premultiplied RGBA
+    value. Reading it from `adapter_fill()` keeps this prediction bound to the
+    bytes that actually ran instead of to a colour copied into the harness.
+    """
+    text = (ROOT / 'apps/native_window_probe/native_main.cc').read_text()
+    anchor = 'static void adapter_fill(void)'
+    if anchor not in text:
+        fail('the probe no longer defines adapter_fill(void)')
+    body = text.split(anchor, 1)[1].split('}', 1)[0]
+    values = [int(token, 16) for token in re.findall(r'0x([0-9a-fA-F]{2})', body)]
+    if len(values) != 4:
+        fail('adapter_fill() does not carry four channel values')
+    return values
+
+
+def expected_solid_frame(fill):
+    """ModernDesktop::DrawNativeSlot applied to a one-colour 16x16 frame."""
+    red, green, blue, alpha = fill
+    pixels = []
+    for y in range(16):
+        row = []
+        for x in range(16):
+            background = CHECKER[((x // 4 + y // 4) & 1)]
+            row.append(tuple(channel +
+                             (background[index] * (255 - alpha) + 127) // 255
+                             for index, channel in enumerate((red, green, blue))))
+        pixels.append(row)
+    return pixels
+
+
 def verify_frame(image, expected):
     """Every pixel of the content rectangle must match the prediction exactly."""
     mismatches = []
@@ -323,6 +371,8 @@ def main():
     qemu_smoke.BOOT_ISO = iso
 
     expected = expected_framebuffer(parse_expected_premul(), PUBLISH_TONE)
+    adapter_fill = parse_adapter_fill()
+    expected_adapter = expected_solid_frame(adapter_fill)
     state = {'scope': 'Real guest: native window ABI and CPL3 input copy through the real '
                       'desktop, PS/2 input and the VM ABI',
              'iso': str(iso), 'iso_sha256': hashlib.sha256(iso.read_bytes()).hexdigest(),
@@ -331,6 +381,7 @@ def main():
                           'close_visible': CLOSE_VISIBLE, 'dock_apps': DOCK_APPS,
                           'origin': ORIGIN},
              'publish_tone': PUBLISH_TONE,
+             'adapter_fill': adapter_fill,
              'required_stages': list(STAGES),
              'required_checks': list(REQUIRED_CHECKS),
              'sources': source_binding({'runner': sys.modules[__name__],
@@ -394,6 +445,40 @@ def main():
         guest.wait(stage_wait('CLOSE_COPY_DONE'), 90)
         checks['close_copy_stage'] = True
 
+        # ---- stage 4: the same request-close, observed through the adapter ----
+        # The probe has closed its wire window and created a new one through the
+        # user-space object, which the desktop binds to the same slot. The probe
+        # announces that it is polling INFO, so the press below cannot race a
+        # window that does not exist yet.
+        guest.wait(ADAPTER_CLOSE_WAIT, 120)
+        # A repeat press on a window that is already closing is a no-op in the
+        # desktop, so pressing until the probe reports CLOSING is safe and does
+        # not depend on guessing how long the desktop needs to bind the object.
+        deadline = time.monotonic() + 40
+        presses = 0
+        while time.monotonic() < deadline:
+            if ADAPTER_CLOSING in guest.text():
+                break
+            pointer.move(CLOSE_VISIBLE[0], CLOSE_VISIBLE[1])
+            pointer.click(CLOSE_VISIBLE[0], CLOSE_VISIBLE[1])
+            presses += 1
+            time.sleep(0.8)
+        if ADAPTER_CLOSING not in guest.text():
+            fail('the adapter never observed the desktop request-close after '
+                 '%d presses' % presses)
+        state['adapter_close_presses'] = presses
+        # The window is CLOSING, not destroyed: the desktop still paints the last
+        # frame it published, and the probe is holding it while this is measured.
+        # The frame is one solid colour, so every pixel of the client rectangle is
+        # an exact prediction rather than a presence test.
+        closing_frame = screendump(guest, out, 'adapter-closing')
+        state['sample_content_closing'] = closing_frame.getpixel(CENTRE)
+        closing_mismatches = verify_frame(closing_frame, expected_adapter)
+        state['closing_mismatches'] = closing_mismatches[:8]
+        checks['adapter_closing_frame'] = not closing_mismatches
+        guest.wait(stage_wait('ADAPTER_LIFECYCLE_DONE'), 120)
+        checks['adapter_lifecycle_stage'] = True
+
         guest.wait(PASS, 90)
         checks['probe_pass'] = True
         guest.wait(REAPED, 60)
@@ -419,6 +504,10 @@ def main():
             state['stage_cases'].get(name) for name in STAGES)
         checks['no_runtime_failure'] = 'NATIVE RUNTIME FAIL' not in text
         checks['single_pass'] = text.count('GTOS NATIVE WINDOW PASS') == 1
+        # The user-space adapter stage has its own completion line, reported only
+        # after its last CHECK. Its absence means the object path never finished,
+        # even if the raw window path did.
+        checks['adapter_pass'] = text.count(ADAPTER_PASS) == 1
         # The probe's own CHECK failures surface as a non-zero exit code, so the
         # kernel's report is a second, independent witness to the same run.
         checks['probe_exit_zero'] = PROBE_EXIT in text
