@@ -17,8 +17,15 @@ enum ModernWindowKind {
     ModernSettings,
     ModernGame,
     ModernImage,
+    // Persistent native windows; additive. The six kinds above keep their ids
+    // and the five dock cells are untouched.
+    ModernNative0,
+    ModernNative1,
+    ModernNative2,
+    ModernNative3,
     ModernWindowCount
 };
+enum { ModernNativeCount = 4 };
 struct ModernWindow {
     ModernRect bounds, restore;
     bool open, minimized, maximized;

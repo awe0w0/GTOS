@@ -27,7 +27,8 @@ static void TraceImage(const char *format, const uint32_t *values) {
     Trace(record);
 }
 static const char *windowTitles[] = {"Welcome", "Applications", "System monitor", "Appearance",
-                                     "Catch", "Native image"};
+                                     "Catch", "Native image", "Native window 1",
+                                     "Native window 2", "Native window 3", "Native window 4"};
 static bool EqualText(const char *a, const char *b) {
     if (!a || !b)
         return false;
@@ -45,8 +46,11 @@ static bool BundledCatch(const gtos::storage::AppInfo *app) {
 }
 ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppStore *s,
                              gtos::storage::SettingsStore *settings, bool live,
-                             const NativeImageProvider *source)
+                             const NativeImageProvider *source,
+                             NativeWindowProvider *windows)
     : fb(*f), paint(*f), wm(f->Width(), f->Height()), imageProvider(source), image(), pendingImage(),
+      windowProvider(windows), windowViews(), windowFrames(), windowHandles(), windowCapture(0),
+      windowFocusHandle(0),
       imageTraceBounds(), imageSeenGeneration(0), imageTraceGeneration(0), imageX(0), imageY(0), imageScale(0),
       imageTraceX(0), imageTraceY(0), imageTraceScale(0), imageTraceVisible(false),
       store(s), vm(this), preferences(settings),
@@ -227,6 +231,9 @@ void ModernDesktop::CancelCapture() {
     leftDown = false;
     dragKind = -1;
     resizing = false;
+    // A native capture belongs to the same physical press: dropping the desktop
+    // state must drop it too, or a stale window keeps taking the pointer.
+    windowCapture = 0;
 }
 void ModernDesktop::Open(ModernWindowKind k) {
     if (k == ModernImage && !image.generation) {
@@ -236,6 +243,9 @@ void ModernDesktop::Open(ModernWindowKind k) {
     CancelCapture();
     CancelComposition();
     wm.Open(k);
+    // Opening changes focus: the window that just lost it must be reset now, not
+    // on some later update.
+    SyncNativeFocus();
     launcher = false;
     Notice(windowTitles[k]);
     if (k == ModernMonitor) {
@@ -247,6 +257,20 @@ void ModernDesktop::Open(ModernWindowKind k) {
 }
 void ModernDesktop::Close(ModernWindowKind k) {
     CancelComposition();
+    // A native window is never destroyed by the desktop: the request only moves
+    // it to closing and keeps the last frame until the application closes or
+    // exits, and the next Update removes the binding.
+    if (k >= ModernNative0 && k < ModernWindowCount) {
+        uint32_t slot = (uint32_t)(k - ModernNative0);
+        if (windowProvider && windowViews[slot].handle) {
+            windowProvider->RequestWindowClose(windowViews[slot].handle);
+            if (windowCapture == windowViews[slot].handle) windowCapture = 0;
+            Notice("Close requested");
+        }
+        dragKind = -1;
+        leftDown = false;
+        return;
+    }
     if (k == ModernMonitor)
         bootLogView = false;
     if (k == ModernGame) {
@@ -254,6 +278,8 @@ void ModernDesktop::Close(ModernWindowKind k) {
         Trace("APP CLOSE OK\n");
     }
     wm.Close(k);
+    // Closing changes focus too.
+    SyncNativeFocus();
     if (k == ModernImage) {
         const uint32_t values[] = {image.generation};
         TraceImage("GTOS NATIVE IMAGE CLOSED V1 generation=?\n", values);
@@ -261,6 +287,161 @@ void ModernDesktop::Close(ModernWindowKind k) {
     dragKind = -1;
     leftDown = false;
     Notice("Window closed");
+}
+// Bind the four native slots to whatever the provider currently holds. Runs on
+// the deferred desktop path only: the bank never calls into the GUI.
+//
+// The provider writes straight into this slot's fixed frame cache, so no whole
+// frame is ever a local or a temporary here.
+void ModernDesktop::SyncNativeWindows() {
+    if (!windowProvider) return;
+    bool changed = false;
+    for (uint32_t slot = 0; slot < ModernNativeCount; ++slot) {
+        NativeWindowView view;
+        const uint32_t previous = windowHandles[slot];
+        const uint32_t previousGeneration = windowViews[slot].frameGeneration;
+        const uint32_t previousLifecycle = windowViews[slot].lifecycle;
+        // A stale cached frame is not evidence that the object still exists.
+        if (!windowProvider->CopySlot(slot, view, windowFrames[slot])) {
+            view.handle = 0;
+            view.lifecycle = NativeWindowDead;
+            view.frameGeneration = 0;
+            view.width = view.height = 0;
+        }
+        const bool gone = !view.handle || view.lifecycle == NativeWindowDead;
+        if (gone) {
+            if (previous) {
+                ForgetNativeWindow(slot);
+                wm.Close((ModernWindowKind)(ModernNative0 + slot));
+                changed = true;
+            }
+            continue;
+        }
+        windowViews[slot] = view;
+        if (!view.frameGeneration) {
+            // The provider already zeroed the cache for an unpublished object.
+            for (uint32_t i = 0; i < NativeImageMaximumBytes; ++i) windowFrames[slot].rgba[i] = 0;
+            windowFrames[slot].generation = 0;
+            windowFrames[slot].width = windowFrames[slot].height = 0;
+        }
+        if (previous != view.handle) {
+            // A new object takes over the slot. Retire only the OLD binding; the
+            // frame and view just copied above belong to the new object and must
+            // survive this update. The old window's drag/resize/capture and its
+            // WM entry are dropped first so none of it can act on the new owner.
+            if (previous) RetireNativeSlot(slot);
+            windowHandles[slot] = view.handle;
+            wm.Open((ModernWindowKind)(ModernNative0 + slot));
+            changed = true;
+        } else if (view.frameGeneration != previousGeneration ||
+                   view.lifecycle != previousLifecycle) {
+            changed = true;
+        }
+    }
+    if (changed) needsDraw = true;
+    SyncNativeFocus();
+}
+
+// Drop only the routing state that belonged to one slot's previous handle. The
+// cached frame is deliberately left alone: a caller that has just written a new
+// frame for the same slot must not lose it.
+void ModernDesktop::RetireNativeSlot(uint32_t slot) {
+    const uint32_t previous = windowHandles[slot];
+    if (!previous) return;
+    if (windowCapture == previous) {
+        windowCapture = 0;
+        leftDown = false;
+    }
+    if (windowFocusHandle == previous) windowFocusHandle = 0;
+    // A drag or resize that started on the old object must not continue on the
+    // new one in the same slot.
+    if (dragKind == (int32_t)(ModernNative0 + slot)) {
+        dragKind = -1;
+        resizing = false;
+    }
+    // Close the old WM entry so Open below starts from a clean window state.
+    wm.Close((ModernWindowKind)(ModernNative0 + slot));
+}
+
+// Drop the binding AND the cached frame; used when the object is really gone.
+void ModernDesktop::ForgetNativeWindow(uint32_t slot) {
+    RetireNativeSlot(slot);
+    windowHandles[slot] = 0;
+    windowViews[slot] = NativeWindowView();
+    windowFrames[slot].generation = windowFrames[slot].width = windowFrames[slot].height = 0;
+    for (uint32_t i = 0; i < NativeImageMaximumBytes; ++i) windowFrames[slot].rgba[i] = 0;
+}
+
+// Compare the focus that has actually been handled with the current one. Called
+// after every real focus change and before each routed event, so an A->B->A
+// batch cannot hide the moment A lost focus.
+void ModernDesktop::SyncNativeFocus() {
+    if (!windowProvider) return;
+    const int32_t focused = wm.Focused();
+    uint32_t focusedHandle = 0;
+    if (focused >= (int32_t)ModernNative0 && focused < (int32_t)ModernWindowCount)
+        focusedHandle = windowHandles[(uint32_t)(focused - (int32_t)ModernNative0)];
+    if (windowFocusHandle == focusedHandle) return;
+    const uint32_t lost = windowFocusHandle;
+    windowFocusHandle = focusedHandle;
+    if (!lost) return;
+    // The old window may have seen a press it will never see released.
+    windowProvider->ResetWindowInput(lost);
+    // A capture belongs to the press that is now meaningless, so the physical
+    // press state is released together with the capture.
+    if (windowCapture == lost) {
+        windowCapture = 0;
+        leftDown = false;
+    }
+}
+int32_t ModernDesktop::NativeSlotFor(uint32_t handle) const {
+    if (!handle) return -1;
+    for (uint32_t slot = 0; slot < ModernNativeCount; ++slot)
+        if (windowHandles[slot] == handle) return (int32_t)slot;
+    return -1;
+}
+// One place that turns a RouteInput result into capture state. Returns true when
+// the event was accepted by the application.
+bool ModernDesktop::ApplyRouteResult(int routed, uint32_t handle, bool newDown) {
+    if (routed < 0) {
+        // The application refused this event, so a capture held for THAT handle
+        // is no longer valid. A refusal for an unrelated window must not disturb
+        // the capture another window still holds.
+        if (handle && windowCapture == handle) {
+            windowCapture = 0;
+            leftDown = false;
+        }
+        return false;
+    }
+    // A reset means the application dropped its state; any capture is invalid.
+    if (routed == 1) windowCapture = 0;
+    // The new down is already queued, so the capture is established after it.
+    if (newDown) windowCapture = handle;
+    return true;
+}
+bool ModernDesktop::RouteKeyNative(uint8_t code, bool down) {
+    if (!windowProvider) return false;
+    // A key is routed only to the focus that is current right now; a focus change
+    // since the last event is handled first so the old window can be reset.
+    SyncNativeFocus();
+    const int32_t focused = wm.Focused();
+    if (focused < (int32_t)ModernNative0 || focused >= (int32_t)ModernWindowCount) return false;
+    // Desktop-reserved keys keep their meaning: Esc closes, and the launcher,
+    // image and window-management shortcuts stay with the desktop.
+    if (code == 27 || code == '`' || code == '5' || code == 'l' || code == 'b' ||
+        code == 'h' || (code >= '1' && code <= '4'))
+        return false;
+    uint32_t slot = (uint32_t)(focused - (int32_t)ModernNative0);
+    if (!windowHandles[slot]) return false;
+    GtosInputEvent event;
+    event.type = down ? GTOS_INPUT_KEY_DOWN : GTOS_INPUT_KEY_UP;
+    event.code = code;
+    event.x = 0;
+    event.y = 0;
+    // A key never establishes a capture; a reset still invalidates any existing
+    // one, and the event itself is already queued.
+    return ApplyRouteResult(windowProvider->RouteInput(windowHandles[slot], event),
+                            windowHandles[slot], false);
 }
 void ModernDesktop::ReloadDisk() {
     CancelCapture();
@@ -404,8 +585,12 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         k += 32;
     bool repeat = down && keys[k];
     keys[k] = down;
-    if (!down)
+    if (!down) {
+        // A release must reach the focused native window even though every other
+        // desktop path below is press-only.
+        RouteKeyNative(k, false);
         return;
+    }
     needsDraw = true;
     if (confirmRemove) {
         if (!repeat && (k == 'y' || k == '\n'))
@@ -515,18 +700,25 @@ void ModernDesktop::Key(uint8_t k, bool down) {
         CancelComposition();
         CancelCapture();
         wm.Cycle();
+        SyncNativeFocus();
         return;
     }
     if (k == '[' && wm.Focused() >= 0) {
         CancelCapture();
         wm.Minimize((ModernWindowKind)wm.Focused());
+        // Minimizing changes focus immediately, not on some later update.
+        SyncNativeFocus();
         return;
     }
     if (k == ']' && wm.Focused() >= 0) {
         CancelCapture();
         wm.ToggleMaximize((ModernWindowKind)wm.Focused());
+        SyncNativeFocus();
         return;
     }
+    // Keys go to the focused window. A native window receives everything the
+    // desktop has not reserved; the reserved set keeps its meaning above.
+    if (RouteKeyNative(k, down)) return;
     if (k == 27 && wm.Focused() >= 0) {
         Close((ModernWindowKind)wm.Focused());
         return;
@@ -587,6 +779,37 @@ void ModernDesktop::Key(uint8_t k, bool down) {
 void ModernDesktop::Pointer(const Input &e) {
     const int32_t x = e.x, y = e.y;
     needsDraw = true;
+    // A native capture outranks hit testing: move/up go to the original handle
+    // even when the pointer left the window or Hit would be -1.
+    if (windowCapture && windowProvider) {
+        if (e.type == 4 || e.type == 5) {
+            int32_t slot = NativeSlotFor(windowCapture);
+            if (slot >= 0) {
+                const uint32_t captured = windowCapture;
+                GtosInputEvent event;
+                event.type = e.type == 4 ? GTOS_INPUT_POINTER_UP : GTOS_INPUT_POINTER_MOVE;
+                // Only down/up carry the button number; a move carries none.
+                event.code = e.type == 4 ? 1 : 0;
+                const ModernRect r = wm.Window((ModernWindowKind)(ModernNative0 + slot)).bounds;
+                const ModernRect content = NativeContentRect(r, windowViews[slot]);
+                const int32_t scale = windowViews[slot].width && content.w
+                    ? content.w / (int32_t)windowViews[slot].width : 1;
+                event.x = scale > 0 ? (x - content.x) / scale : 0;
+                event.y = scale > 0 ? (y - content.y) / scale : 0;
+                // A reset or a refusal drops the capture; the event itself stays
+                // queued when the application accepted it.
+                ApplyRouteResult(windowProvider->RouteInput(captured, event), captured, false);
+            } else {
+                // The bound object is gone: there is nothing left to capture for.
+                windowCapture = 0;
+            }
+            if (e.type == 4) {
+                windowCapture = 0;
+                leftDown = false;
+            }
+            return;
+        }
+    }
     if (e.type == 4) {
         leftDown = false;
         dragKind = -1;
@@ -605,6 +828,29 @@ void ModernDesktop::Pointer(const Input &e) {
                           dragHeight + y - dragY);
             else
                 wm.Move((ModernWindowKind)dragKind, x - dragX, y - dragY);
+        }
+        // Hover never changes focus; it only reports a position to the window
+        // under the pointer when that point is inside its client content.
+        if (!leftDown && windowProvider) {
+            int32_t hitSlot = wm.Hit(x, y);
+            if (hitSlot >= (int32_t)ModernNative0 && hitSlot < (int32_t)ModernWindowCount) {
+                uint32_t slot = (uint32_t)(hitSlot - (int32_t)ModernNative0);
+                const ModernRect content = NativeContentRect(
+                    wm.Window((ModernWindowKind)hitSlot).bounds, windowViews[slot]);
+                if (windowViews[slot].handle && content.Contains(x, y)) {
+                    const int32_t scale = windowViews[slot].width
+                        ? content.w / (int32_t)windowViews[slot].width : 1;
+                    GtosInputEvent event;
+                    event.type = GTOS_INPUT_POINTER_MOVE;
+                    event.code = 0;
+                    event.x = scale > 0 ? (x - content.x) / scale : 0;
+                    event.y = scale > 0 ? (y - content.y) / scale : 0;
+                    // Hover never creates a capture, but a reset still invalidates
+                    // any capture held from an earlier press.
+                    ApplyRouteResult(windowProvider->RouteInput(windowViews[slot].handle, event),
+                                     windowViews[slot].handle, false);
+                }
+            }
         }
         return;
     }
@@ -645,10 +891,12 @@ void ModernDesktop::Pointer(const Input &e) {
                 Launch();
                 return;
             }
-            if (w.open && !w.minimized && wm.Focused() == k)
+            if (w.open && !w.minimized && wm.Focused() == k) {
                 wm.Minimize(k);
-            else
+                SyncNativeFocus();
+            } else {
                 Open(k);
+            }
         }
         return;
     }
@@ -700,7 +948,31 @@ void ModernDesktop::Pointer(const Input &e) {
         return;
     ModernWindowKind k = (ModernWindowKind)hit;
     wm.Focus(k);
+    // The focus changed on this press: give the window that just lost it its
+    // reset before this event is routed anywhere.
+    SyncNativeFocus();
     ModernRect r = wm.Window(k).bounds;
+    // A press inside a native client area is delivered and becomes a capture, so
+    // the matching release still arrives after the pointer leaves the window.
+    if (k >= ModernNative0 && k < ModernWindowCount && windowProvider) {
+        uint32_t slot = (uint32_t)(k - ModernNative0);
+        const ModernRect content = NativeContentRect(r, windowViews[slot]);
+        if (windowViews[slot].handle && content.Contains(x, y)) {
+            const int32_t scale = windowViews[slot].width
+                ? content.w / (int32_t)windowViews[slot].width : 1;
+            GtosInputEvent event;
+            event.type = GTOS_INPUT_POINTER_DOWN;
+            event.code = 1;
+            event.x = scale > 0 ? (x - content.x) / scale : 0;
+            event.y = scale > 0 ? (y - content.y) / scale : 0;
+            // A reset clears the old capture first; this down is already queued,
+            // so the new capture is established after it.
+            if (ApplyRouteResult(windowProvider->RouteInput(windowViews[slot].handle, event),
+                                 windowViews[slot].handle, true))
+                leftDown = true;
+            return;
+        }
+    }
     if (y < r.y + ModernWindowManager::Title) {
         if (x >= r.x + r.w - 40) {
             Close(k);
@@ -708,16 +980,19 @@ void ModernDesktop::Pointer(const Input &e) {
         }
         if (x >= r.x + r.w - 76) {
             wm.ToggleMaximize(k);
+            SyncNativeFocus();
             Trace("UI WINDOW MAXIMIZE\n");
             return;
         }
         if (x >= r.x + r.w - 112) {
             wm.Minimize(k);
+            SyncNativeFocus();
             Trace("UI WINDOW MINIMIZE\n");
             return;
         }
         if (titleClickKind == k && state.ticks - lastTitleClick < 30) {
             wm.ToggleMaximize(k);
+            SyncNativeFocus();
             titleClickKind = -1;
             return;
         }
@@ -790,6 +1065,8 @@ void ModernDesktop::Pointer(const Input &e) {
 }
 void ModernDesktop::Update(const SystemSnapshot &s) {
     state = s;
+    // Native windows are synchronised on this deferred path only.
+    SyncNativeWindows();
     // The provider serializes the copy; no user address is retained. Fixed
     // candidate storage keeps large snapshots off the kernel stack and rejects
     // bad frames without discarding the desktop's last valid image.
@@ -834,6 +1111,13 @@ void ModernDesktop::Update(const SystemSnapshot &s) {
         dragKind = -1;
         for (uint32_t i = 0; i < 256; ++i)
             keys[i] = false;
+        // The IRQ ring lost raw events, so every native window may have missed a
+        // release: give each one the same reset the application needs.
+        if (windowProvider) {
+            for (uint32_t slot = 0; slot < ModernNativeCount; ++slot)
+                if (windowHandles[slot]) windowProvider->ResetWindowInput(windowHandles[slot]);
+            windowCapture = 0;
+        }
         Notice("Input queue recovered; press the key again");
     }
     const ModernWindow &gameWindow = wm.Window(ModernGame);

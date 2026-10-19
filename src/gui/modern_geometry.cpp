@@ -5,8 +5,8 @@ ModernWindowManager::ModernWindowManager(int32_t w, int32_t h) : width(w), heigh
         width = 640;
     if (height < 480)
         height = 480;
-    const int32_t widths[] = {602, 570, 590, 510, 594, 360},
-                  heights[] = {400, 412, 424, 430, 396, 300};
+    const int32_t widths[] = {602, 570, 590, 510, 594, 360, 480, 480, 480, 480},
+                  heights[] = {400, 412, 424, 430, 396, 300, 360, 360, 360, 360};
     for (uint32_t i = 0; i < ModernWindowCount; ++i) {
         order[i] = i;
         ModernRect r = {(width - widths[i]) / 2 + (int32_t)i * 12 - 24, Top + 38 + (int32_t)i * 15,
@@ -18,8 +18,8 @@ ModernWindowManager::ModernWindowManager(int32_t w, int32_t h) : width(w), heigh
 }
 void ModernWindowManager::Clamp(ModernRect &r, ModernWindowKind kind) const {
     ModernRect a = WorkArea();
-    const int32_t minimumWidths[] = {500, 500, 540, 480, 592, 320},
-                  minimumHeights[] = {360, 350, 398, 398, 380, 240};
+    const int32_t minimumWidths[] = {500, 500, 540, 480, 592, 320, 320, 320, 320, 320},
+                  minimumHeights[] = {360, 350, 398, 398, 380, 240, 240, 240, 240, 240};
     int32_t mw = minimumWidths[kind], mh = minimumHeights[kind];
     if (r.w < mw)
         r.w = mw;

@@ -2,7 +2,8 @@
 #include <gui/modern_desktop.h>
 using namespace gtos::gui;
 static const char *titles[] = {"Welcome", "Applications", "System monitor", "Appearance",
-                               "Catch", "Native image"};
+                               "Catch", "Native image", "Native window 1", "Native window 2",
+                               "Native window 3", "Native window 4"};
 static const char *dockTitles[] = {"Home", "Apps", "Monitor", "Settings", "Catch"};
 static const uint32_t gamePalette[] = {0x101923, 0x182633, 0x243744, 0x354D5A, 0x517080, 0x809BA9,
                                        0xBCD1D5, 0xEAF1ED, 0xEEDF83, 0x81CB9B, 0x86C5D5, 0xB7B1DA,
@@ -131,6 +132,8 @@ void ModernDesktop::DrawWindow(ModernWindowKind k) {
         DrawGame(r);
     else if (k == ModernImage)
         DrawNativeImage(r);
+    else if (k >= ModernNative0 && k < ModernWindowCount)
+        DrawNativeSlot(r, (uint32_t)(k - ModernNative0));
     fb.ResetClip();
     if (focus) {
         fb.Rect(r.x + 9, r.y, r.w - 18, 1, c.accent);
@@ -435,6 +438,64 @@ void ModernDesktop::DrawNativeImage(const ModernRect &r) {
             fb.Rect(imageX + x * scale, imageY + y * scale, scale, scale, color);
         }
     paint.Text(r.x + 24, r.y + r.h - 27, Label("5 reopens this image / Esc closes"), c.muted);
+}
+// One client-content rectangle rule shared by drawing and input inversion, so the
+// two cannot drift. Dimensions come from the CREATE size in the view, not from
+// whether a frame was published.
+ModernRect ModernDesktop::NativeContentRect(const ModernRect &r,
+                                            const NativeWindowView &view) const {
+    ModernRect out = {0, 0, 0, 0};
+    if (!view.width || !view.height) return out;
+    const int32_t availableWidth = r.w - 48, availableHeight = r.h - 124;
+    int32_t scale = availableWidth / (int32_t)view.width;
+    const int32_t verticalScale = availableHeight / (int32_t)view.height;
+    if (verticalScale < scale) scale = verticalScale;
+    if (scale > 6) scale = 6;
+    if (scale <= 0) return out;
+    const int32_t width = (int32_t)view.width * scale, height = (int32_t)view.height * scale;
+    out.x = r.x + (r.w - width) / 2;
+    out.y = r.y + 82 + (availableHeight - height) / 2;
+    out.w = width;
+    out.h = height;
+    return out;
+}
+void ModernDesktop::DrawNativeSlot(const ModernRect &r, uint32_t slot) {
+    if (slot >= ModernNativeCount) return;
+    const NativeWindowView &view = windowViews[slot];
+    if (!view.handle || view.lifecycle == NativeWindowDead) return;
+    // A cached view is not proof the object is still alive: ask the provider.
+    if (windowProvider && !windowProvider->ContainsWindow(view.handle)) return;
+    Theme c = Colors();
+    paint.Text(r.x + 24, r.y + 54, Label("Native application window"), c.muted);
+    const ModernRect content = NativeContentRect(r, view);
+    if (!content.w || !content.h) {
+        paint.Text(r.x + 24, r.y + 82, Label("Window too small to present"), c.muted);
+        return;
+    }
+    paint.Outline(content.x - 2, content.y - 2, content.w + 4, content.h + 4, c.line);
+    const NativeImageSnapshot &frame = windowFrames[slot];
+    // An unpublished window keeps its rectangle but paints no pixels.
+    if (!view.frameGeneration || !frame.width || !frame.height) {
+        fb.Rect(content.x, content.y, content.w, content.h, c.panel);
+        paint.Text(content.x + 12, content.y + 12, Label("Waiting for the first frame"), c.muted);
+        return;
+    }
+    const int32_t scale = content.w / (int32_t)view.width;
+    for (uint32_t y = 0; y < view.height; ++y)
+        for (uint32_t x = 0; x < view.width; ++x) {
+            const uint32_t background = ((x / 4 + y / 4) & 1) ? 0xA7B5C2 : 0xDDE5EC;
+            const uint8_t *pixel = frame.rgba + (y * view.width + x) * 4;
+            const uint32_t inverseAlpha = 255 - pixel[3];
+            uint32_t color = 0;
+            for (uint32_t channel = 0; channel < 3; ++channel) {
+                const uint32_t shift = 16 - channel * 8;
+                const uint32_t result = pixel[channel] +
+                    (((background >> shift) & 255) * inverseAlpha + 127) / 255;
+                color |= result << shift;
+            }
+            fb.Rect(content.x + x * scale, content.y + y * scale, scale, scale, color);
+        }
+    paint.Text(r.x + 24, r.y + r.h - 27, Label("Esc closes this window"), c.muted);
 }
 void ModernDesktop::DrawLauncher() {
     Theme c = Colors();

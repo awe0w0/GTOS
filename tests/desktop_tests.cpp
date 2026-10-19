@@ -1,5 +1,6 @@
 // Deterministic real desktop/framebuffer tests, executable without libc.
 #include <gui/modern_desktop.h>
+#include <process/native_windows.h>
 #include <i18n/font.h>
 using namespace gtos;
 using namespace gtos::gui;
@@ -1129,6 +1130,1099 @@ static void NativeImageTests() {
     Output("Native image snapshot, alpha8, close/reopen and bilingual glyph tests passed\n");
 }
 
+// Host memory standing in for user pages, so the tests read the real bank queue
+// through the real syscall-shaped Call() rather than peeking at internals.
+struct DesktopArena : process::UserMemory {
+    uint8_t bytes[8192];
+    DesktopArena() { for (uint32_t i = 0; i < sizeof(bytes); ++i) bytes[i] = 0; }
+    bool CopyFromUser(void *destination, unsigned source, unsigned length) {
+        if (source > sizeof(bytes) || length > sizeof(bytes) - source) return false;
+        const uint8_t *from = bytes + source;
+        uint8_t *to = (uint8_t *)destination;
+        for (unsigned i = 0; i < length; ++i) to[i] = from[i];
+        return true;
+    }
+    bool CopyToUser(unsigned destination, const void *source, unsigned length) {
+        if (destination > sizeof(bytes) || length > sizeof(bytes) - destination)
+            return false;
+        const uint8_t *from = (const uint8_t *)source;
+        uint8_t *to = bytes + destination;
+        for (unsigned i = 0; i < length; ++i) to[i] = from[i];
+        return true;
+    }
+};
+
+// Drain one window's queue through the production syscall entry. A negative
+// result is a real error and is reported as a failure: it is never treated as
+// "the queue was empty".
+static int DrainEvents(process::NativeWindows &bank, uint32_t owner, uint32_t handle,
+                       GtosInputEvent *out, uint32_t capacity, const char *label) {
+    DesktopArena arena;
+    GtosInputReadRequest request;
+    request.version = GTOS_WINDOW_ABI_VERSION;
+    request.handle = handle;
+    request.count = capacity < GTOS_INPUT_READ_LIMIT ? capacity : GTOS_INPUT_READ_LIMIT;
+    request.destination = 4096;
+    const uint8_t *raw = (const uint8_t *)&request;
+    for (uint32_t i = 0; i < sizeof(request); ++i) arena.bytes[64 + i] = raw[i];
+    const int delivered = bank.Call(owner, arena, GTOS_SYS_INPUT_READ, 64, sizeof(request));
+    Check(delivered >= 0, label);
+    if (delivered <= 0) return 0;
+    const GtosInputEvent *events = (const GtosInputEvent *)(arena.bytes + 4096);
+    for (int i = 0; i < delivered; ++i) out[i] = events[i];
+    return delivered;
+}
+
+// WINDOW_INFO through the same entry: the only trustworthy way to know the real
+// queue depth before claiming a boundary.
+static int QueryInfo(process::NativeWindows &bank, uint32_t owner, uint32_t handle,
+                     GtosWindowInfoResponse &info) {
+    DesktopArena arena;
+    GtosWindowInfoRequest request;
+    request.version = GTOS_WINDOW_ABI_VERSION;
+    request.handle = handle;
+    request.result_va = 2048;
+    const uint8_t *raw = (const uint8_t *)&request;
+    for (uint32_t i = 0; i < sizeof(request); ++i) arena.bytes[64 + i] = raw[i];
+    const int result = bank.Call(owner, arena, GTOS_SYS_WINDOW_INFO, 64, sizeof(request));
+    if (result < 0) return result;
+    info = *(const GtosWindowInfoResponse *)(arena.bytes + 2048);
+    return result;
+}
+
+
+// The same content rectangle the desktop uses, recomputed from the published
+// view so the test checks real framebuffer pixels.
+static ModernRect NativeContentOf(const ModernDesktop &d, uint32_t slot,
+                                  const NativeWindowView &view) {
+    ModernRect r = d.Windows().Window((ModernWindowKind)(ModernNative0 + slot)).bounds;
+    ModernRect out = {0, 0, 0, 0};
+    if (!view.width || !view.height) return out;
+    const int32_t aw = r.w - 48, ah = r.h - 124;
+    int32_t scale = aw / (int32_t)view.width;
+    const int32_t vertical = ah / (int32_t)view.height;
+    if (vertical < scale) scale = vertical;
+    if (scale > 6) scale = 6;
+    if (scale <= 0) return out;
+    const int32_t w = (int32_t)view.width * scale, h = (int32_t)view.height * scale;
+    out.x = r.x + (r.w - w) / 2;
+    out.y = r.y + 82 + (ah - h) / 2;
+    out.w = w;
+    out.h = h;
+    return out;
+}
+
+static uint32_t ExpectedNativePixel(const NativeImageSnapshot &frame, uint32_t x, uint32_t y) {
+    const uint32_t background = ((x / 4 + y / 4) & 1) ? 0xA7B5C2 : 0xDDE5EC;
+    const uint8_t *pixel = frame.rgba + (y * frame.width + x) * 4;
+    uint32_t expected = 0;
+    for (uint32_t channel = 0; channel < 3; ++channel) {
+        const uint32_t shift = 16 - channel * 8;
+        expected |= ((pixel[channel] * 255 + ((background >> shift) & 255) *
+                      (255 - pixel[3]) + 127) / 255) << shift;
+    }
+    return expected;
+}
+
+// Queue events without draining: the IRQ side only enqueues.
+static void QueueKeyDown(ModernDesktop &d, uint8_t key) { d.OnKeyDown((char)key); }
+static void QueueDown(ModernDesktop &d) { d.OnMouseDown(1); }
+static void QueueUp(ModernDesktop &d) { d.OnMouseUp(1); }
+static void QueueMoveTo(ModernDesktop &d, int32_t x, int32_t y) {
+    while (x != pointerX || y != pointerY) {
+        int32_t dx = x - pointerX, dy = y - pointerY;
+        if (dx > 100) dx = 100;
+        if (dx < -100) dx = -100;
+        if (dy > 100) dy = 100;
+        if (dy < -100) dy = -100;
+        pointerX += dx;
+        pointerY += dy;
+        d.OnMouseMove((int8_t)dx, (int8_t)dy);
+    }
+}
+// One update only. Ticks advance by the minimum the 2-tick draw throttle needs,
+// and the whole test stays well below the 50-tick monitor refresh so a redraw
+// can only come from the native synchronisation itself.
+static void OneUpdate(ModernDesktop &d) {
+    snapshot.ticks += 3;
+    d.Update(snapshot);
+}
+
+// A real press that stays held. Unlike Click() this never sends the release, so a
+// capture is genuinely active for the steps that follow.
+static void BeginPress(ModernDesktop &d, int32_t x, int32_t y) {
+    MoveTo(d, x, y); // hover first so no window is dragged on the way
+    d.OnMouseDown(1);
+    Pump(d);
+}
+static void EndPress(ModernDesktop &d, int32_t x, int32_t y) {
+    MoveTo(d, x, y);
+    d.OnMouseUp(1);
+    Pump(d);
+}
+// Press without moving first, for cases where the pointer must stay exactly where
+// the previous step left it.
+static void PressHere(ModernDesktop &d) {
+    d.OnMouseDown(1);
+    Pump(d);
+}
+// One hover: bounded steps, each a real pointer move with the button up.
+static void HoverStep(ModernDesktop &d, int32_t x, int32_t y) {
+    while (x != pointerX || y != pointerY) {
+        int32_t dx = x - pointerX, dy = y - pointerY;
+        if (dx > 100) dx = 100;
+        if (dx < -100) dx = -100;
+        if (dy > 100) dy = 100;
+        if (dy < -100) dy = -100;
+        pointerX += dx;
+        pointerY += dy;
+        d.OnMouseMove((int8_t)dx, (int8_t)dy);
+        Pump(d);
+    }
+}
+// Bring the window's normal queue to exactly `target` entries, then prove the
+// depth with WINDOW_INFO. The starting depth is measured, never assumed, and
+// every fill step is one pixel inside the content so it routes exactly one move.
+static bool FillQueueTo(ModernDesktop &d, process::NativeWindows &bank, uint32_t owner,
+                        uint32_t handle, const ModernRect &content, uint32_t target) {
+    if (content.w < 4 || content.h < 4) return false;
+    const int32_t cx = content.x + content.w / 2;
+    const int32_t cy = content.y + content.h / 2;
+    MoveTo(d, cx, cy); // approach in bounded steps
+    GtosWindowInfoResponse info;
+    if (QueryInfo(bank, owner, handle, info) < 0) return false;
+    bool flip = false;
+    while (info.queue_depth < target) {
+        // Two interior points one pixel apart: every step is a real move and
+        // stays inside the content, so it routes exactly one event.
+        HoverStep(d, flip ? cx + 1 : cx, cy);
+        flip = !flip;
+        if (QueryInfo(bank, owner, handle, info) < 0) return false;
+    }
+    return info.queue_depth == target;
+}
+
+static void NativeWindowRedrawTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "redraw framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    // Start the tick counter low so every update below stays far from the
+    // 50-tick monitor refresh.
+    snapshot.ticks = 0;
+    Pump(d);
+    OneUpdate(d);
+
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    int handle = bank.Create(1, create);
+    Check(handle > 0, "redraw create");
+    // CREATE alone must repaint; no input is injected anywhere in this test.
+    OneUpdate(d);
+    Check(d.Windows().Window(ModernNative0).open, "create opens the window");
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "redraw provider slot");
+    ModernRect content = NativeContentOf(d, 0, view);
+    Check(content.w > 0 && content.h > 0, "redraw content rectangle");
+    const uint32_t emptyPixel = display[(content.y + 2) * 800 + content.x + 2];
+
+    unsigned char chunk[GTOS_WINDOW_WRITE_LIMIT];
+    GtosWindowSubmitRequest submit;
+    submit.version = GTOS_WINDOW_ABI_VERSION;
+    submit.handle = (unsigned)handle;
+    submit.source = 0;
+    submit.length = 64;
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+
+    // First frame, colour A.
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0x00; chunk[i + 1] = 0xC0; chunk[i + 2] = 0x00; chunk[i + 3] = 0xFF;
+    }
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "redraw submit frame 1");
+    }
+    Check(bank.Present(1, control) == 0, "redraw present frame 1");
+    OneUpdate(d);
+    Check(bank.CopySlot(0, view, frame), "redraw slot after frame 1");
+    const uint32_t firstPixel = display[(content.y + 2) * 800 + content.x + 2];
+    Check(firstPixel != emptyPixel, "first frame repaints without input");
+    Check(firstPixel == ExpectedNativePixel(frame, 0, 0), "first frame pixel is exact");
+    const ModernRect boundsAfterFirst = d.Windows().Window(ModernNative0).bounds;
+
+    // Second frame, different colour, same handle and rectangle.
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0xC0; chunk[i + 1] = 0x00; chunk[i + 2] = 0x00; chunk[i + 3] = 0xFF;
+    }
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "redraw submit frame 2");
+    }
+    Check(bank.Present(1, control) == 0, "redraw present frame 2");
+    OneUpdate(d);
+    Check(bank.CopySlot(0, view, frame), "redraw slot after frame 2");
+    const uint32_t secondPixel = display[(content.y + 2) * 800 + content.x + 2];
+    Check(secondPixel != firstPixel, "second frame repaints without input");
+    Check(secondPixel == ExpectedNativePixel(frame, 0, 0), "second frame pixel is exact");
+    // The rectangle is unchanged field by field against the value saved before
+    // the second frame, not by a tautology.
+    const ModernRect afterSecond = d.Windows().Window(ModernNative0).bounds;
+    Check(afterSecond.x == boundsAfterFirst.x && afterSecond.y == boundsAfterFirst.y &&
+              afterSecond.w == boundsAfterFirst.w && afterSecond.h == boundsAfterFirst.h,
+          "second frame keeps the window rectangle");
+
+    // Destroy removes the window and repaints the background.
+    Check(bank.Close(1, control) == 0, "redraw destroy");
+    OneUpdate(d);
+    Check(!d.Windows().Window(ModernNative0).open, "destroy removes the window");
+    Check(display[(content.y + 2) * 800 + content.x + 2] != secondPixel,
+          "destroy repaints the desktop without input");
+    bank.SetAvailable(false);
+}
+
+static void NativeWindowFocusBatchTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "focus framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int a = bank.Create(1, create);
+    const int b = bank.Create(2, create);
+    Check(a > 0 && b > 0, "focus creates two windows");
+    Pump(d);
+    Check(d.Windows().Window(ModernNative0).open && d.Windows().Window(ModernNative1).open,
+          "both native windows opened");
+
+    // Focus A by its title bar, then let A see a key press.
+    Click(d, 212, 162);
+    Check(d.Windows().Focused() == ModernNative0, "title click focuses A");
+    Key(d, 'x');
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+    uint32_t count = (uint32_t)DrainEvents(bank, 1, (uint32_t)a, events,
+                                           GTOS_INPUT_READ_LIMIT, "focus read accepted");
+    Check(count == 2 && events[0].type == GTOS_INPUT_KEY_DOWN &&
+          events[1].type == GTOS_INPUT_KEY_UP, "A saw its key pair");
+
+    // A batch that visits B and comes back to A without any update in between.
+    // The pointer moves first, so no window is dragged while the button is held.
+    QueueKeyDown(d, 'y');
+    QueueMoveTo(d, 695, 180);
+    QueueDown(d);
+    QueueUp(d);
+    QueueMoveTo(d, 212, 162);
+    QueueDown(d);
+    QueueUp(d);
+    OneUpdate(d);
+    Check(d.Windows().Focused() == ModernNative0, "batch ends focused on A");
+    count = (uint32_t)DrainEvents(bank, 1, (uint32_t)a, events, GTOS_INPUT_READ_LIMIT,
+                                  "focus batch read accepted");
+    Check(count >= 1, "A received something after the batch");
+    bool reset = false, staleDown = false;
+    for (uint32_t i = 0; i < count; ++i) {
+        if (events[i].type == GTOS_INPUT_RESET) reset = true;
+        if (events[i].type == GTOS_INPUT_KEY_DOWN && events[i].code == 'y') staleDown = true;
+    }
+    Check(reset, "A gets RESET after losing focus inside the batch");
+    Check(!staleDown, "A does not keep a press from before the focus loss");
+    bank.Close(1, (GtosWindowControlRequest){GTOS_WINDOW_ABI_VERSION, (unsigned)a});
+    bank.Close(2, (GtosWindowControlRequest){GTOS_WINDOW_ABI_VERSION, (unsigned)b});
+    bank.SetAvailable(false);
+}
+
+static void NativeWindowCaptureTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "capture framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "capture create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "capture slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+
+    // Start from an empty queue so the chain below is exactly this case's own.
+    while (DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                       "capture pre-drain accepted") > 0) {}
+
+    // The press really stays held across the PRESENT.
+    BeginPress(d, content.x + content.w / 2, content.y + content.h / 2);
+    // The approach hovers into the window, so the first batch is those moves and
+    // ends with the down. Read it instead of discarding it.
+    int count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                            "capture press read accepted");
+    Check(count >= 1, "the press produced records");
+    bool pressOk = count >= 1;
+    for (int i = 0; i < count; ++i) {
+        const bool last = i == count - 1;
+        if (last) {
+            if (events[i].type != GTOS_INPUT_POINTER_DOWN || events[i].code != 1)
+                pressOk = false;
+        } else if (events[i].type != GTOS_INPUT_POINTER_MOVE || events[i].code != 0) {
+            pressOk = false;
+        }
+    }
+    Check(pressOk, "the press batch is moves followed by one down carrying code 1");
+
+    unsigned char chunk[GTOS_WINDOW_WRITE_LIMIT];
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0x10; chunk[i + 1] = 0x20; chunk[i + 2] = 0x30; chunk[i + 3] = 0xFF;
+    }
+    GtosWindowSubmitRequest submit;
+    submit.version = GTOS_WINDOW_ABI_VERSION;
+    submit.handle = (unsigned)handle;
+    submit.source = 0;
+    submit.length = 64;
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "capture submit");
+    }
+    Check(bank.Present(1, control) == 0, "capture present");
+    Pump(d);
+    // Leave the window entirely, then release out there.
+    EndPress(d, 5, 5);
+
+    count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                        "capture release read accepted");
+    Check(count >= 2, "the release batch has moves and one up");
+    bool releaseOk = count >= 2;
+    bool sawNegative = false;
+    for (int i = 0; i < count; ++i) {
+        const bool last = i == count - 1;
+        if (last) {
+            if (events[i].type != GTOS_INPUT_POINTER_UP || events[i].code != 1)
+                releaseOk = false;
+        } else {
+            if (events[i].type != GTOS_INPUT_POINTER_MOVE || events[i].code != 0)
+                releaseOk = false;
+            if (events[i].x < 0 && events[i].y < 0) sawNegative = true;
+        }
+    }
+    Check(releaseOk, "the release batch is captured moves followed by one up carrying code 1");
+    Check(sawNegative,
+          "a captured move outside the window reports signed negative coordinates");
+    Check(DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                      "capture tail read") == 0, "nothing else follows the release");
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+static void NativeWindowOverflowRouteTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "overflow framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "overflow create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "overflow slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+
+    // A held press, then fill to 125 proved by WINDOW_INFO, then two keys: the
+    // first reaches exactly 126, the second is the first real overflow.
+    BeginPress(d, content.x + content.w / 2, content.y + content.h / 2);
+    Check(FillQueueTo(d, bank, 1, (unsigned)handle, content, 125),
+          "queue reaches exactly 125 by captured moves");
+    QueueKeyDown(d, 0x20);
+    OneUpdate(d);
+    GtosWindowInfoResponse info;
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 126,
+          "queue reaches exactly 126 with one key");
+    QueueKeyDown(d, 0x21);
+    OneUpdate(d);
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 2,
+          "key overflow leaves RESET plus the new key");
+    // dropped counts every unread normal entry the overflow discarded, which was
+    // exactly the full queue of 126.
+    Check(info.dropped == GTOS_INPUT_NORMAL_ENTRIES,
+          "key overflow discarded exactly the full queue");
+
+    // Read the whole batch, not just its head: RESET first, then the new key.
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+    int count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                            "key overflow read accepted");
+    Check(count == 2, "key overflow batch has exactly two records");
+    if (count == 2) {
+        Check(events[0].type == GTOS_INPUT_RESET, "key overflow reports RESET first");
+        Check(events[1].type == GTOS_INPUT_KEY_DOWN && events[1].code == 0x21,
+              "the key that caused the overflow is still delivered");
+    }
+    // The reset cancelled the capture: the release outside is not delivered.
+    EndPress(d, 5, 5);
+    Check(DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                      "key overflow tail read") == 0,
+          "key overflow cancelled the capture, so no outside release arrives");
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+// Hover alone reaches the boundary and its overflow cancels a capture that a
+// different press established.
+static void NativeWindowHoverOverflowTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "hover overflow framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "hover overflow create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "hover overflow slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+
+    BeginPress(d, content.x + content.w / 2, content.y + content.h / 2);
+    Check(FillQueueTo(d, bank, 1, (unsigned)handle, content, 125),
+          "hover path reaches 125");
+    // Two more hovers: 126, then overflow.
+    HoverStep(d, content.x + 1, content.y + 1);
+    GtosWindowInfoResponse info;
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 126,
+          "hover reaches exactly 126");
+    HoverStep(d, content.x + 2, content.y + 1);
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 2,
+          "hover overflow leaves RESET plus the new move");
+    const int count = DrainEvents(bank, 1, (unsigned)handle, events,
+                                  GTOS_INPUT_READ_LIMIT, "hover overflow read accepted");
+    Check(count == 2 && events[0].type == GTOS_INPUT_RESET,
+          "hover overflow reports RESET first");
+    Check(count == 2 && events[1].type == GTOS_INPUT_POINTER_MOVE,
+          "the hover that caused the overflow is still delivered");
+    EndPress(d, 5, 5);
+    Check(DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                      "hover overflow tail read") == 0,
+          "hover overflow cancelled the capture");
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+// The same 126 -> overflow transition reached with the button UP, so no capture
+// exists and the hover branch is the one under test. The captured-move variant
+// above stays as it is; this group proves the hover path on its own.
+static void NativeWindowHoverFreeOverflowTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "free hover overflow framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "free hover overflow create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "free hover overflow slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+
+    // Fill to exactly 126 with the button up. FillQueueTo only ever moves, so no
+    // press happens anywhere in this group.
+    Check(FillQueueTo(d, bank, 1, (unsigned)handle, content, 126),
+          "free hover reaches exactly 126");
+    // Focus must not move on a hover: the pointer is over the native window and
+    // nothing else was pressed, so the focus is still whatever it was.
+    const int32_t focusedBefore = d.Windows().Focused();
+    Check(focusedBefore == ModernNative0, "free hover starts focused on the native window");
+
+    // One more hover overflows: RESET plus this move, and nothing else.
+    HoverStep(d, content.x + 1, content.y + 1);
+    GtosWindowInfoResponse info;
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 2,
+          "free hover overflow leaves RESET plus the new move");
+    Check(d.Windows().Focused() == focusedBefore, "free hover overflow never changes focus");
+    const int count = DrainEvents(bank, 1, (unsigned)handle, events,
+                                  GTOS_INPUT_READ_LIMIT, "free hover overflow read accepted");
+    Check(count == 2 && events[0].type == GTOS_INPUT_RESET,
+          "free hover overflow reports RESET first");
+    Check(count == 2 && events[1].type == GTOS_INPUT_POINTER_MOVE,
+          "the free hover that caused the overflow is still delivered");
+    Check(count == 2 && events[1].code == 0,
+          "a hover move carries no button number");
+    Check(count == 2 && events[1].x >= 0 && events[1].y >= 0 &&
+              events[1].x < (int)view.width && events[1].y < (int)view.height,
+          "the free hover move is inside the client content");
+
+    // With no capture held, moving the pointer away must deliver nothing at all:
+    // that is the observable difference between this group and the captured one.
+    HoverStep(d, 5, 5);
+    Check(DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                      "free hover leaving the window read") == 0,
+          "no capture means leaving the window delivers nothing");
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 0,
+          "the queue is empty after the free hover group");
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+// A new down that overflows still establishes a fresh capture, so the matching
+// release outside the window is delivered.
+static void NativeWindowDownOverflowTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "down overflow framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "down overflow create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "down overflow slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+
+    // No capture yet: fill to 126 by hover alone.
+    Check(FillQueueTo(d, bank, 1, (unsigned)handle, content, 126),
+          "queue reaches exactly 126 without a capture");
+    // This press overflows on its own down and must still become a capture. The
+    // pointer must not move first, or the hover would overflow instead.
+    PressHere(d);
+    GtosWindowInfoResponse info;
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 && info.queue_depth == 2,
+          "the overflowing down leaves RESET plus the down");
+    int count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                            "down overflow read accepted");
+    Check(count == 2 && events[0].type == GTOS_INPUT_RESET,
+          "down overflow reports RESET first");
+    Check(count == 2 && events[1].type == GTOS_INPUT_POINTER_DOWN,
+          "the overflowing down is still delivered");
+    // The capture was rebuilt after the reset, so the outside release arrives.
+    EndPress(d, 5, 5);
+    count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                        "down overflow release read");
+    Check(count >= 2, "rebuilt capture delivers moves then a release");
+    bool releaseOk = count >= 2;
+    for (int i = 0; i < count; ++i) {
+        const bool last = i == count - 1;
+        if (last) {
+            if (events[i].type != GTOS_INPUT_POINTER_UP || events[i].code != 1)
+                releaseOk = false;
+        } else if (events[i].type != GTOS_INPUT_POINTER_MOVE || events[i].code != 0) {
+            releaseOk = false;
+        }
+    }
+    Check(releaseOk, "rebuilt capture moves carry code 0 and the release code 1");
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+// A refusal (negative result) cancels the capture held for that window. The bank
+// is put into closing through its own API so the refusal is real.
+static void NativeWindowRefusedCaptureTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "refused capture framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "refused capture create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "refused capture slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+
+    BeginPress(d, content.x + content.w / 2, content.y + content.h / 2);
+    // Read the press batch now, so what follows proves only the refusal's effect.
+    int pressCount = DrainEvents(bank, 1, (unsigned)handle, events,
+                                 GTOS_INPUT_READ_LIMIT, "refused capture press read");
+    Check(pressCount >= 1 &&
+              events[pressCount - 1].type == GTOS_INPUT_POINTER_DOWN,
+          "the press that starts the capture is delivered");
+    // The application closes the object while the press is still held: routing
+    // now refuses, so the desktop must drop the capture.
+    bank.RequestClose(1, (unsigned)handle);
+    HoverStep(d, content.x + 1, content.y + 1);
+    EndPress(d, 5, 5);
+    const int count = DrainEvents(bank, 1, (unsigned)handle, events,
+                                  GTOS_INPUT_READ_LIMIT, "refused capture read accepted");
+    bool anyPointer = false;
+    int closes = 0;
+    for (int i = 0; i < count; ++i) {
+        if (events[i].type == GTOS_INPUT_CLOSE)
+            ++closes;
+        else if (events[i].type != GTOS_INPUT_RESET)
+            anyPointer = true;
+    }
+    Check(!anyPointer, "a refused route leaves no pointer records for this window");
+    // The CLOSE that closing queued is the only thing waiting, and it survives.
+    GtosWindowInfoResponse info;
+    Check(QueryInfo(bank, 1, (unsigned)handle, info) >= 0 &&
+              info.lifecycle == GTOS_WINDOW_CLOSING,
+          "the window is still closing, not destroyed by the desktop");
+    Check(closes == 1, "the pending CLOSE survives a refused route");
+    Check(DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                      "refused capture tail read") == 0,
+          "the CLOSE is delivered only once");
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+static void NativeWindowLifecycleTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "lifecycle framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    int handle = bank.Create(1, create);
+    Check(handle > 0, "lifecycle create");
+    Pump(d);
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    unsigned char chunk[GTOS_WINDOW_WRITE_LIMIT];
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0x30; chunk[i + 1] = 0x60; chunk[i + 2] = 0x90; chunk[i + 3] = 0xFF;
+    }
+    GtosWindowSubmitRequest submit;
+    submit.version = GTOS_WINDOW_ABI_VERSION;
+    submit.handle = (unsigned)handle;
+    submit.source = 0;
+    submit.length = 64;
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "lifecycle submit");
+    }
+    Check(bank.Present(1, control) == 0, "lifecycle present");
+    Pump(d);
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "lifecycle slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    const uint32_t shown = display[(content.y + 2) * 800 + content.x + 2];
+
+    // Request-close keeps the frame and yields exactly one CLOSE.
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+    // Empty the queue first, so the CLOSE counted below is the only one possible.
+    while (DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                       "lifecycle pre-drain accepted") > 0) {}
+    Click(d, content.x + content.w / 2, content.y + 10);
+    Check(d.Windows().Focused() == ModernNative0, "lifecycle focus");
+    Key(d, 27);
+    Check(d.Windows().Window(ModernNative0).open, "request-close keeps the window");
+    Check(display[(content.y + 2) * 800 + content.x + 2] == shown,
+          "request-close keeps the last frame pixels");
+    uint32_t count = (uint32_t)DrainEvents(bank, 1, (unsigned)handle, events,
+                                           GTOS_INPUT_READ_LIMIT, "lifecycle close read");
+    uint32_t closes = 0;
+    for (uint32_t i = 0; i < count; ++i) if (events[i].type == GTOS_INPUT_CLOSE) ++closes;
+    Check(closes == 1, "request-close yields exactly one CLOSE");
+    count = (uint32_t)DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                                  "lifecycle close tail read");
+    Check(count == 0, "CLOSE is delivered only once");
+
+    // Real destroy removes the window on the next update.
+    Check(bank.Close(1, control) == 0, "lifecycle destroy");
+    OneUpdate(d);
+    Check(!d.Windows().Window(ModernNative0).open, "destroy removes the window");
+    Check(display[(content.y + 2) * 800 + content.x + 2] != shown,
+          "destroy repaints the desktop");
+
+    // A new handle in the same slot must not inherit the old binding.
+    int fresh = bank.Create(1, create);
+    Check(fresh > handle, "reuse gives a new handle");
+    Pump(d);
+    Check(d.Windows().Window(ModernNative0).open, "reused slot opens a window");
+    Check(bank.RouteInput((unsigned)handle, (GtosInputEvent){1, 0, 0, 0}) ==
+          GTOS_WINDOW_ERR_BAD_HANDLE, "stale handle is rejected");
+    Check(bank.ContainsWindow((unsigned)fresh), "new handle is live");
+    bank.Close(1, (GtosWindowControlRequest){GTOS_WINDOW_ABI_VERSION, (unsigned)fresh});
+    bank.SetAvailable(false);
+}
+
+static void NativeWindowIrqOverflowTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "irq overflow framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(1, create);
+    Check(handle > 0, "irq overflow create");
+    Pump(d);
+    // A second window on another owner is put into closing so its CLOSE is
+    // waiting when the IRQ ring is lost.
+    const int closing = bank.Create(2, create);
+    Check(closing > 0, "irq overflow closing create");
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "irq overflow slot");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+    while (DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                       "irq overflow pre-drain accepted") > 0) {}
+    // A real held press, so the reset has a live capture to cancel.
+    BeginPress(d, content.x + content.w / 2, content.y + content.h / 2);
+    bank.RequestClose(2, (unsigned)closing);
+    // Overflow the desktop's own IRQ ring: 127 usable slots, so 140 raw events.
+    // This is the deferred path, not IRQ context.
+    for (uint32_t i = 0; i < 140; ++i) QueueKeyDown(d, 'a');
+    OneUpdate(d);
+    int count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                            "irq overflow read accepted");
+    bool reset = false;
+    for (int i = 0; i < count; ++i)
+        if (events[i].type == GTOS_INPUT_RESET) reset = true;
+    Check(reset, "IRQ overflow resets a bound native window");
+    while (DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                       "irq overflow drain accepted") > 0) {}
+    // The capture was cancelled with the reset, so the release is not delivered.
+    EndPress(d, 5, 5);
+    count = DrainEvents(bank, 1, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                        "irq overflow tail read");
+    Check(count == 0, "IRQ overflow cleared the native capture");
+    // The closing window's CLOSE was not lost by the recovery.
+    GtosWindowInfoResponse info;
+    Check(QueryInfo(bank, 2, (unsigned)closing, info) >= 0 &&
+              info.lifecycle == GTOS_WINDOW_CLOSING,
+          "the closing window is still closing after the IRQ recovery");
+    count = DrainEvents(bank, 2, (unsigned)closing, events, GTOS_INPUT_READ_LIMIT,
+                        "irq overflow closing read");
+    Check(count == 1 && events[0].type == GTOS_INPUT_CLOSE,
+          "IRQ recovery keeps the pending CLOSE");
+    bank.Close(1, (GtosWindowControlRequest){GTOS_WINDOW_ABI_VERSION, (unsigned)handle});
+    bank.Close(2, (GtosWindowControlRequest){GTOS_WINDOW_ABI_VERSION, (unsigned)closing});
+    bank.SetAvailable(false);
+}
+
+// The slot changes owner between two updates: the desktop never observes an
+// empty slot. The new object must get its own frame, size and coordinates, and
+// must not inherit the old object's drag, resize or capture.
+static void NativeWindowHandleSwapTests() {
+    process::NativeWindows &bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "swap framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    int first = bank.Create(1, create);
+    Check(first > 0, "swap first create");
+    Pump(d);
+    const ModernRect defaultBounds = d.Windows().Window(ModernNative0).bounds;
+
+    // Publish a frame for the first object, then start dragging its title bar.
+    unsigned char chunk[GTOS_WINDOW_WRITE_LIMIT];
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0x00; chunk[i + 1] = 0x00; chunk[i + 2] = 0xFF; chunk[i + 3] = 0xFF;
+    }
+    GtosWindowSubmitRequest submit;
+    submit.version = GTOS_WINDOW_ABI_VERSION;
+    submit.handle = (unsigned)first;
+    submit.source = 0;
+    submit.length = 64;
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "swap submit first");
+    }
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)first;
+    Check(bank.Present(1, control) == 0, "swap present first");
+    Pump(d);
+
+    BeginPress(d, defaultBounds.x + 60, defaultBounds.y + 10);
+    HoverStep(d, defaultBounds.x + 20, defaultBounds.y + 40);
+    const ModernRect dragged = d.Windows().Window(ModernNative0).bounds;
+    Check(dragged.x != defaultBounds.x || dragged.y != defaultBounds.y,
+          "the first object is being dragged");
+
+    // Replace the owner with no update in between: the desktop never sees a gap.
+    Check(bank.Close(1, control) == 0, "swap destroy first");
+    int second = bank.Create(1, create);
+    Check(second > first, "swap second handle is new");
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0x00; chunk[i + 1] = 0xFF; chunk[i + 2] = 0x00; chunk[i + 3] = 0xFF;
+    }
+    submit.handle = (unsigned)second;
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "swap submit second");
+    }
+    control.handle = (unsigned)second;
+    Check(bank.Present(1, control) == 0, "swap present second");
+    OneUpdate(d);
+
+    // The very first update must already carry the new object's frame and size.
+    NativeWindowView view;
+    NativeImageSnapshot frame;
+    Check(bank.CopySlot(0, view, frame), "swap provider slot");
+    Check(view.handle == (unsigned)second, "swap bound the new handle");
+    Check(view.width == 8 && view.height == 8, "swap kept the new view size");
+    const ModernRect content = NativeContentOf(d, 0, view);
+    Check(content.w > 0 && content.h > 0, "swap produced a content rectangle");
+    Check(display[(content.y + 2) * 800 + content.x + 2] == ExpectedNativePixel(frame, 0, 0),
+          "swap draws the new frame on the first update");
+    // The desktop window keeps the place the user put it; what must NOT carry
+    // over is the live drag, which is proven by the next check.
+    const ModernRect afterSwap = d.Windows().Window(ModernNative0).bounds;
+    Check(afterSwap.x == dragged.x && afterSwap.y == dragged.y &&
+              afterSwap.w == dragged.w && afterSwap.h == dragged.h,
+          "the desktop window keeps its place across the object swap");
+    // A stale handle is refused by the bank itself.
+    Check(bank.RouteInput((unsigned)first, (GtosInputEvent){GTOS_INPUT_KEY_DOWN, 0x41, 0, 0}) ==
+              GTOS_WINDOW_ERR_BAD_HANDLE,
+          "swap rejects the stale handle");
+    // And the drag is really cancelled: a further move does not move the window.
+    HoverStep(d, afterSwap.x + 90, afterSwap.y + 70);
+    const ModernRect afterMove = d.Windows().Window(ModernNative0).bounds;
+    Check(afterMove.x == afterSwap.x && afterMove.y == afterSwap.y,
+          "the cancelled drag does not act on the new object");
+    EndPress(d, 5, 5);
+    bank.Close(1, control);
+    bank.SetAvailable(false);
+}
+
+static void NativeWindowTests() {
+    // Real geometry/render/desktop plus the real bank as provider.
+    process::NativeWindows& bank = process::NativeWindows::Instance();
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "native window framebuffer");
+    ModernDesktop d(&fb, 0, 0, true, 0, &bank);
+    pointerX = 770;
+    pointerY = 16;
+    Pump(d);
+    Check(!d.Windows().Window(ModernNative0).open,
+          "no native window before the application creates one");
+
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 8;
+    create.height = 8;
+    create.stride = 32;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    int handle = bank.Create(1, create);
+    Check(handle > 0, "application creates a window");
+    Pump(d);
+    Check(d.Windows().Window(ModernNative0).open,
+          "unpublished native object opens an empty window");
+    const ModernRect bounds = d.Windows().Window(ModernNative0).bounds;
+    Check(bounds.w > 0 && bounds.h > 0, "native window has a real rectangle");
+
+    unsigned char chunk[GTOS_WINDOW_WRITE_LIMIT];
+    for (unsigned i = 0; i < sizeof(chunk); i += 4) {
+        chunk[i] = 0x20; chunk[i + 1] = 0x40; chunk[i + 2] = 0x60; chunk[i + 3] = 0xFF;
+    }
+    GtosWindowSubmitRequest submit;
+    submit.version = GTOS_WINDOW_ABI_VERSION;
+    submit.handle = (unsigned)handle;
+    submit.source = 0;
+    submit.length = 64;
+    for (unsigned offset = 0; offset < 256; offset += 64) {
+        submit.offset = offset;
+        Check(bank.Submit(1, submit, chunk) == 64, "desktop submits a chunk");
+    }
+    GtosWindowControlRequest control;
+    control.version = GTOS_WINDOW_ABI_VERSION;
+    control.handle = (unsigned)handle;
+    Check(bank.Present(1, control) == 0, "desktop presents a frame");
+    Pump(d);
+    Check(d.Windows().Window(ModernNative0).open, "publishing keeps the window open");
+    Check(d.Windows().Window(ModernNative0).bounds.w == bounds.w,
+          "publishing does not resize the window");
+
+    // Desktop request-close keeps the window visible with its last frame. The
+    // desktop path is the real one: click the window, then press Esc.
+    Click(d, bounds.x + bounds.w / 2, bounds.y + 10);
+    Check(d.Windows().Focused() == ModernNative0, "click focuses the native window");
+    Key(d, 27);
+    Check(d.Windows().Window(ModernNative0).open,
+          "request-close keeps the window visible");
+    Check(bank.ContainsWindow((unsigned)handle), "request-close does not destroy");
+    Check(bank.Close(1, control) == 0, "application destroys the window");
+    Pump(d);
+    Check(!d.Windows().Window(ModernNative0).open,
+          "destroyed native window is hidden on the next update");
+    Check(!bank.ContainsWindow((unsigned)handle), "destroyed handle is gone");
+    Check(!d.Windows().Window(ModernImage).open, "image path untouched");
+    bank.SetAvailable(false);
+}
+
+// Native window groups, run together in the full pass and individually through
+// the optional command-line selector so a cheap targeted run can name one.
+struct NativeGroup {
+    const char *name;
+    void (*run)();
+};
+static const NativeGroup nativeGroups[] = {
+    {"basic", NativeWindowTests},
+    {"redraw", NativeWindowRedrawTests},
+    {"focus", NativeWindowFocusBatchTests},
+    {"capture", NativeWindowCaptureTests},
+    {"overflow", NativeWindowOverflowRouteTests},
+    {"hoveroverflow", NativeWindowHoverOverflowTests},
+    {"hoverfree", NativeWindowHoverFreeOverflowTests},
+    {"downoverflow", NativeWindowDownOverflowTests},
+    {"refused", NativeWindowRefusedCaptureTests},
+    {"lifecycle", NativeWindowLifecycleTests},
+    {"irqoverflow", NativeWindowIrqOverflowTests},
+    {"swap", NativeWindowHandleSwapTests},
+};
+#ifdef GTOS_DESKTOP_NATIVE_GROUP
+static bool SameName(const char *a, const char *b) {
+    while (*a && *b) {
+        if (*a != *b) return false;
+        ++a;
+        ++b;
+    }
+    return *a == *b;
+}
+#endif
+static void RunNativeWindows() {
+#ifdef GTOS_DESKTOP_NATIVE_GROUP
+    // Cheap targeted run: -DGTOS_DESKTOP_NATIVE_GROUP=\"capture\" builds a binary
+    // that exercises exactly one group.
+    for (uint32_t i = 0; i < sizeof(nativeGroups) / sizeof(nativeGroups[0]); ++i)
+        if (SameName(GTOS_DESKTOP_NATIVE_GROUP, nativeGroups[i].name)) {
+            nativeGroups[i].run();
+            Output("native window group passed\n");
+            return;
+        }
+    Output("native window group name not found\n");
+    Check(false, "targeted native window group exists");
+    return;
+#endif
+    for (uint32_t i = 0; i < sizeof(nativeGroups) / sizeof(nativeGroups[0]); ++i)
+        nativeGroups[i].run();
+}
+
 static void RunTests() {
     FramebufferTests();
     GeometryTests();
@@ -1138,6 +2232,7 @@ static void RunTests() {
     LocalizationTests();
     MinimumMonitorTests();
     NativeImageTests();
+    RunNativeWindows();
     Output("Desktop/framebuffer safety and interaction tests passed\n");
 }
 #ifdef GTOS_DESKTOP_SANITIZE
@@ -1147,6 +2242,12 @@ int main() {
 }
 #else
 extern "C" void _start() {
+    // Static constructors are not run by the kernel entry, so any namespace-scope
+    // object with a vtable must be initialised here before the tests use it.
+    extern void (*__init_array_start[])(void);
+    extern void (*__init_array_end[])(void);
+    for (void (**ctor)(void) = __init_array_start; ctor != __init_array_end; ++ctor)
+        (*ctor)();
     RunTests();
     Exit(0);
 }

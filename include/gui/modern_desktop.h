@@ -2,6 +2,7 @@
 #define GTOS_GUI_MODERN_DESKTOP_H
 #include <gui/modern_geometry.h>
 #include <gui/native_image.h>
+#include <gui/native_window.h>
 #include <gui/modern_painter.h>
 #include <gui/shell.h>
 #include <i18n/catalog.h>
@@ -24,6 +25,22 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     ModernWindowManager wm;
     const NativeImageProvider *imageProvider;
     NativeImageSnapshot image, pendingImage;
+    // Persistent native windows: additive to the image path above.
+    NativeWindowProvider *windowProvider;
+    NativeWindowView windowViews[4];
+    NativeImageSnapshot windowFrames[4];
+    uint32_t windowHandles[4];
+    uint32_t windowCapture;
+    uint32_t windowFocusHandle;
+    void SyncNativeWindows();
+    void SyncNativeFocus();
+    void RetireNativeSlot(uint32_t slot);
+    void ForgetNativeWindow(uint32_t slot);
+    bool ApplyRouteResult(int routed, uint32_t handle, bool newDown);
+    void DrawNativeSlot(const ModernRect &r, uint32_t slot);
+    ModernRect NativeContentRect(const ModernRect &r, const NativeWindowView &view) const;
+    int32_t NativeSlotFor(uint32_t handle) const;
+    bool RouteKeyNative(uint8_t code, bool down);
     ModernRect imageTraceBounds;
     uint32_t imageSeenGeneration, imageTraceGeneration;
     int32_t imageX, imageY, imageScale, imageTraceX, imageTraceY, imageTraceScale;
@@ -98,7 +115,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
   public:
     ModernDesktop(drivers::Framebuffer *framebuffer, storage::AppStore *store,
                   storage::SettingsStore *settings = 0, bool live = false,
-                  const NativeImageProvider *imageProvider = 0);
+                  const NativeImageProvider *imageProvider = 0,
+                  NativeWindowProvider *windowProvider = 0);
     void SetInstaller(const uint8_t *data, uint32_t length);
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);

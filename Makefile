@@ -143,10 +143,54 @@ $(FP_DIAGNOSTIC_ISO): $(FP_DIAGNOSTIC_BINARY) apps/catch.gtapp $(FP_DIAGNOSTIC_O
 	cp obj/browser-probe/browser-probe.elf $(FP_DIAGNOSTIC_OBJDIR)/iso/boot/browser-probe.elf
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS FP Desktop DIAGNOSTIC ONLY" {\n set gfxpayload=800x600x32\n multiboot /boot/GTOS.bin native-fp-test native-fp-diagnostic\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > $(FP_DIAGNOSTIC_OBJDIR)/iso/boot/grub/grub.cfg
 	grub-mkrescue --output=$@ $(FP_DIAGNOSTIC_OBJDIR)/iso
+# Reclaim diagnostics: separate CPL3 payloads that own a live window, so the
+# kernel can prove StopGroup/Reap reclaim a real object instead of a bare process.
+# They are built only into the dedicated reclaim ISO and never replace the
+# default fault/peer modules.
+RECLAIM_USER_OBJDIR ?= $(KERNEL_OBJDIR)/native-reclaim-user
+$(RECLAIM_USER_OBJDIR)/start.o: apps/native/start.s
+	mkdir -p $(@D)
+	$(AS) $(ASFLAGS) $< -o $@
+$(RECLAIM_USER_OBJDIR)/%.o: apps/native/%.cpp apps/native/reclaim.h apps/native/probe.h include/process/abi.h include/process/window_abi.h include/process/native_reclaim_abi.h Makefile
+	mkdir -p $(@D)
+	$(CXX) $(NATIVE_CXXFLAGS) -c $< -o $@
+$(RECLAIM_USER_OBJDIR)/%.elf: $(RECLAIM_USER_OBJDIR)/%.o $(RECLAIM_USER_OBJDIR)/start.o apps/native/image.ld
+	$(LD) $(LDFLAGS) -T apps/native/image.ld -o $@ $< $(RECLAIM_USER_OBJDIR)/start.o
+.SECONDARY: $(RECLAIM_USER_OBJDIR)/reclaim_fault.o $(RECLAIM_USER_OBJDIR)/reclaim_peer.o $(RECLAIM_USER_OBJDIR)/reclaim_fault.elf $(RECLAIM_USER_OBJDIR)/reclaim_peer.elf
+RECLAIM_OBJDIR := $(KERNEL_OBJDIR)/native-reclaim
+RECLAIM_BINARY ?= GTOS-native-reclaim.bin
+RECLAIM_ISO ?= GTOS-native-reclaim.iso
+# The reclaim kernel differs from the audited one only by GTOS_NATIVE_RECLAIM, so
+# the ordinary kernel and its audit stay exactly as qualified. The bank object is
+# rebuilt for the same reason: the acceptance census is compiled only under that
+# macro, and the production object must not carry it.
+$(RECLAIM_OBJDIR)/kernel.o: src/kernel.cpp tools/kernel-cxxflags Makefile
+	mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_NATIVE_RECLAIM=1 -c $< -o $@
+$(RECLAIM_OBJDIR)/native_windows.o: src/process/native_windows.cpp tools/kernel-cxxflags Makefile
+	mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_NATIVE_RECLAIM=1 -c $< -o $@
+RECLAIM_OBJECTS := $(filter-out $(KERNEL_OBJDIR)/kernel.o $(KERNEL_OBJDIR)/process/native_windows.o,$(OBJECTS)) $(RECLAIM_OBJDIR)/kernel.o $(RECLAIM_OBJDIR)/native_windows.o
+$(RECLAIM_BINARY): linker.ld $(RECLAIM_OBJECTS) tools/audit-kernel-instructions.py
+	$(LD) $(LDFLAGS) -T $< -Map $(RECLAIM_OBJDIR)/kernel.map -o $@ $(RECLAIM_OBJECTS)
+	$(PYTHON) tools/audit-kernel-instructions.py --map $(RECLAIM_OBJDIR)/kernel.map --source-root . $@
+$(RECLAIM_ISO): $(RECLAIM_BINARY) apps/catch.gtapp $(RECLAIM_USER_OBJDIR)/reclaim_fault.elf $(RECLAIM_USER_OBJDIR)/reclaim_peer.elf obj/browser-probe/browser-probe.elf docs/desktop-font-license.txt apps/fonts/OFL.txt apps/fonts/README.md apps/fonts/han_manifest.json Makefile
+	mkdir -p $(RECLAIM_OBJDIR)/iso/boot/grub $(RECLAIM_OBJDIR)/iso/boot/licenses
+	cp $(RECLAIM_BINARY) $(RECLAIM_OBJDIR)/iso/boot/GTOS.bin
+	cp apps/catch.gtapp $(RECLAIM_OBJDIR)/iso/boot/catch.gtapp
+	cp $(RECLAIM_USER_OBJDIR)/reclaim_fault.elf $(RECLAIM_OBJDIR)/iso/boot/native-fault.elf
+	cp $(RECLAIM_USER_OBJDIR)/reclaim_peer.elf $(RECLAIM_OBJDIR)/iso/boot/native-peer.elf
+	cp obj/browser-probe/browser-probe.elf $(RECLAIM_OBJDIR)/iso/boot/browser-probe.elf
+	cp docs/desktop-font-license.txt $(RECLAIM_OBJDIR)/iso/boot/licenses/
+	cp apps/fonts/OFL.txt $(RECLAIM_OBJDIR)/iso/boot/licenses/Noto-OFL.txt
+	cp apps/fonts/README.md $(RECLAIM_OBJDIR)/iso/boot/licenses/noto-font-provenance.md
+	cp apps/fonts/han_manifest.json $(RECLAIM_OBJDIR)/iso/boot/licenses/
+	printf 'set timeout=0\nset default=0\nmenuentry "GTOS Reclaim Diagnostic" {\n set gfxpayload=800x600x32\n multiboot /boot/GTOS.bin\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > $(RECLAIM_OBJDIR)/iso/boot/grub/grub.cfg
+	grub-mkrescue --output=$@ $(RECLAIM_OBJDIR)/iso
 run: GTOS.iso
 	./tools/run-qemu.sh
 clean:
-	rm -rf obj GTOS.bin GTOS.iso GTOS-legacy.iso GTOS-native-test.iso GTOS-native-fp-test.iso GTOS-native-fp-diagnostic.bin GTOS-native-fp-diagnostic.iso
+	rm -rf obj GTOS.bin GTOS.iso GTOS-legacy.iso GTOS-native-test.iso GTOS-native-fp-test.iso GTOS-native-fp-diagnostic.bin GTOS-native-fp-diagnostic.iso GTOS-native-reclaim.bin GTOS-native-reclaim.iso
 test:
 	./tests/run.sh
 test-kernel-integer:
@@ -154,6 +198,7 @@ test-kernel-integer:
 -include $(OBJECTS:.o=.d)
 
 -include $(wildcard obj/native/*.d)
+-include $(wildcard $(RECLAIM_USER_OBJDIR)/*.d)
 -include $(wildcard obj/native-fp-desktop/*.d)
 
 -include $(wildcard $(FP_DIAGNOSTIC_OBJDIR)/*.d)

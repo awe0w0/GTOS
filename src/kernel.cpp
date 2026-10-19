@@ -25,6 +25,8 @@
 #include <syscalls.h>
 #include <process/native_runtime.h>
 #include <process/native_surface.h>
+#include <process/native_windows.h>
+#include <process/native_reclaim_abi.h>
 #include <process/clock_abi.h>
 using namespace gtos;
 using namespace gtos::hardwarecommunication;
@@ -454,6 +456,177 @@ static bool nativeFpDemo = false, nativeFpDiagnostic = false;
 #if defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
 extern "C" bool native_fp_desktop_qualify_pointer_gap();
 #endif
+#if defined(GTOS_NATIVE_RECLAIM)
+// Reclaim acceptance. This block observes only: it adds no syscall, changes no
+// bank behaviour and never reclaims anything itself. The reclaim action is the
+// production StopGroup (already called by NativeRuntime when a process stops or
+// faults) and the production Reap; these functions record what the bank and the
+// GUI view really held at each phase so the two can be told apart.
+struct NativeReclaimProof {
+    uint32_t signature, progress, errors; // identical layout to NativeProbeData
+    uint32_t windowHandle, windowMagic;
+};
+static NativeReclaimProof reclaimFaultProof = {}, reclaimPeerProof = {};
+static process::NativeWindows::Census reclaimFaultCensus = {0, 0, 0};
+static process::NativeWindows::Census reclaimPeerCensus = {0, 0, 0};
+static uint32_t reclaimOldFaultHandle = 0, reclaimOldPeerHandle = 0;
+static bool reclaimFaultSeen = false, reclaimPeerSeen = false, reclaimPeerQueued = false;
+static bool reclaimStopOK = false, reclaimReapOK = false;
+// The individual results of the post-Reap probe. A single boolean would hide which
+// step failed, and re-guessing the error order is exactly what this round must not
+// do, so the real return codes are recorded and printed.
+static int reclaimCreate = 0, reclaimSubmit = 0, reclaimPresent = 0, reclaimClose = 0;
+static int reclaimInfoFault = 0, reclaimInfoPeer = 0;
+// The GUI removal check cannot run inside ServiceNativeDemo: the desktop only
+// re-syncs its native slots on its next Update, which happens in the main loop.
+// So Reap records the request here and the loop performs the read-only check
+// immediately after that real Update.
+static bool reclaimGuiPending = false, reclaimGuiClosed = false;
+static unsigned reclaimGuiOpenSlots = 0;
+
+// Phase D, after the desktop's next real Update. Read-only: it asks the actual
+// window manager whether any of the four native slots is still open, so the
+// removal is a positive state (all four closed) rather than "the picture changed".
+static void ReclaimObserveGui(const gui::ModernDesktop &desktop) {
+    unsigned openSlots = 0;
+    for (unsigned i = 0; i < gui::ModernNativeCount; ++i) {
+        const gui::ModernWindow &window = desktop.Windows().Window(
+            (gui::ModernWindowKind)((unsigned)gui::ModernNative0 + i));
+        if (window.open) ++openSlots;
+    }
+    reclaimGuiOpenSlots = openSlots;
+    reclaimGuiClosed = openSlots == 0;
+    LogValue("NATIVE RECLAIM GUI OPEN SLOTS ", openSlots);
+    printf(reclaimGuiClosed ? "GTOS NATIVE RECLAIM GUI CLOSED V1\n"
+                            : "GTOS NATIVE RECLAIM GUI OPEN V1\n");
+}
+
+// Phase A, while an owner is still running: a live window with a published frame
+// and an unfinished draft must already exist, and the peer must additionally hold
+// a pending input record that arrived through the real desktop route. The two
+// owners are observed separately because the second one only creates its window
+// after the first has already been stopped.
+static void ReclaimObserveLive(void) {
+    NativeReclaimProof fault = {}, peer = {};
+    if (!reclaimFaultSeen &&
+        nativeRuntime.ReadMemory(nativeFaultId, process::NativeRuntime::DataAddress,
+                                 &fault, sizeof(fault)) &&
+        fault.signature == 0xA11CE001U && fault.windowHandle &&
+        fault.windowMagic == GTOS_RECLAIM_MAGIC) {
+        reclaimFaultProof = fault;
+        reclaimOldFaultHandle = fault.windowHandle;
+        reclaimFaultCensus = process::NativeWindows::Instance().Snapshot();
+        reclaimFaultSeen = true;
+    }
+    if (!reclaimPeerQueued &&
+        nativeRuntime.ReadMemory(nativePeerId, process::NativeRuntime::DataAddress,
+                                 &peer, sizeof(peer)) &&
+        peer.signature == 0xB22CE002U && peer.windowHandle &&
+        (peer.windowMagic == GTOS_RECLAIM_MAGIC ||
+         peer.windowMagic == GTOS_RECLAIM_QUEUE_MAGIC)) {
+        if (!reclaimPeerSeen) {
+            reclaimPeerProof = peer;
+            reclaimOldPeerHandle = peer.windowHandle;
+            reclaimPeerCensus = process::NativeWindows::Instance().Snapshot();
+            reclaimPeerSeen = true;
+        }
+        if (peer.windowMagic == GTOS_RECLAIM_QUEUE_MAGIC) {
+            reclaimPeerProof = peer;
+            reclaimPeerCensus = process::NativeWindows::Instance().Snapshot();
+            reclaimPeerQueued = true;
+        }
+    }
+}
+
+// Phase B, after StopGroup and before Reap. Both owners are gone, so every slot
+// they held must already be DEAD, their handles must be rejected, and the view
+// the GUI reads must already be empty.
+static bool ReclaimStopped(void) {
+    process::NativeWindows& bank = process::NativeWindows::Instance();
+    bool ok = reclaimFaultSeen && reclaimPeerSeen && reclaimPeerQueued &&
+              reclaimFaultCensus.live >= 1 && reclaimFaultCensus.partial >= 1 &&
+              reclaimPeerCensus.live >= 1 && reclaimPeerCensus.partial >= 1 &&
+              reclaimPeerCensus.pending >= 1 &&
+              reclaimOldFaultHandle && reclaimOldPeerHandle &&
+              reclaimOldFaultHandle != reclaimOldPeerHandle;
+    const process::NativeWindows::Census after = bank.Snapshot();
+    ok = ok && after.live == 0 && after.partial == 0 && after.pending == 0;
+    GtosWindowInfoRequest request;
+    GtosWindowInfoResponse response;
+    request.version = GTOS_WINDOW_ABI_VERSION;
+    request.result_va = 0;
+    request.handle = reclaimOldFaultHandle;
+    ok = ok && bank.Info(nativeFaultId, request, response) == GTOS_WINDOW_ERR_BAD_HANDLE;
+    request.handle = reclaimOldPeerHandle;
+    ok = ok && bank.Info(nativePeerId, request, response) == GTOS_WINDOW_ERR_BAD_HANDLE;
+    gui::NativeWindowView view;
+    gui::NativeImageSnapshot snapshot;
+    for (unsigned slot = 0; slot < GTOS_WINDOW_MAX_OBJECTS; ++slot) {
+        ok = ok && bank.CopySlot(slot, view, snapshot);
+        ok = ok && view.lifecycle == GTOS_WINDOW_DEAD && view.handle == 0;
+    }
+    return ok;
+}
+
+// Phase C, after Reap. A fresh owner must be able to create, publish and close a
+// window in the slot the stopped owners used, and the old handles must stay dead.
+static bool ReclaimReusable(void) {
+    process::NativeWindows& bank = process::NativeWindows::Instance();
+    static unsigned char pixels[GTOS_WINDOW_MAX_BYTES];
+    const unsigned owner = 0x5245434CU; // scratch owner, never a real process id
+    GtosWindowCreateRequest create;
+    create.version = GTOS_WINDOW_ABI_VERSION;
+    create.width = 16;
+    create.height = 16;
+    create.stride = 64;
+    create.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
+    const int handle = bank.Create(owner, create);
+    reclaimCreate = handle;
+    bool ok = handle > 0 && (unsigned)handle != reclaimOldFaultHandle &&
+              (unsigned)handle != reclaimOldPeerHandle;
+    if (ok) {
+        // Premultiplied means every colour channel is at most the alpha.
+        for (unsigned i = 0; i < GTOS_WINDOW_MAX_BYTES; i += 4) {
+            pixels[i] = 0x20; pixels[i + 1] = 0x18; pixels[i + 2] = 0x10; pixels[i + 3] = 0x20;
+        }
+        // The slot's total is the created geometry, not the maximum buffer, so the
+        // chunk loop is bounded by exactly what this window declared.
+        const unsigned total = create.width * create.height * 4U;
+        GtosWindowSubmitRequest submit;
+        submit.version = GTOS_WINDOW_ABI_VERSION;
+        submit.handle = (unsigned)handle;
+        submit.source = 0;
+        reclaimSubmit = 0;
+        for (unsigned offset = 0; offset < total; offset += GTOS_WINDOW_WRITE_LIMIT) {
+            submit.offset = offset;
+            submit.length = GTOS_WINDOW_WRITE_LIMIT;
+            const int written = bank.Submit(owner, submit, pixels);
+            // Record the first non-successful result, so a failure is never hidden
+            // behind an earlier success.
+            if (reclaimSubmit >= 0 && written < 0) reclaimSubmit = written;
+            else if (!reclaimSubmit) reclaimSubmit = written;
+            ok = ok && written == (int)GTOS_WINDOW_WRITE_LIMIT;
+        }
+        GtosWindowControlRequest control;
+        control.version = GTOS_WINDOW_ABI_VERSION;
+        control.handle = (unsigned)handle;
+        reclaimPresent = bank.Present(owner, control);
+        reclaimClose = bank.Close(owner, control);
+        ok = ok && reclaimPresent == 0 && reclaimClose == 0;
+    }
+    GtosWindowInfoRequest request;
+    GtosWindowInfoResponse response;
+    request.version = GTOS_WINDOW_ABI_VERSION;
+    request.result_va = 0;
+    request.handle = reclaimOldFaultHandle;
+    reclaimInfoFault = bank.Info(nativeFaultId, request, response);
+    ok = ok && reclaimInfoFault == GTOS_WINDOW_ERR_BAD_HANDLE;
+    request.handle = reclaimOldPeerHandle;
+    reclaimInfoPeer = bank.Info(nativePeerId, request, response);
+    ok = ok && reclaimInfoPeer == GTOS_WINDOW_ERR_BAD_HANDLE;
+    return ok;
+}
+#endif
 static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
                             const memory::MultibootInfo *boot) {
     // Enabled only by the dedicated acceptance ISO. Ordinary boots preserve
@@ -520,6 +693,10 @@ static void ServiceNativeDemo(TaskManager &tasks) {
         return;
     if (!fault.live && fault.faultVector == 14 && peer.live)
         nativePeerAfterFault = true;
+#if defined(GTOS_NATIVE_RECLAIM)
+    // Record the live owner state while both processes are still running.
+    ReclaimObserveLive();
+#endif
     if (fault.live || peer.live || browser.live) {
         if (tasks.Ticks() - nativeBeginTick < 1000)
             return;
@@ -564,11 +741,44 @@ static void ServiceNativeDemo(TaskManager &tasks) {
         imageReclaimed = handle > 0 && (unsigned)handle > imageProof.generation
             && surfaces.Abort(nativeBrowserId, control, sizeof(control)) == 0;
     }
+#if defined(GTOS_NATIVE_RECLAIM)
+    // Every owner has already been stopped; Reap has not run yet. This is the only
+    // point at which "reclaimed at Stop" can be observed rather than inferred.
+    reclaimStopOK = ReclaimStopped();
+#endif
     uint32_t reaped = nativeRuntime.Reap();
     process::NativeStatistics counts = nativeRuntime.Statistics();
     valid = valid && reaped == 3 && counts.created == 3 && counts.faulted == 1 &&
             counts.exited == 2 && counts.reaped == 3 &&
             frames.getStatistics().freeFrames == nativeFrameBaseline;
+#if defined(GTOS_NATIVE_RECLAIM)
+    // Reap has completed, so the page/object accounting must be back at baseline
+    // and the reclaimed slots must be reusable without reviving the old handles.
+    reclaimReapOK = ReclaimReusable();
+    valid = valid && reclaimStopOK && reclaimReapOK;
+    // The GUI verdict is printed by the main loop after its next Update, because
+    // only that Update makes the desktop forget the reclaimed slots.
+    reclaimGuiPending = true;
+    printf(reclaimStopOK ? "GTOS NATIVE RECLAIM STOP PASS V1\n"
+                         : "GTOS NATIVE RECLAIM STOP FAIL V1\n");
+    printf(reclaimReapOK ? "GTOS NATIVE RECLAIM REAP PASS V1\n"
+                         : "GTOS NATIVE RECLAIM REAP FAIL V1\n");
+    LogValue("NATIVE RECLAIM FAULT LIVE SLOTS ", reclaimFaultCensus.live);
+    LogValue("NATIVE RECLAIM FAULT PARTIAL DRAFTS ", reclaimFaultCensus.partial);
+    LogValue("NATIVE RECLAIM PEER LIVE SLOTS ", reclaimPeerCensus.live);
+    LogValue("NATIVE RECLAIM PEER PARTIAL DRAFTS ", reclaimPeerCensus.partial);
+    LogValue("NATIVE RECLAIM PEER PENDING INPUT ", reclaimPeerCensus.pending);
+    LogValue("NATIVE RECLAIM OLD FAULT HANDLE ", reclaimOldFaultHandle);
+    LogValue("NATIVE RECLAIM OLD PEER HANDLE ", reclaimOldPeerHandle);
+    LogValue("NATIVE RECLAIM CREATE RESULT ", (uint32_t)reclaimCreate);
+    LogValue("NATIVE RECLAIM SUBMIT RESULT ", (uint32_t)reclaimSubmit);
+    LogValue("NATIVE RECLAIM PRESENT RESULT ", (uint32_t)reclaimPresent);
+    LogValue("NATIVE RECLAIM CLOSE RESULT ", (uint32_t)reclaimClose);
+    LogValue("NATIVE RECLAIM INFO OLD FAULT ", (uint32_t)reclaimInfoFault);
+    LogValue("NATIVE RECLAIM INFO OLD PEER ", (uint32_t)reclaimInfoPeer);
+    LogValue("NATIVE RECLAIM FREE FRAMES ", frames.getStatistics().freeFrames);
+    LogValue("NATIVE RECLAIM FRAME BASELINE ", nativeFrameBaseline);
+#endif
     if (imagePublished) {
         imageReclaimed = imageReclaimed && surfaces.CopyLatest(0, imageAfter)
             && imageAfter.generation == imageProof.generation
@@ -739,12 +949,15 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
             printf("FB CONFIGURED\n");
             modern = new gui::ModernDesktop(&framebuffer, &store, &settings, liveBoot,
-                                            &process::NativeSurfaceBank::Instance());
+                                            &process::NativeSurfaceBank::Instance(),
+                                            &process::NativeWindows::Instance());
         }
         if (!modern && backbuffer)
             frames.freeContiguous(backbuffer, backbufferPages);
     }
     process::NativeSurfaceBank::Instance().SetAvailable(modern != 0);
+    // Native windows are admitted only once a framebuffer desktop exists.
+    process::NativeWindows::Instance().SetAvailable(modern != 0);
     if (uefiBoot && !modern) Panic("UEFI GOP FRAMEBUFFER UNAVAILABLE", "E09");
     printf(modern ? "DESKTOP MODE FRAMEBUFFER\n" : "DESKTOP MODE LEGACY\n");
     if ((mbi->flags & (1 << 3)) && mbi->moduleCount) {
@@ -906,6 +1119,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             modern->Update(snapshot);
         else
             desktop.Update(snapshot);
+#if defined(GTOS_NATIVE_RECLAIM)
+        // The desktop has now re-synced against the reclaimed bank, so this is the
+        // first honest moment to ask the real window manager what it still shows.
+        if (reclaimGuiPending) {
+            reclaimGuiPending = false;
+            if (modern) ReclaimObserveGui(*modern);
+        }
+#endif
         asm volatile("sti; hlt");
     }
 }

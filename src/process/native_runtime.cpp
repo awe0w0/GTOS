@@ -1,6 +1,8 @@
 #include <process/native_runtime.h>
 #include <process/resources.h>
 #include <process/native_surface.h>
+#include <process/native_windows.h>
+#include <process/native_window_memory.h>
 #include <process/vm_abi.h>
 #include <process/readonly_abi.h>
 #include <process/clock_abi.h>
@@ -351,6 +353,7 @@ CPUState* NativeRuntime::Stop(Slot& slot, CPUState* cpu, uint32_t code) {
 }
 void NativeRuntime::StopGroup(Slot& process, uint32_t code) {
     NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
+    NativeWindows::Instance().ReclaimOwner(process.status.id);
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Slot& member = slots[i];
         if (!member.occupied || member.process != &process || !member.status.live) continue;
@@ -831,6 +834,20 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         else cpu->eax = (uint32_t)NativeSurfaceBank::Instance().Abort(slot->status.id, request, cpu->ecx);
         break;
     }
+    case GTOS_SYS_WINDOW_CREATE:
+    case GTOS_SYS_WINDOW_SUBMIT:
+    case GTOS_SYS_WINDOW_PRESENT:
+    case GTOS_SYS_WINDOW_CLOSE:
+    case GTOS_SYS_WINDOW_INFO:
+    case GTOS_SYS_INPUT_READ: {
+        // One syscall-shaped entry: the endpoint snapshots the request, applies
+        // the version gate and does every copy through this adapter, which
+        // forwards to the same production checked-copy used above.
+        WindowAddressSpace memory(slot->space);
+        cpu->eax = (uint32_t)NativeWindows::Instance().Call(
+            slot->status.id, memory, cpu->eax, cpu->ebx, cpu->ecx);
+        break;
+    }
     case GTOS_SYS_VM_RESERVE: {
         if (cpu->ecx != GTOS_VM_RESERVE_REQUEST_BYTES) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
@@ -999,6 +1016,7 @@ uint32_t NativeRuntime::Reap() {
         }
         if (!removed) continue;
         NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
+        NativeWindows::Instance().ReclaimOwner(process.status.id);
         if (files) files->ReclaimOwner(process.status.id);
         if (events) events->ReclaimOwner(process.status.id);
         if (!process.space.Destroy()) continue;
