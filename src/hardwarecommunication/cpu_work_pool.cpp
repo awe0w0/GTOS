@@ -30,6 +30,8 @@ namespace {
         uint32_t apicId, stackBase, stackPages;
         volatile uint32_t state, failure, observedCr3, observedCr0, wakes, spurious;
         volatile uint32_t faultVector, faultError, faultInstruction, faultAddress;
+        // Park protocol: the BSP writes the request, the AP writes the acknowledgement after its last job access.
+        volatile uint32_t parkRequested, parkAckedSession, parkAckCount;
 #ifdef GTOS_CPU_WORK_POOL_TEST
         volatile uint32_t injectedFault, testHold, testHoldAck;
 #endif
@@ -106,6 +108,8 @@ namespace {
 namespace gtos { namespace hardwarecommunication {
     struct CpuWorkPoolShared {
         uint32_t bspApicId, localApic, directory, count, allocationBase, allocationPages;
+        // The session every park acknowledgement from this pool is stamped with.
+        uint32_t session;
         CpuMemoryTypes memoryTypes;
         Worker* byApic[256];
         Worker* workers[256];
@@ -113,6 +117,9 @@ namespace gtos { namespace hardwarecommunication {
 } }
 namespace {
     CpuWorkPoolShared* activePool=0;
+    // A monotonically increasing session stamp. A park acknowledgement carries the session it belongs to, so a
+    // confirmation written by an earlier run can never be read as this one's.
+    uint32_t nextSession=1;
     Worker* CurrentWorker() {
         if(!activePool)return 0;
         uint32_t id=Identity();return id<256?activePool->byApic[id]:0;
@@ -154,7 +161,11 @@ extern "C" void gtos_work_ap_fault(uint32_t frameAddress) {
     for(;;)asm volatile("cli; hlt":::"memory");
 }
 CpuWorkTicket::CpuWorkTicket():workerIndex(0xFFFFFFFFU),ticket(){}
-CpuWorkPool::CpuWorkPool():shared(0),startup(0),error(CpuWorkPoolOk),prepared(false),started(false),closed(false){}
+CpuWorkPool::CpuWorkPool():shared(0),startup(0),error(CpuWorkPoolOk),prepared(false),started(false),closed(false),sessionStamp(0){}
+CpuWorkHolder::CpuWorkHolder():pool(0),workerIndex(0xFFFFFFFFU),apicId(0xFFFFFFFFU),ticket(){}
+bool CpuWorkHolder::IsBound()const{
+    return pool!=0&&workerIndex!=0xFFFFFFFFU&&apicId!=0xFFFFFFFFU&&ticket.IsValid();
+}
 bool CpuWorkPool::OnBootstrapProcessor()const{return shared&&(!shared->count||Identity()==shared->bspApicId);}
 int CpuWorkPool::FindWorker(uint32_t apicId)const{
     if (!shared) return -1;
@@ -175,6 +186,7 @@ bool CpuWorkPool::Prepare(CpuStartup& boot,memory::PhysicalMemoryManager& frames
     shared=(CpuWorkPoolShared*)address;Zero(shared,pages*4096);
     shared->bspApicId=report.detectedProcessors>1?Identity():0;shared->localApic=report.localApicAddress;
     shared->allocationBase=address;shared->allocationPages=pages;
+    shared->session=nextSession++;
     if (candidates) shared->memoryTypes=memoryTypes;
     uint32_t next=((address+sizeof(CpuWorkPoolShared)+63)&~63U);
     for(uint32_t i=0;i<report.detectedProcessors;++i){
@@ -243,15 +255,30 @@ void CpuWorkPool::ApplicationProcessorMain(uint32_t apicId,void* opaque){
         if (__atomic_load_n(&worker->injectedFault,__ATOMIC_ACQUIRE))
             asm volatile("movl $0x12345678,0" : : : "memory");
 #endif
-        // A parked worker is set by the BSP only after the pool reported drained, so the AP leaves its work loop and
-        // halts with interrupts clear. It never touches a payload again.
-        if(__atomic_load_n(&worker->state,__ATOMIC_ACQUIRE)==(uint32_t)CpuWorkerParked){
-            SetState(*worker,CpuWorkerParked);
-            for(;;)asm volatile("cli; hlt":::"memory");
+        // Park protocol. The BSP only *requests*; this AP decides when it has actually left the work path. It
+        // acknowledges after this point, which is after its last queue access, and then halts with interrupts
+        // clear. A BSP that published a state and re-read it would prove nothing; this write is the AP's own.
+        if(__atomic_load_n(&worker->parkRequested,__ATOMIC_ACQUIRE)){
+            // Nothing may still be owed to the BSP on this worker. A pending or completed-but-uncollected job means
+            // the request arrived too early, and it is refused rather than answered.
+            const WorkQueueStats stats=worker->queue.GetStats();
+            if(stats.submitted<=stats.collected){
+                SetState(*worker,CpuWorkerParked);
+                __atomic_store_n(&worker->parkAckedSession,pool->session,__ATOMIC_RELEASE);
+                __atomic_fetch_add(&worker->parkAckCount,1U,__ATOMIC_RELAXED);
+                for(;;)asm volatile("cli; hlt":::"memory");
+            }
         }
         if(!worker->queue.HasPending()){
             SetState(*worker,CpuWorkerIdle);
             asm volatile("sti; hlt":::"memory");
+            // An idle AP must still see a park request, so it polls briefly with interrupts enabled before
+            // halting. A bare sti/hlt would sleep until an unrelated interrupt arrived, which is how a request
+            // can be missed for the rest of the run.
+            for(uint32_t idlePoll=0;idlePoll<2000;++idlePoll){
+                if(__atomic_load_n(&worker->parkRequested,__ATOMIC_ACQUIRE))break;
+                asm volatile("pause");
+            }
         }else{
             SetState(*worker,CpuWorkerBusy);
             asm volatile("sti":::"memory");
@@ -369,6 +396,40 @@ bool CpuWorkPool::IsDrained(uint32_t& queued,uint32_t& busy,uint32_t& uncollecte
     }
     return queued==0&&busy==0&&uncollected==0;
 }
+bool CpuWorkPool::RequestPark(){
+    Guard guard;
+    uint32_t requestFailures=0;
+    if(!OnBootstrapProcessor()){error=CpuWorkPoolBadState;return false;}
+    if(!shared||!started){error=CpuWorkPoolBadState;return false;}
+    // The request is only a request. Nothing here writes an acknowledgement and nothing here claims the pool is
+    // parked; ObservePark is the only function that reports a confirmation, and it reads what the AP wrote.
+    for(uint32_t i=0;i<shared->count;++i){
+        Worker& worker=*shared->workers[i];
+        if(State(worker)==CpuWorkerFaulted)continue;
+        __atomic_store_n(&worker.parkRequested,1U,__ATOMIC_RELEASE);
+        if(State(worker)!=CpuWorkerParked)SetState(worker,CpuWorkerParkRequested);
+        // A halted AP wakes only on an interrupt, so the request must be delivered as one. Without this the
+        // request is written and never observed, which is exactly what the guest showed: requested 1, acked 0.
+        if(!SendWake(shared,worker.apicId))++requestFailures;
+    }
+    // A request that could not be delivered to any worker is a failure, not a partial success.
+    if(requestFailures){error=CpuWorkPoolWakeFailed;return false;}
+    return true;
+}
+bool CpuWorkPool::ObservePark(uint32_t& requested,uint32_t& acked)const{
+    requested=0;acked=0;
+    if(!shared)return false;
+    const uint32_t session=shared->session;
+    for(uint32_t i=0;i<shared->count;++i){
+        const Worker& worker=*shared->workers[i];
+        if(State(worker)==CpuWorkerFaulted)continue;
+        if(__atomic_load_n(&worker.parkRequested,__ATOMIC_ACQUIRE))++requested;
+        // Only an acknowledgement stamped with THIS session counts. One left by an earlier pool carries a different
+        // stamp and is ignored, which is the whole reason the session is carried.
+        if(session!=0&&__atomic_load_n(&worker.parkAckedSession,__ATOMIC_ACQUIRE)==session)++acked;
+    }
+    return requested>0&&acked==requested;
+}
 bool CpuWorkPool::ParkWorkers(){
     Guard guard;
     if(!OnBootstrapProcessor()){error=CpuWorkPoolBadState;return false;}
@@ -376,21 +437,34 @@ bool CpuWorkPool::ParkWorkers(){
     // Parking an AP that still holds work would abandon that work, so the pool refuses rather than pretending.
     uint32_t queued=0,busy=0,uncollected=0;
     if(!IsDrained(queued,busy,uncollected)){error=CpuWorkPoolBadState;return false;}
-    for(uint32_t i=0;i<shared->count;++i){
-        Worker& worker=*shared->workers[i];
-        if(State(worker)==CpuWorkerFaulted)continue;
-        SetState(worker,CpuWorkerParked);
+    // ParkWorkers now means "confirmed by every worker", not "a state was published". It requests and then waits for
+    // each AP to write its own acknowledgement, bounded so a worker that never leaves cannot hang the BSP.
+    if(!RequestPark())return false;
+    for(uint32_t poll=0;poll<4000000U;++poll){
+        uint32_t requested=0,acked=0;
+        if(ObservePark(requested,acked))return true;
+        asm volatile("pause");
     }
-    return true;
+    error=CpuWorkPoolBadState;
+    return false;
+}
+uint32_t CpuWorkPool::Session()const{return shared?shared->session:sessionStamp;}
+const CpuWorkQueue* CpuWorkPool::WorkerQueue(uint32_t workerIndex)const{
+    if(!shared||workerIndex>=shared->count)return 0;
+    return &shared->workers[workerIndex]->queue;
 }
 CpuWorkPoolReport CpuWorkPool::GetReport()const{
     CpuWorkPoolReport result={};result.error=error;result.schedulerOnlineProcessors=1;if(!shared)return result;
     result.configuredWorkers=shared->count;result.sharedPageDirectory=shared->directory;
+    result.session=shared->session;
     for(uint32_t i=0;i<shared->count;++i){const Worker& worker=*shared->workers[i];uint32_t state=State(worker);
         if(Ready(state)&&Load(worker.observedCr3)==shared->directory&&(Load(worker.observedCr0)&0xE0010001U)==0x80010001U)++result.readyWorkers;
         if (state==CpuWorkerBusy) ++result.busyWorkers;
         if (state==CpuWorkerFaulted) ++result.faultedWorkers;
         result.completedJobs+=worker.queue.GetStats().completed;
+        if(__atomic_load_n(&worker.parkRequested,__ATOMIC_ACQUIRE))++result.parkRequestedWorkers;
+        if(shared->session&&__atomic_load_n(&worker.parkAckedSession,__ATOMIC_ACQUIRE)==shared->session)
+            ++result.parkAckedWorkers;
     }return result;
 }
 bool CpuWorkPool::GetWorker(uint32_t index,CpuWorkerSnapshot& result)const{
@@ -450,6 +524,7 @@ extern "C" bool gtos_host_install_pool(uint32_t workerCount, uint32_t bspApicId,
     hostShared->bspApicId = bspApicId;
     hostShared->localApic = lapicAddress;
     hostShared->allocationBase = (uint32_t)hostStorage;
+    hostShared->session = nextSession++;
     hostShared->allocationPages = (sizeof(hostStorage) + 4095) / 4096;
     uint32_t next = ((uint32_t)hostStorage + sizeof(CpuWorkPoolShared) + 63) & ~63U;
     for (uint32_t i = 0; i < workerCount; ++i) {
@@ -469,6 +544,8 @@ extern "C" bool gtos_host_install_pool(uint32_t workerCount, uint32_t bspApicId,
         hostShared->workers[hostShared->count++] = worker;
         hostShared->byApic[worker->apicId] = worker;
     }
+    // A request that could not be delivered to any worker is a failure, not a partial success.
+    if(requestFailures){error=CpuWorkPoolWakeFailed;return false;}
     return true;
 }
 // The friend struct that carries the private-state access. The extern "C" entry point below calls through it, so the
@@ -502,6 +579,51 @@ extern "C" bool gtos_host_worker_execute(uint32_t workerIndex, uint32_t apicId) 
 extern "C" uint32_t gtos_host_worker_state(uint32_t workerIndex) {
     if (!hostShared || workerIndex >= hostShared->count) return 0xFFFFFFFFU;
     return State(*hostShared->workers[workerIndex]);
+}
+extern "C" bool gtos_host_worker_enter_busy(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    SetState(*hostShared->workers[workerIndex], CpuWorkerBusy);
+    return true;
+}
+extern "C" bool gtos_host_worker_leave_busy(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    if (State(*hostShared->workers[workerIndex]) != CpuWorkerBusy) return false;
+    SetState(*hostShared->workers[workerIndex], CpuWorkerIdle);
+    return true;
+}
+extern "C" bool gtos_host_worker_fault(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    Worker* worker = hostShared->workers[workerIndex];
+    Store(worker->failure, CpuWorkerSelfTestMismatch);
+    SetState(*worker, CpuWorkerFaulted);
+    return true;
+}
+// The AP's own park sequence, in the AP's own order: leave the work path, then stamp the session, then halt. A test that
+// called this without a request would be performing an acknowledgement nobody asked for, so it refuses.
+extern "C" bool gtos_host_worker_park(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    Worker* worker = hostShared->workers[workerIndex];
+    if (!__atomic_load_n(&worker->parkRequested, __ATOMIC_ACQUIRE)) return false;
+    const WorkQueueStats stats = worker->queue.GetStats();
+    if (stats.submitted > stats.collected) return false;
+    SetState(*worker, CpuWorkerParked);
+    __atomic_store_n(&worker->parkAckedSession, hostShared->session, __ATOMIC_RELEASE);
+    __atomic_fetch_add(&worker->parkAckCount, 1U, __ATOMIC_RELAXED);
+    return true;
+}
+// Plants an acknowledgement carrying a different session, standing in for a value left by an earlier pool.
+extern "C" bool gtos_host_worker_park_stale(uint32_t workerIndex, uint32_t session) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    __atomic_store_n(&hostShared->workers[workerIndex]->parkAckedSession, session, __ATOMIC_RELEASE);
+    return true;
+}
+extern "C" uint32_t gtos_host_park_requested(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return 0xFFFFFFFFU;
+    return __atomic_load_n(&hostShared->workers[workerIndex]->parkRequested, __ATOMIC_ACQUIRE);
+}
+extern "C" uint32_t gtos_host_park_acked_session(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return 0xFFFFFFFFU;
+    return __atomic_load_n(&hostShared->workers[workerIndex]->parkAckedSession, __ATOMIC_ACQUIRE);
 }
 extern "C" void gtos_host_reset_pool() {
     // Only the test may reset, and only between independent cases; the production pool never resets.

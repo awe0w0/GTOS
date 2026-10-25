@@ -7,7 +7,7 @@ namespace gtos { namespace hardwarecommunication {
     // Parked is a terminal diagnostic state: the worker no longer takes jobs and no longer touches any payload the
     // BSP may reclaim. It is reached only through CloseAdmission followed by Drain.
     enum CpuWorkerState { CpuWorkerPrepared, CpuWorkerStarting, CpuWorkerIdle, CpuWorkerBusy, CpuWorkerFaulted,
-        CpuWorkerParked };
+        CpuWorkerParkRequested, CpuWorkerParked };
     enum CpuWorkerFailure { CpuWorkerNoFailure, CpuWorkerMemoryTypeMismatch, CpuWorkerApicMismatch, CpuWorkerSelfTestMismatch, CpuWorkerException };
     enum CpuWorkPoolError { CpuWorkPoolOk, CpuWorkPoolBadState, CpuWorkPoolWrongCpu,
         CpuWorkPoolNoMemory, CpuWorkPoolBadPaging, CpuWorkPoolStartupFailed,
@@ -24,13 +24,35 @@ namespace gtos { namespace hardwarecommunication {
         uint32_t observedCr3, observedCr0, wakeInterrupts, spuriousInterrupts;
         uint32_t faultVector, faultError, faultInstruction, faultAddress;
         WorkQueueStats queue;
+        // The park protocol. `parkRequested` is written by the BSP; `parkAckedSession` is written by the AP itself
+        // after it has left its work loop, and carries the session it belongs to so a stale acknowledgement from an
+        // earlier run cannot be mistaken for this one.
+        uint32_t parkRequested;
+        uint32_t parkAckedSession;
+        uint32_t parkAckCount;
     };
     struct CpuWorkPoolReport {
         CpuWorkPoolError error;
         uint32_t configuredWorkers, readyWorkers, busyWorkers, faultedWorkers;
         uint32_t completedJobs, schedulerOnlineProcessors, sharedPageDirectory;
+        // Distinguishes "the BSP asked" from "the AP confirmed". A report where requested equals workers but acked is
+        // zero is a pool that has been asked and has not confirmed.
+        uint32_t parkRequestedWorkers, parkAckedWorkers, session;
     };
     struct CpuWorkPoolShared;
+
+    // A pool ticket bound to the pool, worker and queue it was issued on. The raw WorkTicket is queue-local, so two
+    // workers can hold tickets that compare equal; a holder that carries this identity cannot address the wrong queue
+    // and cannot read a result that belongs to another worker. The handle is only meaningful while the pool is alive,
+    // which the caller guarantees because every owner lives until the guest ends.
+    struct CpuWorkHolder {
+        CpuWorkPoolShared* pool;
+        uint32_t workerIndex;
+        uint32_t apicId;
+        WorkTicket ticket;
+        CpuWorkHolder();
+        bool IsBound() const;
+    };
     // BSP-only producer/control plane; each AP consumes its own bounded queue.
     // Jobs never invoke the global allocator, device drivers or BSP scheduler.
 #ifdef GTOS_CPU_WORK_POOL_HOST_TEST
@@ -48,6 +70,9 @@ namespace gtos { namespace hardwarecommunication {
         CpuStartup* startup;
         CpuWorkPoolError error;
         bool prepared, started, closed;
+        // The session stamp this instance reports when it has no shared block yet. Once a pool is prepared the stamp
+        // lives in the shared block, so every reader sees the same value.
+        uint32_t sessionStamp;
         bool OnBootstrapProcessor() const;
         int FindWorker(uint32_t apicId) const;
         static void ApplicationProcessorMain(uint32_t apicId, void* context) __attribute__((noreturn));
@@ -78,11 +103,22 @@ namespace gtos { namespace hardwarecommunication {
         // Parks every worker that has nothing left to do. Refuses while anything is still in flight, because parking
         // an AP that still holds a job would abandon that job silently. After a successful park the workers take no
         // further jobs and the BSP may reclaim the payloads.
+        // Two-step: RequestPark asks every live worker to leave its work loop and writes the request; no worker writes
+        // its own confirmation here. ObservePark reports how many workers have confirmed with the CURRENT session stamp.
+        // A pool that has only been asked is never reported as parked.
+        bool RequestPark();
+        bool ObservePark(uint32_t& requested, uint32_t& acked) const;
         bool ParkWorkers();
         bool AdmissionClosed() const;
         // Number of jobs submitted on this pool, for a caller that must not confuse a configured worker with an
         // executed job.
         uint32_t SubmittedJobs() const;
+        // The session this pool instance belongs to. Set once at construction, so a value observed here can be compared
+        // with the stamp an AP wrote and a stale confirmation from an earlier pool is visibly different.
+        uint32_t Session() const;
+        // The queue a worker index owns, for a holder that must prove which queue it is addressing. Null when the index
+        // is not a worker of this pool.
+        const CpuWorkQueue* WorkerQueue(uint32_t workerIndex) const;
         CpuWorkPoolReport GetReport() const;
         bool GetWorker(uint32_t index, CpuWorkerSnapshot& result) const;
         static const char* ErrorName(CpuWorkPoolError error);
