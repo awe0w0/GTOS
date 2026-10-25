@@ -12,6 +12,8 @@ const char kTablesValue[] = "tables";
 const char kApValue[] = "ap";
 const char kPagingValue[] = "paging";
 const char kWorkersValue[] = "workers";
+// The runtime-initialisation stop. Named separately so a caller can accept it without duplicating the table.
+const char kRuntimeInitValue[] = "runtime-init";
 
 // Exact, length-bounded comparison against a NUL-terminated literal.
 bool Equals(const char* span, const char* text, uint32_t length) {
@@ -29,6 +31,7 @@ uint32_t StopForValue(const char* span, uint32_t length) {
     if (Equals(span, kApValue, length)) return BootDiagnostic::StopAp;
     if (Equals(span, kPagingValue, length)) return BootDiagnostic::StopPaging;
     if (Equals(span, kWorkersValue, length)) return BootDiagnostic::StopWorkers;
+    if (Equals(span, kRuntimeInitValue, length)) return BootDiagnostic::StopRuntimeInit;
     return BootDiagnostic::StopNone;
 }
 
@@ -132,6 +135,8 @@ const char* BootDiagnostic::Marker(uint32_t stop) {
         return "BOOTDIAG PAGING ENABLED OWNED MAP";
     case StopWorkers:
         return "BOOTDIAG WORKERS DRAINED PARKED";
+    case StopRuntimeInit:
+        return "BOOTDIAG RUNTIME INITIALIZED";
     case StopReject:
         return "BOOTDIAG REJECT invalid-option";
     default:
@@ -168,6 +173,8 @@ uint32_t BootDiagnostic::RequiredPhase(uint32_t stop) {
         return PhasePaging;
     case StopWorkers:
         return PhaseWorkers;
+    case StopRuntimeInit:
+        return PhaseRuntimeInit;
     default:
         return PhaseCommandLine;
     }
@@ -185,6 +192,8 @@ const char* BootDiagnostic::ValueName(uint32_t stop) {
         return kPagingValue;
     case StopWorkers:
         return kWorkersValue;
+    case StopRuntimeInit:
+        return kRuntimeInitValue;
     default:
         return 0;
     }

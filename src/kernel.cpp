@@ -1299,6 +1299,95 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     }
 
 
+    // ---------------------------------------------------------------- runtime initialisation
+    // The first stop that reaches the native runtime's own initialisation. It runs after the GDT/IDT, the CPU inventory
+    // and paging, and before B04 storage, Settings, B05 graphics, the worker pool or any service exists in this path.
+    //
+    // What it may do is bounded and stated: PrepareStacks and Activate, plus the BSP paging and control-register work
+    // those two genuinely need. What it may not do, and does not: Create, CreateElf, RunSelfTests, any user-mode entry,
+    // any ELF load, any scheduler run, any syscall dispatch, and any interrupt. The runtime stays empty afterwards, which
+    // is why the marker reports counts rather than a process.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopRuntimeInit) {
+        // The runtime is a BSP-only prototype. On a machine with more than one processor it must be refused before it is
+        // touched, not after, because Activate publishes state an AP would have to understand and no AP has been told.
+        // The AP startup protocol is the authority on how many processors exist, because it is the only path that
+        // validated the firmware inventory. The CPU manager's own field answers a different question.
+        CpuStartup runtimeInventory;
+        const bool runtimeInventoryPrepared =
+            runtimeInventory.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+        const uint32_t runtimeProcessors = runtimeInventoryPrepared
+            ? runtimeInventory.GetReport().detectedProcessors
+            : cpu.GetInfo().detectedLogicalProcessors;
+        LogValue("RUNTIME DIAG DETECTED ", runtimeProcessors);
+        if (runtimeProcessors > 1) {
+            printf("RUNTIME DIAG REFUSED MULTI CPU\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME REFUSED MULTI CPU");
+        }
+        // One identity map, no framebuffer and no device beyond the local APIC, which the BSP itself needs.
+        memory::PagingDeviceRange runtimeDevices[3];
+        uint32_t runtimeDeviceCount = 0;
+        const memory::PagingConfig runtimeConfig =
+            BuildPagingConfig(mbi, runtimeDevices, runtimeDeviceCount, 0, 0);
+        if (!paging.prepareIdentity(frames, runtimeConfig)) {
+            printf("RUNTIME DIAG PAGING FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+        }
+        // PrepareStacks needs the prepared directory but not an enabled one; the comment on the method says exactly that.
+        const bool runtimeStacks = nativeRuntime.PrepareStacks(paging, frames);
+        printf(runtimeStacks ? "RUNTIME DIAG STACKS PREPARED\n" : "RUNTIME DIAG STACKS FAILED\n");
+        if (!runtimeStacks) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+        }
+        // Paging is enabled only now, because Activate requires BSP CR3 with paging on and interrupts still clear.
+        if (!paging.enable()) {
+            printf("RUNTIME DIAG ENABLE FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+        }
+        uint32_t runtimeCr0 = 0;
+        asm volatile("mov %%cr0,%0" : "=r"(runtimeCr0));
+        uint32_t runtimeCr3 = 0;
+        asm volatile("mov %%cr3,%0" : "=r"(runtimeCr3));
+        LogValue("RUNTIME DIAG CR0 ", runtimeCr0);
+        LogValue("RUNTIME DIAG CR3 ", runtimeCr3);
+        LogValue("RUNTIME DIAG DIRECTORY ", paging.getStatistics().directoryAddress);
+        // The freeze Activate requires, and the only thing that makes the directory shareable. No AP is running, so this
+        // is a statement about the BSP's own table rather than a cross-core action.
+        const bool runtimeSealed = paging.sealForSharedProcessors();
+        printf(runtimeSealed ? "RUNTIME DIAG SEALED\n" : "RUNTIME DIAG SEAL FAILED\n");
+        if (!runtimeSealed) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+        }
+        // Activate with FP disabled and threads off: the smallest activation the API offers, and the one that leaves the
+        // fewest claims to make. It attaches no file or event endpoint, because neither exists in this path.
+        const bool runtimeActive = nativeRuntime.Activate(
+            tasks, gdt, paging, frames, process::NativeFpDisabled, false);
+        printf(runtimeActive ? "RUNTIME DIAG ACTIVATED\n" : "RUNTIME DIAG ACTIVATE FAILED\n");
+        const process::NativeStatistics runtimeCounts = nativeRuntime.Statistics();
+        LogValue("RUNTIME DIAG CREATED ", runtimeCounts.created);
+        LogValue("RUNTIME DIAG EXITED ", runtimeCounts.exited);
+        LogValue("RUNTIME DIAG FAULTED ", runtimeCounts.faulted);
+        LogValue("RUNTIME DIAG REAPED ", runtimeCounts.reaped);
+        LogValue("RUNTIME DIAG FP ENABLED ", nativeRuntime.FpEnabled() ? 1U : 0U);
+        // The claim this checkpoint is allowed to make: the runtime is initialised and empty. A created process, a fault
+        // or an enabled FP policy would each mean the path went further than it was permitted to.
+        const bool runtimeEmpty = runtimeActive && runtimeCounts.created == 0 && runtimeCounts.exited == 0
+            && runtimeCounts.faulted == 0 && runtimeCounts.reaped == 0;
+        printf(runtimeEmpty ? "RUNTIME DIAG EMPTY\n" : "RUNTIME DIAG NOT EMPTY\n");
+        // Interrupts must still be clear: this checkpoint never enables them.
+        uint32_t runtimeFlags = 0;
+        asm volatile("pushfl; popl %0" : "=r"(runtimeFlags));
+        printf((runtimeFlags & 0x200U) ? "RUNTIME DIAG INTERRUPTS ENABLED\n" : "RUNTIME DIAG INTERRUPTS CLEAR\n");
+        if (!runtimeActive || !runtimeEmpty || (runtimeFlags & 0x200U)) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+        }
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeInit));
+    }
+
+
     // Prepare resources before identity mappings are built. BSP GDT/IDT already
     // exist, while interrupts and paging remain disabled.
     CpuStartup cpuStartup;

@@ -471,6 +471,37 @@ extern "C" int bootDiagnosticTestMain() {
                "the oversize reason is named as such");
     }
 
+
+    // ================================================================ the runtime-initialisation stop
+    {
+        // The stop is selected by its own value, carries its own marker and belongs to its own phase, so a caller can
+        // tell it from the worker stop without reading the number.
+        const char* text = "bootdiag-stop=runtime-init";
+        Diagnostic::Decision decision = Diagnostic::Parse(text, Length(text));
+        Expect(decision.stop == Diagnostic::StopRuntimeInit, "runtime-init selects its stop");
+        Expect(decision.reject == Diagnostic::RejectNone, "runtime-init is not rejected");
+        Expect(TextEquals(Diagnostic::ValueName(Diagnostic::StopRuntimeInit), "runtime-init"),
+               "the stop names its own value");
+        Expect(TextEquals(Diagnostic::Marker(Diagnostic::StopRuntimeInit), "BOOTDIAG RUNTIME INITIALIZED"),
+               "the marker is the runtime one");
+        Expect(Diagnostic::RequiredPhase(Diagnostic::StopRuntimeInit) == Diagnostic::PhaseRuntimeInit,
+               "the stop requires the runtime phase");
+        // The phase rule is a comparison the caller makes, so the test asserts the ordering it protects: the runtime
+        // phase comes after the worker phase, and a stop may only fire once its own phase is reached.
+        Expect(Diagnostic::PhaseRuntimeInit > Diagnostic::PhaseWorkers,
+               "the runtime phase comes after the worker phase");
+        Expect(Diagnostic::RequiredPhase(Diagnostic::StopRuntimeInit)
+               > Diagnostic::RequiredPhase(Diagnostic::StopWorkers),
+               "the runtime stop requires a later phase than the worker stop");
+        // The worker and runtime markers differ, so a log cannot be read as the other stop.
+        Expect(!TextEquals(Diagnostic::Marker(Diagnostic::StopWorkers),
+                           Diagnostic::Marker(Diagnostic::StopRuntimeInit)),
+               "the worker and runtime markers are different text");
+        Expect(!TextEquals(Diagnostic::ValueName(Diagnostic::StopWorkers),
+                           Diagnostic::ValueName(Diagnostic::StopRuntimeInit)),
+               "the worker and runtime values are different text");
+    }
+
     Say(failures == 0 ? "BOOTDIAG HOST UNIT PASS\n" : "BOOTDIAG HOST UNIT FAIL\n");
     return (int)failures;
 }
