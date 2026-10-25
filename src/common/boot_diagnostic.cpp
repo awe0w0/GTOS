@@ -11,6 +11,7 @@ const char kMemoryValue[] = "memory";
 const char kTablesValue[] = "tables";
 const char kApValue[] = "ap";
 const char kPagingValue[] = "paging";
+const char kWorkersValue[] = "workers";
 
 // Exact, length-bounded comparison against a NUL-terminated literal.
 bool Equals(const char* span, const char* text, uint32_t length) {
@@ -27,6 +28,7 @@ uint32_t StopForValue(const char* span, uint32_t length) {
     if (Equals(span, kTablesValue, length)) return BootDiagnostic::StopTables;
     if (Equals(span, kApValue, length)) return BootDiagnostic::StopAp;
     if (Equals(span, kPagingValue, length)) return BootDiagnostic::StopPaging;
+    if (Equals(span, kWorkersValue, length)) return BootDiagnostic::StopWorkers;
     return BootDiagnostic::StopNone;
 }
 
@@ -128,6 +130,8 @@ const char* BootDiagnostic::Marker(uint32_t stop) {
         return "BOOTDIAG AP CHECKPOINT";
     case StopPaging:
         return "BOOTDIAG PAGING ENABLED OWNED MAP";
+    case StopWorkers:
+        return "BOOTDIAG WORKERS DRAINED PARKED";
     case StopReject:
         return "BOOTDIAG REJECT invalid-option";
     default:
@@ -162,6 +166,8 @@ uint32_t BootDiagnostic::RequiredPhase(uint32_t stop) {
         return PhaseAp;
     case StopPaging:
         return PhasePaging;
+    case StopWorkers:
+        return PhaseWorkers;
     default:
         return PhaseCommandLine;
     }
@@ -177,6 +183,8 @@ const char* BootDiagnostic::ValueName(uint32_t stop) {
         return kApValue;
     case StopPaging:
         return kPagingValue;
+    case StopWorkers:
+        return kWorkersValue;
     default:
         return 0;
     }

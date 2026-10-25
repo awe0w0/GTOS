@@ -10,6 +10,7 @@ namespace gtos { namespace common {
 //   bootdiag-stop=tables   halt after the GDT and IDT are constructed and loaded
 //   bootdiag-stop=ap       halt after the AP handshake diagnostic, before any worker or service
 //   bootdiag-stop=paging   halt after real bootstrap paging is enabled and the owned mapping probe passes
+//   bootdiag-stop=workers  halt after the worker pool ran a real job set to completion and parked its APs
 // Anything else that carries the option prefix is a rejection, never a silent fall-through, because a malformed
 // diagnostic must not let the machine continue into late startup.
 //
@@ -36,6 +37,7 @@ class BootDiagnostic {
         StopReject = 3,  // malformed option: fail closed before any late startup
         StopAp = 4,      // halt after the AP handshake diagnostic
         StopPaging = 5,  // halt after real bootstrap paging is enabled
+        StopWorkers = 6, // halt after the worker pool drained, closed admission and parked
     };
     enum Reject {
         RejectNone = 0,
@@ -53,6 +55,7 @@ class BootDiagnostic {
         PhaseTables = 2,
         PhaseAp = 3,
         PhasePaging = 4,
+        PhaseWorkers = 5,
     };
     struct Decision {
         uint32_t stop;

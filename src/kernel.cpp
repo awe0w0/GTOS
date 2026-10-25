@@ -1228,6 +1228,121 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             LogValue("WORKER FAILURE REASON ", (uint32_t)worker.failure);
         }
     }
+    // The worker diagnostic runs here: memory, the GDT/IDT, the CPU inventory, the AP preparation, the pool start and
+    // the paging template all exist, while B04 storage, graphics, the NativeRuntime services and every device are
+    // still dominated. It submits a fixed job set through the real pool, waits for the real AP to finish it, collects
+    // every result, closes admission, drains and parks.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopWorkers) {
+        if (!workersStarted) {
+            // Honest unavailable: no worker ever started, so no job can run and none is invented.
+            printf("WORKER DIAG UNAVAILABLE ");
+            printf(CpuWorkPool::ErrorName(workerReport.error));
+            printf("\n");
+            LogValue("WORKER DIAG CONFIGURED ", workerReport.configuredWorkers);
+            LogValue("WORKER DIAG READY ", workerReport.readyWorkers);
+            // A single detected processor is the documented honest degrade: the pool reports no worker and nothing is
+            // executed. It is distinct from a failed start, and neither claims a job ran.
+            if (workerReport.configuredWorkers == 0 && apsPrepared)
+                BootDiagnosticHalt("BOOTDIAG WORKERS NONE AVAILABLE");
+            BootDiagnosticHalt("BOOTDIAG WORKERS CHECKPOINT NOT REACHED");
+        }
+        LogValue("WORKER DIAG CONFIGURED ", workerReport.configuredWorkers);
+        LogValue("WORKER DIAG READY ", workerReport.readyWorkers);
+        // Start() succeeds with zero workers on a single processor: there is no AP to configure, so the pool is
+        // "started" but has nothing to run a job. That is the honest degrade, and it is decided here, before any
+        // submission, so no job can be invented for a worker that does not exist.
+        if (workerReport.configuredWorkers == 0) {
+            printf("WORKER DIAG SINGLE CPU\n");
+            LogValue("WORKER DIAG SUBMITTED ", 0);
+            LogValue("WORKER DIAG COLLECTED ", 0);
+            BootDiagnosticHalt("BOOTDIAG WORKERS NONE AVAILABLE");
+        }
+        uint32_t diagSubmitted = 0, diagCollected = 0, diagMismatched = 0, diagApExecuted = 0;
+        uint32_t diagTargetApic = 0;
+        for (uint32_t index = 0; index < workerReport.configuredWorkers; ++index) {
+            CpuWorkerSnapshot snapshot;
+            if (workers.GetWorker(index, snapshot) && snapshot.state != CpuWorkerFaulted) {
+                diagTargetApic = snapshot.apicId;
+                break;
+            }
+        }
+        const uint32_t diagBatches = 2, diagPerBatch = 3;
+        for (uint32_t batch = 0; batch < diagBatches; ++batch) {
+            CpuWorkTicket tickets[diagPerBatch];
+            uint32_t seeds[diagPerBatch];
+            bool accepted[diagPerBatch];
+            for (uint32_t job = 0; job < diagPerBatch; ++job) {
+                seeds[job] = 0x1000U * (batch + 1) + job;
+                accepted[job] = false;
+                const CpuWorkSubmitStatus status =
+                    workers.Submit(diagTargetApic, WorkRequest(WorkModularSum, 32 + job, seeds[job]),
+                                   tickets[job]);
+                if (status == CpuWorkAccepted) { ++diagSubmitted; accepted[job] = true; }
+            }
+            for (uint32_t job = 0; job < diagPerBatch; ++job) {
+                if (!accepted[job]) continue;
+                WorkResult result;
+                bool done = false;
+                for (uint32_t poll = 0; poll < 8000000U; ++poll) {
+                    const CpuWorkCollectStatus status = workers.Collect(tickets[job], result);
+                    if (status == CpuWorkComplete) { done = true; break; }
+                    if (status == CpuWorkFailed || status == CpuWorkTicketInvalid) break;
+                    asm volatile("pause");
+                }
+                if (!done) { ++diagMismatched; continue; }
+                ++diagCollected;
+                // The expected value is recomputed here from the same bounded operation, so a wrong result is caught
+                // rather than accepted. The executor identity must be a real AP, never the BSP.
+                // WorkModularSum accumulates into the seed the request carried, so the independent rule starts
+                // there and adds the same bounded sequence the operation adds.
+                uint32_t expected = seeds[job];
+                for (uint32_t i = 0; i < 32 + job; ++i) expected += i + 1;
+                if (result.value != expected) ++diagMismatched;
+                if (result.executingApicId != cpu.GetInfo().bspApicId && result.executingApicId != 0xFFFFFFFFU)
+                    ++diagApExecuted;
+                LogValue("WORKER DIAG TICKET ", tickets[job].ticket.id);
+                LogValue("WORKER DIAG SLOT ", tickets[job].ticket.slot);
+                LogValue("WORKER DIAG APIC ", result.executingApicId);
+                LogValue("WORKER DIAG VALUE ", result.value);
+                LogValue("WORKER DIAG EXPECTED ", expected);
+            }
+        }
+        LogValue("WORKER DIAG SUBMITTED ", diagSubmitted);
+        LogValue("WORKER DIAG COLLECTED ", diagCollected);
+        LogValue("WORKER DIAG MISMATCH ", diagMismatched);
+        LogValue("WORKER DIAG AP EXECUTED ", diagApExecuted);
+        // Close admission, then drain, then park. A new submission after closure must be refused.
+        const bool closedOk = workers.CloseAdmission();
+        CpuWorkTicket afterClose;
+        const CpuWorkSubmitStatus afterCloseStatus =
+            workers.Submit(diagTargetApic, WorkRequest(WorkModularSum, 4, 1), afterClose);
+        uint32_t queued = 0, busy = 0, uncollected = 0;
+        bool drained = false;
+        for (uint32_t poll = 0; poll < 8000000U; ++poll) {
+            if (workers.IsDrained(queued, busy, uncollected)) { drained = true; break; }
+            asm volatile("pause");
+        }
+        const bool parked = drained && workers.ParkWorkers();
+        printf(closedOk ? "WORKER DIAG ADMISSION CLOSED\n" : "WORKER DIAG CLOSE FAILED\n");
+        printf(afterCloseStatus != CpuWorkAccepted ? "WORKER DIAG POST CLOSE REFUSED\n"
+                                                   : "WORKER DIAG POST CLOSE ACCEPTED\n");
+        printf(drained ? "WORKER DIAG DRAINED\n" : "WORKER DIAG NOT DRAINED\n");
+        LogValue("WORKER DIAG QUEUED ", queued);
+        LogValue("WORKER DIAG BUSY ", busy);
+        LogValue("WORKER DIAG UNCOLLECTED ", uncollected);
+        printf(parked ? "WORKER DIAG PARKED\n" : "WORKER DIAG PARK FAILED\n");
+        LogValue("WORKER DIAG SUBMITTED TOTAL ", workers.SubmittedJobs());
+        // The checkpoint marker requires the whole chain: real submissions, every one collected with a correct value
+        // from a real AP, closure, a refused post-close submission, a drained pool and a parked AP.
+        const bool workerPass = closedOk && drained && parked
+            && diagSubmitted == diagBatches * diagPerBatch && diagCollected == diagSubmitted
+            && diagMismatched == 0 && diagApExecuted == diagCollected
+            && afterCloseStatus != CpuWorkAccepted;
+        if (!workerPass)
+            BootDiagnosticHalt("BOOTDIAG WORKERS CHECKPOINT NOT REACHED");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopWorkers));
+    }
+
     if (!paging.enable())
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E13");
     uint32_t cr0;
