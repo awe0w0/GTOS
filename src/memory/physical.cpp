@@ -270,6 +270,26 @@ bool PhysicalMemoryManager::isAllocated(uint32_t address) const {
     const uint32_t frame = address >> 12;
     return ready && !(address & (PageSize - 1)) && frame < frameCount && bit(allocated, frame);
 }
+#ifdef GTOS_MEMORY_TEST
+bool PhysicalMemoryManager::gtos_host_seed(uint32_t addressable, uint32_t arenaFrames) {
+    clear();
+    if (!addressable || addressable > MaximumFrames) return false;
+    if (!arenaFrames || arenaFrames > addressable) return false;
+    frameCount = addressable;
+    // The first megabyte is reserved, exactly as a firmware map reserves it and as the kernel's own low-memory carve-out
+    // does. Frame 256 is address 0x00100000, which is where the arena begins.
+    const uint32_t first = 0x00100000U / PageSize;
+    if (first + arenaFrames > addressable) return false;
+    for (uint32_t frame = first; frame < first + arenaFrames; ++frame) set(eligible, frame, true);
+    freeCount = arenaFrames;
+    allocatedCount = 0;
+    failures = 0;
+    ready = true;
+    mapUsed = false;
+    error = PhysicalMemoryOk;
+    return true;
+}
+#endif
 PhysicalMemoryStatistics PhysicalMemoryManager::getStatistics() const {
     InterruptGuard guard;
     PhysicalMemoryStatistics result;

@@ -476,7 +476,9 @@ extern "C" int bootDiagnosticTestMain() {
     {
         // The stop is selected by its own value, carries its own marker and belongs to its own phase, so a caller can
         // tell it from the worker stop without reading the number.
-        const char* text = "bootdiag-stop=runtime-init";
+        // A terminated span: a token that reaches the end of the readable bytes is RejectUnterminated by contract, which
+        // the neighbouring cases below also rely on.
+        const char* text = "bootdiag-stop=runtime-init ";
         Diagnostic::Decision decision = Diagnostic::Parse(text, Length(text));
         Expect(decision.stop == Diagnostic::StopRuntimeInit, "runtime-init selects its stop");
         Expect(decision.reject == Diagnostic::RejectNone, "runtime-init is not rejected");

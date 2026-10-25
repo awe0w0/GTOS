@@ -11,6 +11,14 @@
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
+
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+// The privileged boundary this unit replaces. Each answers a question a real machine answers; none of them decides what
+// the runtime decides.
+extern "C" uint32_t gtos_host_runtime_is_bsp();
+extern "C" uint32_t gtos_host_runtime_cr3();
+extern "C" uint32_t gtos_host_runtime_fast_entry();
+#endif
 using namespace gtos;
 using namespace gtos::memory;
 using namespace gtos::process;
@@ -29,6 +37,13 @@ namespace {
         default: return GTOS_VM_ERR_BAD_STATE;
         }
     }
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+    // The host cannot execute the ID-bit probe, CPUID or an APIC-base MSR read; those are a protection fault. The seam
+    // answers whether this is the bootstrap processor and nothing else.
+    bool BootstrapProcessor() { return gtos_host_runtime_is_bsp() != 0; }
+    uint32_t Cr3() { return gtos_host_runtime_cr3(); }
+    bool DisableFastEntry() { return gtos_host_runtime_fast_entry() != 0; }
+#else
     bool BootstrapProcessor() {
         uint32_t before, after;
         asm volatile("pushfl; popl %0; movl %0,%1; xorl $0x200000,%1;"
@@ -78,6 +93,7 @@ namespace {
         return true;
     }
     uint32_t Cr3() { uint32_t value; asm volatile("mov %%cr3,%0" : "=r"(value)); return value; }
+#endif
     void Zero(void* memory, uint32_t size) {
         uint8_t* bytes = (uint8_t*)memory;
         for (uint32_t i = 0; i < size; ++i) bytes[i] = 0;

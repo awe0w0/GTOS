@@ -77,6 +77,14 @@ namespace gtos { namespace memory {
         bool isFree(uint32_t address) const;
         bool isAllocated(uint32_t address) const;
         PhysicalMemoryStatistics getStatistics() const;
+#ifdef GTOS_MEMORY_TEST
+        // Host-unit seam. Supplies the memory a firmware map would have described, then leaves every allocator decision
+        // to the production code. A test that used this to place a frame itself would be writing the answer it is
+        // supposed to be measuring.
+        // The free frames are the ones inside the arena the boundary places at a fixed address, so a frame number is also
+        // a dereferenceable pointer here. That is the same property an identity map gives the kernel, not a shortcut.
+        bool gtos_host_seed(uint32_t addressableFrames, uint32_t arenaFrames);
+#endif
         PhysicalMemoryError getLastError() const;
     };
 } }
