@@ -1,0 +1,52 @@
+import fs from 'node:fs';import crypto from 'node:crypto';import {pathToFileURL} from 'node:url';
+const c=JSON.parse(fs.readFileSync(process.argv[2],'utf8')),sha=b=>crypto.createHash('sha256').update(b).digest('hex'),bytes=fs.readFileSync(c.module.path);
+if(bytes.length!==c.module.bytes||sha(bytes)!==c.module.sha256)throw Error('actual module pin');
+const api=await import(pathToFileURL(c.module.path).href);let assertions=0;const checks=[];
+const check=(n,x)=>{assertions++;checks.push({name:n,ok:!!x});if(!x)throw Error(n)},reject=(n,f)=>{let err=false;try{f()}catch{err=true}check(n,err)};
+const ctx={work_root:'/var/tmp/gtos-test-work',source_root:'/var/tmp/gtos-test-source',toolchain_root:'/mnt/f/GTOS-Chromium/toolchains/test-runtime'};
+const r=api.bootRequest(ctx,'boot-01','e99');check('loader is honest cmd0',r.cmd0===r.argv[0]&&r.argv[3]===r.emulator);
+check('no shell wrapper',r.argv[0].endsWith('/ld-linux-x86-64.so.2')&&!r.argv.some(x=>x.endsWith('.sh')));
+check('one kernel input',r.argv.filter(x=>x==='-kernel').length===1&&r.image===ctx.source_root+'/image/provider-static.elf');
+check('two fresh per stage logs',r.outputs.length===2&&r.outputs.every(x=>x.includes('/boot-01/')));
+check('no host acceleration',r.argv.includes('tcg,thread=single')&&r.argv.includes('-nodefaults')&&r.argv.includes('-no-user-config'));
+check('exact append',r.argv.at(-1)==='legacy live serial bootlog bootlog-fail');
+check('12 second bound',r.limit_seconds===12);
+for(const kind of ['version','help']){const p=api.bootRequest(ctx,'query-01',kind);check(kind+' no image/outputs',p.image===null&&p.outputs.length===0&&p.argv.length===5)}
+reject('bad stage',()=>api.bootRequest(ctx,'BAD','e99'));reject('unknown kind',()=>api.bootRequest(ctx,'boot-01','desktop'));
+for(const value of ['/tmp/work','/var/tmp/a/../b','/var/tmp/a\\b','/var/tmp/a\0b','/var/tmp/a b'])reject('invalid work '+JSON.stringify(value),()=>api.bootRequest({...ctx,work_root:value},'boot-01','e99'));
+reject('nested roots',()=>api.bootRequest({...ctx,source_root:ctx.work_root+'/source'},'boot-01','e99'));
+reject('untrusted toolchain root',()=>api.bootRequest({...ctx,toolchain_root:'/usr/bin'},'boot-01','e99'));
+for(const extra of ['-drive','-netdev','-enable-kvm','-daemonize','-qmp','-readconfig','-device'])reject('extra '+extra,()=>api.bootRequest(ctx,'boot-01','e99',[...r.argv,extra]));
+const reordered=[...r.argv];[reordered[4],reordered[5]]=[reordered[5],reordered[4]];reject('changed order',()=>api.bootRequest(ctx,'boot-01','e99',reordered));
+const tools={python_realpath:'/usr/bin/python3.8',loader:'/usr/lib/x86_64-linux-gnu/ld-2.31.so'};
+check('metadata exactly two EXEC',api.bootExecSet(ctx,'native_metadata',tools).length===2);
+check('probe and VM same four EXEC',JSON.stringify(api.bootExecSet(ctx,'emulator_probe',tools))===JSON.stringify(api.bootExecSet(ctx,'vm_e99_trial',tools))&&api.bootExecSet(ctx,'vm_e99_trial',tools).length===4);
+reject('unknown EXEC category',()=>api.bootExecSet(ctx,'object_compile',tools));
+reject('duplicate EXEC identity',()=>api.bootExecSet(ctx,'vm_e99_trial',{...tools,loader:tools.python_realpath}));
+reject('Windows EXEC identity',()=>api.bootExecSet(ctx,'vm_e99_trial',{...tools,loader:'F:/loader'}));
+const log=Buffer.from('BOOT B01 HANDOFF\nBOOT B02 MEMORY\n'+api.E99_MARKER+'\n');
+const probe=Object.fromEntries(api.BOOT_PROBES.map(k=>[k,true])),rawsha=sha(Buffer.alloc(0));
+const good=()=>({request:r,spec:{stage:r.stage,cmd:r.argv},inner:{stage:r.stage,argv:r.argv,landlock:{ok:true},probe_checks:probe,child:{returncode:-9,timed_out:true,group_pgid:123,group_measured:true,group_measured_final:true,descendants_left:[],killed:[],output_path:ctx.work_root+'/logs/child-output-boot-01.raw',output_bytes:0,output_file_bytes:0,output_sha256:rawsha}},row:{stage:r.stage,argv:r.argv,refused:false,landlock_ok:true,probe_checks:probe,exit_code:-9,inner_timed_out:true,timed_out:false,unshare_rc:1,ok:false,group:{pgid:123,measured:true,final_measured:true,descendants_left:[],killed_after:[]}},raw:{requested_path:ctx.work_root+'/logs/child-output-boot-01.raw',bytes:0,sha256:rawsha},e9:log,serial:log});
+check('complete observation passes as data',api.inspectBootEvidence(good()).ok);
+check('tool failure preserved',api.inspectBootEvidence(good()).guard_tool_ok===false);
+const e01=good();e01.e9=Buffer.from(log.toString().replace('E99','E01'));const e01Result=api.inspectBootEvidence(e01);
+check('failed diagnostic does not claim no guest execution',e01Result.ok===false&&e01Result.target_execution_observed===null&&e01Result.constructors_execution_inferred_from_validated_path===null);
+check('not full boot/init readiness',api.inspectBootEvidence(good()).full_boot_pass===false&&api.inspectBootEvidence(good()).init_ready==='unknown');
+const bad=(name,mutate)=>{const x=good();mutate(x);check(name,!api.inspectBootEvidence(x).ok)};
+bad('wrong stage',x=>x.row.stage='other-01');
+bad('no child',x=>delete x.inner.child);bad('refused',x=>x.inner.refused=true);bad('wrong cmd',x=>x.spec.cmd=['other']);
+bad('no row',x=>delete x.row);bad('no raw',x=>delete x.raw);bad('wrong raw',x=>x.raw.sha256='0'.repeat(64));
+bad('guard failure',x=>x.inner.landlock.ok=false);bad('missing probe',x=>x.inner.probe_checks={});
+bad('outer timeout',x=>x.row.timed_out=true);bad('rc0 not halt deadline',x=>x.inner.child.returncode=0);
+bad('process leak',x=>x.row.group.descendants_left=[99]);bad('unknown group',x=>x.inner.child.group_measured=false);
+bad('pgid mismatch',x=>x.row.group.pgid=456);bad('cleanup killed hidden helper',x=>x.inner.child.killed=[9]);
+for(const key of ['e9','serial']){
+ bad(key+' silence',x=>x[key]=Buffer.alloc(0));bad(key+' E01',x=>x[key]=Buffer.from(log.toString().replace('E99','E01')));
+ bad(key+' marker substring',x=>x[key]=Buffer.from(log.toString().replace(api.E99_MARKER,'prefix '+api.E99_MARKER)));
+ bad(key+' later phase',x=>x[key]=Buffer.concat([log,Buffer.from('BOOT B03 GDT IDT SCHEDULER\n')]));
+ bad(key+' oversized',x=>x[key]=Buffer.alloc(65537));bad(key+' missing B02',x=>x[key]=Buffer.from(log.toString().replace('BOOT B02 MEMORY','no phase')));
+}
+for(let i=0;i<256;i++){const q=api.bootRequest(ctx,'boot-01','e99');if(JSON.stringify(q.argv)!==JSON.stringify(r.argv)||!api.inspectBootEvidence(good()).ok)throw Error('stability')}
+check('256 stable plans and classifications',true);
+fs.writeFileSync(c.result_path,JSON.stringify({ok:true,assertions,checks,cycles:256,subject:c.module,real_production_module_imported:true,fixtures_are_data_only:true,project_image_executed:false,VM_started:false},null,2)+'\n',{flag:'wx'});
+console.log(JSON.stringify({ok:true,assertions,cycles:256}));
