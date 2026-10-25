@@ -1,4 +1,4 @@
-// GTOS-DSH-111 publication engine.
+// GTOS-DSH-113 publication engine.
 //
 // Archive and seal for this packet. It keeps the strict evidence rules the earlier packets established, and it adapts
 // only the product rules that belong to 110:
@@ -16,7 +16,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const TASK = 'GTOS-DSH-111';
+const TASK = 'GTOS-DSH-113';
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const checks = [];
 function need(ok, name, detail) {
@@ -210,7 +210,7 @@ function archive(control) {
   const manifest = { task: TASK, publication: control.publication,
     files: payloadRows, root_digest: summary.digest,
     digest_recipe: receipt.digest_recipe, manifest_self_excluded: true };
-  const manifestPath = path.join(pub, 'manifest-111.json');
+  const manifestPath = path.join(pub, 'manifest-113.json');
   need(!fs.existsSync(manifestPath), 'the manifest is new');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
   return { receipt, manifest: hash(manifestPath), payload: receipt.payload };
@@ -255,7 +255,7 @@ function seal(control) {
   need(summary.digest === previous.payload.root_digest, 'the payload digest is unchanged');
 
   // Two-way set comparison against the manifest.
-  const manifestPath = path.join(pub, 'manifest-111.json');
+  const manifestPath = path.join(pub, 'manifest-113.json');
   need(fs.existsSync(manifestPath), 'the manifest exists', manifestPath);
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const onDisk = new Map(rows.map((r) => [r.path, r]));
@@ -308,14 +308,49 @@ export function certifyNativeRoot(request) {
   const reasons = [];
   const push = (text) => { if (!reasons.includes(text)) reasons.push(text); };
   const task = request.task;
+  if (typeof task !== 'string' || !/^GTOS-DSH-[0-9]{3}$/.test(task)) {
+    return { certified: false, reasons: ['request carries no task identity'], stages: 0, joined: 0 };
+  }
   const suffix = task.slice(-3);
   const reportRoot = request.report_root;
   const hostRoot = request.host_root;
+  const attemptRoot = request.attempt_root === undefined ? reportRoot : request.attempt_root;
+  const businessRoot = request.business_root;
   const logDir = path.join(hostRoot, 'logs');
   const ledgerPath = path.join(logDir, request.ledger);
 
+  const inside = (child, parent) => {
+    if (typeof child !== 'string' || typeof parent !== 'string') return false;
+    const a = path.resolve(child);
+    const b = path.resolve(parent);
+    return a === b || a.startsWith(b + path.sep);
+  };
+  // A TEST_ONLY area is any root whose path carries a test-only or fixtures segment. Business record directories are
+  // the report root itself and its frozen-helper store. A test-only area legitimately lives inside the report root, so
+  // "under the report root" cannot be the test: what must never mix is a test-only root and a business record
+  // directory.
+  const testOnlyRoot = (p) => {
+    if (typeof p !== 'string') return false;
+    const parts = path.resolve(p).split(path.sep).map((x) => x.toLowerCase());
+    return parts.includes('test-only') || parts.includes('fixtures');
+  };
+  if (typeof businessRoot === 'string') {
+    const ledgerTestOnly = testOnlyRoot(hostRoot);
+    const attemptTestOnly = testOnlyRoot(attemptRoot);
+    if (ledgerTestOnly !== attemptTestOnly) {
+      push('evidence straddles the business boundary: ledger test-only=' + ledgerTestOnly
+        + ' attempts test-only=' + attemptTestOnly);
+      return { certified: false, reasons, stages: 0, joined: 0, task };
+    }
+    if (!attemptTestOnly
+      && (inside(attemptRoot, businessRoot) || inside(attemptRoot, path.join(businessRoot, 'frozen-helpers')))) {
+      push('attempt records were placed in the business namespace while the ledger is test-only');
+      return { certified: false, reasons, stages: 0, joined: 0, task };
+    }
+  }
+
   if (!fs.existsSync(ledgerPath)) {
-    return { certified: false, reasons: ['ledger absent: ' + ledgerPath], stages: 0 };
+    return { certified: false, reasons: ['ledger absent: ' + ledgerPath], stages: 0, joined: 0, task };
   }
   const rows = fs.readFileSync(ledgerPath, 'utf8').split('\n').filter(Boolean).map((line) => {
     try { return JSON.parse(line); } catch { return null; }
@@ -323,7 +358,26 @@ export function certifyNativeRoot(request) {
 
   const results = rows.filter((r) => r.kind === 'result');
   const seen = new Set();
+  const certifiedStages = new Set();
+  const refusedStages = new Set();
   let certified = 0;
+
+  // A current execution is owned by the runner's own record of what it actually did. An attempt that is not in that
+  // index is not this run's work, whatever its file name says.
+  const actionIndex = request.action_index;
+  let indexByStage = null;
+  if (actionIndex !== undefined) {
+    if (!Array.isArray(actionIndex)) {
+      push('the action index is not a list');
+      return { certified: false, reasons, stages: results.length, joined: 0, task };
+    }
+    indexByStage = new Map();
+    for (const entry of actionIndex) {
+      if (!entry || typeof entry.stage !== 'string') { push('an action index entry carries no stage'); continue; }
+      if (indexByStage.has(entry.stage)) push('the action index lists a stage twice: ' + entry.stage);
+      indexByStage.set(entry.stage, entry);
+    }
+  }
 
   for (const row of results) {
     const stage = row.stage;
@@ -337,13 +391,27 @@ export function certifyNativeRoot(request) {
     const specPath = path.join(logDir, 'spec-' + stage + '.json');
     const innerPath = path.join(logDir, 'inner-report-' + stage + '.json');
     const rawPath = path.join(logDir, 'child-output-' + stage + '.raw');
-    const attemptPath = path.join(reportRoot, 'attempt-' + stage + '-' + suffix + '.json');
-    const terminalPath = path.join(reportRoot, 'result-' + stage + '-' + suffix + '.json');
+    const attemptPath = path.join(attemptRoot, 'attempt-' + stage + '-' + suffix + '.json');
+    const terminalPath = path.join(attemptRoot, 'result-' + stage + '-' + suffix + '.json');
+
+    if (indexByStage !== null) {
+      const entry = indexByStage.get(stage);
+      if (!entry) push('the action index does not own stage ' + stage);
+      else {
+        if (entry.task !== undefined && entry.task !== task) push('action index task disagrees: ' + stage);
+        if (entry.category !== undefined && row.category !== undefined
+          && entry.category !== row.category) push('action index category disagrees: ' + stage);
+        if (entry.route !== undefined && row.route !== undefined && entry.route !== row.route) {
+          push('action index route disagrees: ' + stage);
+        }
+      }
+    }
 
     // A row that says the guard refused before the child existed has a different, narrower obligation.
     const neverStarted = row.refused === true || row.exit_code === 2;
     if (neverStarted) {
       if (!fs.existsSync(attemptPath)) push('a refused stage still needs its attempt record: ' + stage);
+      refusedStages.add(stage);
       continue;
     }
 
@@ -360,11 +428,11 @@ export function certifyNativeRoot(request) {
     try { attempt = JSON.parse(fs.readFileSync(attemptPath, 'utf8')); } catch { push('attempt unreadable: ' + stage); continue; }
     try { terminal = JSON.parse(fs.readFileSync(terminalPath, 'utf8')); } catch { push('terminal unreadable: ' + stage); continue; }
 
-    // Identity: the same stage name, the same task and the same category on every record.
     if (spec.stage !== stage) push('spec stage disagrees: ' + stage);
     if (attempt.attempt !== stage) push('attempt stage disagrees: ' + stage);
     if (attempt.task !== task) push('attempt task disagrees: ' + stage);
     if (terminal.attempt !== undefined && terminal.attempt !== stage) push('terminal stage disagrees: ' + stage);
+    if (terminal.task !== undefined && terminal.task !== task) push('terminal task disagrees: ' + stage);
     if (attempt.category !== row.category && row.category !== undefined) {
       push('attempt category disagrees with the ledger row: ' + stage);
     }
@@ -372,39 +440,58 @@ export function certifyNativeRoot(request) {
       && attempt.operation_id !== terminal.operation_id) {
       push('operation id disagrees between attempt and terminal: ' + stage);
     }
+    // The route and the root are part of identity, not decoration: a record from another route is another execution.
+    if (spec.route !== undefined && row.route !== undefined && spec.route !== row.route) {
+      push('route disagrees between spec and ledger: ' + stage);
+    }
+    if (spec.root !== undefined && row.root !== undefined && spec.root !== row.root) {
+      push('root disagrees between spec and ledger: ' + stage);
+    }
+    if (spec.root !== undefined && request.root !== undefined
+      && path.resolve(spec.root) !== path.resolve(request.root)) {
+      push('spec root is not the declared root: ' + stage);
+    }
 
-    // The argv must be the same array in the spec and the ledger row, in order.
     if (Array.isArray(spec.argv) && Array.isArray(row.argv)
       && JSON.stringify(spec.argv) !== JSON.stringify(row.argv)) {
       push('argv disagrees between spec and ledger: ' + stage);
     }
 
-    // The attempt must be complete and must name a runner that still hashes to what it recorded.
     if (attempt.complete !== true) push('attempt is not complete: ' + stage);
     if (attempt.executor !== 'guard') push('attempt executor is not the guard: ' + stage);
     if (typeof attempt.runner_path === 'string' && fs.existsSync(attempt.runner_path)) {
       const now = fs.readFileSync(attempt.runner_path);
       if (now.length !== attempt.runner_bytes || crypto.createHash('sha256').update(now).digest('hex')
         !== attempt.runner_sha256) push('runner bytes changed since the attempt: ' + stage);
+      if (typeof request.runner === 'string'
+        && path.resolve(attempt.runner_path) !== path.resolve(request.runner)) {
+        push('attempt names a different runner than the one that owns this execution: ' + stage);
+      }
     } else {
       push('runner path is absent or missing: ' + stage);
     }
 
-    // The return code and the timeout state must agree across ledger, inner and terminal.
     const innerChild = inner.child || {};
+    // The ledger and the inner report both record the CHILD's exit code, so these must agree exactly.
     if (innerChild.returncode !== undefined && row.exit_code !== undefined
       && innerChild.returncode !== row.exit_code) {
-      push('return code disagrees between ledger and inner: ' + stage);
+      push('child return code disagrees between ledger and inner: ' + stage);
     }
-    if (terminal.transport_exit_code !== undefined && row.exit_code !== undefined
-      && terminal.transport_exit_code !== row.exit_code) {
-      push('return code disagrees between ledger and terminal: ' + stage);
+    // The inner child's deadline state against the ledger's inner field, never against the outer wrapper field.
+    if (innerChild.timed_out !== undefined) {
+      const ledgerInner = row.inner_timed_out !== undefined ? row.inner_timed_out : null;
+      if (ledgerInner !== null && innerChild.timed_out !== ledgerInner) {
+        push('inner timeout state disagrees: ' + stage);
+      }
     }
-    if (innerChild.timed_out === true && row.timed_out !== true) {
-      push('timeout state disagrees: ' + stage);
+    // The outer wrapper's own deadline is a separate fact and is compared only with itself.
+    if (row.timed_out !== undefined && typeof row.timed_out !== 'boolean') {
+      push('outer timeout state is not a boolean: ' + stage);
+    }
+    if (terminal.transport_exit_code !== undefined && typeof terminal.transport_exit_code !== 'number') {
+      push('terminal transport exit is not a number: ' + stage);
     }
 
-    // The raw capture must exist, stay within its bound, and agree with what the inner report recorded.
     if (fs.existsSync(rawPath)) {
       const rawBytes = fs.readFileSync(rawPath);
       if (rawBytes.length > 524288) push('raw capture exceeds its bound: ' + stage);
@@ -415,14 +502,43 @@ export function certifyNativeRoot(request) {
         && crypto.createHash('sha256').update(rawBytes).digest('hex') !== innerChild.output_sha256) {
         push('raw hash disagrees with the inner report: ' + stage);
       }
-      // The inner report's output_path, when present, must name this stage's own capture.
-      if (typeof innerChild.output_path === 'string'
-        && !innerChild.output_path.endsWith('child-output-' + stage + '.raw')) {
-        push('inner report names another stage raw: ' + stage);
+      if (typeof innerChild.output_path === 'string') {
+        if (!innerChild.output_path.endsWith('child-output-' + stage + '.raw')) {
+          push('inner report names another stage raw: ' + stage);
+        }
+        // The declared Linux root is the only prefix this root's captures may carry. Mapping any earlier packet's
+        // prefix onto the host root would let a foreign capture pass as this root's own.
+        if (typeof request.linux_root === 'string') {
+          const prefix = request.linux_root.replace(/\/+$/, '') + '/';
+          if (!innerChild.output_path.startsWith(prefix)) {
+            push('inner report raw lives outside the certified root: ' + stage);
+          }
+        }
       }
     }
 
+    certifiedStages.add(stage);
     certified += 1;
+  }
+
+  // A record with no ledger row is not evidence of an execution.
+  if (fs.existsSync(attemptRoot)) {
+    const orphanPattern = new RegExp('^attempt-([a-z][a-z0-9]*-[0-9]{2})-' + suffix + '[.]json$');
+    for (const name of fs.readdirSync(attemptRoot)) {
+      const match = orphanPattern.exec(name);
+      if (!match) continue;
+      const stage = match[1];
+      if (!seen.has(stage)) push('orphan attempt record with no ledger row: ' + stage);
+      else if (!certifiedStages.has(stage) && !refusedStages.has(stage)) {
+        push('attempt record belongs to a stage that did not certify: ' + stage);
+      }
+    }
+  }
+
+  if (indexByStage !== null) {
+    for (const stage of indexByStage.keys()) {
+      if (!seen.has(stage)) push('the action index names a stage the ledger never recorded: ' + stage);
+    }
   }
 
   return { certified: reasons.length === 0, reasons, stages: results.length,
@@ -438,7 +554,7 @@ if (isEngineMain) try {
   need(/^[a-z][a-z0-9]*-[0-9]{2}$/.test(control.stage), 'stage grammar', control.stage);
   need(['archive', 'seal'].includes(control.mode), 'mode', control.mode);
   need(path.isAbsolute(control.report_root), 'report root is absolute');
-  need(/^publication-111-v[0-9]{2}$/.test(control.publication), 'owned publication identity',
+  need(/^publication-113-v[0-9]{2}$/.test(control.publication), 'owned publication identity',
     control.publication);
 
   const outcome = control.mode === 'archive' ? archive(control) : seal(control);

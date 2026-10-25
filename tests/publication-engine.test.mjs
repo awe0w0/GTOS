@@ -1,4 +1,4 @@
-// GTOS-DSH-111 G0 transaction test: two real sequential commits in a real fixture repository.
+// GTOS-DSH-113 G0 transaction test: two real sequential commits in a real fixture repository.
 //
 // The point is the property 110 lacked. The second commit must reserve its consumer BEFORE it creates a commit
 // object, so the artifact collision that left 110 with "commit created, delivery incomplete" cannot happen here. The
@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const control = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-if (control.task !== 'GTOS-DSH-111') throw new Error('control is for ' + control.task);
+if (control.task !== 'GTOS-DSH-113') throw new Error('control is for ' + control.task);
 
 const R = control.report_root;
 const FIX = control.fixture_root;
@@ -54,7 +54,7 @@ const branch = 'fixture-branch';
 
 function policyFor(commitName, files, parent) {
   return {
-    task: 'GTOS-DSH-111', test_fixture_only: true,
+    task: 'GTOS-DSH-113', test_fixture_only: true,
     report_root: FIX, repository: repo, worktree, branch,
     base: parent, primary_base: base,
     git: GITEXE, empty_hooks: hooks, author,
@@ -179,7 +179,7 @@ for (const [label, committed, policy] of [['first', firstCommitted, firstPolicy]
     doc.blobs.length);
 }
 
-const summary = { task: 'GTOS-DSH-111', kind: 'g0_transaction',
+const summary = { task: 'GTOS-DSH-113', kind: 'g0_transaction',
   first_commit: firstCommitted.oid, second_commit: secondCommitted.oid,
   checks: out.length, failed: out.filter((c) => !c.ok).length, results: out,
   ok: out.every((c) => c.ok) };

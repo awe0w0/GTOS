@@ -1,4 +1,4 @@
-// GTOS-DSH-111 unified native request normaliser.
+// GTOS-DSH-113 unified native request normaliser.
 //
 // One production place that owns three things the earlier packets each wrote differently:
 //
@@ -235,7 +235,7 @@ export function claimWave(context, wave) {
 // The containers setup may create. A wave is deliberately absent from this list.
 export const SETUP_CONTAINERS = Object.freeze([
   'logs', 'evidence', 'inputs', 'frozen-helpers', 'staging', 'objects', 'test-build', 'image',
-  'tmp', 'home',
+  'tmp', 'home', 'test-only',
 ]);
 
 export function isSetupContainer(name) {
