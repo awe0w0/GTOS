@@ -13,6 +13,8 @@ namespace gtos { namespace common {
 //   bootdiag-stop=workers  halt after the worker pool ran a real job set to completion and parked its APs
 //   bootdiag-stop=runtime-init
 //                          halt after the BSP prepared and activated the native runtime stacks, before any process
+//   bootdiag-stop=runtime-objects
+//                          halt after the BSP created, proved, exited and reaped fixed native objects
 // Anything else that carries the option prefix is a rejection, never a silent fall-through, because a malformed
 // diagnostic must not let the machine continue into late startup.
 //
@@ -45,6 +47,9 @@ class BootDiagnostic {
     // interrupt, no scheduler entry and no service. It is single-CPU only by construction, because the runtime is a
     // BSP-only prototype whose stacks are not safe to hand to an AP that has not been told about them.
     StopRuntimeInit = 7,
+    // Halt after the BSP created fixed native objects, proved their private memory, exited and reaped them. The objects
+    // exist as data and are never dispatched: no user instruction runs, no task is scheduled, no interrupt is enabled.
+    StopRuntimeObjects = 8,
     };
     enum Reject {
         RejectNone = 0,
@@ -66,6 +71,8 @@ class BootDiagnostic {
   // The runtime initialisation belongs to its own phase, after the worker phase, because it needs a sealed directory and a
   // CPU set that will not grow.
   PhaseRuntimeInit = 6,
+  // The object lifecycle belongs to its own phase, after the runtime itself is initialised.
+  PhaseRuntimeObjects = 7,
     };
     struct Decision {
         uint32_t stop;

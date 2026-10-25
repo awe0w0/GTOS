@@ -1388,6 +1388,182 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     }
 
 
+    // ---------------------------------------------------------------- runtime objects
+    // The object lifecycle, in the same bounded shape as the runtime-initialisation stop: single CPU, interrupts clear,
+    // no dispatch. What it adds is the creation of fixed native objects, a proof that their private memory is really
+    // private, and their exit and reclamation.
+    //
+    // The objects are DSH-built constants compiled into this image. Nothing is loaded from a host, a disk or a network, no
+    // user program is assembled or linked, and CreateElf is never called. The user entry point exists only as data: it is
+    // never jumped to, no task is scheduled, no interrupt is enabled and no system call is dispatched.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopRuntimeObjects) {
+        CpuStartup objectInventory;
+        const bool objectInventoryPrepared =
+            objectInventory.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+        const uint32_t objectProcessors = objectInventoryPrepared
+            ? objectInventory.GetReport().detectedProcessors
+            : cpu.GetInfo().detectedLogicalProcessors;
+        LogValue("OBJECT DIAG DETECTED ", objectProcessors);
+        if (objectProcessors > 1) {
+            printf("OBJECT DIAG REFUSED MULTI CPU\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS REFUSED MULTI CPU");
+        }
+        // The same bounded initialisation the runtime-init stop performs, because Activate is a precondition for Create.
+        memory::PagingDeviceRange objectDevices[3];
+        uint32_t objectDeviceCount = 0;
+        const memory::PagingConfig objectConfig =
+            BuildPagingConfig(mbi, objectDevices, objectDeviceCount, 0, 0);
+        if (!paging.prepareIdentity(frames, objectConfig)) {
+            printf("OBJECT DIAG PAGING FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        if (!nativeRuntime.PrepareStacks(paging, frames)) {
+            printf("OBJECT DIAG STACKS FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        printf("OBJECT DIAG STACKS PREPARED\n");
+        if (!paging.enable()) {
+            printf("OBJECT DIAG ENABLE FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        if (!paging.sealForSharedProcessors()) {
+            printf("OBJECT DIAG SEAL FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        if (!nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpDisabled, false)) {
+            printf("OBJECT DIAG ACTIVATE FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        printf("OBJECT DIAG ACTIVATED\n");
+        LogValue("OBJECT DIAG CR3 ", paging.getStatistics().directoryAddress);
+        // The resource baseline every later measurement is relative to. The runtime's own stacks are permanent and are not
+        // part of what the objects consume.
+        const memory::PhysicalMemoryStatistics objectBaseline = frames.getStatistics();
+        LogValue("OBJECT DIAG BASELINE ALLOCATED ", objectBaseline.allocatedFrames);
+        LogValue("OBJECT DIAG BASELINE FREE ", objectBaseline.freeFrames);
+
+        // Two fixed objects. The code is one instruction per object: a return, so the entry is a real address inside the
+        // code range. The data differs between them, which is what makes the private-memory check meaningful.
+        static const uint8_t objectCode[16] = { 0xC3, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                                0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
+        static const uint8_t objectDataA[32] = {
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10 };
+        static const uint8_t objectDataB[32] = {
+            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+            0xA5, 0x5A, 0x3C, 0xC3, 0x0F, 0xF0, 0x69, 0x96,
+            0x5A, 0xA5, 0xC3, 0x3C, 0xF0, 0x0F, 0x96, 0x69 };
+
+        process::NativeImage imageA;
+        imageA.code = objectCode; imageA.codeBytes = sizeof(objectCode); imageA.entryOffset = 0;
+        imageA.data = objectDataA; imageA.dataBytes = sizeof(objectDataA);
+        process::NativeImage imageB;
+        imageB.code = objectCode; imageB.codeBytes = sizeof(objectCode); imageB.entryOffset = 0;
+        imageB.data = objectDataB; imageB.dataBytes = sizeof(objectDataB);
+
+        uint32_t idA = 0, idB = 0;
+        const bool createdA = nativeRuntime.Create(imageA, idA);
+        printf(createdA ? "OBJECT DIAG CREATED A\n" : "OBJECT DIAG CREATE A FAILED\n");
+        const bool createdB = createdA && nativeRuntime.Create(imageB, idB);
+        printf(createdB ? "OBJECT DIAG CREATED B\n" : "OBJECT DIAG CREATE B FAILED\n");
+        LogValue("OBJECT DIAG ID A ", idA);
+        LogValue("OBJECT DIAG ID B ", idB);
+        if (!createdA || !createdB || !idA || !idB || idA == idB) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        // The two objects share one user virtual address, so a shared page would make the reads agree. They must not.
+        uint8_t readA[32] = { 0 }, readB[32] = { 0 };
+        const bool readOkA = nativeRuntime.ReadMemory(idA, process::NativeRuntime::DataAddress, readA, sizeof(readA));
+        const bool readOkB = nativeRuntime.ReadMemory(idB, process::NativeRuntime::DataAddress, readB, sizeof(readB));
+        bool contentA = readOkA, contentB = readOkB;
+        for (uint32_t i = 0; i < sizeof(objectDataA); ++i) {
+            if (readA[i] != objectDataA[i]) contentA = false;
+            if (readB[i] != objectDataB[i]) contentB = false;
+        }
+        printf(contentA ? "OBJECT DIAG DATA A MATCHES\n" : "OBJECT DIAG DATA A WRONG\n");
+        printf(contentB ? "OBJECT DIAG DATA B MATCHES\n" : "OBJECT DIAG DATA B WRONG\n");
+        bool differ = true;
+        for (uint32_t i = 0; i < sizeof(readA); ++i) if (readA[i] == readB[i]) differ = false;
+        printf(differ ? "OBJECT DIAG DATA DIFFERS\n" : "OBJECT DIAG DATA SHARED\n");
+        // The two address spaces must be distinct, or the private-memory claim is empty.
+        process::NativeStatus statusA, statusB;
+        const bool statusOkA = nativeRuntime.Status(idA, statusA);
+        const bool statusOkB = nativeRuntime.Status(idB, statusB);
+        LogValue("OBJECT DIAG DIR A ", statusA.directory);
+        LogValue("OBJECT DIAG DIR B ", statusB.directory);
+        const bool directoriesDiffer = statusOkA && statusOkB && statusA.directory && statusB.directory
+            && statusA.directory != statusB.directory;
+        printf(directoriesDiffer ? "OBJECT DIAG ADDRESS SPACES DIFFER\n" : "OBJECT DIAG ADDRESS SPACES SHARED\n");
+        // Each object is created and not dispatched. The counters say so, and the interrupt flag still says clear.
+        const process::NativeStatistics objectCreated = nativeRuntime.Statistics();
+        LogValue("OBJECT DIAG CREATED COUNT ", objectCreated.created);
+        LogValue("OBJECT DIAG EXITED COUNT ", objectCreated.exited);
+        LogValue("OBJECT DIAG REAPED COUNT ", objectCreated.reaped);
+        uint32_t objectFlags = 0;
+        asm volatile("pushfl; popl %0" : "=r"(objectFlags));
+        printf((objectFlags & 0x200U) ? "OBJECT DIAG INTERRUPTS ENABLED\n" : "OBJECT DIAG INTERRUPTS CLEAR\n");
+        const bool notDispatched = statusOkA && statusOkB && statusA.live && statusB.live
+            && !statusA.reaped && !statusB.reaped
+            && statusA.systemCalls == 0 && statusB.systemCalls == 0
+            && objectCreated.created == 2 && objectCreated.exited == 0 && objectCreated.reaped == 0
+            && !(objectFlags & 0x200U);
+        printf(notDispatched ? "OBJECT DIAG NOT DISPATCHED\n" : "OBJECT DIAG DISPATCHED\n");
+        if (!contentA || !contentB || !differ || !directoriesDiffer || !notDispatched) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        }
+        // Exit and reclaim through the real interfaces. A created object that never ran is still a live obligation, so the
+        // same RequestExit then Reap path applies.
+        const bool exitA = nativeRuntime.RequestExit(idA, 0x11);
+        const bool exitB = nativeRuntime.RequestExit(idB, 0x22);
+        printf((exitA && exitB) ? "OBJECT DIAG EXIT REQUESTED\n" : "OBJECT DIAG EXIT FAILED\n");
+        const uint32_t objectReaped = nativeRuntime.Reap();
+        LogValue("OBJECT DIAG REAPED ", objectReaped);
+        printf(objectReaped == 2 ? "OBJECT DIAG RECLAIMED\n" : "OBJECT DIAG RECLAIM INCOMPLETE\n");
+        // The old IDs must no longer address anything, and the resource baseline must be restored.
+        // Status keeps the record and marks it reaped, which is the existing contract; a reaped object must not be live,
+        // must not be readable and must not be exitable.
+        process::NativeStatus staleA, staleB;
+        const bool staleOkA = nativeRuntime.Status(idA, staleA);
+        const bool staleOkB = nativeRuntime.Status(idB, staleB);
+        LogValue("OBJECT DIAG OLD A REAPED ", staleA.reaped ? 1U : 0U);
+        LogValue("OBJECT DIAG OLD A LIVE ", staleA.live ? 1U : 0U);
+        LogValue("OBJECT DIAG OLD B REAPED ", staleB.reaped ? 1U : 0U);
+        const bool staleGoneA = staleOkA && staleA.reaped && !staleA.live;
+        const bool staleGoneB = staleOkB && staleB.reaped && !staleB.live;
+        printf((staleGoneA && staleGoneB) ? "OBJECT DIAG OLD IDS TOMBSTONED\n" : "OBJECT DIAG OLD IDS LIVE\n");
+        uint8_t staleRead[4];
+        const bool staleReadGone = !nativeRuntime.ReadMemory(idA, process::NativeRuntime::DataAddress,
+                                                             staleRead, sizeof(staleRead));
+        printf(staleReadGone ? "OBJECT DIAG OLD ID UNREADABLE\n" : "OBJECT DIAG OLD ID READABLE\n");
+        // An old ID must not be able to exit a new object either.
+        const bool staleExitRefused = !nativeRuntime.RequestExit(idA, 0) && !nativeRuntime.RequestExit(idB, 0);
+        printf(staleExitRefused ? "OBJECT DIAG OLD ID UNEXITABLE\n" : "OBJECT DIAG OLD ID EXITABLE\n");
+        const memory::PhysicalMemoryStatistics objectAfter = frames.getStatistics();
+        LogValue("OBJECT DIAG AFTER ALLOCATED ", objectAfter.allocatedFrames);
+        LogValue("OBJECT DIAG AFTER FREE ", objectAfter.freeFrames);
+        // The runtime's own stacks are permanent, so the baseline is what the allocator held right after activation.
+        const bool restored = objectAfter.allocatedFrames == objectBaseline.allocatedFrames
+            && objectAfter.freeFrames == objectBaseline.freeFrames;
+        printf(restored ? "OBJECT DIAG RESOURCES RESTORED\n" : "OBJECT DIAG RESOURCES RETAINED\n");
+        const process::NativeStatistics objectFinal = nativeRuntime.Statistics();
+        LogValue("OBJECT DIAG FINAL CREATED ", objectFinal.created);
+        LogValue("OBJECT DIAG FINAL EXITED ", objectFinal.exited);
+        LogValue("OBJECT DIAG FINAL REAPED ", objectFinal.reaped);
+        const bool pass = exitA && exitB && objectReaped == 2 && staleGoneA && staleGoneB && staleReadGone
+            && staleExitRefused && restored && objectFinal.created == 2 && objectFinal.exited == 2
+            && objectFinal.reaped == 2;
+        if (!pass) BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeObjects));
+    }
+
+
     // Prepare resources before identity mappings are built. BSP GDT/IDT already
     // exist, while interrupts and paging remain disabled.
     CpuStartup cpuStartup;
