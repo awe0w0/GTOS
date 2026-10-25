@@ -38,7 +38,12 @@ export function inspectStaticImage(input, options = {}) {
     end32(s.address, s.size); sections.push(s);
   }
   const string = (table, offset) => {
-    check(table && table.type === 3 && offset < table.size, 'string table offset');
+      check(table && table.type === 3, 'string table required');
+      // The table's declared range must lie inside the file before any byte of it is read.
+      check(Number.isSafeInteger(table.offset) && Number.isSafeInteger(table.size)
+        && table.offset >= 0 && table.size >= 0 && table.offset <= b.length && table.size <= b.length - table.offset,
+        'string table range inside the file');
+      check(Number.isSafeInteger(offset) && offset >= 0 && offset < table.size, 'string table offset');
     const start = table.offset + offset, end = b.indexOf(0, start);
     check(end >= start && end < table.offset + table.size, 'unterminated image string');
     return b.toString('utf8', start, end);
@@ -56,13 +61,18 @@ export function inspectStaticImage(input, options = {}) {
     check(s.entrySize === 16 && s.size % 16 === 0 && s.link < shnum && sections[s.link].type === 3, 'image symbol table shape');
     for (let n = 0; n < s.size; n += 16) {
       const at = s.offset + n, section = b.readUInt16LE(at + 14);
-      check(section < shnum || section === 0xfff1 || section === 0xfff2, 'image symbol section');
-      symbols.push({ raw: string(sections[s.link], b.readUInt32LE(at)), value: b.readUInt32LE(at + 4), binding: b[at + 12] >>> 4, type: b[at + 12] & 15, section });
+        // A real section, SHN_ABS or SHN_COMMON. Every other reserved index is malformed.
+        check(section === 0 || section < shnum || section === 0xfff1 || section === 0xfff2,
+          'image symbol section index is a real section or SHN_ABS/SHN_COMMON: ' + section);
+      symbols.push({ index: n / 16, raw: string(sections[s.link], b.readUInt32LE(at)), value: b.readUInt32LE(at + 4), binding: b[at + 12] >>> 4, type: b[at + 12] & 15, section });
     }
   }
   check(symbols.length > 0, 'unstripped image symbols required');
-  const undefinedSymbols = symbols.filter(s => s.raw && s.section === 0 && (s.binding === 1 || s.binding === 2));
-  check(undefinedSymbols.length === 0, 'unresolved strong or weak image symbol');
+  // Structural, not name- or binding-dependent: any symbol whose section index is SHN_UNDEF is unresolved, whatever
+  // its name, value or binding. Only the ELF null symbol at index 0 may be undefined.
+  const undefinedSymbols = symbols.filter(s => s.index > 0 && s.section === 0);
+  check(undefinedSymbols.length === 0, 'unresolved image symbol of any name, value or binding: '
+    + JSON.stringify(undefinedSymbols.slice(0,4).map(s => ({ name: s.raw, value: s.value, binding: s.binding }))));
   check(!symbols.some(s => s.section === 0xfff2), 'unallocated COMMON image symbol');
   const defined = name => {
     const hits = symbols.filter(s => s.raw === name && s.section !== 0 && s.binding === 1);
@@ -75,21 +85,24 @@ export function inspectStaticImage(input, options = {}) {
   check(script.kernel_readonly_end >= expectedStart && script.kernel_readonly_end % 4096 === 0 && script.kernel_end >= script.kernel_readonly_end && script.kernel_end % 4096 === 0, 'page-aligned kernel boundaries');
   const loader = defined('loader'); check(loader.section < shnum && loader.section > 0 && loader.value === entry, 'entry equals real loader definition'); fileOffset(entry, 1, 1);
   check(script.start_ctors >= script.kernel_readonly_end && script.end_ctors >= script.start_ctors && script.end_ctors <= script.kernel_end && script.start_ctors % 4 === 0 && (script.end_ctors - script.start_ctors) % 4 === 0 && script.end_ctors - script.start_ctors <= 16384, 'bounded constructor pointer range');
-  const count = (script.end_ctors - script.start_ctors) / 4, constructors = [];
+    const count = (script.end_ctors - script.start_ctors) / 4, constructors = [];
+    let slotsRead = 0;
   for (let i = 0; i < count; i++) {
     const address = script.start_ctors + 4 * i, at = fileOffset(address, 4, 4), target = b.readUInt32LE(at);
     fileOffset(target, 1, 1);
     const aliases = symbols.filter(s => s.section > 0 && s.section < shnum && s.type === 2 && s.value === target && s.raw).map(s => s.raw);
-    check(aliases.length > 0, 'constructor target has a real function definition'); constructors.push({ address, target, symbols: aliases });
+      check(aliases.length > 0, 'constructor target has a real function definition');
+      constructors.push({ address, target, symbols: aliases }); slotsRead += 1;
   }
   if (options.expectedConstructors !== undefined) {
     const wanted = options.expectedConstructors;
     check(Array.isArray(wanted) && wanted.every(n => typeof n === 'string' && n.length > 0) && new Set(wanted).size === wanted.length && wanted.length === count && wanted.every((n, i) => constructors[i].symbols.includes(n)), 'exact ordered constructor ownership');
   }
+    check(slotsRead === count, 'every constructor slot was actually read: ' + slotsRead + ' of ' + count);
   check(!sections.some(s => s.name.startsWith('.fini_array') && s.size > 0), 'expected linker script discards fini array');
   const multiboot = [];
   for (let at = 0; at + 12 <= Math.min(8192, b.length); at += 4) if (b.readUInt32LE(at) === 0x1badb002 && ((b.readUInt32LE(at) + b.readUInt32LE(at + 4) + b.readUInt32LE(at + 8)) >>> 0) === 0) multiboot.push({ offset: at, flags: b.readUInt32LE(at + 4) });
   check(multiboot.length === 1 && multiboot[0].flags === 7, 'one aligned Multiboot v1 header with original flags and checksum');
   const stacks = programs.filter(p => p.type === 0x6474e551);
-  return { bytes: b.length, elf_type: 2, machine: 3, entry, programs, sections, script_symbols: script, constructors, multiboot: multiboot[0], undefined_symbols: [], executable_stack_requested: stacks.length === 1 ? !!(stacks[0].flags & 1) : null, writable_executable_loads: loads.filter(p => (p.flags & 3) === 3).length, final_initializer_addresses_validated: true, constructors_executed: false, target_execution: false, init_ready: 'unknown', services_runtime_ready: 'unknown' };
+  return { bytes: b.length, elf_type: 2, machine: 3, entry, programs, sections, symbols, script_symbols: script, constructors, multiboot: multiboot[0], undefined_symbols: undefinedSymbols.map(s => ({ name: s.raw, value: s.value, binding: s.binding })), executable_stack_requested: stacks.length === 1 ? !!(stacks[0].flags & 1) : null, writable_executable_loads: loads.filter(p => (p.flags & 3) === 3).length, final_initializer_addresses_validated: true, constructors_executed: false, target_execution: false, init_ready: 'unknown', services_runtime_ready: 'unknown' };
 }

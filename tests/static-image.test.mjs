@@ -22,8 +22,8 @@ function fixture() {
   const sectionNames = ['', '.text', '.data', '.bss', '.strtab', '.symtab', '.shstrtab']; let sn = ''; const no = {}; for (const s of sectionNames) { no[s] = Buffer.byteLength(sn); sn += s + '\0'; } b.write(sn, 0x1300);
   const section = (i, name, type, flags, address, offset, size, link = 0, entry = 0) => { const at = sh + 40 * i; [no[name], type, flags, address, offset, size, link, 0, 4, entry].forEach((v, n) => b.writeUInt32LE(v, at + 4 * n)); };
   section(0, '', 0, 0, 0, 0, 0); section(1, '.text', 1, 6, 0x100100, 0x100, 0x20); section(2, '.data', 1, 3, 0x101000, 0x1000, 8); section(3, '.bss', 8, 3, 0x101008, 0x1008, 0x200); section(4, '.strtab', 3, 0, 0, 0x1100, Buffer.byteLength(st)); section(5, '.symtab', 2, 0, 0, 0x1200, 11 * 16, 4, 16); section(6, '.shstrtab', 3, 0, 0, 0x1300, Buffer.byteLength(sn));
-  const symbols = [['loader', 0x100110, 1, 2], ['kernel_start', 0x100000, 0xfff1, 0], ['kernel_readonly_start', 0x100000, 0xfff1, 0], ['kernel_readonly_end', 0x101000, 0xfff1, 0], ['kernel_end', 0x102000, 0xfff1, 0], ['start_ctors', 0x101000, 2, 0], ['end_ctors', 0x101008, 2, 0], [names[0], 0x100114, 1, 2], [names[1], 0x100118, 1, 2], ['missing', 0, 0, 0]];
-  symbols.forEach(([name, value, section, type], i) => { const at = 0x1200 + 16 * (i + 1); b.writeUInt32LE(offsets[name], at); b.writeUInt32LE(value, at + 4); b[at + 12] = name === 'missing' ? 0 : ((name.startsWith('_GLOBAL') ? 0 : 1) << 4) | type; b.writeUInt16LE(section, at + 14); });
+  const symbols = [['loader', 0x100110, 1, 2], ['kernel_start', 0x100000, 0xfff1, 0], ['kernel_readonly_start', 0x100000, 0xfff1, 0], ['kernel_readonly_end', 0x101000, 0xfff1, 0], ['kernel_end', 0x102000, 0xfff1, 0], ['start_ctors', 0x101000, 2, 0], ['end_ctors', 0x101008, 2, 0], [names[0], 0x100114, 1, 2], [names[1], 0x100118, 1, 2], ['missing', 0x100120, 1, 2]];
+  symbols.forEach(([name, value, section, type], i) => { const at = 0x1200 + 16 * (i + 1); b.writeUInt32LE(offsets[name], at); b.writeUInt32LE(value, at + 4); b[at + 12] = ((name.startsWith('_GLOBAL') || name === 'missing' ? 0 : 1) << 4) | type; b.writeUInt16LE(section, at + 14); });
   return b;
 }
 const expected = { expectedConstructors: names };
@@ -52,8 +52,11 @@ rejects('NOBITS beyond load memory rejected', b => b.writeUInt32LE(0x4000, 0x140
 rejects('invalid symbol section rejected', b => b.writeUInt16LE(8, 0x1210 + 14));
 rejects('symbol table invalid linked section rejected', b => b.writeUInt32LE(1, 0x1400 + 5 * 40 + 24));
 rejects('symbol table invalid entry size rejected', b => b.writeUInt32LE(15, 0x1400 + 5 * 40 + 36));
-rejects('strong undefined rejected', b => { b[0x1200 + 10 * 16 + 12] = 16; });
-rejects('weak undefined rejected', b => { b[0x1200 + 10 * 16 + 12] = 32; });
+const undefine = (b, binding) => { b[0x1200 + 10 * 16 + 12] = binding; b.writeUInt16LE(0, 0x1200 + 10 * 16 + 14); };
+  rejects('strong undefined rejected', b => undefine(b, 16));
+  rejects('local undefined rejected', b => undefine(b, 0));
+  rejects('nameless undefined rejected', b => { undefine(b, 16); b.writeUInt32LE(0, 0x1200 + 10 * 16); });
+rejects('weak undefined rejected', b => undefine(b, 32));
 rejects('missing GLOBAL script name rejected', b => { b[0x1200 + 2 * 16 + 12] = 0; });
 rejects('entry differs from loader rejected', b => b.writeUInt32LE(0x100114, 24));
 rejects('entry outside executable load rejected', b => b.writeUInt32LE(6, 52 + 24));
