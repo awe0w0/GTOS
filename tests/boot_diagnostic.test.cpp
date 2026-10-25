@@ -158,6 +158,64 @@ extern "C" int bootDiagnosticTestMain() {
     ExpectStop(Literal("bootdiag-stop=memory "), Diagnostic::StopMemory,
                "a trailing space after the token is accepted");
 
+    // ---- the two new diagnostic options -------------------------------------------------------
+    ExpectStop(Literal("bootdiag-stop=ap"), Diagnostic::StopAp, "the exact ap token");
+    ExpectStop(Literal("bootdiag-stop=paging"), Diagnostic::StopPaging, "the exact paging token");
+    ExpectStop(Literal("legacy live serial bootlog bootdiag-stop=ap"), Diagnostic::StopAp,
+               "ap after ordinary tokens");
+    ExpectStop(Literal("legacy live serial bootlog bootdiag-stop=paging"), Diagnostic::StopPaging,
+               "paging after ordinary tokens");
+    ExpectStop(Literal("  bootdiag-stop=paging  "), Diagnostic::StopPaging,
+               "paging with surrounding spaces");
+    // ---- the new values obey the same rejection rules as the old ones ------------------------
+    ExpectReject(Literal("bootdiag-stop=a"), Diagnostic::RejectUnknownValue,
+                 "a truncated ap value is unknown");
+    ExpectReject(Literal("bootdiag-stop=APP"), Diagnostic::RejectUnknownValue,
+                 "the ap value is case sensitive");
+    ExpectReject(Literal("bootdiag-stop=aping"), Diagnostic::RejectUnknownValue,
+                 "a suffix on the ap value is unknown");
+    ExpectReject(Literal("bootdiag-stop=pag"), Diagnostic::RejectUnknownValue,
+                 "a truncated paging value is unknown");
+    ExpectReject(Literal("bootdiag-stop=pagingx"), Diagnostic::RejectUnknownValue,
+                 "a suffix on the paging value is unknown");
+    ExpectReject(Literal("bootdiag-stop=ap bootdiag-stop=ap"), Diagnostic::RejectDuplicate,
+                 "a duplicate ap option refuses");
+    ExpectReject(Literal("bootdiag-stop=paging bootdiag-stop=paging"), Diagnostic::RejectDuplicate,
+                 "a duplicate paging option refuses");
+    ExpectReject(Literal("bootdiag-stop=ap bootdiag-stop=paging"), Diagnostic::RejectDuplicate,
+                 "two different diagnostic stops refuse");
+    ExpectReject(Literal("bootdiag-stop=memory bootdiag-stop=ap"), Diagnostic::RejectDuplicate,
+                 "an old and a new stop still refuse as a duplicate");
+    // ---- the new values respect the 256 byte span contract -----------------------------------
+    {
+        static char apAtBound[256];
+        const char* head = "bootdiag-stop=ap ";
+        u32 n = 0;
+        while (head[n]) { apAtBound[n] = head[n]; ++n; }
+        while (n < 256) apAtBound[n++] = 'l';
+        ExpectStop(Span{apAtBound, 256}, Diagnostic::StopAp,
+                   "the ap token inside the 256 byte bound is accepted");
+    }
+    {
+        static char pagingUnterminated[32];
+        const char* head = "bootdiag-stop=paging";
+        u32 n = 0;
+        while (head[n]) { pagingUnterminated[n] = head[n]; ++n; }
+        ExpectReject(Span{pagingUnterminated, n}, Diagnostic::RejectUnterminated,
+                     "an unterminated paging token refuses");
+    }
+    // ---- old option regression: the original values are unchanged ----------------------------
+    ExpectStop(Literal("bootdiag-stop=memory"), Diagnostic::StopMemory,
+               "regression: memory is still the memory stop");
+    ExpectStop(Literal("bootdiag-stop=tables"), Diagnostic::StopTables,
+               "regression: tables is still the tables stop");
+    ExpectStop(Literal("bootlog-fail"), Diagnostic::StopNone,
+               "regression: the legacy E99 token is still not a stop");
+    ExpectReject(Literal("bootdiag-stop=bogus"), Diagnostic::RejectUnknownValue,
+                 "regression: an unknown value still refuses");
+    ExpectReject(Literal("bootdiag-stop="), Diagnostic::RejectEmptyValue,
+                 "regression: an empty value still refuses");
+
     // ================================================================ similar prefix and suffix tokens
     // These are ordinary tokens, not our option, so the flow is unchanged rather than refused.
     ExpectStop(Literal("bootdiag-stopx=memory"), Diagnostic::StopNone,
@@ -321,6 +379,26 @@ extern "C" int bootDiagnosticTestMain() {
         Expect(!TextEquals(memory, tables), "memory and tables markers differ in content");
         Expect(!TextEquals(memory, reject), "memory and reject markers differ in content");
         Expect(!TextEquals(tables, reject), "tables and reject markers differ in content");
+        const char* ap = Diagnostic::Marker(Diagnostic::StopAp);
+        const char* paging = Diagnostic::Marker(Diagnostic::StopPaging);
+        Expect(ap != 0, "ap has a marker");
+        Expect(paging != 0, "paging has a marker");
+        // Every marker pair must differ, so a log reader can never confuse two checkpoints.
+        const char* all[5] = {memory, tables, ap, paging, reject};
+        bool allDistinct = true;
+        for (u32 i = 0; i < 5; ++i)
+            for (u32 j = i + 1; j < 5; ++j)
+                if (TextEquals(all[i], all[j])) allDistinct = false;
+        Expect(allDistinct, "all five markers differ in content");
+        Expect(Contains(ap, "AP"), "the ap marker names AP");
+        Expect(Contains(paging, "PAGING"), "the paging marker names PAGING");
+        Expect(!Contains(ap, "CHECKS PASSED"), "the ap marker claims no memory pass");
+        Expect(!Contains(ap, "TABLES"), "the ap marker cannot be mistaken for the tables checkpoint");
+        Expect(!Contains(tables, "AP "), "the tables marker cannot be mistaken for the ap checkpoint");
+        Expect(!Contains(paging, "AP "), "the paging marker cannot be mistaken for the ap checkpoint");
+        Expect(!Contains(paging, "CHECKS PASSED"),
+               "the paging marker cannot be mistaken for a memory pass");
+        Expect(Contains(paging, "OWNED MAP"), "the paging marker names the owned map probe");
         // And each must be recognisable on its own, so a log reader can identify which one appeared.
         Expect(Contains(memory, "MEMORY"), "the memory marker names MEMORY");
         Expect(Contains(tables, "TABLES"), "the tables marker names TABLES");
@@ -344,6 +422,24 @@ extern "C" int bootDiagnosticTestMain() {
     Expect(Diagnostic::RequiredPhase(Diagnostic::StopMemory)
            < Diagnostic::RequiredPhase(Diagnostic::StopTables),
            "memory is dominated by tables");
+    Expect(Diagnostic::RequiredPhase(Diagnostic::StopAp) == Diagnostic::PhaseAp,
+           "ap belongs to the ap phase");
+    Expect(Diagnostic::RequiredPhase(Diagnostic::StopPaging) == Diagnostic::PhasePaging,
+           "paging belongs to the paging phase");
+    // The phase order is the real boot order, so each later checkpoint strictly dominates the earlier ones.
+    Expect(Diagnostic::RequiredPhase(Diagnostic::StopTables)
+           < Diagnostic::RequiredPhase(Diagnostic::StopAp),
+           "tables is dominated by ap");
+    Expect(Diagnostic::RequiredPhase(Diagnostic::StopAp)
+           < Diagnostic::RequiredPhase(Diagnostic::StopPaging),
+           "ap is dominated by paging");
+    // The value name a caller reports must be the value the parser accepts, or a log could name the wrong stop.
+    Expect(TextEquals(Diagnostic::ValueName(Diagnostic::StopMemory), "memory"), "memory value name");
+    Expect(TextEquals(Diagnostic::ValueName(Diagnostic::StopTables), "tables"), "tables value name");
+    Expect(TextEquals(Diagnostic::ValueName(Diagnostic::StopAp), "ap"), "ap value name");
+    Expect(TextEquals(Diagnostic::ValueName(Diagnostic::StopPaging), "paging"), "paging value name");
+    Expect(Diagnostic::ValueName(Diagnostic::StopNone) == 0, "no stop has no value name");
+    Expect(Diagnostic::ValueName(Diagnostic::StopReject) == 0, "reject has no value name");
     Expect(Diagnostic::RequiredPhase(Diagnostic::StopReject)
            < Diagnostic::RequiredPhase(Diagnostic::StopMemory),
            "reject is dominated by memory");

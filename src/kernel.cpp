@@ -301,6 +301,35 @@ extern "C" void callConstructors() {
         (*i)();
 }
 extern "C" uint8_t kernel_start, kernel_end, kernel_readonly_start, kernel_readonly_end;
+// One builder for the PagingConfig used by the default B06 path and by the paging diagnostic. A null framebuffer
+// mode means the caller runs before graphics, and a zero LAPIC address means it runs before AP preparation.
+static memory::PagingConfig BuildPagingConfig(const memory::MultibootInfo *mbi,
+                                              memory::PagingDeviceRange *devices,
+                                              uint32_t &deviceCount,
+                                              const FramebufferMode *framebufferMode,
+                                              uint32_t localApicAddress) {
+    deviceCount = 0;
+    devices[deviceCount].address = 0xA0000;
+    devices[deviceCount++].length = 0x20000;
+    if (framebufferMode) {
+        const FramebufferMode &mode = *framebufferMode;
+        uint64_t begin = mbi->framebufferAddress & ~4095ULL;
+        uint64_t end =
+            (mbi->framebufferAddress + (uint64_t)mode.pitch * mode.height + 4095) & ~4095ULL;
+        if (end > 0x100000000ULL || end <= begin || end - begin > 0xFFFFFFFFULL)
+            Panic("FRAMEBUFFER MAPPING RANGE", "E11");
+        devices[deviceCount].address = (uint32_t)begin;
+        devices[deviceCount++].length = (uint32_t)(end - begin);
+    }
+    if (localApicAddress) {
+        devices[deviceCount].address = localApicAddress;
+        devices[deviceCount++].length = 4096;
+    }
+    const memory::PagingConfig config = {(uint32_t)&kernel_start, (uint32_t)&kernel_end,
+                                         (uint32_t)&kernel_readonly_start,
+                                         (uint32_t)&kernel_readonly_end, mbi, devices, deviceCount};
+    return config;
+}
 static memory::PhysicalMemoryManager frames;
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
@@ -910,6 +939,153 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     // sti here, has not run. The AP prepare, storage, graphics, paging and every service are dominated.
     if (bootDiagnostic.stop == common::BootDiagnostic::StopTables)
         BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopTables));
+    // The AP diagnostic runs here: the GDT and IDT exist and are loaded, interrupts are still disabled, and
+    // nothing has entered the work pool, storage, graphics or any service. It uses its own CpuStartup instance,
+    // so the default instance below is untouched and the default flow is unchanged.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopAp) {
+        CpuStartup apDiagnostic;
+        const bool apPrepared =
+            apDiagnostic.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+        CpuStartupReport apReady = apDiagnostic.GetReport();
+        LogValue("AP DIAG DETECTED ", apReady.detectedProcessors);
+        LogValue("AP DIAG BSP APIC ", cpu.GetInfo().bspApicId);
+        if (!apPrepared) {
+            printf("AP DIAG PREPARE FAILED ");
+            printf(CpuStartup::ErrorName(apDiagnostic.GetReport().error));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG AP CHECKPOINT NOT REACHED");
+        }
+        // A single detected processor is an honest degrade: no AP is started and no acknowledgement is invented.
+        if (apReady.detectedProcessors <= 1) {
+            const bool singleStarted = apDiagnostic.StartPrepared(0, 0);
+            CpuStartupReport single = apDiagnostic.GetReport();
+            printf("AP DIAG SINGLE CPU\n");
+            LogValue("AP DIAG ATTEMPTED ", single.attemptedAps);
+            LogValue("AP DIAG ACK ", single.acknowledgedAps);
+            LogValue("AP DIAG PARKED ", single.parkedAps);
+            if (!singleStarted || single.attemptedAps != 0 || single.acknowledgedAps != 0
+                || single.parkedAps != 0)
+                BootDiagnosticHalt("BOOTDIAG AP CHECKPOINT NOT REACHED");
+            BootDiagnosticHalt("BOOTDIAG AP SINGLE CPU NO AP STARTED");
+        }
+        // A null continuation parks every AP: it publishes its own identity and halts without entering the work
+        // pool. Nothing here dispatches work, starts a service or enables a global interrupt.
+        const bool apStarted = apDiagnostic.StartPrepared(0, 0);
+        CpuStartupReport ap = apDiagnostic.GetReport();
+        uint32_t freshAcks = 0, verifiedParked = 0, staleOrForeign = 0;
+        for (uint32_t index = 0; index < ap.detectedProcessors; ++index) {
+            CpuStartupProcessorInfo info;
+            if (!apDiagnostic.GetProcessor(index, info)) continue;
+            if (info.state == CpuStartupBootstrap) continue;
+            LogValue("AP DIAG RECORD ", index);
+            LogValue("AP DIAG APIC ", info.apicId);
+            LogValue("AP DIAG OBSERVED ", info.observedApicId);
+            LogValue("AP DIAG STATE ", (uint32_t)info.state);
+            LogValue("AP DIAG STACK ", info.observedStackPointer);
+            LogValue("AP DIAG CHECKSUM ", info.selfTestChecksum);
+            // Prepare resets each record observation to a sentinel, so a real value equal to the record's own APIC
+            // id can only have been published by this run's AP. A record naming the BSP, another id, or the
+            // sentinel is not a fresh acknowledgement and is counted as stale or foreign.
+            if (info.observedApicId == info.apicId && info.apicId != cpu.GetInfo().bspApicId)
+                ++freshAcks;
+            else if (info.observedApicId != 0xFFFFFFFFU)
+                ++staleOrForeign;
+            if (info.state == CpuStartupParked) ++verifiedParked;
+        }
+        LogValue("AP DIAG ATTEMPTED ", ap.attemptedAps);
+        LogValue("AP DIAG ACK ", ap.acknowledgedAps);
+        LogValue("AP DIAG PARKED ", ap.parkedAps);
+        LogValue("AP DIAG FAILED ", ap.failedAps);
+        LogValue("AP DIAG FRESH ACK ", freshAcks);
+        LogValue("AP DIAG STALE ACK ", staleOrForeign);
+        printf(apStarted ? "AP DIAG START PASS\n" : "AP DIAG START LIMITED\n");
+        printf(CpuStartup::ErrorName(ap.error));
+        printf("\n");
+        // The checkpoint marker requires the BSP to have observed a fresh, non-BSP, parked acknowledgement from
+        // the real AP entry, with no stale or foreign observation and no failed AP.
+        if (!apStarted || freshAcks == 0 || verifiedParked == 0 || staleOrForeign != 0
+            || ap.failedAps != 0)
+            BootDiagnosticHalt("BOOTDIAG AP CHECKPOINT NOT REACHED");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopAp));
+    }
+    // The paging diagnostic is single-CPU only and runs before any AP is started, so no cross-core TLB question
+    // arises. It calls the same KernelPaging implementation the default B06 path uses.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopPaging) {
+        memory::PagingDeviceRange diagnosticDevices[3];
+        uint32_t diagnosticDeviceCount = 0;
+        const memory::PagingConfig diagnosticConfig =
+            BuildPagingConfig(mbi, diagnosticDevices, diagnosticDeviceCount, 0, 0);
+        if (!paging.prepareIdentity(frames, diagnosticConfig)) {
+            printf("PAGING DIAG PREPARE FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG PAGING CHECKPOINT NOT REACHED");
+        }
+        // Two owned frames, each mapped at its own virtual page above the identity-mapped RAM, so the probe
+        // cannot collide with the boot identity range and a fresh page table must be allocated for it.
+        const uint32_t canaryVirtualA = 0x40000000U, canaryVirtualB = 0x40001000U;
+        uint32_t canaryPhysicalA = 0, canaryPhysicalB = 0;
+        const bool canaryMapped =
+            frames.allocateContiguous(1, canaryPhysicalA)
+            && frames.allocateContiguous(1, canaryPhysicalB)
+            && paging.mapOwnedPage(canaryVirtualA, canaryPhysicalA, true)
+            && paging.mapOwnedPage(canaryVirtualB, canaryPhysicalB, true);
+        if (!canaryMapped) {
+            printf("PAGING DIAG MAP FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG PAGING CHECKPOINT NOT REACHED");
+        }
+        if (!paging.enable()) {
+            printf("PAGING DIAG ENABLE FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG PAGING CHECKPOINT NOT REACHED");
+        }
+        uint32_t cr0After, cr3After;
+        asm volatile("mov %%cr0,%0" : "=r"(cr0After));
+        asm volatile("mov %%cr3,%0" : "=r"(cr3After));
+        const memory::PagingStatistics stats = paging.getStatistics();
+        // Write through the owned virtual pages, then read back through the physical identity addresses. Two
+        // distinct patterns on two distinct frames prove the mapping is not an alias of the identity range.
+        const uint32_t patternA = 0x5A5AA5A5U, patternB = 0xC3C33C3CU;
+        *(volatile uint32_t *)canaryVirtualA = patternA;
+        *(volatile uint32_t *)canaryVirtualB = patternB;
+        const uint32_t viaVirtualA = *(volatile uint32_t *)canaryVirtualA;
+        const uint32_t viaVirtualB = *(volatile uint32_t *)canaryVirtualB;
+        const uint32_t viaPhysicalA = *(volatile uint32_t *)canaryPhysicalA;
+        const uint32_t viaPhysicalB = *(volatile uint32_t *)canaryPhysicalB;
+        memory::PagingMapping mappingA, mappingB, hole;
+        const bool queryA = paging.query(canaryVirtualA, mappingA);
+        const bool queryB = paging.query(canaryVirtualB, mappingB);
+        const bool holeAbsent = !paging.query(0, hole);
+        LogValue("PAGING DIAG CR0 ", cr0After);
+        LogValue("PAGING DIAG CR3 ", cr3After);
+        LogValue("PAGING DIAG DIR ", stats.directoryAddress);
+        LogValue("PAGING DIAG PAGES ", stats.mappedPages);
+        LogValue("PAGING DIAG TABLES ", stats.pageTableFrames);
+        LogValue("PAGING DIAG CANARY A ", viaPhysicalA);
+        LogValue("PAGING DIAG CANARY B ", viaPhysicalB);
+        LogValue("PAGING DIAG VIRTUAL A ", viaVirtualA);
+        LogValue("PAGING DIAG VIRTUAL B ", viaVirtualB);
+        LogValue("PAGING DIAG PHYS A ", mappingA.physicalAddress);
+        LogValue("PAGING DIAG PHYS B ", mappingB.physicalAddress);
+        const bool pgSet = (cr0After & 0x80000000U) != 0 && (cr0After & 0x00010000U) != 0;
+        const bool cr3Matches = (cr3After & 0xFFFFF000U) == (stats.directoryAddress & 0xFFFFF000U);
+        const bool probesPass = viaVirtualA == patternA && viaVirtualB == patternB
+            && viaPhysicalA == patternA && viaPhysicalB == patternB && queryA && queryB && holeAbsent
+            && mappingA.physicalAddress == canaryPhysicalA && mappingB.physicalAddress == canaryPhysicalB
+            && canaryPhysicalA != canaryPhysicalB && mappingA.managed && mappingB.managed;
+        printf(stats.enabled ? "PAGING DIAG ENABLED\n" : "PAGING DIAG NOT ENABLED\n");
+        printf(pgSet ? "PAGING DIAG PG WP SET\n" : "PAGING DIAG PG WP MISSING\n");
+        printf(cr3Matches ? "PAGING DIAG CR3 MATCH\n" : "PAGING DIAG CR3 MISMATCH\n");
+        printf(probesPass ? "PAGING DIAG OWNED MAP PASS\n" : "PAGING DIAG OWNED MAP FAIL\n");
+        // The checkpoint marker requires the real CR0/CR3 state and the real owned-mapping probe, not just a
+        // successful call to the enable function.
+        if (!stats.enabled || !pgSet || !cr3Matches || !probesPass)
+            BootDiagnosticHalt("BOOTDIAG PAGING CHECKPOINT NOT REACHED");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopPaging));
+    }
     // Prepare resources before identity mappings are built. BSP GDT/IDT already
     // exist, while interrupts and paging remain disabled.
     CpuStartup cpuStartup;
@@ -1012,30 +1188,13 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         Panic("VGA MODE", "E10");
     graphicsActive = true;
     BootStage("B06", "PAGING");
-    memory::PagingDeviceRange devices[3] = {{0xA0000, 0x20000}, {0, 0}, {0, 0}};
-    uint32_t deviceCount = 1;
-    if (modern) {
-        uint64_t begin = mbi->framebufferAddress & ~4095ULL;
-        uint64_t end =
-            (mbi->framebufferAddress + (uint64_t)mode.pitch * mode.height + 4095) & ~4095ULL;
-        if (end > 0x100000000ULL || end <= begin || end - begin > 0xFFFFFFFFULL)
-            Panic("FRAMEBUFFER MAPPING RANGE", "E11");
-        devices[deviceCount].address = (uint32_t)begin;
-        devices[deviceCount++].length = (uint32_t)(end - begin);
-    }
-    // Never guess a LAPIC address: Prepare validated this page against the
-    // executing BSP's APIC-base MSR, firmware inventory and hardware identity.
-    if (apsPrepared && apReport.localApicAddress) {
-        devices[deviceCount].address = apReport.localApicAddress;
-        devices[deviceCount++].length = 4096;
-    }
-    const memory::PagingConfig pagingConfig = {(uint32_t)&kernel_start,
-                                               (uint32_t)&kernel_end,
-                                               (uint32_t)&kernel_readonly_start,
-                                               (uint32_t)&kernel_readonly_end,
-                                               mbi,
-                                               devices,
-                                               deviceCount};
+    memory::PagingDeviceRange devices[3];
+    uint32_t deviceCount = 0;
+    // Never guess a LAPIC address: Prepare validated this page against the executing BSP's APIC-base MSR,
+    // firmware inventory and hardware identity, so only a validated address is mapped here.
+    const memory::PagingConfig pagingConfig =
+        BuildPagingConfig(mbi, devices, deviceCount, modern ? &mode : 0,
+                          (apsPrepared && apReport.localApicAddress) ? apReport.localApicAddress : 0);
     if (!paging.prepareIdentity(frames, pagingConfig))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
     bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames);

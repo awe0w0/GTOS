@@ -5,14 +5,18 @@ namespace gtos { namespace common {
 // Pure classification of the bounded boot command line for the private diagnostic stops. No heap, no device IO, no
 // globals, no allocation: the helper reads only the caller's span and returns a small value.
 //
-// The only recognised option is the whole space-delimited token "bootdiag-stop=memory" or "bootdiag-stop=tables".
+// The only recognised options are the whole space-delimited tokens
+//   bootdiag-stop=memory   halt after the real physical and heap self-tests succeed
+//   bootdiag-stop=tables   halt after the GDT and IDT are constructed and loaded
+//   bootdiag-stop=ap       halt after the AP handshake diagnostic, before any worker or service
+//   bootdiag-stop=paging   halt after real bootstrap paging is enabled and the owned mapping probe passes
 // Anything else that carries the option prefix is a rejection, never a silent fall-through, because a malformed
 // diagnostic must not let the machine continue into late startup.
 //
 // The legacy "bootlog-fail" token keeps its E99 precedence. The kernel checks that token first, so a command line
 // carrying both never reaches this helper's stop arms.
 //
-// Span contract, stated exactly because the earlier packet left it ambiguous:
+// Span contract, stated exactly:
 //
 //   `span`     the first readable byte of the command line. A null span is "no command line" and yields StopNone.
 //   `capacity` the number of readable bytes the caller guarantees at `span`. It is NOT an upper bound the helper may
@@ -26,10 +30,12 @@ namespace gtos { namespace common {
 class BootDiagnostic {
   public:
     enum Stop {
-        StopNone = 0,   // no diagnostic option: the normal boot flow is unchanged
-        StopMemory = 1, // halt after the real physical and heap self-tests succeed
-        StopTables = 2, // halt after the GDT and IDT are constructed and loaded
-        StopReject = 3, // malformed option: fail closed before any late startup
+        StopNone = 0,    // no diagnostic option: the normal boot flow is unchanged
+        StopMemory = 1,  // halt after the real physical and heap self-tests succeed
+        StopTables = 2,  // halt after the GDT and IDT are constructed and loaded
+        StopReject = 3,  // malformed option: fail closed before any late startup
+        StopAp = 4,      // halt after the AP handshake diagnostic
+        StopPaging = 5,  // halt after real bootstrap paging is enabled
     };
     enum Reject {
         RejectNone = 0,
@@ -39,8 +45,15 @@ class BootDiagnostic {
         RejectUnterminated = 4,
         RejectOversizeSpan = 5,
     };
-    // Phase ordering. A stop may only fire once its phase is reached; the kernel calls the stop arm at the matching cut.
-    enum Phase { PhaseCommandLine = 0, PhaseMemory = 1, PhaseTables = 2 };
+    // Phase ordering. A stop may only fire once its phase is reached; the kernel calls the stop arm at the matching
+    // cut. The order is the real boot order, so a later phase strictly dominates an earlier one.
+    enum Phase {
+        PhaseCommandLine = 0,
+        PhaseMemory = 1,
+        PhaseTables = 2,
+        PhaseAp = 3,
+        PhasePaging = 4,
+    };
     struct Decision {
         uint32_t stop;
         uint32_t reject;
@@ -59,6 +72,8 @@ class BootDiagnostic {
     static const char* RejectName(uint32_t reject);
     // The phase a stop belongs to. StopReject belongs to the command-line phase.
     static uint32_t RequiredPhase(uint32_t stop);
+    // The option value a stop is selected by, so a caller can name the stop it accepted without duplicating a table.
+    static const char* ValueName(uint32_t stop);
 };
 } }
 #endif

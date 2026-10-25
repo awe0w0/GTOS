@@ -9,6 +9,8 @@ namespace {
 const char kOptionPrefix[BootDiagnostic::OptionPrefixLength + 1] = "bootdiag-stop=";
 const char kMemoryValue[] = "memory";
 const char kTablesValue[] = "tables";
+const char kApValue[] = "ap";
+const char kPagingValue[] = "paging";
 
 // Exact, length-bounded comparison against a NUL-terminated literal.
 bool Equals(const char* span, const char* text, uint32_t length) {
@@ -17,6 +19,15 @@ bool Equals(const char* span, const char* text, uint32_t length) {
             return false;
     }
     return text[length] == '\0';
+}
+
+// One table maps a value to its stop, so the parser and ValueName can never disagree about which token is accepted.
+uint32_t StopForValue(const char* span, uint32_t length) {
+    if (Equals(span, kMemoryValue, length)) return BootDiagnostic::StopMemory;
+    if (Equals(span, kTablesValue, length)) return BootDiagnostic::StopTables;
+    if (Equals(span, kApValue, length)) return BootDiagnostic::StopAp;
+    if (Equals(span, kPagingValue, length)) return BootDiagnostic::StopPaging;
+    return BootDiagnostic::StopNone;
 }
 
 } // namespace
@@ -86,12 +97,8 @@ BootDiagnostic::Decision BootDiagnostic::Parse(const char* span, uint32_t capaci
             decision.reject = RejectEmptyValue;
             return decision;
         }
-        uint32_t thisStop = StopNone;
-        if (Equals(span + valueStart, kMemoryValue, valueLength))
-            thisStop = StopMemory;
-        else if (Equals(span + valueStart, kTablesValue, valueLength))
-            thisStop = StopTables;
-        else {
+        const uint32_t thisStop = StopForValue(span + valueStart, valueLength);
+        if (thisStop == StopNone) {
             decision.stop = StopReject;
             decision.reject = RejectUnknownValue;
             return decision;
@@ -117,6 +124,10 @@ const char* BootDiagnostic::Marker(uint32_t stop) {
         return "BOOTDIAG MEMORY CHECKS PASSED";
     case StopTables:
         return "BOOTDIAG TABLES CHECKPOINT";
+    case StopAp:
+        return "BOOTDIAG AP CHECKPOINT";
+    case StopPaging:
+        return "BOOTDIAG PAGING ENABLED OWNED MAP";
     case StopReject:
         return "BOOTDIAG REJECT invalid-option";
     default:
@@ -147,8 +158,27 @@ uint32_t BootDiagnostic::RequiredPhase(uint32_t stop) {
         return PhaseMemory;
     case StopTables:
         return PhaseTables;
+    case StopAp:
+        return PhaseAp;
+    case StopPaging:
+        return PhasePaging;
     default:
         return PhaseCommandLine;
+    }
+}
+
+const char* BootDiagnostic::ValueName(uint32_t stop) {
+    switch (stop) {
+    case StopMemory:
+        return kMemoryValue;
+    case StopTables:
+        return kTablesValue;
+    case StopAp:
+        return kApValue;
+    case StopPaging:
+        return kPagingValue;
+    default:
+        return 0;
     }
 }
 
