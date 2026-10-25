@@ -1,5 +1,6 @@
 #include <common/types.h>
 #include <common/boot_log.h>
+#include <common/boot_diagnostic.h>
 #include <gui/modern_painter.h>
 #include <gdt.h>
 #include <memorymanagement.h>
@@ -282,6 +283,15 @@ static void Panic(const char *message, const char* code = "E00") {
     printf("PANIC "); printf(code); printf(" PHASE "); printf(bootPhase); printf(" ");
     printf(message); printf("\n");
     bootLogEmergencyScreen();
+    for (;;) asm volatile("cli; hlt");
+}
+// A private diagnostic stop. It prints one marker through the ordinary printf sink, so the BootLog, the E9
+// port and the UART all receive it, and then halts the BSP with interrupts disabled. Nothing after the cut
+// runs. Only the guest executes this, and only when the command line asked for it.
+static void BootDiagnosticHalt(const char *marker) {
+    asm volatile("cli" ::: "memory");
+    printf(marker);
+    printf("\n");
     for (;;) asm volatile("cli; hlt");
 }
 typedef void (*constructor)();
@@ -843,6 +853,19 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     // The sole deliberate failure token is absent from normal delivery menus.
     // No storage initialization or runtime workload occurs on this test path.
     if (BootOption(mbi, "bootlog-fail")) Panic("SAFE DIAGNOSTIC FAILURE", "E99");
+    // The legacy E99 token above keeps its precedence, so a command line carrying both never reaches these
+    // arms. A malformed diagnostic option is rejected here, before the self-tests and before any device,
+    // graphics, paging or service initialisation.
+    const char* diagnosticLine = (mbi->flags & 4) && mbi->commandLine
+        ? (const char*)(uint32_t)mbi->commandLine : 0;
+    const common::BootDiagnostic::Decision bootDiagnostic =
+        common::BootDiagnostic::Parse(diagnosticLine, common::BootDiagnostic::MaximumCommandLine);
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopReject) {
+        printf("BOOTDIAG REJECT reason=");
+        printf(common::BootDiagnostic::RejectName(bootDiagnostic.reject));
+        printf("\n");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopReject));
+    }
     memory::PhysicalMemoryStatistics physical = frames.getStatistics();
     LogValue("MEMORY FREE FRAMES ", physical.freeFrames);
     bool physicalOK = memory::RunPhysicalMemorySelfTest(frames);
@@ -856,6 +879,11 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     printf(memoryOK ? "HEAP SELFTEST PASS\n" : "HEAP SELFTEST FAIL\n");
     if (!memoryOK)
         Panic("MEMORY SELFTEST", "E03");
+    // Both the physical self-test and the heap self-test with validation returned success above, so this
+    // marker is reachable only on real success. It fires before the GDT, the IDT, the APs, storage,
+    // graphics and every service.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopMemory)
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopMemory));
     uint32_t ramMiB =
         (mbi->flags & 1) ? (mbi->memUpper + 2047) / 1024 : physical.addressableFrames / 256;
     BootStage("B03", "GDT IDT SCHEDULER");
@@ -877,6 +905,11 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         Panic("SCHEDULER SELFTEST", "E04");
     InterruptsManager interrupts(0x20, &gdt, &tasks);
     SyscallHandler syscalls(&interrupts, 0x80);
+    // The GDT constructor executed lgdt and the InterruptsManager constructor executed lidt, so both tables
+    // are constructed and loaded. Interrupts are still disabled: interrupts.Activate(), the only global
+    // sti here, has not run. The AP prepare, storage, graphics, paging and every service are dominated.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopTables)
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopTables));
     // Prepare resources before identity mappings are built. BSP GDT/IDT already
     // exist, while interrupts and paging remain disabled.
     CpuStartup cpuStartup;
