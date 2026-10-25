@@ -1,0 +1,5 @@
+# Private runtime staging
+
+Run the pinned Python test script with one JSON control under the existing guard, using only system Python and its loader as EXEC grants. The production module path and hash are in `module`; `fixture_root` and `result_path` are fresh paths inside the guard's writable root. It imports the actual production function and performs ordinary filesystem copies, real POSIX mode checks, refusal cases and 64 fresh copy/publish cycles. It does not execute the copied TEST_ONLY files or QEMU.
+
+Production staging reads only the fixed, pinned inventory from the existing QEMU bundle. Library aliases become independent files with the same bytes. Only the two named loader/emulator copies receive 0755; data and libraries receive 0644. A fresh scratch tree is published once after every copy has been rehashed. Failed scratch trees remain in place. Original toolchain files, mount options, guard policy and old logs are never changed. A successful relocated probe demonstrates that path works under the current guard; it does not establish the cause of an earlier EACCES.

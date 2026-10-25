@@ -3,7 +3,7 @@ const c=JSON.parse(fs.readFileSync(process.argv[2],'utf8')),sha=b=>crypto.create
 if(bytes.length!==c.module.bytes||sha(bytes)!==c.module.sha256)throw Error('actual module pin');
 const api=await import(pathToFileURL(c.module.path).href);let assertions=0;const checks=[];
 const check=(n,x)=>{assertions++;checks.push({name:n,ok:!!x});if(!x)throw Error(n)},reject=(n,f)=>{let err=false;try{f()}catch{err=true}check(n,err)};
-const ctx={work_root:'/var/tmp/gtos-test-work',source_root:'/var/tmp/gtos-test-source',toolchain_root:'/mnt/f/GTOS-Chromium/toolchains/test-runtime'};
+const ctx={work_root:'/var/tmp/gtos-test-work',source_root:'/var/tmp/gtos-test-source',toolchain_root:'/var/tmp/gtos-test-source/runtime'};
 const r=api.bootRequest(ctx,'boot-01','e99');check('loader is honest cmd0',r.cmd0===r.argv[0]&&r.argv[3]===r.emulator);
 check('no shell wrapper',r.argv[0].endsWith('/ld-linux-x86-64.so.2')&&!r.argv.some(x=>x.endsWith('.sh')));
 check('one kernel input',r.argv.filter(x=>x==='-kernel').length===1&&r.image===ctx.source_root+'/image/provider-static.elf');
@@ -21,6 +21,9 @@ const reordered=[...r.argv];[reordered[4],reordered[5]]=[reordered[5],reordered[
 const tools={python_realpath:'/usr/bin/python3.8',loader:'/usr/lib/x86_64-linux-gnu/ld-2.31.so'};
 check('metadata exactly two EXEC',api.bootExecSet(ctx,'native_metadata',tools).length===2);
 check('probe and VM same four EXEC',JSON.stringify(api.bootExecSet(ctx,'emulator_probe',tools))===JSON.stringify(api.bootExecSet(ctx,'vm_e99_trial',tools))&&api.bootExecSet(ctx,'vm_e99_trial',tools).length===4);
+check('runtime unit and staging use only Python EXEC',api.bootExecSet(ctx,'native_runtime_unit_test',tools).length===2&&api.bootExecSet(ctx,'runtime_stage',tools).length===2);
+reject('old drvfs runtime is no longer selected',()=>api.bootRequest({...ctx,toolchain_root:'/mnt/f/GTOS-Chromium/toolchains/test-runtime'},'boot-01','e99'));
+reject('another source runtime cannot be substituted',()=>api.bootRequest({...ctx,toolchain_root:'/var/tmp/other/runtime'},'boot-01','e99'));
 reject('unknown EXEC category',()=>api.bootExecSet(ctx,'object_compile',tools));
 reject('duplicate EXEC identity',()=>api.bootExecSet(ctx,'vm_e99_trial',{...tools,loader:tools.python_realpath}));
 reject('Windows EXEC identity',()=>api.bootExecSet(ctx,'vm_e99_trial',{...tools,loader:'F:/loader'}));

@@ -22,9 +22,9 @@ const write = (name, data) => {
   fs.writeFileSync(p, typeof data === 'string' || Buffer.isBuffer(data) ? data : JSON.stringify(data), { flag: 'wx' }); return p;
 };
 const L = '/var/tmp/test-boot-work', S = '/var/tmp/test-boot-source';
-const context = { work_root: L, source_root: S, toolchain_root: '/mnt/f/GTOS-Chromium/toolchains/fixture', native_choices: {} };
+const context = { work_root: L, source_root: S, toolchain_root: S + '/runtime', native_choices: {} };
 const tools = { python_realpath: '/usr/bin/python3.8', loader: '/usr/lib/x86_64-linux-gnu/ld-2.31.so', toolchain_root: context.toolchain_root };
-const native_EXEC = Object.fromEntries(['native_metadata', 'emulator_probe', 'vm_e99_trial'].map(k => [k, b.bootExecSetFor(k, tools, api)]));
+const native_EXEC = Object.fromEntries(['native_metadata', 'native_runtime_unit_test', 'runtime_stage', 'emulator_probe', 'vm_e99_trial'].map(k => [k, b.bootExecSetFor(k, tools, api, context)]));
 const grant = { authorized: true, max_launches: 2, inner_seconds: 12, outer_seconds: 90,
   full_desktop: false, services: false, host_devices: false, network: false, disks: false, source_repair: false };
 const authorization = { native_EXEC, target_execution_grant: grant };
@@ -142,7 +142,32 @@ await rejectAsync(() => b.loadBridgeContext({ ...loadControl, path_module: { ...
 check(!fs.existsSync(sentinel), 'bad path module did not import');
 await rejectAsync(() => b.loadBridgeContext({ ...loadControl, task: 'GTOS-DSH-106' }), 'cross-task authority');
 check(!fs.existsSync(sentinel), 'wrong task did not import');
-check(assertions >= 50, 'regression count sanity');
+
+check(b.assertNativeStageIdentity({ stage: 'meta-01', control: { bridge: { stage: 'meta-01', outer_stage: 'meta-01' } } }), 'one shared native stage');
+reject(() => b.assertNativeStageIdentity({ stage: 'metastage-01', control: { bridge: { stage: 'meta-01', outer_stage: 'metastage-01' } } }), '107 outer/choice mismatch');
+reject(() => b.assertNativeStageIdentity({ stage: 'meta-01', control: { bridge: { stage: 'meta-01' } } }), 'outer stage cannot be omitted');
+const live = { task: 'GTOS-DSH-108', attempt: 'meta-03', complete: false, executor: 'guard', category: 'native_metadata', operation_id: 'qemu.metadata', runner_sha256: plain.sha256, runner_bytes: plain.bytes };
+const liveControl = { task: live.task, stage: live.attempt, outer_stage: live.attempt, report_root: control.fixture_root, runner: plain };
+const livePlan = { stage: live.attempt, category: live.category, operation: live.operation_id };
+write('attempt-meta-03-108.json', live);
+check(b.requireLiveReservation(liveControl, livePlan).sha256.length === 64, 'actual false reservation before launch');
+reject(() => b.requireLiveReservation({ ...liveControl, outer_stage: 'other-01' }, livePlan), 'wrong outer binding');
+reject(() => b.requireLiveReservation({ ...liveControl, runner: { ...plain, bytes: 0 } }, livePlan), 'wrong live runner');
+reject(() => b.requireLiveReservation(liveControl, { ...livePlan, category: 'emulator_probe' }), 'wrong live category');
+write('result-meta-03-108.json', { ok: true });
+reject(() => b.requireLiveReservation(liveControl, livePlan), 'completed native stage cannot be launched again');
+reject(() => b.requireFreshNativeNamespace(evidenceControl, vm, paths), '107 repeated name refused before guard');
+for (const [stage, kind, category] of [['rtunit-01', 'runtimeunit', 'native_runtime_unit_test'], ['rtstage-01', 'runtimestage', 'runtime_stage']]) {
+  const owner = kind === 'runtimestage' ? S : L;
+  context.native_choices[stage] = { ...b.metadataRequest({ ...context, tools, work_root: owner }, stage), kind, category };
+  const request = plan(stage, kind);
+  check(request.argv.length === 5 && request.exec_set.length === 2 && request.work_root === owner, kind + ' exact Python request and writable owner');
+}
+const runtimeTransport = b.bootWslArgv(transportControl, plan('rtstage-01', 'runtimestage'), {});
+check(runtimeTransport[runtimeTransport.indexOf('--work-root') + 1] === S && !runtimeTransport.includes('--read-only'), 'runtime staging writes only its S owner');
+b.requireFreshNativeNamespace({ ...evidenceControl, task: 'GTOS-DSH-108' }, { ...meta, stage: 'meta-09' }, { nativeHostPath: (_ctx, p) => path.join(control.fixture_root, 'not-created', p.slice(1)) });
+check(true, 'fresh namespace admits no old evidence');
+check(assertions >= 64, 'regression count sanity');
 const result = { ok: true, assertions, module: control.module, request_module: control.request_module,
   fixtures_are_test_only: true, WSL_started: false, guard_started: false, emulator_started: false, target_execution: false };
 fs.writeFileSync(control.result_path, JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });

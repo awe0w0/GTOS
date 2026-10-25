@@ -13,7 +13,7 @@ export function bootRequest(context, stage, kind, suppliedArgv) {
     && linux(context.source_root) && context.source_root.startsWith('/var/tmp/'), 'canonical native roots');
   const L = context.work_root, S = context.source_root, T = context.toolchain_root;
   need(L !== S && !L.startsWith(S + '/') && !S.startsWith(L + '/'), 'disjoint roots');
-  need(linux(T) && T.startsWith('/mnt/f/GTOS-Chromium/toolchains/'), 'fixed toolchain root');
+  need(linux(T) && T === S + '/runtime', 'private runtime bound to source root');
   need(/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage) && ['version', 'help', 'e99'].includes(kind), 'registered request kind and stage');
   const emulator = T + '/root/usr/bin/qemu-system-i386';
   const loader = T + '/root/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2';
@@ -38,10 +38,10 @@ export function bootRequest(context, stage, kind, suppliedArgv) {
 
 
 export function bootExecSet(context, kind, tools) {
-  need(['native_metadata', 'emulator_probe', 'vm_e99_trial'].includes(kind), 'execution category');
+  need(['native_metadata', 'native_runtime_unit_test', 'runtime_stage', 'emulator_probe', 'vm_e99_trial'].includes(kind), 'execution category');
   const request = bootRequest(context, 'identity-01', 'version');
   const result = [tools?.python_realpath, tools?.loader];
-  if (kind !== 'native_metadata') result.push(request.cmd0, request.emulator);
+  if (kind === 'emulator_probe' || kind === 'vm_e99_trial') result.push(request.cmd0, request.emulator);
   need(result.every(linux) && new Set(result).size === result.length, 'exact distinct file EXEC identities');
   return result;
 }

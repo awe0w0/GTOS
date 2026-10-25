@@ -20,13 +20,12 @@ const jsonPin = p => JSON.parse(checkedPin(p).toString('utf8'));
 const equalPin = (actual, expected) => actual && expected && actual.bytes === expected.bytes
   && actual.sha256 === expected.sha256;
 
-export function bootExecSetFor(kind, tools, api) {
-  return api.bootExecSet({ work_root: '/var/tmp/identity-work', source_root: '/var/tmp/identity-source',
-    toolchain_root: tools.toolchain_root }, kind, tools);
+export function bootExecSetFor(kind, tools, api, context) {
+  return api.bootExecSet(context, kind, tools);
 }
 
 export function metadataRequest(context, stage) {
-  need(/^meta-[0-9]{2}$/.test(stage), 'metadata stage');
+  need(/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage), 'Python stage');
   const argv = [context.tools.python_realpath, '-B', '-S', context.work_root + '/frozen-helpers/' + stage + '.py',
     context.work_root + '/inputs/' + stage + '.json'];
   return { stage, kind: 'metadata', argv, outputs: [], cwd: context.work_root, limit_seconds: 60,
@@ -37,13 +36,16 @@ export function bootPlan(context, stage, kind, options) {
   const { api, tools, authorization } = options;
   const choice = context.native_choices?.[stage];
   need(choice && choice.stage === stage && choice.kind === kind, 'registered stage and kind');
-  const request = kind === 'metadata' ? metadataRequest(context, stage)
+  const pythonKind = ['metadata', 'runtimeunit', 'runtimestage'].includes(kind);
+  const workRoot = kind === 'runtimestage' ? context.source_root : context.work_root;
+  const request = pythonKind ? { ...metadataRequest({ ...context, work_root: workRoot }, stage), kind, work_root: workRoot }
     : api.bootRequest(context, stage, kind, options.suppliedArgv);
   need(same(request.argv, choice.argv), 'exact frozen argv order');
   if (options.suppliedArgv !== undefined) need(same(options.suppliedArgv, request.argv), 'caller argv');
-  const category = kind === 'metadata' ? 'native_metadata' : kind === 'e99' ? 'vm_e99_trial' : 'emulator_probe';
+  const category = kind === 'metadata' ? 'native_metadata' : kind === 'runtimeunit' ? 'native_runtime_unit_test'
+    : kind === 'runtimestage' ? 'runtime_stage' : kind === 'e99' ? 'vm_e99_trial' : 'emulator_probe';
   need(choice.category === category, 'frozen execution category');
-  const execSet = bootExecSetFor(category, tools, api);
+  const execSet = bootExecSetFor(category, tools, api, context);
   need(same(execSet, authorization.native_EXEC?.[category]), 'exact EXEC file grants');
   if (kind === 'e99') {
     const g = authorization.target_execution_grant;
@@ -55,12 +57,12 @@ export function bootPlan(context, stage, kind, options) {
   }
   return { ...request, category, operation: choice.operation, mode: choice.mode,
     exec_set: execSet, argv_tokens: request.argv.length,
-    cmd0_is_the_bundled_loader: kind !== 'metadata' && request.argv[0] !== request.emulator };
+    cmd0_is_the_bundled_loader: !pythonKind && request.argv[0] !== request.emulator };
 }
 
 export function validatePlanFiles(control, context, plan) {
   const host = context.nativeHostPath;
-  const inputs = plan.kind === 'metadata' ? [plan.argv[3], plan.argv[4]]
+  const inputs = ['metadata', 'runtimeunit', 'runtimestage'].includes(plan.kind) ? [plan.argv[3], plan.argv[4]]
     : plan.kind === 'e99' ? [plan.image] : [];
   for (const input of inputs) {
     const p = host(input);
@@ -83,8 +85,9 @@ export function bootWslArgv(control, plan, env) {
     && new Set(plan.exec_set).size === plan.exec_set.length, 'distinct EXEC set');
   need(typeof control.guard_linux === 'string' && control.guard_linux.startsWith('/mnt/f/'), 'guard path');
   const switches = ['--stage', plan.stage, '--purpose', plan.kind + ' for ' + control.task,
-    '--work-root', control.work_root, '--cwd', plan.cwd, '--log', control.work_root + '/logs/runs-' + control.task.slice(-3) + '.jsonl',
-    '--limit', String(plan.limit_seconds), '--read-only', control.source_root];
+    '--work-root', plan.work_root || control.work_root, '--cwd', plan.cwd, '--log', (plan.work_root || control.work_root) + '/logs/runs-' + control.task.slice(-3) + '.jsonl',
+    '--limit', String(plan.limit_seconds)];
+  if (plan.kind !== 'runtimestage') switches.push('--read-only', control.source_root);
   for (const file of plan.exec_set) switches.push('--exec', file);
   for (const [key, value] of Object.entries(env)) switches.push('--env', key + '=' + value);
   return ['--distribution', control.distribution, '--exec', control.tools.python_realpath, '-B', '-S', control.guard_linux,
@@ -111,6 +114,14 @@ export async function loadBridgeContext(control) {
     && JSON.stringify(authorization.target_execution_grant) === JSON.stringify(authority.target_execution_grant), 'authority grants');
   const runtimePins = [authority.runtime.loader, authority.runtime.emulator, ...authority.runtime.firmware];
   for (const p of runtimePins) checkedPin(p);
+  if (['version', 'help', 'e99'].includes(control.kind)) {
+    const staged = runtimePins.map(p => {
+      need(p.linux_path.startsWith(authority.source_root + '/runtime/'), 'runtime execution path under S');
+      return { path: '//wsl$/Ubuntu-20.04' + p.linux_path, bytes: p.bytes, sha256: p.sha256 };
+    });
+    for (const p of staged) checkedPin(p);
+    runtimePins.push(...staged);
+  }
   const api = await import(pathToFileURL(control.request_module.path).href);
   const paths = await import(pathToFileURL(control.path_module.path).href);
   const runner = await import(pathToFileURL(control.runner.path).href);
@@ -138,7 +149,7 @@ export function readBootEvidence(control, plan, api, paths) {
     return b;
   };
   const json = p => { const b = readBounded(p, 1024 * 1024); return b === null ? null : JSON.parse(b); };
-  const root = control.work_root + '/logs/', spec = json(root + 'spec-' + plan.stage + '.json'),
+  const root = (plan.work_root || control.work_root) + '/logs/', spec = json(root + 'spec-' + plan.stage + '.json'),
     inner = json(root + 'inner-report-' + plan.stage + '.json');
   const rawPath = root + 'child-output-' + plan.stage + '.raw', rawBytes = readBounded(rawPath, 4 * 1024 * 1024);
   const raw = rawBytes === null ? null : { requested_path: rawPath, bytes: rawBytes.length, sha256: sha(rawBytes) };
@@ -185,14 +196,46 @@ export function transportAccepted(plan, transport, verdict, unchanged) {
     && transport.launch_error === null && verdict.ok === true && unchanged === true;
 }
 
+export function assertNativeStageIdentity(spec) {
+  const c = spec?.control?.bridge;
+  need(c && c.stage === spec.stage && c.outer_stage === spec.stage, 'outer/native stage identity');
+  return true;
+}
+
+export function requireLiveReservation(control, plan) {
+  need(control.stage === plan.stage && control.outer_stage === plan.stage, 'bridge stage binding');
+  const file = path.join(control.report_root, 'attempt-' + plan.stage + '-' + control.task.slice(-3) + '.json');
+  const bytes = fs.readFileSync(file), a = JSON.parse(bytes);
+  need(a.task === control.task && a.attempt === plan.stage && a.complete === false && a.executor === 'guard'
+    && a.category === plan.category && a.operation_id === plan.operation, 'live matching guard reservation');
+  need(a.runner_sha256 === control.runner.sha256 && a.runner_bytes === control.runner.bytes, 'reservation runner identity');
+  need(!fs.existsSync(path.join(control.report_root, 'result-' + plan.stage + '-' + control.task.slice(-3) + '.json')), 'no terminal result before native launch');
+  return { path: file, bytes: bytes.length, sha256: sha(bytes) };
+}
+
+export function requireFreshNativeNamespace(control, plan, paths) {
+  const root = (plan.work_root || control.work_root) + '/logs/';
+  for (const name of ['spec-' + plan.stage + '.json', 'inner-report-' + plan.stage + '.json', 'child-output-' + plan.stage + '.raw'])
+    need(!fs.existsSync(paths.nativeHostPath(control.path_context, root + name)), 'fresh native evidence name: ' + name);
+  const ledger = paths.nativeHostPath(control.path_context, root + 'runs-' + control.task.slice(-3) + '.jsonl');
+  if (fs.existsSync(ledger)) {
+    need(fs.statSync(ledger).size <= 8 * 1024 * 1024, 'bounded existing ledger');
+    const rows = fs.readFileSync(ledger, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+    need(!rows.some(r => r.stage === plan.stage), 'native stage never appeared in ledger');
+  }
+}
+
 export async function runBootStage(control, stage, kind, options = {}) {
   const loaded = await loadBridgeContext(control);
   const { authorization, authority, api, paths, runner, context, components } = loaded;
   const plan = bootPlan(context, stage, kind, { api, tools: { ...control.tools, toolchain_root: control.toolchain_root },
     authorization, suppliedArgv: options.argv });
+  components.push(requireLiveReservation(control, plan));
+  requireFreshNativeNamespace(control, plan, paths);
   validatePlanFiles(control, context, plan);
-  const env = { HOME: control.work_root + '/home', TMPDIR: control.work_root + '/tmp', TMP: control.work_root + '/tmp',
-    TEMP: control.work_root + '/tmp', XDG_CACHE_HOME: control.work_root + '/cache', LANG: 'C.UTF-8',
+  const activeRoot = plan.work_root || control.work_root;
+  const env = { HOME: activeRoot + '/home', TMPDIR: activeRoot + '/tmp', TMP: activeRoot + '/tmp',
+    TEMP: activeRoot + '/tmp', XDG_CACHE_HOME: activeRoot + '/cache', LANG: 'C.UTF-8',
     PYTHONDONTWRITEBYTECODE: '1', ...(plan.env || {}) };
   const wslArgv = bootWslArgv(control, plan, env);
   const transport = await runner.spawnPinned(control.wsl.path, wslArgv, { cwd: control.report_root, timeoutMs: 90000 });
