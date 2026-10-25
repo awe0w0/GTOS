@@ -1,24 +1,39 @@
-// GTOS-DSH-113 G1: the real CpuWorkPool admission, drain and park contract, executed on the host.
+// GTOS-DSH-115 S0: the real CpuWorkPool lifecycle, executed on the host.
 //
-// The pool object under test is the production one. What the seam replaces is only the privileged boundary: the flag
-// register, the control registers, the CPU identity read, interrupt masking, the local APIC page, the IPI, the paging
-// query and the shared-block allocation that Prepare and Start would otherwise perform. The admission rule, the
-// closure flag, the drain arithmetic, the worker state transitions and every CpuWorkQueue are the real production
-// code, because a test that stubbed those would prove nothing about them.
+// 113 wrote this unit around a shared block it installed itself, so Prepare() and Start() were never called. The 114
+// review named the consequence: a group that only exercises an empty object is not a Start regression, a negative case
+// on a slot that had already been collected proves nothing, and a setter that writes Busy is not an execution
+// interleaving. This file closes those three.
 //
-// What this unit therefore shows: the pool refuses a submission when it is closed, when it was never started, when the
-// APIC id is unknown and when a worker is not ready; it reports drained only when nothing is queued, running or
-// completed-but-uncollected; and it refuses to park while any of that is outstanding. What it cannot show: that a real
-// AP ever executed anything, or that the hardware IPI was delivered. Those are guest observations.
+// What the seam replaces is the machine's answer, not the pool's work:
+//   flags, CR0, CR3, CPUID identity, interrupt masking, the local APIC page and the IPI   privileged boundary
+//   contiguous allocation, the MTRR/PAT snapshot, the paging directory and the seal       the hardware's answer
+//   the AP bring-up protocol's detected processors, stacks and delivery result            the firmware's answer
+//
+// Prepare(), Start(), Submit(), Collect(), CloseAdmission(), IsDrained(), RequestPark(), ObservePark() and every
+// CpuWorkQueue run for real against those answers. The shared block and every worker record are built by the production
+// Prepare(), so a test cannot install one.
+//
+// What this unit shows: a real Prepare and Start succeed and publish an owner; allocation failure, no AP, delivery
+// failure, repeat calls and a late AP all leave a truthful state with the owner retained; a ticket binds its session so a
+// leftover cannot consume a new job; a live victim's result survives a mis-routed collect attempt; and a close or park
+// driven from the production running state does not fake drained or acked.
+//
+// What it cannot show: that a real AP executed anything, or that a hardware IPI was delivered. Those are guest
+// observations, and the guest runs in the same packet.
 
 #include <common/types.h>
 #include <hardwarecommunication/cpu_work_pool.h>
+#include <hardwarecommunication/cpu_startup.h>
+#include <memory/physical.h>
+#include <memory/paging.h>
 
 using namespace gtos::hardwarecommunication;
 
 extern "C" uint32_t gtos_host_flags;
 extern "C" uint32_t gtos_host_cr0;
 extern "C" uint32_t gtos_host_cr3;
+extern "C" uint32_t gtos_host_cr4;
 extern "C" uint32_t gtos_host_identity;
 extern "C" uint32_t gtos_host_wake_result;
 extern "C" uint32_t gtos_host_wake_calls;
@@ -39,6 +54,36 @@ extern "C" bool gtos_host_worker_leave_busy(uint32_t workerIndex);
 extern "C" bool gtos_host_worker_fault(uint32_t workerIndex);
 extern "C" bool gtos_host_worker_park_stale(uint32_t workerIndex, uint32_t session);
 extern "C" uint32_t gtos_host_park_acked_session(uint32_t workerIndex);
+extern "C" bool gtos_host_worker_step(uint32_t workerIndex);
+extern "C" void gtos_host_step_gate(uint32_t armed);
+extern "C" uint32_t gtos_host_step_reached();
+extern "C" bool gtos_host_worker_resume(uint32_t workerIndex);
+extern "C" void gtos_host_machine_init();
+
+// The machine's answers. The test sets these before calling a production method; the boundary reads them.
+extern "C" {
+extern uint32_t gtos_host_machine_processors;
+extern uint32_t gtos_host_machine_local_apic;
+extern uint32_t gtos_host_machine_ready;
+extern uint32_t gtos_host_machine_delivery;
+extern uint32_t gtos_host_machine_error;
+extern uint32_t gtos_host_machine_attempted_aps;
+extern uint32_t gtos_host_machine_start_calls;
+extern uint32_t gtos_host_machine_processor_apic[8];
+extern uint32_t gtos_host_machine_processor_state[8];
+extern uint32_t gtos_host_machine_processor_stack_base[8];
+extern uint32_t gtos_host_machine_processor_stack_pages[8];
+
+extern uint32_t gtos_host_machine_arena_pages;
+extern uint32_t gtos_host_machine_arena_used;
+extern uint32_t gtos_host_machine_allocation_fail;
+extern uint32_t gtos_host_machine_allocation_calls;
+extern uint32_t gtos_host_machine_memory_types;
+extern uint32_t gtos_host_machine_paging_prepared;
+extern uint32_t gtos_host_machine_paging_directory;
+extern uint32_t gtos_host_machine_paging_seal;
+extern uint32_t gtos_host_machine_paging_sealed;
+}
 
 
 // The seam globals. Their initial values describe an idle BSP with paging off and interrupts clear, which is the state
@@ -48,6 +93,7 @@ extern "C" {
 uint32_t gtos_host_flags = 0x00000002U;
 uint32_t gtos_host_cr0 = 0x00000011U;
 uint32_t gtos_host_cr3 = 0x00000000U;
+uint32_t gtos_host_cr4 = 0x00000000U;
 uint32_t gtos_host_identity = 0;
 uint32_t gtos_host_wake_result = 1;
 uint32_t gtos_host_wake_calls = 0;
@@ -89,10 +135,63 @@ const u32 kBspApic = 0;
 const u32 kLapic = 0xFEE00000U;
 
 // A pool bound to a fresh shared block. Reset, install, attach: the three steps the seam needs, in that order.
+//
+// This is the *installed* fixture. It exists so the admission, drain, park and queue rules can be exercised without
+// walking the whole bring-up for every case. It is NOT how a real pool is created, and the cases that claim to test
+// Prepare() or Start() do not use it: those call the production methods below.
 bool FreshPool(CpuWorkPool& pool, u32 workerCount) {
     gtos_host_reset_pool();
     if (!gtos_host_install_pool(workerCount, kBspApic, kLapic)) return false;
     return gtos_host_attach_pool(&pool);
+}
+
+// The machine's answers, reset to a plain two-processor machine with paging prepared and delivery working.
+void ResetMachine(u32 processors, u32 workersWithStacks) {
+    gtos_host_machine_processors = processors;
+    gtos_host_machine_local_apic = kLapic;
+    gtos_host_machine_ready = 1;
+    gtos_host_machine_delivery = 1;
+    gtos_host_machine_error = 0;
+    gtos_host_machine_attempted_aps = 0;
+    gtos_host_machine_start_calls = 0;
+    gtos_host_machine_arena_used = 0;
+    gtos_host_machine_arena_pages = 256;
+    gtos_host_machine_arena_used = 0;
+    gtos_host_machine_allocation_fail = 0;
+    gtos_host_machine_allocation_calls = 0;
+    gtos_host_machine_memory_types = 1;
+    gtos_host_machine_paging_prepared = 1;
+    gtos_host_machine_paging_directory = 0x00500000U;
+    gtos_host_machine_paging_seal = 1;
+    gtos_host_machine_paging_sealed = 0;
+    for (u32 i = 0; i < 8; ++i) {
+        gtos_host_machine_processor_apic[i] = i;
+        gtos_host_machine_processor_state[i] = CpuStartupEntered;
+        gtos_host_machine_processor_stack_base[i] = 0x00600000U + i * 0x4000U;
+        gtos_host_machine_processor_stack_pages[i] = (i >= 1 && i <= workersWithStacks) ? 4 : 0;
+    }
+    // The BSP is processor 0 and has no AP stack.
+    gtos_host_machine_processor_apic[0] = kBspApic;
+    gtos_host_machine_processor_stack_pages[0] = 0;
+    // The seam's privileged state: idle BSP, paging off, interrupts clear.
+    gtos_host_flags = 0x00000002U;
+    gtos_host_cr0 = 0x00000011U;
+    gtos_host_cr3 = 0x00000000U;
+    gtos_host_identity = kBspApic;
+    gtos_host_wake_result = 1;
+    gtos_host_reset_pool();
+}
+
+// A real Prepare and Start, driven through the production methods with a CpuStartup the machine answers for.
+bool RealPrepare(CpuWorkPool& pool) {
+    CpuInfo info;
+    CpuStartup startup;
+    gtos::memory::PhysicalMemoryManager frames;
+    return pool.Prepare(startup, frames);
+}
+bool RealStart(CpuWorkPool& pool) {
+    gtos::memory::KernelPaging paging;
+    return pool.Start(paging);
 }
 
 // The APIC id of worker 0, which is what a caller submits to.
@@ -101,6 +200,9 @@ u32 WorkerApic(u32 index) { return kBspApic + 1 + index; }
 } // namespace
 
 extern "C" int poolTestMain() {
+    // The boundary owns host memory for the arena and the directory, so it is initialised once before any case runs.
+    gtos_host_machine_init();
+    Say("CASE 1\n");
     // ================================================================ 1. a fresh pool admits and reports ready
     {
         CpuWorkPool pool;
@@ -118,6 +220,7 @@ extern "C" int poolTestMain() {
                "an idle pool reports zero for every outstanding count");
     }
 
+    Say("CASE 2\n");
     // ================================================================ 2. submit, execute, collect
     {
         CpuWorkPool pool;
@@ -154,6 +257,7 @@ extern "C" int poolTestMain() {
                "after the job is collected the pool is drained again");
     }
 
+    Say("CASE 3\n");
     // ================================================================ 3. completed but not collected keeps it busy
     {
         CpuWorkPool pool;
@@ -185,6 +289,7 @@ extern "C" int poolTestMain() {
         Expect(gtos_host_worker_state(0) == CpuWorkerParked, "the worker reports the parked state");
     }
 
+    Say("CASE 4\n");
     // ================================================================ 4. close admission refuses new work
     {
         CpuWorkPool pool;
@@ -213,6 +318,7 @@ extern "C" int poolTestMain() {
         Expect(pool.ObservePark(closedRequested, closedAcked), "the closed pool observes the confirmation");
     }
 
+    Say("CASE 5\n");
     // ================================================================ 5. closure does not abandon in-flight work
     {
         CpuWorkPool pool;
@@ -239,6 +345,7 @@ extern "C" int poolTestMain() {
                "the drained closed pool observes the confirmation");
     }
 
+    Say("CASE 6\n");
     // ================================================================ 6. unknown and unready workers
     {
         CpuWorkPool pool;
@@ -253,6 +360,7 @@ extern "C" int poolTestMain() {
         Expect(pool.SubmittedJobs() == 0, "no refused submission was counted");
     }
 
+    Say("CASE 7\n");
     // ================================================================ 7. a faulted worker is not ready
     {
         CpuWorkPool pool;
@@ -266,6 +374,7 @@ extern "C" int poolTestMain() {
                "the pool reports no fault for a healthy worker");
     }
 
+    Say("CASE 8\n");
     // ================================================================ 8. two workers keep separate obligations
     {
         CpuWorkPool pool;
@@ -301,6 +410,7 @@ extern "C" int poolTestMain() {
         Expect(pool.IsDrained(queued, busy, uncollected), "both obligations closed means drained");
     }
 
+    Say("CASE 9\n");
     // ================================================================ 9. a wake failure is reported, not hidden
     {
         CpuWorkPool pool;
@@ -325,6 +435,7 @@ extern "C" int poolTestMain() {
         gtos_host_wake_result = 1;
     }
 
+    Say("CASE 10\n");
     // ================================================================ 10. the queue refuses a full worker
     {
         CpuWorkPool pool;
@@ -356,6 +467,7 @@ extern "C" int poolTestMain() {
                "the queue is full again after the single replacement");
     }
 
+    Say("CASE 11\n");
     // ================================================================ 11. drain requires an empty queue, not a total
     {
         CpuWorkPool pool;
@@ -383,6 +495,7 @@ extern "C" int poolTestMain() {
     }
 
 
+    Say("CASE 12\n");
     // ================================================================ 12. a pool that was never started admits nothing
     {
         // No seam install: this pool has never been prepared or started, which is the state a failed Prepare leaves.
@@ -402,6 +515,7 @@ extern "C" int poolTestMain() {
         Expect(!fresh.ParkWorkers(), "a never-started pool refuses to park");
     }
 
+    Say("CASE 13\n");
     // ================================================================ 13. a faulted worker is not ready and takes nothing
     {
         CpuWorkPool pool;
@@ -420,6 +534,7 @@ extern "C" int poolTestMain() {
         Expect(!pool.Kick(WorkerApic(0)), "a faulted worker cannot be kicked");
     }
 
+    Say("CASE 14\n");
     // ================================================================ 14. a busy worker blocks drain and park
     {
         CpuWorkPool pool;
@@ -438,6 +553,7 @@ extern "C" int poolTestMain() {
         Expect(pool.IsDrained(queued, busy, uncollected), "the idle pool is drained again");
     }
 
+    Say("CASE 15\n");
     // ================================================================ 15. request is not acknowledgement
     {
         CpuWorkPool pool;
@@ -461,6 +577,7 @@ extern "C" int poolTestMain() {
                "the report separates requested from acknowledged");
     }
 
+    Say("CASE 16\n");
     // ================================================================ 16. a stale session cannot confirm a new park
     {
         CpuWorkPool pool;
@@ -479,6 +596,7 @@ extern "C" int poolTestMain() {
         Expect(pool.ObservePark(requested, acked), "the current acknowledgement confirms");
     }
 
+    Say("CASE 17\n");
     // ================================================================ 17. a holder cannot address another worker
     {
         CpuWorkPool pool;
@@ -516,6 +634,7 @@ extern "C" int poolTestMain() {
                "the refused collect wrote nothing into the caller's result");
     }
 
+    Say("CASE 18\n");
     // ================================================================ 18. the queue accessor is a real handle
     {
         CpuWorkPool pool;
@@ -528,6 +647,7 @@ extern "C" int poolTestMain() {
         Expect(pool.WorkerQueue(0xFFFFFFFFU) == 0, "an invalid worker index exposes nothing");
     }
 
+    Say("CASE 19\n");
     // ================================================================ 19. reuse across the real capacity
     {
         CpuWorkPool pool;
@@ -535,22 +655,20 @@ extern "C" int poolTestMain() {
         // Fill the worker's whole queue, drain and collect all of it, then fill it again. The second pass must issue
         // different tickets into the same slots, which is what "the slot was really reused" means.
         const u32 capacity = CpuWorkQueue::Capacity;
+        // The real tickets are kept, not rebuilt. A ticket now names its pool session, so a hand-made one would be
+        // refused for the right reason and the case would be testing the refusal instead of the reuse.
+        CpuWorkTicket first[16];
         u32 firstIds[16], firstSlots[16];
         for (u32 i = 0; i < capacity; ++i) {
-            CpuWorkTicket t;
-            Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 2, i), t) == CpuWorkAccepted,
+            Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 2, i), first[i]) == CpuWorkAccepted,
                    "the first pass accepts every slot");
-            firstIds[i] = t.ticket.id;
-            firstSlots[i] = t.ticket.slot;
+            firstIds[i] = first[i].ticket.id;
+            firstSlots[i] = first[i].ticket.slot;
         }
         for (u32 i = 0; i < capacity; ++i) {
             gtos_host_worker_execute(0, WorkerApic(0));
-            CpuWorkTicket t;
-            // Collect by rebuilding the ticket from what the first pass recorded.
-            t.workerIndex = 0;
-            t.ticket = WorkTicket(firstSlots[i], firstIds[i]);
             WorkResult r;
-            Expect(pool.Collect(t, r) == CpuWorkComplete, "the first pass collects every slot");
+            Expect(pool.Collect(first[i], r) == CpuWorkComplete, "the first pass collects every slot");
             // The operation accumulates into the seed, so seed i with two iterations is i + 1 + 2.
             Expect(r.value == i + 1U + 2U, "the first pass value is the operation's own result");
         }
@@ -565,6 +683,280 @@ extern "C" int poolTestMain() {
         }
         Expect(reused == capacity, "the second pass reused every slot of the first");
         Expect(newIds == capacity, "every reused slot carries a new ticket id");
+    }
+
+
+    Say("CASE 20\n");
+    // ================================================================ 20. a real Prepare and Start
+    {
+        // The production methods, on a machine that answers yes. This is what 113 never did: the shared block below is
+        // built by Prepare(), not installed by the test.
+        ResetMachine(2, 1);
+        Say(" 20a machine\n");
+        CpuWorkPool pool;
+        Say(" 20b pool\n");
+        Expect(RealPrepare(pool), "a real Prepare succeeds on a machine with one AP and a stack for it");
+        Say(" 20c prepared\n");
+        Expect(!pool.Started(), "Prepare does not claim the pool started");
+        Expect(!pool.OwnerPublished(), "Prepare does not publish an owner");
+        u32 ownedBase = 0, ownedPages = 0;
+        Expect(pool.OwnedRange(ownedBase, ownedPages), "Prepare allocated a block the pool owns");
+        Expect(ownedBase != 0 && ownedPages != 0, "the owned range is a real range");
+        Expect(gtos_host_machine_allocation_calls >= 1, "Prepare really asked the allocator");
+        {
+            const bool started = RealStart(pool);
+            if (!started) {
+                static const char* names[] = {"Ok","BadState","WrongCpu","NoMemory","BadPaging","StartupFailed",
+                    "ReadyTimeout","WakeFailed","BadMemoryTypes","WorkerSetupFailed","Closed"};
+                const u32 code = (u32)pool.GetReport().error;
+                Say("   start refused: ");
+                Say(code < 11 ? names[code] : "unknown");
+                Say("\n");
+            }
+            Expect(started, "a real Start succeeds when delivery works");
+        }
+        Say(" 20d started\n");
+        Expect(pool.Started(), "a successful Start reports started");
+        Expect(pool.OwnerPublished(), "a successful Start publishes the owner");
+        Expect(gtos_host_machine_start_calls == 1, "Start called the startup protocol exactly once");
+        CpuWorkPoolReport report = pool.GetReport();
+        Expect(report.configuredWorkers == 1, "the production Prepare configured the one AP");
+        Expect(report.readyWorkers == 1, "the production Start reports it ready");
+        Expect(report.session != 0, "the production Prepare stamped a session");
+    }
+
+    Say("CASE 21\n");
+    // ================================================================ 21. Prepare refuses without an AP stack
+    {
+        ResetMachine(2, 0); // two processors detected, neither AP has a stack
+        CpuWorkPool pool;
+        Expect(RealPrepare(pool), "Prepare succeeds even when no AP has a stack");
+        CpuWorkPoolReport report = pool.GetReport();
+        Expect(report.configuredWorkers == 0, "no AP with a stack means no configured worker");
+        Expect(RealStart(pool), "Start succeeds with no workers, because there is nothing to deliver");
+        Expect(pool.Started(), "a workerless pool still reports started");
+    }
+
+    Say("CASE 22\n");
+    // ================================================================ 22. an allocation failure is a real failure
+    {
+        ResetMachine(2, 1);
+        gtos_host_machine_allocation_fail = 1;
+        CpuWorkPool pool;
+        Expect(!RealPrepare(pool), "Prepare fails when the allocator cannot supply the block");
+        Expect(!pool.Started(), "a failed Prepare leaves the pool unstarted");
+        Expect(!pool.OwnerPublished(), "a failed Prepare publishes no owner");
+        u32 base = 0, pages = 0;
+        Expect(!pool.OwnedRange(base, pages), "a failed Prepare owns no range");
+        CpuWorkTicket ticket;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 2, 0), ticket) != CpuWorkAccepted,
+               "a pool whose Prepare failed accepts nothing");
+        // And it is not a permanent state: the same object can be prepared once the machine can supply the block.
+        gtos_host_machine_allocation_fail = 0;
+        Expect(RealPrepare(pool), "the same pool prepares once allocation succeeds");
+    }
+
+    Say("CASE 23\n");
+    // ================================================================ 23. delivery failure keeps the owner alive
+    {
+        // The case the review said was never exercised. Start() used to publish "started" before calling StartPrepared,
+        // so a delivery failure left a pool that claimed to have started. It must now report the failure while keeping
+        // everything an AP might already be reading.
+        ResetMachine(2, 1);
+        gtos_host_machine_delivery = 0;
+        CpuWorkPool pool;
+        Expect(RealPrepare(pool), "Prepare succeeds before a delivery failure");
+        u32 base = 0, pages = 0;
+        Expect(pool.OwnedRange(base, pages), "the block exists before delivery is attempted");
+        const u32 allocationCalls = gtos_host_machine_allocation_calls;
+        const u32 usedPages = gtos_host_machine_arena_used;
+        Expect(!RealStart(pool), "Start fails when delivery fails");
+        Expect(!pool.Started(), "a failed delivery never claims the pool started");
+        Expect(gtos_host_machine_start_calls == 1, "delivery was attempted exactly once");
+        // The owner stays published and the block stays allocated: an AP may have entered before the failure.
+        Expect(pool.OwnerPublished(), "the owner stays published after a failed delivery");
+        u32 afterBase = 0, afterPages = 0;
+        Expect(pool.OwnedRange(afterBase, afterPages), "the block is still owned after a failed delivery");
+        Expect(afterBase == base && afterPages == pages, "the block is the same block, not a new one");
+        Expect(gtos_host_machine_allocation_calls == allocationCalls,
+               "nothing was allocated again, so nothing was reclaimed and reissued");
+        Expect(gtos_host_machine_arena_used == usedPages,
+               "the allocator's used count is unchanged, so the block was not freed");
+        // Admission must be shut: a caller cannot use a pool whose APs never arrived.
+        CpuWorkTicket ticket;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 2, 0), ticket) == CpuWorkOffline,
+               "a pool whose delivery failed refuses a submission as offline");
+        Expect(!ticket.ticket.IsValid(), "the refusal left an invalid ticket");
+    }
+
+    Say("CASE 24\n");
+    // ================================================================ 24. repeat calls are refused, not repeated
+    {
+        ResetMachine(2, 1);
+        CpuWorkPool pool;
+        Expect(RealPrepare(pool), "the first Prepare succeeds");
+        const u32 calls = gtos_host_machine_allocation_calls;
+        Expect(!RealPrepare(pool), "a second Prepare on the same pool is refused");
+        Expect(gtos_host_machine_allocation_calls == calls,
+               "the refused Prepare did not allocate a second block");
+        Expect(RealStart(pool), "the first Start succeeds");
+        Expect(!RealStart(pool), "a second Start is refused");
+        Expect(gtos_host_machine_start_calls == 1, "the refused Start did not deliver APs again");
+        Expect(pool.Started(), "the refused repeat left the pool started");
+    }
+
+    Say("CASE 25\n");
+    // ================================================================ 25. a partial AP set is truthful
+    {
+        // Two APs detected, one of them failed its self test. Start must report the failure rather than a clean start,
+        // and the healthy worker must still be usable.
+        ResetMachine(3, 2);
+        gtos_host_machine_processor_state[2] = CpuStartupSelfTestFailed;
+        CpuWorkPool pool;
+        Expect(RealPrepare(pool), "Prepare succeeds with a failing AP present");
+        const bool started = RealStart(pool);
+        CpuWorkPoolReport report = pool.GetReport();
+        Expect(report.configuredWorkers == 2, "both APs with stacks were configured");
+        Expect(report.faultedWorkers == 1, "the failing AP is reported faulted");
+        Expect(!started, "Start reports failure when an AP failed its self test");
+        Expect(!pool.Started(), "a partial AP set does not claim a clean start");
+        // The healthy worker is still real: its queue is addressable and its state is not faulted.
+        const CpuWorkQueue* healthy = pool.WorkerQueue(0);
+        Expect(healthy != 0, "the healthy worker's queue is addressable");
+    }
+
+    Say("CASE 26\n");
+    // ================================================================ 26. a live victim is not consumed by a wrong route
+    {
+        // The review's second point: the old case collected both results first, so the target slot was empty and any
+        // routing would have refused. Here the victim is still live when the mis-routed attempt is made.
+        CpuWorkPool pool;
+        Expect(FreshPool(pool, 2), "the seam installs a two-worker pool");
+        CpuWorkTicket first, second;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 3, 0), first) == CpuWorkAccepted,
+               "worker 0 accepts a job");
+        Expect(pool.Submit(WorkerApic(1), WorkRequest(WorkModularSum, 5, 0), second) == CpuWorkAccepted,
+               "worker 1 accepts a job");
+        // Execute both so each slot holds a completed, uncollected result: a live obligation, not an empty slot.
+        gtos_host_worker_execute(0, WorkerApic(0));
+        gtos_host_worker_execute(1, WorkerApic(1));
+
+        // The victim is worker 1's result. Route worker 0's ticket at worker 1 and demand the exact refusal reason.
+        CpuWorkTicket misrouted = first;
+        misrouted.workerIndex = second.workerIndex;
+        WorkResult stolen;
+        stolen.value = 0xDEADBEEFU;
+        stolen.executingApicId = 0xDEADBEEFU;
+        Expect(pool.Collect(misrouted, stolen) == CpuWorkTicketInvalid,
+               "a ticket naming another worker's slot is refused");
+        Expect(stolen.value == 0xDEADBEEFU && stolen.executingApicId == 0xDEADBEEFU,
+               "the refused collect wrote nothing into the caller's result");
+
+        // And the victim is untouched: it still collects normally with its own ticket.
+        WorkResult secondResult;
+        Expect(pool.Collect(second, secondResult) == CpuWorkComplete,
+               "the victim still collects after the mis-routed attempt");
+        Expect(secondResult.executingApicId == WorkerApic(1),
+               "the victim's result belongs to worker 1");
+        Expect(secondResult.value != 0xDEADBEEFU, "the victim's value was not overwritten");
+        // Worker 0's own obligation is also intact.
+        WorkResult firstResult;
+        Expect(pool.Collect(first, firstResult) == CpuWorkComplete,
+               "the mis-routed ticket still collects its own job");
+    }
+
+    Say("CASE 27\n");
+    // ================================================================ 27. a stale session cannot consume a new job
+    {
+        CpuWorkPool pool;
+        Expect(FreshPool(pool, 1), "the seam installs a one-worker pool");
+        const u32 session = pool.Session();
+        Expect(session != 0, "the pool has a session");
+        CpuWorkTicket live;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 2, 7), live) == CpuWorkAccepted,
+               "the pool accepts a job");
+        Expect(live.session == session, "the issued ticket carries the pool's session");
+        gtos_host_worker_execute(0, WorkerApic(0));
+
+        // A ticket from an earlier pool: same worker index, different session.
+        CpuWorkTicket stale = live;
+        stale.session = session + 1;
+        WorkResult result;
+        Expect(pool.Collect(stale, result) == CpuWorkTicketInvalid,
+               "a ticket from another session is refused");
+        // The real ticket still collects, so the refusal did not consume anything.
+        Expect(pool.Collect(live, result) == CpuWorkComplete,
+               "the current ticket still collects its job");
+    }
+
+    Say("CASE 28\n");
+    // ================================================================ 28. close from the real running state
+    {
+        // The review's third point: the old case used a setter to write Busy. This one reaches Running through the
+        // production step and pauses at its interior boundary, so the interleaving is real.
+        CpuWorkPool pool;
+        Expect(FreshPool(pool, 1), "the seam installs a one-worker pool");
+        CpuWorkTicket ticket;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 6, 11), ticket) == CpuWorkAccepted,
+               "the pool accepts a job");
+        gtos_host_step_gate(1);
+        // The step publishes Running and stops before touching the job.
+        Expect(gtos_host_worker_step(0), "the real step paused at its interior boundary");
+        Expect(gtos_host_worker_state(0) == CpuWorkerBusy,
+               "the production step published the running state");
+        Expect(gtos_host_step_reached() == 1, "the step is paused at its interior boundary");
+
+        // From this real running state, close admission and prove the pool does not claim to be drained.
+        Expect(pool.CloseAdmission(), "admission closes while a worker is genuinely running");
+        u32 queued = 0, busy = 0, uncollected = 0;
+        Expect(!pool.IsDrained(queued, busy, uncollected),
+               "a pool with a running worker does not report drained");
+        Expect(busy == 1, "the running worker is counted");
+        // Parking is refused for the same reason: the obligation is still live.
+        Expect(!pool.ParkWorkers(), "parking is refused while a worker is genuinely running");
+        Expect(gtos_host_park_requested(0) == 0, "the refused park did not even request");
+        // And a new submission is refused because admission closed, not because the worker was busy.
+        CpuWorkTicket afterClose;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 2, 0), afterClose) == CpuWorkOffline,
+               "a submission after the close is refused as offline");
+
+        // Release the step. The job completes, and the obligation that was already live is still collectable.
+        gtos_host_step_gate(0);
+        Expect(gtos_host_worker_resume(0), "the paused step resumes");
+        Expect(gtos_host_worker_state(0) == CpuWorkerIdle,
+               "the released step returned the worker to idle");
+        WorkResult result;
+        Expect(pool.Collect(ticket, result) == CpuWorkComplete,
+               "the job that was running when admission closed still collects");
+        Expect(pool.IsDrained(queued, busy, uncollected), "the pool drains once the job is collected");
+    }
+
+    Say("CASE 29\n");
+    // ================================================================ 29. park from the real running state
+    {
+        CpuWorkPool pool;
+        Expect(FreshPool(pool, 1), "the seam installs a one-worker pool");
+        CpuWorkTicket ticket;
+        Expect(pool.Submit(WorkerApic(0), WorkRequest(WorkModularSum, 4, 3), ticket) == CpuWorkAccepted,
+               "the pool accepts a job");
+        gtos_host_step_gate(1);
+        Expect(gtos_host_worker_step(0), "the real step paused at its interior boundary");
+        Expect(gtos_host_worker_state(0) == CpuWorkerBusy, "the worker is genuinely running");
+        // A park request while the job is mid-flight must not produce an acknowledgement.
+        Expect(pool.RequestPark(), "the park request is accepted");
+        u32 requested = 0, acked = 0;
+        Expect(!pool.ObservePark(requested, acked), "no acknowledgement exists while the job is mid-flight");
+        Expect(acked == 0, "the ack count is zero");
+        // The AP-side acknowledgement is refused too, because a job is still owed.
+        Expect(!gtos_host_worker_park(0), "the worker refuses to acknowledge while it owes a job");
+        // Release and collect; then the acknowledgement is possible.
+        gtos_host_step_gate(0);
+        Expect(gtos_host_worker_resume(0), "the paused step resumes");
+        WorkResult result;
+        Expect(pool.Collect(ticket, result) == CpuWorkComplete, "the job collects after release");
+        Expect(gtos_host_worker_park(0), "the worker acknowledges once nothing is owed");
+        Expect(pool.ObservePark(requested, acked), "the acknowledgement confirms the park");
+        Expect(acked == 1, "exactly one worker acknowledged");
     }
 
     Say(failures == 0 ? "POOL UNIT PASS\n" : "POOL UNIT FAIL\n");

@@ -16,7 +16,17 @@ namespace gtos { namespace hardwarecommunication {
     enum CpuWorkSubmitStatus { CpuWorkAccepted, CpuWorkAcceptedWakeFailed, CpuWorkFull,
         CpuWorkInvalid, CpuWorkExhausted, CpuWorkOffline, CpuWorkWrongContext };
     enum CpuWorkCollectStatus { CpuWorkTicketInvalid, CpuWorkPending, CpuWorkComplete, CpuWorkFailed };
-    struct CpuWorkTicket { uint32_t workerIndex; WorkTicket ticket; CpuWorkTicket(); };
+    struct CpuWorkTicket {
+        uint32_t workerIndex;
+        // The session this ticket was issued in. A ticket from an earlier pool carries a different session and cannot be
+        // collected against this one. The raw WorkTicket below remains queue-local.
+        uint32_t session;
+        // The queue this ticket was issued on. Two workers number their own tickets from one, so (slot, id) alone is
+        // ambiguous across workers; this tag is what makes a ticket unaddressable on any other worker.
+        uint32_t queueTag;
+        WorkTicket ticket;
+        CpuWorkTicket();
+    };
     struct CpuWorkerSnapshot {
         uint32_t apicId;
         CpuWorkerState state;
@@ -50,8 +60,13 @@ namespace gtos { namespace hardwarecommunication {
         uint32_t workerIndex;
         uint32_t apicId;
         WorkTicket ticket;
+        // The session this holder was bound in. A holder from an earlier pool reports IsBound() false.
+        uint32_t session;
         CpuWorkHolder();
         bool IsBound() const;
+        // True only when this holder names the given pool session and worker. A holder from an earlier pool fails here
+        // even if its worker index happens to match.
+        bool BoundTo(uint32_t poolSession, uint32_t index) const;
     };
     // BSP-only producer/control plane; each AP consumes its own bounded queue.
     // Jobs never invoke the global allocator, device drivers or BSP scheduler.
@@ -62,6 +77,17 @@ namespace gtos { namespace hardwarecommunication {
     extern "C" bool gtos_host_install_pool(uint32_t workerCount, uint32_t bspApicId, uint32_t lapicAddress);
     extern "C" bool gtos_host_attach_pool(void* poolAddress);
     extern "C" bool gtos_host_worker_execute(uint32_t workerIndex, uint32_t apicId);
+    // Runs one real worker step: the same function the AP loop calls. It publishes Running, executes one job through the
+    // production queue and returns to Idle, so a test can observe the genuine intermediate state rather than a state a
+    // setter fabricated.
+    // Runs one real worker step up to its interior boundary and returns whether it paused there. A second call resumes
+    // and completes the same job. Two calls are one step; neither fabricates a state.
+    extern "C" bool gtos_host_worker_step(uint32_t workerIndex);
+    extern "C" bool gtos_host_worker_resume(uint32_t workerIndex);
+    // Arms or releases a pause at that step's interior boundary. The step itself is production code; only the pause is
+    // test-only, and it cannot fabricate a terminal state.
+    extern "C" void gtos_host_step_gate(uint32_t armed);
+    extern "C" uint32_t gtos_host_step_reached();
     extern "C" uint32_t gtos_host_worker_state(uint32_t workerIndex);
     extern "C" void gtos_host_reset_pool();
 #endif
@@ -109,6 +135,9 @@ namespace gtos { namespace hardwarecommunication {
         bool RequestPark();
         bool ObservePark(uint32_t& requested, uint32_t& acked) const;
         bool ParkWorkers();
+        // The physical range this pool owns. Retained for the pool's whole life, including after a failed Start, because
+        // an AP may still be reading it.
+        bool OwnedRange(uint32_t& address, uint32_t& pages) const;
         bool AdmissionClosed() const;
         // Number of jobs submitted on this pool, for a caller that must not confuse a configured worker with an
         // executed job.
@@ -116,6 +145,12 @@ namespace gtos { namespace hardwarecommunication {
         // The session this pool instance belongs to. Set once at construction, so a value observed here can be compared
         // with the stamp an AP wrote and a stale confirmation from an earlier pool is visibly different.
         uint32_t Session() const;
+        // True only when the AP delivery call succeeded and admission may open. Distinct from the owner being published:
+        // a Start that failed may still have entered APs, whose stacks, tables and shared block must stay alive.
+        bool Started() const;
+        // True when the shared owner block is published. Publishing happens before delivery so an entering AP can
+        // identify itself, and is never undone, because an AP may already be reading it.
+        bool OwnerPublished() const;
         // The queue a worker index owns, for a holder that must prove which queue it is addressing. Null when the index
         // is not a worker of this pool.
         const CpuWorkQueue* WorkerQueue(uint32_t workerIndex) const;

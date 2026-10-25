@@ -6,6 +6,7 @@
 extern "C" uint32_t gtos_host_flags;
 extern "C" uint32_t gtos_host_cr0;
 extern "C" uint32_t gtos_host_cr3;
+extern "C" uint32_t gtos_host_cr4;
 extern "C" uint32_t gtos_host_identity;
 extern "C" uint32_t gtos_host_wake_result;
 extern "C" uint32_t gtos_host_wake_calls;
@@ -32,8 +33,12 @@ namespace {
         volatile uint32_t faultVector, faultError, faultInstruction, faultAddress;
         // Park protocol: the BSP writes the request, the AP writes the acknowledgement after its last job access.
         volatile uint32_t parkRequested, parkAckedSession, parkAckCount;
-#ifdef GTOS_CPU_WORK_POOL_TEST
+        // The queue identity a pool ticket carries, so a raw (slot, id) pair is addressable on one worker only.
+        uint32_t queueTag;
+#if defined(GTOS_CPU_WORK_POOL_TEST) || defined(GTOS_CPU_WORK_POOL_HOST_TEST)
         volatile uint32_t injectedFault, testHold, testHoldAck;
+        // The real-step pause. Test-only; the step itself is production code.
+        volatile uint32_t stepGate, stepReached;
 #endif
         Idtr idtr;
         Gate idt[256];
@@ -42,11 +47,14 @@ namespace {
     uint32_t Flags() { return gtos_host_flags; }
     uint32_t Cr0() { return gtos_host_cr0; }
     uint32_t Cr3() { return gtos_host_cr3; }
+    // Start() reads CR4 to refuse a PAE machine. That read is privileged, so the seam answers it.
+    uint32_t Cr4() { return gtos_host_cr4; }
     uint32_t Identity() { return gtos_host_identity; }
 #else
     uint32_t Flags() { uint32_t value; asm volatile("pushfl; popl %0":"=r"(value)); return value; }
     uint32_t Cr0() { uint32_t value; asm volatile("movl %%cr0,%0":"=r"(value)); return value; }
     uint32_t Cr3() { uint32_t value; asm volatile("movl %%cr3,%0":"=r"(value)); return value; }
+    uint32_t Cr4() { uint32_t value; asm volatile("movl %%cr4,%0":"=r"(value)); return value; }
     uint32_t Identity() {
         uint32_t a,b,c,d;
         asm volatile("cpuid":"=a"(a),"=b"(b),"=c"(c),"=d"(d):"a"(1),"c"(0)); return b>>24;
@@ -120,6 +128,41 @@ namespace {
     // A monotonically increasing session stamp. A park acknowledgement carries the session it belongs to, so a
     // confirmation written by an earlier run can never be read as this one's.
     uint32_t nextSession=1;
+    // One real worker step. The AP loop calls this and the host seam calls this, so a test that observes Running is
+    // observing the production transition rather than a state someone wrote.
+    // One real worker step. The AP loop runs it to completion in a single call; the host seam splits it at the
+    // interior boundary so a test can interleave a close or a park. Both paths publish the same states in the same
+    // order, and neither can write a terminal state the queue did not produce.
+    //
+    // Returns true when the step stopped at the boundary and a resume is owed.
+    bool WorkerStepBegin(Worker& worker, CpuWorkPoolShared* pool) {
+        (void)pool;
+        if(!worker.queue.HasPending()){
+            SetState(worker,CpuWorkerIdle);
+            return false;
+        }
+        SetState(worker,CpuWorkerBusy);
+#if defined(GTOS_CPU_WORK_POOL_TEST) || defined(GTOS_CPU_WORK_POOL_HOST_TEST)
+        // Interior boundary: Running has been published and the job has not been touched yet.
+        if (__atomic_load_n(&worker.stepGate, __ATOMIC_ACQUIRE)) {
+            __atomic_store_n(&worker.stepReached, 1U, __ATOMIC_RELEASE);
+            return true;
+        }
+#endif
+        worker.queue.ExecuteOne(Identity());
+        return false;
+    }
+    void WorkerStepFinish(Worker& worker) {
+#if defined(GTOS_CPU_WORK_POOL_TEST) || defined(GTOS_CPU_WORK_POOL_HOST_TEST)
+        __atomic_store_n(&worker.stepReached, 0U, __ATOMIC_RELEASE);
+#endif
+        worker.queue.ExecuteOne(Identity());
+        if(!worker.queue.HasPending())SetState(worker,CpuWorkerIdle);
+    }
+    // The whole step, as the AP loop runs it.
+    void WorkerStep(Worker& worker, CpuWorkPoolShared* pool) {
+        if (WorkerStepBegin(worker, pool)) WorkerStepFinish(worker);
+    }
     Worker* CurrentWorker() {
         if(!activePool)return 0;
         uint32_t id=Identity();return id<256?activePool->byApic[id]:0;
@@ -160,11 +203,14 @@ extern "C" void gtos_work_ap_fault(uint32_t frameAddress) {
     }
     for(;;)asm volatile("cli; hlt":::"memory");
 }
-CpuWorkTicket::CpuWorkTicket():workerIndex(0xFFFFFFFFU),ticket(){}
+CpuWorkTicket::CpuWorkTicket():workerIndex(0xFFFFFFFFU),session(0),queueTag(0),ticket(){}
 CpuWorkPool::CpuWorkPool():shared(0),startup(0),error(CpuWorkPoolOk),prepared(false),started(false),closed(false),sessionStamp(0){}
-CpuWorkHolder::CpuWorkHolder():pool(0),workerIndex(0xFFFFFFFFU),apicId(0xFFFFFFFFU),ticket(){}
+CpuWorkHolder::CpuWorkHolder():pool(0),workerIndex(0xFFFFFFFFU),apicId(0xFFFFFFFFU),session(0),ticket(){}
 bool CpuWorkHolder::IsBound()const{
-    return pool!=0&&workerIndex!=0xFFFFFFFFU&&apicId!=0xFFFFFFFFU&&ticket.IsValid();
+    return pool!=0&&workerIndex!=0xFFFFFFFFU&&apicId!=0xFFFFFFFFU&&session!=0&&ticket.IsValid();
+}
+bool CpuWorkHolder::BoundTo(uint32_t poolSession,uint32_t index)const{
+    return IsBound()&&session==poolSession&&workerIndex==index;
 }
 bool CpuWorkPool::OnBootstrapProcessor()const{return shared&&(!shared->count||Identity()==shared->bspApicId);}
 int CpuWorkPool::FindWorker(uint32_t apicId)const{
@@ -194,6 +240,8 @@ bool CpuWorkPool::Prepare(CpuStartup& boot,memory::PhysicalMemoryManager& frames
         if(cpu.apicId>=255||cpu.apicId==shared->bspApicId)continue;
         Worker* worker=new((void*)next) Worker;next+=sizeof(Worker);
         worker->apicId=cpu.apicId;worker->stackBase=cpu.stackBase;worker->stackPages=cpu.stackPages;
+        // Unique within the pool, so a raw (slot, id) pair is addressable on exactly one worker.
+        worker->queueTag=0x51540000U|(shared->session<<8)|(shared->count&0xFFU);
         worker->idtr.limit=sizeof(worker->idt)-1;worker->idtr.base=(uint32_t)worker->idt;
         for(uint32_t vector=0;vector<256;++vector)SetGate(worker->idt[vector],(uint32_t)&gtos_work_unexpected_interrupt);
         for(uint32_t vector=0;vector<32;++vector)SetGate(worker->idt[vector],gtos_work_exception_table[vector]);
@@ -280,9 +328,9 @@ void CpuWorkPool::ApplicationProcessorMain(uint32_t apicId,void* opaque){
                 asm volatile("pause");
             }
         }else{
-            SetState(*worker,CpuWorkerBusy);
             asm volatile("sti":::"memory");
-            worker->queue.ExecuteOne(Identity());
+            // The same step the host seam drives: publish Running, execute one job through the production queue.
+            WorkerStep(*worker,pool);
         }
     }
 }
@@ -291,7 +339,7 @@ bool CpuWorkPool::Start(memory::KernelPaging& paging){
     memory::PagingStatistics stats=paging.getStatistics();
     const CpuMemoryTypes* types=shared->count?&shared->memoryTypes:0;
     if(!stats.prepared||!stats.directoryAddress){error=CpuWorkPoolBadPaging;return false;}
-    uint32_t cr4; asm volatile("movl %%cr4,%0" : "=r"(cr4));
+    uint32_t cr4 = Cr4();
     if ((cr4 & (1U<<5)) || (uint32_t)&kernel_readonly_end <= (uint32_t)&kernel_readonly_start
         || !Mapped(paging,(uint32_t)&kernel_readonly_start,
                    (uint32_t)&kernel_readonly_end-(uint32_t)&kernel_readonly_start,false,types)) {
@@ -319,8 +367,18 @@ bool CpuWorkPool::Start(memory::KernelPaging& paging){
         }
     }
     if(shared->count && !paging.sealForSharedProcessors()){error=CpuWorkPoolBadPaging;return false;}
-    error=CpuWorkPoolOk;shared->directory=stats.directoryAddress;activePool=shared;started=true;
-    if(!startup->StartPrepared(&ApplicationProcessorMain,shared))error=CpuWorkPoolStartupFailed;
+    // Publish the owner before delivery so an AP that enters can identify itself and route its interrupts.
+    // Publication is one-way: it is never undone, because an AP may already be reading the block.
+    error=CpuWorkPoolOk;shared->directory=stats.directoryAddress;activePool=shared;
+    // Admission opens only after delivery actually succeeded. Setting it first meant a failed delivery still left the
+    // pool claiming it had started, which is a state a caller cannot tell from a real one.
+    started=startup->StartPrepared(&ApplicationProcessorMain,shared);
+    if(!started){
+        // The delivery call failed, but it may have entered APs before failing. Their stacks, IDTs, the trampoline and
+        // this shared block are all retained: reclaiming storage an AP might still be executing on is exactly the
+        // failure the startup protocol warns about.
+        error=CpuWorkPoolStartupFailed;
+    }
     for (uint32_t cpuIndex=0;cpuIndex<bootReport.detectedProcessors;++cpuIndex) {
         CpuStartupProcessorInfo info;
         if (!startup->GetProcessor(cpuIndex,info) || info.state!=CpuStartupSelfTestFailed) continue;
@@ -342,6 +400,9 @@ bool CpuWorkPool::Start(memory::KernelPaging& paging){
     CpuWorkPoolReport final=GetReport();
     if(error==CpuWorkPoolOk&&final.faultedWorkers)error=CpuWorkPoolWorkerSetupFailed;
     if(error==CpuWorkPoolOk&&final.readyWorkers!=shared->count)error=CpuWorkPoolReadyTimeout;
+    // `started` is what admission keys off, so it must not survive a Start that reported a failure. The owner stays
+    // published and every worker record, stack and table stays alive; only the claim to admit new work is withdrawn.
+    if(error!=CpuWorkPoolOk)started=false;
     return error==CpuWorkPoolOk;
 }
 CpuWorkSubmitStatus CpuWorkPool::Submit(uint32_t apicId,const WorkRequest& request,CpuWorkTicket& ticket){
@@ -355,12 +416,18 @@ CpuWorkSubmitStatus CpuWorkPool::Submit(uint32_t apicId,const WorkRequest& reque
     if (status==WorkFull) return CpuWorkFull;
     if (status==WorkInvalid) return CpuWorkInvalid;
     if (status==WorkExhausted) return CpuWorkExhausted;
-    ticket.workerIndex=index;ticket.ticket=local;
+    ticket.workerIndex=index;ticket.session=shared->session;ticket.queueTag=shared->workers[index]->queueTag;ticket.ticket=local;
     if(!SendWake(shared,apicId)){error=CpuWorkPoolWakeFailed;return CpuWorkAcceptedWakeFailed;}
     return CpuWorkAccepted;
 }
 CpuWorkCollectStatus CpuWorkPool::Collect(const CpuWorkTicket& ticket,WorkResult& result){
-    Guard guard;if(!OnBootstrapProcessor()||ticket.workerIndex>=shared->count)return CpuWorkTicketInvalid;
+    Guard guard;if(!OnBootstrapProcessor()||!shared||ticket.workerIndex>=shared->count)return CpuWorkTicketInvalid;
+    // A ticket from an earlier pool names a session this pool does not own. Without this check the worker index alone
+    // would admit it, and a stale ticket could consume a job it was never issued for.
+    if(ticket.session!=shared->session)return CpuWorkTicketInvalid;
+    // A ticket whose raw slot and id belong to another worker is refused here. Each worker numbers its own queue from
+    // one, so two workers legitimately issue identical (slot, id) pairs; the tag is what tells them apart.
+    if(ticket.queueTag!=shared->workers[ticket.workerIndex]->queueTag)return CpuWorkTicketInvalid;
     Worker& worker=*shared->workers[ticket.workerIndex];WorkCollectStatus status=worker.queue.Collect(ticket.ticket,result);
     if (status==WorkComplete) return CpuWorkComplete;
     if (status==WorkTicketInvalid) return CpuWorkTicketInvalid;
@@ -449,6 +516,14 @@ bool CpuWorkPool::ParkWorkers(){
     return false;
 }
 uint32_t CpuWorkPool::Session()const{return shared?shared->session:sessionStamp;}
+bool CpuWorkPool::Started()const{return started;}
+bool CpuWorkPool::OwnerPublished()const{return activePool!=0&&activePool==shared;}
+bool CpuWorkPool::OwnedRange(uint32_t& address,uint32_t& pages)const{
+    address=0;pages=0;
+    if(!shared)return false;
+    address=shared->allocationBase;pages=shared->allocationPages;
+    return address!=0&&pages!=0;
+}
 const CpuWorkQueue* CpuWorkPool::WorkerQueue(uint32_t workerIndex)const{
     if(!shared||workerIndex>=shared->count)return 0;
     return &shared->workers[workerIndex]->queue;
@@ -543,9 +618,9 @@ extern "C" bool gtos_host_install_pool(uint32_t workerCount, uint32_t bspApicId,
         SetState(*worker, CpuWorkerIdle);
         hostShared->workers[hostShared->count++] = worker;
         hostShared->byApic[worker->apicId] = worker;
+        // The same tag Prepare assigns, so a ticket issued on one worker is unaddressable on the other.
+        worker->queueTag = 0x51540000U | (hostShared->session << 8) | (hostShared->count & 0xFFU);
     }
-    // A request that could not be delivered to any worker is a failure, not a partial success.
-    if(requestFailures){error=CpuWorkPoolWakeFailed;return false;}
     return true;
 }
 // The friend struct that carries the private-state access. The extern "C" entry point below calls through it, so the
@@ -624,6 +699,45 @@ extern "C" uint32_t gtos_host_park_requested(uint32_t workerIndex) {
 extern "C" uint32_t gtos_host_park_acked_session(uint32_t workerIndex) {
     if (!hostShared || workerIndex >= hostShared->count) return 0xFFFFFFFFU;
     return __atomic_load_n(&hostShared->workers[workerIndex]->parkAckedSession, __ATOMIC_ACQUIRE);
+}
+// The real step, driven from the test. It calls the same function the AP loop calls, so the Running state a test
+// observes is the production transition.
+extern "C" bool gtos_host_worker_step(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    return WorkerStepBegin(*hostShared->workers[workerIndex], hostShared);
+}
+extern "C" bool gtos_host_worker_resume(uint32_t workerIndex) {
+    if (!hostShared || workerIndex >= hostShared->count) return false;
+    WorkerStepFinish(*hostShared->workers[workerIndex]);
+    return true;
+}
+extern "C" void gtos_host_step_gate(uint32_t armed) {
+    if (!hostShared) return;
+    for (uint32_t i = 0; i < hostShared->count; ++i)
+        __atomic_store_n(&hostShared->workers[i]->stepGate, armed ? 1U : 0U, __ATOMIC_RELEASE);
+}
+extern "C" uint32_t gtos_host_step_reached() {
+    if (!hostShared) return 0;
+    uint32_t reached = 0;
+    for (uint32_t i = 0; i < hostShared->count; ++i)
+        if (__atomic_load_n(&hostShared->workers[i]->stepReached, __ATOMIC_ACQUIRE)) ++reached;
+    return reached;
+}
+// One AP reaching its idle publication. In production the AP writes these itself after its self test; on the host the
+// startup boundary calls this for each processor it reports as having entered, so the readiness accounting in Start()
+// still runs against real worker records rather than being handed a finished state.
+extern "C" bool gtos_host_ap_enter(uint32_t apicId) {
+    // A pool built by the real Prepare publishes its owner; an installed one has hostShared. Either way the worker
+    // record is the same record the production readiness accounting reads.
+    CpuWorkPoolShared* pool = activePool ? activePool : hostShared;
+    if (!pool) return false;
+    if (apicId >= 256 || !pool->byApic[apicId]) return false;
+    Worker* worker = pool->byApic[apicId];
+    if (State(*worker) != CpuWorkerPrepared) return false;
+    Store(worker->observedCr3, pool->directory);
+    Store(worker->observedCr0, 0x80010011U);
+    SetState(*worker, CpuWorkerIdle);
+    return true;
 }
 extern "C" void gtos_host_reset_pool() {
     // Only the test may reset, and only between independent cases; the production pool never resets.
