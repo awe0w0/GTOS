@@ -1,4 +1,4 @@
-// GTOS-DSH-110 production bridge.
+// GTOS-DSH-111 production bridge.
 //
 // Every native request is built here, from the normaliser's file descriptions, so no stage hand-assembles a control
 // and no stage invents its own path conversion. The bridge never takes a free-form command line: each kind has its own
@@ -173,8 +173,10 @@ export function emulatorRequest(control, authority, options) {
   need(typeof image === 'string' && image.startsWith('/'), 'a checkpoint needs the current image');
   need(typeof append === 'string' && append.length > 0, 'a checkpoint needs its append line');
   need(logs && logs.e9 && logs.serial, 'a checkpoint needs two log destinations');
+  const vcpus = options.vcpus === undefined ? 1 : options.vcpus;
+  need(vcpus === 1 || vcpus === 2, 'vCPU count must be 1 or 2, got ' + vcpus);
   const machine = ['-machine', 'pc', '-accel', 'tcg,thread=single', '-cpu', 'qemu32',
-    '-smp', '1', '-m', '128M',
+    '-smp', String(vcpus), '-m', '128M',
     '-nodefaults', '-no-user-config', '-display', 'none', '-monitor', 'none',
     '-nic', 'none', '-vga', 'none',
     '-serial', 'file:' + logs.serial,
@@ -185,7 +187,7 @@ export function emulatorRequest(control, authority, options) {
   const argv = [...base, ...machine, '-kernel', image, ...(options.extra || []), '-append', append];
   return { stage: options.stage, kind, argv, outputs: [logs.e9, logs.serial],
     cwd: control.work_root, work_root: control.work_root, limit_seconds: options.limit || 130,
-    env: emulatorEnv, cmd0: loader, emulator, image, logs, append,
+    env: emulatorEnv, cmd0: loader, emulator, image, logs, append, vcpus,
     cmd0_is_the_bundled_loader: true, machine_started: true };
 }
 

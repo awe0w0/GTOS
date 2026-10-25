@@ -31,7 +31,15 @@ export function prepare(policy) {
   const head = gitText(policy, repository, ['rev-parse', 'HEAD']);
   need(head === policy.primary_base, 'primary HEAD is the packet base', { head, want: policy.primary_base });
   need(gitText(policy, repository, ['rev-parse', '--abbrev-ref', 'HEAD']) === 'dev', 'primary branch is dev');
-  need(!fs.existsSync(worktree), 'the worktree does not exist yet', worktree);
+  const worktreeExists = fs.existsSync(worktree);
+  if (worktreeExists) {
+    // A later commit on the same branch reuses the worktree. It must already sit at this commit's base, on this branch.
+    need(gitText(policy, worktree, ['rev-parse', '--abbrev-ref', 'HEAD']) === branch,
+      'the existing worktree is on this branch');
+    need(gitText(policy, worktree, ['rev-parse', 'HEAD']) === base,
+      'the existing worktree is at this commit base',
+      { head: gitText(policy, worktree, ['rev-parse', 'HEAD']), want: base });
+  }
 
   // The six existing paths must equal their parent pin BEFORE the rewrite is permitted.
   for (const file of policy.files) {
@@ -50,9 +58,11 @@ export function prepare(policy) {
     need(r.status !== 0, 'new path is absent from the parent', file.logical);
   }
 
-  gitText(policy, repository, ['worktree', 'add', '-b', branch, worktree, base]);
-  need(fs.existsSync(worktree), 'the worktree exists after add');
-  need(gitText(policy, worktree, ['rev-parse', 'HEAD']) === base, 'the worktree starts at the parent');
+  if (!worktreeExists) {
+    gitText(policy, repository, ['worktree', 'add', '-b', branch, worktree, base]);
+    need(fs.existsSync(worktree), 'the worktree exists after add');
+    need(gitText(policy, worktree, ['rev-parse', 'HEAD']) === base, 'the worktree starts at the parent');
+  }
 
   const staged = [];
   for (const file of policy.files) {
@@ -120,26 +130,85 @@ export function commit(policy, canonical) {
   const formatPatch = gitRun(policy, worktree, ['format-patch', '-1', '--stdout', '--no-signature',
     '--no-stat', oid]).stdout;
 
+  // Reserve the consumer BEFORE the commit object exists. The policy may name a consumer, and a second commit on the
+  // same branch must name a different one; either way the reservation is what proves the namespace is free.
+  const consumer = policy.canonical_consumer || 'git-commit';
+  const reservation = reserveConsumer(policy.report_root, consumer, policy.stage || 'gitcommit-01');
   const written = [];
-  written.push(canonical.createCanonical(policy.report_root, 'git-commit',
+  written.push(canonical.createCanonical(policy.report_root, consumer,
     'commit.json', Buffer.from(JSON.stringify({ task: policy.task, oid, parent, tree, branch,
       author: author.name + ' <' + author.email + '>', message, blobs }, null, 2) + '\n')));
-  written.push(canonical.createCanonical(policy.report_root, 'git-commit',
+  written.push(canonical.createCanonical(policy.report_root, consumer,
     'show.patch', showPatch));
-  written.push(canonical.createCanonical(policy.report_root, 'git-commit',
+  written.push(canonical.createCanonical(policy.report_root, consumer,
     'format-patch.patch', formatPatch));
-  written.push(canonical.createCanonical(policy.report_root, 'git-commit',
+  written.push(canonical.createCanonical(policy.report_root, consumer,
     'verification.json', Buffer.from(JSON.stringify({ task: policy.task, ok: true,
       commit: { oid, parent, tree, blobs }, blobs_checked: blobs.length,
       changed_paths: changed.length, five_way: true }, null, 2) + '\n')));
 
-  return { mode: 'commit', ok: true, oid, parent, tree, branch, author,
+  return { mode: 'commit', ok: true, oid, parent, tree, branch, author, canonical_consumer: consumer,
+    canonical_reservation: reservation,
     message, blobs, changed_paths: changed.length, artifacts: written,
     five_way_identity: true };
 }
 
 // The runner freezes this module and executes it with a control path. The entry below is the only way it is driven:
 // it reads the control, calls the exported transaction, and writes a receipt exclusively.
+
+// ---------------------------------------------------------------- consumer reservation
+//
+// A transaction reserves its canonical consumer BEFORE it creates a commit object or moves a branch tip. 110 learned
+// this the hard way: the commit existed, then the artifact write collided with the previous commit's consumer
+// directory, and the transaction ended "commit created, delivery incomplete". A reservation makes that impossible for
+// a controlled writer, because the collision is detected while nothing has been mutated yet.
+//
+// The reservation is a record on disk owned by one stage. It is not an operating-system lock: it constrains this
+// writer, not an arbitrary Node process.
+
+export function reserveConsumer(reportRoot, consumer, stage) {
+  if (typeof consumer !== 'string' || !/^[a-z][a-z0-9-]*$/.test(consumer)) {
+    throw new Error('RESERVE: consumer must be lower-case letters, digits and dashes, got ' + consumer);
+  }
+  if (typeof stage !== 'string' || !/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) {
+    throw new Error('RESERVE: stage must match the stage grammar, got ' + stage);
+  }
+  const directory = path.join(reportRoot, 'canonical', consumer);
+  const record = path.join(reportRoot, 'canonical', consumer + '.reservation.json');
+  if (fs.existsSync(record)) {
+    const prior = JSON.parse(fs.readFileSync(record, 'utf8'));
+    throw new Error('RESERVE: consumer ' + consumer + ' is already reserved by stage ' + prior.stage
+      + ' at ' + prior.reserved_utc + '; a consumer belongs to exactly one transaction');
+  }
+  // An existing canonical directory that already holds artifacts belongs to someone else even without a record.
+  if (fs.existsSync(directory) && fs.readdirSync(directory).length > 0) {
+    throw new Error('RESERVE: consumer ' + consumer + ' already holds canonical artifacts; '
+      + 'a new transaction needs its own consumer');
+  }
+  const doc = {
+    kind: 'canonical_consumer_reservation', consumer, stage, directory,
+    reserved_utc: new Date().toISOString(),
+    reserved_before_any_mutation: true,
+    note: 'written before the commit object is created and before any branch tip moves',
+  };
+  fs.mkdirSync(path.dirname(record), { recursive: true });
+  fs.writeFileSync(record, JSON.stringify(doc, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  return { reserved: true, consumer, stage, directory, record,
+    reserved_utc: doc.reserved_utc };
+}
+
+export function releaseConsumer(reportRoot, consumer, stage) {
+  const record = path.join(reportRoot, 'canonical', consumer + '.reservation.json');
+  if (!fs.existsSync(record)) throw new Error('RELEASE: consumer ' + consumer + ' has no reservation');
+  const doc = JSON.parse(fs.readFileSync(record, 'utf8'));
+  if (doc.stage !== stage) {
+    throw new Error('RELEASE: consumer ' + consumer + ' is owned by stage ' + doc.stage
+      + ', not by ' + stage);
+  }
+  fs.unlinkSync(record);
+  return true;
+}
+
 const isMain = process.argv[1]
   && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 if (isMain) {
