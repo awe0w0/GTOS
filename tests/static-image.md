@@ -1,0 +1,7 @@
+# Static i386 image inspection
+
+Run `node tests/static-image.test.mjs`. The suite imports the actual `tools/static-image.mjs`, reads synthetic ELF byte fixtures, and exercises headers, table bounds, load mappings, symbol ownership, unresolved references, constructor slots, Multiboot headers and repeated reads. It never executes fixture bytes or a project image.
+
+`inspectStaticImage(bytes, {expectedKernelStart, expectedConstructors})` accepts an unstripped ELF32 little-endian ET_EXEC i386 image from the pinned linker script. It rejects unresolved strong and weak symbols, dynamic loading, remaining relocation sections, inconsistent mapped addresses and an unexpected constructor sequence. Pass the ordered initializer names independently derived from the input objects; do not derive the expectation from the output being checked. NOBITS is checked against segment memory extents and is never allocated by this reader.
+
+The result reports final addresses, constructor targets, writable executable segments and the stack execution request. It always reports constructors and target code as unexecuted and `init_ready` as unknown. A valid static image does not establish that a boot loader accepts it, that constructors run, or that services and hardware work. This test suite alone does not inspect any real project final image. Final linking and subsequent static inspection require a separate explicit grant.
