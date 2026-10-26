@@ -391,14 +391,26 @@ bool ProcessAddressSpace::ProtectPage(uint32_t address, bool writable) {
 // LATE stage of Create, after earlier stages have already taken frames and mapped pages: without it a unit can only
 // starve the allocator, which fails the first stage and therefore never exercises the rollback of a partial acquisition.
 // The default profile does not define this macro, so the production path is unchanged.
+//
+// The witness is part of the seam, not of the test. Every call to ProtectRange records that it was consulted, the page
+// count it saw, and whether it refused. A test can then ask the executed path what happened instead of inferring it from
+// the return value: "Create returned false" is consistent with failing anywhere, but a recorded consultation that
+// refused at page count 2 can only be this stage.
 extern "C" uint32_t gtos_process_memory_test_fail_protect_after;
+extern "C" uint32_t gtos_process_memory_test_protect_calls;
+extern "C" uint32_t gtos_process_memory_test_protect_refusals;
+extern "C" uint32_t gtos_process_memory_test_protect_pages_at_refusal;
 #endif
 bool ProcessAddressSpace::ProtectRange(uint32_t address, uint32_t bytes, bool writable) {
     InterruptGuard guard;
     if (!Mutable()) return false;
 #ifdef GTOS_PROCESS_MEMORY_TEST
+    ++gtos_process_memory_test_protect_calls;
     if (gtos_process_memory_test_fail_protect_after && pageCount >= gtos_process_memory_test_fail_protect_after) {
-        // The seam refuses at this stage, which is the fifth of Create. Everything before it already happened.
+        // The seam refuses at this stage, which is the fifth of Create. Everything before it already happened, and the
+        // page count recorded here is what it had already acquired.
+        ++gtos_process_memory_test_protect_refusals;
+        gtos_process_memory_test_protect_pages_at_refusal = pageCount;
         return Fail(ProcessMemoryNoMemory);
     }
 #endif

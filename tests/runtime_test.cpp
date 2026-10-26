@@ -37,6 +37,9 @@ extern "C" uint32_t gtos_process_memory_test_cr3;
 extern "C" bool gtos_process_memory_test_bsp;
 // The declared host-only fault point for the late stage of Create. Zero means the production path.
 extern "C" uint32_t gtos_process_memory_test_fail_protect_after;
+extern "C" uint32_t gtos_process_memory_test_protect_calls;
+extern "C" uint32_t gtos_process_memory_test_protect_refusals;
+extern "C" uint32_t gtos_process_memory_test_protect_pages_at_refusal;
 
 // The unit constructs its objects in raw storage, so it supplies the one placement-new form it uses. A replacement
 // allocation function must be at global scope.
@@ -834,20 +837,38 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         for (u32 i = 0; i < frameSetCount; ++i) withSibling[withSiblingCount++] = frameSet[i];
 
         // Arm the seam so the FIFTH stage of the next Create is refused. The threshold is the page count the object has
-        // already reached at that point, which is exactly the count after the two mappings.
+        // already reached at that point, which is exactly the count after the two mappings. The witness is reset here so
+        // that what it reports afterwards belongs to this one attempt.
+        const u32 callsBefore = gtos_process_memory_test_protect_calls;
+        gtos_process_memory_test_protect_refusals = 0;
+        gtos_process_memory_test_protect_pages_at_refusal = 0;
         gtos_process_memory_test_fail_protect_after = 1;
 
         MakeImage(1, image);
         uint32_t lateId = 0xDEADBEEFU;
         const bool late = runtime.Create(image, lateId);
         gtos_process_memory_test_fail_protect_after = 0;
-        Say("   late Create returned "); Say(late ? "true" : "false"); Say("\n");
+
+        // What the executed path recorded, read after the fact. A false return alone cannot say where Create stopped:
+        // failing in Prepare or in the first mapping returns false just as well. These three numbers can.
+        const u32 callsDuring = gtos_process_memory_test_protect_calls - callsBefore;
+        const u32 refusals = gtos_process_memory_test_protect_refusals;
+        const u32 pagesAtRefusal = gtos_process_memory_test_protect_pages_at_refusal;
+        Say("   late Create returned "); Say(late ? "true" : "false");
+        Say("   ProtectRange consulted "); SayHex(callsDuring);
+        Say(" times, refused "); SayHex(refusals);
+        Say(" times at page count "); SayHex(pagesAtRefusal); Say("\n");
+
         Expect(!late, "a Create whose fifth stage is refused fails");
         ExpectHex(lateId, 0, "the refused Create cleared the caller identifier");
 
-        // The target stage really was reached: the seam only refuses when the page count is at least the threshold, so a
-        // refusal means the two mappings had already happened.
-        Say("   the fifth stage was reached before the refusal\n");
+        // The target stage was actually reached and actually refused, as recorded by the seam rather than inferred from
+        // the return value. ProtectPage calls ProtectRange once, so a single consultation is the stage running once.
+        ExpectHex(callsDuring, 1, "the fifth stage was consulted exactly once");
+        ExpectHex(refusals, 1, "the fifth stage refused exactly once");
+        // The refusal happened with the two mappings already acquired: CodeAddress and DataAddress are two pages, so the
+        // page count at refusal is 2. A refusal at 0 or 1 would be a different, earlier failure.
+        ExpectHex(pagesAtRefusal, 2, "the refusal happened with both mappings already acquired");
 
         // Nothing was published.
         const NativeStatistics afterLate = runtime.Statistics();

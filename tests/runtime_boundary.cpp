@@ -167,6 +167,10 @@ extern "C" bool gtos_process_memory_test_bsp = true;
 // The declared host-only fault point for the late stage of Create. It is defined here because this file is the host
 // boundary: the one place allowed to answer what a host cannot do. Zero is the production path.
 extern "C" uint32_t gtos_process_memory_test_fail_protect_after = 0;
+// The seam's witness: how often the stage was consulted, how often it refused, and the page count it saw when it did.
+extern "C" uint32_t gtos_process_memory_test_protect_calls = 0;
+extern "C" uint32_t gtos_process_memory_test_protect_refusals = 0;
+extern "C" uint32_t gtos_process_memory_test_protect_pages_at_refusal = 0;
 extern "C" void gtos_process_memory_test_invalidate(uint32_t address) { (void)address; }
 extern "C" uint32_t gtos_host_runtime_is_bsp() { return gtos_host_runtime_bsp; }
 extern "C" uint32_t gtos_host_runtime_cr3() {
