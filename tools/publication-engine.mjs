@@ -1,4 +1,4 @@
-// GTOS-DSH-113 publication engine.
+// GTOS-DSH-126 publication engine.
 //
 // Archive and seal for this packet. It keeps the strict evidence rules the earlier packets established, and it adapts
 // only the product rules that belong to 110:
@@ -16,7 +16,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const TASK = 'GTOS-DSH-113';
+const TASK = 'GTOS-DSH-126';
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const checks = [];
 function need(ok, name, detail) {
@@ -56,7 +56,7 @@ function walk(root, prefix, add) {
 // ---------------------------------------------------------------- evidence rules
 // A stage that reports a started transport must have produced its raw capture. A filesystem miss is never read as an
 // inference that nothing ran; it is a refusal.
-function assertStartedHasRaw(nativeRoot) {
+export function assertStartedHasRaw(nativeRoot) {
   const logDir = path.join(nativeRoot.host_root, 'logs');
   const declared = path.join(logDir, nativeRoot.ledger);
   const ledger = fs.existsSync(declared) ? declared
@@ -210,7 +210,7 @@ function archive(control) {
   const manifest = { task: TASK, publication: control.publication,
     files: payloadRows, root_digest: summary.digest,
     digest_recipe: receipt.digest_recipe, manifest_self_excluded: true };
-  const manifestPath = path.join(pub, 'manifest-113.json');
+  const manifestPath = path.join(pub, 'manifest-126.json');
   need(!fs.existsSync(manifestPath), 'the manifest is new');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
   return { receipt, manifest: hash(manifestPath), payload: receipt.payload };
@@ -255,7 +255,7 @@ function seal(control) {
   need(summary.digest === previous.payload.root_digest, 'the payload digest is unchanged');
 
   // Two-way set comparison against the manifest.
-  const manifestPath = path.join(pub, 'manifest-113.json');
+  const manifestPath = path.join(pub, 'manifest-126.json');
   need(fs.existsSync(manifestPath), 'the manifest exists', manifestPath);
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const onDisk = new Map(rows.map((r) => [r.path, r]));
@@ -554,7 +554,7 @@ if (isEngineMain) try {
   need(/^[a-z][a-z0-9]*-[0-9]{2}$/.test(control.stage), 'stage grammar', control.stage);
   need(['archive', 'seal'].includes(control.mode), 'mode', control.mode);
   need(path.isAbsolute(control.report_root), 'report root is absolute');
-  need(/^publication-113-v[0-9]{2}$/.test(control.publication), 'owned publication identity',
+  need(/^publication-126-v[0-9]{2}$/.test(control.publication), 'owned publication identity',
     control.publication);
 
   const outcome = control.mode === 'archive' ? archive(control) : seal(control);
