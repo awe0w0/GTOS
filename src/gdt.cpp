@@ -123,18 +123,28 @@ extern "C" uint32_t gtos_gdt_host_reads;
 extern "C" uint32_t gtos_gdt_host_window_base;
 extern "C" uint32_t gtos_gdt_host_window_bytes;
 extern "C" uint32_t gtos_gdt_host_illegal_reads;
+// Reads attributed to the region they came from, so a refusal before the TSS is touched can be shown to have read none of it
+// even when the descriptor was read and even when the base is a legal address inside the window.
+extern "C" uint32_t gtos_gdt_host_descriptor_reads;
+extern "C" uint32_t gtos_gdt_host_tss_reads;
 #endif
+
+// The region a read is charged to. It is declared for both builds so the call sites do not differ.
+enum ReadRegion { kDescriptorRead = 1, kTaskStateRead = 2 };
 
 #ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
 // Reads one byte, recording an access outside the declared window instead of performing it. A refusal is then provable by
 // the counter rather than by hoping the address happened to be readable.
-static uint8_t SafeReadByte(uint64_t address) {
+// A read is charged to its region before the window test, so an access outside the window is still attributed: an illegal
+// TSS read is a TSS read that was refused, not an anonymous one.
+static uint8_t SafeReadByte(uint64_t address, ReadRegion region) {
+    if (region == kTaskStateRead) ++gtos_gdt_host_tss_reads; else ++gtos_gdt_host_descriptor_reads;
     const uint64_t base = gtos_gdt_host_window_base, bytes = gtos_gdt_host_window_bytes;
     if (address < base || address >= base + bytes) { ++gtos_gdt_host_illegal_reads; return 0; }
     return *(const uint8_t*)(__SIZE_TYPE__)address;
 }
 #else
-static uint8_t SafeReadByte(uint64_t address) { return *(const uint8_t*)(__SIZE_TYPE__)address; }
+static uint8_t SafeReadByte(uint64_t address, ReadRegion) { return *(const uint8_t*)(__SIZE_TYPE__)address; }
 #endif
 
 uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out,
@@ -167,6 +177,14 @@ uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out
     out.gdt_base = gdtr.base;
     out.gdt_limit = gdtr.limit;
 
+    // ---------------------------------------------------------------- the selector, before anything is indexed by it
+    // The index below is only a GDT offset if the selector names the GDT. Each of these refusals happens before the offset is
+    // computed, so a selector that names the LDT cannot be used to read a GDT slot it does not address.
+    if (!out.read_ok) { fail("the machine-level reads did not execute"); (void)before; return failureCount; }
+    if (out.str_selector != expectedSelector) { fail("the task register selector is not the one that was loaded"); (void)before; return failureCount; }
+    if (out.str_ti != 0) { fail("the task register selector names the LDT, not the GDT"); (void)before; return failureCount; }
+    if (out.str_rpl != 0) { fail("the task register selector has a ring other than 0"); (void)before; return failureCount; }
+
     // ---------------------------------------------------------------- the descriptor, read only when it is safe to
     // A descriptor occupies eight bytes. The offset is computed in 64 bits so a selector near the top of the range cannot
     // wrap the addition, and the whole descriptor must lie inside the table the GDT register reported.
@@ -183,12 +201,12 @@ uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out
     }
 
     const uint64_t descriptorAddress = (uint64_t)out.gdt_base + descriptorOffset;
-    const uint32_t limitLo = (uint32_t)SafeReadByte(descriptorAddress + 0) | ((uint32_t)SafeReadByte(descriptorAddress + 1) << 8);
-    const uint32_t baseLo = (uint32_t)SafeReadByte(descriptorAddress + 2) | ((uint32_t)SafeReadByte(descriptorAddress + 3) << 8);
-    const uint32_t baseMid = (uint32_t)SafeReadByte(descriptorAddress + 4);
-    const uint32_t access = (uint32_t)SafeReadByte(descriptorAddress + 5);
-    const uint32_t flagsLimitHi = (uint32_t)SafeReadByte(descriptorAddress + 6);
-    const uint32_t baseHi = (uint32_t)SafeReadByte(descriptorAddress + 7);
+    const uint32_t limitLo = (uint32_t)SafeReadByte(descriptorAddress + 0, kDescriptorRead) | ((uint32_t)SafeReadByte(descriptorAddress + 1, kDescriptorRead) << 8);
+    const uint32_t baseLo = (uint32_t)SafeReadByte(descriptorAddress + 2, kDescriptorRead) | ((uint32_t)SafeReadByte(descriptorAddress + 3, kDescriptorRead) << 8);
+    const uint32_t baseMid = (uint32_t)SafeReadByte(descriptorAddress + 4, kDescriptorRead);
+    const uint32_t access = (uint32_t)SafeReadByte(descriptorAddress + 5, kDescriptorRead);
+    const uint32_t flagsLimitHi = (uint32_t)SafeReadByte(descriptorAddress + 6, kDescriptorRead);
+    const uint32_t baseHi = (uint32_t)SafeReadByte(descriptorAddress + 7, kDescriptorRead);
     out.descriptor_type = access;
     out.descriptor_present = (access & 0x80u) ? 1u : 0u;
     out.descriptor_limit = limitLo | ((flagsLimitHi & 0x0Fu) << 16);
@@ -226,16 +244,13 @@ uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out
 
     // ---------------------------------------------------------------- now the TSS may be read
     const uint64_t tssAddress = (uint64_t)out.descriptor_base;
-    out.tss_esp0 = (uint32_t)SafeReadByte(tssAddress + 4) | ((uint32_t)SafeReadByte(tssAddress + 5) << 8)
-                 | ((uint32_t)SafeReadByte(tssAddress + 6) << 16) | ((uint32_t)SafeReadByte(tssAddress + 7) << 24);
-    out.tss_ss0 = (uint32_t)SafeReadByte(tssAddress + 8) | ((uint32_t)SafeReadByte(tssAddress + 9) << 8);
-    out.tss_iomap_base = (uint32_t)SafeReadByte(tssAddress + 102) | ((uint32_t)SafeReadByte(tssAddress + 103) << 8);
+    out.tss_esp0 = (uint32_t)SafeReadByte(tssAddress + 4, kTaskStateRead) | ((uint32_t)SafeReadByte(tssAddress + 5, kTaskStateRead) << 8)
+                 | ((uint32_t)SafeReadByte(tssAddress + 6, kTaskStateRead) << 16) | ((uint32_t)SafeReadByte(tssAddress + 7, kTaskStateRead) << 24);
+    out.tss_ss0 = (uint32_t)SafeReadByte(tssAddress + 8, kTaskStateRead) | ((uint32_t)SafeReadByte(tssAddress + 9, kTaskStateRead) << 8);
+    out.tss_iomap_base = (uint32_t)SafeReadByte(tssAddress + 102, kTaskStateRead) | ((uint32_t)SafeReadByte(tssAddress + 103, kTaskStateRead) << 8);
 
-    // The obligations that need the values just read.
-    if (!out.read_ok) fail("the machine-level reads did not execute");
-    if (out.str_selector != expectedSelector) fail("the task register selector is not the one that was loaded");
-    if (out.str_ti != 0) fail("the task register selector names the LDT, not the GDT");
-    if (out.str_rpl != 0) fail("the task register selector has a ring other than 0");
+    // The obligations that need the values just read. The selector obligations are already settled above, before the
+    // descriptor was touched, so they are not repeated here.
     if (out.tss_ss0 != expectedSs0) fail("the TSS ring-0 stack selector is not the one the runtime set");
     if (out.tss_iomap_base != expectedIoMapBase) fail("the TSS io map base is not the one the runtime set");
     (void)before;

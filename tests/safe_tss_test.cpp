@@ -27,6 +27,8 @@ uint32_t gtos_gdt_host_reads = 0;
 uint32_t gtos_gdt_host_window_base = 0;
 uint32_t gtos_gdt_host_window_bytes = 0;
 uint32_t gtos_gdt_host_illegal_reads = 0;
+uint32_t gtos_gdt_host_descriptor_reads = 0;
+uint32_t gtos_gdt_host_tss_reads = 0;
 }
 
 static uint32_t failures = 0;
@@ -111,10 +113,16 @@ extern "C" int oMain() {
     // ---------------------------------------------------------------- the normal case
     {
         gtos_gdt_host_illegal_reads = 0;
+        gtos_gdt_host_descriptor_reads = 0;
+        gtos_gdt_host_tss_reads = 0;
         uint32_t bad = GlobalDescriptorTable().ObserveTaskRegister(out, kSelector, tssBase,
             kLimit, kSs0, kIoMap, why, count);
         Expect(bad == 0, "the runtime's own state satisfies every obligation");
         Expect(gtos_gdt_host_illegal_reads == 0, "the normal case read nothing outside the declared window");
+        // Eight descriptor bytes and eight task-state bytes: esp0 is four, ss0 is two and the io map base is two. The
+        // counts are asserted so a counter that never increments cannot make a refusal look clean.
+        Expect(gtos_gdt_host_descriptor_reads == 8, "the eight descriptor bytes were read");
+        Expect(gtos_gdt_host_tss_reads == 8, "the eight task-state bytes were read");
         Expect(out.tss_ss0 == kSs0, "the ring-0 selector was read");
         Expect(out.tss_iomap_base == kIoMap, "the io map base was read");
         Say("   selector "); SayHex(out.str_selector);
@@ -122,91 +130,126 @@ extern "C" int oMain() {
         Say(" limit "); SayHex(out.descriptor_limit);
         Say(" ss0 "); SayHex(out.tss_ss0);
         Say(" iomap "); SayHex(out.tss_iomap_base);
+        Say(" descriptor reads "); SayHex(gtos_gdt_host_descriptor_reads);
+        Say(" tss reads "); SayHex(gtos_gdt_host_tss_reads);
         Say(" illegal reads "); SayHex(gtos_gdt_host_illegal_reads);
         Say("\n");
     }
 
     // ---------------------------------------------------------------- each precondition, alone
-    // A helper: break one thing, require a refusal, and require that no byte outside the window was read.
-    auto refuse = [&](const char* label, uint32_t expectedSelector, uint32_t expectedBase, uint32_t expectedLimit) {
+    // Two kinds of refusal, and the test has to say which is which. A refusal that is decided before the task state is
+    // reached must show no task-state read at all; a refusal whose wrong value lives inside the task state can only be
+    // decided by reading it, and must show that read stayed inside the window. One blanket assertion would be either too
+    // weak for the first kind or false for the second.
+    auto reset = []() {
         gtos_gdt_host_illegal_reads = 0;
+        gtos_gdt_host_descriptor_reads = 0;
+        gtos_gdt_host_tss_reads = 0;
+    };
+    auto refuseBefore = [&](const char* label, uint32_t expectedSelector, uint32_t expectedBase, uint32_t expectedLimit) {
+        reset();
         uint32_t bad = GlobalDescriptorTable().ObserveTaskRegister(out, expectedSelector, expectedBase,
             expectedLimit, kSs0, kIoMap, why, count);
         Expect(bad > 0, label);
         Expect(gtos_gdt_host_illegal_reads == 0, "the refusal did not read outside the declared window");
+        // No task-state byte at all. This holds even when the base it refused was a legal address inside the window, which
+        // is the case a single window-wide counter could not distinguish.
+        Expect(gtos_gdt_host_tss_reads == 0, "the refusal read no byte of the task state");
         Say("   ");
         Say(label);
         Say(" -> ");
         Say(count > 0 && why[0] ? why[0] : "(unnamed)");
+        Say(" desc "); SayHex(gtos_gdt_host_descriptor_reads);
+        Say(" tss "); SayHex(gtos_gdt_host_tss_reads);
         Say(" illegal "); SayHex(gtos_gdt_host_illegal_reads);
+        Say("\n");
+    };
+    auto refuseAfter = [&](const char* label) {
+        reset();
+        uint32_t bad = GlobalDescriptorTable().ObserveTaskRegister(out, kSelector, tssBase, kLimit, kSs0, kIoMap,
+            why, count);
+        Expect(bad > 0, label);
+        Expect(gtos_gdt_host_illegal_reads == 0, "the refusal did not read outside the declared window");
+        Expect(gtos_gdt_host_tss_reads == 8, "the refusal read the task state once, inside the window");
+        Say("   ");
+        Say(label);
+        Say(" -> ");
+        Say(count > 0 && why[0] ? why[0] : "(unnamed)");
+        Say(" desc "); SayHex(gtos_gdt_host_descriptor_reads);
+        Say(" tss "); SayHex(gtos_gdt_host_tss_reads);
         Say("\n");
     };
 
     // The descriptor is outside the GDT limit: the offset arithmetic must not wrap, and nothing is read.
     gtos_gdt_host_str_selector = 0x7FF8;
-    refuse("a descriptor past the table limit is refused", 0x7FF8, tssBase, kLimit);
+    refuseBefore("a descriptor past the table limit is refused", 0x7FF8, tssBase, kLimit);
     gtos_gdt_host_str_selector = kSelector;
 
     // The descriptor is absent.
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x09, 0x00);
-    refuse("an absent descriptor is refused", kSelector, tssBase, kLimit);
+    refuseBefore("an absent descriptor is refused", kSelector, tssBase, kLimit);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
     // The descriptor is a code segment, not a system descriptor at all.
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x9A, 0x00);
-    refuse("a non-system descriptor is refused", kSelector, tssBase, kLimit);
+    refuseBefore("a non-system descriptor is refused", kSelector, tssBase, kLimit);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
     // A system descriptor of the wrong type: a 16-bit TSS is type 1, an LDT is type 2. Both have S = 0, so they reach the
     // type check rather than being refused as code.
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x81, 0x00);
-    refuse("a 16-bit TSS descriptor is refused", kSelector, tssBase, kLimit);
+    refuseBefore("a 16-bit TSS descriptor is refused", kSelector, tssBase, kLimit);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x82, 0x00);
-    refuse("an LDT descriptor is refused", kSelector, tssBase, kLimit);
+    refuseBefore("an LDT descriptor is refused", kSelector, tssBase, kLimit);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
     // A non-zero DPL.
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0xE9, 0x00);
-    refuse("a descriptor with a non-zero DPL is refused", kSelector, tssBase, kLimit);
+    refuseBefore("a descriptor with a non-zero DPL is refused", kSelector, tssBase, kLimit);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
     // A base that is not the runtime's task state. This is the case the previous packet could not test: the base points
     // outside the declared window, and the refusal must happen before anything reads there.
     PutDescriptor(&table[6 * 8], tssBase + 0x10000u, kLimit, 0x89, 0x00);
-    refuse("a base outside the declared window is refused without reading it", kSelector, tssBase, kLimit);
+    refuseBefore("a base outside the declared window is refused without reading it", kSelector, tssBase, kLimit);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
     // A limit that does not cover the fields read.
     PutDescriptor(&table[6 * 8], tssBase, 8, 0x89, 0x00);
-    refuse("a short limit is refused", kSelector, tssBase, 8);
+    refuseBefore("a short limit is refused", kSelector, tssBase, 8);
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
     // A selector with ring 3.
     gtos_gdt_host_str_selector = 0x33;
-    refuse("a selector with a non-zero RPL is refused", kSelector, tssBase, kLimit);
+    refuseBefore("a selector with a non-zero RPL is refused", kSelector, tssBase, kLimit);
     gtos_gdt_host_str_selector = kSelector;
 
     // A selector that names the LDT.
     gtos_gdt_host_str_selector = 0x34;
-    refuse("a selector that names the LDT is refused", kSelector, tssBase, kLimit);
+    refuseBefore("a selector that names the LDT is refused", kSelector, tssBase, kLimit);
     gtos_gdt_host_str_selector = kSelector;
 
     // A TSS whose own ss0 is not the runtime's.
     taskState[8] = 0x20;
     {
         gtos_gdt_host_illegal_reads = 0;
+        gtos_gdt_host_descriptor_reads = 0;
+        gtos_gdt_host_tss_reads = 0;
         uint32_t bad = GlobalDescriptorTable().ObserveTaskRegister(out, kSelector, tssBase, kLimit, kSs0, kIoMap,
             why, count);
         Expect(bad > 0, "a TSS ring-0 selector that is not the runtime's is refused");
         Expect(out.tss_ss0 == 0x20, "the wrong value is what was read");
         Expect(gtos_gdt_host_illegal_reads == 0, "reading the real TSS stayed inside the window");
+        // This refusal is after the read, so both regions were touched. That is the contrast with every refusal above.
+        Expect(gtos_gdt_host_descriptor_reads == 8, "the descriptor was read before this refusal");
+        Expect(gtos_gdt_host_tss_reads == 8, "the task state was read before this refusal");
     }
     taskState[8] = (uint8_t)(kSs0 & 0xFF);
 
     // A TSS whose io map base is wrong.
     taskState[102] = 0;
     taskState[103] = 0;
-    refuse("a TSS io map base that is not the runtime's is refused", kSelector, tssBase, kLimit);
+    refuseAfter("a TSS io map base that is not the runtime's is refused");
     taskState[102] = (uint8_t)(kIoMap & 0xFF);
     taskState[103] = (uint8_t)((kIoMap >> 8) & 0xFF);
 
@@ -215,11 +258,16 @@ extern "C" int oMain() {
     // happen at the bad base.
     PutDescriptor(&table[6 * 8], tssBase + 0x20000u, kLimit, 0x09, 0x00);
     gtos_gdt_host_illegal_reads = 0;
+    gtos_gdt_host_descriptor_reads = 0;
+    gtos_gdt_host_tss_reads = 0;
     {
         uint32_t bad = GlobalDescriptorTable().ObserveTaskRegister(out, kSelector, tssBase, kLimit, kSs0, kIoMap,
             why, count);
         Expect(bad > 0, "several faults at once are refused");
         Expect(gtos_gdt_host_illegal_reads == 0, "several faults at once read nothing outside the window");
+        Expect(gtos_gdt_host_tss_reads == 0, "several faults at once read no byte of the task state");
+        Expect(count > 0 && why[0] != 0, "the first refusal is named");
+        Say("   several faults -> "); Say(why[0]); Say("\n");
     }
     PutDescriptor(&table[6 * 8], tssBase, kLimit, 0x89, 0x00);
 
