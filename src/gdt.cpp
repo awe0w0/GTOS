@@ -110,6 +110,89 @@ uint32_t GlobalDescriptorTable::SegmentDescriptor::Limit() {
 uint16_t GlobalDescriptorTable::UserCodeSegmentSelector() { return 0x23; }
 uint16_t GlobalDescriptorTable::UserDataSegmentSelector() { return 0x2B; }
 void GlobalDescriptorTable::SetKernelStack(uint32_t top) { taskState.esp0 = top; }
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+// The host cannot execute STR, SGDT or read a descriptor table, so the host test supplies the three machine-level reads
+// through these symbols and the observation code below is the production code. The host never claims to have observed
+// hardware: it supplies what a machine would have returned, and the checks are the same checks.
+extern "C" uint32_t gtos_gdt_host_str_selector;
+extern "C" uint32_t gtos_gdt_host_sgdt_base;
+extern "C" uint32_t gtos_gdt_host_sgdt_limit;
+extern "C" uint32_t gtos_gdt_host_reads;
+#endif
+
+uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out,
+                                                    uint32_t expectedSelector, uint32_t expectedDescriptorBase,
+                                                    uint32_t expectedDescriptorLimit, uint32_t expectedSs0,
+                                                    uint32_t expectedIoMapBase,
+                                                    const char* failures[8], uint32_t& failureCount) {
+    for (uint32_t i = 0; i < sizeof(out); ++i) ((uint8_t*)&out)[i] = 0;
+    failureCount = 0;
+    const uint32_t before = failureCount;
+    auto fail = [&](const char* name) { if (failureCount < 8) failures[failureCount] = name; ++failureCount; };
+
+    uint16_t str = 0;
+    struct { uint16_t limit; uint32_t base; } __attribute__((packed)) gdtr;
+    gdtr.limit = 0; gdtr.base = 0;
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+    str = (uint16_t)gtos_gdt_host_str_selector;
+    gdtr.limit = (uint16_t)gtos_gdt_host_sgdt_limit;
+    gdtr.base = gtos_gdt_host_sgdt_base;
+    ++gtos_gdt_host_reads;
+#else
+    asm volatile("str %0" : "=r"(str) : : "memory");
+    asm volatile("sgdt %0" : "=m"(gdtr) : : "memory");
+#endif
+    out.read_ok = 1;
+    out.str_selector = str;
+    out.str_index = (uint32_t)(str >> 3);
+    out.str_ti = (uint32_t)((str >> 2) & 1u);
+    out.str_rpl = (uint32_t)(str & 3u);
+    out.gdt_base = gdtr.base;
+    out.gdt_limit = gdtr.limit;
+
+    // The descriptor the selector names, read from the table the GDT register points at.
+    out.descriptor_offset = out.str_index * 8u;
+    // A descriptor occupies eight bytes; it is wholly inside the table when offset + 7 <= limit.
+    out.descriptor_in_gdt = (out.descriptor_offset + 7u <= out.gdt_limit) ? 1u : 0u;
+
+    if (out.descriptor_in_gdt) {
+        const uint8_t* d = (const uint8_t*)(__SIZE_TYPE__)(out.gdt_base + out.descriptor_offset);
+        const uint32_t limitLo = (uint32_t)d[0] | ((uint32_t)d[1] << 8);
+        const uint32_t baseLo = (uint32_t)d[2] | ((uint32_t)d[3] << 8);
+        const uint32_t baseMid = (uint32_t)d[4];
+        const uint32_t access = (uint32_t)d[5];
+        const uint32_t flagsLimitHi = (uint32_t)d[6];
+        const uint32_t baseHi = (uint32_t)d[7];
+        out.descriptor_type = access;
+        out.descriptor_present = (access & 0x80u) ? 1u : 0u;
+        out.descriptor_limit = limitLo | ((flagsLimitHi & 0x0Fu) << 16);
+        out.descriptor_base = baseLo | (baseMid << 16) | (baseHi << 24);
+        // The TSS fields are read from the base the descriptor names, which is where the runtime's own taskState lives.
+        const uint8_t* tss = (const uint8_t*)(__SIZE_TYPE__)(out.descriptor_base);
+        out.tss_ss0 = (uint32_t)tss[8] | ((uint32_t)tss[9] << 8);
+        out.tss_esp0 = (uint32_t)tss[4] | ((uint32_t)tss[5] << 8)
+                     | ((uint32_t)tss[6] << 16) | ((uint32_t)tss[7] << 24);
+        out.tss_iomap_base = (uint32_t)tss[102] | ((uint32_t)tss[103] << 8);
+    }
+
+    // The obligations, each named. The expected values came from the caller's own initialisation state.
+    if (!out.read_ok) fail("the machine-level reads did not execute");
+    if (out.str_selector != expectedSelector) fail("the task register selector is not the one that was loaded");
+    if (out.str_ti != 0) fail("the task register selector names the LDT, not the GDT");
+    if (out.str_rpl != 0) fail("the task register selector has a ring other than 0");
+    if (!out.descriptor_in_gdt) fail("the descriptor is not inside the GDT limit");
+    if (!out.descriptor_present) fail("the TSS descriptor is not present");
+    // A 32-bit available TSS is type 9 in the low nibble, and ring 0 in the DPL bits.
+    if ((out.descriptor_type & 0x0Fu) != 9u) fail("the TSS descriptor type is not 32-bit available TSS");
+    if (((out.descriptor_type >> 5) & 3u) != 0u) fail("the TSS descriptor DPL is not 0");
+    if (out.descriptor_base != expectedDescriptorBase) fail("the TSS descriptor base is not the runtime task state");
+    if (out.descriptor_limit != expectedDescriptorLimit) fail("the TSS descriptor limit is not the task state size");
+    if (out.tss_ss0 != expectedSs0) fail("the TSS ring-0 stack selector is not the one the runtime set");
+    if (out.tss_iomap_base != expectedIoMapBase) fail("the TSS io map base is not the one the runtime set");
+    (void)before;
+    return failureCount;
+}
+
 void GlobalDescriptorTable::LoadTaskState(uint32_t top) {
     SetKernelStack(top);
     if (!taskStateLoaded) {
