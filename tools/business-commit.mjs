@@ -1,4 +1,4 @@
-// GTOS-DSH-123 P0b: the business commit entry, wired to the atomic transaction.
+// GTOS-DSH-125 P0b: the business commit entry, wired to the atomic transaction.
 //
 // The 122 commit driver still called the old delivery.prepare/commit pair, so the new transaction module existed beside the
 // business path instead of protecting it. This module is the entry the business path calls, and it does not have a second
