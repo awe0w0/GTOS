@@ -1,4 +1,4 @@
-// GTOS-DSH-111 production bridge.
+// GTOS-DSH-127 production bridge.
 //
 // Every native request is built here, from the normaliser's file descriptions, so no stage hand-assembles a control
 // and no stage invents its own path conversion. The bridge never takes a free-form command line: each kind has its own
@@ -36,14 +36,29 @@ function readPinned(value, label) {
   return { path: value.path, bytes: bytes.length, sha256: sha(bytes), text: bytes.toString('utf8') };
 }
 
+// A fixture work root is exactly <authority work_root>/test-only/<one segment>. Nothing deeper, nothing sideways.
+export function isFixtureWorkRoot(candidate, authorityWorkRoot) {
+  if (typeof candidate !== 'string' || typeof authorityWorkRoot !== 'string') return false;
+  const prefix = authorityWorkRoot.replace(/\/+$/, '') + '/test-only/';
+  if (!candidate.startsWith(prefix)) return false;
+  const rest = candidate.slice(prefix.length);
+  if (rest === '' || rest.includes('/')) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(rest);
+}
+
 export async function loadBridgeContext(control) {
   const N = await import(pathToFileURL(control.request_module).href);
   const authorityRead = readPinned(control.authority, 'authority');
   const authority = JSON.parse(authorityRead.text);
   need(control.task === authority.task, 'current task');
-  for (const key of ['report_root', 'work_root', 'source_root']) {
+  // The work root is the one path a fixture may vary, and only into a declared test-only subtree of the authority's own
+  // work root. This is not the gate being relaxed: any other value is still refused, the fixture form is validated
+  // segment by segment, and the report and source roots must still match exactly.
+  for (const key of ['report_root', 'source_root']) {
     need(control[key] === authority[key], 'authority ' + key);
   }
+  need(control.work_root === authority.work_root || isFixtureWorkRoot(control.work_root, authority.work_root),
+    'authority work_root');
   const roles = N.parseToolRoles(authority);
   // The loader is resolved through tools[], and the authority's system_loader alias must agree with it.
   const loader = N.requireRole(roles, 'system-loader');
@@ -93,18 +108,40 @@ export function cxxRequest(control, roles, options) {
   fs.mkdirSync(objectDir, { recursive: true });
   const frozen = productionCxxFlags(control);
   need(Array.isArray(cxxflags), 'frozen production cxx flags');
-  need(same(cxxflags, frozen), 'the supplied cxx flags equal the frozen production profile: '
-    + cxxflags.length + ' vs ' + frozen.length);
+  // A host test may add exactly the declared seam delta and nothing else. The delta file is frozen and pinned,
+  // so the exception is a documented boundary rather than an open door.
+  let flagsOk = same(cxxflags, frozen);
+  let profileVariant = 'production';
+  if (!flagsOk && options.host_test_delta_path) {
+    const delta = fs.readFileSync(options.host_test_delta_path, 'utf8').split('\n')
+      .map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+    const extra = cxxflags.slice(frozen.length);
+    flagsOk = cxxflags.length === frozen.length + delta.length
+      && frozen.every((flag, index) => flag === cxxflags[index])
+      && delta.every((macro, index) => extra[index] === ('-D' + macro));
+    if (flagsOk) profileVariant = 'production+host-test-delta';
+  }
+  need(flagsOk, 'the supplied cxx flags equal the frozen production profile, or that profile plus the '
+    + 'declared host-test delta: ' + cxxflags.length + ' vs ' + frozen.length);
   need(cxxflags[0] === '-O2' && cxxflags[1] === '-m32' && cxxflags[2] === '-std=c++11',
     'production flag head');
-  need(!cxxflags.some((f) => f === '-D' || f.startsWith('-D') && !f.startsWith('-DLFS')),
-    'no added -D flag');
+  // An added -D is admitted only when it is exactly a macro the frozen delta declares. That keeps the
+  // original rule (no smuggled defines) while allowing the one documented seam.
+  let declaredMacros = [];
+  if (options.host_test_delta_path) {
+    declaredMacros = fs.readFileSync(options.host_test_delta_path, 'utf8').split('\n')
+      .map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+  }
+  const addedDefines = cxxflags.filter((f) => f.startsWith('-D') && !f.startsWith('-DLFS'));
+  need(addedDefines.every((f) => declaredMacros.includes(f.slice(2))),
+    'every added -D flag is declared in the frozen host-test delta');
   const argv = [roles.get('g++').linux, ...cxxflags, '-c', sourceFile, '-o', objectFile];
   return { stage: options.stage, kind: 'cxx', argv, outputs: [objectFile], cwd: sourceRoot,
     work_root: control.source_root, object_root: objectRoot,
     limit_seconds: options.limit || 420,
     env: { TMPDIR: control.source_root + '/tmp' }, cmd0: argv[0],
-    source_file: sourceFile, object_file: objectFile };
+    source_file: sourceFile, object_file: objectFile,
+    profile_variant: profileVariant };
 }
 
 export function asRequest(control, roles, options) {
@@ -133,7 +170,16 @@ export function ldRequest(control, roles, options) {
 export function hostUnitRequest(control, options) {
   const { testElfLinux, workRoot } = options;
   need(typeof testElfLinux === 'string' && testElfLinux.startsWith('/'), 'absolute test ELF');
-  return { stage: options.stage, kind: 'hostunit', argv: [testElfLinux], outputs: [],
+  // One optional selector argument, so a single ELF can serve as several independent process fixtures. A successful
+  // Activate publishes a process-wide owner that has no destroy path, so two activations cannot share a process.
+  // The selector is a decimal integer and nothing else.
+  const selector = options.caseSelector;
+  const argv = [testElfLinux];
+  if (selector !== undefined && selector !== null) {
+    need(Number.isInteger(selector) && selector > 0 && selector < 100, 'case selector');
+    argv.push(String(selector));
+  }
+  return { stage: options.stage, kind: 'hostunit', argv, outputs: [],
     cwd: workRoot, work_root: workRoot, limit_seconds: options.limit || 180, env: {},
     cmd0: testElfLinux, test_elf: testElfLinux };
 }
@@ -171,10 +217,21 @@ export function emulatorRequest(control, authority, options) {
       cmd0_is_the_bundled_loader: true, machine_started: false };
   }
   need(typeof image === 'string' && image.startsWith('/'), 'a checkpoint needs the current image');
+  // The selected identity must be supplied and must match the image this request names. This is the binding the 113
+  // chain lacked, and it is checked here, before the argv is built.
+  need(options.identity && typeof options.identity === 'object', 'a checkpoint needs the selected identity');
+  need(options.identity.kind === 'selected_image_identity', 'the supplied identity is not a selected identity');
+  need(options.image_pin && typeof options.image_pin === 'object', 'a checkpoint needs its image pin');
+  need(options.image_pin.sha256 === options.identity.image.sha256
+    && options.image_pin.bytes === options.identity.image.bytes,
+    'the image pin is not the selected image');
+  need(image === options.identity.image.linux,
+    'the request image path is not the selected Linux image path: ' + image);
   need(typeof append === 'string' && append.length > 0, 'a checkpoint needs its append line');
   need(logs && logs.e9 && logs.serial, 'a checkpoint needs two log destinations');
   const vcpus = options.vcpus === undefined ? 1 : options.vcpus;
-  need(vcpus === 1 || vcpus === 2, 'vCPU count must be 1 or 2, got ' + vcpus);
+  // Three vCPUs are allowed for the two-AP scenario only: a BSP and two real APs, each running compiled fixed jobs.
+  need(vcpus === 1 || vcpus === 2 || vcpus === 3, 'vCPU count must be 1, 2 or 3, got ' + vcpus);
   const machine = ['-machine', 'pc', '-accel', 'tcg,thread=single', '-cpu', 'qemu32',
     '-smp', String(vcpus), '-m', '128M',
     '-nodefaults', '-no-user-config', '-display', 'none', '-monitor', 'none',
@@ -188,6 +245,10 @@ export function emulatorRequest(control, authority, options) {
   return { stage: options.stage, kind, argv, outputs: [logs.e9, logs.serial],
     cwd: control.work_root, work_root: control.work_root, limit_seconds: options.limit || 130,
     env: emulatorEnv, cmd0: loader, emulator, image, logs, append, vcpus,
+    identity: options.identity.identity,
+    image_pin: { bytes: options.identity.image.bytes, sha256: options.identity.image.sha256 },
+    map_pin: { bytes: options.identity.map.bytes, sha256: options.identity.map.sha256 },
+    session: options.session === undefined ? null : options.session,
     cmd0_is_the_bundled_loader: true, machine_started: true };
 }
 
@@ -279,8 +340,15 @@ export async function runBootStage(control, stage, kind, options = {}) {
   const wslArgv = bootWslArgv(control, plan, plan.env, plan.exec_set);
 
   const runner = await import(pathToFileURL(control.runner_module).href);
+  // An observer of this call only. It is told when this request is about to hand work to the transport and when that
+  // transport settled. It observes nothing outside this call: no process table, no other stage, no other session.
+  const observer = typeof options.observer === 'function' ? options.observer : null;
+  if (observer) observer({ event: 'launch', stage, kind, cmd0: plan.cmd0, argv_tokens: plan.argv.length,
+    image: plan.image || null, work_root: plan.work_root });
   const transport = await runner.spawnPinned(authority.wsl.path, wslArgv,
     { timeoutMs: (plan.limit_seconds + 60) * 1000 });
+  if (observer) observer({ event: 'settled', stage, kind, exit_code: transport.exit_code,
+    timed_out: transport.timed_out === true, launch_error: transport.launch_error || null });
 
   const host = (linux) => {
     const mount = /^\/mnt\/([a-z])\/(.*)$/.exec(linux);

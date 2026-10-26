@@ -1,4 +1,4 @@
-// GTOS-DSH-126 runner.
+// GTOS-DSH-127 runner.
 //
 // No budgets. This runner carries no cap table, no attempt ceiling and no `assertCap`. The route table is used only to
 // identify an action and to decide which executor owns it, exactly as AGENTS.goals-and-acceptance.md requires.
@@ -15,8 +15,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
-export const TASK = 'GTOS-DSH-126';
-export const REPORT_ROOT = 'F:/GTOS-Chromium/artifacts/native-immutable-evidence-replay-and-admitted-image-recovery-20261026-a';
+export const TASK = 'GTOS-DSH-127';
+export const REPORT_ROOT = 'F:/GTOS-Chromium/artifacts/native-isolated-fixtures-current-evidence-and-runtime-delivery-20261026-a';
 
 // Executor ownership. This is identity and permission routing, not a quota.
 export const GUARD_ROUTES = Object.freeze([
@@ -53,6 +53,32 @@ export function writeNew(p, value) {
   return { path: p, bytes: h.bytes, sha256: h.sha256, unchanged: false };
 }
 
+// The declared test-only subtrees. A fixture may live here and nowhere else.
+const FIXTURE_PARENTS = [
+  path.join(REPORT_ROOT, 'test-only'),
+  '//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-127-e759-isolated-replay/test-only',
+];
+
+// Validate a fixture root. A fixture is a place where destructive work is allowed, so the check is that it is inside a
+// declared test-only subtree and not merely that it is absolute.
+export function assertFixtureRoot(candidate) {
+  if (candidate === undefined || candidate === null) return null;
+  if (typeof candidate !== 'string' || candidate.trim() === '') {
+    throw new Error('FIXTURE GATE: a fixture root must be a non-empty string');
+  }
+  if (!path.isAbsolute(candidate)) throw new Error('FIXTURE GATE: fixture root is relative: ' + candidate);
+  const normalised = path.resolve(candidate);
+  const ok = FIXTURE_PARENTS.some((parent) => {
+    const base = path.resolve(parent);
+    return normalised.toLowerCase().startsWith((base + path.sep).toLowerCase());
+  });
+  if (!ok) {
+    throw new Error('FIXTURE GATE: ' + normalised + ' is not inside a declared test-only subtree ('
+      + FIXTURE_PARENTS.map((p) => path.resolve(p)).join(' or ') + ')');
+  }
+  return normalised;
+}
+
 export function assertOwnedPath(candidate, label, roots) {
   if (typeof candidate !== 'string' || candidate.trim() === '') throw new Error(`PATH GATE: ${label} is empty`);
   if (!path.isAbsolute(candidate)) throw new Error(`PATH GATE: ${label} is relative`);
@@ -65,14 +91,20 @@ export function assertOwnedPath(candidate, label, roots) {
   return normalised;
 }
 
-export function assertRunnerPin(runnerPath) {
+export function assertRunnerPin(runnerPath, fixtureRoot) {
   const full = path.resolve(runnerPath);
-  const frozenRoot = path.resolve(REPORT_ROOT, 'frozen-runners');
-  if (!full.toLowerCase().startsWith((frozenRoot + path.sep).toLowerCase())) {
-    throw new Error(`RUNNER PIN: '${full}' is not under '${frozenRoot}'; only a frozen copy may run`);
+  // A fixture carries its own frozen copy and its own pin, so the allowed frozen roots are the packet's and the fixture's.
+  const frozenRoots = [path.resolve(REPORT_ROOT, 'frozen-runners')];
+  if (fixtureRoot) frozenRoots.push(path.resolve(fixtureRoot, 'frozen-runners'));
+  const owner = frozenRoots.find((frozenRoot) =>
+    full.toLowerCase().startsWith((frozenRoot + path.sep).toLowerCase()));
+  if (!owner) {
+    throw new Error(`RUNNER PIN: '${full}' is not under a frozen-runners directory (`
+      + frozenRoots.join(' or ') + '); only a frozen copy may run');
   }
   const revision = path.basename(full, path.extname(full));
-  const pinPath = path.join(REPORT_ROOT, `runner-pin-126-${revision}.json`);
+  // The pin lives beside the frozen root that owns the runner.
+  const pinPath = path.join(path.dirname(owner), `runner-pin-127-${revision}.json`);
   if (!fs.existsSync(pinPath)) throw new Error(`RUNNER PIN: no pin at ${pinPath}`);
   const h = hashFile(full);
   const pin = readJson(pinPath);
@@ -108,10 +140,11 @@ export function assertModuleGate(frozenPath, route) {
   return { imports: [...found], child_process_allowed: !CHILD_PROCESS_FORBIDDEN.has(route) };
 }
 
-export function freezeHelper(draftRelative, stage) {
-  const draftPath = path.join(REPORT_ROOT, draftRelative);
+export function freezeHelper(draftRelative, stage, base) {
+  const owner = base || REPORT_ROOT;
+  const draftPath = path.join(owner, draftRelative);
   if (!fs.existsSync(draftPath)) throw new Error(`draft missing: ${draftPath}`);
-  const frozenPath = path.join(REPORT_ROOT, 'frozen-helpers', `${stage}.mjs`);
+  const frozenPath = path.join(owner, 'frozen-helpers', `${stage}.mjs`);
   if (fs.existsSync(frozenPath)) throw new Error(`FREEZE: ${frozenPath} already exists; written once`);
   const draftBytes = fs.readFileSync(draftPath);
   fs.mkdirSync(path.dirname(frozenPath), { recursive: true });
@@ -158,13 +191,13 @@ export function spawnPinned(exe, argv, options) {
 
 // The route table is read for identity and executor ownership only. It never gates work.
 export function routeFor(routeId) {
-  const table = readJson(path.join(REPORT_ROOT, 'execution-identities-126.json'));
+  const table = readJson(path.join(REPORT_ROOT, 'execution-identities-127.json'));
   const route = table.routes[routeId];
   if (!route) throw new Error(`ROUTE: '${routeId}' is not a route in this packet`);
   return { id: routeId, mode: route.mode, executor: route.executor };
 }
 
-const STAGE_REGISTRY = 'stage-registry-126.jsonl';
+const STAGE_REGISTRY = 'stage-registry-127.jsonl';
 
 // Every stage name ever claimed in this root, in the order it was claimed. Append only.
 export function readStageRegistry(base) {
@@ -204,8 +237,8 @@ export async function invokeTransportLifecycle(options) {
     frozen, launch, preLaunch, routeGate = null,
     parent_attempt = null, retry_of = null, failure_cause = null } = options;
   const base = root || REPORT_ROOT;
-  const recordPath = path.join(base, `attempt-${stage}-126.json`);
-  const resultPath = path.join(base, `result-${stage}-126.json`);
+  const recordPath = path.join(base, `attempt-${stage}-127.json`);
+  const resultPath = path.join(base, `result-${stage}-127.json`);
 
   // The durable claim is the first thing that happens. A name that has been claimed is refused as a name, before any
   // question about what else survived on disk. If this throws, no reservation, no freeze and no child has happened.
@@ -363,18 +396,22 @@ export async function invokeStage(spec) {
   if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) {
     throw new Error(`stage name must be <letter then letters/digits>-NN, got '${stage}'`);
   }
+  // A fixture context owns every mutable path of the stage. Without one the packet's own root is the context, which is
+  // what every business stage uses.
+  const fixtureRoot = assertFixtureRoot(spec.fixture_root);
   const root = spec.root || REPORT_ROOT;
+  const stateRoot = fixtureRoot || root;
   const executor = route.executor;
   if (spec.executor && spec.executor !== executor) throw new Error('EXECUTOR GATE: route/executor mismatch');
-  const runnerPin = assertRunnerPin(spec.runnerPath || process.argv[1]);
+  const runnerPin = assertRunnerPin(spec.runnerPath || process.argv[1], fixtureRoot);
   const limit = spec.limit || 600;
   const expected = (spec.expected_outputs || []).slice();
 
   const frozen = { frozen_path: null, frozen_name: stage + '.mjs', frozen_bytes: null, frozen_sha256: null };
   let controlPath = null;
   let nodePin = null;
-  const stdoutPath = path.join(REPORT_ROOT, 'stage-output', stage + '.out.txt');
-  const stderrPath = path.join(REPORT_ROOT, 'stage-output', stage + '.err.txt');
+  const stdoutPath = path.join(stateRoot, 'stage-output', stage + '.out.txt');
+  const stderrPath = path.join(stateRoot, 'stage-output', stage + '.err.txt');
   const preLaunch = async () => {
     if (spec.control?.bridge?.binding_module) {
       const binding = spec.control.bridge.binding_module;
@@ -389,11 +426,12 @@ export async function invokeStage(spec) {
     if (nodePin.bytes !== PINNED.node.bytes || nodePin.sha256 !== PINNED.node.sha256) {
       throw new Error('HOST TOOL PIN: node drifted');
     }
-    Object.assign(frozen, freezeHelper(spec.helper, stage));
+    Object.assign(frozen, freezeHelper(spec.helper, stage, stateRoot));
     assertModuleGate(frozen.frozen_path, spec.route);
     if (spec.control) {
-      controlPath = path.join(REPORT_ROOT, 'stage-output', stage + '.control.json');
-      assertOwnedPath(controlPath, 'control file for ' + stage, [REPORT_ROOT, root]);
+      controlPath = path.join(stateRoot, 'stage-output', stage + '.control.json');
+      assertOwnedPath(controlPath, 'control file for ' + stage,
+        fixtureRoot ? [REPORT_ROOT, fixtureRoot] : [REPORT_ROOT, root]);
       if (fs.existsSync(controlPath)) throw new Error('CONTROL GATE: ' + controlPath + ' already exists');
       writeNew(controlPath, spec.control);
     }
@@ -415,7 +453,7 @@ export async function invokeStage(spec) {
   };
   const routeGate = { id: route.id, mode: route.mode, subjects: spec.route_subjects || [] };
   const outcome = await invokeTransportLifecycle({
-    stage, route: route.id, executor, root, runnerPin, routeGate,
+    stage, route: route.id, executor, root: stateRoot, runnerPin, routeGate,
     declaredOutputs: expected, expectedOutputs: expected, frozen, launch, preLaunch,
     parent_attempt: retryIdentity.parent_attempt,
     retry_of: retryIdentity.retry_of,
