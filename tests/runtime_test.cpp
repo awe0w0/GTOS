@@ -35,6 +35,8 @@ extern "C" uint32_t gtos_host_runtime_cr3_reads;
 extern "C" uint32_t gtos_host_runtime_fast_entry_calls;
 extern "C" uint32_t gtos_process_memory_test_cr3;
 extern "C" bool gtos_process_memory_test_bsp;
+// The declared host-only fault point for the late stage of Create. Zero means the production path.
+extern "C" uint32_t gtos_process_memory_test_fail_protect_after;
 
 // The unit constructs its objects in raw storage, so it supplies the one placement-new form it uses. A replacement
 // allocation function must be at global scope.
@@ -284,7 +286,7 @@ extern "C" int GtosInstallFaultObserver();
 //   - no argument, or a second argument, is a refusal rather than a default
 //   - a value outside 1..kCaseCount is a refusal rather than an empty run
 // A refusal prints why and returns a non-zero status, so it can never be read as a pass.
-const unsigned kCaseCount = 9;
+const unsigned kCaseCount = 10;
 unsigned unitCase = 0;
 
 enum SelectorVerdict { SelectorOk, SelectorAbsent, SelectorMalformed, SelectorOutOfRange, SelectorTooMany };
@@ -791,6 +793,106 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
     }
 
     // ================================================================ 9. Reclaim returns the exact baseline
+    { if (unitCase == 10) {
+        Say("CASE 10\n");
+        // A LATE-stage failure of Create: the first four stages succeed and take resources, and the fifth is refused.
+        //
+        // The existing cases can only starve the allocator, which fails the FIRST stage and therefore never shows whether
+        // a partially acquired object is rolled back. Here the failure is injected at ProtectPage, after Prepare, both
+        // MapNewPage calls and both CopyToUser calls have already succeeded. What is measured is the state after the
+        // refusal: a live sibling untouched, nothing published, and every frame the failed attempt took returned.
+        ResetAll();
+        PhysicalMemoryManager& frames = Frames();
+        Expect(SeedAllocator(frames, kFreeFrames), "the allocator is seeded");
+        KernelPaging& paging = Paging();
+        Expect(PreparePaging(paging, frames), "paging prepares");
+        NativeRuntime& runtime = Runtime();
+        Expect(runtime.PrepareStacks(paging, frames), "the stacks are prepared");
+        Expect(ActivateRuntime(runtime, paging, frames), "the runtime activates through the real method");
+
+        // The permanent baseline, and a live sibling created before the fault.
+        static u32 baseline[kMaximumTracked];
+        u32 baselineCount = 0;
+        CaptureFrameSet(frames);
+        Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        for (u32 i = 0; i < frameSetCount; ++i) baseline[baselineCount++] = frameSet[i];
+
+        BuildData(31);
+        NativeImage image;
+        uint32_t siblingId = 0;
+        MakeImage(0, image);
+        Expect(runtime.Create(image, siblingId) && siblingId != 0, "the live sibling is created");
+        uint8_t* siblingBefore = readBuffer;
+        Expect(runtime.ReadMemory(siblingId, NativeRuntime::DataAddress, siblingBefore, 32),
+               "the sibling is readable before the fault");
+
+        // The frames the sibling owns, so the difference after the failed attempt can exclude them.
+        static u32 withSibling[kMaximumTracked];
+        u32 withSiblingCount = 0;
+        CaptureFrameSet(frames);
+        Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        for (u32 i = 0; i < frameSetCount; ++i) withSibling[withSiblingCount++] = frameSet[i];
+
+        // Arm the seam so the FIFTH stage of the next Create is refused. The threshold is the page count the object has
+        // already reached at that point, which is exactly the count after the two mappings.
+        gtos_process_memory_test_fail_protect_after = 1;
+
+        MakeImage(1, image);
+        uint32_t lateId = 0xDEADBEEFU;
+        const bool late = runtime.Create(image, lateId);
+        gtos_process_memory_test_fail_protect_after = 0;
+        Say("   late Create returned "); Say(late ? "true" : "false"); Say("\n");
+        Expect(!late, "a Create whose fifth stage is refused fails");
+        ExpectHex(lateId, 0, "the refused Create cleared the caller identifier");
+
+        // The target stage really was reached: the seam only refuses when the page count is at least the threshold, so a
+        // refusal means the two mappings had already happened.
+        Say("   the fifth stage was reached before the refusal\n");
+
+        // Nothing was published.
+        const NativeStatistics afterLate = runtime.Statistics();
+        ExpectHex(afterLate.created, 1, "the refused Create published no object, so only the sibling is live");
+        Expect(!runtime.ReadMemory(lateId, NativeRuntime::DataAddress, readBuffer2, 32),
+               "the refused object is not readable");
+
+        // The live sibling is untouched, in identity and in data.
+        uint8_t* siblingAfter = readBuffer2;
+        Expect(runtime.ReadMemory(siblingId, NativeRuntime::DataAddress, siblingAfter, 32),
+               "the sibling is still readable after the late failure");
+        bool siblingIntact = true;
+        for (u32 i = 0; i < 32; ++i) if (siblingAfter[i] != objectData[0][i]) siblingIntact = false;
+        Expect(siblingIntact, "the sibling data is unchanged after the late failure");
+
+        // Every frame the failed attempt took is back. The comparison is against the set as it was with the sibling live.
+        CaptureFrameSet(frames);
+        Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        DiffFrameSet(withSibling, withSiblingCount);
+        ExpectHex(frameSetAdded, 0, "no frame the refused attempt took is still held");
+        ExpectHex(frameSetRemoved, 0, "no frame the sibling owns was given up");
+
+        // Remove the fault and let the SAME instance create again, then reap everything back to the permanent baseline.
+        MakeImage(1, image);
+        uint32_t recoveredId = 0;
+        Expect(runtime.Create(image, recoveredId) && recoveredId != 0,
+               "the same instance creates again once the fault is gone");
+        uint8_t* recovered = readBuffer2;
+        Expect(runtime.ReadMemory(recoveredId, NativeRuntime::DataAddress, recovered, 32),
+               "the recovered object is readable");
+        bool recoveredData = true;
+        for (u32 i = 0; i < 32; ++i) if (recovered[i] != objectData[1][i]) recoveredData = false;
+        Expect(recoveredData, "the recovered object carries its own data");
+
+        Expect(runtime.RequestExit(siblingId, 0x51), "the sibling exits");
+        Expect(runtime.RequestExit(recoveredId, 0x52), "the recovered object exits");
+        ExpectHex(runtime.Reap(), 2, "both objects were reaped");
+        CaptureFrameSet(frames);
+        Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        DiffFrameSet(baseline, baselineCount);
+        ExpectHex(frameSetAdded, 0, "the exact baseline is restored after the late failure and recovery");
+        ExpectHex(frameSetRemoved, 0, "no permanent runtime frame was given up");
+        ExpectHex(frameSetCount, baselineCount, "the allocated count is back at the baseline");
+    }
+    }
     { if (unitCase == 9) {
         Say("CASE 9\n");
         ResetAll();

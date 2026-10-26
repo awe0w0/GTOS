@@ -386,9 +386,22 @@ bool ProcessAddressSpace::MapNewRange(uint32_t address, uint32_t bytes, bool wri
 bool ProcessAddressSpace::ProtectPage(uint32_t address, bool writable) {
     return ProtectRange(address, 4096, writable);
 }
+#ifdef GTOS_PROCESS_MEMORY_TEST
+// A host-only fault point, declared and inert unless the host-test macro is defined. It exists to reach the failure of a
+// LATE stage of Create, after earlier stages have already taken frames and mapped pages: without it a unit can only
+// starve the allocator, which fails the first stage and therefore never exercises the rollback of a partial acquisition.
+// The default profile does not define this macro, so the production path is unchanged.
+extern "C" uint32_t gtos_process_memory_test_fail_protect_after;
+#endif
 bool ProcessAddressSpace::ProtectRange(uint32_t address, uint32_t bytes, bool writable) {
     InterruptGuard guard;
     if (!Mutable()) return false;
+#ifdef GTOS_PROCESS_MEMORY_TEST
+    if (gtos_process_memory_test_fail_protect_after && pageCount >= gtos_process_memory_test_fail_protect_after) {
+        // The seam refuses at this stage, which is the fifth of Create. Everything before it already happened.
+        return Fail(ProcessMemoryNoMemory);
+    }
+#endif
     if (!UserPage(address) || !bytes || (bytes & 4095) || bytes > UserLimit - address)
         return Fail(ProcessMemoryBadRange);
     if (bytes / 4096 > pageLimit) return Fail(ProcessMemoryNotMapped);
