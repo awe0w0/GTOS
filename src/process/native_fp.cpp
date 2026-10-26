@@ -5,7 +5,12 @@ void printf(char*);
 namespace {
     uint32_t Cr0() { uint32_t n; asm volatile("mov %%cr0,%0" : "=r"(n)); return n; }
     uint32_t Cr4() { uint32_t n; asm volatile("mov %%cr4,%0" : "=r"(n)); return n; }
-    bool InterruptsOff() { uint32_t n; asm volatile("pushfl; popl %0" : "=r"(n)); return !(n & 0x200); }
+    #ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+extern "C" uint32_t gtos_host_runtime_flags();
+bool InterruptsOff() { return (gtos_host_runtime_flags() & 0x200U) == 0; }
+#else
+bool InterruptsOff() { uint32_t n; asm volatile("pushfl; popl %0" : "=r"(n)); return !(n & 0x200); }
+#endif
     bool Resident(gtos::memory::KernelPaging& kernel, const void* data, uint32_t bytes) {
         const uint32_t address = (uint32_t)data;
         if (!address || !bytes || (uint64_t)address + bytes > 0x100000000ULL) return false;

@@ -43,7 +43,14 @@ namespace gtos { namespace process {
         static const uint32_t DataAddress = 0x40002000U;
         static const uint32_t UserStackBottom = 0xBFFFD000U;
         static const uint32_t UserStackTop = 0xBFFFF000U;
-        static const uint32_t KernelStackArena = 0xD0000000U;
+    #ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+    // A kernel virtual address only exists because an MMU translates it, and a 32-bit host process cannot map above its own
+    // TASK_SIZE. The host unit therefore places the arena inside the modelled identity window. The layout below -- one
+    // leading guard, four pages, one inter-slot guard per slot, one trailing guard -- is unchanged.
+    static const uint32_t KernelStackArena = 0x00700000U;
+#else
+    static const uint32_t KernelStackArena = 0xD0000000U;
+#endif
         static const uint32_t KernelStackPages = 4;
     private:
         struct Slot {

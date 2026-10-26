@@ -18,6 +18,7 @@ GlobalDescriptorTable::GlobalDescriptorTable()
         uint16_t limit;
         uint32_t base;
     } gdtr = {(uint16_t)(7 * sizeof(SegmentDescriptor) - 1), (uint32_t)this};
+#ifndef GTOS_NATIVE_RUNTIME_HOST_TEST
     asm volatile("lgdt %0" : : "m"(gdtr) : "memory");
     asm volatile("mov $0x18, %%ax; mov %%ax, %%ds; mov %%ax, %%es; "
                  "mov %%ax, %%fs; mov %%ax, %%gs; mov %%ax, %%ss; "
@@ -25,6 +26,11 @@ GlobalDescriptorTable::GlobalDescriptorTable()
                  :
                  :
                  : "eax", "memory");
+#else
+    // A host cannot load a descriptor table or reload the segment registers. The table's contents are still built above,
+    // and the selectors below are still the object's real offsets, which is all Activate needs.
+    (void)gdtr;
+#endif
 }
 
 GlobalDescriptorTable::~GlobalDescriptorTable() {}
@@ -108,7 +114,9 @@ void GlobalDescriptorTable::LoadTaskState(uint32_t top) {
     SetKernelStack(top);
     if (!taskStateLoaded) {
         uint16_t selector = 0x30;
+        #ifndef GTOS_NATIVE_RUNTIME_HOST_TEST
         asm volatile("ltr %0" : : "r"(selector) : "memory");
+        #endif
         taskStateLoaded = true;
     }
 }

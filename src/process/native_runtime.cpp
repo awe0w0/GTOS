@@ -18,6 +18,8 @@
 extern "C" uint32_t gtos_host_runtime_is_bsp();
 extern "C" uint32_t gtos_host_runtime_cr3();
 extern "C" uint32_t gtos_host_runtime_fast_entry();
+extern "C" uint32_t gtos_host_runtime_flags();
+extern "C" uint32_t gtos_host_runtime_cr0();
 #endif
 using namespace gtos;
 using namespace gtos::memory;
@@ -164,7 +166,13 @@ rollback:
 bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descriptors,
                              KernelPaging& kernel, PhysicalMemoryManager& allocator, NativeFpPolicy policy,
                              bool enableThreads) {
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+    // A host process runs with interrupts enabled; the guest does not. The seam answers the flag register for the same
+    // reason it answers CR3 and the bootstrap identity, and nothing else about Activate changes.
+    const uint32_t flags = gtos_host_runtime_flags();
+#else
     uint32_t flags; asm volatile("pushfl; popl %0" : "=r"(flags));
+#endif
     PagingStatistics info = kernel.getStatistics();
     if (!BootstrapProcessor() || (flags & 0x200) || active || enabled || !stacksPrepared || paging != &kernel
         || frames != &allocator || !kernel.usesAllocator(allocator) || !info.enabled || !info.sealedForSharing
@@ -176,7 +184,12 @@ bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descript
     scheduler = &tasks; gdt = &descriptors;
     tasks.nativeGdt = gdt; tasks.kernelDirectory = info.directoryAddress;
     tasks.nativeFpEnabled = fp.Enabled();
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+    // A host cannot read CR0. The value is recorded for the guest's own accounting and nothing decides on it here.
+    tasks.kernelCr0 = gtos_host_runtime_cr0();
+#else
     asm volatile("mov %%cr0,%0" : "=r"(tasks.kernelCr0));
+#endif
     descriptors.LoadTaskState(StackTop(0));
     GtosClockReadResult clock = {};
     NativeRtcSnapshot calendar;

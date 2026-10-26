@@ -83,7 +83,7 @@ namespace gtos { namespace memory {
         // supposed to be measuring.
         // The free frames are the ones inside the arena the boundary places at a fixed address, so a frame number is also
         // a dereferenceable pointer here. That is the same property an identity map gives the kernel, not a shortcut.
-        bool gtos_host_seed(uint32_t addressableFrames, uint32_t arenaFrames);
+        bool gtos_host_seed(uint32_t addressableFrames, uint32_t firstFreeFrame, uint32_t freeFrames);
 #endif
         PhysicalMemoryError getLastError() const;
     };

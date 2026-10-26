@@ -30,6 +30,11 @@ namespace {
             && a.divider == b.divider && a.valid == b.valid;
     }
 }
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+// The CMOS is read through port I/O, which a host cannot execute. False is the production answer for "no usable RTC", so
+// Activate leaves the realtime clock uninitialised rather than being handed a fabricated calendar.
+bool gtos::process::ReadNativeRtc(NativeRtcSnapshot& result) { (void)result; return false; }
+#else
 bool gtos::process::ReadNativeRtc(NativeRtcSnapshot& result) {
     memory::InterruptGuard guard;
     Port8Bit index(0x70), data(0x71);
@@ -44,3 +49,4 @@ bool gtos::process::ReadNativeRtc(NativeRtcSnapshot& result) {
     }
     return false;
 }
+#endif
