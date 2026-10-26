@@ -1,4 +1,4 @@
-// GTOS-DSH-130 B2: one business link entry, used by the normal case and by every failure case.
+// GTOS-DSH-135 B2: one business link entry, used by the normal case and by every failure case.
 //
 // The 129 linkgate was a second code path. It called the admission function directly, hardcoded `ld_started: false` in the
 // record, and built its "host-test object" by writing text to a file. That proves the admission refuses a set. It does not
@@ -23,7 +23,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import * as TC from './terminal-consumption-135.mjs';
+
 const sha256 = (b) => crypto.createHash('sha256').update(b).digest('hex');
+
+// A host path as the child will see it. The bridge and the linker both take Linux paths.
+function hostToLinux(p) {
+  if (typeof p !== 'string') return p;
+  const s = p.replace(/\\/g, '/');
+  const unc = /^\/\/wsl\$\/[^/]+\/(.*)$/i.exec(s);
+  if (unc) return '/' + unc[1];
+  const drive = /^([A-Za-z]):\/(.*)$/.exec(s);
+  if (drive) return '/mnt/' + drive[1].toLowerCase() + '/' + drive[2];
+  return s;
+}
 
 function readBytes(p) {
   let b = null;
@@ -91,40 +104,79 @@ export function linkThroughEntry(options) {
   // ---- 3. launch, through the frozen runner. The spec is written only after the claim, so a stage that was refused never
   //         has a spec and never has an attempt.
   const specPath = path.join(reportRoot, 'stage-output', stage + '.spec.json');
-  const resultPath = path.join(reportRoot, 'result-' + stage + '-130.json');
+  // Three distinct roles, three distinct files. The canonical terminal belongs to the runner's lifecycle; the helper's
+  // business report is its own document; and the helper's outputs are the artefacts it produced. In 133 the report was
+  // declared at the terminal's own path, so the file the entry read was a helper report wearing a result's name.
+  const resultPath = path.join(reportRoot, 'result-' + stage + '-135.json');
+  const helperReportPath = path.join(reportRoot, 'helper-report-' + stage + '-135.json');
+  // The runner's control and its expected outputs are read by a child that sees Linux paths, so both are expressed that way.
+  const helperReportLinux = hostToLinux(helperReportPath);
+  const attemptPath = path.join(reportRoot, 'attempt-' + stage + '-135.json');
+  const frozenHelperPath = path.join(reportRoot, 'frozen-helpers', stage + '.mjs');
+
+  // The preparation gate, before the freeze and before any child.
+  try {
+    TC.assertDistinctRoles({
+      canonical_terminal: resultPath, helper_report: helperReportPath,
+      control: path.join(reportRoot, 'stage-output', stage + '.control.json'),
+      frozen_helper: frozenHelperPath, attempt: attemptPath,
+    });
+    step('declaration', 'distinct');
+  } catch (error) {
+    record.refusal = { obligation: 'declaration', why: String(error.message), collisions: error.collisions };
+    step('declaration', 'refused', record.refusal);
+    return record;
+  }
+
   const spec = {
     task: authority.task, route: 'image.link', stage, root: reportRoot,
-    runnerPath: runner, helper: 'native-130-01.mjs',
+    runnerPath: runner, helper: 'native-135-01.mjs',
     control: {
       task: authority.task, route: 'image.link', stage,
       mode: 'image-link', bridge_module_path: bridge.binding_module.path, bridge,
       stage_options: { individuals, mapFile, elfFile, linkerScript, objectRoot },
       purpose: 'the business link entry, ' + stage,
-      report_path: resultPath,
+      report_path: helperReportLinux,
     },
-    expected_outputs: [resultPath],
+    // The helper's outputs are the artefacts it was asked to produce. The terminal is not one of them: it is written by
+    // the lifecycle afterwards, and declaring it here is what let 133 treat a report as a terminal.
+    expected_outputs: [helperReportLinux],
     limit: limit || 900,
   };
   fs.mkdirSync(path.dirname(specPath), { recursive: true });
   fs.writeFileSync(specPath, JSON.stringify(spec, null, 2) + '\n');
-  step('spec', 'written', { path: specPath });
+  step('spec', 'written', { path: specPath, helper_report: helperReportPath, terminal: resultPath });
 
   const r = spawnSync(node, [runner, specPath], {
     windowsHide: true, timeout: (limit || 900) * 1000, maxBuffer: 32 * 1024 * 1024, encoding: 'utf8',
   });
   step('runner', r.status === 0 ? 'completed' : 'failed', { status: r.status });
 
-  // ---- 4. consume. The launch observation is read from the runner's own result, never written here.
-  const resultBytes = readBytes(resultPath);
-  if (resultBytes === null) {
+  // ---- 4. consume the lifecycle terminal, typed. The attempt must be complete, must name this terminal, and the
+  //         terminal must be a lifecycle record of the right stage. A helper report beside it is not a substitute, and a
+  //         tool that returned zero inside a runner that failed is not a success.
+  const consumed = TC.consumeTerminal({
+    attemptPath,
+    expect: { task: authority.task, stage, route: 'image.link', canonical_terminal: resultPath },
+  });
+  record.terminal_consumption = consumed;
+  if (!consumed.accepted) {
+    record.refusal = consumed.first_refusal;
     record.launched = false;
-    record.launch_observation = { source: 'no result document', why: 'the runner produced no result' };
-    record.refusal = { obligation: 'result', why: 'the runner produced no result document' };
-    step('consume', 'refused', record.refusal);
+    step('consume', 'refused', consumed.first_refusal);
     return record;
   }
-  const result = JSON.parse(resultBytes.toString('utf8'));
-  const transport = result.transport || {};
+  step('consume', 'terminal_accepted', consumed.terminal);
+  const result = JSON.parse(readBytes(consumed.terminal.path).toString('utf8'));
+  const resultBytes = readBytes(consumed.terminal.path);
+  // The lifecycle terminal records the transport as flat fields; the helper's business report nests it. Both shapes are
+  // read, and the lifecycle's own field is the authority because that is the file this consumed.
+  const transport = result.transport || {
+    started: result.transport_started,
+    exit_code: result.transport_exit_code,
+    timed_out: result.timed_out,
+    launch_error: result.launch_error,
+  };
   const group = (result.guard_row && result.guard_row.group) || {};
   const runnerVerdict = result.verdict || {};
   record.result = {
@@ -157,7 +209,23 @@ export function linkThroughEntry(options) {
     verdict_accepted: runnerVerdict.accepted,
   };
 
-  // ---- 5. the outputs. A zero exit with no image is a failure, which is what linkVerdict is for.
+  // ---- 5. the runner's own status. A tool that returned zero inside a runner that failed did not succeed as a stage,
+  //         and this is the check 133 was missing: it read the helper report, saw ok, and never looked at the exit.
+  if (r.status !== 0) {
+    record.refusal = { obligation: 'runner', why: 'the runner exited ' + r.status + ', so the stage did not complete',
+      terminal_exit: result.transport_exit_code, runner_status: r.status };
+    step('consume', 'refused', record.refusal);
+    return record;
+  }
+  const runnerState = TC.runnerStatus(result);
+  record.runner_status = runnerState;
+  if (!runnerState.ok) {
+    record.refusal = { obligation: 'runner', why: 'the terminal records a stage that did not succeed', state: runnerState };
+    step('consume', 'refused', record.refusal);
+    return record;
+  }
+
+  // ---- 6. the outputs. A zero exit with no image is a failure, which is what linkVerdict is for.
   const elfBytes = readBytes(hostOf(elfFile));
   const mapBytes = readBytes(hostOf(mapFile));
   record.elf = elfBytes === null ? null
