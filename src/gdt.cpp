@@ -118,6 +118,23 @@ extern "C" uint32_t gtos_gdt_host_str_selector;
 extern "C" uint32_t gtos_gdt_host_sgdt_base;
 extern "C" uint32_t gtos_gdt_host_sgdt_limit;
 extern "C" uint32_t gtos_gdt_host_reads;
+// The declared readable window and the count of accesses outside it. The host cannot fault, so this is how a refusal is
+// shown not to have read a bad address.
+extern "C" uint32_t gtos_gdt_host_window_base;
+extern "C" uint32_t gtos_gdt_host_window_bytes;
+extern "C" uint32_t gtos_gdt_host_illegal_reads;
+#endif
+
+#ifdef GTOS_NATIVE_RUNTIME_HOST_TEST
+// Reads one byte, recording an access outside the declared window instead of performing it. A refusal is then provable by
+// the counter rather than by hoping the address happened to be readable.
+static uint8_t SafeReadByte(uint64_t address) {
+    const uint64_t base = gtos_gdt_host_window_base, bytes = gtos_gdt_host_window_bytes;
+    if (address < base || address >= base + bytes) { ++gtos_gdt_host_illegal_reads; return 0; }
+    return *(const uint8_t*)(__SIZE_TYPE__)address;
+}
+#else
+static uint8_t SafeReadByte(uint64_t address) { return *(const uint8_t*)(__SIZE_TYPE__)address; }
 #endif
 
 uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out,
@@ -150,43 +167,75 @@ uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out
     out.gdt_base = gdtr.base;
     out.gdt_limit = gdtr.limit;
 
-    // The descriptor the selector names, read from the table the GDT register points at.
-    out.descriptor_offset = out.str_index * 8u;
-    // A descriptor occupies eight bytes; it is wholly inside the table when offset + 7 <= limit.
-    out.descriptor_in_gdt = (out.descriptor_offset + 7u <= out.gdt_limit) ? 1u : 0u;
-
-    if (out.descriptor_in_gdt) {
-        const uint8_t* d = (const uint8_t*)(__SIZE_TYPE__)(out.gdt_base + out.descriptor_offset);
-        const uint32_t limitLo = (uint32_t)d[0] | ((uint32_t)d[1] << 8);
-        const uint32_t baseLo = (uint32_t)d[2] | ((uint32_t)d[3] << 8);
-        const uint32_t baseMid = (uint32_t)d[4];
-        const uint32_t access = (uint32_t)d[5];
-        const uint32_t flagsLimitHi = (uint32_t)d[6];
-        const uint32_t baseHi = (uint32_t)d[7];
-        out.descriptor_type = access;
-        out.descriptor_present = (access & 0x80u) ? 1u : 0u;
-        out.descriptor_limit = limitLo | ((flagsLimitHi & 0x0Fu) << 16);
-        out.descriptor_base = baseLo | (baseMid << 16) | (baseHi << 24);
-        // The TSS fields are read from the base the descriptor names, which is where the runtime's own taskState lives.
-        const uint8_t* tss = (const uint8_t*)(__SIZE_TYPE__)(out.descriptor_base);
-        out.tss_ss0 = (uint32_t)tss[8] | ((uint32_t)tss[9] << 8);
-        out.tss_esp0 = (uint32_t)tss[4] | ((uint32_t)tss[5] << 8)
-                     | ((uint32_t)tss[6] << 16) | ((uint32_t)tss[7] << 24);
-        out.tss_iomap_base = (uint32_t)tss[102] | ((uint32_t)tss[103] << 8);
+    // ---------------------------------------------------------------- the descriptor, read only when it is safe to
+    // A descriptor occupies eight bytes. The offset is computed in 64 bits so a selector near the top of the range cannot
+    // wrap the addition, and the whole descriptor must lie inside the table the GDT register reported.
+    const uint64_t descriptorOffset = (uint64_t)out.str_index * 8u;
+    const uint64_t tableLimit = (uint64_t)out.gdt_limit;
+    out.descriptor_offset = (uint32_t)descriptorOffset;
+    out.descriptor_in_gdt = (descriptorOffset + 7u <= tableLimit) ? 1u : 0u;
+    if (!out.descriptor_in_gdt) {
+        // Nothing beyond this point may touch memory addressed by the descriptor: the offset is outside the table, so the
+        // descriptor itself is unreadable and the TSS it might have named is not something this code is entitled to read.
+        fail("the descriptor is not inside the GDT limit");
+        (void)before;
+        return failureCount;
     }
 
-    // The obligations, each named. The expected values came from the caller's own initialisation state.
+    const uint64_t descriptorAddress = (uint64_t)out.gdt_base + descriptorOffset;
+    const uint32_t limitLo = (uint32_t)SafeReadByte(descriptorAddress + 0) | ((uint32_t)SafeReadByte(descriptorAddress + 1) << 8);
+    const uint32_t baseLo = (uint32_t)SafeReadByte(descriptorAddress + 2) | ((uint32_t)SafeReadByte(descriptorAddress + 3) << 8);
+    const uint32_t baseMid = (uint32_t)SafeReadByte(descriptorAddress + 4);
+    const uint32_t access = (uint32_t)SafeReadByte(descriptorAddress + 5);
+    const uint32_t flagsLimitHi = (uint32_t)SafeReadByte(descriptorAddress + 6);
+    const uint32_t baseHi = (uint32_t)SafeReadByte(descriptorAddress + 7);
+    out.descriptor_type = access;
+    out.descriptor_present = (access & 0x80u) ? 1u : 0u;
+    out.descriptor_limit = limitLo | ((flagsLimitHi & 0x0Fu) << 16);
+    out.descriptor_base = baseLo | (baseMid << 16) | (baseHi << 24);
+
+    // ---------------------------------------------------------------- the descriptor must be the right kind of thing
+    // before its base is used as an address. A descriptor that is absent, not a system descriptor, not a 32-bit available
+    // TSS, or not ring 0 describes something this code must not follow. Each refusal returns without dereferencing the
+    // base, so a wrong descriptor cannot cause a read at an address it was never entitled to name.
+    const bool system = (access & 0x10u) == 0;
+    const uint32_t kind = access & 0x0Fu;
+    const uint32_t dpl = (access >> 5) & 3u;
+    if (!out.descriptor_present) { fail("the TSS descriptor is not present"); (void)before; return failureCount; }
+    if (!system) { fail("the descriptor is not a system descriptor"); (void)before; return failureCount; }
+    if (kind != 9u) { fail("the TSS descriptor type is not 32-bit available TSS"); (void)before; return failureCount; }
+    if (dpl != 0u) { fail("the TSS descriptor DPL is not 0"); (void)before; return failureCount; }
+
+    // The TSS the descriptor names has to be the object this runtime owns. Its base and limit are compared to the caller's
+    // own initialisation state before a single byte is read, so a descriptor that points somewhere else is refused rather
+    // than followed.
+    if (out.descriptor_base != expectedDescriptorBase) {
+        fail("the TSS descriptor base is not the runtime task state");
+        (void)before; return failureCount;
+    }
+    if (out.descriptor_limit != expectedDescriptorLimit) {
+        fail("the TSS descriptor limit is not the task state size");
+        (void)before; return failureCount;
+    }
+    // The TSS fields this reads lie at offsets 4, 8 and 102 inside a 104-byte structure, so the declared limit must cover
+    // the last of them before any of them is read.
+    if (out.descriptor_limit < 103u) {
+        fail("the TSS limit does not cover the fields this reads");
+        (void)before; return failureCount;
+    }
+
+    // ---------------------------------------------------------------- now the TSS may be read
+    const uint64_t tssAddress = (uint64_t)out.descriptor_base;
+    out.tss_esp0 = (uint32_t)SafeReadByte(tssAddress + 4) | ((uint32_t)SafeReadByte(tssAddress + 5) << 8)
+                 | ((uint32_t)SafeReadByte(tssAddress + 6) << 16) | ((uint32_t)SafeReadByte(tssAddress + 7) << 24);
+    out.tss_ss0 = (uint32_t)SafeReadByte(tssAddress + 8) | ((uint32_t)SafeReadByte(tssAddress + 9) << 8);
+    out.tss_iomap_base = (uint32_t)SafeReadByte(tssAddress + 102) | ((uint32_t)SafeReadByte(tssAddress + 103) << 8);
+
+    // The obligations that need the values just read.
     if (!out.read_ok) fail("the machine-level reads did not execute");
     if (out.str_selector != expectedSelector) fail("the task register selector is not the one that was loaded");
     if (out.str_ti != 0) fail("the task register selector names the LDT, not the GDT");
     if (out.str_rpl != 0) fail("the task register selector has a ring other than 0");
-    if (!out.descriptor_in_gdt) fail("the descriptor is not inside the GDT limit");
-    if (!out.descriptor_present) fail("the TSS descriptor is not present");
-    // A 32-bit available TSS is type 9 in the low nibble, and ring 0 in the DPL bits.
-    if ((out.descriptor_type & 0x0Fu) != 9u) fail("the TSS descriptor type is not 32-bit available TSS");
-    if (((out.descriptor_type >> 5) & 3u) != 0u) fail("the TSS descriptor DPL is not 0");
-    if (out.descriptor_base != expectedDescriptorBase) fail("the TSS descriptor base is not the runtime task state");
-    if (out.descriptor_limit != expectedDescriptorLimit) fail("the TSS descriptor limit is not the task state size");
     if (out.tss_ss0 != expectedSs0) fail("the TSS ring-0 stack selector is not the one the runtime set");
     if (out.tss_iomap_base != expectedIoMapBase) fail("the TSS io map base is not the one the runtime set");
     (void)before;

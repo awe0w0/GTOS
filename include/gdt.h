@@ -73,6 +73,9 @@ namespace gtos {
             // Reads the task register, the GDT register and the TSS descriptor. The expected values are supplied by the
             // caller from its own initialisation state, so a comparison cannot be satisfied by copying the descriptor
             // being examined. Returns the number of obligations that failed, and fills failures with their names.
+            // The host cannot fault on a bad address, so the test declares the window this code is allowed to read and
+            // the observation records any access outside it. On a real machine the window is the truth and this counter
+            // is unused.
             uint32_t ObserveTaskRegister(TaskRegisterObservation& out,
                                          uint32_t expectedSelector, uint32_t expectedDescriptorBase,
                                          uint32_t expectedDescriptorLimit, uint32_t expectedSs0,
