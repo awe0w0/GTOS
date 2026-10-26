@@ -1,4 +1,4 @@
-// GTOS-DSH-127 publication engine.
+// GTOS-DSH-128 publication engine.
 //
 // Archive and seal for this packet. It keeps the strict evidence rules the earlier packets established, and it adapts
 // only the product rules that belong to 110:
@@ -16,7 +16,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const TASK = 'GTOS-DSH-127';
+const TASK = 'GTOS-DSH-128';
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const checks = [];
 function need(ok, name, detail) {
@@ -109,6 +109,12 @@ function assertRunnerIdentity(reportRoot) {
 
 // ---------------------------------------------------------------- the archive branch
 function archive(control) {
+  // An archive after a successful seal would be a second publication for a packet that is finished.
+  const sealed = assertPacketNotSealed(control.report_root, control.task);
+  if (sealed) {
+    need(false, 'this packet is already sealed; a further archive is a second publication',
+      sealed.sealed.map((s) => s.receipt + ' -> ' + s.publication).join(', '));
+  }
   const shape = pinned(control.shape);
   const plan = pinned(control.copy_plan);
   need(shape.task === TASK && plan.task === TASK, 'plan and shape belong to this task');
@@ -210,13 +216,34 @@ function archive(control) {
   const manifest = { task: TASK, publication: control.publication,
     files: payloadRows, root_digest: summary.digest,
     digest_recipe: receipt.digest_recipe, manifest_self_excluded: true };
-  const manifestPath = path.join(pub, 'manifest-127.json');
+  const manifestPath = path.join(pub, 'manifest-128.json');
   need(!fs.existsSync(manifestPath), 'the manifest is new');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
   return { receipt, manifest: hash(manifestPath), payload: receipt.payload };
 }
 
 // ---------------------------------------------------------------- the seal branch
+// A packet has one terminal seal. Any successful seal for this task in this report root closes production for the packet:
+// a later archive or seal is a second publication, not a continuation. The check reads the receipts on disk, so it holds
+// across processes and cannot be reset by starting a new stage.
+export function assertPacketNotSealed(reportRoot, task) {
+  const receiptDir = path.join(reportRoot, 'receipts');
+  if (!fs.existsSync(receiptDir)) return null;
+  const sealed = [];
+  for (const name of fs.readdirSync(receiptDir).sort()) {
+    if (!name.endsWith('.json')) continue;
+    let prior = null;
+    try { prior = JSON.parse(fs.readFileSync(path.join(receiptDir, name), 'utf8')); } catch { continue; }
+    if (prior && prior.mode === 'seal' && prior.ok === true && prior.task === task) {
+      sealed.push({ receipt: name, publication: prior.publication,
+        root_digest: prior.payload ? prior.payload.root_digest : null,
+        files: prior.payload ? prior.payload.files : null });
+    }
+  }
+  if (!sealed.length) return null;
+  return { task, sealed, publication: sealed[0].publication, count: sealed.length };
+}
+
 function seal(control) {
   const previous = pinned(control.archive_receipt);
   need(previous.task === TASK && previous.mode === 'archive' && previous.ok === true,
@@ -237,6 +264,13 @@ function seal(control) {
     }
   }
 
+  // The packet's terminal seal comes first, before this seal writes anything.
+  const alreadySealed = assertPacketNotSealed(control.report_root, control.task);
+  if (alreadySealed) {
+    need(false, 'this packet is already sealed; a second seal is a second publication, not a continuation',
+      alreadySealed.sealed.map((s) => s.receipt + ' -> ' + s.publication).join(', '));
+  }
+
   const pub = path.join(control.report_root, control.publication);
   const native = path.join(pub, 'native');
   need(fs.existsSync(native), 'the archived payload exists', native);
@@ -255,7 +289,7 @@ function seal(control) {
   need(summary.digest === previous.payload.root_digest, 'the payload digest is unchanged');
 
   // Two-way set comparison against the manifest.
-  const manifestPath = path.join(pub, 'manifest-127.json');
+  const manifestPath = path.join(pub, 'manifest-128.json');
   need(fs.existsSync(manifestPath), 'the manifest exists', manifestPath);
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const onDisk = new Map(rows.map((r) => [r.path, r]));
@@ -554,7 +588,7 @@ if (isEngineMain) try {
   need(/^[a-z][a-z0-9]*-[0-9]{2}$/.test(control.stage), 'stage grammar', control.stage);
   need(['archive', 'seal'].includes(control.mode), 'mode', control.mode);
   need(path.isAbsolute(control.report_root), 'report root is absolute');
-  need(/^publication-127-v[0-9]{2}$/.test(control.publication), 'owned publication identity',
+  need(/^publication-128-v[0-9]{2}$/.test(control.publication), 'owned publication identity',
     control.publication);
 
   const outcome = control.mode === 'archive' ? archive(control) : seal(control);
