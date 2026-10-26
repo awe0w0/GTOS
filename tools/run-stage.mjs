@@ -61,6 +61,24 @@ const FIXTURE_PARENTS = [
 
 // Validate a fixture root. A fixture is a place where destructive work is allowed, so the check is that it is inside a
 // declared test-only subtree and not merely that it is absolute.
+// The authority work root, as recorded in this packet's authority.
+const AUTH_WORK_ROOT = (() => {
+  try {
+    const a = JSON.parse(fs.readFileSync(path.join(REPORT_ROOT, 'authority-127.json'), 'utf8'));
+    return a.work_root;
+  } catch { return null; }
+})();
+
+// A fixture work root on the Linux side is exactly <authority work_root>/test-only/<one segment>.
+export function isFixtureWorkRoot(candidate, authorityWorkRoot) {
+  if (typeof candidate !== 'string' || typeof authorityWorkRoot !== 'string') return false;
+  const prefix = authorityWorkRoot.replace(/\/+$/, '') + '/test-only/';
+  if (!candidate.startsWith(prefix)) return false;
+  const rest = candidate.slice(prefix.length);
+  if (rest === '' || rest.includes('/')) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(rest);
+}
+
 export function assertFixtureRoot(candidate) {
   if (candidate === undefined || candidate === null) return null;
   if (typeof candidate !== 'string' || candidate.trim() === '') {
@@ -401,6 +419,26 @@ export async function invokeStage(spec) {
   const fixtureRoot = assertFixtureRoot(spec.fixture_root);
   const root = spec.root || REPORT_ROOT;
   const stateRoot = fixtureRoot || root;
+  // A fixture owns its registry AND its guard ledger. The registry lives on the host side of the fixture and the guard
+  // writes its ledger on the Linux side, so they cannot be the same path; they must be the same namespace. If the guard is
+  // told to write somewhere else, one stage name can be claimed in one place and recorded in another, which is exactly how
+  // a name gets used twice.
+  if (fixtureRoot) {
+    const declared = spec.control && spec.control.bridge ? spec.control.bridge.work_root : null;
+    if (typeof declared !== 'string' || !declared.startsWith('/')) {
+      throw new Error('FIXTURE GATE: a fixture stage must declare its bridge work_root as an absolute Linux path');
+    }
+    if (!isFixtureWorkRoot(declared, AUTH_WORK_ROOT)) {
+      throw new Error('FIXTURE GATE: the guard ledger root ' + declared + ' is not a test-only subtree of the authority '
+        + 'work root ' + AUTH_WORK_ROOT);
+    }
+    const fixtureSegment = path.basename(path.resolve(fixtureRoot));
+    const linuxSegment = declared.split('/').filter(Boolean).pop();
+    if (fixtureSegment !== linuxSegment) {
+      throw new Error('FIXTURE GATE: the fixture registry namespace is ' + fixtureSegment + ' but the guard ledger would be '
+        + 'written under ' + linuxSegment + '; a fixture owns both or neither');
+    }
+  }
   const executor = route.executor;
   if (spec.executor && spec.executor !== executor) throw new Error('EXECUTOR GATE: route/executor mismatch');
   const runnerPin = assertRunnerPin(spec.runnerPath || process.argv[1], fixtureRoot);

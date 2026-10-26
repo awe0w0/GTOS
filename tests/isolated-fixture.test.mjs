@@ -338,6 +338,31 @@ if (first && first.ok) {
   }
 }
 
+// ---------------------------------------------------------------- the namespace gate
+// A fixture owns its registry and its guard ledger. This is the defect that let one stage name be claimed in a fixture
+// registry while its guard row landed in the business work root, which is how a business ledger came to hold two
+// generations of one debug stage. The gate refuses the mismatch before anything runs.
+{
+  const good = JSON.parse(readBytes(F + '/stage-output/' + 'fixrun-01' + '.spec.json') === null
+    ? readBytes(F + '/stage-output/fixrun-02.spec.json').toString('utf8')
+    : readBytes(F + '/stage-output/fixrun-01.spec.json').toString('utf8'));
+  // Same fixture, but the guard told to write its ledger into the business work root.
+  const mismatched = JSON.parse(JSON.stringify(good));
+  mismatched.stage = 'nsgate-01';
+  mismatched.control.bridge.work_root = A.work_root;
+  mismatched.control.report_path = F + '/results-nsgate-01.json';
+  const mp = F + '/stage-output/nsgate-01.spec.json';
+  fs.writeFileSync(mp, JSON.stringify(mismatched, null, 2) + '\n');
+  const r = spawnSync(NODE, [F + '/frozen-runners/run-127-r01.mjs', mp],
+    { windowsHide: true, timeout: 120000, maxBuffer: 8 * 1024 * 1024 });
+  const msg = String(r.stderr || '');
+  check('a fixture whose guard ledger would land in the business work root is refused',
+    r.status !== 0 && /FIXTURE GATE/.test(msg) && /owns both or neither|not a test-only subtree/.test(msg),
+    msg.split('\n').filter((l) => l.trim()).slice(0, 2).join(' | '));
+  check('that refusal wrote nothing into the business work root',
+    !fs.existsSync('//wsl$/Ubuntu-20.04' + A.work_root + '/logs/inner-report-nsgate-01.json'), null);
+}
+
 // ---------------------------------------------------------------- I1b: the business is untouched
 const after = businessSnapshot();
 const diff = businessDiff(before, after);
@@ -354,7 +379,7 @@ check('absence in the business snapshot is absence in both readings',
 const failures = checks.filter((c) => !c.ok);
 const report = {
   task: 'GTOS-DSH-127', kind: 'isolated_fixture_test',
-  subject: 'tools/run-stage.mjs fixture context, tools/private-boot-checkpoints.mjs work-root gate, tools/publication-engine.mjs ledger check',
+  subject: 'frozen-runners/run-127-r01.mjs fixture context, references/publication-engine-127.mjs ledger check',
   fixture: { host_root: F, linux_root: FL, namespace: NS,
     runner_sha256: sha(runnerBytes), same_hash_as_packet: true },
   business: {
