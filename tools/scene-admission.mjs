@@ -21,8 +21,13 @@ import { consumeRole, bindSet } from './prerequisite-consumption.mjs';
 const sha256 = (b) => crypto.createHash('sha256').update(b).digest('hex');
 
 // The stops the production parser recognises, in its own spelling.
+//
+// This list is the parser's vocabulary, and it has to match src/common/boot_diagnostic.cpp exactly or it is worse than
+// nothing: a scene could name a stop this table blesses and the parser refuse, and the refusal would look like a guest
+// fault. It was missing `runtime-recovery` until packet 139, which is why the list is now checked against the parser's own
+// source by tests/scene-admission.test.mjs rather than maintained by hand.
 export const STOPS = Object.freeze([
-  'memory', 'tables', 'ap', 'paging', 'workers', 'runtime-init', 'runtime-objects',
+  'memory', 'tables', 'ap', 'paging', 'workers', 'runtime-init', 'runtime-objects', 'runtime-recovery',
 ]);
 
 // The non-stop tokens the production parser accepts, each with what it does.
@@ -42,6 +47,10 @@ const SCENES = [
     stop: 'runtime-init',
     flags: ['serial'],
     required_marker: 'BOOTDIAG RUNTIME INITIALIZED',
+    // The marker alone says the path reached its stop. These say what the path is required to have established on the
+    // way, and each one is a line the guest prints only after a check it performed itself. A scene that reached its
+    // marker without the task register having been read would satisfy the marker and prove nothing about the hardware.
+    also_required: ['RUNTIME DIAG TSS OBSERVED', 'RUNTIME DIAG EXPECT LOADED 00000001'],
     permits: ['RUNTIME DIAG', 'BOOTDIAG RUNTIME INITIALIZED'],
     forbids: [
       // The ordinary stages the diagnostic must never reach.
@@ -163,6 +172,40 @@ const SCENES = [
     purpose: 'three cores run the fixed integer jobs on their APs and drain',
   },
   {
+    name: 'runtime-recovery-smp1',
+    vcpus: 1,
+    stop: 'runtime-recovery',
+    flags: ['serial'],
+    required_marker: 'BOOTDIAG RUNTIME RECOVERED CAPACITY',
+    also_required: ['RECOVERY DIAG OVERFLOW REFUSED', 'RECOVERY DIAG REFUSAL CLEAN',
+      'RECOVERY DIAG RECREATED', 'RECOVERY DIAG NEW ID FRESH', 'RECOVERY DIAG NEW DATA MATCHES',
+      'RECOVERY DIAG SURVIVORS LIVE', 'RECOVERY DIAG ACCOUNTED'],
+    permits: ['RECOVERY DIAG', 'BOOTDIAG RUNTIME RECOVERED CAPACITY'],
+    forbids: [
+      'BOOT B04', 'BOOT B05', 'BOOT B06', 'BOOT B07', 'BOOT B08',
+      'APP STORE', 'SETTINGS', 'DESKTOP MODE', 'LIVE RAM STORAGE', 'LIVE BOOT PACKAGE',
+      'WORKER POOL READY', 'WORKER CONFIGURED', 'WORKER READY', 'WORKER FAILED',
+      'AP STARTUP', 'AP INITIALIZED', 'AP PARKED', 'AP FAILED',
+      'PAGING PG WP', 'PAGING CR3',
+    ],
+    purpose: 'the BSP fills the runtime slot table to its real capacity, is refused by the runtime itself, and recovers in the same instance',
+  },
+  {
+    name: 'runtime-recovery-smp2',
+    vcpus: 2,
+    stop: 'runtime-recovery',
+    flags: ['serial'],
+    required_marker: 'BOOTDIAG RUNTIME RECOVERY REFUSED MULTI CPU',
+    permits: ['RECOVERY DIAG', 'BOOTDIAG RUNTIME RECOVERY REFUSED MULTI CPU'],
+    forbids: [
+      'BOOT B04', 'BOOT B05', 'BOOT B06', 'BOOT B07', 'BOOT B08',
+      'APP STORE', 'SETTINGS', 'DESKTOP MODE',
+      'WORKER POOL READY', 'WORKER CONFIGURED', 'AP STARTUP', 'AP INITIALIZED',
+      'RECOVERY DIAG STACKS PREPARED', 'RECOVERY DIAG ACTIVATED', 'RECOVERY DIAG FILLED',
+    ],
+    purpose: 'two cores are detected and the recovery diagnostic refuses before it prepares stacks or creates anything',
+  },
+  {
     name: 'tables-smp1',
     vcpus: 1,
     stop: 'tables',
@@ -181,6 +224,54 @@ const SCENES = [
     permits: ['PAGING', 'BOOTDIAG PAGING'],
     forbids: ['BOOT B06', 'BOOT B07', 'APP STORE', 'SETTINGS', 'DESKTOP MODE', 'AP STARTUP', 'AP INITIALIZED'],
     purpose: 'bootstrap paging is enabled and the owned mapping probe passes, then the machine stops',
+  },
+  {
+    name: 'ap-fresh-smp2',
+    vcpus: 2,
+    stop: 'ap',
+    flags: ['serial'],
+    // The BSP must have observed a fresh, non-BSP, parked acknowledgement from the real AP entry. The marker is what the
+    // kernel prints only after that whole conjunction held, so the marker is not a weaker claim than the lines below it.
+    required_marker: 'BOOTDIAG AP CHECKPOINT',
+    also_required: ['AP DIAG FRESH ACK 00000001', 'AP DIAG STALE ACK 00000000', 'AP DIAG FAILED 00000000',
+      'AP DIAG START PASS'],
+    permits: ['AP DIAG', 'BOOTDIAG AP CHECKPOINT'],
+    forbids: [
+      'BOOT B04', 'BOOT B05', 'BOOT B06', 'BOOT B07', 'BOOT B08',
+      'APP STORE', 'SETTINGS', 'DESKTOP MODE', 'LIVE RAM STORAGE',
+      // The worker pool and the ordinary AP path are downstream of this stop and must not be reached: this scene proves
+      // the handshake, not the pool.
+      'WORKER POOL READY', 'WORKER CONFIGURED', 'WORKER READY',
+      'AP STARTUP', 'AP INITIALIZED', 'AP PARKED', 'AP FAILED',
+      'PAGING PG WP', 'PAGING CR3',
+    ],
+    purpose: 'the real AP entry acknowledges freshly and parks, with no stale or foreign acknowledgement and no failed AP',
+  },
+  {
+    // A fixed illegal diagnostic value, refused by the production parser before the self-tests and before any device,
+    // graphics, paging or service initialisation. This is the guest regression the 138 review said was missing: 138's
+    // "illegal_option" record was a host-side refusal of an unknown scene name, which is an entry test and cannot stand in
+    // for the kernel's own parser refusing a value.
+    //
+    // The `stop` field carries the illegal value on purpose. It is not a stop the parser knows, so the derived command line
+    // is `serial bootdiag-stop=illegal`, and the kernel's answer to that is StopReject with the reason named. Writing the
+    // illegal token anywhere else would let the derivation and the refusal disagree.
+    name: 'kernel-invalid',
+    vcpus: 1,
+    stop: 'illegal',
+    flags: ['serial'],
+    required_marker: 'BOOTDIAG REJECT invalid-option',
+    also_required: ['BOOTDIAG REJECT reason=unknown-value'],
+    expects_rejection: true,
+    permits: ['BOOTDIAG REJECT'],
+    forbids: [
+      // The refusal happens on the command line, so nothing after it may run. These are the first real things the kernel
+      // would otherwise do, and their absence is what makes the refusal an early stop rather than a late complaint.
+      'MEMORY FREE FRAMES', 'PHYSICAL SELFTEST', 'HEAP SELFTEST', 'BOOTDIAG MEMORY CHECKS PASSED',
+      'BOOT B03', 'BOOT B04', 'BOOT B05', 'BOOT B06', 'BOOT B07', 'BOOT B08',
+      'APP STORE', 'SETTINGS', 'DESKTOP MODE', 'AP STARTUP', 'WORKER POOL READY',
+    ],
+    purpose: 'the production parser refuses a fixed illegal diagnostic value before any self-test or device initialisation',
   },
   {
     name: 'e99-priority',
@@ -517,9 +608,24 @@ export function functionalVerdict(sceneObject, channels, options = {}) {
       + ' on ' + forbiddenFound[0].channel);
   }
 
+  // The lines the scene is required to have produced besides its marker. Each is a check the guest performed on itself,
+  // so a scene whose marker is present but whose obligations did not all report is a scene that stopped for a reason
+  // other than the one it was declared for. Checked on both channels, because the guest writes to both and a channel
+  // that lost a line is a fact about that channel.
+  const alsoMissing = [];
+  for (const required of (sceneObject.also_required || [])) {
+    const present = [e9Lines, serialLines].some((lines) => lines && lines.some((l) => l.includes(required)));
+    if (!present) alsoMissing.push(required);
+  }
+  if (alsoMissing.length) {
+    refuse('also_required', 'a required line is absent from both channels: ' + alsoMissing[0]
+      + (alsoMissing.length > 1 ? ' (and ' + (alsoMissing.length - 1) + ' more)' : ''));
+  }
+
   const accepted = problems.length === 0;
   return { accepted, problems, first_refusal: problems.length ? problems[0] : null,
     marker_present: markerPresent, forbidden_found: forbiddenFound,
+    also_missing: alsoMissing,
     channels: { e9_lines: e9Lines ? e9Lines.length : null,
       serial_lines: serialLines ? serialLines.length : null },
     note: 'this is the functional result; the transport result is recorded separately and neither substitutes for '

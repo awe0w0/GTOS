@@ -15,6 +15,8 @@ namespace gtos { namespace common {
 //                          halt after the BSP prepared and activated the native runtime stacks, before any process
 //   bootdiag-stop=runtime-objects
 //                          halt after the BSP created, proved, exited and reaped fixed native objects
+//   bootdiag-stop=runtime-recovery
+//                          halt after the BSP drove the runtime into a real capacity refusal and recovered from it
 // Anything else that carries the option prefix is a rejection, never a silent fall-through, because a malformed
 // diagnostic must not let the machine continue into late startup.
 //
@@ -50,6 +52,10 @@ class BootDiagnostic {
     // Halt after the BSP created fixed native objects, proved their private memory, exited and reaped them. The objects
     // exist as data and are never dispatched: no user instruction runs, no task is scheduled, no interrupt is enabled.
     StopRuntimeObjects = 8,
+    // Halt after the BSP filled the runtime's own slot table to its real limit, was refused by the runtime's own
+    // capacity check rather than by an injected fault, and then recovered in the same instance: the refused attempt
+    // left nothing behind, a reaped slot became usable again, and the next Create succeeded with a live object.
+    StopRuntimeRecovery = 9,
     };
     enum Reject {
         RejectNone = 0,
@@ -73,6 +79,8 @@ class BootDiagnostic {
   PhaseRuntimeInit = 6,
   // The object lifecycle belongs to its own phase, after the runtime itself is initialised.
   PhaseRuntimeObjects = 7,
+  // The recovery probe needs an initialised runtime with a live object table, so it comes after the lifecycle phase.
+  PhaseRuntimeRecovery = 8,
     };
     struct Decision {
         uint32_t stop;

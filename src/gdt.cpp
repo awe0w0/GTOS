@@ -8,7 +8,7 @@ GlobalDescriptorTable::GlobalDescriptorTable()
       userCodeSegmentSelector(0, 0xFFFFFFFF, 0xFA),
       userDataSegmentSelector(0, 0xFFFFFFFF, 0xF2),
       taskSegmentSelector((uint32_t)&taskState, sizeof(TaskStateSegment) - 1, 0x89),
-      taskStateLoaded(false) {
+      taskStateLoaded(false), taskRegisterLoaded(false) {
     static_assert(sizeof(TaskStateSegment) == 104, "i386 TSS layout");
     for (uint32_t i = 0; i < sizeof(taskState); ++i) ((uint8_t*)&taskState)[i] = 0;
     taskState.ss0 = 0x18;
@@ -127,6 +127,8 @@ extern "C" uint32_t gtos_gdt_host_illegal_reads;
 // even when the descriptor was read and even when the base is a legal address inside the window.
 extern "C" uint32_t gtos_gdt_host_descriptor_reads;
 extern "C" uint32_t gtos_gdt_host_tss_reads;
+// Whether the modelled machine executed `ltr`. A host cannot, so a unit that wants the post-`ltr` world declares it.
+extern "C" uint32_t gtos_gdt_host_ltr_ran;
 #endif
 
 // The region a read is charged to. It is declared for both builds so the call sites do not differ.
@@ -227,7 +229,29 @@ uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out
     const uint32_t dpl = (access >> 5) & 3u;
     if (!out.descriptor_present) { fail("the TSS descriptor is not present"); (void)before; return failureCount; }
     if (!system) { fail("the descriptor is not a system descriptor"); (void)before; return failureCount; }
-    if (kind != 9u) { fail("the TSS descriptor type is not 32-bit available TSS"); (void)before; return failureCount; }
+    // Two questions, in this order, because they are different questions.
+    //
+    // First: is this a 32-bit TSS at all? The type field must be 9 (available) or 11 (busy). A 16-bit TSS, a busy 16-bit
+    // TSS and an LDT all carry the busy bit in combinations that would otherwise be reported as a busy-bit disagreement,
+    // and the honest answer for them is that they are the wrong kind of descriptor.
+    //
+    // Second: does the busy bit agree with the task register? `ltr` sets it, so a machine that ran `ltr` has type 11 and a
+    // machine that did not has type 9. 138 checked only `kind == 9`, against a host fixture that never ran `ltr`, and
+    // refused every real machine once the register was loaded -- which is what the first guest run of this packet found.
+    // The register's state is hardware state, not the software flag that records the call, so a host that called
+    // LoadTaskState without `ltr` executing still expects an available descriptor.
+    if (kind != 9u && kind != 11u) {
+        fail("the TSS descriptor type is not a 32-bit TSS");
+        (void)before; return failureCount;
+    }
+    const bool registerLoaded = taskRegisterLoaded;
+    const bool descriptorBusy = (kind & 2u) != 0;
+    if (descriptorBusy != registerLoaded) {
+        fail(registerLoaded ? "the TSS descriptor is not busy although the task register is loaded"
+                            : "the TSS descriptor is busy although the task register is not loaded");
+        (void)before; return failureCount;
+    }
+    out.descriptor_busy = descriptorBusy ? 1u : 0u;
     if (dpl != 0u) { fail("the TSS descriptor DPL is not 0"); (void)before; return failureCount; }
 
     // The TSS the descriptor names has to be the object this runtime owns. Its base and limit are compared to the caller's
@@ -269,6 +293,12 @@ void GlobalDescriptorTable::LoadTaskState(uint32_t top) {
         uint16_t selector = 0x30;
         #ifndef GTOS_NATIVE_RUNTIME_HOST_TEST
         asm volatile("ltr %0" : : "r"(selector) : "memory");
+        // Only here, where the instruction really executed. A host process cannot run `ltr`, so on the host this stays
+        // false and the descriptor keeps its available type -- which is what the host unit's fixture lays out. A test that
+        // wants to model a machine which did execute it declares so through the seam.
+        taskRegisterLoaded = true;
+        #else
+        taskRegisterLoaded = gtos_gdt_host_ltr_ran != 0;
         #endif
         taskStateLoaded = true;
     }
@@ -292,6 +322,7 @@ uint32_t GlobalDescriptorTable::TaskStateRing0Selector() const { return taskStat
 uint32_t GlobalDescriptorTable::TaskStateIoMapBase() const { return taskState.ioMapBase; }
 uint32_t GlobalDescriptorTable::TaskStateKernelStack() const { return taskState.esp0; }
 bool GlobalDescriptorTable::TaskStateIsLoaded() const { return taskStateLoaded; }
+bool GlobalDescriptorTable::TaskRegisterIsLoaded() const { return taskRegisterLoaded; }
 uint32_t GlobalDescriptorTable::DescriptorTableBase() const {
     return (uint32_t)(__SIZE_TYPE__)this;
 }

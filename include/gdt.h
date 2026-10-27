@@ -36,7 +36,14 @@ namespace gtos {
                 uint16_t trap, ioMapBase;
             } __attribute__((packed));
             TaskStateSegment taskState;
+            // Two different facts, kept apart because the descriptor's busy bit depends on the second and not the first.
+            //
+            // `taskStateLoaded` is software state: LoadTaskState was called and the runtime considers the task state live.
+            // `taskRegisterLoaded` is hardware state: the `ltr` instruction actually executed. On a real machine the second
+            // follows the first. On a host it does not, because a host process cannot execute `ltr`, and the distinction is
+            // the whole reason the host unit cannot settle the busy-bit obligation on its own.
             bool taskStateLoaded;
+            bool taskRegisterLoaded;
         public:
             GlobalDescriptorTable();
             ~GlobalDescriptorTable();
@@ -62,6 +69,10 @@ namespace gtos {
             uint32_t TaskStateIoMapBase() const;
             uint32_t TaskStateKernelStack() const;
             bool TaskStateIsLoaded() const;
+            // Whether the task register was really loaded, which is what decides the descriptor's busy bit. Distinct from
+            // TaskStateIsLoaded(): a host can call LoadTaskState without `ltr` executing, so the two disagree there and the
+            // disagreement is a fact about the environment rather than a fault.
+            bool TaskRegisterIsLoaded() const;
             // The GDT's own extent, as the runtime laid it out.
             uint32_t DescriptorTableBase() const;
             uint32_t DescriptorTableLimit() const;
@@ -79,7 +90,8 @@ namespace gtos {
                 uint32_t gdt_limit;          // SGDT limit, in bytes
                 uint32_t descriptor_offset;  // the byte offset of the TSS descriptor within the GDT
                 uint32_t descriptor_in_gdt;  // 1 when the descriptor lies wholly inside the GDT limit
-                uint32_t descriptor_type;    // access byte: present, DPL, type
+                uint32_t descriptor_type;    // access byte: present, DPL, type. Type 9 before `ltr`, type 11 after it.
+                uint32_t descriptor_busy;    // the type's busy bit, which `ltr` sets and nothing else in this path does
                 uint32_t descriptor_present;
                 uint32_t descriptor_limit;
                 uint32_t descriptor_base;

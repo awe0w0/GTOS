@@ -27,6 +27,18 @@ extern "C" uint32_t gtos_gdt_host_sgdt_base;
 extern "C" uint32_t gtos_gdt_host_sgdt_limit;
 extern "C" uint32_t gtos_gdt_host_reads;
 
+// Whether the modelled machine executed `ltr`.
+//
+// This is not the same fact as "LoadTaskState was called", and the difference is what packet 139 was about. A host process
+// cannot execute `ltr`, so when a host unit calls LoadTaskState the call succeeds and the instruction does not happen. On a
+// real machine `ltr` sets the TSS descriptor's busy bit, so the descriptor reads as type 11 afterwards; on a host that never
+// ran it the same descriptor still reads as type 9. A unit that did not model this distinction tested the available-TSS
+// path only, and the observation refused every real machine -- which is what the first guest run of this packet found.
+//
+// So the seam carries the hardware fact explicitly. A unit that wants the post-`ltr` world sets it and lays out a type-11
+// descriptor; a unit that leaves it zero gets the pre-`ltr` world, which is what its type-9 fixture describes.
+extern "C" uint32_t gtos_gdt_host_ltr_ran;
+
 // The readable window and the three counters.
 extern "C" uint32_t gtos_gdt_host_window_base;
 extern "C" uint32_t gtos_gdt_host_window_bytes;
@@ -40,6 +52,8 @@ inline void SetGdtRegister(uint32_t base, uint32_t limit) {
     gtos_gdt_host_sgdt_base = base;
     gtos_gdt_host_sgdt_limit = limit;
 }
+// Declare whether the modelled machine executed `ltr`, which is what decides the descriptor's busy bit.
+inline void SetTaskRegisterExecuted(bool executed) { gtos_gdt_host_ltr_ran = executed ? 1u : 0u; }
 
 // The window the observation may read. A read outside it is charged to illegal reads and returns zero, which is the only
 // thing a host can do in place of a fault.

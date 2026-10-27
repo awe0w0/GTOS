@@ -306,13 +306,15 @@ extern "C" int oMain() {
     PutAccess(TaskIndex(), savedAccess);
 
     // A system descriptor of the wrong type. A 16-bit TSS is type 1 and an LDT is type 2; both keep S = 0, so they reach
-    // the type check instead of being refused as code.
+    // the type check instead of being refused as code. The refusal says what is wrong with them -- they are not 32-bit
+    // TSSes -- rather than reporting their busy bit as a disagreement, which is why the kind test comes before the busy
+    // test: type 2 (an LDT) has bit 1 set and would otherwise be misreported as "busy although nothing loaded it".
     PutAccess(TaskIndex(), (uint8_t)((savedAccess & 0xF0u) | 0x01u));
     RefuseBefore("a 16-bit TSS descriptor is refused",
-        "the TSS descriptor type is not 32-bit available TSS", 8);
+        "the TSS descriptor type is not a 32-bit TSS", 8);
     PutAccess(TaskIndex(), (uint8_t)((savedAccess & 0xF0u) | 0x02u));
     RefuseBefore("an LDT descriptor is refused",
-        "the TSS descriptor type is not 32-bit available TSS", 8);
+        "the TSS descriptor type is not a 32-bit TSS", 8);
     PutAccess(TaskIndex(), savedAccess);
 
     // A non-zero DPL.
@@ -387,6 +389,88 @@ extern "C" int oMain() {
     }
     PutAccess(TaskIndex(), savedAccess);
     PutBase(TaskIndex(), savedBase);
+
+    // ---------------------------------------------------------------- the busy bit, which only a machine settles
+    //
+    // This is the case packet 139 added because the guest found the defect the 138 unit could not. Every case above runs
+    // with `gtos_gdt_host_ltr_ran` at zero, because a host process cannot execute `ltr`. In that world the descriptor stays
+    // type 9 and the observation, as 138 wrote it, accepted it. On a real machine `ltr` executes, the CPU sets the busy bit,
+    // and the same descriptor reads as type 11 -- which 138's `kind == 9` refused, so the runtime checkpoint failed on
+    // hardware while this unit stayed green.
+    //
+    // The unit cannot execute `ltr`. What it can do is state what the machine did, lay out the descriptor that follows from
+    // it, and require the observation to accept the pair and refuse the mismatches. The three cases below are the pair and
+    // its two disagreements; the guest scene is what confirms the pair is what real hardware produces.
+    {
+        // A fresh table, loaded with the seam declaring that `ltr` ran. The load has to come after the declaration, because
+        // the object records the hardware fact at load time.
+        SetTaskRegisterExecuted(true);
+        new (gdtStorage) GlobalDescriptorTable();
+        Descriptors().LoadTaskState(stackTop);
+        SetTaskRegister(Descriptors().TaskStateSelector());
+        SetGdtRegister(Descriptors().DescriptorTableBase(), Descriptors().DescriptorTableLimit());
+        DeclareWindow();
+        CaptureExpectations();
+        Expect(Descriptors().TaskRegisterIsLoaded(), "the modelled machine executed ltr");
+
+        // The runtime's constructor writes type 9. On a machine that ran `ltr` the CPU has already set the busy bit, so the
+        // descriptor in memory is type 11. Setting it here is not a convenience: it is the state `ltr` leaves behind.
+        const uint32_t availableAccess = AccessAt(TaskIndex());
+        PutAccess(TaskIndex(), (uint8_t)(availableAccess | 0x02u));
+        Expect((AccessAt(TaskIndex()) & 0x0F) == 11, "the descriptor is laid out as busy 32-bit TSS");
+        {
+            const uint32_t bad = Observe();
+            Expect(bad == 0, "a busy descriptor satisfies the obligation when ltr ran");
+            Expect(out.descriptor_busy == 1, "the observation reports the busy bit it read");
+            Expect(out.descriptor_type == (availableAccess | 0x02u), "the access byte is read back whole");
+            Say("   busy after ltr -> accepted, busy ");
+            SayHex(out.descriptor_busy);
+            Say(" type ");
+            SayHex(out.descriptor_type);
+            Say("\n");
+        }
+        // The disagreement in one direction: the machine ran `ltr` but the descriptor is still available. That is a table
+        // the CPU did not update, which means the load did not really happen.
+        PutAccess(TaskIndex(), (uint8_t)availableAccess);
+        {
+            const uint32_t bad = Observe();
+            Expect(bad == 1, "an available descriptor is refused when ltr ran");
+            Expect(SameText(why[0], "the TSS descriptor is not busy although the task register is loaded"),
+                "the refusal names the busy bit and the register together");
+            Say("   available after ltr -> ");
+            Say(why[0] ? why[0] : "(unnamed)");
+            Say("\n");
+        }
+        // The disagreement in the other direction: the descriptor is busy but nothing loaded it. A busy descriptor with no
+        // load is a descriptor nothing owns.
+        SetTaskRegisterExecuted(false);
+        new (gdtStorage) GlobalDescriptorTable();
+        Descriptors().LoadTaskState(stackTop);
+        SetTaskRegister(Descriptors().TaskStateSelector());
+        SetGdtRegister(Descriptors().DescriptorTableBase(), Descriptors().DescriptorTableLimit());
+        DeclareWindow();
+        CaptureExpectations();
+        Expect(!Descriptors().TaskRegisterIsLoaded(), "the modelled machine did not execute ltr");
+        PutAccess(TaskIndex(), (uint8_t)(AccessAt(TaskIndex()) | 0x02u));
+        {
+            const uint32_t bad = Observe();
+            Expect(bad == 1, "a busy descriptor is refused when ltr did not run");
+            Expect(SameText(why[0], "the TSS descriptor is busy although the task register is not loaded"),
+                "the refusal names the disagreement in this direction too");
+            Say("   busy without ltr -> ");
+            Say(why[0] ? why[0] : "(unnamed)");
+            Say("\n");
+        }
+        // And back to the pre-ltr world the rest of this unit describes, so the final case runs against the same state the
+        // earlier cases did.
+        SetTaskRegisterExecuted(false);
+        new (gdtStorage) GlobalDescriptorTable();
+        Descriptors().LoadTaskState(stackTop);
+        SetTaskRegister(Descriptors().TaskStateSelector());
+        SetGdtRegister(Descriptors().DescriptorTableBase(), Descriptors().DescriptorTableLimit());
+        DeclareWindow();
+        CaptureExpectations();
+    }
 
     // ---------------------------------------------------------------- back to clean
     {

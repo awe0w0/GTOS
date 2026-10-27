@@ -16,7 +16,12 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import * as scene from '../tools/scene-admission.mjs';
+
+// The worktree this test lives in. Used to read the production parser's own source, so the stop vocabulary is checked
+// against the code rather than against a second hand-written list.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const R = process.argv[4] || 'F:/GTOS-Chromium/artifacts/native-current-evidence-runtime-seam-closure-and-guest-matrix-20261027-a';
 // Where the 131 records this test reads as its identity live. They are read, never written: this packet does not add to a
@@ -52,10 +57,34 @@ const SUB_CTX = {
 {
   const names = scene.sceneNames();
   check('the scene table is declared and non-trivial', names.length >= 8, names);
-  check('every declared scene has a real production stop', names.every((n) => {
+  // Every scene's stop must be one the production parser recognises, with one deliberate exception: the rejection scene,
+  // whose whole purpose is to carry a value the parser does not recognise. Stating the exception as its own assertion is
+  // what keeps it from becoming a hole -- a scene that is not marked `expects_rejection` still has to name a real stop, and
+  // a scene that is marked has to name a value the parser must refuse.
+  check('every ordinary scene has a real production stop', names.every((n) => {
     const s = scene.scene(n);
-    return s && scene.STOPS.includes(s.stop);
-  }), names.map((n) => ({ n, stop: scene.scene(n).stop })));
+    if (!s) return false;
+    return s.expects_rejection ? !scene.STOPS.includes(s.stop) : scene.STOPS.includes(s.stop);
+  }), names.map((n) => ({ n, stop: scene.scene(n).stop, rejects: !!scene.scene(n).expects_rejection })));
+  check('the rejection scene is present and carries an unrecognised value', names.some((n) => {
+    const s = scene.scene(n);
+    return s && s.expects_rejection === true && !scene.STOPS.includes(s.stop);
+  }), names.filter((n) => scene.scene(n).expects_rejection));
+  // The stop vocabulary must match the production parser's own, because a scene naming a stop this table blesses and the
+  // parser refuses would look like a guest fault. The parser's list is read from its source rather than restated here.
+  {
+    const source = fs.readFileSync(path.join(ROOT, 'src/common/boot_diagnostic.cpp'), 'utf8');
+    // The parser's accepted values are its own named constants, and its dispatch table is the one place that maps them to
+    // stops. Reading the constants is what makes this a comparison against the code rather than against a second list.
+    const fromSource = [...source.matchAll(/const char (k[A-Za-z]+Value)\[\] = "([a-z-]+)";/g)].map((m) => m[2]).sort();
+    const declared = [...scene.STOPS].sort();
+    check('the declared stop vocabulary is the parser\'s own', fromSource.length >= 8
+      && JSON.stringify(declared) === JSON.stringify(fromSource), { declared, from_source: fromSource });
+    // And the dispatch table must map every one of them, or a value the parser knows would fall through to StopNone.
+    const dispatched = [...source.matchAll(/Equals\(span, (k[A-Za-z]+Value), length\)/g)].map((m) => m[1]);
+    check('every declared value is dispatched by the parser', dispatched.length === fromSource.length,
+      { dispatched, values: fromSource.length });
+  }
   check('every declared scene names a required marker', names.every((n) => {
     const s = scene.scene(n);
     return typeof s.required_marker === 'string' && s.required_marker.length > 0;
@@ -201,11 +230,14 @@ expectRefusal('a prerequisite that is absent',
 
 // ---------------------------------------------------------------- 4. the functional verdict
 const s = scene.scene('runtime-init-smp1');
+// The lines this scene declares as obligations beyond its marker. They are read from the declaration rather than written
+// here, so a scene that gains an obligation does not silently leave this fixture behind asserting the old, weaker set.
+const ALSO = s.also_required || [];
 {
-  // The good case: both channels present, marker there, nothing forbidden.
+  // The good case: both channels present, marker there, every declared obligation there, nothing forbidden.
   const good = scene.functionalVerdict(s, {
-    e9: ['BOOT B01 HANDOFF', 'RUNTIME DIAG STACKS PREPARED', 'BOOTDIAG RUNTIME INITIALIZED'],
-    serial: ['BOOT B01 HANDOFF', 'RUNTIME DIAG STACKS PREPARED', 'BOOTDIAG RUNTIME INITIALIZED'],
+    e9: ['BOOT B01 HANDOFF', 'RUNTIME DIAG STACKS PREPARED', 'BOOTDIAG RUNTIME INITIALIZED', ...ALSO],
+    serial: ['BOOT B01 HANDOFF', 'RUNTIME DIAG STACKS PREPARED', 'BOOTDIAG RUNTIME INITIALIZED', ...ALSO],
   });
   check('a complete, clean pair of channels is accepted', good.accepted === true, good.problems);
 

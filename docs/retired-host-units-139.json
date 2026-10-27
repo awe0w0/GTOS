@@ -1,0 +1,52 @@
+{
+  "task": "GTOS-DSH-139",
+  "document": "retired-host-units-139",
+  "purpose": "Record the two host units packet 139 retired, what each claimed, what replaces it, and the probe that makes the retirement a result rather than a preference.",
+  "authority": {
+    "taskbook_sha256": "539f6cf5dd0971f81a27885cbd204354b8126eba7a45b75acb4ee12f7d41847f",
+    "dispatch_sha256": "fb7186f22fab0020320884a63e278cbd97398f054212a94307e2f43f491b17d6",
+    "requirement": "tr_tss and the 130/134-bound tests are fixed or retired, with a coverage mapping"
+  },
+  "retired": [
+    {
+      "path": "tests/tr_tss_test.cpp",
+      "state": "retired, file kept",
+      "why_retired": [
+        "It cannot be linked. It defines four of the nine host-seam symbols itself (gtos_gdt_host_str_selector, _sgdt_base, _sgdt_limit, _reads), which 137 moved into tests/gdt_host_seam.cpp so that more than one unit could link the observation. Linking it without that unit leaves five symbols undefined; linking it with that unit defines four of them twice. Both link attempts exit 1; the probe records the exact diagnostics.",
+        "Its eleven assertions are all of the form bad > 0: a mutation is applied and the case requires that something was refused. None of them requires that the refusal was the right one, so a case could pass on an unrelated gate. safe_tss_test.cpp already covers every one of these mutations and requires the named reason for each.",
+        "It asserts nothing about the busy bit at all, which is the one obligation its structure could not see."
+      ],
+      "replaced_by": "tests/safe_tss_test.cpp",
+      "coverage_mapping": [
+        { "tr_tss claim": "a task register selector that is not the loaded one is refused", "safe_tss case": "a well-formed selector that is not the loaded one is refused -> the task register selector is not the one that was loaded" },
+        { "tr_tss claim": "a task register selector with a non-zero RPL is refused", "safe_tss case": "a selector with a non-zero RPL is refused -> the task register selector has a ring other than 0" },
+        { "tr_tss claim": "a descriptor outside the GDT limit is refused", "safe_tss case": "a descriptor past the GDT limit is refused -> the descriptor is not inside the GDT limit" },
+        { "tr_tss claim": "an absent TSS descriptor is refused", "safe_tss case": "an absent descriptor is refused -> the TSS descriptor is not present" },
+        { "tr_tss claim": "a descriptor that is not a TSS is refused", "safe_tss case": "a non-system descriptor is refused -> the descriptor is not a system descriptor, plus the 16-bit TSS and LDT cases -> the TSS descriptor type is not a 32-bit TSS" },
+        { "tr_tss claim": "a TSS base that is not the runtime task state is refused", "safe_tss case": "a base outside the declared window is refused without reading it, and a base inside the window that is not the task state is refused" },
+        { "tr_tss claim": "a TSS ring-0 selector that is not the runtime's is refused", "safe_tss case": "a TSS ring-0 selector that is not the runtime's is refused -> the TSS ring-0 stack selector is not the one the runtime set" },
+        { "tr_tss claim": "a TSS io map base that is not the runtime's is refused", "safe_tss case": "a TSS io map base that is not the runtime's is refused -> the TSS io map base is not the one the runtime set" },
+        { "tr_tss claim": "a TSS limit that is not the task state size is refused", "safe_tss case": "a descriptor limit that is not the task state size is refused -> the TSS descriptor limit is not the task state size" }
+      ],
+      "coverage_added_beyond_tr_tss": [
+        "the normal case, with the byte counts asserted so a counter that never increments cannot make a refusal look clean",
+        "the absence of reads before a refusal, attributed per region",
+        "the two disagreements between the descriptor's busy bit and the task register, which tr_tss never touched",
+        "several faults at once, requiring the earlier gate to win by name"
+      ],
+      "evidence": "test-only/tr-tss-probe-02: compile rc=0, link A rc=1 (five undefined seam symbols), link B rc=1 (four multiple definitions), verdict RETIRE"
+    },
+    {
+      "path": "tests/safe_tss_test.cpp",
+      "state": "fixed, not retired",
+      "why": "It is the replacement, and it was itself wrong: its production-descriptor case asserted (AccessAt & 0x89) == 0x89, which is only true before ltr runs. It now models both worlds through the seam's gtos_gdt_host_ltr_ran and requires the observation to accept the pair and refuse each disagreement.",
+      "evidence": "test-only/safe-tss-06: SAFE TSS UNIT PASS, with 'busy after ltr -> accepted, busy 00000001 type 0000008B' matching the 0x8B the guest printed in test-only/h-run-03"
+    }
+  ],
+  "the_130_and_134_bound_tests": {
+    "claim_to_check": "the packet brief names tests bound to packets 130 and 134 as candidates for the same treatment",
+    "finding": "no unit in tests/ carries a packet number, and the 130/134 obligations that exist are scene obligations in tools/scene-admission.mjs, which this packet re-derived from the guest's own output rather than inheriting",
+    "action": "no file retired on this ground, because no file was found whose retirement this evidence would justify; the scene obligations those packets introduced are covered by the matrix rows and by tools/verify-matrix-139.mjs, which restates each scene's obligations independently of the declaration it is checking",
+    "note": "recorded as a finding rather than left silent: a retirement carried out to satisfy a phrase in a brief, without a probe like the one above, would be exactly the kind of unearned closure this packet exists to refuse"
+  }
+}

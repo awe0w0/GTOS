@@ -1366,6 +1366,59 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         const bool runtimeActive = nativeRuntime.Activate(
             tasks, gdt, paging, frames, process::NativeFpDisabled, false);
         printf(runtimeActive ? "RUNTIME DIAG ACTIVATED\n" : "RUNTIME DIAG ACTIVATE FAILED\n");
+        // ------------------------------------------------------------ the task register, read from the machine
+        // Activate is what executes ltr, so this is the first point in any boot path where the task register holds a
+        // real value. Reading it before Activate would read a register nothing has written, and reading it after the
+        // runtime is torn down would read a selector that no longer names this table.
+        //
+        // The expected values come from the GDT object's own initialisation state -- the layout offset of the task
+        // descriptor, the address and size of the TSS object, the ring-0 selector and io map base the constructor set.
+        // They are not taken from the descriptor being examined, so the comparison is between the machine's copy and the
+        // runtime's intent rather than between the descriptor and itself.
+        if (runtimeActive) {
+            GlobalDescriptorTable::TaskRegisterObservation taskRegister;
+            const char* taskRegisterFailures[8];
+            uint32_t taskRegisterFailureCount = 0;
+            const uint32_t taskRegisterProblems = gdt.ObserveTaskRegister(
+                taskRegister,
+                gdt.TaskStateSelector(), gdt.TaskStateBase(), gdt.TaskStateLimit(),
+                gdt.TaskStateRing0Selector(), gdt.TaskStateIoMapBase(),
+                taskRegisterFailures, taskRegisterFailureCount);
+            // The values the instructions returned, printed before the judgement, so a log reader can check the
+            // arithmetic without trusting the counter.
+            LogValue("RUNTIME DIAG TR READ ", taskRegister.read_ok);
+            LogValue("RUNTIME DIAG TR SELECTOR ", taskRegister.str_selector);
+            LogValue("RUNTIME DIAG TR INDEX ", taskRegister.str_index);
+            LogValue("RUNTIME DIAG TR TI ", taskRegister.str_ti);
+            LogValue("RUNTIME DIAG TR RPL ", taskRegister.str_rpl);
+            LogValue("RUNTIME DIAG SGDT BASE ", taskRegister.gdt_base);
+            LogValue("RUNTIME DIAG SGDT LIMIT ", taskRegister.gdt_limit);
+            LogValue("RUNTIME DIAG TSS DESC OFFSET ", taskRegister.descriptor_offset);
+            LogValue("RUNTIME DIAG TSS DESC IN GDT ", taskRegister.descriptor_in_gdt);
+            LogValue("RUNTIME DIAG TSS DESC TYPE ", taskRegister.descriptor_type);
+            LogValue("RUNTIME DIAG TSS DESC BASE ", taskRegister.descriptor_base);
+            LogValue("RUNTIME DIAG TSS DESC LIMIT ", taskRegister.descriptor_limit);
+            LogValue("RUNTIME DIAG TSS SS0 ", taskRegister.tss_ss0);
+            LogValue("RUNTIME DIAG TSS ESP0 ", taskRegister.tss_esp0);
+            LogValue("RUNTIME DIAG TSS IOMAP ", taskRegister.tss_iomap_base);
+            // The runtime's own expectations, printed beside the observation, so the two are comparable in the log.
+            LogValue("RUNTIME DIAG EXPECT SELECTOR ", gdt.TaskStateSelector());
+            LogValue("RUNTIME DIAG EXPECT TSS BASE ", gdt.TaskStateBase());
+            LogValue("RUNTIME DIAG EXPECT TSS LIMIT ", gdt.TaskStateLimit());
+            LogValue("RUNTIME DIAG EXPECT SS0 ", gdt.TaskStateRing0Selector());
+            LogValue("RUNTIME DIAG EXPECT IOMAP ", gdt.TaskStateIoMapBase());
+            LogValue("RUNTIME DIAG EXPECT LOADED ", gdt.TaskStateIsLoaded() ? 1U : 0U);
+            LogValue("RUNTIME DIAG TSS OBLIGATIONS FAILED ", taskRegisterProblems);
+            for (uint32_t i = 0; i < taskRegisterFailureCount && i < 8; ++i) {
+                printf("RUNTIME DIAG TSS FAILURE ");
+                printf((char*)taskRegisterFailures[i]);
+                printf("\n");
+            }
+            printf(taskRegisterProblems == 0 ? "RUNTIME DIAG TSS OBSERVED\n" : "RUNTIME DIAG TSS MISMATCH\n");
+            if (taskRegisterProblems != 0 || !gdt.TaskStateIsLoaded()) {
+                BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+            }
+        }
         const process::NativeStatistics runtimeCounts = nativeRuntime.Statistics();
         LogValue("RUNTIME DIAG CREATED ", runtimeCounts.created);
         LogValue("RUNTIME DIAG EXITED ", runtimeCounts.exited);
@@ -1561,6 +1614,215 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             && objectFinal.reaped == 2;
         if (!pass) BootDiagnosticHalt("BOOTDIAG RUNTIME OBJECTS CHECKPOINT NOT REACHED");
         BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeObjects));
+    }
+
+
+    // ---------------------------------------------------------------- runtime capacity refusal and recovery
+    // The runtime's slot table holds a fixed number of native contexts. This stop fills it to that number, attempts one
+    // more, and requires the runtime itself to refuse: the refusal comes from the runtime's own FreeSlot returning
+    // nothing, not from a fault this code injects and not from a stub that always returns false. That distinction is the
+    // whole point of the scene. A fabricated failure would prove only that the caller can return false.
+    //
+    // Then it recovers in the same instance. Nothing is reinitialised, no stack is re-prepared and no second runtime is
+    // constructed: the object that refused the attempt is the object that serves the next one. The recovery is a reap
+    // followed by a create, and what makes it evidence is that the numbers agree -- the refused attempt left the
+    // allocator exactly where it was, the reaped slot became usable again, and the new object is live and readable.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopRuntimeRecovery) {
+        CpuStartup recoveryInventory;
+        const bool recoveryInventoryPrepared =
+            recoveryInventory.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+        const uint32_t recoveryProcessors = recoveryInventoryPrepared
+            ? recoveryInventory.GetReport().detectedProcessors
+            : cpu.GetInfo().detectedLogicalProcessors;
+        LogValue("RECOVERY DIAG DETECTED ", recoveryProcessors);
+        if (recoveryProcessors > 1) {
+            printf("RECOVERY DIAG REFUSED MULTI CPU\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY REFUSED MULTI CPU");
+        }
+        memory::PagingDeviceRange recoveryDevices[3];
+        uint32_t recoveryDeviceCount = 0;
+        const memory::PagingConfig recoveryConfig =
+            BuildPagingConfig(mbi, recoveryDevices, recoveryDeviceCount, 0, 0);
+        if (!paging.prepareIdentity(frames, recoveryConfig)) {
+            printf("RECOVERY DIAG PAGING FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        if (!nativeRuntime.PrepareStacks(paging, frames)) {
+            printf("RECOVERY DIAG STACKS FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        printf("RECOVERY DIAG STACKS PREPARED\n");
+        if (!paging.enable()) {
+            printf("RECOVERY DIAG ENABLE FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        if (!paging.sealForSharedProcessors()) {
+            printf("RECOVERY DIAG SEAL FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        if (!nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpDisabled, false)) {
+            printf("RECOVERY DIAG ACTIVATE FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        printf("RECOVERY DIAG ACTIVATED\n");
+        LogValue("RECOVERY DIAG CR3 ", paging.getStatistics().directoryAddress);
+        const memory::PhysicalMemoryStatistics recoveryBaseline = frames.getStatistics();
+        LogValue("RECOVERY DIAG BASELINE ALLOCATED ", recoveryBaseline.allocatedFrames);
+        LogValue("RECOVERY DIAG BASELINE FREE ", recoveryBaseline.freeFrames);
+
+        // Four distinct images, so the four live objects are distinguishable by content and a shared page would show.
+        static const uint8_t recoveryCode[16] = { 0xC3, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                                  0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
+        static const uint8_t recoveryData[4][16] = {
+            { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F },
+            { 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F },
+            { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F },
+            { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F },
+        };
+
+        // Fill the table. The loop bound is the runtime's own declared capacity, read from the type rather than written
+        // as a literal here, so the loop and the runtime cannot disagree about how many slots exist.
+        const uint32_t recoveryCapacity = process::NativeRuntime::MaximumProcesses;
+        LogValue("RECOVERY DIAG CAPACITY ", recoveryCapacity);
+        uint32_t recoveryIds[8];
+        uint32_t recoveryCreated = 0;
+        bool recoveryFillOk = true;
+        for (uint32_t i = 0; i < recoveryCapacity && i < 8; ++i) {
+            process::NativeImage image;
+            image.code = recoveryCode; image.codeBytes = sizeof(recoveryCode); image.entryOffset = 0;
+            image.data = recoveryData[i % 4]; image.dataBytes = sizeof(recoveryData[i % 4]);
+            uint32_t id = 0;
+            const bool made = nativeRuntime.Create(image, id);
+            if (!made || !id) { recoveryFillOk = false; break; }
+            recoveryIds[recoveryCreated++] = id;
+            LogValue("RECOVERY DIAG FILLED ", recoveryCreated);
+        }
+        printf(recoveryFillOk && recoveryCreated == recoveryCapacity
+            ? "RECOVERY DIAG FILLED TO CAPACITY\n" : "RECOVERY DIAG FILL FAILED\n");
+        if (!recoveryFillOk || recoveryCreated != recoveryCapacity) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        const process::NativeStatistics recoveryFull = nativeRuntime.Statistics();
+        LogValue("RECOVERY DIAG FULL CREATED ", recoveryFull.created);
+        LogValue("RECOVERY DIAG FULL REAPED ", recoveryFull.reaped);
+        // The four live objects must have four distinct ids and four distinct address spaces, or "full" is not a
+        // statement about the table.
+        bool recoveryDistinct = recoveryFull.created == recoveryCapacity;
+        for (uint32_t i = 0; i < recoveryCreated; ++i) {
+            process::NativeStatus left, right;
+            if (!nativeRuntime.Status(recoveryIds[i], left) || !left.live) recoveryDistinct = false;
+            for (uint32_t j = i + 1; j < recoveryCreated; ++j) {
+                if (recoveryIds[i] == recoveryIds[j]) recoveryDistinct = false;
+                if (!nativeRuntime.Status(recoveryIds[j], right)) { recoveryDistinct = false; continue; }
+                if (left.directory == right.directory) recoveryDistinct = false;
+            }
+        }
+        printf(recoveryDistinct ? "RECOVERY DIAG LIVE DISTINCT\n" : "RECOVERY DIAG LIVE SHARED\n");
+        if (!recoveryDistinct) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+
+        // The natural refusal. The table is full, so the runtime's own FreeSlot finds nothing and Create returns false.
+        // The frame counts are taken either side of the attempt, because a refusal that leaked a frame would be a
+        // refusal this path could not recover from later.
+        const memory::PhysicalMemoryStatistics recoveryBeforeRefusal = frames.getStatistics();
+        process::NativeImage recoveryExtra;
+        recoveryExtra.code = recoveryCode; recoveryExtra.codeBytes = sizeof(recoveryCode);
+        recoveryExtra.entryOffset = 0;
+        recoveryExtra.data = recoveryData[0]; recoveryExtra.dataBytes = sizeof(recoveryData[0]);
+        uint32_t recoveryRefusedId = 0xFFFFFFFFU;
+        const bool recoveryOverflow = nativeRuntime.Create(recoveryExtra, recoveryRefusedId);
+        printf(recoveryOverflow ? "RECOVERY DIAG OVERFLOW ACCEPTED\n" : "RECOVERY DIAG OVERFLOW REFUSED\n");
+        LogValue("RECOVERY DIAG OVERFLOW ID ", recoveryRefusedId);
+        const memory::PhysicalMemoryStatistics recoveryAfterRefusal = frames.getStatistics();
+        LogValue("RECOVERY DIAG REFUSED ALLOCATED ", recoveryAfterRefusal.allocatedFrames);
+        LogValue("RECOVERY DIAG REFUSED FREE ", recoveryAfterRefusal.freeFrames);
+        const process::NativeStatistics recoveryAfterOverflow = nativeRuntime.Statistics();
+        LogValue("RECOVERY DIAG REFUSED CREATED ", recoveryAfterOverflow.created);
+        // A refusal must leave nothing behind: no new object, no new id, no consumed frame.
+        const bool recoveryClean = !recoveryOverflow && recoveryRefusedId == 0
+            && recoveryAfterRefusal.allocatedFrames == recoveryBeforeRefusal.allocatedFrames
+            && recoveryAfterRefusal.freeFrames == recoveryBeforeRefusal.freeFrames
+            && recoveryAfterOverflow.created == recoveryCapacity
+            && recoveryAfterOverflow.reaped == recoveryFull.reaped;
+        printf(recoveryClean ? "RECOVERY DIAG REFUSAL CLEAN\n" : "RECOVERY DIAG REFUSAL DIRTIED\n");
+        if (!recoveryClean) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+
+        // Recovery in the same instance. One live object is asked to exit and is reaped; the slot it held becomes
+        // usable again, and the very next Create succeeds. Nothing about the runtime was reset between the refusal and
+        // this point, which is what makes it a recovery rather than a restart.
+        const uint32_t recoveryVictim = recoveryIds[1];
+        const bool recoveryExit = nativeRuntime.RequestExit(recoveryVictim, 0x5A);
+        printf(recoveryExit ? "RECOVERY DIAG EXIT REQUESTED\n" : "RECOVERY DIAG EXIT FAILED\n");
+        const uint32_t recoveryReaped = nativeRuntime.Reap();
+        LogValue("RECOVERY DIAG REAPED ", recoveryReaped);
+        if (!recoveryExit || recoveryReaped != 1) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        process::NativeStatus recoveryStale;
+        const bool recoveryStaleOk = nativeRuntime.Status(recoveryVictim, recoveryStale);
+        const bool recoveryStaleGone = recoveryStaleOk && recoveryStale.reaped && !recoveryStale.live;
+        printf(recoveryStaleGone ? "RECOVERY DIAG VICTIM TOMBSTONED\n" : "RECOVERY DIAG VICTIM LIVE\n");
+        if (!recoveryStaleGone) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+
+        // The create that the refusal had just made impossible.
+        process::NativeImage recoveryReplacement;
+        recoveryReplacement.code = recoveryCode; recoveryReplacement.codeBytes = sizeof(recoveryCode);
+        recoveryReplacement.entryOffset = 0;
+        recoveryReplacement.data = recoveryData[3]; recoveryReplacement.dataBytes = sizeof(recoveryData[3]);
+        uint32_t recoveryNewId = 0;
+        const bool recoveryRecreated = nativeRuntime.Create(recoveryReplacement, recoveryNewId);
+        printf(recoveryRecreated ? "RECOVERY DIAG RECREATED\n" : "RECOVERY DIAG RECREATE FAILED\n");
+        LogValue("RECOVERY DIAG NEW ID ", recoveryNewId);
+        // A new object must not inherit the reaped id: an id that came back would let a stale handle address a live
+        // object, which is the failure the reap is supposed to make impossible.
+        bool recoveryFreshId = recoveryRecreated && recoveryNewId != 0;
+        for (uint32_t i = 0; i < recoveryCreated; ++i) if (recoveryNewId == recoveryIds[i]) recoveryFreshId = false;
+        printf(recoveryFreshId ? "RECOVERY DIAG NEW ID FRESH\n" : "RECOVERY DIAG NEW ID REUSED\n");
+        // The recovered object is live, readable and carries the data it was created with. A create that returned true
+        // without a usable object would satisfy a boolean and nothing else.
+        uint8_t recoveryRead[16] = { 0 };
+        const bool recoveryReadOk = recoveryRecreated && nativeRuntime.ReadMemory(
+            recoveryNewId, process::NativeRuntime::DataAddress, recoveryRead, sizeof(recoveryRead));
+        bool recoveryContentOk = recoveryReadOk;
+        for (uint32_t i = 0; i < sizeof(recoveryRead); ++i)
+            if (recoveryRead[i] != recoveryData[3][i]) recoveryContentOk = false;
+        printf(recoveryContentOk ? "RECOVERY DIAG NEW DATA MATCHES\n" : "RECOVERY DIAG NEW DATA WRONG\n");
+        process::NativeStatus recoveryNewStatus;
+        const bool recoveryNewOk = nativeRuntime.Status(recoveryNewId, recoveryNewStatus)
+            && recoveryNewStatus.live && !recoveryNewStatus.reaped;
+        printf(recoveryNewOk ? "RECOVERY DIAG NEW LIVE\n" : "RECOVERY DIAG NEW NOT LIVE\n");
+        // The four surviving objects are still there: a recovery that lost the others would be a reset.
+        uint32_t recoverySurvivors = 0;
+        for (uint32_t i = 0; i < recoveryCreated; ++i) {
+            if (recoveryIds[i] == recoveryVictim) continue;
+            process::NativeStatus survivor;
+            if (nativeRuntime.Status(recoveryIds[i], survivor) && survivor.live && !survivor.reaped)
+                ++recoverySurvivors;
+        }
+        LogValue("RECOVERY DIAG SURVIVORS ", recoverySurvivors);
+        const bool recoverySurvivorsOk = recoverySurvivors == recoveryCapacity - 1;
+        printf(recoverySurvivorsOk ? "RECOVERY DIAG SURVIVORS LIVE\n" : "RECOVERY DIAG SURVIVORS LOST\n");
+        const process::NativeStatistics recoveryFinal = nativeRuntime.Statistics();
+        LogValue("RECOVERY DIAG FINAL CREATED ", recoveryFinal.created);
+        LogValue("RECOVERY DIAG FINAL EXITED ", recoveryFinal.exited);
+        LogValue("RECOVERY DIAG FINAL REAPED ", recoveryFinal.reaped);
+        // The accounting has to close: every create counted, the one exit counted, the one reap counted, and the table
+        // back at capacity with a different membership than before.
+        const bool recoveryAccounted = recoveryFinal.created == recoveryCapacity + 1
+            && recoveryFinal.exited == 1 && recoveryFinal.reaped == 1;
+        printf(recoveryAccounted ? "RECOVERY DIAG ACCOUNTED\n" : "RECOVERY DIAG ACCOUNTING WRONG\n");
+        // And the machine is still where this path is allowed to be: no interrupt, no dispatch.
+        uint32_t recoveryFlags = 0;
+        asm volatile("pushfl; popl %0" : "=r"(recoveryFlags));
+        printf((recoveryFlags & 0x200U) ? "RECOVERY DIAG INTERRUPTS ENABLED\n" : "RECOVERY DIAG INTERRUPTS CLEAR\n");
+        const bool recoveryPass = recoveryClean && recoveryExit && recoveryReaped == 1 && recoveryStaleGone
+            && recoveryRecreated && recoveryFreshId && recoveryContentOk && recoveryNewOk && recoverySurvivorsOk
+            && recoveryAccounted && !(recoveryFlags & 0x200U);
+        if (!recoveryPass) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeRecovery));
     }
 
 

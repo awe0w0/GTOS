@@ -1,0 +1,132 @@
+{
+  "task": "GTOS-DSH-139",
+  "document": "goal-h-guest-observation-139",
+  "purpose": "Record what the guest observed about the task register and the task state segment on real hardware, what the host unit could and could not settle, and how the two relate. Goal H asks for a real guest STR/SGDT/TSS relation and a natural BSP pressure failure with same-instance recovery; both are here, and the boundary between them and the host seam is stated rather than blurred.",
+  "authority": {
+    "taskbook_sha256": "539f6cf5dd0971f81a27885cbd204354b8126eba7a45b75acb4ee12f7d41847f",
+    "dispatch_sha256": "fb7186f22fab0020320884a63e278cbd97398f054212a94307e2f43f491b17d6"
+  },
+
+  "the_defect_the_guest_found": {
+    "summary": "The 138 host unit asserted the TSS descriptor type was 9 (available 32-bit TSS) and passed. The first real guest run of this packet printed type 0x8B (busy 32-bit TSS) and the runtime checkpoint failed.",
+    "why_the_host_unit_could_not_see_it": "Executing `ltr` sets the descriptor's busy bit, so from the load onward the same descriptor reads as type 11 rather than 9. A host process cannot execute `ltr` at all, so a host unit that calls LoadTaskState gets the software flag set and the descriptor left at type 9 -- and an assertion of `kind == 9` is then structurally unable to fail. The unit was not wrong about what it measured; it was measuring a world in which the instruction had not happened, and it reported that as the world the runtime runs in.",
+    "this_is_the_goal": "This is exactly the class of claim goal H exists to close. The packet brief says the host seam may not be claimed as the natural failure phase, and this is the concrete case: the host seam's green result was not evidence about the loaded descriptor.",
+    "fixed_by": [
+      "src/gdt.cpp: the obligation is stated against whether the task register was loaded, not against a constant. Available (9) before the load, busy (11) after it.",
+      "include/gdt.h + src/gdt.cpp: `taskRegisterLoaded` is now a member distinct from `taskStateLoaded`. The first is hardware state (the instruction ran); the second is software state (the call was made). They differ on a host by construction.",
+      "tests/gdt_host_seam.h: the seam carries `gtos_gdt_host_ltr_ran`, so a host unit declares which world it is modelling instead of silently getting the pre-ltr one.",
+      "tests/safe_tss_test.cpp: three cases added -- the busy descriptor accepted, and each direction of disagreement refused with its own named reason."
+    ]
+  },
+
+  "the_task_register_observation": {
+    "where": "the runtime-init stop, after NativeRuntime::Activate, before any process exists",
+    "source": "test-only/h-run-03/runtime-init-smp1.e9.log",
+    "observed": {
+      "tr_selector": "0x0030",
+      "tr_index": 6,
+      "sgdt_base": "0x005F9DB3",
+      "sgdt_limit": 55,
+      "tss_descriptor_offset": "0x0030",
+      "tss_descriptor_type": "0x8B",
+      "tss_descriptor_base": "0x005F9DEB",
+      "tss_ss0": "0x0018",
+      "tss_esp0": "0xD0005000",
+      "tss_iomap_base": "0x0068"
+    },
+    "what_makes_this_a_relation_and_not_a_list": [
+      "The selector's index times eight equals the descriptor's offset in the table (6 * 8 = 0x30), so the register and the table agree about which descriptor is the task state.",
+      "The GDTR limit is 55, which is the offset of the last valid byte of seven eight-byte descriptors (7 * 8 - 1). The task descriptor at offset 48 occupies bytes 48 through 55, so it is the last descriptor and it fits exactly.",
+      "The descriptor's base equals the address of the runtime's own task state object, and its limit is the object's size minus one, so the descriptor describes the runtime's object rather than some other memory.",
+      "The type is 0x8B: present, DPL 0, system, busy 32-bit TSS. The busy bit is the evidence that `ltr` executed against this descriptor.",
+      "ss0 is 0x18, the kernel data selector the runtime's own GDT defines; esp0 is 0xD0005000, a kernel address inside the runtime's stack arena, not zero and not a user address; the io map base is 0x68, inside the task state."
+    ],
+    "independence": "The guest computes each of these from the machine and compares it against the runtime's own expectation, printing both sides as separate `RUNTIME DIAG` and `RUNTIME DIAG EXPECT` lines. The verifier then re-derives the arithmetic from the printed numbers rather than accepting the guest's verdict, so a guest that printed EXPECT lines equal to its observed lines by copying them would still fail the arithmetic.",
+    "result": "RUNTIME DIAG TSS OBLIGATIONS FAILED 00000000, then RUNTIME DIAG TSS OBSERVED, then BOOTDIAG RUNTIME INITIALIZED."
+  },
+
+  "the_natural_pressure_and_recovery": {
+    "where": "the runtime-recovery stop, a fixed restricted scene: one core, IF=0, no dispatch",
+    "source": "test-only/h-run-04/runtime-recovery-smp1.e9.log",
+    "why_it_is_natural": "The pressure is the runtime's own capacity check. The scene fills the runtime's slot table to process::NativeRuntime::MaximumProcesses by calling the same Create the production path calls, and the refusal comes from the runtime's own bound rather than from an injected fault, a seam, or a manufactured failure return. Nothing is dispatched: no user instruction runs, no task is scheduled, no interrupt is enabled.",
+    "sequence": [
+      "CAPACITY 00000004 -- the runtime's declared limit, read from the runtime",
+      "FILLED TO CAPACITY / FULL CREATED 00000004 / LIVE DISTINCT -- four objects, all live, with distinct ids and distinct directories",
+      "OVERFLOW REFUSED / OVERFLOW ID 00000000 -- a fifth Create is refused and hands back no id",
+      "REFUSED CREATED 00000004 -- the refused attempt did not change the count",
+      "REFUSAL CLEAN -- the allocator was left exactly as it was",
+      "REAPED 00000001 / VICTIM TOMBSTONED -- one object exited and was reaped, and its slot is marked dead",
+      "RECREATED / NEW ID 00000005 / NEW ID FRESH -- the next Create succeeds with an id never issued before",
+      "NEW DATA MATCHES / NEW LIVE -- the new object's private memory is its own and it is live",
+      "SURVIVORS 00000003 / SURVIVORS LIVE -- the three objects that were never touched are still live",
+      "FINAL CREATED 00000005 / FINAL EXITED 00000001 / FINAL REAPED 00000001 / ACCOUNTED",
+      "INTERRUPTS CLEAR -- the whole exercise ran with interrupts off and left them off",
+      "BOOTDIAG RUNTIME RECOVERED CAPACITY"
+    ],
+    "same_instance": "Every step above runs against one NativeRuntime object, in one boot, with no re-initialisation between the refusal and the recovery. The recovery is not a reboot and not a second instance.",
+    "frame_conservation": {
+      "baseline_allocated": "0x00000432",
+      "refused_allocated": "0x0000044E",
+      "reading": "The refused attempt changed the allocated count by the amount the four live objects had already taken and by nothing more. The verifier re-derives conservation from the four printed frame numbers (baseline allocated plus free equals refused allocated plus free) rather than trusting the guest's REFUSAL CLEAN line, and separately requires that the frames consumed by the filled objects divide evenly by the capacity, so the allocator is charged a consistent amount per object rather than an amount that varies with the attempt."
+    },
+    "old_id_safety": "The reaped object's id is not reused: the new object gets 5, which was never issued. The scene also requires that the survivors' data is unchanged and that the new object's data matches what it wrote, so an id or a directory that aliased a dead object would show up as a mismatch rather than as a pass."
+  },
+
+  "the_multi_core_refusal": {
+    "scenes": ["runtime-init-smp2", "runtime-init-smp3", "runtime-recovery-smp2", "runtime-objects-smp2", "runtime-objects-smp3"],
+    "what_happens": "The guest detects the core count from the firmware's MADT, refuses before it prepares stacks or activates anything, and prints a refusal marker naming the core count. Nothing is allocated, no stack is prepared, no AP is started.",
+    "why_this_is_the_right_answer": "The runtime is a BSP-only prototype whose stacks are not safe to hand to an AP that has not been told about them. Refusing early is the correct behaviour, not a limitation to be worked around; a runtime that accepted two cores and then behaved unpredictably would be worse than one that says no.",
+    "evidence": "test-only/matrix-05: each refusal row's e9 channel carries the detection count, the refusal marker, and no STACKS PREPARED line. The verifier requires the refusal to precede any stack preparation and to be attributed to the core count."
+  },
+
+  "the_host_units_and_what_they_settle": {
+    "tests/safe_tss_test.cpp": {
+      "state": "PASS, 48 Expect calls, run directly as a 32-bit Linux program",
+      "settles": [
+        "the exact first refusal and its name for each of twelve single-condition breaks",
+        "that a refusal before the task state is reached charges no task-state byte, and that a refusal before the descriptor is reached charges no descriptor byte -- attributed per region, so a legal address inside the window that was refused still shows as charged to the right region",
+        "the byte counts of a clean read, so a counter that never increments cannot make a refusal look clean",
+        "the production descriptor's base, limit, selector and access byte against the runtime's own state",
+        "the busy-bit pair and both directions of disagreement, with the modelled machine declaring through the seam whether ltr ran"
+      ],
+      "does_not_settle": "It cannot execute `ltr`, cannot read the real GDTR, and cannot observe a real machine's descriptor. Those three are the guest's, and the guest's lines above are where they are settled."
+    },
+    "tests/gdt_host_seam.h": {
+      "state": "extended, not replaced",
+      "what_changed": "It gained `gtos_gdt_host_ltr_ran` and `SetTaskRegisterExecuted`. The seam still defines no behaviour of its own: it carries the machine fact and the unit decides what to lay out. A seam that decided anything would be a second implementation of the thing under test."
+    },
+    "the_retired_unit": "tests/tr_tss_test.cpp is retired, with a probe and a per-assertion coverage mapping in docs/retired-host-units-139.json. It cannot be linked at all -- it defines four of the nine seam symbols itself, so it leaves five undefined without the shared unit and defines four of them twice with it. Both link attempts exit 1."
+  },
+
+  "the_matrix": {
+    "scenes": 16,
+    "rows": [
+      { "scene": "runtime-init-smp1", "vcpus": 1, "result": "the task register and task state observed, obligations zero, marker reached" },
+      { "scene": "runtime-init-smp2", "vcpus": 2, "result": "early refusal attributed to the core count" },
+      { "scene": "runtime-init-smp3", "vcpus": 3, "result": "early refusal attributed to the core count" },
+      { "scene": "runtime-recovery-smp1", "vcpus": 1, "result": "capacity refusal, same-instance recovery, no id reuse, frames conserved" },
+      { "scene": "runtime-recovery-smp2", "vcpus": 2, "result": "early refusal before stacks" },
+      { "scene": "runtime-objects-smp1", "vcpus": 1, "result": "objects created, proved, exited and reaped" },
+      { "scene": "runtime-objects-smp2", "vcpus": 2, "result": "early refusal before creating anything" },
+      { "scene": "runtime-objects-smp3", "vcpus": 3, "result": "early refusal before creating anything" },
+      { "scene": "tables-smp1", "vcpus": 1, "result": "GDT and IDT constructed and loaded" },
+      { "scene": "paging-smp1", "vcpus": 1, "result": "bootstrap paging enabled, owned mapping probe passed, no AP online" },
+      { "scene": "ap-fresh-smp2", "vcpus": 2, "result": "the real AP entry acknowledged freshly and parked, no stale or foreign acknowledgement, no failed AP" },
+      { "scene": "workers-smp1", "vcpus": 1, "result": "single core honestly reports no worker available" },
+      { "scene": "workers-smp2", "vcpus": 2, "result": "the AP ran its fixed integer jobs, drained, and parked with an independent ack" },
+      { "scene": "workers-smp3", "vcpus": 3, "result": "both APs ran their jobs, drained, and parked" },
+      { "scene": "kernel-invalid", "vcpus": 1, "result": "the production parser refused a fixed illegal value before any self-test" },
+      { "scene": "e99-priority", "vcpus": 1, "result": "the legacy failure token kept its precedence over the stop on the same line" }
+    ],
+    "same_image": "Every row ran the same GTOS.bin. A difference between two rows is a difference in the command line and the core count, never in the image.",
+    "command_lines_are_derived": "The append line for each row is derived from the scene declaration by tools/derive-scenes-139.mjs into tools/scenes.tsv, and the runner reads that file rather than composing a line. This is a correction: an earlier version of the runner composed `serial bootdiag-stop=$STOP` in shell, which silently dropped the e99 scene's `bootlog-fail` token and ran the memory scene under the e99 name. The row then failed for a reason that had nothing to do with the kernel.",
+    "verification": "tools/verify-matrix-139.mjs restates each scene's obligations independently of the declaration and re-derives the guest's arithmetic from the printed numbers. 163 checks."
+  },
+
+  "what_this_does_not_claim": [
+    "No ordinary boot, service, desktop, storage, network or package path was reached by any row.",
+    "No user instruction ran, no task was dispatched, no scheduler entry occurred, no interrupt was enabled.",
+    "The AP work in workers-smp2/3 is a fixed restricted diagnostic VM: no AP allocator, no AP heap, no online PTE pressure, no cross-core TLB, no general Destroy.",
+    "The host unit is not evidence about the loaded descriptor, and the guest log is not evidence about the exact first refusal. Each is evidence about its own question."
+  ]
+}

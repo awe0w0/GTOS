@@ -21,4 +21,6 @@ uint32_t gtos_gdt_host_window_bytes = 0;
 uint32_t gtos_gdt_host_illegal_reads = 0;
 uint32_t gtos_gdt_host_descriptor_reads = 0;
 uint32_t gtos_gdt_host_tss_reads = 0;
+// Whether the modelled machine executed `ltr`. Zero by default, which is the honest default: a host has not executed it.
+uint32_t gtos_gdt_host_ltr_ran = 0;
 }

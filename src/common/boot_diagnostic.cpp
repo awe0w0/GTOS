@@ -16,6 +16,8 @@ const char kWorkersValue[] = "workers";
 const char kRuntimeInitValue[] = "runtime-init";
 // The object-lifecycle stop. Named separately so a caller can accept it without duplicating the table.
 const char kRuntimeObjectsValue[] = "runtime-objects";
+// The capacity-refusal-and-recovery stop.
+const char kRuntimeRecoveryValue[] = "runtime-recovery";
 
 // Exact, length-bounded comparison against a NUL-terminated literal.
 bool Equals(const char* span, const char* text, uint32_t length) {
@@ -35,6 +37,7 @@ uint32_t StopForValue(const char* span, uint32_t length) {
     if (Equals(span, kWorkersValue, length)) return BootDiagnostic::StopWorkers;
     if (Equals(span, kRuntimeInitValue, length)) return BootDiagnostic::StopRuntimeInit;
     if (Equals(span, kRuntimeObjectsValue, length)) return BootDiagnostic::StopRuntimeObjects;
+    if (Equals(span, kRuntimeRecoveryValue, length)) return BootDiagnostic::StopRuntimeRecovery;
     return BootDiagnostic::StopNone;
 }
 
@@ -142,6 +145,8 @@ const char* BootDiagnostic::Marker(uint32_t stop) {
         return "BOOTDIAG RUNTIME INITIALIZED";
     case StopRuntimeObjects:
         return "BOOTDIAG RUNTIME OBJECTS RECLAIMED";
+    case StopRuntimeRecovery:
+        return "BOOTDIAG RUNTIME RECOVERED CAPACITY";
     case StopReject:
         return "BOOTDIAG REJECT invalid-option";
     default:
@@ -182,6 +187,8 @@ uint32_t BootDiagnostic::RequiredPhase(uint32_t stop) {
         return PhaseRuntimeInit;
     case StopRuntimeObjects:
         return PhaseRuntimeObjects;
+    case StopRuntimeRecovery:
+        return PhaseRuntimeRecovery;
     default:
         return PhaseCommandLine;
     }
@@ -203,6 +210,8 @@ const char* BootDiagnostic::ValueName(uint32_t stop) {
         return kRuntimeInitValue;
     case StopRuntimeObjects:
         return kRuntimeObjectsValue;
+    case StopRuntimeRecovery:
+        return kRuntimeRecoveryValue;
     default:
         return 0;
     }
