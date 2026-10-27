@@ -10,10 +10,19 @@
   },
 
   "the_payload": {
-    "files": 1434,
-    "bytes": 12627464,
-    "groups": 19,
-    "source": "copy-plan-139-i.json / publication-shape-139-i.json",
+    "files": 1443,
+    "bytes": 13077747,
+    "groups": 20,
+    "source": "copy-plan-139-k.json / publication-shape-139-k.json",
+    "seal": {
+      "archive_stage": "arc139-01",
+      "seal_stage": "seal139-01",
+      "root_digest": "74b6fdd99800b7aa7b126efac9dd457028db7be9e287fdf51a66ad6fe20f9d90",
+      "two_way_set_comparison": { "missing_on_disk": 0, "drift": 0, "extra_on_disk": 0 },
+      "independent_verification": "seal-verification-139.json, written by stage-output/verify-seal-139.mjs, which imports nothing from the engine and recomputes the root digest from the bytes on disk",
+      "exactly_one_successful_seal": true,
+      "erratum": "the copy of the report inside the payload states 1434 files and 12627464 bytes, the figures of copy-plan-139-i. The final plan is 9 files and 450283 bytes larger. The payload is terminal once sealed and is not rewritten; the authoritative figures are the seal receipt's 1443 files and 13077747 bytes."
+    },
     "named_members": {
       "elf": ["image/l140-default.elf", "host/safe-tss/safe_tss.elf", "host/gdt-units/safe_tss_test/unit.elf"],
       "binary": ["image/GTOS.bin"],
