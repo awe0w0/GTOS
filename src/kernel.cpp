@@ -1708,6 +1708,15 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F },
         };
 
+        // The frame set before the first object exists. It is captured here, before anything is created, so the comparison
+        // at the end of the scene is against the state the machine was in rather than against a state the scene chose.
+        const memory::PhysicalMemoryStatistics recoveryBaselineStats = frames.getStatistics();
+        uint32_t recoveryBaselineOwned = 0;
+        const uint32_t recoveryBaselineDigest = FrameSetDigest(recoveryBaselineOwned);
+        LogValue("RECOVERY DIAG BASELINE ALLOCATED ", recoveryBaselineStats.allocatedFrames);
+        LogValue("RECOVERY DIAG BASELINE FREE ", recoveryBaselineStats.freeFrames);
+        LogValue("RECOVERY DIAG BASELINE DIGEST ", recoveryBaselineDigest);
+
         // Fill the table. The loop bound is the runtime's own declared capacity, read from the type rather than written
         // as a literal here, so the loop and the runtime cannot disagree about how many slots exist.
         const uint32_t recoveryCapacity = process::NativeRuntime::MaximumProcesses;
@@ -1846,6 +1855,53 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             && recoveryRecreated && recoveryFreshId && recoveryContentOk && recoveryNewOk && recoverySurvivorsOk
             && recoveryAccounted && !(recoveryFlags & 0x200U);
         if (!recoveryPass) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- retire the survivors and land back on the frame set this scene started from
+        //
+        // The capacity scene used to stop with four objects still live, and 139 reported that as the shape of a recovery.
+        // It is not: a scene that leaves live objects has not shown that the machine can be returned to the state it was in,
+        // and the next scene on the same machine would start from a frame set this one chose. So the survivors are stopped
+        // and reaped here, and the frame set is compared with the baseline captured before the first create -- the same
+        // comparison the frame scene makes, over the same allocator, by the same digest.
+        for (uint32_t i = 0; i < recoveryCreated; ++i) {
+            if (recoveryIds[i] == recoveryVictim) continue;
+            if (!nativeRuntime.RequestExit(recoveryIds[i], 0x70 + i)) {
+                BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+            }
+        }
+        if (!nativeRuntime.RequestExit(recoveryNewId, 0x7F)) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        const uint32_t recoveryRetired = nativeRuntime.Reap();
+        LogValue("RECOVERY DIAG RETIRED ", recoveryRetired);
+        // Everything still live is retired in this one call: the three survivors and the object the recovery created. The
+        // victim was already reaped above, so it is not counted here.
+        const uint32_t recoveryStillLive = recoveryCreated - 1 + 1;
+        printf(recoveryRetired == recoveryStillLive ? "RECOVERY DIAG RETIRED ALL\n" : "RECOVERY DIAG RETIRED SOME\n");
+        const memory::PhysicalMemoryStatistics recoveryFrameStats = frames.getStatistics();
+        uint32_t recoveryOwned = 0;
+        const uint32_t recoveryDigest = FrameSetDigest(recoveryOwned);
+        LogValue("RECOVERY DIAG BASELINE ALLOCATED ", recoveryBaselineStats.allocatedFrames);
+        LogValue("RECOVERY DIAG BASELINE FREE ", recoveryBaselineStats.freeFrames);
+        LogValue("RECOVERY DIAG BASELINE DIGEST ", recoveryBaselineDigest);
+        LogValue("RECOVERY DIAG RESTORED ALLOCATED ", recoveryFrameStats.allocatedFrames);
+        LogValue("RECOVERY DIAG RESTORED FREE ", recoveryFrameStats.freeFrames);
+        LogValue("RECOVERY DIAG RESTORED DIGEST ", recoveryDigest);
+        // The same frame set, not the same totals: every page the objects and their tables held is back with the allocator,
+        // and no frame that belonged to the kernel moved.
+        const bool recoveryBaselineOk = recoveryFrameStats.allocatedFrames == recoveryBaselineStats.allocatedFrames
+            && recoveryFrameStats.freeFrames == recoveryBaselineStats.freeFrames
+            && recoveryDigest == recoveryBaselineDigest && recoveryOwned == recoveryBaselineStats.allocatedFrames;
+        printf(recoveryBaselineOk ? "RECOVERY DIAG BASELINE RESTORED\n" : "RECOVERY DIAG BASELINE DRIFTED\n");
+        process::NativeStatus recoveryLeftover;
+        bool recoveryTableEmpty = true;
+        for (uint32_t id = 1; id <= recoveryFinal.created + 2 && recoveryTableEmpty; ++id) {
+            if (nativeRuntime.Status(id, recoveryLeftover) && recoveryLeftover.live) recoveryTableEmpty = false;
+        }
+        printf(recoveryTableEmpty ? "RECOVERY DIAG TABLE EMPTY\n" : "RECOVERY DIAG TABLE OCCUPIED\n");
+        if (!recoveryBaselineOk || !recoveryTableEmpty) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
+        }
         BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeRecovery));
     }
 
