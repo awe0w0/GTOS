@@ -1,4 +1,4 @@
-// GTOS-DSH-127 production bridge.
+// GTOS-DSH-138 production bridge.
 //
 // Every native request is built here, from the normaliser's file descriptions, so no stage hand-assembles a control
 // and no stage invents its own path conversion. The bridge never takes a free-form command line: each kind has its own
@@ -13,6 +13,28 @@ const need = (ok, text) => { if (!ok) throw Error('BOOT BRIDGE: ' + text); };
 const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length
   && a.every((v, i) => v === b[i]);
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
+
+// The identity of the tool a plan will run: the executable's own name, its resolved path, and the hash of its bytes when
+// this host can read them. A stage that says "I linked with ld.bfd" and a stage that says "something exited zero" are
+// different claims, and only the first one is a tool identity. When the tool lives inside the distribution and this host
+// cannot read it, the identity records that honestly rather than inventing a hash.
+function toolIdentity(plan) {
+  const cmd0 = plan.cmd0 || (plan.argv && plan.argv[0]) || null;
+  if (typeof cmd0 !== 'string' || !cmd0) return null;
+  const id = { name: path.posix.basename(cmd0), linux_path: cmd0, host_path: null,
+    bytes: null, sha256: null, readable_from_this_host: false };
+  const m = /^\/(.+)$/.exec(cmd0);
+  if (m) id.host_path = '//wsl$/Ubuntu-20.04' + cmd0;
+  try {
+    if (id.host_path) {
+      const bytes = fs.readFileSync(id.host_path);
+      id.bytes = bytes.length;
+      id.sha256 = sha(bytes);
+      id.readable_from_this_host = true;
+    }
+  } catch { /* a tool this host cannot read stays null, which is a fact and not a failure */ }
+  return id;
+}
 
 // The single native stage identity gate. The runner calls this after the reservation and before the freeze; the bridge
 // re-checks the same names before it builds the transport, so a mismatched stage can never reach the guard.
@@ -362,14 +384,31 @@ export async function runBootStage(control, stage, kind, options = {}) {
       if (row.stage === stage && row.kind === 'result') guardRow = row;
     }
   }
-  const innerPath = host(plan.work_root + '/logs/inner-report-' + stage + '.json');
-  const rawPath = host(plan.work_root + '/logs/child-output-' + stage + '.raw');
-  const inner = fs.existsSync(innerPath) ? JSON.parse(fs.readFileSync(innerPath, 'utf8')) : null;
+  // The inner report and the raw stream are this bridge's own products, so this bridge records where it put them and what
+  // they hashed at the moment it read them. In 137 only the booleans `inner_report_present` and `raw_present` were
+  // recorded, so a consumer that wanted the inner report had to rebuild the same name itself. That is the caller
+  // assembling an identity it never observed. The path is recorded here, with the bytes and the hash, and the consumer
+  // checks the pin rather than guessing a name.
+  const innerLinux = plan.work_root + '/logs/inner-report-' + stage + '.json';
+  const rawLinux = plan.work_root + '/logs/child-output-' + stage + '.raw';
+  const innerPath = host(innerLinux);
+  const rawPath = host(rawLinux);
+  const innerBytes = fs.existsSync(innerPath) ? fs.readFileSync(innerPath) : null;
+  const inner = innerBytes === null ? null : JSON.parse(innerBytes.toString('utf8'));
   const rawBytes = fs.existsSync(rawPath) ? fs.readFileSync(rawPath) : null;
 
   const verdict = classify(kind, plan, transport, guardRow, inner, rawBytes, control);
   const report = {
     task: control.task, stage, kind, route: control.route,
+    // The subject: what this stage asked the tool to do. A consumer that only sees the transport cannot tell whether the
+    // tool that ran is the tool this stage meant to run. These are the built request, not the caller's claim.
+    subject: {
+      kind, cmd0: plan.cmd0, cwd: plan.cwd, work_root: plan.work_root,
+      argv: plan.argv, argv_tokens: plan.argv_tokens,
+      outputs: plan.outputs, image: plan.image || null, emulator: plan.emulator || null,
+      exec_set: plan.exec_set, limit_seconds: plan.limit_seconds,
+      tool_identity: toolIdentity(plan),
+    },
     plan: { argv: plan.argv, argv_tokens: plan.argv_tokens, cmd0: plan.cmd0,
       emulator: plan.emulator || null, image: plan.image || null, outputs: plan.outputs,
       exec_set: plan.exec_set, cwd: plan.cwd, work_root: plan.work_root,
@@ -381,7 +420,40 @@ export async function runBootStage(control, stage, kind, options = {}) {
       stderr_bytes: Buffer.byteLength(transport.stderr || '', 'utf8') },
     stdout_tail: String(transport.stdout || '').slice(-6000),
     stderr_tail: String(transport.stderr || '').slice(-6000),
-    guard_row: guardRow, inner_report_present: inner !== null,
+    guard_row: guardRow,
+    // The two channels, each with the identity this bridge observed.
+    inner_report: {
+      linux_path: innerLinux, path: innerPath,
+      present: inner !== null,
+      bytes: innerBytes === null ? null : innerBytes.length,
+      sha256: innerBytes === null ? null : sha(innerBytes),
+      // The tool's own return code, taken from the inner report the guard wrote. This is the number 137 substituted the
+      // helper's transport exit code for.
+      returncode: inner && inner.child ? inner.child.returncode : null,
+      timed_out: inner && inner.child ? inner.child.timed_out : null,
+      group: inner && inner.child ? {
+        pgid: inner.child.group_pgid, measured: inner.child.group_measured,
+        measured_final: inner.child.group_measured_final,
+        descendants_left: inner.child.descendants_left,
+        killed: inner.child.killed,
+        output_path: inner.child.output_path,
+        output_bytes: inner.child.output_bytes,
+        output_file_bytes: inner.child.output_file_bytes,
+        output_sha256: inner.child.output_sha256,
+      } : null,
+      argv: inner ? inner.argv : null,
+      cwd: inner ? inner.cwd : null,
+      stage: inner ? inner.stage : null,
+      work_root: inner ? inner.work_root : null,
+    },
+    raw: {
+      linux_path: rawLinux, path: rawPath,
+      present: rawBytes !== null,
+      bytes: rawBytes ? rawBytes.length : 0,
+      sha256: rawBytes ? sha(rawBytes) : null,
+    },
+    // The 137 names are kept because old readers exist and because they are what this bridge always meant.
+    inner_report_present: inner !== null,
     raw_present: rawBytes !== null, raw_bytes: rawBytes ? rawBytes.length : 0,
     raw_sha256: rawBytes ? sha(rawBytes) : null,
     verdict, ok: verdict.accepted,
@@ -419,8 +491,16 @@ function classify(kind, plan, transport, guardRow, inner, rawBytes, control) {
       && v.raw_within_bound && v.landlock_ok === true && v.probes_ok === true
       && v.group_measured === true && v.group_empty_after_cleanup === true;
   } else {
+    // 137 accepted a non-emulator stage on the transport and the guard row alone, so a stage whose tool wrote no inner
+    // report and no raw stream was still "ok". The inner report is the only place the tool's own return code appears, so
+    // accepting without it means accepting on the wrapper's exit code, which is what the guard returns, not what the tool
+    // returned. Both channels are now required, and the tool's own code is required to be the expected one.
+    v.tool_returncode = inner && inner.child ? inner.child.returncode : null;
+    v.tool_timed_out = inner && inner.child ? inner.child.timed_out === true : null;
     v.accepted = v.transport_started && v.guard_exit_as_expected && v.guard_row_present
-      && v.landlock_ok === true && v.probes_ok === true && !v.timed_out;
+      && v.landlock_ok === true && v.probes_ok === true && !v.timed_out
+      && v.inner_present && v.raw_present && v.raw_within_bound
+      && v.tool_returncode === expected && v.tool_timed_out === false;
   }
   v.note = emulator
     ? 'a halted guest cannot exit cleanly, so the tool row is expected to be red. Guest behaviour is judged from the logs.'

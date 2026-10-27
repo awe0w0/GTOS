@@ -1,4 +1,4 @@
-// GTOS-DSH-136 E: whose path is it, and who is allowed to write it.
+// GTOS-DSH-138 E: whose path is it, and who is allowed to write it.
 //
 // In 135 the link entry converted a host path to a Linux path and handed it to a Windows child. Windows Node resolved
 // `/mnt/f/...` against the current drive and created `F:/mnt/f/...`, a tree outside the packet root. The review found the
@@ -18,6 +18,8 @@
 // *writable name*: the same file on ext4 under two casings is one identity, but on Windows the two spellings do reach the
 // same file while on ext4 they do not. Identity comparison is for checking; it is never used to build a path to open.
 
+import crypto from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 
 // ---------------------------------------------------------------- platforms
@@ -159,6 +161,25 @@ export function assertInsideRoots(target, roots, platform) {
   throw e;
 }
 
+// The gate a writer calls immediately before mkdir or open. It returns the path to use on the consumer's platform, so a
+// caller cannot check one string and then write a different one. The stage name is carried on the refusal, which is what
+// makes a first refusal attributable to the writer that refused.
+export function gateWrite(stage, target, roots, platform) {
+  try {
+    return assertInsideRoots(target, roots, platform).target;
+  } catch (error) {
+    error.writer = stage;
+    error.declared_roots = roots;
+    throw error;
+  }
+}
+
+// The same gate for a path that is read rather than written. A stage may inspect its own declared outputs and nothing
+// outside them, which is what stops a declared output from naming a file this stage was never given.
+export function gateRead(stage, target, roots, platform) {
+  return gateWrite(stage, target, roots, platform);
+}
+
 // A single place that decides what a stage may write, so no caller assembles the list by hand.
 export function stageRoots(stateRoot, platform) {
   return {
@@ -167,3 +188,44 @@ export function stageRoots(stateRoot, platform) {
     note: 'a stage writes inside the root it was given, and nowhere else',
   };
 }
+
+// ---------------------------------------------------------------- the writer itself
+
+// 137 put the gate in the production helper and then wrote a *second* writer inside the test to prove the gate refuses.
+// The test therefore proved that a writer refuses, not that the business writer refuses. This function is the write path:
+// gate, then make the directory, then create the file exclusively, then write. Production calls it, and the negatives call
+// it, so the refusal under test is the refusal production performs.
+//
+// The order matters and is the point. The gate runs before `mkdirSync`, so a refusal leaves no directory; and before the
+// open, so a refusal leaves no file. `flag: 'wx'` means an existing file is refused rather than truncated, so a rerun
+// cannot silently overwrite the evidence of a previous one.
+export function writeGatedFile(stage, declaredPath, roots, platform, bytes) {
+  const target = gateWrite(stage, declaredPath, roots, platform);
+  const payload = typeof bytes === 'string' ? Buffer.from(bytes, 'utf8') : bytes;
+  if (!Buffer.isBuffer(payload)) {
+    const e = new Error('WRITE: the payload must be a string or a Buffer');
+    e.obligation = 'payload';
+    e.writer = stage;
+    throw e;
+  }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, payload, { encoding: undefined, flag: 'wx' });
+  return {
+    writer: stage, path: target, bytes: payload.length,
+    sha256: crypto.createHash('sha256').update(payload).digest('hex'),
+    roots, platform,
+  };
+}
+
+// The same for a file this process only reads back. It exists so that a reader in the pipeline declares the root it
+// believes the file lives in, and is refused on the same terms as a writer, rather than being able to read anywhere.
+export function readGatedFile(stage, declaredPath, roots, platform) {
+  const target = gateRead(stage, declaredPath, roots, platform);
+  const bytes = fs.readFileSync(target);
+  return {
+    writer: stage, path: target, bytes: bytes.length,
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    data: bytes,
+  };
+}
+

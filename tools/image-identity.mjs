@@ -1,4 +1,4 @@
-// GTOS-DSH-114 T0: one selected image identity, bound from the current materials through to the guest request.
+// GTOS-DSH-138 T0: one selected image identity, bound from the current materials through to the guest request.
 //
 // The 113 failure this module exists to prevent: the static gate inspected one image, the guest request froze a
 // *pathname*, and that pathname resolved to a different image with the same size. Nothing in the chain compared the
@@ -23,7 +23,10 @@ function readPinned(what, member) {
     throw new Error('IDENTITY: ' + what + ' needs an absolute Linux path');
   }
   if (typeof host !== 'string' || !host) throw new Error('IDENTITY: ' + what + ' needs a host path');
-  if (!fs.existsSync(host)) throw new Error('IDENTITY: ' + what + ' absent: ' + host);
+  // A UNC read can fail transiently, so the existence test is retried before it is treated as absence.
+  let present = false;
+  for (let attempt = 0; attempt < 10 && !present; attempt++) present = fs.existsSync(host);
+  if (!present) throw new Error('IDENTITY: ' + what + ' absent: ' + host);
   const stat = fs.statSync(host);
   if (!stat.isFile()) throw new Error('IDENTITY: ' + what + ' is not a regular file: ' + host);
   const bytes = fs.readFileSync(host);
@@ -162,7 +165,9 @@ export function parseMapSymbols(mapText) {
     const line = lines[index];
     // Both accepted forms, anchored, so a fragment inside another column cannot match.
     const definition = /^\s+0x([0-9a-f]{8,16})\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/.exec(line);
-    const assignment = /^\s+0x([0-9a-f]{8,16})\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\.\s*$/.exec(line);
+    // An assignment whose right-hand side is any expression: `= .`, `= ALIGN (0x1000)`, and so on. The address on the
+    // left is the resolved value, which is exactly what the association needs.
+    const assignment = /^\s+0x([0-9a-f]{8,16})\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\S.*$/.exec(line);
     const match = definition || assignment;
     if (!match) continue;
     const address = parseInt(match[1], 16);

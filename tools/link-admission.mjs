@@ -1,4 +1,4 @@
-// GTOS-DSH-128 J1: the link entry's admission, before any linker runs.
+// GTOS-DSH-138 J1: the link entry's admission, before any linker runs.
 //
 // The 127 link was real and produced a correct image, but nothing stood between a caller and the linker: the bridge checked
 // that the individual list was non-empty and distinct and then built the argv. A set that was missing an object, carried an
@@ -54,8 +54,21 @@ export function admitLink(request, contract) {
   const actual = request.individuals;
 
   // ---- the set, by logical name. A missing object and an extra object are different refusals.
+  // A slot may be named by its baseline token and carried under a lineage name. Both names denote the same slot, so the
+  // comparison maps a lineage target back to its token before it compares anything.
+  const lineageToToken = new Map();
+  for (const pair of (contract.lineage && typeof contract.lineage === 'object'
+    ? Object.entries(contract.lineage) : [])) lineageToToken.set(pair[1], pair[0]);
+  const basenameOf = (p) => {
+    const s = String(p);
+    const cut = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
+    return cut >= 0 ? s.slice(cut + 1) : s;
+  };
   const expectedNames = expected.map((e) => e.logical);
-  const actualNames = actual.map((a) => (typeof a === 'string' ? a.split('/').pop() : String(a)));
+  const actualNames = actual.map((a) => {
+    const base = basenameOf(a);
+    return lineageToToken.get(base) || base;
+  });
 
   // A repeated name is a duplicate, whatever else the list looks like. It is checked before the set comparison because a
   // duplicate is not "extra" (its name is expected) and not "missing" (nothing is absent).

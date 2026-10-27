@@ -1,4 +1,4 @@
-// GTOS-DSH-135 runner.
+// GTOS-DSH-138 runner.
 //
 // No budgets. This runner carries no cap table, no attempt ceiling and no `assertCap`. The route table is used only to
 // identify an action and to decide which executor owns it, exactly as AGENTS.goals-and-acceptance.md requires.
@@ -14,9 +14,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import * as HP from '../tools/host-path.mjs';
 
-export const TASK = 'GTOS-DSH-135';
-export const REPORT_ROOT = 'F:/GTOS-Chromium/artifacts/native-executed-terminal-wiring-and-hardware-runtime-recovery-20261026-a';
+export const TASK = 'GTOS-DSH-138';
+export const REPORT_ROOT = 'F:/GTOS-Chromium/artifacts/native-current-evidence-runtime-seam-closure-and-guest-matrix-20261027-a';
 
 // Executor ownership. This is identity and permission routing, not a quota.
 // ---------------------------------------------------------------- role identity
@@ -62,7 +63,9 @@ export const PINNED = {
 };
 
 const CHILD_PROCESS_FORBIDDEN = new Set(['export', 'archive', 'seal']);
-const ALLOWED_IMPORTS = new Set(['node:fs', 'node:path', 'node:crypto', 'node:child_process', 'node:url']);
+const ALLOWED_IMPORTS = new Set(['node:fs', 'node:path', 'node:crypto', 'node:child_process', 'node:url',
+  // The shared path module is frozen beside the helper and is the one relative import a frozen helper may make.
+  './host-path-138.mjs']);
 
 export function sha256(buffer) { return crypto.createHash('sha256').update(buffer).digest('hex'); }
 export function hashFile(p) { const b = fs.readFileSync(p); return { bytes: b.length, sha256: sha256(b) }; }
@@ -95,7 +98,7 @@ const FIXTURE_PARENTS = [
 // The authority work root, as recorded in this packet's authority.
 const AUTH_WORK_ROOT = (() => {
   try {
-    const a = JSON.parse(fs.readFileSync(path.join(REPORT_ROOT, 'authority-135.json'), 'utf8'));
+    const a = JSON.parse(fs.readFileSync(path.join(REPORT_ROOT, 'authority-138.json'), 'utf8'));
     return a.work_root;
   } catch { return null; }
 })();
@@ -153,7 +156,7 @@ export function assertRunnerPin(runnerPath, fixtureRoot) {
   }
   const revision = path.basename(full, path.extname(full));
   // The pin lives beside the frozen root that owns the runner.
-  const pinPath = path.join(path.dirname(owner), `runner-pin-135-${revision}.json`);
+  const pinPath = path.join(path.dirname(owner), `runner-pin-138-${revision}.json`);
   if (!fs.existsSync(pinPath)) throw new Error(`RUNNER PIN: no pin at ${pinPath}`);
   const h = hashFile(full);
   const pin = readJson(pinPath);
@@ -198,6 +201,26 @@ export function freezeHelper(draftRelative, stage, base) {
   const draftBytes = fs.readFileSync(draftPath);
   fs.mkdirSync(path.dirname(frozenPath), { recursive: true });
   fs.writeFileSync(frozenPath, draftBytes, { flag: 'wx' });
+  // The shared path module is frozen beside the helper. A frozen helper may make exactly this one relative import, and the
+  // copy is written only when it is not already there with the same bytes.
+  const sharedModule = path.join(path.dirname(frozenPath), 'host-path-138.mjs');
+  const draftDir = path.dirname(draftPath);
+  const moduleCandidates = [path.join(draftDir, 'host-path-138.mjs'),
+    path.join(draftDir, 'references', 'host-path-138.mjs')];
+  const moduleAt = moduleCandidates.find((p) => fs.existsSync(p));
+  if (!moduleAt) {
+    throw new Error('FREEZE: no shared path module beside ' + draftPath + ' (looked in '
+      + moduleCandidates.join(', ') + ')');
+  }
+  const sharedBytes = fs.readFileSync(moduleAt);
+  if (fs.existsSync(sharedModule)) {
+    const existing = fs.readFileSync(sharedModule);
+    if (!existing.equals(sharedBytes)) {
+      throw new Error('FREEZE: ' + sharedModule + ' exists with different bytes');
+    }
+  } else {
+    fs.writeFileSync(sharedModule, sharedBytes, { flag: 'wx' });
+  }
   const frozenBytes = fs.readFileSync(frozenPath);
   if (!draftBytes.equals(frozenBytes)) throw new Error(`FREEZE: not byte-identical: ${frozenPath}`);
   return { frozen_path: frozenPath, frozen_name: `${stage}.mjs`,
@@ -240,13 +263,13 @@ export function spawnPinned(exe, argv, options) {
 
 // The route table is read for identity and executor ownership only. It never gates work.
 export function routeFor(routeId) {
-  const table = readJson(path.join(REPORT_ROOT, 'execution-identities-135.json'));
+  const table = readJson(path.join(REPORT_ROOT, 'execution-identities-138.json'));
   const route = table.routes[routeId];
   if (!route) throw new Error(`ROUTE: '${routeId}' is not a route in this packet`);
   return { id: routeId, mode: route.mode, executor: route.executor };
 }
 
-const STAGE_REGISTRY = 'stage-registry-135.jsonl';
+const STAGE_REGISTRY = 'stage-registry-138.jsonl';
 
 // Every stage name ever claimed in this root, in the order it was claimed. Append only.
 export function readStageRegistry(base) {
@@ -286,8 +309,8 @@ export async function invokeTransportLifecycle(options) {
     frozen, launch, preLaunch, routeGate = null,
     parent_attempt = null, retry_of = null, failure_cause = null } = options;
   const base = root || REPORT_ROOT;
-  const recordPath = path.join(base, `attempt-${stage}-135.json`);
-  const resultPath = path.join(base, `result-${stage}-135.json`);
+  const recordPath = path.join(base, `attempt-${stage}-138.json`);
+  const resultPath = path.join(base, `result-${stage}-138.json`);
 
   // The durable claim is the first thing that happens. A name that has been claimed is refused as a name, before any
   // question about what else survived on disk. If this throws, no reservation, no freeze and no child has happened.
@@ -336,12 +359,29 @@ export async function invokeTransportLifecycle(options) {
   const timedOut = launchResult ? launchResult.timed_out === true : false;
   if (launchResult && launchResult.launch_error) launchError = launchResult.launch_error;
 
+  // Every declared output is gated before it is stat'd. This process is Windows Node, so a POSIX path here would be
+  // resolved against the current drive and the runner would report on a file the stage never wrote, which is how a wrong
+  // declaration passed in 135. The gate refuses the wrong domain and anything outside the stage root, and it runs before
+  // the first existsSync.
   const expectedState = [];
   let allPresent = true;
   for (const one of expectedOutputs || []) {
-    const present = fs.existsSync(one) && fs.statSync(one).isFile();
+    let checked = null;
+    let gateRefusal = null;
+    try {
+      checked = HP.gateRead('runner:expected-output', one, [base], 'win32');
+    } catch (error) {
+      gateRefusal = { obligation: error.obligation, why: String(error.message),
+        writer: error.writer, target: one };
+    }
+    if (gateRefusal !== null) {
+      allPresent = false;
+      expectedState.push({ path: one, present: false, bytes: null, refused: gateRefusal });
+      continue;
+    }
+    const present = fs.existsSync(checked) && fs.statSync(checked).isFile();
     if (!present) allPresent = false;
-    expectedState.push({ path: one, present, bytes: present ? fs.statSync(one).size : null });
+    expectedState.push({ path: one, checked, present, bytes: present ? fs.statSync(checked).size : null });
   }
 
   const prelaunchRefused = launchError !== null && !transportStarted;
@@ -478,8 +518,8 @@ export async function invokeStage(spec) {
   // here, before the claim, before the freeze and before any child exists. In 134 this check lived only in the caller, so a
   // caller that did not call it could still collide.
   const roleDeclarations = {
-    attempt: path.join(stateRoot, 'attempt-' + stage + '-135.json'),
-    canonical_terminal: path.join(stateRoot, 'result-' + stage + '-135.json'),
+    attempt: path.join(stateRoot, 'attempt-' + stage + '-138.json'),
+    canonical_terminal: path.join(stateRoot, 'result-' + stage + '-138.json'),
     control: path.join(stateRoot, 'stage-output', stage + '.control.json'),
     frozen_helper: path.join(stateRoot, 'frozen-helpers', stage + '.mjs'),
   };
