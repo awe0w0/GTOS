@@ -1,0 +1,123 @@
+{
+  "task": "GTOS-DSH-139",
+  "document": "goal-d-portable-closure-139",
+  "purpose": "Record what the delivered evidence is, where each member physically lives, and what was actually done to show it survives leaving the machine that produced it. Goal D asks for physical completeness and a relocated closure that does not fall back to the live root; both are measured here rather than asserted.",
+
+  "the_requirement_that_138_failed": {
+    "what_138_delivered": "a 414-file manifest, 4537581 bytes, digest af9228263471555361213c50473ce247e3a790d57211d924f2ca1413183cd849",
+    "what_it_did_not_contain": "not one named ELF, object file, depfile, raw channel or inner report. Its payload described a build without containing it, so a reader could not open the object that was linked or the raw the guest wrote.",
+    "this_packet": "names them individually. 3 ELF, 69 objects, 56 real depfiles, 19 e9 channels, 18 serial channels, 66 inner reports, 66 child raw files -- each as its own row with its own path, size and digest."
+  },
+
+  "the_payload": {
+    "files": 1434,
+    "bytes": 12627464,
+    "groups": 19,
+    "source": "copy-plan-139-i.json / publication-shape-139-i.json",
+    "named_members": {
+      "elf": ["image/l140-default.elf", "host/safe-tss/safe_tss.elf", "host/gdt-units/safe_tss_test/unit.elf"],
+      "binary": ["image/GTOS.bin"],
+      "map": ["image/l140-default.map"],
+      "object": 69,
+      "depfile": 56,
+      "raw_e9": 19,
+      "raw_serial": 18,
+      "inner": 66,
+      "child_raw": 66
+    },
+    "why_69_objects_for_61_slots": "61 are the link's inputs. The other 8 are the host units' own objects -- the safe-TSS unit's main, gdt, seam and start, and the same four for the generic host-unit runner. They are in the payload because the host units are claims this packet makes, and a claim about a unit whose object is not in the payload cannot be re-checked.",
+    "why_19_e9_and_18_serial": "The matrix contributes 16 of each. The two H runs contribute one each. The nineteenth e9 is the host unit's: a host program writes to the e9 port and has no serial port, so it has an e9 channel and no serial channel. That asymmetry is correct and is the only one in the payload.",
+    "what_is_deliberately_not_in_the_payload": [
+      "The materialised runtime tree: 94 MB of a third party's files. The packet's claim about it is the readback record, which states that all 206 files landed with the right hash, mode, inode and link count. Copying the tree would add 94 MB and not one checkable fact.",
+      "Former packets' artifacts: cited by path and pin. A copy would claim this packet authored them, and the archive would hold two versions of a former packet's file with no way to tell which is the record.",
+      "The live stage registry: every stage appends to it, including the archive and seal stages themselves, so a plan that pinned it could never be satisfied by the run that reads the plan. A snapshot is published and the live ledger is cited by path."
+    ]
+  },
+
+  "the_relocation": {
+    "root": "test-only/relocated-141",
+    "members": 474,
+    "bytes": 5612915,
+    "what_was_copied": "the image, the objects and depfiles, every guest channel, the inner reports and child raw, the host units, the results and evidence that cite them, and the current-chain records. Not the committed sources: those are in Git and in the archive, and a consumer of relocated evidence does not open them.",
+    "what_each_member_had_to_be": [
+      "an ordinary file, not a symlink and not a directory",
+      "nlink exactly 1, so a mutation in one place does not appear in two",
+      "a distinct inode, so no two members are the same bytes under two names"
+    ],
+    "checked_before_the_copy": "each source was re-hashed against the plan's pin before it was read, not after it landed. A copy of a file that had already drifted would be a faithful copy of the wrong bytes."
+  },
+
+  "the_five_checks": {
+    "1_relocate": {
+      "result": "474 members, 5612915 bytes, every one an ordinary file with nlink 1 and a unique inode",
+      "record": "test-only/relocated-141/manifest.json"
+    },
+    "2_consume": {
+      "consumer": "worktree-139/tools/verify-matrix-139.mjs",
+      "pointed_at": "test-only/relocated-141/guest/matrix",
+      "result": "163 checks, 0 failed, exit 0",
+      "why_this_is_the_strong_one": "The matrix verifier is the real consumer of the guest evidence. It ran against the relocated copy and reached the same 163 verdicts it reached against the live copy. That is what portable means: not that the files can be copied, but that the thing which reads them still agrees.",
+      "record": "test-only/relocated-141/consumption.json"
+    },
+    "3_same_size_mutation": {
+      "member": "image/l140-default.elf",
+      "original_bytes": 754176,
+      "mutated_bytes": 754176,
+      "original_sha256": "e972d385a082a0eb62ba0b8fb3eed7c91f65350f7f3a339758a70ea66002ed37",
+      "mutated_sha256": "2c58f2f05d1a3cef1fdb9d1a634da0e1c1a5c3508e61215ea9a319c5b265b876",
+      "result": "the size did not change and the digest did; the manifest's rule refused it; the file was restored and re-hashed to the original digest",
+      "why_the_size_was_held_constant": "A checker that compared sizes would pass a one-byte change. Holding the size constant is the only way to show the check is not a size check.",
+      "record": "test-only/relocated-141/mutation.json"
+    },
+    "4_mandatory_equals_listed": {
+      "mandatory": 21,
+      "listed": 474,
+      "missing": [],
+      "listed_but_not_in_the_plan": [],
+      "result": "every mandatory member is present, the listed set is a subset of the plan with nothing extra, every listed destination is an ordinary file, and no destination is a wildcard or a directory",
+      "why_the_mandatory_set_is_written_out": "A mandatory set derived from what was copied is not a requirement -- it would shrink to whatever the copy happened to contain. The 21 are stated independently and then compared.",
+      "record": "test-only/relocated-141/mandatory.json"
+    },
+    "5_no_live_root_fallback": {
+      "method": "the consumer was pointed at a directory that does not exist and was required to fail",
+      "path_exists": false,
+      "exit": 1,
+      "wrote_no_report": true,
+      "result": "it refused and wrote nothing",
+      "why_this_is_the_right_test": "The failure this guards against is a consumer that silently reads the live root when its given path is missing. Such a consumer passes every ordinary test. Pointing it at nothing is the only way to make that fallback visible, because a consumer with one would have found the live evidence and reported success.",
+      "why_the_live_root_was_not_moved": "Moving the real evidence to prove a point risks the evidence. The absent-path test proves the same property without touching it.",
+      "record": "test-only/relocated-141/fallback.json"
+    }
+  },
+
+  "the_commits": {
+    "branch": "codex/gtos-dsh-139-mandatory-runtime",
+    "worktree": "worktree-139",
+    "identity": "xiaokang wang <hanser0w0@gmail.com>",
+    "parent": "899616013ee3f0a8e0de6f698e4593875335ff39",
+    "commits": [
+      { "sha": "37f0fdedfb15f8bfab6af6bddf9cc577ac33217f", "tree": "adfe906feebad542ce0bfdd0dea2a20b7d8043b0", "subject": "runtime: the prerequisite set is mandatory, and its ten roles read real artifacts", "goal": "T" },
+      { "sha": "1c54ed3df090dd81e88dac823cd98b391b9d1f7a", "tree": "89aa90ed338299b7ea13c2a0e702203b6c1550ff", "subject": "runtime: the task register is read on real hardware, and the busy bit is judged against it", "goal": "H" },
+      { "sha": "afd1ea781de282bb29979db9f5988ab0bb4d719a", "tree": "25ba9389efa09bdb9887ee26134d3963db0e2b4d", "subject": "image: rebuild the fixed 61-input closure, and measure that it is the baseline plus this packet's changes", "goal": "P, G" }
+    ],
+    "canonical_records": "canonical/git-commit-139-mandatory-runtime/{show.txt, format-patch.patch, commit-object.txt, commits.txt}",
+    "why_three_commits_and_not_one": "Each is a separate reviewable claim: the prerequisite set is mandatory, the task register is real, and the image is the baseline plus these changes. The third could not have been written before the first two, because the rebuild it measures is of their sources.",
+    "no_push_no_merge": "the branch is local to this worktree. Nothing was pushed, merged, amended, reset, rebased or cherry-picked, and no credentials were used."
+  },
+
+  "the_retirement": {
+    "unit": "tests/tr_tss_test.cpp",
+    "decision": "retired",
+    "evidence": "docs/retired-host-units-139.json",
+    "how_it_was_decided": "a probe compiled it and attempted both link forms. It defines four of the nine host-seam symbols itself, so alone it leaves five undefined and with the seam unit it defines four twice. Both attempts exit 1. That is a link failure, not an opinion.",
+    "why_retirement_is_right_rather_than_fixing_it": "Its eleven assertions were all of the form `bad > 0` -- a mutation was applied and something had to be refused. A case could therefore pass on an unrelated gate, which is the same defect class this packet found in the TSS type assertion. safe_tss_test.cpp covers every one of the eleven and requires the named reason for each.",
+    "the_130_and_134_question": "no test file carries a 130 or 134 packet number, so nothing was retired on that ground. That is recorded in the same document rather than left as an open item."
+  },
+
+  "what_this_does_not_claim": [
+    "That the payload is complete in an absolute sense. It is complete for the claims this packet makes, and the mandatory set is where that is written down.",
+    "That the relocated consumer proves the kernel. It proves the evidence about the kernel survives relocation; the kernel's behaviour is the matrix's question.",
+    "That the runtime tree is absent from the delivery because it does not matter. It is absent because it is 94 MB of someone else's files and its readback record is the checkable fact.",
+    "That a same-size mutation is the only kind of corruption that matters. It is the kind a size check would miss, which is why it is the one demonstrated."
+  ]
+}
