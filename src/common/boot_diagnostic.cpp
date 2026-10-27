@@ -18,6 +18,8 @@ const char kRuntimeInitValue[] = "runtime-init";
 const char kRuntimeObjectsValue[] = "runtime-objects";
 // The capacity-refusal-and-recovery stop.
 const char kRuntimeRecoveryValue[] = "runtime-recovery";
+// The frame-pressure-refusal-and-recovery stop. A refusal that comes from the frame allocator while a slot was free.
+const char kRuntimeFrameRecoveryValue[] = "runtime-frame-recovery";
 
 // Exact, length-bounded comparison against a NUL-terminated literal.
 bool Equals(const char* span, const char* text, uint32_t length) {
@@ -38,6 +40,7 @@ uint32_t StopForValue(const char* span, uint32_t length) {
     if (Equals(span, kRuntimeInitValue, length)) return BootDiagnostic::StopRuntimeInit;
     if (Equals(span, kRuntimeObjectsValue, length)) return BootDiagnostic::StopRuntimeObjects;
     if (Equals(span, kRuntimeRecoveryValue, length)) return BootDiagnostic::StopRuntimeRecovery;
+    if (Equals(span, kRuntimeFrameRecoveryValue, length)) return BootDiagnostic::StopRuntimeFrameRecovery;
     return BootDiagnostic::StopNone;
 }
 
@@ -147,6 +150,8 @@ const char* BootDiagnostic::Marker(uint32_t stop) {
         return "BOOTDIAG RUNTIME OBJECTS RECLAIMED";
     case StopRuntimeRecovery:
         return "BOOTDIAG RUNTIME RECOVERED CAPACITY";
+    case StopRuntimeFrameRecovery:
+        return "BOOTDIAG RUNTIME RECOVERED FRAMES";
     case StopReject:
         return "BOOTDIAG REJECT invalid-option";
     default:
@@ -189,6 +194,8 @@ uint32_t BootDiagnostic::RequiredPhase(uint32_t stop) {
         return PhaseRuntimeObjects;
     case StopRuntimeRecovery:
         return PhaseRuntimeRecovery;
+    case StopRuntimeFrameRecovery:
+        return PhaseRuntimeFrameRecovery;
     default:
         return PhaseCommandLine;
     }
@@ -212,6 +219,8 @@ const char* BootDiagnostic::ValueName(uint32_t stop) {
         return kRuntimeObjectsValue;
     case StopRuntimeRecovery:
         return kRuntimeRecoveryValue;
+    case StopRuntimeFrameRecovery:
+        return kRuntimeFrameRecoveryValue;
     default:
         return 0;
     }

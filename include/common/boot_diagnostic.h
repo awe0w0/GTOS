@@ -56,6 +56,13 @@ class BootDiagnostic {
     // capacity check rather than by an injected fault, and then recovered in the same instance: the refused attempt
     // left nothing behind, a reaped slot became usable again, and the next Create succeeded with a live object.
     StopRuntimeRecovery = 9,
+    // Halt after the BSP produced a refusal that came from the frame allocator rather than from the slot table: a spare
+    // slot existed the whole time, a live sibling object held its own memory, and a bounded set of frames the BSP had
+    // claimed for itself made the next create fail partway through its own address-space construction. The state sets
+    // either side of that call are compared element by element, not by totals, so a leak that moved one frame from free
+    // to allocated while leaving the sum unchanged cannot pass. The pressure is then withdrawn, the same instance serves
+    // a create, and every object is reaped back to the frame set the runtime started from.
+    StopRuntimeFrameRecovery = 10,
     };
     enum Reject {
         RejectNone = 0,
@@ -81,6 +88,9 @@ class BootDiagnostic {
   PhaseRuntimeObjects = 7,
   // The recovery probe needs an initialised runtime with a live object table, so it comes after the lifecycle phase.
   PhaseRuntimeRecovery = 8,
+  // The frame-pressure probe needs the same initialised runtime, and it comes after the capacity probe because it
+  // measures the other refusal the runtime can produce: not "no slot" but "no frames".
+  PhaseRuntimeFrameRecovery = 9,
     };
     struct Decision {
         uint32_t stop;

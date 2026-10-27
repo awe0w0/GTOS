@@ -504,6 +504,64 @@ extern "C" int bootDiagnosticTestMain() {
                "the worker and runtime values are different text");
     }
 
+    // ================================================================ the frame-pressure recovery stop
+    {
+        // The second recovery stop exists because the runtime has two different refusals and only one of them is about
+        // frames. A value that selected the capacity stop would make the frame scene unreachable, and a value that
+        // selected nothing would make it a rejection. Both are checked here against the real parser.
+        const char* text = "bootdiag-stop=runtime-frame-recovery ";
+        Diagnostic::Decision decision = Diagnostic::Parse(text, Length(text));
+        Expect(decision.stop == Diagnostic::StopRuntimeFrameRecovery, "runtime-frame-recovery selects its stop");
+        Expect(decision.reject == Diagnostic::RejectNone, "runtime-frame-recovery is not rejected");
+        Expect(TextEquals(Diagnostic::ValueName(Diagnostic::StopRuntimeFrameRecovery), "runtime-frame-recovery"),
+               "the frame stop names its own value");
+        Expect(TextEquals(Diagnostic::Marker(Diagnostic::StopRuntimeFrameRecovery),
+                          "BOOTDIAG RUNTIME RECOVERED FRAMES"),
+               "the frame marker is the frame one");
+        Expect(Diagnostic::RequiredPhase(Diagnostic::StopRuntimeFrameRecovery)
+               == Diagnostic::PhaseRuntimeFrameRecovery,
+               "the frame stop requires the frame phase");
+
+        // The two recovery stops must not be interchangeable. A log that carried the capacity marker would otherwise be
+        // readable as evidence for the frame scene, which is exactly the substitution this packet is correcting.
+        Expect(!TextEquals(Diagnostic::Marker(Diagnostic::StopRuntimeRecovery),
+                           Diagnostic::Marker(Diagnostic::StopRuntimeFrameRecovery)),
+               "the capacity and frame markers are different text");
+        Expect(!TextEquals(Diagnostic::ValueName(Diagnostic::StopRuntimeRecovery),
+                           Diagnostic::ValueName(Diagnostic::StopRuntimeFrameRecovery)),
+               "the capacity and frame values are different text");
+        Expect(Diagnostic::StopRuntimeRecovery != Diagnostic::StopRuntimeFrameRecovery,
+               "the capacity and frame stops are different stops");
+        // The frame phase strictly follows the capacity phase: the frame scene needs the runtime the capacity scene
+        // leaves behind, and a stop that could fire earlier would be claiming a runtime that is not there yet.
+        Expect(Diagnostic::PhaseRuntimeFrameRecovery > Diagnostic::PhaseRuntimeRecovery,
+               "the frame phase comes after the capacity phase");
+
+        // The value is matched exactly, not by prefix. A prefix match would accept any token that started with the same
+        // text, so a truncated or extended spelling would silently run a different scene than the one declared.
+        const char* shortText = "bootdiag-stop=runtime-frame ";
+        Diagnostic::Decision shortDecision = Diagnostic::Parse(shortText, Length(shortText));
+        Expect(shortDecision.stop == Diagnostic::StopReject
+               && shortDecision.reject == Diagnostic::RejectUnknownValue,
+               "a truncated frame value is refused as unknown");
+        const char* longText = "bootdiag-stop=runtime-frame-recovery-2 ";
+        Diagnostic::Decision longDecision = Diagnostic::Parse(longText, Length(longText));
+        Expect(longDecision.stop == Diagnostic::StopReject
+               && longDecision.reject == Diagnostic::RejectUnknownValue,
+               "an extended frame value is refused as unknown");
+        // And the value alone, without the option prefix, selects nothing: an ordinary token is not a diagnostic.
+        const char* bare = "runtime-frame-recovery ";
+        Diagnostic::Decision bareDecision = Diagnostic::Parse(bare, Length(bare));
+        Expect(bareDecision.stop == Diagnostic::StopNone && bareDecision.reject == Diagnostic::RejectNone,
+               "the bare frame value is not an option");
+        // Two diagnostic options remain a refusal even when one of them is the new value.
+        const char* twice = "bootdiag-stop=runtime-frame-recovery bootdiag-stop=runtime-frame-recovery ";
+        Diagnostic::Decision twiceDecision = Diagnostic::Parse(twice, Length(twice));
+        Expect(twiceDecision.stop == Diagnostic::StopReject
+               && twiceDecision.reject == Diagnostic::RejectDuplicate,
+               "a repeated frame option is refused as duplicate");
+    }
+
     Say(failures == 0 ? "BOOTDIAG HOST UNIT PASS\n" : "BOOTDIAG HOST UNIT FAIL\n");
     return (int)failures;
 }

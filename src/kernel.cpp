@@ -334,6 +334,30 @@ static memory::PhysicalMemoryManager frames;
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
 static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
+// An exact digest of the physical allocator's ownership set, not a summary of its totals.
+//
+// Totals cannot answer the question the frame-pressure scene asks. A refusal that leaked one frame moves a frame from
+// free to allocated and leaves free+allocated unchanged; a set that swapped one frame for another of equal count leaves
+// every total unchanged. So the scene compares this digest either side of the one call that must change nothing, and the
+// digest walks the whole frame space and folds every allocated frame number rather than sampling or counting. Two states
+// agree here only when they hold the same frames. The count is returned alongside so a caller can also see that the walk
+// and the allocator's own allocatedCount agree -- a digest over a set the allocator does not think it owns would be a
+// measurement of nothing.
+static uint32_t FrameSetDigest(uint32_t &allocatedOut) {
+    const memory::PhysicalMemoryStatistics state = frames.getStatistics();
+    uint32_t digest = 2166136261U; // FNV-1a offset basis.
+    uint32_t allocated = 0;
+    for (uint32_t frame = 0; frame < state.addressableFrames; ++frame) {
+        if (!frames.isAllocated(frame << 12)) continue;
+        ++allocated;
+        for (uint32_t byte = 0; byte < 4; ++byte) {
+            digest ^= (frame >> (byte * 8)) & 0xFFU;
+            digest *= 16777619U;
+        }
+    }
+    allocatedOut = allocated;
+    return digest;
+}
 static volatile uint32_t sleeperWakes = 0, yielderRuns = 0;
 static void Sleeper() {
     for (uint32_t i = 0; i < 3; ++i) {
@@ -1824,6 +1848,359 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         if (!recoveryPass) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
         BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeRecovery));
     }
+
+    // ---------------------------------------------------------------- frame-pressure refusal and recovery
+    // The capacity scene above fills the slot table and is refused by FreeSlot. That is one of the two refusals this
+    // runtime can produce, and it is not the one that says anything about frames. This scene produces the other: the
+    // slot table keeps three free slots the whole time, a live sibling object holds its own memory throughout, and the
+    // refusal comes from the frame allocator itself because the BSP has claimed the frames a create would need.
+    //
+    // What makes it evidence rather than a story about a boolean:
+    //   * the cost of one object is measured from the create that succeeded, not assumed, so the amount of pressure that
+    //     leaves the next create one frame short is derived from this build rather than from a guess about it;
+    //   * the state either side of the failing call is compared as an exact frame set, not as totals, so the leak that
+    //     conserves free+allocated cannot pass;
+    //   * the allocator's own refusal counter has to advance by exactly one, which is what distinguishes "the frame
+    //     allocator was asked and said no" from "the call was refused somewhere else and the frames never mattered";
+    //   * the pressure is withdrawn and the digest returns to the post-sibling state, so the pressure itself is shown to
+    //     have been exactly reversible and not to have perturbed anything else;
+    //   * the same instance then serves the create the refusal had made impossible, the live sibling is retired and its
+    //     old id is shown to be unusable as a handle, and every object is reaped back to the frame set the runtime
+    //     started from -- which is the baseline, not a new one.
+    if (bootDiagnostic.stop == common::BootDiagnostic::StopRuntimeFrameRecovery) {
+        CpuStartup frameInventory;
+        const bool frameInventoryPrepared =
+            frameInventory.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+        const uint32_t frameProcessors = frameInventoryPrepared
+            ? frameInventory.GetReport().detectedProcessors
+            : cpu.GetInfo().detectedLogicalProcessors;
+        LogValue("FRAMEREC DIAG DETECTED ", frameProcessors);
+        if (frameProcessors > 1) {
+            printf("FRAMEREC DIAG REFUSED MULTI CPU\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY REFUSED MULTI CPU");
+        }
+        memory::PagingDeviceRange frameDevices[3];
+        uint32_t frameDeviceCount = 0;
+        const memory::PagingConfig frameConfig =
+            BuildPagingConfig(mbi, frameDevices, frameDeviceCount, 0, 0);
+        if (!paging.prepareIdentity(frames, frameConfig)) {
+            printf("FRAMEREC DIAG PAGING FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        if (!nativeRuntime.PrepareStacks(paging, frames)) {
+            printf("FRAMEREC DIAG STACKS FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        printf("FRAMEREC DIAG STACKS PREPARED\n");
+        if (!paging.enable()) {
+            printf("FRAMEREC DIAG ENABLE FAILED ");
+            printf(memory::KernelPaging::ErrorName(paging.getLastError()));
+            printf("\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        if (!paging.sealForSharedProcessors()) {
+            printf("FRAMEREC DIAG SEAL FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        if (!nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpDisabled, false)) {
+            printf("FRAMEREC DIAG ACTIVATE FAILED\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        printf("FRAMEREC DIAG ACTIVATED\n");
+        LogValue("FRAMEREC DIAG CR3 ", paging.getStatistics().directoryAddress);
+
+        // Two distinct images, so the sibling and the object recovered later are distinguishable by content and a shared
+        // page would show rather than being assumed absent.
+        static const uint8_t frameCode[16] = { 0xC3, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                               0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
+        static const uint8_t frameData[2][16] = {
+            { 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F },
+            { 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F },
+        };
+
+        // ---- the prepared baseline: the frame set the runtime starts from, before any object exists
+        const memory::PhysicalMemoryStatistics baselineStats = frames.getStatistics();
+        uint32_t baselineOwned = 0;
+        const uint32_t baselineDigest = FrameSetDigest(baselineOwned);
+        LogValue("FRAMEREC DIAG BASELINE ALLOCATED ", baselineStats.allocatedFrames);
+        LogValue("FRAMEREC DIAG BASELINE FREE ", baselineStats.freeFrames);
+        LogValue("FRAMEREC DIAG BASELINE DIGEST ", baselineDigest);
+        // The walk and the allocator have to agree about what is owned, or the digest describes a set nobody keeps.
+        const bool baselineWalkAgrees = baselineOwned == baselineStats.allocatedFrames;
+        printf(baselineWalkAgrees ? "FRAMEREC DIAG WALK AGREES\n" : "FRAMEREC DIAG WALK DISAGREES\n");
+        if (!baselineWalkAgrees) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- the live sibling. It exists before the pressure and stays live across it, so a refusal that damaged the
+        // neighbouring object would be visible as a changed directory, changed memory statistics or a lost read.
+        process::NativeImage siblingImage;
+        siblingImage.code = frameCode; siblingImage.codeBytes = sizeof(frameCode); siblingImage.entryOffset = 0;
+        siblingImage.data = frameData[0]; siblingImage.dataBytes = sizeof(frameData[0]);
+        uint32_t siblingId = 0;
+        const bool siblingMade = nativeRuntime.Create(siblingImage, siblingId);
+        printf(siblingMade ? "FRAMEREC DIAG SIBLING CREATED\n" : "FRAMEREC DIAG SIBLING FAILED\n");
+        if (!siblingMade || !siblingId) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+        LogValue("FRAMEREC DIAG SIBLING ID ", siblingId);
+        process::NativeStatus siblingStatus;
+        memory::ProcessMemoryStatistics siblingMemory;
+        const bool siblingReadable = nativeRuntime.Status(siblingId, siblingStatus)
+            && siblingStatus.live && !siblingStatus.reaped
+            && nativeRuntime.MemoryStatistics(siblingId, siblingMemory);
+        printf(siblingReadable ? "FRAMEREC DIAG SIBLING LIVE\n" : "FRAMEREC DIAG SIBLING UNREADABLE\n");
+        if (!siblingReadable) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        const memory::PhysicalMemoryStatistics afterSiblingStats = frames.getStatistics();
+        uint32_t afterSiblingOwned = 0;
+        const uint32_t afterSiblingDigest = FrameSetDigest(afterSiblingOwned);
+        LogValue("FRAMEREC DIAG AFTER SIBLING ALLOCATED ", afterSiblingStats.allocatedFrames);
+        LogValue("FRAMEREC DIAG AFTER SIBLING DIGEST ", afterSiblingDigest);
+        // What one object actually costs, taken from the create that succeeded. Every step below is derived from this
+        // number rather than from a count written into this file, so a change to the address space that alters the cost
+        // moves the pressure with it instead of silently turning the scene into a different one.
+        const uint32_t objectCost = afterSiblingStats.allocatedFrames - baselineStats.allocatedFrames;
+        LogValue("FRAMEREC DIAG OBJECT COST ", objectCost);
+        if (objectCost < 2 || afterSiblingStats.freeFrames <= objectCost) {
+            printf("FRAMEREC DIAG COST UNUSABLE\n");
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+
+        // ---- the pressure. The BSP claims frames for itself until one create would be exactly one frame short. It is
+        // the allocator's own free count that is driven to that number, and the claims are recorded so they can be
+        // returned one for one; a pressure that was not recorded could not be withdrawn exactly and the recovery below
+        // would be resting on a total rather than on the same frames coming back.
+        static uint32_t claimBase[1024], claimCount[1024];
+        static const uint32_t claimChunk[6] = { 1024, 256, 64, 16, 4, 1 };
+        const uint32_t targetFree = objectCost - 1;
+        const uint32_t toClaim = afterSiblingStats.freeFrames - targetFree;
+        uint32_t claimBlocks = 0, claimedFrames = 0;
+        while (claimedFrames < toClaim) {
+            bool progressed = false;
+            for (uint32_t s = 0; s < 6 && !progressed; ++s) {
+                uint32_t want = claimChunk[s];
+                if (want > toClaim - claimedFrames) want = toClaim - claimedFrames;
+                uint32_t base = 0;
+                if (!frames.allocateContiguous(want, base)) continue;
+                if (claimBlocks < 1024) { claimBase[claimBlocks] = base; claimCount[claimBlocks] = want; ++claimBlocks; }
+                claimedFrames += want;
+                progressed = true;
+            }
+            if (!progressed) break;
+        }
+        LogValue("FRAMEREC DIAG CLAIMED FRAMES ", claimedFrames);
+        LogValue("FRAMEREC DIAG CLAIM BLOCKS ", claimBlocks);
+        const memory::PhysicalMemoryStatistics pressuredStats = frames.getStatistics();
+        LogValue("FRAMEREC DIAG PRESSURE FREE ", pressuredStats.freeFrames);
+        const bool pressureHeld = claimedFrames == toClaim && claimBlocks <= 1024
+            && pressuredStats.freeFrames == targetFree;
+        printf(pressureHeld ? "FRAMEREC DIAG PRESSURE HELD\n" : "FRAMEREC DIAG PRESSURE SHORT\n");
+        if (!pressureHeld) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- the window. Nothing between these two readings except the one create below, so any frame that moves is
+        // the create's doing. The slot table is read inside the window as well, because the claim this scene makes is
+        // that the refusal was NOT a capacity refusal and that has to be a measurement of the same instant.
+        const process::NativeStatistics runtimeBefore = nativeRuntime.Statistics();
+        const memory::PhysicalMemoryStatistics beforeStats = frames.getStatistics();
+        uint32_t beforeOwned = 0;
+        const uint32_t beforeDigest = FrameSetDigest(beforeOwned);
+        process::NativeStatus siblingBefore;
+        memory::ProcessMemoryStatistics siblingMemoryBefore;
+        const bool siblingBeforeOk = nativeRuntime.Status(siblingId, siblingBefore)
+            && nativeRuntime.MemoryStatistics(siblingId, siblingMemoryBefore);
+        LogValue("FRAMEREC DIAG BEFORE ALLOCATED ", beforeStats.allocatedFrames);
+        LogValue("FRAMEREC DIAG BEFORE FREE ", beforeStats.freeFrames);
+        LogValue("FRAMEREC DIAG BEFORE DIGEST ", beforeDigest);
+        LogValue("FRAMEREC DIAG BEFORE FAILURES ", beforeStats.failedAllocations);
+        LogValue("FRAMEREC DIAG BEFORE CREATED ", runtimeBefore.created);
+        // Three slots are free: the runtime's own declared capacity minus the one live object. This is the number that
+        // makes the refusal below a frame refusal, and it is read here rather than asserted in a comment.
+        const bool spareSlotHeld = runtimeBefore.created < process::NativeRuntime::MaximumProcesses;
+        LogValue("FRAMEREC DIAG SPARE SLOTS ", process::NativeRuntime::MaximumProcesses - runtimeBefore.created);
+        printf(spareSlotHeld ? "FRAMEREC DIAG SPARE SLOT\n" : "FRAMEREC DIAG TABLE FULL\n");
+        if (!spareSlotHeld || !siblingBeforeOk) {
+            BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        }
+
+        process::NativeImage starvedImage;
+        starvedImage.code = frameCode; starvedImage.codeBytes = sizeof(frameCode); starvedImage.entryOffset = 0;
+        starvedImage.data = frameData[1]; starvedImage.dataBytes = sizeof(frameData[1]);
+        uint32_t starvedId = 0xFFFFFFFFU;
+        const bool starvedAccepted = nativeRuntime.Create(starvedImage, starvedId);
+        printf(starvedAccepted ? "FRAMEREC DIAG STARVED ACCEPTED\n" : "FRAMEREC DIAG STARVED REFUSED\n");
+        LogValue("FRAMEREC DIAG STARVED ID ", starvedId);
+
+        const process::NativeStatistics runtimeAfter = nativeRuntime.Statistics();
+        const memory::PhysicalMemoryStatistics afterStats = frames.getStatistics();
+        uint32_t afterOwned = 0;
+        const uint32_t afterDigest = FrameSetDigest(afterOwned);
+        process::NativeStatus siblingAfter;
+        memory::ProcessMemoryStatistics siblingMemoryAfter;
+        const bool siblingAfterOk = nativeRuntime.Status(siblingId, siblingAfter)
+            && nativeRuntime.MemoryStatistics(siblingId, siblingMemoryAfter);
+        LogValue("FRAMEREC DIAG AFTER ALLOCATED ", afterStats.allocatedFrames);
+        LogValue("FRAMEREC DIAG AFTER FREE ", afterStats.freeFrames);
+        LogValue("FRAMEREC DIAG AFTER DIGEST ", afterDigest);
+        LogValue("FRAMEREC DIAG AFTER FAILURES ", afterStats.failedAllocations);
+        LogValue("FRAMEREC DIAG AFTER CREATED ", runtimeAfter.created);
+
+        // The refusal carried no identity, so nothing downstream can hold a handle to an object that does not exist.
+        const bool starvedIdentless = !starvedAccepted && starvedId == 0;
+        printf(starvedIdentless ? "FRAMEREC DIAG REFUSAL IDENTLESS\n" : "FRAMEREC DIAG REFUSAL LEFT AN ID\n");
+        // The allocator was asked exactly once more and refused exactly once. This is the link between "the call
+        // returned false" and "the frames were the reason": without it the refusal could have come from any of the
+        // earlier guards and the pressure would be decoration.
+        const bool allocatorRefused = afterStats.failedAllocations == beforeStats.failedAllocations + 1;
+        LogValue("FRAMEREC DIAG REFUSALS ADDED ", afterStats.failedAllocations - beforeStats.failedAllocations);
+        printf(allocatorRefused ? "FRAMEREC DIAG ALLOCATOR REFUSED\n" : "FRAMEREC DIAG ALLOCATOR NOT ASKED\n");
+        // The exact frame set, not the totals. A refusal that leaked a frame, or that freed somebody else's frame,
+        // changes this digest while leaving free+allocated unchanged.
+        const bool frameSetUnmoved = afterDigest == beforeDigest && afterOwned == beforeOwned
+            && afterStats.allocatedFrames == beforeStats.allocatedFrames
+            && afterStats.freeFrames == beforeStats.freeFrames
+            && afterOwned == afterStats.allocatedFrames;
+        printf(frameSetUnmoved ? "FRAMEREC DIAG FRAME SET UNMOVED\n" : "FRAMEREC DIAG FRAME SET MOVED\n");
+        // No object was created, and the live sibling came through untouched: same id, same directory, same page and
+        // table counts, and still live.
+        const bool noObjectMade = runtimeAfter.created == runtimeBefore.created
+            && runtimeAfter.exited == runtimeBefore.exited && runtimeAfter.reaped == runtimeBefore.reaped;
+        const bool siblingIntact = siblingAfterOk && siblingAfter.live && !siblingAfter.reaped
+            && siblingAfter.id == siblingBefore.id
+            && siblingAfter.directory == siblingBefore.directory
+            && siblingMemoryAfter.residentPages == siblingMemoryBefore.residentPages
+            && siblingMemoryAfter.capacityPages == siblingMemoryBefore.capacityPages
+            && siblingMemoryAfter.metadataFrames == siblingMemoryBefore.metadataFrames
+            && siblingMemoryAfter.tableFrames == siblingMemoryBefore.tableFrames;
+        printf(noObjectMade ? "FRAMEREC DIAG NO OBJECT MADE\n" : "FRAMEREC DIAG OBJECT MADE\n");
+        printf(siblingIntact ? "FRAMEREC DIAG SIBLING INTACT\n" : "FRAMEREC DIAG SIBLING DAMAGED\n");
+        const bool refusalPass = starvedIdentless && allocatorRefused && frameSetUnmoved && noObjectMade
+            && siblingIntact;
+        if (!refusalPass) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- withdraw the pressure, one recorded block at a time, in reverse
+        bool withdrawalOk = true;
+        uint32_t returnedFrames = 0;
+        for (uint32_t i = claimBlocks; i > 0; --i) {
+            if (!frames.freeContiguous(claimBase[i - 1], claimCount[i - 1])) { withdrawalOk = false; break; }
+            returnedFrames += claimCount[i - 1];
+        }
+        const memory::PhysicalMemoryStatistics withdrawnStats = frames.getStatistics();
+        uint32_t withdrawnOwned = 0;
+        const uint32_t withdrawnDigest = FrameSetDigest(withdrawnOwned);
+        LogValue("FRAMEREC DIAG RETURNED FRAMES ", returnedFrames);
+        LogValue("FRAMEREC DIAG WITHDRAWN FREE ", withdrawnStats.freeFrames);
+        LogValue("FRAMEREC DIAG WITHDRAWN DIGEST ", withdrawnDigest);
+        // The state after the withdrawal is the state after the sibling create, exactly: the pressure took nothing that
+        // was not returned and returned nothing that it did not take.
+        const bool pressureReversed = withdrawalOk && returnedFrames == claimedFrames
+            && withdrawnStats.freeFrames == afterSiblingStats.freeFrames
+            && withdrawnStats.allocatedFrames == afterSiblingStats.allocatedFrames
+            && withdrawnDigest == afterSiblingDigest
+            && withdrawnOwned == afterSiblingOwned;
+        printf(pressureReversed ? "FRAMEREC DIAG PRESSURE REVERSED\n" : "FRAMEREC DIAG PRESSURE RESIDUE\n");
+        if (!pressureReversed) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- recover in the same instance: the create the refusal had just made impossible
+        process::NativeImage recoveredImage;
+        recoveredImage.code = frameCode; recoveredImage.codeBytes = sizeof(frameCode); recoveredImage.entryOffset = 0;
+        recoveredImage.data = frameData[1]; recoveredImage.dataBytes = sizeof(frameData[1]);
+        uint32_t recoveredId = 0;
+        const bool recoveredMade = nativeRuntime.Create(recoveredImage, recoveredId);
+        printf(recoveredMade ? "FRAMEREC DIAG RECOVERED\n" : "FRAMEREC DIAG RECOVERY FAILED\n");
+        LogValue("FRAMEREC DIAG RECOVERED ID ", recoveredId);
+        // A fresh id, never one of the ids that have been issued, because a returned id would let a stale handle address
+        // a live object.
+        const bool recoveredFresh = recoveredMade && recoveredId != 0 && recoveredId != siblingId;
+        printf(recoveredFresh ? "FRAMEREC DIAG RECOVERED ID FRESH\n" : "FRAMEREC DIAG RECOVERED ID REUSED\n");
+        uint8_t recoveredRead[16] = { 0 };
+        const bool recoveredReadOk = recoveredMade && nativeRuntime.ReadMemory(
+            recoveredId, process::NativeRuntime::DataAddress, recoveredRead, sizeof(recoveredRead));
+        bool recoveredContentOk = recoveredReadOk;
+        for (uint32_t i = 0; i < sizeof(recoveredRead); ++i)
+            if (recoveredRead[i] != frameData[1][i]) recoveredContentOk = false;
+        printf(recoveredContentOk ? "FRAMEREC DIAG RECOVERED DATA MATCHES\n" : "FRAMEREC DIAG RECOVERED DATA WRONG\n");
+        process::NativeStatus recoveredStatus;
+        const bool recoveredLive = recoveredMade && nativeRuntime.Status(recoveredId, recoveredStatus)
+            && recoveredStatus.live && !recoveredStatus.reaped
+            && recoveredStatus.directory != siblingStatus.directory;
+        printf(recoveredLive ? "FRAMEREC DIAG RECOVERED LIVE\n" : "FRAMEREC DIAG RECOVERED NOT LIVE\n");
+        const bool recoveryPass = recoveredFresh && recoveredContentOk && recoveredLive;
+        if (!recoveryPass) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- the active victim. The sibling is live at the moment it is asked to exit, so the id being retired is the
+        // id of a running object rather than of something already gone; after the reap that id must not work as a handle
+        // in any of the three ways it could be used.
+        const bool siblingExit = nativeRuntime.RequestExit(siblingId, 0x5A);
+        printf(siblingExit ? "FRAMEREC DIAG VICTIM EXIT REQUESTED\n" : "FRAMEREC DIAG VICTIM EXIT FAILED\n");
+        const uint32_t siblingReaped = nativeRuntime.Reap();
+        LogValue("FRAMEREC DIAG VICTIM REAPED ", siblingReaped);
+        process::NativeStatus victimStale;
+        const bool victimTombstoned = nativeRuntime.Status(siblingId, victimStale)
+            && victimStale.reaped && !victimStale.live;
+        uint8_t staleRead[16] = { 0 };
+        const bool staleReadRefused = !nativeRuntime.ReadMemory(siblingId, process::NativeRuntime::DataAddress,
+                                                                staleRead, sizeof(staleRead));
+        const bool staleExitRefused = !nativeRuntime.RequestExit(siblingId, 0x5B);
+        memory::ProcessMemoryStatistics staleMemory;
+        const bool staleMemoryRefused = !nativeRuntime.MemoryStatistics(siblingId, staleMemory);
+        // And the id was never a wildcard: an unrelated id and the zero id are both refused.
+        process::NativeStatus unknownStatus;
+        const bool unknownRefused = !nativeRuntime.Status(siblingId + 0x1000U, unknownStatus)
+            && !nativeRuntime.Status(0, unknownStatus)
+            && !nativeRuntime.ReadMemory(0, process::NativeRuntime::DataAddress, staleRead, sizeof(staleRead));
+        printf(victimTombstoned ? "FRAMEREC DIAG VICTIM TOMBSTONED\n" : "FRAMEREC DIAG VICTIM STILL LIVE\n");
+        printf(staleReadRefused ? "FRAMEREC DIAG OLD ID READ REFUSED\n" : "FRAMEREC DIAG OLD ID READ SERVED\n");
+        printf(staleExitRefused ? "FRAMEREC DIAG OLD ID EXIT REFUSED\n" : "FRAMEREC DIAG OLD ID EXIT SERVED\n");
+        printf(staleMemoryRefused ? "FRAMEREC DIAG OLD ID MEMORY REFUSED\n" : "FRAMEREC DIAG OLD ID MEMORY SERVED\n");
+        printf(unknownRefused ? "FRAMEREC DIAG UNKNOWN ID REFUSED\n" : "FRAMEREC DIAG UNKNOWN ID SERVED\n");
+        const bool oldIdPass = siblingExit && siblingReaped == 1 && victimTombstoned && staleReadRefused
+            && staleExitRefused && staleMemoryRefused && unknownRefused;
+        if (!oldIdPass) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+
+        // ---- reap the rest and land back on the prepared baseline
+        const bool recoveredExit = nativeRuntime.RequestExit(recoveredId, 0x5C);
+        const uint32_t finalReaped = nativeRuntime.Reap();
+        LogValue("FRAMEREC DIAG FINAL REAPED ", finalReaped);
+        const memory::PhysicalMemoryStatistics finalStats = frames.getStatistics();
+        uint32_t finalOwned = 0;
+        const uint32_t finalDigest = FrameSetDigest(finalOwned);
+        const process::NativeStatistics runtimeFinal = nativeRuntime.Statistics();
+        LogValue("FRAMEREC DIAG FINAL ALLOCATED ", finalStats.allocatedFrames);
+        LogValue("FRAMEREC DIAG FINAL FREE ", finalStats.freeFrames);
+        LogValue("FRAMEREC DIAG FINAL DIGEST ", finalDigest);
+        LogValue("FRAMEREC DIAG FINAL CREATED ", runtimeFinal.created);
+        LogValue("FRAMEREC DIAG FINAL EXITED ", runtimeFinal.exited);
+        LogValue("FRAMEREC DIAG FINAL REAPED ", runtimeFinal.reaped);
+        // The same frame set the runtime started from. Not the same totals, the same frames: every page the two objects
+        // and their tables held is back with the allocator, and no frame that belonged to the kernel moved.
+        const bool baselineRestored = recoveredExit && finalReaped == 1
+            && finalStats.allocatedFrames == baselineStats.allocatedFrames
+            && finalStats.freeFrames == baselineStats.freeFrames
+            && finalDigest == baselineDigest && finalOwned == baselineOwned
+            && finalOwned == finalStats.allocatedFrames;
+        printf(baselineRestored ? "FRAMEREC DIAG BASELINE RESTORED\n" : "FRAMEREC DIAG BASELINE DRIFTED\n");
+        // Every create counted, every exit counted, every reap counted: two objects existed, one was refused, both were
+        // retired, and the refusal is not in the created count because it produced nothing.
+        const bool accounted = runtimeFinal.created == 2 && runtimeFinal.exited == 2
+            && runtimeFinal.reaped == 2 && runtimeFinal.faulted == 0;
+        printf(accounted ? "FRAMEREC DIAG ACCOUNTED\n" : "FRAMEREC DIAG ACCOUNTING WRONG\n");
+        // The slot table is empty again, which is the state the capacity scene could not reach.
+        process::NativeStatus leftover;
+        bool tableEmpty = true;
+        for (uint32_t id = 1; id <= runtimeFinal.created + 2 && tableEmpty; ++id) {
+            if (nativeRuntime.Status(id, leftover) && leftover.live) tableEmpty = false;
+        }
+        printf(tableEmpty ? "FRAMEREC DIAG TABLE EMPTY\n" : "FRAMEREC DIAG TABLE OCCUPIED\n");
+        // And the machine is still where this path is allowed to be: no interrupt taken, no dispatch.
+        uint32_t frameFlags = 0;
+        asm volatile("pushfl; popl %0" : "=r"(frameFlags));
+        printf((frameFlags & 0x200U) ? "FRAMEREC DIAG INTERRUPTS ENABLED\n" : "FRAMEREC DIAG INTERRUPTS CLEAR\n");
+        const bool framePass = refusalPass && pressureReversed && recoveryPass && oldIdPass
+            && baselineRestored && accounted && tableEmpty && !(frameFlags & 0x200U);
+        if (!framePass) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        BootDiagnosticHalt(common::BootDiagnostic::Marker(common::BootDiagnostic::StopRuntimeFrameRecovery));
+    }
+
 
 
     // Prepare resources before identity mappings are built. BSP GDT/IDT already

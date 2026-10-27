@@ -289,7 +289,7 @@ extern "C" int GtosInstallFaultObserver();
 //   - no argument, or a second argument, is a refusal rather than a default
 //   - a value outside 1..kCaseCount is a refusal rather than an empty run
 // A refusal prints why and returns a non-zero status, so it can never be read as a pass.
-const unsigned kCaseCount = 10;
+const unsigned kCaseCount = 11;
 unsigned unitCase = 0;
 
 enum SelectorVerdict { SelectorOk, SelectorAbsent, SelectorMalformed, SelectorOutOfRange, SelectorTooMany };
@@ -954,6 +954,111 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         ExpectHex(frameSetAdded, 0, "no frame the objects took is still held");
         ExpectHex(frameSetRemoved, 0, "no permanent runtime frame was given up");
         ExpectHex(frameSetCount, baselineCount, "the allocated count is back at the baseline");
+    }
+    }
+
+    // ================================================================ 11. the extra-four-frame leak that conserves totals
+    { if (unitCase == 11) {
+        Say("CASE 11\n");
+        // The negative this packet exists to answer. The 139 recovery measured its refusal against the slot table's capacity
+        // and then checked `allocated + free` for conservation. That check cannot see a leak: the sum is the machine's
+        // addressable total and it is conserved by construction whenever a frame merely moves from free to allocated. Four
+        // frames is a small enough leak to keep `allocated` divisible by four, and a leak of four is exactly what a
+        // two-page object plus its two page-table frames would leave behind if a refusal took the frames and did not put
+        // them back.
+        //
+        // So this case builds that leak out of the allocator's own calls, shows the sum and the divisibility both pass, and
+        // then shows the frame set does not. The point is not that the leak is possible; it is that the measurement the
+        // scene uses can see it and the measurement 139 used cannot.
+        ResetAll();
+        PhysicalMemoryManager& frames = Frames();
+        Expect(SeedAllocator(frames, kFreeFrames), "the allocator is seeded");
+        const PhysicalMemoryStatistics seeded = frames.getStatistics();
+        const u32 seededSum = seeded.allocatedFrames + seeded.freeFrames;
+
+        static u32 baseline[kMaximumTracked];
+        u32 baselineCount = 0;
+        CaptureFrameSet(frames);
+        Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        for (u32 i = 0; i < frameSetCount; ++i) baseline[baselineCount++] = frameSet[i];
+
+        // One four-frame allocation, then one frame given back, then the other three given back, then one of those three
+        // taken again and not returned. The sequence is deliberately ordinary: every call succeeds, nothing is refused, and
+        // the only unusual thing is that the last allocation has no matching free. A leak that arrived through a failed
+        // call would be a different shape; this case is about the arithmetic, so it uses calls that all succeed.
+        u32 block = 0;
+        Expect(frames.allocateContiguous(4, block), "four contiguous frames are taken");
+        Expect(block != 0, "the block has a real address");
+        Expect(frames.free(block), "the first of the four is given back");
+        Expect(frames.free(block + 4096U), "the second is given back");
+        Expect(frames.free(block + 2U * 4096U), "the third is given back");
+        // The fourth frame is deliberately not freed. That is the leak.
+        const PhysicalMemoryStatistics leaked = frames.getStatistics();
+
+        // (a) The check 139 used. The sum is conserved, because the total number of frames did not change -- four frames
+        // moved from free to allocated and the sum counts both sides.
+        ExpectHex(leaked.allocatedFrames + leaked.freeFrames, seededSum,
+                  "the leak conserves allocated + free, which is why the sum cannot see it");
+        // (b) The other check 139 used. Four is divisible by four, so a divisibility test passes too.
+        ExpectHex(leaked.allocatedFrames % 4U, 0,
+                  "the leak leaves the allocated count divisible by four");
+        // (c) And the count did move, which the sum hid. This is the part a sum-only check never reads.
+        ExpectHex(leaked.allocatedFrames, seeded.allocatedFrames + 1,
+                  "the leak is visible in the allocated count, one frame");
+        ExpectHex(leaked.freeFrames, seeded.freeFrames - 1,
+                  "and in the free count, one frame the other way");
+
+        // (d) The measurement the scene uses. The frame set differs from the baseline by exactly the leaked frame, and a
+        // comparison of the sets names it. This is the same walk the scene's digest folds, over the same allocator.
+        CaptureFrameSet(frames);
+        Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        DiffFrameSet(baseline, baselineCount);
+        ExpectHex(frameSetAdded, 1, "the frame set gained exactly one frame");
+        ExpectHex(frameSetRemoved, 0, "the frame set lost nothing");
+        Expect(FrameSetContains(block + 3U * 4096U), "the frame set names the leaked frame");
+        Expect(!FrameSetContains(block), "the frame set no longer names the frame that was given back");
+
+        // (e) The same leak at the size the scene's own object costs. An object costs seven frames: two data pages, its
+        // page tables and its directory contribution. A four-frame leak is the piece of that which survives a partial
+        // rollback, so the case repeats the arithmetic at four against a baseline that is not zero.
+        ResetAll();
+        PhysicalMemoryManager& frames2 = Frames();
+        Expect(SeedAllocator(frames2, kFreeFrames), "the allocator is seeded a second time");
+        const PhysicalMemoryStatistics seeded2 = frames2.getStatistics();
+        static u32 baseline2[kMaximumTracked];
+        u32 baseline2Count = 0;
+        CaptureFrameSet(frames2);
+        Expect(frameSetComplete, "the second frame walk covered every addressable frame");
+        for (u32 i = 0; i < frameSetCount; ++i) baseline2[baseline2Count++] = frameSet[i];
+
+        u32 block2 = 0;
+        Expect(frames2.allocateContiguous(4, block2), "four contiguous frames are taken the second time");
+        // Nothing is given back at all: the whole four-frame block is the leak.
+        const PhysicalMemoryStatistics leaked2 = frames2.getStatistics();
+        ExpectHex(leaked2.allocatedFrames + leaked2.freeFrames, seeded2.allocatedFrames + seeded2.freeFrames,
+                  "the four-frame leak also conserves the sum");
+        ExpectHex(leaked2.allocatedFrames % 4U, 0, "the four-frame leak also stays divisible by four");
+        CaptureFrameSet(frames2);
+        Expect(frameSetComplete, "the second frame walk covered every addressable frame");
+        DiffFrameSet(baseline2, baseline2Count);
+        ExpectHex(frameSetAdded, 4, "the frame set gained four frames");
+        ExpectHex(frameSetRemoved, 0, "the frame set lost nothing");
+        for (u32 i = 0; i < 4; ++i) {
+            Expect(FrameSetContains(block2 + i * 4096U), "the frame set names each leaked frame");
+        }
+        // A digest over the set has to differ, because the set differs. This is the property the scene relies on: equal
+        // digests mean equal sets, not equal counts.
+        u32 digestBefore = 2166136261U;
+        for (u32 i = 0; i < baseline2Count; ++i) {
+            const u32 frame = baseline2[i] >> 12;
+            for (u32 byte = 0; byte < 4; ++byte) { digestBefore ^= (frame >> (byte * 8)) & 0xFFU; digestBefore *= 16777619U; }
+        }
+        u32 digestAfter = 2166136261U;
+        for (u32 i = 0; i < frameSetCount; ++i) {
+            const u32 frame = frameSet[i] >> 12;
+            for (u32 byte = 0; byte < 4; ++byte) { digestAfter ^= (frame >> (byte * 8)) & 0xFFU; digestAfter *= 16777619U; }
+        }
+        Expect(digestBefore != digestAfter, "the frame-set digest separates the two sets the totals cannot");
     }
     }
 
