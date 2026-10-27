@@ -1,0 +1,62 @@
+{
+  "task": "GTOS-DSH-139",
+  "document": "goal-g-same-image-matrix-139",
+  "purpose": "Record what the final matrix is, why each row exists, and what the verifier re-derives rather than accepts. Goal G asks for a complete same-image matrix after the gates; the value of a matrix is that a reader can tell what a row would have caught.",
+
+  "the_rule_that_makes_it_a_matrix": {
+    "one_image": "Every row ran the same GTOS.bin, sha256 e972d385a082a0eb62ba0b8fb3eed7c91f65350f7f3a339758a70ea66002ed37. A difference between two rows is a difference in the command line and the core count and in nothing else, so no row can be explained away as 'a different build'.",
+    "command_lines_are_derived_not_composed": "The append line for each row is produced from the scene declaration by tools/derive-scenes-139.mjs into a table, and the runner reads that table. The runner does not build a line from a stop value.",
+    "why_that_matters_concretely": "An earlier version of the runner composed `serial bootdiag-stop=$STOP` itself. The e99 scene is the one that also carries `bootlog-fail`, and the composed line dropped it, so the run started the plain memory scenario and filed it under the e99 name. The row then failed for a reason that had nothing to do with the kernel. A matrix whose rows are not the scenes it claims is worse than no matrix, because it produces confident wrong answers.",
+    "the_derivation_also_refuses": "It refuses a scene name the module does not declare, verifies each append carries the scene's own stop and every one of its flags, and refuses two rows that share both a command line and a core count. So a row cannot be a duplicate of another row under a different label."
+  },
+
+  "the_rows": [
+    { "n": 1, "scene": "runtime-init-smp1", "vcpus": 1, "what_it_proves": "the task register, the GDT and the task state agree on real hardware, and the runtime's own obligations come back zero", "what_it_would_catch": "a descriptor that is not the runtime's object, a selector that indexes the wrong slot, an ss0 or esp0 that is not the kernel's, a task state whose io map points outside itself, or a load that never happened" },
+    { "n": 2, "scene": "runtime-init-smp2", "vcpus": 2, "what_it_proves": "the runtime refuses a second core before it prepares stacks", "what_it_would_catch": "a runtime that accepted a core it cannot hand a safe stack to, or one that refused for some other reason and was credited with the right answer" },
+    { "n": 3, "scene": "runtime-init-smp3", "vcpus": 3, "what_it_proves": "the same refusal at a different count, so the refusal is about the count and not about two specifically", "what_it_would_catch": "a refusal hardcoded to the value 2" },
+    { "n": 4, "scene": "runtime-recovery-smp1", "vcpus": 1, "what_it_proves": "the runtime's own capacity bound refuses a create, leaves nothing behind, and recovers in the same instance with a never-issued id while the survivors stay live", "what_it_would_catch": "a refusal that still consumed a slot, an id that was reused after a reap, a recovery that needed a re-initialisation, a survivor that was silently destroyed, or frames that did not balance" },
+    { "n": 5, "scene": "runtime-recovery-smp2", "vcpus": 2, "what_it_proves": "the recovery scene's own early refusal on two cores", "what_it_would_catch": "a recovery path reachable on a machine it is not valid on" },
+    { "n": 6, "scene": "runtime-objects-smp1", "vcpus": 1, "what_it_proves": "objects are created, proved, exited and reaped against the runtime", "what_it_would_catch": "a create that returns an object whose private memory is not its own, or a reap that does not account for what it released" },
+    { "n": 7, "scene": "runtime-objects-smp2", "vcpus": 2, "what_it_proves": "the objects scene refuses before creating anything on two cores", "what_it_would_catch": "allocation that happens before the core-count check" },
+    { "n": 8, "scene": "runtime-objects-smp3", "vcpus": 3, "what_it_proves": "the same at three", "what_it_would_catch": "the same, at a count that is not the one the check was written against" },
+    { "n": 9, "scene": "tables-smp1", "vcpus": 1, "what_it_proves": "the GDT and IDT are constructed and loaded", "what_it_would_catch": "a table that is built but never loaded, or a load with the wrong register operand" },
+    { "n": 10, "scene": "paging-smp1", "vcpus": 1, "what_it_proves": "bootstrap paging is enabled and the owned mapping probe passes with no AP online", "what_it_would_catch": "a directory installed but not active, or a probe that passed because nothing was mapped at all" },
+    { "n": 11, "scene": "ap-fresh-smp2", "vcpus": 2, "what_it_proves": "the real AP entry acknowledges freshly and parks, with no stale or foreign acknowledgement and no failed AP", "what_it_would_catch": "an acknowledgement read from a previous run's slot, a second core that never started, or a start that succeeded against the wrong processor" },
+    { "n": 12, "scene": "workers-smp1", "vcpus": 1, "what_it_proves": "a single core honestly reports that no worker is available", "what_it_would_catch": "a worker path that claims work on a machine with no AP to do it" },
+    { "n": 13, "scene": "workers-smp2", "vcpus": 2, "what_it_proves": "the AP ran its fixed integer jobs, drained its queue and parked with an independent acknowledgement", "what_it_would_catch": "a queue that drains without the work being done, or a park that precedes the drain" },
+    { "n": 14, "scene": "workers-smp3", "vcpus": 3, "what_it_proves": "both APs ran their jobs, drained and parked", "what_it_would_catch": "routing that only ever reaches the first AP, or a second AP that starts but is never given work" },
+    { "n": 15, "scene": "kernel-invalid", "vcpus": 1, "what_it_proves": "the production parser refuses a fixed illegal value before any self-test runs", "what_it_would_catch": "a parser that accepts an unknown value, or one that refuses only after the kernel has already begun to trust its input" },
+    { "n": 16, "scene": "e99-priority", "vcpus": 1, "what_it_proves": "the legacy failure token keeps its precedence over the stop on the same command line", "what_it_would_catch": "a stop mechanism that silently overrode the older failure reporting, which would make every later e99 row a false pass" }
+  ],
+
+  "why_two_rows_are_new_in_this_packet": {
+    "ap-fresh-smp2": "138's matrix had no row in which the real AP entry acknowledged anything. The workers rows ran the AP, but a worker row proves the queue was served, not that the acknowledgement came from this boot's processor into this boot's slot. The fresh/stale pair is what separates those two claims.",
+    "kernel-invalid": "138 recorded an 'illegal_option' pass whose actual content was a host-side refusal of an unknown scene name. That is a refusal by the harness, not by the kernel, and it could not stand in for the kernel's own parser. This row runs the production parser on a fixed illegal value and requires the reason line before any self-test."
+  },
+
+  "what_the_verifier_does": {
+    "file": "tools/verify-matrix-139.mjs",
+    "checks": 163,
+    "principle": "It does not read the scene declaration and agree with it. It restates each scene's obligations independently and re-derives the guest's arithmetic from the numbers the guest printed.",
+    "examples": [
+      "The GDT-limit check is `offset + 7 <= limit` together with `limit === 7 * 8 - 1`, so a limit that is one byte short of holding the descriptor fails even though the descriptor is present.",
+      "The recovery row's frame conservation is re-derived from the four printed frame counts rather than taken from the guest's own 'refusal clean' line, and the frames consumed by the filled objects must divide evenly by the capacity -- so an allocator charged a varying amount per object fails.",
+      "The AP row's fresh, stale, parked and failed counts are re-derived from the counters, not read from the verdict lines.",
+      "The refusal rows are keyed on the marker actually containing 'REFUSED', so a row that silently took the success path cannot be counted as a refusal.",
+      "The coverage check compares the row set against the scene module's own declared list, so a scene added to the module and never run is a failure rather than a smaller matrix that still passes."
+    ],
+    "result": "163 of 163 on the final image. test-only/matrix-verify-07.json."
+  },
+
+  "what_the_matrix_does_not_reach": [
+    "No ordinary boot, service, desktop, storage, network or package path.",
+    "No user instruction, no task dispatch, no scheduler entry, no interrupt enabled.",
+    "The AP work is a fixed restricted diagnostic VM: no AP allocator, no AP heap, no online PTE pressure, no cross-core TLB, no general Destroy.",
+    "A row that passes says its scene reached its marker with its obligations satisfied. It does not say the kernel is correct outside that scene."
+  ],
+
+  "the_emulator_exit_code": {
+    "observed": 124,
+    "why": "The guest halts at its checkpoint with interrupts off and no shutdown path. It cannot exit, so the transport's timeout ends it and the record carries the timeout's code. The verifier records the code rather than judging it, and the emulator kind's expected code is a separate question the bridge already answers. Judging a halted guest by its exit status would be judging it on something it was never asked to do."
+  }
+}

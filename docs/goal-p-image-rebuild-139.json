@@ -1,0 +1,97 @@
+{
+  "task": "GTOS-DSH-139",
+  "document": "goal-p-image-rebuild-139",
+  "purpose": "Answer whether the current image could be reused or had to be rebuilt, by measuring each of the 61 fixed slots rather than by asserting a conclusion. Goal P asks for a current image whose every input is accounted for; this records what was measured, what it showed, and what the measurement cannot say.",
+
+  "the_question_restated": {
+    "catalog_asks_for_both": [
+      "reuse valid unaffected objects before rebuilding the whole closure",
+      "rebuild the fixed 61-input closure when the original producer evidence is inadequate"
+    ],
+    "why_that_is_not_a_contradiction": "Reuse is preferred where an object is provably unaffected, because reusing a good object costs nothing and rebuild is not free. But an object is only 'provably unaffected' if its dependency set contains nothing this packet changed. So the two instructions are one instruction with a measurement in the middle, and the measurement is the deliverable.",
+    "what_would_make_the_answer_unacceptable": "A prose claim that 'only the changed objects differ'. That sentence cannot fail. A rebuilt object that differs for a reason the packet does not explain is a defect, and it would hide behind that sentence."
+  },
+
+  "the_measurement": {
+    "method": "For each of the 61 slots the packet's own closure built, compare the object byte for byte against the baseline object the catalog carries for that token. Then read the slot's real depfile -- the one the compiler wrote, not a list of includes typed into a script -- and intersect it with the files that changed between the parent commit and the work that is about to be committed.",
+    "three_outcomes": {
+      "reproduced": "the rebuilt object is byte-identical to the baseline. The toolchain, the profile and the source are all exactly what produced the baseline object, so this slot is unaffected and reuse would have produced the same byte.",
+      "changed_and_explained": "the object differs, and at least one file in its depfile is a file this packet changed. The difference has a named cause.",
+      "unexplained": "the object differs and nothing in its depfile changed. This is a defect and the image cannot be described."
+    },
+    "result": {
+      "slots": 61,
+      "assembly_slots": 5,
+      "reproduced_byte_identical": 58,
+      "changed_and_explained": 3,
+      "unexplained": 0,
+      "source": "test-only/p-impact-02.json"
+    },
+    "the_three_that_changed": [
+      { "slot": 13, "token": "gdt.o", "source": "src/gdt.cpp", "touched": ["src/gdt.cpp", "include/gdt.h"] },
+      { "slot": 57, "token": "kernel.o", "source": "src/kernel.cpp", "touched": ["src/kernel.cpp", "include/common/boot_diagnostic.h", "include/gdt.h"] },
+      { "slot": 58, "token": "boot_diagnostic.o", "source": "src/common/boot_diagnostic.cpp", "touched": ["src/common/boot_diagnostic.cpp", "include/common/boot_diagnostic.h"] }
+    ],
+    "what_58_identical_objects_actually_prove": [
+      "The profile is the baseline's profile. The 24 flags in the closure contract are the ones that produced these bytes, so the packet did not quietly build under a different flag set.",
+      "The toolchain is the baseline's toolchain. A different compiler version would not reproduce 58 objects byte for byte.",
+      "Every source this packet did not change is the baseline's source. A source that had drifted would show up as a differing object with no changed dependency -- that is exactly the 'unexplained' class, and it is empty.",
+      "The three differences are the three files whose text changed. The map from source change to object change is one to one."
+    ],
+    "what_58_identical_objects_do_not_prove": [
+      "They do not prove the three changed objects are correct. They prove the other 58 are unchanged; correctness of the change is the units' and the guest's question, not this one's.",
+      "They do not prove the link is correct. That is the link gate's question.",
+      "They do not prove the image boots. That is the matrix's question, and it ran separately."
+    ]
+  },
+
+  "the_decision_and_why": {
+    "decision": "The closure was rebuilt in full rather than partly reused.",
+    "why_not_reuse_the_58": "Because the answer is the same either way and the rebuild is strictly more evidence. The measurement above shows reuse would have produced the same image: the 58 objects a reuse would have carried forward are byte-identical to the ones the rebuild produced. So rebuilding them costs only time, of which this packet has no budget, and it removes the need to defend any object as 'carried forward on trust'.",
+    "the_header_rule_forced_it_anyway": "The packet changes include/gdt.h and include/common/boot_diagnostic.h, and the catalog requires changed internal headers to have their actual dependents rebuilt. A depfile-driven dependant set is what a full rebuild already covers, so the header rule and the full rebuild agree.",
+    "the_assembly_slots": "All five assembly slots reproduced byte for byte, including the loader. Assembly has no depfile and no headers, so the only thing that can change its object is its own source, and none of the five changed."
+  },
+
+  "the_image": {
+    "how_it_was_built": "The 61 slots were compiled from the committed worktree -- not from a draft, not from a former packet's source view -- under the profile in producer-contract-p139.json, and linked by the real GNU ld through the entry's own admission, in the baseline link's own order. The contract was written once with flag 'wx' before the first compile and the consumer re-read its bytes at the end of the run.",
+    "elf_sha256": "e972d385a082a0eb62ba0b8fb3eed7c91f65350f7f3a339758a70ea66002ed37",
+    "elf_bytes": 754176,
+    "individuals": 61,
+    "distinct": 61,
+    "link_exit": 0,
+    "previous_image": {
+      "sha256": "0f9c89c0bf87553650e5eb5d7b15e851f826c597dad14f20d5128922767e1bdb",
+      "bytes": 781364,
+      "note": "built by the impact-limited path, which recompiled only the files the catalog named and took the rest from the frozen catalog. It was a legitimate image, but a third of its objects were carried rather than rebuilt, so a difference in it could not be attributed to the packet alone. It is kept as history; the matrix now runs the fully rebuilt image."
+    },
+    "why_the_two_sizes_differ": "The impact-limited image was linked from the Makefile's own object list, which globs every source under src/ including the littlefs C files that the 116 link does not use. The closure rebuild links exactly the 61 inputs the baseline link spec names. The difference is the objects the baseline never had, not a difference in any object they share."
+  },
+
+  "the_static_gate": {
+    "tool": "tools/audit-kernel-instructions.py, the same audit the Makefile runs as a prerequisite of the binary",
+    "map": "/var/tmp/gtos-dsh-139-e759-mandatory-evidence-view/image/l140-default.map",
+    "result": [
+      "PASS integer-only kernel interfaces: 171 source/header files",
+      "PASS integer-only linked code: GTOS.bin: 61 input objects, 65817 instructions, 11 FP instructions inside exact allowances"
+    ],
+    "exit": 0,
+    "why_it_is_a_real_gate_and_not_a_formality": "It disassembles the linked image and counts floating-point instructions against exact allowances, and separately forbids FP types and intrinsics in the kernel's own sources and headers. The eleven permitted FP instructions are the ones the allowances name; a twelfth would fail. The count is derived from this link's own map, so it describes the image that exists rather than an image that was audited earlier.",
+    "what_it_does_not_say": "It says nothing about whether the image boots or behaves. An integer-only image can still be wrong."
+  },
+
+  "the_contract_that_was_kept": {
+    "slots": "61, in the baseline link spec's own order, read from that spec on disk rather than restated",
+    "assembly": "5, each resolved through the assembly source contract rather than guessed from a filename",
+    "frozen_before_build": "the producer contract was written with flag 'wx' before the first compile; a producer spec pins it; the consumer re-reads its bytes at the end, so a producer cannot be described as having run under a contract written afterwards",
+    "depfiles": "56 real .d files, written by the compiler and used as the dependency authority in the impact analysis above",
+    "real_ld": "the link went through the entry's own admission and then through GNU ld; the record carries ld's exit status, not a wrapper's",
+    "refusals_that_are_not_claims": "the entry refuses a missing attempt, colliding declaration roles, and a spec it cannot read back. Those refusals are the reason a successful link record means something."
+  },
+
+  "what_this_does_not_claim": [
+    "That the rebuilt image is better than the impact-limited one in any way the guest can see. Both boot; the difference is what can be said about them.",
+    "That a full rebuild is the right default. It is the right answer here because the measurement showed reuse would have produced the same bytes and because two changed headers had dependants.",
+    "That the static gate passing means the kernel is correct. It means the image contains no floating-point code outside the declared allowances.",
+    "That 58 byte-identical objects means 58 correct objects. It means 58 unchanged ones."
+  ]
+}
