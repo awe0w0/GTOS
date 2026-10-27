@@ -18,8 +18,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import * as scene from '../tools/scene-admission.mjs';
 
-const R = process.argv[4] || 'F:/GTOS-Chromium/artifacts/native-scenario-bound-guest-admission-tr-tss-and-recovery-20261026-a';
-const NODE = process.argv[5] || 'C:/Program Files/nodejs/node.exe';
+const R = process.argv[4] || 'F:/GTOS-Chromium/artifacts/native-current-evidence-runtime-seam-closure-and-guest-matrix-20261027-a';
+// Where the 131 records this test reads as its identity live. They are read, never written: this packet does not add to a
+// former packet's namespace. Only the opt-in launch section needs R and P to be the same root, because that runner asserts
+// every path it writes inside its own REPORT_ROOT.
+const P = process.argv[5] || 'F:/GTOS-Chromium/artifacts/native-scenario-bound-guest-admission-tr-tss-and-recovery-20261026-a';
+const NODE = process.argv[6] || 'C:/Program Files/nodejs/node.exe';
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const checks = [];
 const check = (name, ok, detail) => checks.push({ name, ok: !!ok, detail: detail === undefined ? null : detail });
@@ -28,8 +32,8 @@ const readBytes = (p) => {
   for (let i = 0; i < 30 && b === null; i++) { try { b = fs.readFileSync(p); } catch { /* retry */ } }
   return b;
 };
-const A = JSON.parse(readBytes(R + '/authority-131.json').toString('utf8'));
-const identityDoc = JSON.parse(readBytes(R + '/identity-131.json').toString('utf8'));
+const A = JSON.parse(readBytes(P + '/authority-131.json').toString('utf8'));
+const identityDoc = JSON.parse(readBytes(P + '/identity-131.json').toString('utf8'));
 const identity = identityDoc.identity ? { ...identityDoc, kind: 'selected_image_identity' } : identityDoc;
 
 // ---------------------------------------------------------------- 1. the declared scenes
@@ -122,10 +126,22 @@ expectRefusal('a prerequisite that is absent',
     { ...baseRequest, prerequisites: [{ path: victim, sha256: 'a'.repeat(64) }] }, 'prerequisite');
   expectRefusal('a prerequisite that did not pass',
     { ...baseRequest, prerequisites: [{ path: victim, ok: false }] }, 'prerequisite');
-  // And one that is present, matches and passed is admitted.
-  const good = scene.admitScene({ ...baseRequest,
+  // 138 replaced the bare `{path, sha256, ok}` prerequisite with a ten-role typed set, because `ok` is the caller's own
+  // word: a caller that wrote `ok: true` beside a path satisfied the old gate and the ten facts it stands for collapsed
+  // into one. So the case that used to be admitted here is now a refusal, and the refusal has to be about the shape and
+  // not about the bytes. The positive case — a complete set of ten real records, each admitted on its own fact — lives in
+  // tests/scene-prerequisites.test.mjs, because it needs ten fixtures and this file is about the scene.
+  const legacy = scene.admitScene({ ...baseRequest,
     prerequisites: [{ path: victim, sha256: sha(readBytes(victim)), ok: true }] });
-  check('a prerequisite that is present, matching and passed is admitted', good.admitted === true, good.problems);
+  check('a bare {path, sha256, ok} prerequisite is no longer a satisfied gate',
+    legacy.admitted === false
+      && legacy.problems.some((p) => p.obligation === 'prerequisite'
+        && /names no role|required role is omitted/.test(String(p.why))), legacy.problems);
+  // And a request that names no prerequisite set at all is still admitted: the set is a gate the caller has to bring,
+  // not a field this function invents. The packet's own S phase is what brings it.
+  const noSet = scene.admitScene({ ...baseRequest });
+  check('a request that brings no prerequisite set is still admitted by the scene gate alone',
+    noSet.admitted === true, noSet.problems);
 }
 
 // ---------------------------------------------------------------- 3. the argv is built from the scene
@@ -210,9 +226,26 @@ const s = scene.scene('runtime-init-smp1');
 }
 
 // ---------------------------------------------------------------- 5. the real launch, then no launch
-// A declared scene, admitted and launched through the frozen runner, so the launch observation is the guard's.
-const RUNNER = R + '/frozen-runners/run-131-r01.mjs';
-const BRIDGE = R + '/references/private-boot-checkpoints-131.mjs';
+//
+// This section launches a real guest through the 131 frozen runner, and it is therefore bound to the 131 packet: that
+// runner asserts every path it writes inside its own REPORT_ROOT, so it can only be driven with R set to the 131 root,
+// and every run writes a fresh spec, attempt, evidence report and two log channels into the 131 namespace. In 138 the
+// same scene is launched fourteen times through this packet's own frozen runner, with an admitted scene, a derived argv,
+// two read-back channels and a cold-boot comparison — see guest-matrix-138-s46-60.json. Re-running the 131 launch here
+// would add a stage to a former packet's namespace and prove nothing the 138 matrix does not already prove better.
+//
+// So it is opt-in: without --launch the report says the section was not run and why, and it is not counted as a pass.
+// The refusal half below is always run, because it never launches anything.
+const LAUNCH = process.argv.includes('--launch');
+// A suffix that is fresh per run, so a rerun cannot collide with a former run's stage name.
+const RUN = String(10 + (Date.now() % 89));
+if (LAUNCH && R !== P) {
+  throw new Error('--launch drives the 131 frozen runner, which writes only inside its own report root; pass R === P');
+}
+const skipped = [];
+if (LAUNCH) {
+const RUNNER = P + '/frozen-runners/run-131-r01.mjs';
+const BRIDGE = P + '/references/private-boot-checkpoints-131.mjs';
 const L = A.work_root;
 const S = A.source_root;
 const pin = (p) => { const b = readBytes(p); return b === null ? null : { path: p, bytes: b.length, sha256: sha(b) }; };
@@ -224,8 +257,8 @@ function launch(stageName, admittedScene, options = {}) {
   const bridge = {
     task: A.task, stage: stageName, outer_stage: stageName, kind: 'checkpoint', route: 'vm.checkpoint',
     report_root: R, work_root: L, source_root: S, distribution: 'Ubuntu-20.04',
-    authority: pin(R + '/authority-131.json'),
-    request_module: R + '/references/native-request-131.mjs',
+    authority: pin(P + '/authority-131.json'),
+    request_module: P + '/references/native-request-131.mjs',
     tools: { python_realpath: A.python.realpath },
     guard_linux: '/mnt/f/GTOS-Chromium/artifacts/native-cxx-full-output-frontier-20261022-a/guard-041-capture.py',
     runner_module: RUNNER, binding_module: pin(BRIDGE),
@@ -283,6 +316,13 @@ check('the declared scene produced a real launch', positive.status === 0,
   check('the launched group was empty after cleanup',
     Array.isArray(group.descendants_left) && group.descendants_left.length === 0, group.descendants_left);
 }
+} else {
+  skipped.push({ section: '5. the real launch', why: 'opt-in with --launch',
+    because: 'it drives the 131 frozen runner, which asserts every path it writes inside the 131 REPORT_ROOT, so it '
+      + 'would add a stage to a former packet namespace and prove nothing this packet has not already run better',
+    covered_by: 'guest-matrix-138-s46-60.json: fourteen admitted scenes launched through this packet own runner, with '
+      + 'two read-back channels each and a byte-identical cold-boot comparison' });
+}
 
 // Every refusal happens before a spec is written, so no QEMU child can exist for it. The proof is the absence of the spec
 // and the attempt, which the runner would have written had it been invoked.
@@ -301,9 +341,10 @@ check('the declared scene produced a real launch', positive.status === 0,
     const stage = 'sng' + RUN + String(refusals.length) + '-01';
     const specPath = R + '/stage-output/' + stage + '.spec.json';
     const attemptPath = R + '/attempt-' + stage + '-131.json';
-    // The entry refuses, and because it refuses it never reaches the launch, so it never writes the spec.
+    // The entry refuses, and because it refuses it never reaches the launch, so it never writes the spec. This half never
+    // launches anything, so it runs whether or not --launch was given.
     let launched = false;
-    if (v.admitted) { launch(stage, v); launched = true; }
+    if (v.admitted) { launched = true; }
     refusals.push({ case: name, obligation: v.first_refusal ? v.first_refusal.obligation : null,
       admitted: v.admitted, launched, spec_written: fs.existsSync(specPath),
       attempt_written: fs.existsSync(attemptPath) });
@@ -318,12 +359,11 @@ check('the declared scene produced a real launch', positive.status === 0,
 
 const failures = checks.filter((c) => !c.ok);
 const report = {
-  task: 'GTOS-DSH-131', kind: 'scene_admission_test',
-  subject: 'references/scene-admission-131.mjs',
+  task: 'GTOS-DSH-138', kind: 'scene_admission_test',
+  subject: 'tools/scene-admission.mjs',
+  launched: LAUNCH,
+  sections_not_run: skipped,
   declared_scenes: scene.sceneNames(),
-  positive: { stage: positiveStage, status: positive.status,
-    append: positive.built.append, vcpus: positive.built.vcpus,
-    e9: positive.logs.e9, serial: positive.logs.serial },
   checks, checks_total: checks.length, checks_failed: failures.length, ok: failures.length === 0,
 };
 const out = process.argv[3];

@@ -13,6 +13,9 @@ import path from 'node:path';
 import * as la from '../tools/link-admission.mjs';
 
 const R = process.argv[4] || 'F:/GTOS-Chromium/artifacts/native-trusted-observation-link-admission-runtime-recovery-20261026-a';
+// Where this run own fixtures go, kept apart from R because R is where the 128 link record this test reads lives and that
+// namespace is read here, never written.
+const F = process.argv[5] || R;
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const checks = [];
 const check = (name, ok, detail) => checks.push({ name, ok: !!ok, detail: detail === undefined ? null : detail });
@@ -76,14 +79,14 @@ expectRefusal('two objects are swapped', (list) => {
 expectRefusal('an object is not on disk', (list) => {
   const out = list.slice();
   const name = list[20].split('/').pop();
-  out[20] = R + '/test-only/j1/' + name;
+  out[20] = F + '/test-only/j1/' + name;
   return out;
 }, 'absent');
 
 // A hash mismatch needs a real file whose bytes differ from the contract. A TEST_ONLY copy of a real object with one byte
 // changed is exactly that, and it is a real file rather than a fabricated hash.
 {
-  const T = R + '/test-only/j1';
+  const T = F + '/test-only/j1';
   fs.mkdirSync(T, { recursive: true });
   const victim = individuals[40];
   const original = readBytes(victim);
@@ -120,7 +123,7 @@ expectRefusal('an object is not on disk', (list) => {
 
 // ---------------------------------------------------------------- the fresh claim
 {
-  const T = R + '/test-only/j1-claim';
+  const T = F + '/test-only/j1-claim';
   if (fs.existsSync(T)) throw new Error('the claim fixture already exists: ' + T);
   fs.mkdirSync(T, { recursive: true });
 
