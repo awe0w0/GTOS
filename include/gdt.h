@@ -48,6 +48,24 @@ namespace gtos {
             void LoadTaskState(uint32_t kernelStackTop);
             void SetKernelStack(uint32_t kernelStackTop);
 
+            // The runtime's own task-state identity, reported from the object the runtime initialised.
+            //
+            // A caller that must state what it expects has to get those expectations from somewhere that is not the
+            // descriptor it is about to examine. Deriving them from the descriptor would make the comparison a tautology.
+            // These report the initialisation state itself: the task state's address and size, the selector
+            // LoadTaskState loads, the ring-0 selector the constructor sets, and the io map base it sets. They read the
+            // TSS object, never the descriptor, so a descriptor that pointed somewhere else would disagree with them.
+            uint32_t TaskStateBase() const;
+            uint32_t TaskStateLimit() const;
+            uint32_t TaskStateSelector() const;
+            uint32_t TaskStateRing0Selector() const;
+            uint32_t TaskStateIoMapBase() const;
+            uint32_t TaskStateKernelStack() const;
+            bool TaskStateIsLoaded() const;
+            // The GDT's own extent, as the runtime laid it out.
+            uint32_t DescriptorTableBase() const;
+            uint32_t DescriptorTableLimit() const;
+
             // A read-only view of what the task register and the TSS descriptor actually say, taken by executing the
             // instructions that read them. Nothing here is stored at load time and echoed back: STR and SGDT read the
             // hardware's own copy, and the descriptor bytes are read from the GDT the base points at.

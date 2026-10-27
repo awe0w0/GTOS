@@ -180,10 +180,16 @@ uint32_t GlobalDescriptorTable::ObserveTaskRegister(TaskRegisterObservation& out
     // ---------------------------------------------------------------- the selector, before anything is indexed by it
     // The index below is only a GDT offset if the selector names the GDT. Each of these refusals happens before the offset is
     // computed, so a selector that names the LDT cannot be used to read a GDT slot it does not address.
+    //
+    // The order is the selector's own validity first, then equality. Written the other way round, the equality test
+    // subsumes both of the others: the runtime loads a ring-0 GDT selector, so any selector whose TI or RPL differs also
+    // differs from the expected value, and the equality test would fire first every time. The TI and RPL obligations would
+    // then be unreachable code that no case could ever attribute. Judging the observed selector on its own terms first
+    // means each condition reports itself, and equality remains the check that the register still holds what was loaded.
     if (!out.read_ok) { fail("the machine-level reads did not execute"); (void)before; return failureCount; }
-    if (out.str_selector != expectedSelector) { fail("the task register selector is not the one that was loaded"); (void)before; return failureCount; }
     if (out.str_ti != 0) { fail("the task register selector names the LDT, not the GDT"); (void)before; return failureCount; }
     if (out.str_rpl != 0) { fail("the task register selector has a ring other than 0"); (void)before; return failureCount; }
+    if (out.str_selector != expectedSelector) { fail("the task register selector is not the one that was loaded"); (void)before; return failureCount; }
 
     // ---------------------------------------------------------------- the descriptor, read only when it is safe to
     // A descriptor occupies eight bytes. The offset is computed in 64 bits so a selector near the top of the range cannot
@@ -266,4 +272,29 @@ void GlobalDescriptorTable::LoadTaskState(uint32_t top) {
         #endif
         taskStateLoaded = true;
     }
+}
+
+// The runtime's own task-state identity. Each of these reads the object the runtime initialised and never the descriptor
+// being examined, so a caller that states its expectations from here compares the descriptor against the state rather than
+// against itself.
+uint32_t GlobalDescriptorTable::TaskStateBase() const {
+    return (uint32_t)(__SIZE_TYPE__)&taskState;
+}
+uint32_t GlobalDescriptorTable::TaskStateLimit() const {
+    return (uint32_t)(sizeof(TaskStateSegment) - 1);
+}
+uint32_t GlobalDescriptorTable::TaskStateSelector() const {
+    // The selector LoadTaskState loads is the task descriptor's offset in this table, which is what a descriptor index
+    // means. Taking it from the layout rather than from a literal keeps the two from drifting apart.
+    return (uint16_t)((uint8_t *)&taskSegmentSelector - (uint8_t *)this);
+}
+uint32_t GlobalDescriptorTable::TaskStateRing0Selector() const { return taskState.ss0; }
+uint32_t GlobalDescriptorTable::TaskStateIoMapBase() const { return taskState.ioMapBase; }
+uint32_t GlobalDescriptorTable::TaskStateKernelStack() const { return taskState.esp0; }
+bool GlobalDescriptorTable::TaskStateIsLoaded() const { return taskStateLoaded; }
+uint32_t GlobalDescriptorTable::DescriptorTableBase() const {
+    return (uint32_t)(__SIZE_TYPE__)this;
+}
+uint32_t GlobalDescriptorTable::DescriptorTableLimit() const {
+    return (uint32_t)(7 * sizeof(SegmentDescriptor) - 1);
 }
