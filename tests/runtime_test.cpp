@@ -999,10 +999,9 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         // moved from free to allocated and the sum counts both sides.
         ExpectHex(leaked.allocatedFrames + leaked.freeFrames, seededSum,
                   "the leak conserves allocated + free, which is why the sum cannot see it");
-        // (b) The other check 139 used. Four is divisible by four, so a divisibility test passes too.
-        ExpectHex(leaked.allocatedFrames % 4U, 0,
-                  "the leak leaves the allocated count divisible by four");
-        // (c) And the count did move, which the sum hid. This is the part a sum-only check never reads.
+        // (b) And the count did move, which the sum hid. This is the part a sum-only check never reads. The leak here is
+        // one frame, so divisibility would not be the interesting test at this size; the second half of this case leaks
+        // four, which is the size at which divisibility passes and the sum still does.
         ExpectHex(leaked.allocatedFrames, seeded.allocatedFrames + 1,
                   "the leak is visible in the allocated count, one frame");
         ExpectHex(leaked.freeFrames, seeded.freeFrames - 1,
@@ -1037,7 +1036,12 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         const PhysicalMemoryStatistics leaked2 = frames2.getStatistics();
         ExpectHex(leaked2.allocatedFrames + leaked2.freeFrames, seeded2.allocatedFrames + seeded2.freeFrames,
                   "the four-frame leak also conserves the sum");
-        ExpectHex(leaked2.allocatedFrames % 4U, 0, "the four-frame leak also stays divisible by four");
+        ExpectHex(leaked2.allocatedFrames - seeded2.allocatedFrames, 4, "the leak is exactly four frames");
+        // Four frames on top of a seeded baseline of zero leaves the count divisible by four, which is the arithmetic
+        // coincidence 139 relied on. The assertion is stated against the seeded count so that it says what it means if the
+        // seed ever changes.
+        ExpectHex(leaked2.allocatedFrames % 4U, seeded2.allocatedFrames % 4U,
+                  "the four-frame leak leaves the count as divisible by four as it started");
         CaptureFrameSet(frames2);
         Expect(frameSetComplete, "the second frame walk covered every addressable frame");
         DiffFrameSet(baseline2, baseline2Count);
