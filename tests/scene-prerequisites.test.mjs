@@ -1,288 +1,242 @@
-// GTOS-DSH-138 S: the scene prerequisite set, and the argv that cannot be obtained without an admission.
+// GTOS-DSH-139 T: the prerequisite set is a set, and its members are read.
 //
-// Before this packet, `admitScene` took a list of `{path, sha256, ok}` prerequisites. That shape has one defect: `ok` is
-// the caller's own word. A caller that wrote `ok: true` next to a path satisfied the gate, and the ten things the gate is
-// supposed to stand for — the contract, the producer closure, the dependency chain, the link input read, the typed
-// terminal, the default link, the static image, the host tests, the tooling subject and the runtime environment — collapsed
-// into one fact: "some JSON parsed".
+// This file is the companion to tests/prerequisite-consumption.test.mjs. That one is about what a single role consumer
+// does with the artifacts it is handed; this one is about the set as a whole — which roles must be present, what makes a
+// member wrong, and what it means for ten members to be one claim rather than ten green lights.
 //
-// This test proves the replacement, in the order that matters:
-//
-//   1. a complete set of ten real records is admitted, and each role's own fact is read from the record, not from `ok`;
-//   2. every role is required: omitting any one of the ten is refused, and the refusal names the role;
-//   3. each way a member can be wrong is refused with its own obligation — absent, empty, drifted, not JSON, wrong kind,
-//      another task's record, a duplicate, a role this packet does not declare, and a member that is only `ok: true`;
-//   4. a record whose file changed after the caller read it is refused, so the gate reads the disk rather than the claim;
-//   5. `sceneArgv` has no argv for an object that did not come from `admitScene`, so a hand-made `{admitted: true}` cannot
-//      reach the emulator.
-//
-// The fixtures live under the packet's own test-only root and are written once. Nothing here reads or writes a business
-// path, and nothing here launches anything.
+// 138 wrote the positive case here as ten hand-written JSON records: a source list naming `src/a.cpp`, a tool list naming
+// `/p/g++`, `all_match: true`, `slots_read: 61`, and an empty pin object. Every one of those was a declaration, and the
+// checks read the declaration. This file now builds its positive case from bytes: tests/prerequisite-substrate.mjs writes
+// the files, hashes them after writing, and the members carry those hashes. The difference is the whole point — the old
+// positive case would pass a gate that opened nothing, and this one cannot.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import * as scene from '../tools/scene-admission.mjs';
+import * as SA from '../tools/scene-admission.mjs';
+import { buildSubstrate, membersFrom } from './prerequisite-substrate.mjs';
 
-const R = process.argv[4] || 'F:/GTOS-Chromium/artifacts/native-current-evidence-runtime-seam-closure-and-guest-matrix-20261027-a';
-const TESTONLY = R + '/test-only/scene-prerequisites';
+const R = process.argv[4] || 'F:/GTOS-Chromium/artifacts/native-mandatory-evidence-hardware-recovery-and-portable-closure-20261027-a';
+const OUT = process.argv[3] || null;
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const checks = [];
 const check = (name, ok, detail) => checks.push({ name, ok: !!ok, detail: detail === undefined ? null : detail });
 
-fs.mkdirSync(TESTONLY, { recursive: true });
+const ROOT = path.join(R, 'test-only', 'prereq-set-' + process.pid + '-' + Date.now());
+const F = buildSubstrate(ROOT);
+const members = membersFrom(F);
+const CTX = { build_started_at: F.buildStartedAt, runner_path: F.tools.find((t) => t.role === 'runner').path };
 
-// A fixture is written once. A rerun that would change it is a refusal, not an overwrite: the case's meaning depends on
-// the bytes it was written with.
-function writeOnce(p, text) {
-  const b = Buffer.from(text, 'utf8');
-  if (fs.existsSync(p)) {
-    const onDisk = fs.readFileSync(p);
-    if (!onDisk.equals(b)) throw new Error('a test-only fixture changed under a fixed name: ' + p);
-    return p;
-  }
+// Write a record into the fixture tree and return the member that names it, so a case can vary exactly one record while
+// the other nine stay the real positive ones.
+let counter = 0;
+function memberFor(role, record) {
+  counter += 1;
+  const p = path.join(ROOT, 'variants', role + '-' + counter + '.json');
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  const b = Buffer.from(JSON.stringify(record, null, 2) + '\n', 'utf8');
   fs.writeFileSync(p, b, { flag: 'wx' });
-  return p;
+  return { role, path: p, sha256: sha(b) };
+}
+function withRecord(role, mutate) {
+  const rec = JSON.parse(JSON.stringify(F.records[role]));
+  mutate(rec);
+  return SA.admitPrerequisiteSet(members.map((m) => (m.role === role ? memberFor(role, rec) : m)), CTX);
+}
+function expectRefusal(name, set, pattern) {
+  const hit = set.problems.find((p) => pattern.test(String(p.why)));
+  check(name, set.complete === false && !!hit, set.problems.map((p) => p.why).slice(0, 3));
 }
 
 // ---------------------------------------------------------------- 1. a complete set of ten real records
-//
-// Each fixture is the shape that role's own production record has. They are deliberately different from one another: if
-// the gate were reading one generic field, one fixture would satisfy all ten.
-const FIXTURES = {
-  source_profile_contract: {
-    kind: 'producer_closure_contract', task: 'GTOS-DSH-138', frozen_before_build: true,
-    sources: [{ path: 'src/a.cpp', sha256: 'a'.repeat(64) }],
-    order_from: { path: 'contract.json', sha256: 'b'.repeat(64) },
-    order: ['a'], headers: ['include/a.h'],
-  },
-  producer_chain: {
-    kind: 'producer_closure', task: 'GTOS-DSH-138', individuals: 2, rebuilt: 2, forwarded: 0,
-    contract_sha256: 'c'.repeat(64),
-    provenance: [{ slot: 1, token: 't1' }, { slot: 2, token: 't2' }],
-  },
-  dependency_chain: {
-    kind: 'link_input_read', task: 'GTOS-DSH-138', slots_read: 61, slots_expected: 61,
-    all_present: true, all_relocatable_i386: true,
-    summary: { depfiles_present: 61, depfiles_with_missing_sources: [] },
-  },
-  link_input_consumption: {
-    kind: 'entry_link', task: 'GTOS-DSH-138',
-    record: {
-      read_set: { roles: ['spec', 'terminal', 'helper_report', 'bridge', 'inner_report', 'raw'],
-        pins: { spec: {}, terminal: {}, helper_report: {}, bridge: {}, inner_report: {}, raw: {} } },
-      elf: { sha256: 'd'.repeat(64) }, map: { sha256: 'e'.repeat(64) },
-    },
-  },
-  typed_terminal_validation: {
-    kind: 'link_gate', task: 'GTOS-DSH-138', ok: true,
-    cases: [{ name: 'baseline', admitted: true }, { name: 'stale', admitted: false }],
-  },
-  default_link: {
-    kind: 'default_link', task: 'GTOS-DSH-138', image_exists: true, link_exit: 0,
-    individuals: 61, elf: 'f'.repeat(64),
-  },
-  static_image: {
-    kind: 'static_image_inspection', task: 'GTOS-DSH-138', elf_type: 2, machine: 3,
-    interp_present: false, dynamic_present: false, inspection_passed: true, entry: 0x100000,
-    multiboot: { offset: 0, flags: 7 }, script_symbols: ['start'],
-    elf: { path: '/var/tmp/x.elf', bytes: 745748, sha256: '1'.repeat(64) },
-  },
-  related_host_tests: {
-    kind: 'host_unit_execution', task: 'GTOS-DSH-138',
-    summary: { all_passed: true, safe_tss_cases_named: 16, runtime_cases_passed: '10/10' },
-  },
-  tooling_subject: {
-    kind: 'runner_pin', task: 'GTOS-DSH-138',
-    subjects: [
-      { role: 'runner', path: '/p/runner.mjs', bytes: 1, sha256: '2'.repeat(64) },
-      { role: 'guard', path: '/p/guard.py', bytes: 1, sha256: '3'.repeat(64) },
-      { role: 'compiler', path: '/p/g++', bytes: 1, sha256: '4'.repeat(64) },
-      { role: 'assembler', path: '/p/as', bytes: 1, sha256: '5'.repeat(64) },
-      { role: 'linker', path: '/p/ld.bfd', bytes: 1, sha256: '6'.repeat(64) },
-      { role: 'emulator', path: '/p/qemu', bytes: 1, sha256: '7'.repeat(64) },
-      { role: 'loader', path: '/p/ld-linux.so.2', bytes: 1, sha256: '8'.repeat(64) },
-    ],
-  },
-  runtime_environment: {
-    kind: 'runtime_materialization', task: 'GTOS-DSH-138', all_match: true,
-    files: 206, bytes: 94050160,
-  },
-};
-
-const paths = {};
-for (const [role, record] of Object.entries(FIXTURES)) {
-  paths[role] = writeOnce(TESTONLY + '/' + role + '.json', JSON.stringify(record, null, 2) + '\n');
-}
-const member = (role, overrides = {}) => ({
-  role, path: paths[role], sha256: sha(fs.readFileSync(paths[role])), record: FIXTURES[role], ...overrides,
-});
-const fullSet = () => scene.REQUIRED_ROLES.map((role) => member(role));
-// The set with one role's member removed, so a case can substitute its own record for that role instead of appending a
-// second member for a role that is already present.
-const without = (role) => fullSet().filter((m) => m.role !== role);
-
-check('the packet declares ten roles', scene.REQUIRED_ROLES.length === 10, scene.REQUIRED_ROLES);
 {
-  const v = scene.admitPrerequisiteSet(fullSet());
-  check('a complete set of ten real records is admitted', v.complete === true, v.problems);
-  check('every role is reported back with the fact it was admitted on',
-    v.roles.length === 10 && v.roles.every((r) => r.fact && r.fact.ok === true),
-    v.roles.filter((r) => !r.fact || !r.fact.ok));
-  // The ten facts are ten different facts, not one. Two roles whose detail is identical would mean the gate read the
-  // same field twice and the set is smaller than it claims.
-  const details = v.roles.map((r) => JSON.stringify(r.fact.detail));
-  check('the ten roles are admitted on ten different facts', new Set(details).size === 10, details);
+  const set = SA.admitPrerequisiteSet(members, CTX);
+  check('a complete set of ten real records is admitted', set.complete === true, set.problems);
+  check('the set reports all ten roles', set.roles.length === 10, set.roles.length);
+  check('the set is bound to one contract, one image and one tool generation',
+    set.binding.bound === true && !!set.binding.contract && !!set.binding.image && !!set.binding.subject,
+    { bound: set.binding.bound });
+  // The facts are ten different facts. A gate that asked "did the JSON parse" ten times would report ten details that are
+  // all the same shape; these are not.
+  const details = set.roles.map((r) => JSON.stringify(r.fact && r.fact.detail));
+  check('the ten roles report ten distinct facts', new Set(details).size === 10, new Set(details).size);
+  check('every role reports a fact it established', set.roles.every((r) => r.fact && r.fact.ok === true),
+    set.roles.filter((r) => !(r.fact && r.fact.ok)).map((r) => r.role));
+  // And the binding is named by several roles rather than asserted once, which is what makes it a binding.
+  check('the contract is named by more than one role', set.binding.named.contract > 1, set.binding.named);
+  check('the image is named by more than one role', set.binding.named.image > 1, set.binding.named);
 }
 
 // ---------------------------------------------------------------- 2. every role is required
-for (const role of scene.REQUIRED_ROLES) {
-  const v = scene.admitPrerequisiteSet(fullSet().filter((m) => m.role !== role));
-  check('omitting ' + role + ' is refused',
-    v.complete === false && v.problems.some((p) => p.obligation === 'prerequisite'
-      && p.why.includes(role)), v.problems);
-}
 {
-  const v = scene.admitPrerequisiteSet([]);
-  check('an empty set is refused once per role, not once overall',
-    v.complete === false && v.problems.length === 10, v.problems.length);
+  for (const role of SA.REQUIRED_ROLES) {
+    const set = SA.admitPrerequisiteSet(members.filter((m) => m.role !== role), CTX);
+    check('omitting the ' + role + ' role is refused by name',
+      set.complete === false && set.problems.some((p) => p.why === 'the required role is omitted: ' + role),
+      set.problems.map((p) => p.why).slice(0, 2));
+  }
+  check('the required set is exactly the ten declared roles', SA.REQUIRED_ROLES.length === 10, SA.REQUIRED_ROLES.length);
+  check('the required set is frozen', Object.isFrozen(SA.REQUIRED_ROLES) === true);
 }
 
 // ---------------------------------------------------------------- 3. each way a member can be wrong
-function expectRefusal(name, members, why) {
-  const v = scene.admitPrerequisiteSet(members);
-  const hit = v.problems.some((p) => p.obligation === 'prerequisite' && String(p.why).includes(why));
-  check(name, v.complete === false && hit, { problems: v.problems });
-}
-expectRefusal('a member that is not an object',
-  [...fullSet(), null], 'not an object');
-expectRefusal('a member that names no role',
-  [...fullSet(), { path: paths.static_image }], 'names no role');
-expectRefusal('a role this packet does not declare',
-  [...fullSet(), member('static_image')].map((m, i) => (i === 10 ? { ...m, role: 'invented_role' } : m)),
-  'does not declare');
-expectRefusal('the same role twice',
-  [...fullSet(), member('static_image')], 'more than once');
-expectRefusal('a role with no path',
-  fullSet().map((m) => (m.role === 'producer_chain' ? { ...m, path: undefined } : m)), 'no path');
-expectRefusal('a role whose file is absent',
-  fullSet().map((m) => (m.role === 'producer_chain' ? { ...m, path: TESTONLY + '/not-here.json' } : m)),
-  'absent on disk');
-expectRefusal('a role record that is empty',
-  [...without('runtime_environment'), { role: 'runtime_environment', path: writeOnce(TESTONLY + '/empty.json', '') }],
-  'empty');
-expectRefusal('a role record that is not JSON',
-  [...without('runtime_environment'),
-    { role: 'runtime_environment', path: writeOnce(TESTONLY + '/not-json.json', 'this is not json\n') }],
-  'not JSON');
-// A record whose bytes changed after the caller read it. The gate reads the disk, so the caller's hash is what is
-// compared, and a mismatch means the file the caller described is not the file that is there now.
-expectRefusal('a role record that changed after it was read',
-  fullSet().map((m) => (m.role === 'dependency_chain' ? { ...m, sha256: 'f'.repeat(64) } : m)),
-  'changed after it was read');
-// The wrong-typed role: a link record filed where the runtime environment belongs. Both are valid JSON of a declared
-// kind, so only a per-role kind check can tell them apart.
-expectRefusal('a record of the wrong kind for its role',
-  // The hash has to be the substituted file's own, or the case would be refused for drift and never reach the kind check.
-  fullSet().map((m) => (m.role === 'runtime_environment'
-    ? { ...m, path: paths.link_input_consumption, sha256: sha(fs.readFileSync(paths.link_input_consumption)) }
-    : m)),
-  'wrong kind');
-expectRefusal('a record that belongs to another task',
-  [...without('runtime_environment'),
-    { role: 'runtime_environment', path: writeOnce(TESTONLY + '/other-task.json',
-      JSON.stringify({ kind: 'runtime_materialization', task: 'GTOS-DSH-131', all_match: true,
-        files: 206, bytes: 94050160 }, null, 2) + '\n') }],
-  'another task');
-// The defect this whole gate replaces: a caller's `ok` is not the fact. The record is the right kind and the right task
-// and carries `ok: true`, and it still has to show the fact.
-expectRefusal('a caller\'s ok alone does not satisfy a role',
-  [...without('related_host_tests'),
-    { role: 'related_host_tests', path: writeOnce(TESTONLY + '/ok-only.json',
-      JSON.stringify({ kind: 'host_unit_execution', task: 'GTOS-DSH-138', ok: true }, null, 2) + '\n') }],
-  'does not show the fact');
-// And each role's fact is its own: a runtime record that is otherwise correct but is not the declared runtime is refused
-// on the numbers, not on the kind.
-expectRefusal('a runtime that is not the declared one',
-  [...without('runtime_environment'),
-    { role: 'runtime_environment', path: writeOnce(TESTONLY + '/runtime-wrong.json',
-      JSON.stringify({ kind: 'runtime_materialization', task: 'GTOS-DSH-138', all_match: true,
-        files: 205, bytes: 94050160 }, null, 2) + '\n') }],
-  'not the declared');
-// A gate that admitted its baseline and refused nothing would be a gate that cannot refuse.
-expectRefusal('a link gate that admitted everything',
-  [...without('typed_terminal_validation'),
-    { role: 'typed_terminal_validation', path: writeOnce(TESTONLY + '/gate-all-admitted.json',
-      JSON.stringify({ kind: 'link_gate', task: 'GTOS-DSH-138', ok: true,
-        cases: [{ name: 'a', admitted: true }, { name: 'b', admitted: true }] }, null, 2) + '\n') }],
-  'admitted more than the baseline');
-// A tooling subject that names a path but no hash is a claim about a file that has since been free to change.
-expectRefusal('a tooling subject with no hash',
-  [...without('tooling_subject'),
-    { role: 'tooling_subject', path: writeOnce(TESTONLY + '/tooling-no-hash.json',
-      JSON.stringify({ kind: 'runner_pin', task: 'GTOS-DSH-138', subjects: [
-        { role: 'runner', path: '/p/r.mjs', bytes: 1, sha256: '2'.repeat(64) },
-        { role: 'guard', path: '/p/g.py', bytes: 1, sha256: '3'.repeat(64) },
-        { role: 'compiler', path: '/p/g++', bytes: 1, sha256: '4'.repeat(64) },
-        { role: 'assembler', path: '/p/as', bytes: 1, sha256: '5'.repeat(64) },
-        { role: 'linker', path: '/p/ld.bfd', bytes: 1, sha256: '6'.repeat(64) },
-        { role: 'emulator', path: '/p/qemu', bytes: 1, sha256: '7'.repeat(64) },
-        { role: 'loader', path: '/p/ld-linux.so.2', bytes: 1 },
-      ] }, null, 2) + '\n') }],
-  'no usable hash');
-// And a subject set that omits a capability is refused by name, so a run under an unnamed tool cannot pass.
-expectRefusal('a tooling subject that omits the emulator',
-  [...without('tooling_subject'),
-    { role: 'tooling_subject', path: writeOnce(TESTONLY + '/tooling-no-emulator.json',
-      JSON.stringify({ kind: 'runner_pin', task: 'GTOS-DSH-138', subjects: [
-        { role: 'runner', path: '/p/r.mjs', bytes: 1, sha256: '2'.repeat(64) },
-        { role: 'guard', path: '/p/g.py', bytes: 1, sha256: '3'.repeat(64) },
-        { role: 'compiler', path: '/p/g++', bytes: 1, sha256: '4'.repeat(64) },
-        { role: 'assembler', path: '/p/as', bytes: 1, sha256: '5'.repeat(64) },
-        { role: 'linker', path: '/p/ld.bfd', bytes: 1, sha256: '6'.repeat(64) },
-        { role: 'loader', path: '/p/ld-linux.so.2', bytes: 1, sha256: '8'.repeat(64) },
-      ] }, null, 2) + '\n') }],
-  'omits the emulator');
+{
+  // Not an object.
+  let set = SA.admitPrerequisiteSet([null, ...members.slice(1)], CTX);
+  expectRefusal('a member that is not an object is refused', set, /not an object/);
 
-// ---------------------------------------------------------------- 4. the argv needs an admission
+  // No role name.
+  set = SA.admitPrerequisiteSet([{ path: F.roleFiles.default_link.path }, ...members.slice(1)], CTX);
+  expectRefusal('a member that names no role is refused', set, /names no role/);
+
+  // A role this packet does not declare.
+  set = SA.admitPrerequisiteSet([...members.slice(1), { role: 'not_a_role', path: F.roleFiles.static_image.path }], CTX);
+  expectRefusal('a role this packet does not declare is refused', set, /does not declare/);
+
+  // The same role twice.
+  set = SA.admitPrerequisiteSet([...members, members[0]], CTX);
+  expectRefusal('a role that appears twice is refused', set, /appears more than once/);
+
+  // No path.
+  set = SA.admitPrerequisiteSet(members.map((m) => (m.role === 'default_link' ? { role: 'default_link' } : m)), CTX);
+  expectRefusal('a member with no path is refused', set, /has no path/);
+
+  // A path that is not on disk.
+  set = SA.admitPrerequisiteSet(members.map((m) => (m.role === 'default_link'
+    ? { role: 'default_link', path: path.join(ROOT, 'nowhere', 'absent.json') } : m)), CTX);
+  expectRefusal('a member whose file is not on disk is refused', set, /absent on disk/);
+
+  // An empty file.
+  const emptyPath = path.join(ROOT, 'variants', 'empty.json');
+  fs.mkdirSync(path.dirname(emptyPath), { recursive: true });
+  fs.writeFileSync(emptyPath, '', { flag: 'wx' });
+  set = SA.admitPrerequisiteSet(members.map((m) => (m.role === 'default_link'
+    ? { role: 'default_link', path: emptyPath, sha256: sha(Buffer.alloc(0)) } : m)), CTX);
+  expectRefusal('a member whose record is empty is refused', set, /record is empty/);
+
+  // Bytes that are not JSON.
+  const notJsonPath = path.join(ROOT, 'variants', 'notjson.json');
+  fs.writeFileSync(notJsonPath, 'this is not json at all\n', { flag: 'wx' });
+  set = SA.admitPrerequisiteSet(members.map((m) => (m.role === 'default_link'
+    ? { role: 'default_link', path: notJsonPath, sha256: sha(fs.readFileSync(notJsonPath)) } : m)), CTX);
+  expectRefusal('a member whose record is not JSON is refused', set, /not JSON/);
+
+  // The caller's hash does not match the bytes.
+  set = SA.admitPrerequisiteSet(members.map((m) => (m.role === 'default_link'
+    ? { ...m, sha256: 'c'.repeat(64) } : m)), CTX);
+  expectRefusal('a member whose bytes changed after the caller read them is refused', set, /changed after it was read/);
+
+  // The wrong kind of record for the role.
+  set = SA.admitPrerequisiteSet(members.map((m) => (m.role === 'static_image'
+    ? { role: 'static_image', path: F.roleFiles.default_link.path, sha256: F.roleFiles.default_link.sha256 } : m)), CTX);
+  expectRefusal('a record of the wrong kind for its role is refused', set, /wrong kind/);
+
+  // A record from another task.
+  set = withRecord('default_link', (r) => { r.task = 'GTOS-DSH-138'; });
+  expectRefusal('a record from another task is refused', set, /belongs to another task/);
+}
+
+// ---------------------------------------------------------------- 4. the 138 regression: ten green records
 //
-// The 138 defect: `sceneArgv` took any object with `admitted: true`. A caller that wrote that literal by hand got the
-// argv, and the emulator launched a scene that had never been admitted. The gate is now the object's provenance, so the
-// refusal is about where the object came from and not about a field it carries.
+// The records 138 accepted. Reproduced so the regression is pinned in the file that used to hold them as the positive
+// case: these are what "green" looked like when nothing was opened.
+const GREEN_138 = {
+  source_profile_contract: { kind: 'producer_closure_contract', sources: [], headers: [], order: [],
+    order_from: { sha256: '' }, frozen_before_build: true },
+  producer_chain: { kind: 'producer_closure', individuals: 61, provenance: [], rebuilt: 61, forwarded: 0 },
+  dependency_chain: { kind: 'link_input_read', slots_read: 61, slots_expected: 61, all_present: true,
+    all_relocatable_i386: true, summary: { depfiles_present: 61, depfiles_with_missing_sources: [] } },
+  link_input_consumption: { kind: 'entry_link',
+    record: { read_set: { roles: ['spec', 'terminal', 'helper_report', 'bridge', 'inner_report', 'raw'], pins: {} },
+      elf: {}, map: {} } },
+  typed_terminal_validation: { kind: 'link_gate', ok: true, cases: [{ admitted: true }], image_exists: true, link_exit: 0 },
+  default_link: { kind: 'default_link', image_exists: true, link_exit: 0, elf: 'image.elf', individuals: 61 },
+  static_image: { kind: 'static_image_inspection', elf_type: 2, machine: 3, interp_present: false,
+    dynamic_present: false, multiboot: { offset: 0, flags: 7 }, inspection_passed: true,
+    elf: { sha256: 'a'.repeat(64) }, entry: '0x100000' },
+  related_host_tests: { kind: 'host_unit_execution',
+    summary: { all_passed: true, safe_tss_cases_named: 16, runtime_cases_passed: '10/10' } },
+  tooling_subject: { kind: 'tool_pin', subjects: ['runner', 'guard', 'compiler', 'assembler', 'linker', 'emulator',
+    'loader'].map((role) => ({ role, path: '/p/' + role, bytes: 1, sha256: 'b'.repeat(64) })) },
+  runtime_environment: { kind: 'runtime_materialization', all_match: true, files: 206, bytes: 94050160 },
+};
 {
-  let threw = null;
-  try {
-    scene.sceneArgv({ admitted: true, scene: 'runtime-init-smp1', vcpus: 1, commandLine: 'serial bootdiag-stop=runtime-init' },
-      { identity: { image: { linux: '/var/tmp/x.elf', bytes: 1, sha256: 'a'.repeat(64) } },
-        logs: { e9: '/tmp/e9.log', serial: '/tmp/serial.log' }, limit: 150 });
-  } catch (e) { threw = e; }
-  check('a hand-made admitted object has no argv',
-    threw !== null && /SCENE/.test(String(threw.message)), threw ? threw.message : null);
-}
-{
-  let threw = null;
-  try { scene.sceneArgv(scene.admitScene({}), { logs: {}, identity: {} }); } catch (e) { threw = e; }
-  check('a refused admission has no argv', threw !== null && /SCENE/.test(String(threw.message)),
-    threw ? threw.message : null);
+  const greenMembers = Object.entries(GREEN_138).map(([role, rec]) =>
+    memberFor(role, { task: 'GTOS-DSH-139', ...rec }));
+  const set = SA.admitPrerequisiteSet(greenMembers, CTX);
+  check('the ten hand-written green records of 138 are refused as a set', set.complete === false, set.complete);
+  check('all ten green roles are refused on their own fact',
+    set.roles.length === 10 && set.roles.every((r) => r.fact && r.fact.ok === false),
+    set.roles.filter((r) => !(r.fact && r.fact.ok === false)).map((r) => r.role));
+  // The refusal has to be about content, not about a missing or unreadable file: these records exist, they parse, and the
+  // caller's hashes match them. So the assertion is the negative one — none of the ten may be refused for absence,
+  // unreadability or drift. What is left is the consumer saying, in its own words, that the record does not show the fact.
+  const structuralOnly = /absent on disk|not JSON|changed after it was read|record is empty|has no path/;
+  const structural = set.roles.filter((r) => r.fact && structuralOnly.test(String(r.fact.why)));
+  check('the green records are refused because they name nothing openable, not because they are absent',
+    structural.length === 0, structural.map((r) => r.role + ': ' + r.fact.why));
+  check('each green record is refused with a reason of its own',
+    new Set(set.roles.map((r) => String(r.fact && r.fact.why))).size === 10,
+    new Set(set.roles.map((r) => String(r.fact && r.fact.why))).size);
 }
 
+// ---------------------------------------------------------------- 5. the binding, broken one way at a time
+{
+  // One role names a different contract. Everything else is valid, so the refusal is the binding's.
+  let set = withRecord('producer_chain', (r) => { r.contract_sha256 = 'f'.repeat(64); });
+  expectRefusal('a set whose members name different contracts is refused', set, /different contract_sha256/);
+
+  // One role names a different image.
+  set = withRecord('default_link', (r) => { r.elf = F.hostElf2; });
+  expectRefusal('a set whose members name different images is refused', set, /different image_sha256/);
+
+  // One role names a different runner. The consumer refuses this on the runner comparison, which is the stricter and more
+  // specific check, and that is the refusal recorded here.
+  const altTool = path.join(ROOT, 'tools', 'other-runner.mjs');
+  fs.mkdirSync(path.dirname(altTool), { recursive: true });
+  fs.writeFileSync(altTool, 'different runner\n', { flag: 'wx' });
+  set = withRecord('tooling_subject', (r) => {
+    const i = r.subjects.findIndex((s) => s.role === 'runner');
+    r.subjects[i] = { role: 'runner', path: altTool, bytes: fs.statSync(altTool).size,
+      sha256: sha(fs.readFileSync(altTool)) };
+  });
+  expectRefusal('a set naming a different runner is refused', set, /runner pin is not the runner that is running/);
+
+  // A set where nothing names the contract is not bound to one.
+  set = SA.admitPrerequisiteSet(members.map((m) => {
+    if (!['source_profile_contract', 'producer_chain', 'dependency_chain', 'link_input_consumption',
+      'typed_terminal_validation', 'default_link', 'static_image', 'related_host_tests'].includes(m.role)) return m;
+    const rec = JSON.parse(JSON.stringify(F.records[m.role]));
+    delete rec.contract_sha256;
+    return memberFor(m.role, rec);
+  }), CTX);
+  check('a set in which no role names the contract is refused', set.complete === false
+    && set.problems.some((p) => /no role names the contract/.test(String(p.why))),
+    set.problems.map((p) => p.why).slice(0, 3));
+}
+
+// ---------------------------------------------------------------- 6. the argv needs a real admission
+{
+  const forged = { admitted: true, scene: SA.scene('runtime-init-smp1'),
+    cmdline: SA.commandLine(SA.scene('runtime-init-smp1')), vcpus: 1, problems: [], first_refusal: null };
+  let threw = null;
+  try { SA.sceneArgv(forged, { identity: { image: { linux: '/x' } }, logs: { e9: '/x', serial: '/y' }, limit: 60 }); }
+  catch (e) { threw = e; }
+  check('a forged admission has no argv', threw !== null && /did not come from admitScene/.test(threw.message),
+    threw && threw.message);
+}
+
+// ---------------------------------------------------------------- report
 const failures = checks.filter((c) => !c.ok);
 const report = {
-  task: 'GTOS-DSH-138', kind: 'scene_prerequisite_test',
-  subject: 'tools/scene-admission.mjs',
-  required_roles: scene.REQUIRED_ROLES,
-  fixtures: Object.keys(FIXTURES).map((role) => ({ role, path: paths[role],
-    bytes: fs.statSync(paths[role]).size })),
+  task: 'GTOS-DSH-139', kind: 'scene_prerequisites_test',
+  subject: 'tools/scene-admission.mjs + tools/prerequisite-consumption.mjs',
+  fixture_root: ROOT,
   checks, checks_total: checks.length, checks_failed: failures.length, ok: failures.length === 0,
-  note: 'these are the prerequisite and argv gates in one module, run against real files under this packet own '
-    + 'test-only root. Nothing here launches an emulator, reads a business path, or stands for a guest run.',
 };
-const out = process.argv[2];
-if (out && out !== '--') {
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  if (fs.existsSync(out)) throw new Error('REFUSED exists: ' + out);
-  fs.writeFileSync(out, JSON.stringify(report, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+if (OUT) {
+  fs.mkdirSync(path.dirname(OUT), { recursive: true });
+  fs.writeFileSync(OUT, JSON.stringify(report, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
 }
-console.log(JSON.stringify({ ok: report.ok, checks: report.checks_total, failed: report.checks_failed,
-  failures: failures.map((f) => f.name) }));
+console.log(JSON.stringify({ ok: report.ok, checks: report.checks_total, failed: report.checks_failed }));
 process.exit(report.ok ? 0 : 1);

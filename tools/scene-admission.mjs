@@ -16,6 +16,7 @@
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { consumeRole, bindSet } from './prerequisite-consumption.mjs';
 
 const sha256 = (b) => crypto.createHash('sha256').update(b).digest('hex');
 
@@ -235,12 +236,20 @@ const ROLE_SHAPE = Object.freeze({
 
 // A role member is {role, path, sha256, record}. The record is the parsed bytes the caller read; the bytes on disk are
 // read again here, so a member whose file changed after the caller read it is refused rather than trusted.
-export function admitPrerequisiteSet(members) {
+export function admitPrerequisiteSet(members, context) {
   const problems = [];
   const refuse = (obligation, why) => problems.push({ obligation, why });
+  // A set is a list. `undefined`, `null`, an object, a string — each of these is a caller that did not bring a set, and
+  // the refusal says so rather than falling through to "no problems found".
   if (!Array.isArray(members)) {
     return { complete: false, roles: [], problems: [{ obligation: 'prerequisite',
-      why: 'the prerequisite set is not a list of role members' }] };
+      why: 'the prerequisite set is not a list of role members: it is ' + (members === null ? 'null'
+        : Array.isArray(members) ? 'a list' : typeof members) }] };
+  }
+  // An empty list is not a small set. It is the absence of the set, spelled as a list.
+  if (members.length === 0) {
+    return { complete: false, roles: [], problems: [{ obligation: 'prerequisite',
+      why: 'the prerequisite set is empty; the ten roles are required' }] };
   }
   const byRole = new Map();
   for (const m of members) {
@@ -262,6 +271,7 @@ export function admitPrerequisiteSet(members) {
   }
 
   const roles = [];
+  const consumed = [];
   for (const role of REQUIRED_ROLES) {
     const m = byRole.get(role);
     if (!m) continue;
@@ -290,140 +300,27 @@ export function admitPrerequisiteSet(members) {
         + ', the role needs ' + shape.kind.join(' or '));
       roles.push(row); continue;
     }
-    if (row.task !== null && typeof row.task === 'string' && !/^GTOS-DSH-138$/.test(row.task)) {
+    if (row.task !== null && typeof row.task === 'string' && !/^GTOS-DSH-139$/.test(row.task)) {
       refuse('prerequisite', 'the role record belongs to another task: ' + role + ' ' + row.task);
       roles.push(row); continue;
     }
-    // A caller's `ok` is not the fact. Each role states here what its own record has to show.
-    const fact = roleFact(role, record);
+    // A caller's `ok` is not the fact, and neither is any other field the record wrote about itself. The consumer opens
+    // the artifacts this role is a claim about and reports what it found there.
+    const fact = consumeRole(role, record, context || {});
     row.fact = fact;
     if (!fact.ok) {
       refuse('prerequisite', 'the role record does not show the fact it is filed for: ' + role + ' — ' + fact.why);
     }
+    consumed.push({ role, binding: fact.binding || null });
     roles.push(row);
   }
-  return { complete: problems.length === 0, roles, problems };
-}
-
-// What each role's own record must contain. This is deliberately per role: the point of the set is that the ten facts are
-// ten different facts, and a generic "the JSON parsed" check would make them one.
-function roleFact(role, r) {
-  const bad = (why) => ({ ok: false, why });
-  const good = (detail) => ({ ok: true, detail });
-  switch (role) {
-    case 'source_profile_contract': {
-      // The contract that names the sources, and the order it froze before the build.
-      if (r.kind === 'host_cpp_contract') return good({ units: (r.units || []).length });
-      if (!Array.isArray(r.sources) || r.sources.length === 0) return bad('no source pins');
-      if (!r.order_from || typeof r.order_from.sha256 !== 'string') return bad('no frozen order');
-      if (r.frozen_before_build !== true) return bad('the contract was not frozen before the build');
-      return good({ sources: r.sources.length, order: (r.order || []).length, headers: (r.headers || []).length });
-    }
-    case 'producer_chain': {
-      if (typeof r.individuals !== 'number' || r.individuals === 0) return bad('no individuals');
-      if (!Array.isArray(r.provenance) || r.provenance.length !== r.individuals) {
-        return bad('the provenance does not cover every individual');
-      }
-      if (typeof r.contract_sha256 !== 'string' || !r.contract_sha256) return bad('the closure names no contract');
-      return good({ individuals: r.individuals, rebuilt: r.rebuilt, forwarded: r.forwarded });
-    }
-    case 'dependency_chain': {
-      if (r.slots_read !== 61 || r.slots_expected !== 61) return bad('not all 61 slots were read');
-      if (!r.all_present || !r.all_relocatable_i386) return bad('an input is missing or not a relocatable i386 object');
-      if (!r.summary || r.summary.depfiles_with_missing_sources.length !== 0) {
-        return bad('a depfile names a source that is not on disk');
-      }
-      return good({ slots: r.slots_read, depfiles: r.summary.depfiles_present });
-    }
-    case 'link_input_consumption': {
-      if (!r.record || !r.record.read_set || !Array.isArray(r.record.read_set.roles)) return bad('no read set');
-      if (r.record.refusal) return bad('the link was refused');
-      if (!r.record.elf || !r.record.map) return bad('no ELF and map');
-      const need = ['spec', 'terminal', 'helper_report', 'bridge', 'inner_report', 'raw'];
-      const missing = need.filter((n) => !r.record.read_set.roles.includes(n));
-      if (missing.length) return bad('the entry did not read: ' + missing.join(', '));
-      // Each role in the read set must carry the pin it was read under, or "read" is just a list of words.
-      const unpinned = need.filter((n) => !r.record.read_set.pins || !r.record.read_set.pins[n]);
-      if (unpinned.length) return bad('the read set pins nothing for: ' + unpinned.join(', '));
-      return good({ read_roles: r.record.read_set.roles.length, elf: r.record.elf.sha256 });
-    }
-    case 'typed_terminal_validation': {
-      if (r.kind === 'link_gate') {
-        if (!r.ok) return bad('the gate did not admit its baseline and refuse a stale claim');
-        if (!Array.isArray(r.cases) || r.cases.filter((c) => c.admitted).length !== 1) {
-          return bad('the gate admitted more than the baseline');
-        }
-        return good({ cases: r.cases.length, admitted: 1 });
-      }
-      if (!r.image_exists) return bad('the default link produced no image');
-      if (r.link_exit !== 0) return bad('the default link did not exit zero');
-      return good({ individuals: r.individuals, elf: r.elf });
-    }
-    case 'default_link': {
-      if (r.kind === 'entry_link') {
-        if (!r.record || !r.record.elf) return bad('the entry link produced no ELF');
-        return good({ elf: r.record.elf.sha256, map: r.record.map ? r.record.map.sha256 : null });
-      }
-      if (!r.image_exists || r.link_exit !== 0) return bad('the default link did not succeed');
-      if (typeof r.elf !== 'string' || !r.elf) return bad('the default link names no image');
-      return good({ individuals: r.individuals, elf: r.elf });
-    }
-    case 'static_image': {
-      if (r.elf_type !== 2 || r.machine !== 3) return bad('not a static i386 ET_EXEC');
-      if (r.interp_present !== false || r.dynamic_present !== false) {
-        return bad('the image carries an interpreter or a dynamic section');
-      }
-      if (!r.multiboot || typeof r.multiboot.offset !== 'number') return bad('no multiboot header');
-      if (r.multiboot.flags !== 7) return bad('the multiboot header does not ask for the declared flags');
-      if (r.inspection_passed !== true) return bad('the inspection did not pass');
-      // The image the record describes must still be the image on disk, or the record describes a former image.
-      if (!r.elf || typeof r.elf.sha256 !== 'string') return bad('the inspection names no image');
-      return good({ entry: r.entry, symbols: (r.script_symbols || []).length, elf: r.elf.sha256 });
-    }
-    case 'related_host_tests': {
-      if (!r.summary || !r.summary.all_passed) return bad('a host unit did not pass');
-      if (!(r.summary.safe_tss_cases_named >= 1)) return bad('the safe-TSS unit named no cases');
-      if (!/^\d+\/\d+$/.test(String(r.summary.runtime_cases_passed))) return bad('the runtime unit reported no case count');
-      return good({ safe_tss_cases: r.summary.safe_tss_cases_named, runtime: r.summary.runtime_cases_passed });
-    }
-    case 'tooling_subject': {
-      // The tools this packet runs under, each with the hash it was at when the record was written. A subject list that
-      // names a path but no hash is a claim about a file that has since been free to change.
-      if (!Array.isArray(r.subjects) || r.subjects.length === 0) return bad('no tooling subjects');
-      const roles = new Set(r.subjects.map((s) => s && s.role));
-      // The capabilities, each of which may be carried by any of the named subjects. The names are the packet's own tool
-      // roles, not a private spelling, so a record that files the compiler as "g++" satisfies "compiler".
-      const CAPABILITY = {
-        runner: ['runner'],
-        guard: ['guard'],
-        compiler: ['compiler', 'g++', 'cc1plus'],
-        assembler: ['assembler', 'as'],
-        linker: ['linker', 'ld.bfd'],
-        emulator: ['emulator'],
-        loader: ['loader', 'bundled_loader'],
-      };
-      for (const [need, names] of Object.entries(CAPABILITY)) {
-        if (!names.some((n) => roles.has(n))) return bad('the tooling subject omits the ' + need);
-      }
-      for (const s of r.subjects) {
-        if (!s || typeof s.path !== 'string' || !s.path) return bad('a tooling subject has no path');
-        if (!(s.bytes > 0) || typeof s.sha256 !== 'string' || s.sha256.length !== 64) {
-          return bad('a tooling subject has no usable hash: ' + String(s.role));
-        }
-      }
-      return good({ subjects: r.subjects.length });
-    }
-    case 'runtime_environment': {
-      if (r.kind === 'runtime_materialization') {
-        if (!r.all_match) return bad('a runtime file did not read back');
-        if (r.files !== 206 || r.bytes !== 94050160) return bad('the runtime is not the declared 206 files / 94050160 bytes');
-        return good({ files: r.files, bytes: r.bytes });
-      }
-      if (!r.ok) return bad('setup did not complete');
-      return good({ roots: r.roots });
-    }
-    default: return bad('no fact is declared for this role');
+  // The ten roles are one claim about one build. A set whose members describe different contracts, images or tool
+  // generations is ten green documents, not a complete prerequisite set.
+  const binding = bindSet(consumed);
+  if (!binding.bound) {
+    for (const p of binding.problems) refuse(p.obligation, p.why);
   }
+  return { complete: problems.length === 0, roles, problems, binding };
 }
 
 // ---------------------------------------------------------------- admission
@@ -477,29 +374,24 @@ export function admitScene(request) {
       refuse('map', 'the request map is not the selected map');
     }
   }
-  // The prerequisite results this packet must have produced, named by path. A missing one is a refusal, because the
-  // scene is not allowed to run on an image whose current chain was never admitted.
-  if (Array.isArray(request.prerequisites)) {
-    for (const p of request.prerequisites) {
-      if (!p || typeof p.path !== 'string') { refuse('prerequisite', 'a prerequisite has no path'); continue; }
-      let b = null;
-      for (let i = 0; i < 20 && b === null; i++) { try { b = fs.readFileSync(p.path); } catch { /* retry */ } }
-      if (b === null) { refuse('prerequisite', 'the prerequisite is absent: ' + p.path); continue; }
-      if (typeof p.sha256 === 'string' && sha256(b) !== p.sha256) {
-        refuse('prerequisite', 'the prerequisite bytes changed: ' + p.path);
-      }
-      if (typeof p.ok === 'boolean' && p.ok !== true) {
-        refuse('prerequisite', 'the prerequisite did not pass: ' + p.path);
-      }
-    }
+  // The prerequisite set is mandatory, and it is mandatory as a whole.
+  //
+  // In 138 this check was `if (request.prerequisites !== undefined)`, and the test beside it asserted that a request
+  // bringing no set at all was still admitted. That is the bypass the whole gate existed to close: a caller that omitted
+  // one property got the scene, and the ten roles never ran. An optional gate is not a gate.
+  //
+  // So absence is refused here, before the set is examined, and the refusal names the obligation rather than reporting an
+  // empty problem list as success. `undefined`, a missing property, `null`, a non-list, and an empty list are five
+  // different spellings of "no set", and each of them is refused with the spelling it used.
+  const hasSet = Object.prototype.hasOwnProperty.call(request, 'prerequisites');
+  if (!hasSet) {
+    return { admitted: false,
+      problems: [{ obligation: 'prerequisite', why: 'the request carries no prerequisite set; the ten roles are required' }],
+      first_refusal: { obligation: 'prerequisite', why: 'the request carries no prerequisite set; the ten roles are required' } };
   }
-  // The role set is the frozen one. A bare list of paths is not the set: it can hold nine roles, or a role twice, or a
-  // record that has nothing to do with the role it is filed under. The obligation is the complete typed set.
-  if (request.prerequisites !== undefined) {
-    const set = admitPrerequisiteSet(request.prerequisites);
-    if (!set.complete) {
-      for (const p of set.problems) refuse(p.obligation, p.why);
-    }
+  const set = admitPrerequisiteSet(request.prerequisites, request.prerequisite_context || {});
+  if (!set.complete) {
+    for (const p of set.problems) refuse(p.obligation, p.why);
   }
 
   const cmdline = commandLine(declared);
@@ -518,6 +410,24 @@ export function admitScene(request) {
 // `admitScene` (the set below is module-private and cannot be added to from outside), and it recomputes the command line
 // from the declared scene rather than believing the one on the object.
 const ADMITTED = new WeakSet();
+
+// The bridge's own gate. A checkpoint starts a machine, and a machine may only be started from a declared scene that
+// `admitScene` returned. This is exported so the launch boundary can ask the question, but it cannot be answered from
+// outside: the WeakSet is module-private, so an object a caller wrote is not in it however faithfully it is shaped.
+export function assertAdmittedScene(admitted) {
+  if (!admitted || typeof admitted !== 'object' || !ADMITTED.has(admitted)) {
+    throw new Error('SCENE: this object did not come from admitScene, so no machine may be started from it');
+  }
+  if (admitted.admitted !== true) throw new Error('SCENE: an unadmitted scene may not start a machine');
+  const declared = scene(admitted.scene.name);
+  if (!declared) throw new Error('SCENE: the admitted scene is not declared: ' + admitted.scene.name);
+  const derived = commandLine(declared);
+  if (admitted.cmdline !== derived) {
+    throw new Error('SCENE: the admitted command line is not the one the scene derives: ' + String(admitted.cmdline)
+      + ' is not ' + derived);
+  }
+  return declared;
+}
 
 export function sceneArgv(admitted, options) {
   if (!admitted || typeof admitted !== 'object' || !ADMITTED.has(admitted)) {

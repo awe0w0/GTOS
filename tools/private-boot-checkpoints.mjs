@@ -8,6 +8,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+// The launch boundary asks the scene module whether the scene it was handed is one that module admitted. It imports the
+// module rather than re-implementing the question, because a second implementation of "is this admitted" is a second
+// answer, and the weaker one wins.
+import * as SA from './scene-admission.mjs';
 
 const need = (ok, text) => { if (!ok) throw Error('BOOT BRIDGE: ' + text); };
 const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length
@@ -254,6 +258,30 @@ export function emulatorRequest(control, authority, options) {
   const vcpus = options.vcpus === undefined ? 1 : options.vcpus;
   // Three vCPUs are allowed for the two-AP scenario only: a BSP and two real APs, each running compiled fixed jobs.
   need(vcpus === 1 || vcpus === 2 || vcpus === 3, 'vCPU count must be 1, 2 or 3, got ' + vcpus);
+
+  // ---------------------------------------------------------------- the launch boundary
+  //
+  // Everything above is a shape check on what the caller passed. It cannot tell a caller who derived an append line from
+  // a declared scene from a caller who typed one, and it cannot see `options.extra` at all — that array is spliced
+  // straight into the argv below, so a caller could hand the emulator any token it liked, `-append yes` included.
+  //
+  // So the boundary requires the admitted scene itself. The object has to be one `admitScene` returned, which is a fact
+  // only the module-private set can answer, and the append line and core count are then checked against what that scene
+  // derives. `extra` is refused outright: a scene's command line is a function of its declaration, so there is nothing
+  // legitimate left for a caller to add.
+  need(options.scene !== undefined && options.scene !== null,
+    'a checkpoint needs the admitted scene it was derived from');
+  const declaredScene = SA.assertAdmittedScene(options.scene);
+  need(!Array.isArray(options.extra) || options.extra.length === 0,
+    'a checkpoint may not carry caller-supplied extra emulator tokens');
+  need(append === SA.commandLine(declaredScene),
+    'the append line is not the one the admitted scene derives: ' + append + ' is not ' + SA.commandLine(declaredScene));
+  need(vcpus === declaredScene.vcpus,
+    'the core count is not the one the admitted scene declares: ' + vcpus + ' is not ' + declaredScene.vcpus);
+  // The image the scene runs has to be the image the identity selected, and the scene declares which stop it expects. A
+  // scene whose marker is not in the append line cannot reach the stop it is admitted for.
+  need(append.includes('bootdiag-stop=' + declaredScene.stop),
+    'the append line does not carry the stop the admitted scene declares: ' + declaredScene.stop);
   const machine = ['-machine', 'pc', '-accel', 'tcg,thread=single', '-cpu', 'qemu32',
     '-smp', String(vcpus), '-m', '128M',
     '-nodefaults', '-no-user-config', '-display', 'none', '-monitor', 'none',

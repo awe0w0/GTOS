@@ -36,6 +36,18 @@ const A = JSON.parse(readBytes(P + '/authority-131.json').toString('utf8'));
 const identityDoc = JSON.parse(readBytes(P + '/identity-131.json').toString('utf8'));
 const identity = identityDoc.identity ? { ...identityDoc, kind: 'selected_image_identity' } : identityDoc;
 
+// Since 139 the prerequisite set is mandatory, so a test that wants an admitted scene has to bring a real one. The
+// substrate builds it from bytes it writes and hashes, so the set this file passes is complete for the same reason a
+// production set is: every role names a file that exists and whose bytes match the pin. Without this the file could only
+// test refusals, and the positive cases — the derived command line, the argv, the observer — would have nowhere to start.
+const { buildSubstrate, membersFrom } = await import('./prerequisite-substrate.mjs');
+const SUB = buildSubstrate(path.join(R, 'test-only', 'scene-sub-' + process.pid + '-' + Date.now()));
+const SUB_MEMBERS = membersFrom(SUB);
+const SUB_CTX = {
+  build_started_at: SUB.buildStartedAt,
+  runner_path: SUB.tools.find((t) => t.role === 'runner').path,
+};
+
 // ---------------------------------------------------------------- 1. the declared scenes
 {
   const names = scene.sceneNames();
@@ -80,6 +92,9 @@ const baseRequest = {
   identity,
   image: identity.image.linux,
   map: identity.map.linux,
+  // The complete current set, from the substrate. Every refusal case below varies one thing against this baseline.
+  prerequisites: SUB_MEMBERS,
+  prerequisite_context: SUB_CTX,
 };
 const admitted = scene.admitScene(baseRequest);
 check('a declared scene is admitted', admitted.admitted === true, admitted.problems);
@@ -137,11 +152,27 @@ expectRefusal('a prerequisite that is absent',
     legacy.admitted === false
       && legacy.problems.some((p) => p.obligation === 'prerequisite'
         && /names no role|required role is omitted/.test(String(p.why))), legacy.problems);
-  // And a request that names no prerequisite set at all is still admitted: the set is a gate the caller has to bring,
-  // not a field this function invents. The packet's own S phase is what brings it.
-  const noSet = scene.admitScene({ ...baseRequest });
-  check('a request that brings no prerequisite set is still admitted by the scene gate alone',
-    noSet.admitted === true, noSet.problems);
+  // And a request that names no prerequisite set is refused.
+  //
+  // 138 asserted the opposite here — `noSet.admitted === true` — on the reasoning that the set is "a gate the caller has
+  // to bring". That reasoning is the bypass: a gate a caller can decline to bring is not a gate, and the ten roles never
+  // ran for any request that omitted one property. 139 makes the set mandatory, and this case now pins the refusal so the
+  // bypass cannot come back through this file.
+  const withoutSet = { ...baseRequest };
+  delete withoutSet.prerequisites;
+  const noSet = scene.admitScene(withoutSet);
+  check('a request that brings no prerequisite set is refused, not admitted',
+    noSet.admitted === false && noSet.first_refusal
+      && noSet.first_refusal.obligation === 'prerequisite'
+      && /carries no prerequisite set/.test(String(noSet.first_refusal.why)), noSet.problems);
+
+  // The other four spellings of absence, each refused at the entry rather than at some later check.
+  for (const [what, value] of [['undefined', undefined], ['null', null], ['empty', []], ['not a list', 'ten roles']]) {
+    const r = scene.admitScene({ ...baseRequest, prerequisites: value });
+    check('a prerequisite set that is ' + what + ' is refused',
+      r.admitted === false && r.first_refusal && r.first_refusal.obligation === 'prerequisite',
+      r.first_refusal);
+  }
 }
 
 // ---------------------------------------------------------------- 3. the argv is built from the scene
