@@ -44,6 +44,31 @@ export const REQUIRED_UNITS = [
 // The records name Linux paths, because the tools that wrote them ran inside the distribution. This consumer runs on the Windows
 // host, so every path is translated before it is opened. The first attempt at this read the Linux form directly and reported every
 // raw channel as absent, which reads like a missing artefact rather than like a translation nobody did.
+// A relocation map says: this record names the original path, the bytes are at this other path. The keys and the values are both
+// in whatever form the record uses, and the comparison is made on the translated form so that a Linux path and its UNC spelling
+// are the same key. A map whose value equals its key is not a relocation, and is refused rather than quietly accepted.
+export function normalizePath(p) {
+  const h = hostPath(p);
+  return typeof h === 'string' ? h.replace(/\//g, '\\').toLowerCase() : h;
+}
+export function aliasResolver(map) {
+  const out = new Map();
+  for (const [from, to] of Object.entries(map || {})) {
+    if (typeof from !== 'string' || typeof to !== 'string') continue;
+    out.set(normalizePath(from), to);
+  }
+  const stats = { supplied: out.size, used: 0, unused: 0, keys: [...out.keys()] };
+  const resolve = (p) => {
+    if (typeof p !== 'string' || !p) return p;
+    const hit = out.get(normalizePath(p));
+    if (hit === undefined) return p;
+    stats.used += 1;
+    return hit;
+  };
+  resolve.stats = stats;
+  return resolve;
+}
+
 export function hostPath(p) {
   if (typeof p !== 'string' || !p) return p;
   if (/^[\\/]{2}[^\\/]/.test(p)) return p.replace(/\//g, '\\');
@@ -101,6 +126,15 @@ export function consumeHostChain(control) {
   const problems = [];
   const spawnBefore = spawnAttempts;
   const c = control || {};
+  // The relocation map, when the caller supplies one. With no map this is the identity function and nothing changes.
+  const resolve = aliasResolver(c.path_aliases);
+  if (c.path_aliases && Object.keys(c.path_aliases).length > 0) {
+    for (const [from, to] of Object.entries(c.path_aliases)) {
+      if (normalizePath(from) === normalizePath(to)) {
+        problems.push({ why: 'the relocation map does not move this path, so it is not a relocation', path: from });
+      }
+    }
+  }
 
   const build = readJson(c.build_record_path, problems, 'build record');
   const contract = readJson(c.contract_path, problems, 'contract');
@@ -115,7 +149,7 @@ export function consumeHostChain(control) {
     if (inputs.length === 0) problems.push({ why: 'the build record names no inputs, so nothing built this ELF that can be checked' });
     for (const input of inputs) {
       seen.build_inputs += 1;
-      const got = identity(input.host_path, problems, 'build input ' + (input.logical || input.host_path));
+      const got = identity(resolve(input.host_path), problems, 'build input ' + (input.logical || input.host_path));
       if (!got) continue;
       const ok = agree(got, { bytes: input.bytes, sha256: input.sha256 }, problems, 'build input ' + input.logical);
       observed.build_inputs.push({ logical: input.logical, role: input.role, bytes: got.bytes, sha256: got.sha256,
@@ -166,7 +200,7 @@ export function consumeHostChain(control) {
 
       // The unit's own ELF, if the contract names one; a unit that names no ELF is a claim about a binary nobody can find.
       if (unit.elf && unit.elf.path) {
-        const got = identity(unit.elf.path, problems, 'ELF for ' + required.role);
+        const got = identity(resolve(unit.elf.path), problems, 'ELF for ' + required.role);
         if (got) {
           const ok = agree(got, unit.elf, problems, 'ELF for ' + required.role);
           unitRow.elf = { bytes: got.bytes, sha256: got.sha256, matches: ok };
@@ -202,7 +236,7 @@ export function consumeHostChain(control) {
           unitRow.cases.push({ ...row, verdict: 'no inner report' });
           continue;
         }
-        const innerId = identity(recorded.path, problems, 'inner report for case ' + want.case);
+        const innerId = identity(resolve(recorded.path), problems, 'inner report for case ' + want.case);
         if (!innerId) { unitRow.cases.push({ ...row, verdict: 'inner report absent' }); continue; }
         seen.inner_reports += 1;
         const innerOk = agree(innerId, { bytes: recorded.bytes, sha256: recorded.sha256 }, problems,
@@ -210,7 +244,7 @@ export function consumeHostChain(control) {
         row.inner_bytes = innerId.bytes;
         row.inner_sha256 = innerId.sha256;
         row.inner_matches_record = innerOk;
-        const inner = readJson(recorded.path, problems, 'inner report for case ' + want.case);
+        const inner = readJson(resolve(recorded.path), problems, 'inner report for case ' + want.case);
         if (!inner) { unitRow.cases.push({ ...row, verdict: 'inner report unreadable' }); continue; }
 
         // What the inner report says about itself.
@@ -250,8 +284,20 @@ export function consumeHostChain(control) {
           }
           const wantArgv = required.selector ? [unitElfLinux, String(want.case)] : [unitElfLinux];
           const same = argv.length === wantArgv.length && wantArgv.every((token, i) => argv[i] === token);
-          if (!same) problems.push({ why: 'the child was launched with a different argv', case: want.case,
-            expected: wantArgv, observed: argv });
+          // With a relocation map the recorded argv names the original path; the resolution of that name is what has to match
+          // the resolved unit ELF, and both the recorded and the resolved forms are kept in the row.
+          const resolvedArgv = argv.map((t) => resolve(t));
+          const resolvedWant = wantArgv.map((t) => resolve(t));
+          const sameResolved = resolvedArgv.length === resolvedWant.length
+            && resolvedWant.every((token, i) => resolvedArgv[i] === token);
+          row.argv = argv;
+          row.argv_resolved = resolvedArgv;
+          if (!same && !sameResolved) problems.push({ why: 'the child was launched with a different argv', case: want.case,
+            expected: wantArgv, observed: argv, resolved_expected: resolvedWant, resolved_observed: resolvedArgv });
+          if (same !== sameResolved) {
+            problems.push({ why: 'the argv agrees with one resolution of the paths and not the other', case: want.case,
+              recorded_matches: same, resolved_matches: sameResolved });
+          }
         }
 
         // The raw channel, at the path the inner report names, with the hash and size the inner report records.
@@ -259,7 +305,7 @@ export function consumeHostChain(control) {
         if (!rawPath) {
           problems.push({ why: 'the inner report names no raw channel', case: want.case });
         } else {
-          const rawId = identity(rawPath, problems, 'raw channel for case ' + want.case);
+          const rawId = identity(resolve(rawPath), problems, 'raw channel for case ' + want.case);
           if (!rawId) { unitRow.cases.push({ ...row, verdict: 'raw absent' }); continue; }
           seen.raw_channels += 1;
           const rawOk = agree(rawId, { bytes: child.output_bytes, sha256: child.output_sha256 }, problems,
@@ -267,7 +313,7 @@ export function consumeHostChain(control) {
           row.raw_bytes = rawId.bytes;
           row.raw_sha256 = rawId.sha256;
           row.raw_matches_inner = rawOk;
-          const text = readBytes(rawPath).toString('utf8');
+          const text = readBytes(resolve(rawPath)).toString('utf8');
           row.carries_case_marker = required.case_marker
             ? new RegExp('CASE ' + want.case + '\\b').test(text) : null;
           if (required.case_marker && !row.carries_case_marker) {
@@ -289,6 +335,19 @@ export function consumeHostChain(control) {
 
   const spawnAfter = spawnAttempts;
   const refused = problems.length > 0;
+  const aliasStats = resolve.stats || { supplied: 0, used: 0, unused: 0, keys: [] };
+  const aliasReport = {
+    supplied: aliasStats.supplied,
+    used: aliasStats.used,
+    keys: aliasStats.keys.length,
+    // A map that was supplied and never used would mean the consumer read the originals, which is the thing this must not do.
+    every_supplied_alias_used: aliasStats.supplied === 0 ? null : aliasStats.used > 0,
+    what: 'the paths the records name, and the relocated path each one was opened at',
+  };
+  if (aliasStats.supplied > 0 && aliasStats.used === 0) {
+    problems.push({ why: 'a relocation map was supplied and no read used it, so the consumer read the originals', aliasReport });
+  }
+  const refused2 = problems.length > 0;
   return {
     task: c.task,
     entry: 'consumeHostChain',
@@ -296,9 +355,10 @@ export function consumeHostChain(control) {
     observed,
     counts: seen,
     problems,
-    refused,
-    accepted: !refused,
+    refused: refused2,
+    accepted: !refused2,
     spawn_attempts: spawnAfter - spawnBefore,
+    path_aliases: aliasReport,
     ok_means: 'every build input, unit ELF, case, inner report, exit layer, argv and raw channel was opened from the path a '
       + 'record names, re-hashed, and compared with what that record claims; the required units and their case counts are this '
       + 'module own constants, so no caller can shrink the requirement',

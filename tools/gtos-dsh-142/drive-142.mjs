@@ -149,7 +149,7 @@ function writeSpec(stage, route, mode, kind, options, limit, extra) {
     report_path: R + '/results/' + stage + '.json',
   };
   const spec = { task: A.task, route, stage, root: R, runnerPath: RUNNER,
-    helper: HELPER, control,
+    helper: (extra && extra.helper) || HELPER, control,
     expected_outputs: [control.report_path], limit, contract_pin: contractPin() };
   const p = R + '/stage-output/' + stage + '.spec.json';
   const text = JSON.stringify(spec, null, 2) + '\n';
@@ -1416,6 +1416,907 @@ if (phase === 'hneg') {
       expected: r.expected, problems: r.problems })), ok: summary.ok }, null, 2));
   process.exit(summary.ok ? 0 : 1);
 }
+
+// ================================================================ scene
+// One guest trial: one scene, one fresh VM, one exclusive stage, one new pair of raw channels. The scene is declared in the
+// frozen admission module and this phase never writes a command line: it names the scene, and the module derives the rest. The
+// prerequisite set is the ten role records this packet wrote, and both the gate in the helper and the bridge at its own launch
+// boundary read the same set.
+//
+// The trial record keeps the transport result, the gate result and the functional result apart, because they answer different
+// questions and neither substitutes for the other: a launch that exited zero and printed nothing is a failed scene.
+if (phase === 'scene') {
+  const stage = process.argv[3];
+  const sceneName = process.argv[4];
+  const prqStage = process.argv[5] || 'tpr142-02';
+  const prqSuffix = process.argv[6] || 'b';
+  const limit = Number(process.argv[7] || 200);
+  const tag = process.argv[8] || '';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const SA = await import('file:///' + BRIDGE.replace(/private-boot-checkpoints-142\.mjs$/, 'scene-admission-142.mjs'));
+  const declared = SA.scene(sceneName);
+  if (!declared) throw new Error('no such declared scene: ' + sceneName);
+
+  // The identity document: the image and the map this packet's link produced, pinned now.
+  const imageLinux = S + '/image/p142-default.elf';
+  const mapLinux = S + '/image/p142-default.map';
+  const imagePin = pin(toHost(imageLinux));
+  const mapPin = pin(toHost(mapLinux));
+  const identityPath = R + '/scene-identity-142.json';
+  const identityDoc = {
+    task: A.task, kind: 'selected_image_identity',
+    what: 'the one image this packet built and the map beside it, selected once and named by every trial',
+    image: { linux: imageLinux, bytes: imagePin.bytes, sha256: imagePin.sha256 },
+    map: { linux: mapLinux, bytes: mapPin.bytes, sha256: mapPin.sha256 },
+    identity: { task: A.task, image_sha256: imagePin.sha256, map_sha256: mapPin.sha256,
+      contract_sha256: contractPin().sha256 },
+  };
+  if (!exists(identityPath)) {
+    fs.writeFileSync(identityPath, JSON.stringify(identityDoc, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  } else {
+    const onDisk = fs.readFileSync(identityPath, 'utf8');
+    if (onDisk !== JSON.stringify(identityDoc, null, 2) + '\n') {
+      throw new Error('REFUSED: the selected identity has changed since it was written: ' + identityPath);
+    }
+  }
+
+  // The ten role records. They are read here only to name their paths; the gate opens them.
+  const ROLE_ORDER = ['source_profile_contract', 'producer_chain', 'dependency_chain', 'link_input_consumption',
+    'typed_terminal_validation', 'default_link', 'static_image', 'related_host_tests', 'tooling_subject',
+    'runtime_environment'];
+  const members = ROLE_ORDER.map((role) => ({ role, path: R + '/role-' + role + '-142' + prqSuffix + '.json' }));
+  for (const m of members) if (!exists(m.path)) throw new Error('absent role record: ' + m.path);
+  const prqRecord = R + '/t-prerequisites-' + prqStage + '-142.json';
+  if (!exists(prqRecord)) throw new Error('absent prerequisite record: ' + prqRecord);
+  const prq = JSON.parse(fs.readFileSync(prqRecord, 'utf8'));
+  if (prq.admission && prq.admission.complete !== true) {
+    throw new Error('the prerequisite set was not complete when it was last judged');
+  }
+
+  // The two channels live under the work root, which is the directory the guard confines the emulator to. A log written
+  // anywhere else is refused by the guard own landlock rule, and the emulator exits before it starts a machine.
+  const logsLinux = { e9: L + '/logs/' + stage + '.e9.log', serial: L + '/logs/' + stage + '.serial.log' };
+  const logsHost = { e9: toHost(logsLinux.e9), serial: toHost(logsLinux.serial) };
+  for (const p of [logsHost.e9, logsHost.serial]) {
+    if (exists(p)) throw new Error('REFUSED: the channel already exists, so this would not be a fresh VM: ' + p);
+  }
+  const sceneRequest = {
+    scene: sceneName,
+    identity: identityDoc,
+    image: imageLinux, map: mapLinux,
+    prerequisites: members,
+    prerequisite_context: { ledger_path: ORDER_LOG, contract_path: R + '/contract-142.json', runner_path: RUNNER },
+  };
+  const options = {
+    scene_module_path: HERE + '/references/scene-admission-142.mjs',
+    image: imageLinux,
+    identity: identityDoc,
+    image_pin: { bytes: imagePin.bytes, sha256: imagePin.sha256 },
+    logs: logsLinux, logs_host: logsHost,
+    vcpus: declared.vcpus,
+    append: SA.commandLine(declared),
+    scene_request: sceneRequest,
+    session: { task: A.task, stage, scene: sceneName, trial: tag || null },
+    limit,
+  };
+  freezeContractInLedger();
+  const spec = writeSpec(stage, 'vm.checkpoint', 'vm-checkpoint', 'checkpoint', options, limit + 120,
+    { helper: 'scene-142-01.mjs' });
+  const r = run(spec);
+  out.push(r);
+
+  // Three records, three authors. The helper writes the gate answer, the functional verdict and the channel readings to the
+  // report path the spec declared; the bridge writes its own report to the evidence path, because the two are different
+  // claims; and the runner writes the reservation, the terminal and its own transport verdict. Reading any one of them as if
+  // it were another is how a scene "passes" without being judged.
+  const evPath = R + '/evidence/' + stage + '.json';
+  const resPath = R + '/results/' + stage + '.json';
+  const runPath = R + '/result-' + stage + '-142.json';
+  const ev = exists(evPath) ? JSON.parse(fs.readFileSync(evPath, 'utf8')) : null;
+  const res = exists(resPath) ? JSON.parse(fs.readFileSync(resPath, 'utf8')) : null;
+  const runnerRec = exists(runPath) ? JSON.parse(fs.readFileSync(runPath, 'utf8')) : null;
+  // The channels as the disk has them now, hashed here rather than taken from the helper's report.
+  const chan = (p) => {
+    if (!exists(p)) return { path: p, present: false };
+    const b = fs.readFileSync(p);
+    return { path: p, present: true, bytes: b.length, sha256: sha(b), text: b.toString('utf8') };
+  };
+  const e9 = chan(logsHost.e9);
+  const serial = chan(logsHost.serial);
+  // The resource judge, applied to the trial's own two channels. It is the same function the negatives call, on the same two
+  // strings, so a trial that passes here would also pass there and a negative that is refused there is refused by the rule this
+  // trial was held to. Scenes the judge has no obligations for are recorded as not covered rather than as accepted.
+  let resource = null;
+  try {
+    const RJ = await import('file:///' + HERE + '/references/resource-semantics-142.mjs');
+    if (RJ.RESOURCE_SCENES[sceneName] || RJ.RESOURCE_REFUSALS[sceneName]) {
+      resource = RJ.judgeResourceSemantics(sceneName, { e9: e9.text || '', serial: serial.text || '' });
+    }
+  } catch (err) {
+    resource = { accepted: false, problems: [{ obligation: 'judge', why: String(err && err.message) }], counts: null };
+  }
+  const trial = {
+    task: A.task, stage, scene: sceneName, trial: tag || null,
+    declared: { vcpus: declared.vcpus, stop: declared.stop, flags: declared.flags,
+      required_marker: declared.required_marker, permits: declared.permits, forbids: declared.forbids },
+    append: options.append,
+    image: { linux: imageLinux, bytes: imagePin.bytes, sha256: imagePin.sha256 },
+    map: { linux: mapLinux, bytes: mapPin.bytes, sha256: mapPin.sha256 },
+    identity: pin(identityPath),
+    prerequisites: { record: pin(prqRecord), members: members.length },
+    spec: pin(spec),
+    result: exists(resPath) ? pin(resPath) : null,
+    evidence: exists(evPath) ? pin(evPath) : null,
+    runner: exists(runPath) ? pin(runPath) : null,
+    runner_ok: runnerRec ? runnerRec.ok === true : null,
+    runner_lifecycle: runnerRec ? runnerRec.lifecycle : null,
+    gate: res ? res.gate : null,
+    launch: res ? res.launch : null,
+    transport: res ? res.transport : null,
+    bridge_verdict: res ? res.bridge_verdict || null : null,
+    functional: res ? res.functional : null,
+    inner_report: res ? res.inner_report : null,
+    raw: res ? res.raw : null,
+    channels: {
+      e9: { path: e9.path, linux_path: logsLinux.e9, present: e9.present, bytes: e9.bytes || 0,
+        sha256: e9.sha256 || null, lines: e9.present ? e9.text.split('\n').length : 0 },
+      serial: { path: serial.path, linux_path: logsLinux.serial, present: serial.present,
+        bytes: serial.bytes || 0, sha256: serial.sha256 || null,
+        lines: serial.present ? serial.text.split('\n').length : 0 },
+    },
+    resource_semantics: resource,
+    ok: !!(runnerRec && runnerRec.ok === true && res && res.ok === true
+      && res.functional && res.functional.accepted === true && res.gate && res.gate.admitted === true
+      && (resource === null || resource.accepted === true)),
+    ok_means: 'the gate admitted the declared scene, the bridge admitted the same request at its own boundary, the machine '
+      + 'ran under the frozen emulator and exited, both channels carry the marker the scene declares with no forbidden '
+      + 'event, and where the scene has resource obligations the production resource judge accepted the same two channels; '
+      + 'the transport result and the functional result are recorded separately',
+  };
+  const target = R + '/g-trial-' + stage + '-142.json';
+  if (exists(target)) throw new Error('REFUSED: ' + target + ' already exists');
+  fs.writeFileSync(target, JSON.stringify(trial, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, scene: sceneName, ok: trial.ok,
+    gate_admitted: res && res.gate ? res.gate.admitted : null,
+    functional: res && res.functional ? { accepted: res.functional.accepted,
+      first_refusal: res.functional.first_refusal, channels: res.functional.channels } : null,
+    transport: res ? res.transport : null,
+    channels: { e9: trial.channels.e9.bytes, serial: trial.channels.serial.bytes },
+    detail: r.detail.slice(0, 300),
+    record: pin(target) }, null, 2));
+  process.exit(trial.ok ? 0 : 1);
+}
+
+// ================================================================ matrix
+// The whole restricted matrix, run as one sequence of independent trials. Each trial is a separate invocation of the scene phase,
+// so each one claims its own stage, freezes its own helper, starts its own machine and writes its own pair of channels. Nothing is
+// shared between trials except the image and the prerequisite set, which are supposed to be shared: a repeat that reused a
+// previous trial's log would not be a second cold start.
+//
+// The requirement is declared here and compared with what was actually launched. It is not derived from the list of scenes that
+// happen to exist, and a trial that is missing is a failure rather than a smaller matrix.
+if (phase === 'matrix') {
+  const stage = process.argv[3];
+  // The first trial number is checked rather than coerced. A caller that passed the prerequisite stage where the number belongs
+  // produced `gm142-NaN` for every trial in a first attempt, which is a stage name the registry would refuse and a matrix that
+  // says nothing; refusing it here is cheaper than reading a matrix whose stages have no names.
+  const first = Number(process.argv[4] === undefined ? 1 : process.argv[4]);
+  if (!Number.isInteger(first) || first < 1) throw new Error('the first trial number is not a positive integer: ' + process.argv[4]);
+  const prqStage = process.argv[5] || 'tpr142-02';
+  const prqSuffix = process.argv[6] || 'b';
+  // The halt deadline. The machine stops itself at the scene stop within a couple of seconds; this is the cap the guard kills
+  // it at, so a small cap costs nothing and a large one costs that many seconds per trial. It is recorded per trial.
+  const limit = Number(process.argv[7] === undefined ? 40 : process.argv[7]);
+  // An optional comma-separated scene filter. A filtered run covers only the scenes it names, records that it was filtered,
+  // and does not claim the whole table; the unfiltered run is the one that has to cover every declared scene.
+  const onlyArg = (process.argv[8] || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const only = onlyArg.length ? new Set(onlyArg) : null;
+  if (!Number.isInteger(limit) || limit < 10) {
+    throw new Error('the halt deadline is not a usable number of seconds: ' + process.argv[7]);
+  }
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+
+  // scene, trials. The taskbook sets a floor per scene, not a count: the two recovery scenes and the two worker multi-core scenes
+  // have to be seen at least twice from independent cold starts, and every other scene once.
+  const REQUIRED = [
+    ['runtime-init-smp1', 2], ['runtime-objects-smp1', 2], ['runtime-recovery-smp1', 2],
+    ['runtime-frame-recovery-smp1', 2],
+    ['runtime-init-smp2', 1], ['runtime-init-smp3', 1], ['runtime-objects-smp2', 1], ['runtime-objects-smp3', 1],
+    ['runtime-recovery-smp2', 1], ['runtime-recovery-smp3', 1],
+    ['runtime-frame-recovery-smp2', 1], ['runtime-frame-recovery-smp3', 1],
+    ['workers-smp1', 1], ['workers-smp2', 2], ['workers-smp3', 2],
+    ['tables-smp1', 1], ['paging-smp1', 1], ['e99-priority', 1],
+  ];
+  const SA = await import('file:///' + HERE + '/references/scene-admission-142.mjs');
+  const declaredNames = SA.sceneNames();
+  const requirement = only ? REQUIRED.filter(([n]) => only.has(n)) : REQUIRED;
+  if (only) {
+    const unknown = [...only].filter((n) => !REQUIRED.some(([r]) => r === n));
+    if (unknown.length) throw new Error('the filter names scenes the requirement does not contain: ' + unknown.join(', '));
+  }
+  const missing = requirement.filter(([n]) => !declaredNames.includes(n)).map(([n]) => n);
+  if (missing.length) throw new Error('the requirement names scenes this packet does not declare: ' + missing.join(', '));
+  // Every declared scene has to appear in the requirement, or the matrix would be smaller than the declaration without saying so.
+  // A filtered run is exempt from that, because it says which scenes it covered and its record names the filter.
+  const unrequired = only ? [] : declaredNames.filter((n) => !REQUIRED.some(([r]) => r === n));
+  if (unrequired.length) throw new Error('a declared scene is not in the requirement: ' + unrequired.join(', '));
+
+  let n = first;
+  const rows = [];
+  for (const [sceneName, trials] of requirement) {
+    for (let t = 1; t <= trials; t++) {
+      const trialStage = 'gm142-' + String(n).padStart(2, '0');
+      n += 1;
+      const spec = [HERE + '/drive-142.mjs', 'scene', trialStage, sceneName, prqStage, prqSuffix, String(limit),
+        sceneName + '-t' + t];
+      orderEvent('run-started', { stage: trialStage });
+      const r = spawnSync(NODE, spec, { windowsHide: true, timeout: 1800000, maxBuffer: 32 * 1024 * 1024 });
+      const outText = (r.stdout || '').toString();
+      orderEvent('run-completed', { stage: trialStage, status: r.status, ok: r.status === 0 });
+      let rec = null;
+      const recPath = R + '/g-trial-' + trialStage + '-142.json';
+      if (exists(recPath)) { try { rec = JSON.parse(fs.readFileSync(recPath, 'utf8')); } catch { rec = null; } }
+      // The inner report is the guard's own record of the process it started, and it carries the process group it measured. That
+      // number is what makes "a second, independent machine" observable rather than asserted: two trials that reported the same
+      // group would be one launch counted twice.
+      const innerPath = L + '/logs/inner-report-' + trialStage + '.json';
+      let inner = null;
+      if (exists(toHost(innerPath))) { try { inner = JSON.parse(fs.readFileSync(toHost(innerPath), 'utf8')); } catch { inner = null; } }
+      rows.push({
+        scene: sceneName, trial: t, stage: trialStage, halt_deadline_seconds: limit,
+        record: exists(recPath) ? pin(recPath) : null,
+        ok: !!(rec && rec.ok === true), status: r.status,
+        gate: rec && rec.gate ? rec.gate.admitted : null,
+        functional: rec && rec.functional ? rec.functional.accepted : null,
+        marker: rec && rec.functional ? rec.functional.marker_present : null,
+        e9: rec ? { path: rec.channels.e9.linux_path, bytes: rec.channels.e9.bytes,
+          sha256: rec.channels.e9.sha256 } : null,
+        serial: rec ? { path: rec.channels.serial.linux_path, bytes: rec.channels.serial.bytes,
+          sha256: rec.channels.serial.sha256 } : null,
+        transport_exit: rec && rec.transport ? rec.transport.exit_code : null,
+        runner_ok: rec ? rec.runner_ok : null,
+        resource: rec && rec.resource_semantics ? { accepted: rec.resource_semantics.accepted,
+          checked: rec.resource_semantics.counts ? rec.resource_semantics.counts.checked : null,
+          first_refusal: rec.resource_semantics.first_refusal } : null,
+        vm: inner ? { process_group: inner.child.group_pgid, raw: inner.child.output_path,
+          elapsed_seconds: inner.child.elapsed_seconds } : null,
+        stderr: String(r.stderr || '').replace(/\n/g, ' | ').slice(0, 300),
+      });
+      console.log(JSON.stringify({ stage: trialStage, scene: sceneName, trial: t, ok: rows[rows.length - 1].ok }));
+    }
+  }
+  // The matrix is judged as a whole: every required scene present, the required number of independent trials each, and every
+  // trial's own gate, functional verdict and runner verdict green.
+  const problems = [];
+  for (const [sceneName, trials] of requirement) {
+    const got = rows.filter((r) => r.scene === sceneName);
+    if (got.length !== trials) problems.push({ why: 'the scene ran a different number of trials', scene: sceneName,
+      required: trials, ran: got.length });
+    const bad = got.filter((r) => !r.ok);
+    if (bad.length) problems.push({ why: 'a trial did not pass', scene: sceneName, stages: bad.map((r) => r.stage) });
+    // Independence is judged on the process group the guard measured, not on the bytes. Two cold boots of one deterministic
+    // guest are supposed to produce the same log; demanding that they differ would be demanding that the guest behave
+    // differently, and the earlier version of this check said exactly that. What has to differ is the launch: a different
+    // stage, a different pair of channel files, a different process group, a different record.
+    const groups = got.map((r) => r.vm && r.vm.process_group).filter((v) => typeof v === 'number');
+    if (groups.length !== got.length) {
+      problems.push({ why: 'a trial left no measured process group', scene: sceneName });
+    } else if (new Set(groups).size !== groups.length) {
+      problems.push({ why: 'two trials of one scene shared one process group', scene: sceneName, groups });
+    }
+    const e9Paths = got.map((r) => r.e9 && r.e9.path);
+    const serialPaths = got.map((r) => r.serial && r.serial.path);
+    if (new Set(e9Paths).size !== e9Paths.length || new Set(serialPaths).size !== serialPaths.length) {
+      problems.push({ why: 'two trials of one scene shared a channel file', scene: sceneName });
+    }
+    const paths = got.map((r) => r.record && r.record.path);
+    if (new Set(paths).size !== paths.length) problems.push({ why: 'two trials share a record', scene: sceneName });
+  }
+  // Determinism, recorded as a fact rather than judged: whether the repeated trials of one scene produced the same channel
+  // bytes. It is not a pass condition in either direction, and it is reported so the reader does not have to guess.
+  const determinism = requirement.filter(([, trials]) => trials > 1).map(([sceneName]) => {
+    const got = rows.filter((r) => r.scene === sceneName);
+    const hashes = got.map((r) => r.e9 && r.e9.sha256);
+    return { scene: sceneName, trials: got.length, distinct_channel_hashes: new Set(hashes).size,
+      byte_identical: hashes.length > 1 && new Set(hashes).size === 1 };
+  });
+  const summary = {
+    task: A.task, stage,
+    requirement: requirement.map(([scene, trials]) => ({ scene, trials })),
+    filtered_to: only ? [...only] : null,
+    declared_scenes: declaredNames,
+    trials: rows,
+    determinism,
+    problems,
+    counts: { scenes: requirement.length, trials: rows.length, passed: rows.filter((r) => r.ok).length,
+      measured_process_groups: new Set(rows.map((r) => r.vm && r.vm.process_group)).size },
+    ok: problems.length === 0 && rows.every((r) => r.ok),
+    ok_means: 'every declared scene ran the number of independent cold trials the requirement sets, and every trial was admitted '
+      + 'by the gate, accepted by the functional judge on both channels, and recorded by the runner; independence is the '
+      + 'distinct stage, channel pair, record and measured process group of each trial, not a difference in the bytes the '
+      + 'guest prints, which a deterministic guest is expected to repeat',
+  };
+  const target = R + '/g-matrix-' + stage + '-142.json';
+  if (exists(target)) throw new Error('REFUSED: ' + target + ' already exists');
+  fs.writeFileSync(target, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, counts: summary.counts, problems: problems.slice(0, 8), ok: summary.ok }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
+
+
+// ================================================================ rneg
+// The two-sided negatives for the resource judge. One side is a copy of a real trial's two channels, judged with no change:
+// it must be accepted. The other side is the same copy with exactly one thing changed, written to its own file, and judged by
+// the same function: it must be refused, and it must be refused by the obligation the change was aimed at. A negative that is
+// refused for some other reason is reported as such rather than counted as a pass, because a judge that refuses everything
+// would otherwise look perfect here and useless in the trial.
+//
+// The copies are new files in a test-only tree. The originals are read and never written, so a negative cannot destroy the
+// evidence it was made from.
+if (phase === 'rneg') {
+  const stage = process.argv[3];
+  const matrixStage = process.argv[4] || 'gm142-03';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const matrixPath = R + '/g-matrix-' + matrixStage + '-142.json';
+  if (!exists(matrixPath)) throw new Error('no matrix record to draw the real trials from: ' + matrixPath);
+  const matrix = JSON.parse(fs.readFileSync(matrixPath, 'utf8'));
+  const RJ = await import('file:///' + HERE + '/references/resource-semantics-142.mjs');
+  const WORD = { 'OBJECT DIAG': 'OBJECT', 'RECOVERY DIAG': 'RECOVERY', 'FRAMEREC DIAG': 'FRAMEREC' };
+  const OTHER = { OBJECT: 'RECOVERY', RECOVERY: 'FRAMEREC', FRAMEREC: 'OBJECT' };
+
+  // Host form: these copies are written by the Windows side, and a Linux-form path would be created somewhere the
+  // distribution cannot see it.
+  const tree = toHost(S + '/tmp/rsneg-' + stage);
+  const treeLinux = S + '/tmp/rsneg-' + stage;
+  fs.mkdirSync(tree, { recursive: true });
+  const writeOnce = (p, text) => {
+    if (exists(p)) throw new Error('REFUSED: ' + p + ' already exists');
+    fs.writeFileSync(p, text, { encoding: 'utf8', flag: 'wx' });
+    return pin(p);
+  };
+
+  // The scenes the judge covers, each taken from a trial that actually ran and passed in the matrix.
+  const wanted = Object.keys(RJ.RESOURCE_SCENES);
+  const cases = [];
+  const problems = [];
+  for (const sceneName of wanted) {
+    const trial = matrix.trials.find((t) => t.scene === sceneName && t.ok === true);
+    if (!trial) { problems.push({ why: 'no passing trial of this scene in the matrix', scene: sceneName }); continue; }
+    const word = WORD[RJ.RESOURCE_SCENES[sceneName].family];
+    const srcE9 = toHost(L + '/logs/' + trial.stage + '.e9.log');
+    const srcSerial = toHost(L + '/logs/' + trial.stage + '.serial.log');
+    if (!exists(srcE9) || !exists(srcSerial)) {
+      problems.push({ why: 'the trial channels are not on disk', scene: sceneName, stage: trial.stage });
+      continue;
+    }
+    const e9Text = fs.readFileSync(srcE9, 'utf8');
+    const serialText = fs.readFileSync(srcSerial, 'utf8');
+    const dir = tree + '/' + sceneName;
+    fs.mkdirSync(dir, { recursive: true });
+
+    // The positive side: the untouched copy, read back from the copy rather than from the original, so the judge is shown to
+    // depend on the bytes and not on the path they came from.
+    const posE9 = writeOnce(dir + '/positive.e9.log', e9Text);
+    const posSerial = writeOnce(dir + '/positive.serial.log', serialText);
+    const posVerdict = RJ.judgeResourceSemantics(sceneName, {
+      e9: fs.readFileSync(dir + '/positive.e9.log', 'utf8'),
+      serial: fs.readFileSync(dir + '/positive.serial.log', 'utf8'),
+    });
+    cases.push({
+      scene: sceneName, source_trial: trial.stage, side: 'positive', mutation: null,
+      e9: posE9, serial: posSerial,
+      accepted: posVerdict.accepted === true, obligations_checked: posVerdict.counts.checked,
+      first_refusal: posVerdict.first_refusal,
+    });
+    if (posVerdict.accepted !== true) {
+      problems.push({ why: 'the untouched copy of a passing trial was refused', scene: sceneName,
+        first_refusal: posVerdict.first_refusal });
+    }
+
+    for (const m of RJ.MUTATIONS) {
+      const mutated = m.apply(e9Text).replace(/__FAMILY__/g, word).replace(/__OTHER__/g, OTHER[word]);
+      if (mutated === e9Text) {
+        problems.push({ why: 'the mutation changed nothing, so it is not a negative', scene: sceneName, mutation: m.id });
+        continue;
+      }
+      const mdir = dir + '/' + m.id;
+      fs.mkdirSync(mdir, { recursive: true });
+      const mE9 = writeOnce(mdir + '/e9.log', mutated);
+      const mSerial = writeOnce(mdir + '/serial.log', m.id === 'other-channel-differs' ? serialText : mutated);
+      const verdict = RJ.judgeResourceSemantics(sceneName, {
+        e9: fs.readFileSync(mdir + '/e9.log', 'utf8'),
+        serial: fs.readFileSync(mdir + '/serial.log', 'utf8'),
+      });
+      // The obligation the change was aimed at, and whether the refusal actually landed on it. The end-state mutation names a
+      // family of obligations because the three scenes name their end state differently.
+      const hit = verdict.problems.some((p) => (m.targets === 'end==baseline'
+        ? /_equals_baseline$/.test(p.obligation) : p.obligation === m.targets));
+      cases.push({
+        scene: sceneName, source_trial: trial.stage, side: 'negative', mutation: m.id, targets: m.targets,
+        e9: mE9, serial: mSerial, accepted: verdict.accepted === true,
+        refused_by: verdict.first_refusal, right_reason: hit,
+      });
+      if (verdict.accepted === true) {
+        problems.push({ why: 'a mutation was accepted', scene: sceneName, mutation: m.id });
+      } else if (!hit) {
+        problems.push({ why: 'a mutation was refused, but not by the obligation it was aimed at', scene: sceneName,
+          mutation: m.id, aimed_at: m.targets, refused_by: verdict.first_refusal });
+      }
+    }
+  }
+
+  const positives = cases.filter((c) => c.side === 'positive');
+  const negatives = cases.filter((c) => c.side === 'negative');
+  const summary = {
+    task: A.task, stage, matrix: pin(matrixPath),
+    judge: { path: 'tools/gtos-dsh-142/references/resource-semantics-142.mjs',
+      sha256: sha(fs.readFileSync(HERE + '/references/resource-semantics-142.mjs')) },
+    tree, tree_linux: treeLinux,
+    cases,
+    problems,
+    counts: {
+      positives: positives.length, positives_accepted: positives.filter((c) => c.accepted).length,
+      negatives: negatives.length, negatives_refused: negatives.filter((c) => !c.accepted).length,
+      negatives_refused_for_the_aimed_obligation: negatives.filter((c) => c.right_reason).length,
+      accepted_by_mistake: negatives.filter((c) => c.accepted).length,
+    },
+    ok: problems.length === 0 && positives.length === wanted.length && positives.every((c) => c.accepted)
+      && negatives.every((c) => !c.accepted && c.right_reason),
+    ok_means: 'the untouched copy of each resource trial was accepted by the judge, every single-change copy was refused, and '
+      + 'every refusal landed on the obligation the change was aimed at; the same judge function produced the trial verdicts',
+  };
+  const outPath = R + '/r-negatives-' + stage + '-142.json';
+  if (exists(outPath)) throw new Error('REFUSED: ' + outPath + ' already exists');
+  fs.writeFileSync(outPath, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, counts: summary.counts, problems: problems.slice(0, 6), ok: summary.ok }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
+
+
+// ================================================================ dclosure
+// The whole preserved set, moved to a new absolute path, and then read there by the same production consumers that read it in
+// place. Three things are checked and they are different things:
+//
+//   1. Identity. Every member that was copied is hashed on both sides. A member that differs, or that is absent on either side,
+//      is named.
+//   2. Consumption. The consumers are pointed at the relocated bytes only: the depfile closure reader walks the relocated
+//      .o/.d set and every source each depfile names; the host consumer reads the relocated build record, contract, result
+//      records, inner reports and raw channels; the resource judge reads the relocated guest channels. No consumer is given an
+//      original path.
+//   3. Refusal. Seven copies of the relocation are made and in each one exactly one member is removed. Each copy is handed to
+//      the same consumer, which must refuse and must name the member that was removed. A copy whose consumer accepts is
+//      reported as an accepted negative rather than as a pass.
+if (phase === 'dclosure') {
+  const stage = process.argv[3];
+  const matrixStage = process.argv[4] || 'gm142-03';
+  const resStage = process.argv[5] || 'gm142-50';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const root = toHost(S + '/relocated-' + stage);
+  const rootLinux = S + '/relocated-' + stage;
+  if (exists(root)) throw new Error('REFUSED: ' + root + ' already exists');
+  fs.mkdirSync(root, { recursive: true });
+
+  const problems = [];
+  const members = [];
+  // Copy one member and hash both sides. The relocation is physical: the bytes are read from the original and written to the new
+  // path, then both files are hashed again.
+  const copyMember = (srcLinux, relPath, role) => {
+    const src = toHost(srcLinux);
+    if (!exists(src)) { problems.push({ why: 'the original is absent', src: srcLinux, role }); return null; }
+    const dst = root + '/' + relPath;
+    fs.mkdirSync(dst.slice(0, dst.lastIndexOf('/')), { recursive: true });
+    const before = pin(src);
+    fs.copyFileSync(src, dst);
+    const after = pin(dst);
+    const same = before.bytes === after.bytes && before.sha256 === after.sha256;
+    if (!same) problems.push({ why: 'the copy differs from the original', rel: relPath, role, before, after });
+    members.push({ role, rel: relPath, src_linux: srcLinux, bytes: after.bytes, sha256: after.sha256, identical: same });
+    return { dst, after };
+  };
+
+  // ---------------------------------------------------------------- 1. the physical set
+  // The producer objects and their depfiles.
+  const producerDir = S + '/producers/p142b';
+  const producerNames = fs.readdirSync(toHost(producerDir)).filter((f) => /\.(o|d)$/.test(f)).sort();
+  for (const name of producerNames) {
+    copyMember(producerDir + '/' + name, 'producers/' + name, name.endsWith('.o') ? 'producer_object' : 'depfile');
+  }
+  // The source view, every wave, as the compiler saw it.
+  for (const wave of ['wave-01', 'wave-02', 'wave-03', 'wave-04']) {
+    const dir = S + '/' + wave;
+    if (!exists(toHost(dir))) { problems.push({ why: 'a staged source wave is absent', wave }); continue; }
+    const walk = (rel) => {
+      for (const e of fs.readdirSync(toHost(dir + (rel ? '/' + rel : '')), { withFileTypes: true })) {
+        const childRel = rel ? rel + '/' + e.name : e.name;
+        if (e.isDirectory()) { walk(childRel); continue; }
+        copyMember(dir + '/' + childRel, wave + '/' + childRel, 'source_view');
+      }
+    };
+    walk('');
+  }
+  // The profile, which is what turned the sources into objects.
+  for (const name of fs.readdirSync(toHost(R + '/profile-142')).sort()) {
+    const p = R + '/profile-142/' + name;
+    if (fs.statSync(toHost(p)).isFile()) copyMember(p, 'profile/' + name, 'profile');
+  }
+  // The image and its map.
+  copyMember(S + '/image/p142-default.elf', 'image/p142-default.elf', 'image');
+  copyMember(S + '/image/p142-default.map', 'image/p142-default.map', 'image_map');
+
+  // The canonical records this packet froze.
+  const canonical = [
+    ['contract-142.json', 'canonical/contract.json'],
+    ['g-matrix-' + matrixStage + '-142.json', 'canonical/matrix.json'],
+    ['g-matrix-' + resStage + '-142.json', 'canonical/matrix-resource.json'],
+    ['h-contract-142h.json', 'canonical/host-contract.json'],
+    ['h-unit-build-h142f-142.json', 'canonical/host-build-runtime.json'],
+    ['t-prerequisites-tpr142-02-142.json', 'canonical/prerequisites.json'],
+  ];
+  for (const [name, rel] of canonical) copyMember(R + '/' + name, rel, 'canonical_record');
+  for (const name of fs.readdirSync(R).filter((f) => /^role-.*-142b?\.json$/.test(f)).sort()) {
+    copyMember(R + '/' + name, 'canonical/' + name, 'role_record');
+  }
+
+  // The guest chain: for every trial of both matrices, its inner report, its raw child output and its two channels. The resource
+  // matrix is a separate run with its own stage names, so its trials are copied as well rather than assumed to be the same set.
+  const matrix = JSON.parse(fs.readFileSync(R + '/g-matrix-' + matrixStage + '-142.json', 'utf8'));
+  const resMatrixEarly = JSON.parse(fs.readFileSync(R + '/g-matrix-' + resStage + '-142.json', 'utf8'));
+  const guestStages = [...new Set([...matrix.trials.map((t) => t.stage), ...resMatrixEarly.trials.map((t) => t.stage)])];
+  for (const st of guestStages) {
+    for (const [suffix, role] of [['.e9.log', 'guest_channel_e9'], ['.serial.log', 'guest_channel_serial']]) {
+      copyMember(L + '/logs/' + st + suffix, 'guest/' + st + suffix, role);
+    }
+    copyMember(L + '/logs/inner-report-' + st + '.json', 'guest/inner-report-' + st + '.json', 'guest_inner_report');
+    copyMember(L + '/logs/child-output-' + st + '.raw', 'guest/child-output-' + st + '.raw', 'guest_raw');
+  }
+  // The host chain the consumer needs: the result records, the inner reports and the raw channels of the thirteen cases.
+  const hostStages = [];
+  for (let n = 1; n <= 11; n++) hostStages.push('hcase142c-' + String(n).padStart(2, '0'));
+  hostStages.push('bdrun142-01', 'saferun142-01');
+  for (const st of hostStages) {
+    copyMember(R + '/results/' + st + '.json', 'host/results/' + st + '.json', 'host_result');
+    // The host runs keep their logs under the source view, which is the work root the hostunit route was given.
+    copyMember(S + '/unit-run/' + st + '/logs/inner-report-' + st + '.json',
+      'host/logs/inner-report-' + st + '.json', 'host_inner_report');
+    copyMember(S + '/unit-run/' + st + '/logs/child-output-' + st + '.raw',
+      'host/logs/child-output-' + st + '.raw', 'host_raw');
+  }
+  // The three unit ELFs, which the host consumer re-hashes.
+  copyMember(S + '/test-build/h142f/runtime_test.elf', 'host/elf/runtime_test.elf', 'host_unit_elf');
+  copyMember(S + '/test-build/u142/boot_diagnostic.test.elf', 'host/elf/boot_diagnostic.test.elf', 'host_unit_elf');
+  copyMember(S + '/test-build/u142b/safe_tss_test.elf', 'host/elf/safe_tss_test.elf', 'host_unit_elf');
+
+  const counts = {};
+  for (const m of members) counts[m.role] = (counts[m.role] || 0) + 1;
+  const identical = members.filter((m) => m.identical).length;
+
+  // ---------------------------------------------------------------- 2. the depfile closure reader
+  // A depfile is the compiler's own statement of what it read to produce an object. This reader walks the relocated set: every
+  // object must be there, its depfile must be there, and every prerequisite the depfile names must resolve. A prerequisite that
+  // is an absolute path into an earlier packet view must still exist there; one that is relative is resolved against the
+  // relocated source waves, which is where the compiler read it.
+  const readDepfile = (p) => {
+    const text = fs.readFileSync(p, 'utf8').replace(/\\\r?\n/g, ' ');
+    const out = [];
+    for (const line of text.split(/\r?\n/)) {
+      const at = line.indexOf(':');
+      if (at < 0) continue;
+      const target = line.slice(0, at).trim();
+      const rest = line.slice(at + 1).trim();
+      if (!rest) continue;
+      for (const dep of rest.split(/\s+/).filter(Boolean)) out.push({ target, dep });
+    }
+    return out;
+  };
+  const sourceRoots = ['wave-01', 'wave-02', 'wave-03', 'wave-04'].map((w) => root + '/' + w);
+  const resolveDep = (dep) => {
+    if (dep.startsWith('/')) return exists(toHost(dep)) ? { where: 'absolute', path: dep } : null;
+    for (const sr of sourceRoots) {
+      const cand = sr + '/' + dep;
+      if (exists(cand)) return { where: 'relocated_source', path: cand };
+    }
+    return null;
+  };
+  // The depfiles are the authority for the closure. Which objects must have one is not a guess: the profile this packet used
+  // compiles with -MMD, so every object the compiler produced has a depfile, and the only objects it does not produce are the
+  // assembler ones, which the profile names *.asm.o. So an object that is not *.asm.o and has no depfile is a broken closure, and
+  // an object that is *.asm.o and has one is a contradiction. Every depfile's target must exist, and every prerequisite every
+  // depfile names must resolve to a real file.
+  const closure = (relocRoot) => {
+    const objs = fs.readdirSync(relocRoot + '/producers').filter((f) => f.endsWith('.o')).sort();
+    const deps = fs.readdirSync(relocRoot + '/producers').filter((f) => f.endsWith('.d')).sort();
+    const withDepfile = new Set(deps.map((d) => d.replace(/\.d$/, '.o')));
+    const bad = [];
+    let edges = 0;
+    let resolved = 0;
+    const assemblerObjects = objs.filter((o) => /\.asm\.o$/.test(o));
+    for (const obj of objs) {
+      const isAssembler = /\.asm\.o$/.test(obj);
+      if (!isAssembler && !withDepfile.has(obj)) {
+        bad.push({ why: 'a compiled object has no depfile', object: obj, depfile: obj.replace(/\.o$/, '.d') });
+      }
+      if (isAssembler && withDepfile.has(obj)) {
+        bad.push({ why: 'an assembler object has a depfile, which the profile does not produce', object: obj });
+      }
+    }
+    for (const depName of deps) {
+      const depPath = relocRoot + '/producers/' + depName;
+      const parsed = readDepfile(depPath);
+      if (parsed.length === 0) { bad.push({ why: 'the depfile names no target', depfile: depName }); continue; }
+      // The target is the object the compiler was writing. It has to be here.
+      const target = parsed[0].target;
+      const targetBase = target.split('/').pop();
+      if (!exists(relocRoot + '/producers/' + targetBase)) {
+        bad.push({ why: 'the depfile names an object that is absent', depfile: depName, target: targetBase });
+      }
+      for (const edge of parsed) {
+        edges += 1;
+        if (resolveDep(edge.dep)) resolved += 1;
+        else bad.push({ why: 'a prerequisite the depfile names does not resolve', depfile: depName, dep: edge.dep });
+      }
+    }
+    return {
+      objects: objs.length, depfiles: deps.length,
+      objects_with_depfile: objs.filter((o) => withDepfile.has(o)).length,
+      assembler_objects: assemblerObjects.length,
+      assembler_objects_without_depfile: assemblerObjects.filter((o) => !withDepfile.has(o)).length,
+      edges, resolved, problems: bad,
+    };
+  };
+  const closureMain = closure(root);
+  if (closureMain.problems.length) problems.push(...closureMain.problems.slice(0, 10).map((p) => ({ ...p, where: 'closure' })));
+
+  // ---------------------------------------------------------------- 3. the host consumer on relocated bytes
+  // The build record names the files the unit was compiled from. In the relocation those files are at new paths, so a relocated
+  // record is written that names them there, and every alias it states is checked against the hash the original record gave. The
+  // consumer then reads only relocated paths.
+  // The records stay byte-identical. What changes is where their paths point, and that is stated as a map rather than by editing a
+  // record: the consumer opens the relocated bytes and still compares them with the hash the untouched record gives. A record that
+  // had been rewritten to name the relocation would prove nothing, because its own claims would have moved with it.
+  const aliasMap = {};
+  for (const m of members) {
+    const target = root + '/' + m.rel;
+    aliasMap[m.src_linux] = target;
+    const unc = toHost(m.src_linux);
+    if (unc !== m.src_linux) aliasMap[unc] = target;
+  }
+  // Every path the host consumer will read has to be in the map, and each one has to have really moved. Anything the map covers is
+  // checked here so that a read the map misses shows up as a missing alias rather than as a silent read of an original.
+  const hostContract = JSON.parse(fs.readFileSync(R + '/h-contract-142h.json', 'utf8'));
+  const buildReal = JSON.parse(fs.readFileSync(R + '/h-unit-build-h142f-142.json', 'utf8'));
+  const requiredReads = [];
+  for (const input of (buildReal.inputs || [])) requiredReads.push({ what: 'build input ' + input.logical, path: input.host_path });
+  for (const unit of (hostContract.units || [])) {
+    if (unit.elf && unit.elf.path) requiredReads.push({ what: 'unit ELF ' + unit.role, path: unit.elf.path });
+    if (unit.elf_linux) requiredReads.push({ what: 'unit ELF (Linux) ' + unit.role, path: unit.elf_linux });
+    for (const cse of (unit.cases || [])) {
+      requiredReads.push({ what: 'inner report ' + cse.stage, path: S + '/unit-run/' + cse.stage + '/logs/inner-report-' + cse.stage + '.json' });
+      requiredReads.push({ what: 'raw channel ' + cse.stage, path: S + '/unit-run/' + cse.stage + '/logs/child-output-' + cse.stage + '.raw' });
+    }
+  }
+  const unresolved = requiredReads.filter((r) => aliasMap[r.path] === undefined
+    && aliasMap[toHost(r.path)] === undefined && aliasMap[toLinux(r.path)] === undefined);
+  for (const u of unresolved) problems.push({ why: 'a path the consumer will read has no relocated counterpart', what: u.what, path: u.path });
+
+  const relocatedBuildPath = root + '/canonical/host-build-runtime.json';
+  const relocatedContractPath = root + '/canonical/host-contract.json';
+  for (const [orig, dest] of [[R + '/h-unit-build-h142f-142.json', relocatedBuildPath],
+    [R + '/h-contract-142h.json', relocatedContractPath]]) {
+    if (!exists(dest)) problems.push({ why: 'the canonical copy of a record is absent', dest });
+    else if (pin(dest).sha256 !== pin(orig).sha256) problems.push({ why: 'the canonical copy of a record is not the same bytes', dest });
+  }
+
+  const consumeHostChain = (await import('file:///' + HERE + '/host-consume-142.mjs')).consumeHostChain;
+  const hostVerdictOn = (relocRoot, contractPath, buildPath, alias) => consumeHostChain({
+    task: A.task,
+    build_record_path: buildPath,
+    contract_path: contractPath,
+    unit_elf_host_path: relocRoot + '/host/elf/runtime_test.elf',
+    unit_elf_linux: relocRoot.replace(/^.*relocated-/, rootLinux.replace(/^.*relocated-/, 'relocated-')) + '/host/elf/runtime_test.elf',
+    results_dir: relocRoot + '/host/results',
+    path_aliases: alias,
+  });
+  const hostVerdict = hostVerdictOn(root, relocatedContractPath, relocatedBuildPath, aliasMap);
+  if (hostVerdict.accepted !== true) {
+    problems.push({ why: 'the host consumer refused the relocated chain', problems: hostVerdict.problems.slice(0, 6) });
+  }
+
+
+  // ---------------------------------------------------------------- 4. the resource judge on relocated channels
+  const RJ = await import('file:///' + HERE + '/references/resource-semantics-142.mjs');
+  const resMatrix = JSON.parse(fs.readFileSync(R + '/g-matrix-' + resStage + '-142.json', 'utf8'));
+  const judged = [];
+  for (const trial of resMatrix.trials) {
+    if (!RJ.RESOURCE_SCENES[trial.scene]) continue;
+    const e9p = root + '/guest/' + trial.stage + '.e9.log';
+    const sep = root + '/guest/' + trial.stage + '.serial.log';
+    if (!exists(e9p) || !exists(sep)) { problems.push({ why: 'a relocated guest channel is absent', stage: trial.stage }); continue; }
+    const v = RJ.judgeResourceSemantics(trial.scene, { e9: fs.readFileSync(e9p, 'utf8'), serial: fs.readFileSync(sep, 'utf8') });
+    judged.push({ stage: trial.stage, scene: trial.scene, accepted: v.accepted === true, checked: v.counts.checked,
+      first_refusal: v.first_refusal });
+    if (v.accepted !== true) problems.push({ why: 'the resource judge refused relocated channels', stage: trial.stage,
+      first_refusal: v.first_refusal });
+  }
+
+  // ---------------------------------------------------------------- 5. the trial set, judged from the record
+  // The requirement is the packet's, not the record's: six scenes must appear twice, and every declared scene once. A record that
+  // has lost a trial is refused here, which is what makes "the second trial was dropped" a detectable negative.
+  const REQUIRED_TRIALS = {
+    'runtime-init-smp1': 2, 'runtime-objects-smp1': 2, 'runtime-recovery-smp1': 2, 'runtime-frame-recovery-smp1': 2,
+    'workers-smp2': 2, 'workers-smp3': 2,
+  };
+  const checkTrialSet = (record) => {
+    const bad = [];
+    for (const [scene, want] of Object.entries(REQUIRED_TRIALS)) {
+      const got = (record.trials || []).filter((t) => t.scene === scene);
+      if (got.length < want) bad.push({ why: 'the scene has fewer independent trials than the requirement', scene, want, got: got.length });
+      if (new Set(got.map((t) => t.vm && t.vm.process_group)).size !== got.length) {
+        bad.push({ why: 'two trials of the scene share a process group', scene });
+      }
+    }
+    return bad;
+  };
+  const trialSetMain = checkTrialSet(matrix);
+  if (trialSetMain.length) problems.push(...trialSetMain);
+
+  // ---------------------------------------------------------------- 6. the single-condition negatives
+  // Each negative is a fresh copy of the relocation with exactly one thing changed. Two arguments are kept apart on purpose:
+  // what the negative changes, and what the consumer is asked to read. Conflating them is how a "negative" ends up removing the
+  // record its own consumer needs, which refuses for the wrong reason and proves nothing.
+  //
+  // Each negative also states the token the refusal has to contain. A refusal that does not name the thing that was broken is
+  // recorded as such rather than counted as a pass.
+  const negatives = [];
+  const negRoot = toHost(S + '/tmp/dneg-' + stage);
+  const runNegative = (spec) => {
+    const dir = negRoot + '/' + spec.name;
+    fs.mkdirSync(dir, { recursive: true });
+    fs.cpSync(root, dir, { recursive: true });
+    if (spec.remove) {
+      const victim = dir + '/' + spec.remove;
+      if (!exists(victim)) {
+        problems.push({ why: 'the negative could not remove a member that is absent', negative: spec.name, member: spec.remove });
+        return;
+      }
+      fs.rmSync(victim, { force: true });
+    }
+    if (spec.mutate) spec.mutate(dir);
+    const result = spec.run(dir);
+    const found = result.problems || [];
+    const text = JSON.stringify(found);
+    const named = spec.names ? text.includes(spec.names) : true;
+    negatives.push({ negative: spec.name, consumer: spec.consumer, removed: spec.remove || null,
+      changed: spec.changed || null, refused: found.length > 0, names_the_broken_thing: named, first: found[0] || null,
+      count: found.length });
+    if (found.length === 0) problems.push({ why: 'a negative was accepted', negative: spec.name });
+    else if (!named) problems.push({ why: 'a negative was refused without naming what was broken', negative: spec.name,
+      wanted: spec.names, first: found[0] });
+  };
+
+  // A copy of the relocation needs a copy of the map: the keys are the original paths and stay, but every value has to point into
+  // the copy, otherwise the negative would be judged against the main relocation and would be testing nothing.
+  const aliasFor = (dir) => Object.fromEntries(Object.entries(aliasMap).map(([from, to]) => [from, dir + to.slice(root.length)]));
+  const hostOn = (dir) => hostVerdictOn(dir, dir + '/canonical/host-contract.json',
+    dir + '/canonical/host-build-runtime.json', aliasFor(dir));
+
+  // a. one depfile removed. The closure reader walks objects, so an object without its depfile is the refusal, and the depfile's
+  // own name is what the refusal has to carry.
+  const someDep = fs.readdirSync(root + '/producers').filter((f) => f.endsWith('.d')).sort()[0];
+  runNegative({ name: 'depfile-absent', remove: 'producers/' + someDep, consumer: 'depfile closure reader',
+    names: someDep, run: (dir) => ({ problems: closure(dir).problems }) });
+
+  // b. one object removed, with its depfile left in place. The closure reader must notice the object, not the depfile.
+  const someObj = fs.readdirSync(root + '/producers').filter((f) => f.endsWith('.o')).sort()[0];
+  runNegative({ name: 'object-absent', remove: 'producers/' + someObj, consumer: 'depfile closure reader',
+    names: someObj, run: (dir) => {
+      const c = closure(dir);
+      const missing = !exists(dir + '/producers/' + someObj) ? [{ why: 'the object is absent', object: someObj }] : [];
+      return { problems: [...missing, ...c.problems] };
+    } });
+
+  // c. one inner report removed: the host consumer opens it by name.
+  runNegative({ name: 'inner-report-absent', remove: 'host/logs/inner-report-hcase142c-05.json',
+    consumer: 'host consumer', names: 'inner-report-hcase142c-05', run: hostOn });
+
+  // d. one raw channel removed: the host consumer re-hashes it by name.
+  runNegative({ name: 'raw-channel-absent', remove: 'host/logs/child-output-hcase142c-07.raw',
+    consumer: 'host consumer', names: 'child-output-hcase142c-07', run: hostOn });
+
+  // e. one result record removed: the host consumer reads it by stage name.
+  runNegative({ name: 'result-record-absent', remove: 'host/results/hcase142c-03.json',
+    consumer: 'host consumer', names: 'hcase142c-03', run: hostOn });
+
+  // f. one guest channel removed: the resource judge refuses that trial, and its refusal names the obligation that failed.
+  const resTrial = resMatrix.trials.find((t) => RJ.RESOURCE_SCENES[t.scene]);
+  runNegative({ name: 'guest-channel-absent', remove: 'guest/' + resTrial.stage + '.e9.log',
+    consumer: 'resource judge', names: 'channel.e9.non_empty', run: (dir) => {
+      const p = dir + '/guest/' + resTrial.stage + '.e9.log';
+      const sep = dir + '/guest/' + resTrial.stage + '.serial.log';
+      const v = RJ.judgeResourceSemantics(resTrial.scene, { e9: exists(p) ? fs.readFileSync(p, 'utf8') : '',
+        serial: exists(sep) ? fs.readFileSync(sep, 'utf8') : '' });
+      return { problems: v.problems };
+    } });
+
+  // g. the second trial of a repeated scene dropped from the record. Nothing is removed from disk; the record is rewritten in the
+  // copy, and the trial-set check reads it there. This is the "missing second trial" case the taskbook names.
+  runNegative({ name: 'second-trial-dropped', consumer: 'trial set check', names: 'independent trials',
+    changed: 'canonical/matrix.json: one repeat trial of every repeated scene removed',
+    mutate: (dir) => {
+      const rec = JSON.parse(fs.readFileSync(dir + '/canonical/matrix.json', 'utf8'));
+      const seen = new Set();
+      rec.trials = rec.trials.filter((t) => {
+        if (!REQUIRED_TRIALS[t.scene]) return true;
+        if (seen.has(t.scene)) return false;
+        seen.add(t.scene);
+        return true;
+      });
+      fs.writeFileSync(dir + '/canonical/matrix.json', JSON.stringify(rec, null, 2) + '\n');
+    },
+    run: (dir) => ({ problems: checkTrialSet(JSON.parse(fs.readFileSync(dir + '/canonical/matrix.json', 'utf8'))) }) });
+
+  // h. one image byte changed with the size untouched. The same-size drift is the case a size check would miss, so the check
+  // that catches it has to be the hash, and the refusal has to say so.
+  runNegative({ name: 'image-same-size-drift', consumer: 'member identity check', names: 'not the bytes',
+    changed: 'image/p142-default.elf: one byte flipped, size unchanged',
+    mutate: (dir) => {
+      const p = dir + '/image/p142-default.elf';
+      const b = fs.readFileSync(p);
+      const at = Math.floor(b.length / 2);
+      b[at] = b[at] ^ 0x01;
+      fs.writeFileSync(p, b);
+    },
+    run: (dir) => {
+      const after = pin(dir + '/image/p142-default.elf');
+      const original = members.find((m) => m.role === 'image');
+      return { problems: (after.sha256 !== original.sha256 && after.bytes === original.bytes)
+        ? [{ why: 'the image is not the bytes the record pins', bytes: after.bytes, sha256: after.sha256 }] : [] };
+    } });
+
+  // i. the depfile of an object edited to name a prerequisite that does not exist anywhere. This is drift rather than absence:
+  // the file is there, its content is wrong, and the closure reader has to resolve every edge rather than count them.
+  runNegative({ name: 'depfile-edge-unresolvable', consumer: 'depfile closure reader', names: 'does not resolve',
+    changed: 'producers/' + someDep + ': one prerequisite name replaced with one that does not exist',
+    mutate: (dir) => {
+      const p = dir + '/producers/' + someDep;
+      const t = fs.readFileSync(p, 'utf8');
+      fs.writeFileSync(p, t.replace(/(include\/[A-Za-z0-9_./-]+\.h)/, 'include/absent/' + stage + '.h'));
+    },
+    run: (dir) => ({ problems: closure(dir).problems }) });
+
+
+  const summary = {
+    task: A.task, stage,
+    root, root_linux: rootLinux,
+    members,
+    counts: { ...counts, total: members.length, identical },
+    // The map is the whole point of the phase: it is what lets the consumer read the relocation while the records keep naming the
+    // originals. The counts are recorded so that "the consumer used the map" is a fact rather than an intention.
+    path_aliases: { entries: Object.keys(aliasMap).length, unresolved_required_reads: unresolved.length,
+      every_supplied_alias_used: hostVerdict.path_aliases && hostVerdict.path_aliases.every_supplied_alias_used,
+      aliased_reads: hostVerdict.path_aliases && hostVerdict.path_aliases.used },
+    depfile_closure: closureMain,
+    host_consumer: { accepted: hostVerdict.accepted, counts: hostVerdict.counts,
+      problems: hostVerdict.problems.slice(0, 6) },
+    resource_judge: judged,
+    trial_set: { required: REQUIRED_TRIALS, problems: trialSetMain },
+    negatives,
+    problems,
+    ok: problems.length === 0 && identical === members.length && hostVerdict.accepted === true
+      && unresolved.length === 0 && hostVerdict.path_aliases.used > 0
+      && judged.length > 0 && judged.every((j) => j.accepted) && negatives.every((n) => n.refused && n.names_the_broken_thing),
+    ok_means: 'every member of the preserved set was copied to a new absolute path and hashed equal on both sides; the depfile '
+      + 'closure, the host consumer and the resource judge all read only relocated bytes and accepted them; and each of the '
+      + 'nine copies with exactly one thing changed was refused by the consumer that reads it, with the thing named',
+  };
+  const outPath = R + '/d-closure-' + stage + '-142.json';
+  if (exists(outPath)) throw new Error('REFUSED: ' + outPath + ' already exists');
+  fs.writeFileSync(outPath, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, counts: summary.counts, closure: closureMain, host: summary.host_consumer.accepted,
+    judged: judged.length, negatives: negatives.map((n) => ({ n: n.negative, refused: n.refused, named: n.names_the_broken_thing })),
+    problems: problems.slice(0, 8), ok: summary.ok }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
+
 
 // ================================================================ pstatic
 // The static byte gate over the current image. It is a separate stage because it runs inside the distribution, where the file's
