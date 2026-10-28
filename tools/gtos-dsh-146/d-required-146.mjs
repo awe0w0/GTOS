@@ -367,13 +367,45 @@ export function deriveSupport(R146) {
       why: 'a module the consumers are made of',
     });
   }
-  // The publisher the packet uses, at the identity the parent commit pins. It is a requirement of the publication role
-  // rather than of the build, and it is listed here because the roles are one set, not four sets.
-  require_('support_module', 'publisher', R146 + '/worktree-146/tools/gtos-dsh-145/publish-145.mjs', {
-    source_task: 'GTOS-DSH-145', derived_from: 'parent_commit:a2d492fb838e0bbd9c278b1a09c00965669b0f1d',
+  // The publisher this packet actually publishes with. The first version of this function named the PARENT's publisher,
+  // which is a different file with different bytes and which this packet never runs; a requirement that names the wrong tool
+  // is worse than no requirement, because the package would then carry a file nothing used while the file that was used went
+  // unlisted. Record `d-required-146-01.json` still exists and still says `publish-145.mjs`; `-02` is the correction, and
+  // `-02` is what the plan pins.
+  require_('support_module', 'publisher', R146 + '/worktree-146/tools/gtos-dsh-146/publish-146.mjs', {
+    source_task: 'GTOS-DSH-146', derived_from: 'taskbook:GTOS-DSH-146',
     why: 'the publisher this packet publishes with',
   });
-  return { ok: true, modules: names.length };
+  // The consumers that produced this packet's own records. They are requirements for the same reason: the records the seal
+  // consumes are the output of these files, and a package that carries the records without the code that made them carries
+  // verdicts it cannot be checked against.
+  const rolesDir = R146 + '/worktree-146/tools/gtos-dsh-146/roles';
+  const roleFiles = fs.readdirSync(hostPath(rolesDir)).filter((n) => n.endsWith('.mjs')).sort();
+  for (const n of roleFiles) {
+    require_('support_module', 'role-runner-' + n.replace(/\.mjs$/, ''), rolesDir + '/' + n, {
+      source_task: 'GTOS-DSH-146', derived_from: 'taskbook:GTOS-DSH-146',
+      why: 'a runner that produced one of the records this packet seals',
+    });
+  }
+  // The numeric judge and the IO modules, which are the code behind the guest-semantics and IO roles.
+  const coreModules = ['r-numeric-146.mjs', 'io-trace-146.cjs', 'io-semantic-146.mjs'];
+  for (const n of coreModules) {
+    require_('support_module', n.replace(/\.[cm]?js$/, ''), R146 + '/worktree-146/tools/gtos-dsh-146/' + n, {
+      source_task: 'GTOS-DSH-146', derived_from: 'taskbook:GTOS-DSH-146',
+      why: 'a module the guest-semantics or IO role is made of',
+    });
+  }
+  // The four suites, whose records the publication-and-tests role seals.
+  const testsDir = R146 + '/worktree-146/tools/gtos-dsh-146/tests';
+  const testFiles = fs.readdirSync(hostPath(testsDir)).filter((n) => n.endsWith('.mjs')).sort();
+  for (const n of testFiles) {
+    require_('support_module', 'test-' + n.replace(/\.mjs$/, ''), testsDir + '/' + n, {
+      source_task: 'GTOS-DSH-146', derived_from: 'taskbook:GTOS-DSH-146',
+      why: 'a suite this packet ran and whose record it seals',
+    });
+  }
+  return { ok: true, modules: names.length, role_runners: roleFiles.length, tests: testFiles.length,
+    core_modules: coreModules.length, publisher: 1 };
 }
 
 // ------------------------------------------------------------------ assembly

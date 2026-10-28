@@ -88,12 +88,33 @@ function judgeScene(scene, nums, other, boot) {
     else add(family + '.prints_the_numbers_it_is_judged_on', true, { missing: [] });
   };
 
-  // ---- the boot numbers, which every scene that booted a kernel prints.
-  add('boot.cpu_online_is_at_most_detected',
-    boot.online === null || boot.detected === null ? false : boot.online <= boot.detected,
-    { detected: boot.detected, online: boot.online });
-  add('boot.at_least_one_cpu_detected', boot.detected !== null && boot.detected >= 1, { detected: boot.detected });
-  if (boot.freeFrames !== null) add('boot.free_frames_is_not_zero', boot.freeFrames > 0, { free_frames: boot.freeFrames });
+  // ---- the boot numbers, which every scene that got past B02 prints.
+  //
+  // Two scenes in the matrix never get there: the emergency screen panics at B02, and the boot diagnostic rejects its own
+  // option before the CPU lines exist. Asking those two whether their online count is at most their detected count is
+  // asking about numbers that were never printed, and it produces a false finding -- the trial is a refusal that worked,
+  // not a boot that failed. So the two are told apart by whether the boot numbers were printed at all, and a refusal is
+  // judged on its own terms: it stopped, it said why, and it printed none of what the full path would have printed.
+  const reachedBootNumbers = boot.detected !== null || boot.online !== null;
+  if (reachedBootNumbers) {
+    add('boot.cpu_online_is_at_most_detected',
+      boot.online === null || boot.detected === null ? false : boot.online <= boot.detected,
+      { detected: boot.detected, online: boot.online });
+    add('boot.at_least_one_cpu_detected', boot.detected !== null && boot.detected >= 1, { detected: boot.detected });
+    if (boot.freeFrames !== null) add('boot.free_frames_is_not_zero', boot.freeFrames > 0, { free_frames: boot.freeFrames });
+  } else {
+    const why = nums.lines.find((l) => /^PANIC |^BOOTDIAG REJECT /.test(l)) || null;
+    add('refused-boot.printed_no_boot_numbers', true, { detected: boot.detected, online: boot.online });
+    add('refused-boot.says_why_it_stopped', why !== null, { line: why });
+    // The proof that it stopped is that the numbers the full path prints are absent. This is the same shape as the multi-CPU
+    // refusal above, and for the same reason: what makes a refusal a refusal is that nothing followed it.
+    const wouldHaveFollowed = ['CPU DETECTED', 'CPU ONLINE', 'MEMORY FREE FRAMES', 'BOOTDIAG TABLES CHECKPOINT']
+      .filter((l) => nums.has(l));
+    add('refused-boot.did_not_reach_a_checkpoint', wouldHaveFollowed.length === 0, { found: wouldHaveFollowed });
+    const families = ['RUNTIME DIAG', 'OBJECT DIAG', 'RECOVERY DIAG', 'WORKER DIAG']
+      .filter((p) => nums.lines.some((l) => l.startsWith(p + ' ')));
+    add('refused-boot.printed_nothing_from_the_full_path', families.length === 0, { found: families });
+  }
 
   // ---- family: the runtime refused to run because more than one CPU was detected.
   const refusalPrefix = ['RUNTIME DIAG', 'OBJECT DIAG', 'RECOVERY DIAG'].find((p) => nums.lines.includes(p + ' REFUSED MULTI CPU'));
@@ -523,7 +544,7 @@ function judgeScene(scene, nums, other, boot) {
   // ---- the two channels of one run have to agree on every number they share. This is a property of the run: the serial
   // port and the E9 port are two output paths from the same guest, and a number that differs between them was printed from
   // two different states.
-  if (other && other.lines.length > 0) {
+  if (other && other.lines.length > 0 && nums.values.size > 0) {
     let shared = 0;
     const disagree = [];
     for (const [label, value] of nums.values) {
@@ -537,6 +558,14 @@ function judgeScene(scene, nums, other, boot) {
     }
     add('channels.agree_on_every_shared_number', disagree.length === 0, { shared, disagreeing: disagree.slice(0, 5), count: disagree.length });
     add('channels.share_a_substantial_number_of_numbers', shared >= 3, { shared });
+  } else if (other && other.lines.length > 0) {
+    // A refusal trial prints no numbers, so there is no shared number to compare -- but the two channels still both carried
+    // the refusal, and they still have to agree on it. Skipping the comparison entirely would leave the one thing a refusal
+    // trial does print unchecked.
+    const sharedLines = nums.lines.filter((l) => other.lines.includes(l));
+    add('channels.agree_on_the_lines_they_share',
+      sharedLines.length > 0 && sharedLines.length >= Math.min(nums.lines.length, other.lines.length),
+      { serial_lines: nums.lines.length, e9_lines: other.lines.length, shared: sharedLines.length });
   }
 
   // ---- a repeated label is either a counter that counts up, or the same value printed twice. A counter that went
