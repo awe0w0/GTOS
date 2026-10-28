@@ -1200,6 +1200,65 @@ if (phase === 'pstatic') {
   process.exit(rep && rep.ok ? 0 : 1);
 }
 
+// ================================================================ pjudge
+// The static byte judge, with the obligations the first gate left out, and with its negatives going through the same decision.
+// The judge itself lives in static-judge-142.py as a pure function; this stage only loads bytes and calls it. The normal image,
+// the relocated image and every one-defect mutant are all judged by that one function, so the four mutants are not a second,
+// weaker copy of the judgement.
+if (phase === 'pjudge') {
+  const stage = process.argv[3];
+  const imageTag = process.argv[4] || 'p142-default';
+  const imageDir = process.argv[5] || (S + '/image');
+  const relocatedDir = process.argv[6] || null;
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const sel = JSON.parse(fs.readFileSync(R + '/p-selection-142c.json', 'utf8'));
+  const objects = sel.slots.map((s) => S + '/producers/p142b/' + s.basename);
+  for (const o of objects) if (!exists(toHost(o))) throw new Error('absent producer object: ' + o);
+  const control = {
+    task: A.task, stage,
+    image: imageDir + '/' + imageTag + '.elf',
+    map: imageDir + '/' + imageTag + '.map',
+    objects,
+    relocated_image: relocatedDir ? relocatedDir + '/' + imageTag + '.elf' : null,
+    relocated_map: relocatedDir ? relocatedDir + '/' + imageTag + '.map' : null,
+    scratch: S + '/tmp/judge-' + stage,
+    report_path: S + '/evidence/' + stage + '.json',
+    expected: { entry_symbol: 'loader' },
+    note: 'the judge is a pure function of bytes and text; the normal image, the relocated copy and every mutant go through it',
+  };
+  // The judge module and its runner both live in the helper root, because the runner imports its neighbour by name.
+  putOrSame(toHost(S + '/frozen-helpers/static-judge-142.py'), fs.readFileSync(HERE + '/static-judge-142.py'));
+  putOrSame(toHost(S + '/frozen-helpers/' + stage + '.py'), fs.readFileSync(HERE + '/static-gate-142b.py'));
+  putOrSame(toHost(S + '/inputs/' + stage + '.json'), Buffer.from(JSON.stringify(control, null, 2) + '\n', 'utf8'));
+  freezeContractInLedger();
+  const p = writeSpec(stage, 'native.metadata', 'native-metadata', 'metadata', { limit: 900 }, 1200);
+  const r = run(p);
+  out.push(r);
+  const repPath = toHost(S + '/evidence/' + stage + '.json');
+  let rep = null;
+  if (exists(repPath)) { try { rep = JSON.parse(fs.readFileSync(repPath, 'utf8')); } catch { rep = { unreadable: true }; } }
+  console.log(JSON.stringify({ stage, image: pin(toHost(control.image)), map: pin(toHost(control.map)),
+    objects: objects.length,
+    ok: rep ? rep.ok : null,
+    real: rep && rep.real ? { accepted: rep.real.accepted, obligations_failed: rep.real.obligations_failed,
+      problem_count: rep.real.problems.length,
+      multiboot: rep.real.multiboot, multiboot_checksum_sum: rep.real.multiboot_checksum_sum,
+      entry: rep.real.entry, entry_symbols: rep.real.entry_symbols, entry_section: rep.real.entry_section,
+      entry_segment: rep.real.entry_segment, loadable_segments: rep.real.loadable_segments,
+      lowest_load_vaddr: rep.real.lowest_load_vaddr, sections: rep.real.sections,
+      common_symbols: (rep.real.common_symbols || []).length, undefined_symbols: (rep.real.undefined_symbols || []).length,
+      map_objects: rep.real.map_objects, map_order_matches_argv: rep.real.map_order_matches_argv,
+      script_symbols: rep.real.script_symbols,
+      constructors_expected: rep.real.constructors_expected, constructors_in_image: rep.real.constructors_in_image,
+      ctors_section: rep.real.ctors_section, last_section_end: rep.real.last_section_end } : null,
+    relocated: rep ? rep.relocated : null,
+    counts: rep ? rep.counts : null,
+    mutants: rep && rep.mutants ? rep.mutants.map((m) => m.name + ':' + (m.refused ? 'refused' : 'ACCEPTED') + ':'
+      + (m.hit_target ? 'expected' : 'wrong-reason') + ':' + m.obligations_failed.join('+')) : null,
+    out: out.map((x) => ({ stage: x.stage, status: x.status, detail: x.detail.slice(0, 300) })) }, null, 2));
+  process.exit(rep && rep.ok ? 0 : 1);
+}
+
 // ================================================================ doctor
 if (phase === 'doctor') {
   const rel = (d) => (exists(d) ? fs.readdirSync(d).sort() : null);
