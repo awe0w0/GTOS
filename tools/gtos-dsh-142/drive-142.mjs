@@ -1143,6 +1143,60 @@ if (phase === 'hconsume') {
   process.exit(summary.ok ? 0 : 1);
 }
 
+// ================================================================ pstatic
+// The static byte gate over the current image. It is a separate stage because it runs inside the distribution, where the file's
+// bytes and its permissions are both observable, and because a gate that ran in the same process as the link could pass on the
+// link's own word.
+if (phase === 'pstatic') {
+  const stage = process.argv[3];
+  const imageTag = process.argv[4] || 'p142-default';
+  const suffix = process.argv[5] || '';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const sel = JSON.parse(fs.readFileSync(R + '/p-selection-142c.json', 'utf8'));
+  const C = JSON.parse(fs.readFileSync(R + '/build-material-catalog-142.json', 'utf8'));
+  const imageLinux = S + '/image/' + imageTag + '.elf';
+  const mapLinux = S + '/image/' + imageTag + '.map';
+  const control = {
+    task: A.task, stage,
+    image: imageLinux, map: mapLinux,
+    negatives_root: S + '/tmp/gate-' + stage + suffix,
+    report_path: S + '/evidence/' + stage + '.json',
+    expected: {
+      load_address: 0x0100000,
+      entry_symbol: 'loader',
+      object_order: sel.slots.map((s) => s.basename),
+      initializers: C.baseline_expected_initializers,
+    },
+    note: 'reads the image bytes and the map text; runs no tool, disassembles nothing, and builds four single-defect copies of the '
+      + 'image in a scratch directory it owns',
+  };
+  putOrSame(toHost(S + '/frozen-helpers/' + stage + '.py'), fs.readFileSync(HERE + '/static-gate-142.py'));
+  putOrSame(toHost(S + '/inputs/' + stage + '.json'), Buffer.from(JSON.stringify(control, null, 2) + '\n', 'utf8'));
+  freezeContractInLedger();
+  const p = writeSpec(stage, 'native.metadata', 'native-metadata', 'metadata', { limit: 900 }, 1200);
+  const r = run(p);
+  out.push(r);
+  const repPath = toHost(S + '/evidence/' + stage + '.json');
+  let rep = null;
+  if (exists(repPath)) { try { rep = JSON.parse(fs.readFileSync(repPath, 'utf8')); } catch { rep = { unreadable: true }; } }
+  console.log(JSON.stringify({ stage, image: pin(toHost(imageLinux)), map: pin(toHost(mapLinux)),
+    accepted: rep ? rep.accepted : null, ok: rep ? rep.ok : null,
+    problems: rep && rep.problems ? rep.problems.slice(0, 4) : null,
+    problem_count: rep && rep.problems ? rep.problems.length : null,
+    negatives: rep && rep.negatives ? rep.negatives.map((n) => n.name + ':' + (n.refused ? 'refused' : 'ACCEPTED')
+      + ':' + (n.matched_expectation ? 'expected' : 'wrong-reason')) : null,
+    header: rep ? { type: rep.header && rep.header.e_type, machine: rep.header && rep.header.e_machine,
+      entry: rep.entry, entry_symbols: rep.entry_symbols } : null,
+    sections: rep ? rep.sections : null, program_headers: rep ? rep.program_headers : null,
+    loadable_segments: rep ? rep.loadable_segments : null, lowest_load_vaddr: rep ? rep.lowest_load_vaddr : null,
+    undefined_symbols: rep ? (rep.undefined_symbols || []).length : null,
+    map_objects: rep ? rep.map_objects : null,
+    initializers_expected: rep ? rep.initializers_expected : null,
+    initializers_missing: rep ? rep.initializers_missing : null,
+    out: out.map((x) => ({ stage: x.stage, status: x.status, detail: x.detail.slice(0, 200) })) }, null, 2));
+  process.exit(rep && rep.ok ? 0 : 1);
+}
+
 // ================================================================ doctor
 if (phase === 'doctor') {
   const rel = (d) => (exists(d) ? fs.readdirSync(d).sort() : null);
