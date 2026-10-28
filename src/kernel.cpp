@@ -358,6 +358,22 @@ static uint32_t FrameSetDigest(uint32_t &allocatedOut) {
     allocatedOut = allocated;
     return digest;
 }
+// A digest over the bytes an object was asked to hold.
+//
+// The object scenes read their own data back and compare it with the constant they created it from, which is a comparison
+// the scene makes with itself. A reader of the log cannot check that comparison, because neither side is printed. Printing
+// the data itself would be a large line per object and would still be a claim about bytes the reader has no copy of; a
+// digest is smaller and is enough to show that two objects hold *different* data, and that a live neighbour's data is
+// unchanged after another object was refused, recovered and reaped. The reader who wants to recompute it can, because the
+// source constant is in the image.
+static uint32_t DataDigest(const uint8_t *bytes, uint32_t size) {
+    uint32_t digest = 2166136261U; // FNV-1a offset basis.
+    for (uint32_t i = 0; i < size; ++i) {
+        digest ^= bytes[i];
+        digest *= 16777619U;
+    }
+    return digest;
+}
 // The exact ownership set, not a locator for it.
 //
 // The digest above can say that two states disagree; it cannot say which frames differ, and it cannot be turned back into a
@@ -1349,7 +1365,15 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                         seenSlotTicket[worker][slot] = id;
                     }
                     ++distinctTickets;
+                    // The fixed input is printed beside the value it produced, so a reader can recompute the expected
+                    // result from the scene's own rule instead of comparing the machine's value with the machine's
+                    // expectation. `seed` and `count` are the two numbers the job was submitted with; the rule the worker
+                    // implements is "start at the seed, add 1..count", and nothing in this line is derived from `result`.
                     LogValue("WORKER DIAG PASS ", pass);
+                    LogValue("WORKER DIAG WORKER ", passTarget[worker][index]);
+                    LogValue("WORKER DIAG JOB ", index);
+                    LogValue("WORKER DIAG SEED ", passSeeds[worker][index]);
+                    LogValue("WORKER DIAG COUNT ", 8 + (index % 4));
                     LogValue("WORKER DIAG TICKET ", id);
                     LogValue("WORKER DIAG SLOT ", slot);
                     LogValue("WORKER DIAG APIC ", result.executingApicId);
@@ -1532,6 +1556,41 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                 printf("\n");
             }
             printf(taskRegisterProblems == 0 ? "RUNTIME DIAG TSS OBSERVED\n" : "RUNTIME DIAG TSS MISMATCH\n");
+            // ------------------------------------------------------ who owns ESP0, and which stack is it
+            // A nonzero, sixteen-byte-aligned ESP0 is a statement about a number, not about a stack. It is satisfied by any
+            // value the TSS happens to hold, including one that points into another slot's frames, into the guard page between
+            // two slots, or outside the arena the runtime prepared. So the checkpoint names the owner and the span:
+            //
+            //   * the arena base and the per-slot geometry are read from the runtime's own public constants, so the reader can
+            //     recompute every number below without trusting this code;
+            //   * the owner is the slot whose stack top the observed ESP0 equals. No slot matching is reported as "no owner"
+            //     rather than as the first slot, because a value that matches nothing must not be attributed to something;
+            //   * the owned span is the frames the slot actually holds -- the top minus the declared page count -- so a value
+            //     inside the span but not at its top is a value the runtime did not put there.
+            const uint32_t esp0Arena = process::NativeRuntime::KernelStackArena;
+            const uint32_t esp0Pages = process::NativeRuntime::KernelStackPages;
+            const uint32_t esp0Stride = (esp0Pages + 1) * 4096;
+            const uint32_t esp0Slots = process::NativeRuntime::MaximumProcesses;
+            uint32_t esp0Owner = 0xFFFFFFFFU;
+            for (uint32_t slot = 0; slot < esp0Slots; ++slot) {
+                if (esp0Arena + (slot + 1) * esp0Stride == taskRegister.tss_esp0) { esp0Owner = slot; break; }
+            }
+            const uint32_t esp0OwnerTop = esp0Owner == 0xFFFFFFFFU ? 0U : esp0Arena + (esp0Owner + 1) * esp0Stride;
+            const uint32_t esp0OwnerLow = esp0OwnerTop - esp0Pages * 4096;
+            LogValue("RUNTIME DIAG STACK ARENA ", esp0Arena);
+            LogValue("RUNTIME DIAG STACK PAGES ", esp0Pages);
+            LogValue("RUNTIME DIAG STACK STRIDE ", esp0Stride);
+            LogValue("RUNTIME DIAG STACK SLOTS ", esp0Slots);
+            LogValue("RUNTIME DIAG ESP0 OWNER ", esp0Owner);
+            LogValue("RUNTIME DIAG ESP0 OWNER TOP ", esp0OwnerTop);
+            LogValue("RUNTIME DIAG ESP0 OWNER LOW ", esp0OwnerLow);
+            printf(esp0Owner != 0xFFFFFFFFU && taskRegister.tss_esp0 > esp0OwnerLow && taskRegister.tss_esp0 <= esp0OwnerTop
+                ? "RUNTIME DIAG ESP0 IN OWNER SPAN\n" : "RUNTIME DIAG ESP0 OUTSIDE OWNER SPAN\n");
+            printf(esp0Owner == 0 ? "RUNTIME DIAG ESP0 OWNER IS ACTIVATED SLOT\n"
+                                  : "RUNTIME DIAG ESP0 OWNER IS NOT ACTIVATED SLOT\n");
+            if (esp0Owner != 0 || taskRegister.tss_esp0 != esp0OwnerTop) {
+                BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
+            }
             if (taskRegisterProblems != 0 || !gdt.TaskStateIsLoaded()) {
                 BootDiagnosticHalt("BOOTDIAG RUNTIME CHECKPOINT NOT REACHED");
             }
@@ -1662,6 +1721,11 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         bool differ = true;
         for (uint32_t i = 0; i < sizeof(readA); ++i) if (readA[i] == readB[i]) differ = false;
         printf(differ ? "OBJECT DIAG DATA DIFFERS\n" : "OBJECT DIAG DATA SHARED\n");
+        // The two data blocks as values, so the reader is not asked to take "MATCHES" and "DIFFERS" on trust. The digests are
+        // over the bytes read back through the runtime's own memory view at the shared user address; two objects that hold
+        // different bytes produce different digests, and the judge can see that without a copy of either constant.
+        LogValue("OBJECT DIAG DATA A DIGEST ", readOkA ? DataDigest(readA, sizeof(readA)) : 0U);
+        LogValue("OBJECT DIAG DATA B DIGEST ", readOkB ? DataDigest(readB, sizeof(readB)) : 0U);
         // The two address spaces must be distinct, or the private-memory claim is empty.
         process::NativeStatus statusA, statusB;
         const bool statusOkA = nativeRuntime.Status(idA, statusA);
@@ -1826,6 +1890,20 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             if (!made || !id) { recoveryFillOk = false; break; }
             recoveryIds[recoveryCreated++] = id;
             LogValue("RECOVERY DIAG FILLED ", recoveryCreated);
+            // The identity and the data of the object that was just created, recorded while it is known to be intact.
+            // The recovery half of the scene reads the survivors again and the judge compares the two readings per id, so
+            // "the neighbours were not disturbed" is a statement about specific objects rather than about a count. The
+            // digest is over the bytes the object was created with, read back through the runtime's own memory view.
+            LogValue("RECOVERY DIAG FILLED ID ", id);
+            process::NativeRuntime::SlotObservation filledSlot;
+            const bool filledSlotOk = nativeRuntime.ObserveSlot(id, filledSlot);
+            LogValue("RECOVERY DIAG FILLED SLOT ", filledSlotOk ? filledSlot.index : 0xFFFFFFFFU);
+            LogValue("RECOVERY DIAG FILLED DIR ", filledSlotOk ? filledSlot.directory : 0U);
+            uint8_t filledRead[16] = { 0 };
+            const bool filledReadOk = nativeRuntime.ReadMemory(id, process::NativeRuntime::DataAddress,
+                filledRead, sizeof(filledRead));
+            LogValue("RECOVERY DIAG FILLED DATA ", filledReadOk ? DataDigest(filledRead, sizeof(filledRead)) : 0U);
+            printf(filledReadOk ? "RECOVERY DIAG FILLED DATA READ\n" : "RECOVERY DIAG FILLED DATA UNREADABLE\n");
         }
         printf(recoveryFillOk && recoveryCreated == recoveryCapacity
             ? "RECOVERY DIAG FILLED TO CAPACITY\n" : "RECOVERY DIAG FILL FAILED\n");
@@ -1921,14 +1999,53 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
             && recoveryNewStatus.live && !recoveryNewStatus.reaped;
         printf(recoveryNewOk ? "RECOVERY DIAG NEW LIVE\n" : "RECOVERY DIAG NEW NOT LIVE\n");
         // The four surviving objects are still there: a recovery that lost the others would be a reset.
+        //
+        // "Still there" is not enough on its own. An object that survived the refusal and the reap but lost its data, or one
+        // that now shares another object's address space, is a neighbour that was disturbed. So each survivor is read: its
+        // id, its slot, its directory and a digest of its data are printed, and the same three facts were printed for it when
+        // it was created. The judge compares the two readings per id, which is a claim about named objects rather than a
+        // count, and it can also see that the survivors hold four different data blocks and four different directories.
         uint32_t recoverySurvivors = 0;
+        uint32_t recoverySurvivorIds[8];
+        uint32_t recoverySurvivorDigests[8];
+        uint32_t recoverySurvivorDirs[8];
+        bool recoverySurvivorReadsOk = true;
         for (uint32_t i = 0; i < recoveryCreated; ++i) {
             if (recoveryIds[i] == recoveryVictim) continue;
             process::NativeStatus survivor;
-            if (nativeRuntime.Status(recoveryIds[i], survivor) && survivor.live && !survivor.reaped)
-                ++recoverySurvivors;
+            if (!nativeRuntime.Status(recoveryIds[i], survivor) || !survivor.live || survivor.reaped) continue;
+            ++recoverySurvivors;
+            LogValue("RECOVERY DIAG SURVIVOR ID ", recoveryIds[i]);
+            process::NativeRuntime::SlotObservation survivorSlot;
+            const bool survivorSlotOk = nativeRuntime.ObserveSlot(recoveryIds[i], survivorSlot);
+            LogValue("RECOVERY DIAG SURVIVOR SLOT ", survivorSlotOk ? survivorSlot.index : 0xFFFFFFFFU);
+            LogValue("RECOVERY DIAG SURVIVOR DIR ", survivorSlotOk ? survivorSlot.directory : 0U);
+            uint8_t survivorRead[16] = { 0 };
+            const bool survivorReadOk = nativeRuntime.ReadMemory(recoveryIds[i],
+                process::NativeRuntime::DataAddress, survivorRead, sizeof(survivorRead));
+            const uint32_t survivorDigest = survivorReadOk ? DataDigest(survivorRead, sizeof(survivorRead)) : 0U;
+            LogValue("RECOVERY DIAG SURVIVOR DATA ", survivorDigest);
+            printf(survivorReadOk ? "RECOVERY DIAG SURVIVOR READ\n" : "RECOVERY DIAG SURVIVOR UNREADABLE\n");
+            if (!survivorReadOk || !survivorSlotOk) recoverySurvivorReadsOk = false;
+            if (recoverySurvivors <= 8) {
+                recoverySurvivorIds[recoverySurvivors - 1] = recoveryIds[i];
+                recoverySurvivorDigests[recoverySurvivors - 1] = survivorDigest;
+                recoverySurvivorDirs[recoverySurvivors - 1] = survivorSlot.directory;
+            }
         }
         LogValue("RECOVERY DIAG SURVIVORS ", recoverySurvivors);
+        // Four live objects, four data blocks, four address spaces. A shared block or a shared directory would mean the
+        // privacy the object scene claims did not survive the recovery.
+        bool recoverySurvivorsDistinct = recoverySurvivorReadsOk && recoverySurvivors <= 8;
+        for (uint32_t i = 0; i < recoverySurvivors && i < 8; ++i) {
+            for (uint32_t j = i + 1; j < recoverySurvivors && j < 8; ++j) {
+                if (recoverySurvivorIds[i] == recoverySurvivorIds[j]) recoverySurvivorsDistinct = false;
+                if (recoverySurvivorDigests[i] == recoverySurvivorDigests[j]) recoverySurvivorsDistinct = false;
+                if (recoverySurvivorDirs[i] == recoverySurvivorDirs[j]) recoverySurvivorsDistinct = false;
+            }
+        }
+        printf(recoverySurvivorsDistinct ? "RECOVERY DIAG SURVIVORS DISTINCT\n"
+                                         : "RECOVERY DIAG SURVIVORS SHARED\n");
         const bool recoverySurvivorsOk = recoverySurvivors == recoveryCapacity - 1;
         printf(recoverySurvivorsOk ? "RECOVERY DIAG SURVIVORS LIVE\n" : "RECOVERY DIAG SURVIVORS LOST\n");
         const process::NativeStatistics recoveryFinal = nativeRuntime.Statistics();
@@ -1946,7 +2063,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         printf((recoveryFlags & 0x200U) ? "RECOVERY DIAG INTERRUPTS ENABLED\n" : "RECOVERY DIAG INTERRUPTS CLEAR\n");
         const bool recoveryPass = recoveryClean && recoveryExit && recoveryReaped == 1 && recoveryStaleGone
             && recoveryRecreated && recoveryFreshId && recoveryContentOk && recoveryNewOk && recoverySurvivorsOk
-            && recoveryAccounted && !(recoveryFlags & 0x200U);
+            && recoverySurvivorsDistinct && recoveryAccounted && !(recoveryFlags & 0x200U);
         if (!recoveryPass) BootDiagnosticHalt("BOOTDIAG RUNTIME RECOVERY CHECKPOINT NOT REACHED");
 
         // ---- retire the survivors and land back on the frame set this scene started from
@@ -2112,6 +2229,15 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         const bool siblingObserved = nativeRuntime.ObserveSlot(siblingId, siblingSlot);
         LogValue("FRAMEREC DIAG SIBLING SLOT ", siblingSlot.index);
         if (!siblingObserved) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
+        // The sibling's own data, read back while it is the only object on the machine. The recovery half of the scene reads
+        // the same address again after the pressure, the refusal and the recovery, and the judge compares the two digests:
+        // that is what makes "the live neighbour was not disturbed" a statement about bytes rather than about a marker.
+        uint8_t siblingDataAtCreate[16] = { 0 };
+        const bool siblingDataAtCreateOk = nativeRuntime.ReadMemory(siblingId, process::NativeRuntime::DataAddress,
+            siblingDataAtCreate, sizeof(siblingDataAtCreate));
+        LogValue("FRAMEREC DIAG SIBLING DATA AT CREATE ",
+            siblingDataAtCreateOk ? DataDigest(siblingDataAtCreate, sizeof(siblingDataAtCreate)) : 0U);
+        if (!siblingDataAtCreateOk) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
         const memory::PhysicalMemoryStatistics afterSiblingStats = frames.getStatistics();
         uint32_t afterSiblingOwned = 0;
         const uint32_t afterSiblingDigest = FrameSetDigest(afterSiblingOwned);
@@ -2364,7 +2490,22 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         // what the conclusion is drawn from, and a reader that only had the statement would be trusting it.
         LogValue("FRAMEREC DIAG SIBLING DIRECTORY ", siblingStatus.directory);
         LogValue("FRAMEREC DIAG RECOVERED DIRECTORY ", recoveredStatus.directory);
-        const bool recoveryPass = recoveredFresh && recoveredContentOk && recoveredLive;
+        // The live neighbours' data, not only the conclusion about it.
+        //
+        // The sibling was created before the pressure and must still hold its own bytes; the recovered object must hold the
+        // bytes it was created with. Both are read back here and printed as digests, so the log carries a value for each
+        // neighbour that a reader can compare with the value printed when that object was created. A run whose sibling
+        // changed, or whose two neighbours converged on one block, is visible without trusting either "MATCHES" line.
+        uint8_t siblingDataNow[16] = { 0 };
+        const bool siblingDataOk = nativeRuntime.ReadMemory(siblingId, process::NativeRuntime::DataAddress,
+            siblingDataNow, sizeof(siblingDataNow));
+        LogValue("FRAMEREC DIAG SIBLING DATA ", siblingDataOk ? DataDigest(siblingDataNow, sizeof(siblingDataNow)) : 0U);
+        LogValue("FRAMEREC DIAG RECOVERED DATA ", recoveredReadOk ? DataDigest(recoveredRead, sizeof(recoveredRead)) : 0U);
+        printf(siblingDataOk && recoveredReadOk && DataDigest(siblingDataNow, sizeof(siblingDataNow))
+                != DataDigest(recoveredRead, sizeof(recoveredRead))
+            ? "FRAMEREC DIAG NEIGHBOUR DATA DISTINCT\n" : "FRAMEREC DIAG NEIGHBOUR DATA SHARED\n");
+        const bool recoveryPass = recoveredFresh && recoveredContentOk && recoveredLive && siblingDataOk
+            && DataDigest(siblingDataNow, sizeof(siblingDataNow)) != DataDigest(recoveredRead, sizeof(recoveredRead));
         if (!recoveryPass) BootDiagnosticHalt("BOOTDIAG RUNTIME FRAME RECOVERY CHECKPOINT NOT REACHED");
 
         // ---- retire the victim, then put a live object in the slot it vacated
