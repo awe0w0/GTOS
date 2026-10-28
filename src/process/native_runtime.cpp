@@ -1079,6 +1079,26 @@ bool NativeRuntime::ReadMemory(uint32_t id, uint32_t address, void* out, uint32_
 }
 NativeStatistics NativeRuntime::Statistics() const { InterruptGuard guard; return statistics; }
 NativeRuntime* NativeRuntime::Active() { return active; }
+bool NativeRuntime::ObserveSlot(uint32_t id, SlotObservation& result) const {
+    InterruptGuard guard;
+    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+        if (!id || slots[i].status.id != id) continue;
+        result.index = i;
+        result.id = slots[i].status.id;
+        result.directory = slots[i].status.directory;
+        result.occupied = slots[i].occupied;
+        result.live = slots[i].status.live;
+        result.reaped = slots[i].status.reaped;
+        return true;
+    }
+    return false;
+}
+uint32_t NativeRuntime::OccupiedSlots() const {
+    InterruptGuard guard;
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < MaximumProcesses; ++i) if (slots[i].occupied) ++count;
+    return count;
+}
 
 bool NativeRuntime::RequestExit(uint32_t id, uint32_t code) {
     InterruptGuard guard;

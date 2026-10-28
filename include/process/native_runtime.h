@@ -149,6 +149,20 @@ namespace gtos { namespace process {
         uint32_t Reap();
         bool RequestExit(uint32_t id, uint32_t code);
         bool Status(uint32_t id, NativeStatus&) const;
+        // Minimal read-only observation of where an object actually lives in the slot table.
+        //
+        // A count of live objects cannot tell "the slot a reaped object vacated was reused" from "some other slot was
+        // taken", and a diagnostic that cannot tell those apart has not shown slot reuse -- it has shown that a create
+        // succeeded. This reports the slot index, the id the slot currently holds and the directory it is bound to, so a
+        // caller can compare the slot before and after a reap and see the same index holding a different generation.
+        // It returns no pointer, mutates nothing, takes no lock of its own beyond the interrupt guard the other readers
+        // take, and is not part of any ABI or SDK surface.
+        struct SlotObservation {
+            uint32_t index, id, directory;
+            bool occupied, live, reaped;
+        };
+        bool ObserveSlot(uint32_t id, SlotObservation&) const;
+        uint32_t OccupiedSlots() const;
         bool MemoryStatistics(uint32_t id, memory::ProcessMemoryStatistics&) const;
         bool ReadMemory(uint32_t id, uint32_t address, void* out, uint32_t bytes) const;
         NativeStatistics Statistics() const;

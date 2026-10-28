@@ -320,7 +320,7 @@ extern "C" int GtosInstallFaultObserver();
 //   - no argument, or a second argument, is a refusal rather than a default
 //   - a value outside 1..kCaseCount is a refusal rather than an empty run
 // A refusal prints why and returns a non-zero status, so it can never be read as a pass.
-const unsigned kCaseCount = 11;
+const unsigned kCaseCount = 12;
 unsigned unitCase = 0;
 
 enum SelectorVerdict { SelectorOk, SelectorAbsent, SelectorMalformed, SelectorOutOfRange, SelectorTooMany };
@@ -1121,6 +1121,137 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         replaced[0] = replaced[0] == baseline2[0] ? baseline2[1] : baseline2[0];
         Expect(replacedCount == frameSetCount && FrameSetDigestOf(replaced, replacedCount) != digestAfter,
                "an equal-size set with a different member has a different digest");
+    }
+    }
+
+    // ================================================================ 12. Slot reuse: the same slot, a later generation
+    { if (unitCase == 12) {
+        Say("CASE 12\n");
+        // The reuse step in case 6 shows that a slot freed by reaping accepts a new object. It does not show that the new
+        // object is in the slot the old one left, and a create that merely succeeded somewhere else would satisfy every
+        // check that case makes. This one asks the runtime where each object actually lives: the same slot index, a later
+        // identifier, a directory of its own, and a live object that the retired identifier still cannot reach.
+        //
+        // The order is the point. The victim is released and reaped first, the slot is observed empty, and only then is the
+        // new object created. Creating it before the release and calling the result reuse is the mistake this case exists
+        // to exclude, so the observation of the empty slot sits between the two and is asserted rather than assumed.
+        ResetAll();
+        PhysicalMemoryManager& frames = Frames();
+        Expect(SeedAllocator(frames, kFreeFrames), "the allocator is seeded");
+        KernelPaging& paging = Paging();
+        Expect(PreparePaging(paging, frames), "paging prepares");
+        NativeRuntime& runtime = Runtime();
+        Expect(runtime.PrepareStacks(paging, frames), "the stacks are prepared");
+        Expect(ActivateRuntime(runtime, paging, frames), "the runtime activates through the real method");
+
+        BuildData(23);
+        NativeImage image;
+        uint32_t victimId = 0, siblingId = 0;
+        MakeImage(0, image);
+        Expect(runtime.Create(image, victimId) && victimId != 0, "the victim is created");
+        MakeImage(1, image);
+        Expect(runtime.Create(image, siblingId) && siblingId != 0, "the sibling is created");
+        Expect(victimId != siblingId, "the two objects have different identifiers");
+        ExpectHex(runtime.OccupiedSlots(), 2, "two slots are occupied");
+
+        NativeRuntime::SlotObservation victimSlot, siblingSlot;
+        Expect(runtime.ObserveSlot(victimId, victimSlot), "the victim's slot is observable");
+        Expect(runtime.ObserveSlot(siblingId, siblingSlot), "the sibling's slot is observable");
+        Expect(victimSlot.index != siblingSlot.index, "the two objects are in different slots");
+        Expect(victimSlot.occupied && victimSlot.live && !victimSlot.reaped, "the victim's slot is occupied and live");
+        ExpectHex(victimSlot.id, victimId, "the victim's slot names the victim");
+        Expect(victimSlot.directory != siblingSlot.directory, "the two objects have different directories");
+        NativeRuntime::SlotObservation never;
+        Expect(!runtime.ObserveSlot(victimId + 0x1000U, never), "an identifier that was never issued is not observable");
+        Expect(!runtime.ObserveSlot(0, never), "the zero identifier is not observable");
+
+        // Release and reap, then look at the slot again before anything is created.
+        Expect(runtime.RequestExit(victimId, 0x71), "the victim exits while it is live");
+        ExpectHex(runtime.Reap(), 1, "exactly one object was reaped");
+        NativeRuntime::SlotObservation vacated;
+        Expect(runtime.ObserveSlot(victimId, vacated), "the retired identifier still names its slot");
+        ExpectHex(vacated.index, victimSlot.index, "it is the same slot index");
+        Expect(!vacated.occupied, "the slot is no longer occupied");
+        Expect(vacated.reaped, "the slot records the reap");
+        Expect(!vacated.live, "the slot is not live");
+        ExpectHex(vacated.id, victimId, "the slot still names the retired generation");
+        ExpectHex(runtime.OccupiedSlots(), 1, "one slot is occupied after the reap");
+
+        // The retired identifier is refused in all three ways while the slot is empty.
+        static uint8_t emptyRead[32];
+        for (u32 i = 0; i < 32; ++i) emptyRead[i] = 0;
+        Expect(!runtime.ReadMemory(victimId, NativeRuntime::DataAddress, emptyRead, 32),
+               "the retired identifier cannot read while the slot is empty");
+        Expect(!runtime.RequestExit(victimId, 0x72), "the retired identifier cannot exit while the slot is empty");
+        ProcessMemoryStatistics staleMemory;
+        Expect(!runtime.MemoryStatistics(victimId, staleMemory),
+               "the retired identifier has no memory statistics while the slot is empty");
+
+        // Now the new object. It must land in the slot the victim left.
+        MakeImage(2, image);
+        uint32_t newId = 0;
+        Expect(runtime.Create(image, newId) && newId != 0, "the new object is created after the reap");
+        NativeRuntime::SlotObservation reused;
+        Expect(runtime.ObserveSlot(newId, reused), "the new object's slot is observable");
+        ExpectHex(reused.index, victimSlot.index, "the new object took the slot the victim left");
+        Expect(reused.id == newId && newId > victimId, "the slot holds a later generation of identifier");
+        Expect(newId != victimId && newId != siblingId, "the new identifier is neither the victim's nor the sibling's");
+        // The directory is a physical address, so the allocator is free to hand the same frame back after the retired space is
+        // destroyed. Comparing the new object's directory with the retired one would therefore assert a property the runtime does
+        // not have, and a pass would depend on the allocator's choice rather than on the runtime's behaviour. What is asserted
+        // instead is what does hold: the two objects that are live at the same time have different directories, and the retired
+        // identifier cannot reach the new object (checked below, while the new object is live).
+        Expect(reused.directory != 0, "the new object has a directory");
+        Expect(reused.directory != siblingSlot.directory, "and not the directory of the live sibling");
+        Expect(reused.occupied && reused.live && !reused.reaped, "the new object is occupied and live");
+        ExpectHex(runtime.OccupiedSlots(), 2, "two slots are occupied again");
+
+        // The control case 6 did not have: the retired identifier is tried again while a live object sits in the slot it
+        // used to name. A lookup that matched on the slot rather than on the generation would serve the wrong object here,
+        // and the buffer would change.
+        static uint8_t afterRead[32];
+        for (u32 i = 0; i < 32; ++i) afterRead[i] = 0;
+        Expect(!runtime.ReadMemory(victimId, NativeRuntime::DataAddress, afterRead, 32),
+               "the retired identifier cannot read the object now in its slot");
+        bool untouched = true;
+        for (u32 i = 0; i < 32; ++i) if (afterRead[i] != 0) untouched = false;
+        Expect(untouched, "the refused read wrote nothing into the buffer");
+        Expect(!runtime.RequestExit(victimId, 0x73), "the retired identifier cannot exit the new object");
+        Expect(!runtime.MemoryStatistics(victimId, staleMemory),
+               "the retired identifier still has no statistics while the new object is live");
+
+        // The new object holds its own bytes, and they are not the bytes of the object that used to be in that slot.
+        static uint8_t newRead[32];
+        Expect(runtime.ReadMemory(newId, NativeRuntime::DataAddress, newRead, 32), "the new object is readable");
+        bool ownBytes = true, victimBytes = true;
+        for (u32 i = 0; i < 32; ++i) {
+            if (newRead[i] != objectData[2][i]) ownBytes = false;
+            if (newRead[i] != objectData[0][i]) victimBytes = false;
+        }
+        Expect(ownBytes, "the new object holds its own data");
+        Expect(!victimBytes, "and not the data of the object that used to be in that slot");
+
+        // The live sibling came through all of it unchanged, in its own slot, with its own data.
+        NativeRuntime::SlotObservation siblingEnd;
+        Expect(runtime.ObserveSlot(siblingId, siblingEnd), "the sibling is still observable");
+        ExpectHex(siblingEnd.index, siblingSlot.index, "the sibling is still in its own slot");
+        Expect(siblingEnd.occupied && siblingEnd.live && !siblingEnd.reaped, "the sibling is still live");
+        static uint8_t siblingRead[32];
+        Expect(runtime.ReadMemory(siblingId, NativeRuntime::DataAddress, siblingRead, 32),
+               "the sibling is still readable");
+        bool siblingOwn = true;
+        for (u32 i = 0; i < 32; ++i) if (siblingRead[i] != objectData[1][i]) siblingOwn = false;
+        Expect(siblingOwn, "the sibling's data is unchanged");
+
+        // Every object is retired through the production path, and no slot is left occupied.
+        Expect(runtime.RequestExit(siblingId, 0x74), "the sibling exits");
+        Expect(runtime.RequestExit(newId, 0x75), "the new object exits");
+        ExpectHex(runtime.Reap(), 2, "both were reaped");
+        ExpectHex(runtime.OccupiedSlots(), 0, "no slot is occupied at the end");
+        const NativeStatistics finalStats = runtime.Statistics();
+        ExpectHex(finalStats.created, 3, "three objects were created");
+        ExpectHex(finalStats.exited, 3, "three were asked to exit");
+        ExpectHex(finalStats.reaped, 3, "three were reaped");
     }
     }
 
