@@ -1,0 +1,186 @@
+{
+  "task": "GTOS-DSH-141",
+  "what": "cold repeats of the two recovery cases, each run a fresh guarded process, comparing both the bytes each process wrote and the frame sets those bytes publish",
+  "unit_tag": "h148",
+  "why_separate_processes": "the allocator, the paging object and the slot table are file-scope storage in the unit, so a second case in one process would inherit state; every repeat here is its own admitted stage",
+  "cases": [
+    9,
+    11
+  ],
+  "repeats": 3,
+  "runs": [
+    {
+      "case": 9,
+      "stage": "rc141-49",
+      "tool_returncode": 0,
+      "accepted": true,
+      "raw_linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-49/logs/child-output-rc141-49.raw",
+      "raw_bytes": 217,
+      "raw_sha256": "59c33888c27c81177b9c8403baf50a3522e3012824ff4522cd7297ca21866dcf",
+      "frame_sets": {
+        "baseline": {
+          "count": 20,
+          "digest": 2728327605
+        },
+        "after-reap": {
+          "count": 20,
+          "digest": 2728327605
+        }
+      }
+    },
+    {
+      "case": 9,
+      "stage": "rc141-50",
+      "tool_returncode": 0,
+      "accepted": true,
+      "raw_linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-50/logs/child-output-rc141-50.raw",
+      "raw_bytes": 217,
+      "raw_sha256": "59c33888c27c81177b9c8403baf50a3522e3012824ff4522cd7297ca21866dcf",
+      "frame_sets": {
+        "baseline": {
+          "count": 20,
+          "digest": 2728327605
+        },
+        "after-reap": {
+          "count": 20,
+          "digest": 2728327605
+        }
+      }
+    },
+    {
+      "case": 9,
+      "stage": "rc141-51",
+      "tool_returncode": 0,
+      "accepted": true,
+      "raw_linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-51/logs/child-output-rc141-51.raw",
+      "raw_bytes": 217,
+      "raw_sha256": "59c33888c27c81177b9c8403baf50a3522e3012824ff4522cd7297ca21866dcf",
+      "frame_sets": {
+        "baseline": {
+          "count": 20,
+          "digest": 2728327605
+        },
+        "after-reap": {
+          "count": 20,
+          "digest": 2728327605
+        }
+      }
+    },
+    {
+      "case": 11,
+      "stage": "rc141-52",
+      "tool_returncode": 0,
+      "accepted": true,
+      "raw_linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-52/logs/child-output-rc141-52.raw",
+      "raw_bytes": 223,
+      "raw_sha256": "1b96f11be4779a9ce7fa0fcfe0f1664784f807144b55bb39dcb77f40e1a93841",
+      "frame_sets": {
+        "leak-baseline": {
+          "count": 0,
+          "digest": 2166136261
+        },
+        "leak-after": {
+          "count": 4,
+          "digest": 452078773
+        }
+      }
+    },
+    {
+      "case": 11,
+      "stage": "rc141-53",
+      "tool_returncode": 0,
+      "accepted": true,
+      "raw_linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-53/logs/child-output-rc141-53.raw",
+      "raw_bytes": 223,
+      "raw_sha256": "1b96f11be4779a9ce7fa0fcfe0f1664784f807144b55bb39dcb77f40e1a93841",
+      "frame_sets": {
+        "leak-baseline": {
+          "count": 0,
+          "digest": 2166136261
+        },
+        "leak-after": {
+          "count": 4,
+          "digest": 452078773
+        }
+      }
+    },
+    {
+      "case": 11,
+      "stage": "rc141-54",
+      "tool_returncode": 0,
+      "accepted": true,
+      "raw_linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-54/logs/child-output-rc141-54.raw",
+      "raw_bytes": 223,
+      "raw_sha256": "1b96f11be4779a9ce7fa0fcfe0f1664784f807144b55bb39dcb77f40e1a93841",
+      "frame_sets": {
+        "leak-baseline": {
+          "count": 0,
+          "digest": 2166136261
+        },
+        "leak-after": {
+          "count": 4,
+          "digest": 452078773
+        }
+      }
+    }
+  ],
+  "verdicts": [
+    {
+      "case": 9,
+      "repeats": 3,
+      "stages": [
+        "rc141-49",
+        "rc141-50",
+        "rc141-51"
+      ],
+      "all_accepted": true,
+      "all_pass_marker": true,
+      "distinct_raw_hashes": 1,
+      "identical_bytes": true,
+      "raw_sha256": [
+        "59c33888c27c81177b9c8403baf50a3522e3012824ff4522cd7297ca21866dcf"
+      ],
+      "frame_sets": {
+        "baseline": {
+          "count": 20,
+          "digest": 2728327605
+        },
+        "after-reap": {
+          "count": 20,
+          "digest": 2728327605
+        }
+      },
+      "frame_sets_identical": true,
+      "frame_set_mismatches": []
+    },
+    {
+      "case": 11,
+      "repeats": 3,
+      "stages": [
+        "rc141-52",
+        "rc141-53",
+        "rc141-54"
+      ],
+      "all_accepted": true,
+      "all_pass_marker": true,
+      "distinct_raw_hashes": 1,
+      "identical_bytes": true,
+      "raw_sha256": [
+        "1b96f11be4779a9ce7fa0fcfe0f1664784f807144b55bb39dcb77f40e1a93841"
+      ],
+      "frame_sets": {
+        "leak-baseline": {
+          "count": 0,
+          "digest": 2166136261
+        },
+        "leak-after": {
+          "count": 4,
+          "digest": 452078773
+        }
+      },
+      "frame_sets_identical": true,
+      "frame_set_mismatches": []
+    }
+  ],
+  "ok": true
+}
