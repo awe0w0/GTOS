@@ -93,15 +93,28 @@ void ExpectHex(u32 got, u32 want, const char* label) {
 // ---------------------------------------------------------------- the modelled machine
 // 1 MiB reserved below the arena, then 8 MiB of frames. The arena is real host memory placed at the modelled address, so a
 // frame number the allocator returns is also a dereferenceable pointer -- which is what an identity map gives the kernel.
-// The modelled machine, laid out the way a real one is: the kernel's own image at 1 MiB with a 4 MiB range reserved for it,
-// the kernel stack arena at 7 MiB, and 4 MiB of free frames at 8 MiB. All of it is real host memory placed at the modelled
-// address, so a frame the allocator returns is a dereferenceable pointer and a page it maps is writable -- which is exactly
-// what an identity map gives a kernel.
+// The modelled machine, laid out the way a real one is: the kernel's own image at 1 MiB, the kernel stack arena above the
+// image, and 4 MiB of free frames at 8 MiB. All of it is real host memory placed at the modelled address, so a frame the allocator
+// returns is a dereferenceable pointer and a page it maps is writable -- which is exactly what an identity map gives a kernel.
+//
+// The end of the reserved kernel range is the end of this unit's own image, taken from the linker script rather than written
+// out beside it. The production paging object refuses an unsafe context unless its own bytes, the allocator's bytes, the
+// directory and every table are identity mapped, and the only way that can be true of a host process is if the unit loads
+// inside the range the identity map covers. So the range follows the image. It used to be the literal 5 MiB, which held the
+// modelled kernel but not the storage this unit statically holds for the runtime, so the paging object -- correctly -- refused
+// its own context and six cases failed before reaching what they test. Deriving the end here keeps the check and makes the
+// layout describe the binary instead of a guess about it.
+extern "C" char __gtos_host_image_start;
+extern "C" char __gtos_host_image_end;
 const u32 kKernelStart = 0x00100000U;
 const u32 kReadOnlyStart = 0x00100000U;
 const u32 kReadOnlyEnd = 0x00101000U;
-const u32 kKernelEnd = 0x00500000U;
-const u32 kStackArena = 0x00700000U;
+// A namespace-scope const initialised from a linker symbol is folded before the symbol is known, so the end of the image is
+// read through a function: the value has to come from the linked binary, not from the compiler's guess about it.
+u32 HostImageEnd() { return ((u32)&__gtos_host_image_end + 4095U) & ~4095U; }
+// The arena address is the production constant, not a copy of it: a fixture that duplicated the number could reserve one
+// range while the runtime wrote stacks into another and still look consistent.
+const u32 kStackArena = NativeRuntime::KernelStackArena;
 const u32 kStackArenaBytes = 0x00014000U;
 const u32 kFreeStart = 0x00800000U;
 const u32 kFreeFrames = 4U * 1024U * 1024U / 4096U;
@@ -167,13 +180,13 @@ bool SeedAllocator(PhysicalMemoryManager& frames, u32 free) {
     // what reserveRegion says through the production call.
     const u32 want = free < kFreeFrames ? free : kFreeFrames;
     if (!frames.gtos_host_seed(kAddressable, kFreeStart / 4096U, want)) return false;
-    if (!frames.reserveRegion(kKernelStart, kKernelEnd - kKernelStart)) return false;
+    if (!frames.reserveRegion(kKernelStart, HostImageEnd() - kKernelStart)) return false;
     return frames.reserveRegion(kStackArena, kStackArenaBytes);
 }
 bool PreparePaging(KernelPaging& paging, PhysicalMemoryManager& frames) {
     PagingConfig config;
     config.kernelStart = kKernelStart;
-    config.kernelEnd = kKernelEnd;
+    config.kernelEnd = HostImageEnd();
     config.readOnlyStart = kReadOnlyStart;
     config.readOnlyEnd = kReadOnlyEnd;
     config.bootInfo = &gtos_host_boot_info;
@@ -333,6 +346,28 @@ extern "C" int runtimeTestMain(int argc, char** argv) {
     if ((observer >> 8) != 5) { ++failures; Say("FAIL only "); SayHex(observer >> 8); Say(" of 5 signals accepted\n"); }
     ResetAll();
     Say("STEP reset\n");
+    // The layout the identity map depends on, stated by the unit instead of assumed by the reader. If the image does not
+    // load where the modelled kernel is, the paging object will refuse its own context and every activation case would fail
+    // for that reason rather than for the one it tests. The unit says so up front, with the addresses it actually got.
+    Say("STEP image "); SayHex((u32)&__gtos_host_image_start); Say(" ");
+    SayHex((u32)&__gtos_host_image_end); Say(" "); SayHex(HostImageEnd()); Say("\n");
+    Expect((u32)&__gtos_host_image_start == kKernelStart, "the unit's image starts at the modelled kernel address");
+    Expect(HostImageEnd() >= (u32)&__gtos_host_image_end, "the reserved kernel range covers the whole image");
+    Expect(HostImageEnd() <= kStackArena, "the reserved kernel range ends before the kernel stack arena");
+    Expect((u32)&pagingStorage >= kReadOnlyEnd, "the paging object is past the modelled read-only page");
+    Expect((u32)&framesStorage >= kReadOnlyEnd, "the allocator is past the modelled read-only page");
+    Expect(kStackArena + kStackArenaBytes <= kFreeStart, "the stack arena ends before the modelled free frames");
+    // The arena is mapped by the entry, and the unit proves it rather than trusting it: a fixed address that nothing mapped
+    // faults inside PrepareStacks, which is indistinguishable from a defect in the code under test. Both ends are written and
+    // read back, so a mapping that is too short is caught here instead of in the middle of a case.
+    {
+        volatile uint8_t* arenaFirst = (volatile uint8_t*)kStackArena;
+        volatile uint8_t* arenaLast = (volatile uint8_t*)(kStackArena + kStackArenaBytes - 1);
+        *arenaFirst = 0x5A; *arenaLast = 0xA5;
+        Expect(*arenaFirst == 0x5A && *arenaLast == 0xA5, "the kernel stack arena is writable where the runtime uses it");
+        *arenaFirst = 0; *arenaLast = 0;
+    }
+    Say("STEP placed\n");
     gtos_host_runtime_bsp = 1;
     gtos_host_runtime_fast_entry_ok = 1;
 

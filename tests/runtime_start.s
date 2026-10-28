@@ -40,6 +40,26 @@ _start:
     mov $1, %eax            # exit
     int $0x80
 1:
+    # ---- map the kernel stack arena
+    #
+    # The runtime's stacks live at a fixed virtual address that a real kernel would have mapped before any process existed.
+    # In a host process that address is memory only if something mapped it. The arena address is the production host-test
+    # constant (NativeRuntime::KernelStackArena), and the unit probes both ends of it before running a case, so this mapping
+    # and that constant cannot drift apart without the run failing loudly instead of faulting inside the runtime.
+    mov $192, %eax          # mmap2
+    mov $0x00780000, %ebx   # addr: the kernel stack arena
+    mov $0x00080000, %ecx   # length: half a megabyte, through to the first free frame
+    mov $7, %edx            # PROT_READ | PROT_WRITE | PROT_EXEC
+    mov $0x32, %esi         # MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS
+    mov $-1, %edi
+    xor %ebp, %ebp
+    int $0x80
+    cmp $0x00780000, %eax
+    je 2f
+    mov $71, %ebx           # EX_OSERR: the arena could not be placed where the runtime expects it
+    mov $1, %eax
+    int $0x80
+2:
     mov (%esp), %eax        # argc
     lea 4(%esp), %ebx       # argv
     push %ebx

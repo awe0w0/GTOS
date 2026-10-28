@@ -47,7 +47,12 @@ namespace gtos { namespace process {
     // A kernel virtual address only exists because an MMU translates it, and a 32-bit host process cannot map above its own
     // TASK_SIZE. The host unit therefore places the arena inside the modelled identity window. The layout below -- one
     // leading guard, four pages, one inter-slot guard per slot, one trailing guard -- is unchanged.
-    static const uint32_t KernelStackArena = 0x00700000U;
+    //
+    // The address is above the unit's own image rather than at 7 MiB, because the unit links the runtime, its slot table and
+    // the surface and window units, and that image ends at 7.06 MiB: an arena at 7 MiB would sit inside the image's own
+    // storage. The arena is placed past the image and still below the modelled free frames at 8 MiB, and the unit checks that
+    // ordering before it runs a case.
+    static const uint32_t KernelStackArena = 0x00780000U;
 #else
     static const uint32_t KernelStackArena = 0xD0000000U;
 #endif
