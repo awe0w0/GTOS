@@ -203,7 +203,8 @@ if (phase === 'view') {
     'tests/gdt_host_seam.cpp', 'tests/gdt_host_seam.h',
     'tests/runtime_test.cpp', 'tests/runtime_start.s', 'tests/runtime_boundary.cpp', 'tests/runtime_host.ld',
     'src/process/native_fp.cpp', 'src/multitasking.cpp', 'src/process/native_realtime.cpp',
-    'tests/boot_diagnostic.test.cpp',
+    'tests/boot_diagnostic.test.cpp', 'tests/boot_diagnostic_start.s',
+    'tests/safe_tss_start.s', 'tests/tr_tss_test.cpp', 'tests/tr_tss_start.s', 'tests/tr_tss.ld',
   ];
   for (const logical of overrides) {
     const p = WORKTREE + '/' + logical;
@@ -289,6 +290,93 @@ if (phase === 'build') {
     map: exists(toHost(objRoot + '/test.map')) ? pin(toHost(objRoot + '/test.map')) : null,
     stages: out.map((r) => ({ stage: r.stage, status: r.status, line: r.line, detail: r.detail })), ok }, null, 2));
   process.exit(ok ? 0 : 1);
+}
+
+// ================================================================ other host units
+// The two units the packet's host gate also requires, built the same way: the production body, the unit own test, its own
+// entry and the repository's own link script. They do not touch paging, so they keep the conventional layout.
+if (phase === 'unit') {
+  const stageRoot = process.argv[3];
+  const wave = process.argv[4] || 'wave-06';
+  const tag = process.argv[5] || 'u141';
+  const helperLogical = process.argv[6];
+  const testLogical = process.argv[7];
+  const startLogical = process.argv[8];
+  const ldLogical = process.argv[9] || 'tests/safe_tss.ld';
+  // A unit that reads machine state cannot run on a host without the declared seam. The flag set and the delta file are the
+  // same ones the runtime unit declares, so a unit either builds under the declared profile or does not build at all.
+  const wantSeam = process.argv[10] === 'seam';
+  const cxxFlagsForUnit = wantSeam ? SEAM : CXXFLAGS;
+  const deltaForUnit = wantSeam ? { host_test_delta_path: R + '/profile-141/host-test-delta-runtime.txt' } : {};
+  const rootAlnum = stageRoot.replace(/[^a-z0-9]/g, '');
+  if (!/^[a-z][a-z0-9]*$/.test(rootAlnum)) throw new Error('bad stage root: ' + stageRoot);
+  let seq = 0;
+  const stageName = () => rootAlnum + '-' + String(++seq).padStart(2, '0');
+  const srcRoot = S + '/' + wave;
+  const objRoot = S + '/test-build/' + tag;
+  fs.mkdirSync(toHost(objRoot), { recursive: true });
+  const base = path.basename(testLogical, '.cpp');
+  const helperList = helperLogical.split(',');
+  const helperObjs = helperList.map((h) => objRoot + '/' + path.basename(h, '.cpp') + '.o');
+  const testObj = objRoot + '/' + base + '.o';
+  const startObj = objRoot + '/' + path.basename(startLogical, '.s') + '.o';
+  const elfFile = objRoot + '/' + base + '.elf';
+  freezeContractInLedger();
+  const specs = [
+    ...helperList.map((h, i) => writeSpec(stageName(), 'test.cpp.build', 'cpp-unit-build', 'cxx',
+      { sourceFile: srcRoot + '/' + h, objectFile: helperObjs[i], cxxflags: cxxFlagsForUnit,
+        ...deltaForUnit, sourceRoot: srcRoot, objectRoot: objRoot }, 480)),
+    writeSpec(stageName(), 'test.cpp.build', 'cpp-unit-build', 'cxx',
+      { sourceFile: srcRoot + '/' + testLogical, objectFile: testObj, cxxflags: cxxFlagsForUnit,
+        ...deltaForUnit, sourceRoot: srcRoot, objectRoot: objRoot }, 480),
+    writeSpec(stageName(), 'assembly', 'assembly', 'as',
+      { sourceFile: srcRoot + '/' + startLogical, objectFile: startObj,
+        sourceRoot: srcRoot, objectRoot: objRoot }, 240),
+    writeSpec(stageName(), 'image.link', 'image-link', 'ld',
+      { individuals: [startObj, ...helperObjs, testObj], mapFile: objRoot + '/test.map',
+        elfFile, linkerScript: srcRoot + '/' + ldLogical, objectRoot: objRoot }, 300),
+  ];
+  for (const s of specs) out.push(run(s));
+  const ok = out.every((r) => r.status === 0);
+  console.log(JSON.stringify({ elfFile, elf: exists(toHost(elfFile)) ? pin(toHost(elfFile)) : null,
+    stages: out.map((r) => ({ stage: r.stage, status: r.status, line: r.line, detail: r.detail })), ok }, null, 2));
+  process.exit(ok ? 0 : 1);
+}
+
+// ================================================================ run any built unit
+if (phase === 'rununit') {
+  const stage = process.argv[3];
+  const tag = process.argv[4] || 'u141';
+  const elfBase = process.argv[5];
+  const selectorArg = process.argv[6];
+  const elfHost = S + '/test-build/' + tag + '/' + elfBase;
+  if (!exists(toHost(elfHost))) throw new Error('no unit ELF at ' + toHost(elfHost));
+  const workRoot = S + '/unit-run/' + stage;
+  fs.mkdirSync(toHost(workRoot + '/logs'), { recursive: true });
+  const options = { testElfLinux: elfHost, workRoot, limit: 240 };
+  if (selectorArg !== undefined) options.caseSelector = Number(selectorArg);
+  freezeContractInLedger();
+  const spec = writeSpec(stage, 'test.cpp.run', 'host-unit-run', 'hostunit', options, 300);
+  out.push(run(spec));
+  const evidence = R + '/evidence/' + stage + '.json';
+  let summary = null;
+  let rawText = null;
+  if (exists(evidence)) {
+    const d = JSON.parse(fs.readFileSync(evidence, 'utf8'));
+    summary = { ok: d.ok, verdict: d.verdict, guard_row: d.guard_row ? {
+      exit_code: d.guard_row.exit_code, inner_timed_out: d.guard_row.inner_timed_out,
+      timed_out: d.guard_row.timed_out, verdict: d.guard_row.verdict } : null,
+      inner_report: d.inner_report, raw: d.raw };
+    if (d.raw && d.raw.path) {
+      for (let i = 0; i < 60 && rawText === null; i++) {
+        try { rawText = fs.readFileSync(d.raw.path, 'utf8'); } catch {
+          const a = new Int32Array(new SharedArrayBuffer(4)); Atomics.wait(a, 0, 0, 250);
+        }
+      }
+    }
+  }
+  console.log(JSON.stringify({ stage, elf: pin(toHost(elfHost)), summary, raw_text: rawText }, null, 2));
+  process.exit(0);
 }
 
 // ================================================================ runcase
