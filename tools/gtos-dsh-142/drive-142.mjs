@@ -2226,6 +2226,25 @@ if (phase === 'dclosure') {
   runNegative({ name: 'result-record-absent', remove: 'host/results/hcase142c-03.json',
     consumer: 'host consumer', names: 'hcase142c-03', run: hostOn });
 
+  // e2. one unit ELF removed: the host consumer re-hashes the ELF the contract names, so its absence is a refusal about that ELF.
+  runNegative({ name: 'unit-elf-absent', remove: 'host/elf/boot_diagnostic.test.elf',
+    consumer: 'host consumer', names: 'ELF for boot_diagnostic', run: hostOn });
+
+  // e3. the image map removed: the map is what the static gate reads to find the entry and the segments, so a reader of it is the
+  // consumer that must refuse. The reader is the same shape the gate uses: the entry line and one line per segment.
+  const readMap = (p) => {
+    if (!exists(p)) return { problems: [{ why: 'the map is absent', path: p, member: 'p142-default.map' }] };
+    const text = fs.readFileSync(p, 'utf8');
+    const bad = [];
+    const entry = /^entry\s+0x([0-9a-fA-F]+)/m.exec(text) || /0x([0-9a-fA-F]+)\s+_start/m.exec(text);
+    if (!entry) bad.push({ why: 'the map names no entry point' });
+    const segs = text.split(/\r?\n/).filter((l) => /^\.(text|rodata|data|bss)\b/.test(l.trim()));
+    if (segs.length < 4) bad.push({ why: 'the map does not carry every segment', segments: segs.length });
+    return { problems: bad };
+  };
+  runNegative({ name: 'image-map-absent', remove: 'image/p142-default.map', consumer: 'image map reader',
+    names: 'p142-default.map', run: (dir) => readMap(dir + '/image/p142-default.map') });
+
   // f. one guest channel removed: the resource judge refuses that trial, and its refusal names the obligation that failed.
   const resTrial = resMatrix.trials.find((t) => RJ.RESOURCE_SCENES[t.scene]);
   runNegative({ name: 'guest-channel-absent', remove: 'guest/' + resTrial.stage + '.e9.log',
@@ -2314,6 +2333,331 @@ if (phase === 'dclosure') {
   console.log(JSON.stringify({ stage, counts: summary.counts, closure: closureMain, host: summary.host_consumer.accepted,
     judged: judged.length, negatives: negatives.map((n) => ({ n: n.negative, refused: n.refused, named: n.names_the_broken_thing })),
     problems: problems.slice(0, 8), ok: summary.ok }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
+
+
+// ================================================================ requiredset
+// Two lists that are easy to confuse and must not be:
+//
+//   * the required physical set - every artefact this packet's goals require to exist, by role and by name. This is a statement
+//     about the packet, and it is the packet's own, not a summary of what happened to be produced.
+//   * the actual consumer read set - what the production consumers actually opened when they were run. This is a statement about
+//     executions that happened, and it is read out of the consumers' own reports rather than asserted here.
+//
+// A file that is required but never read is a gap in the evidence. A file that is read but not required is either an extra or a
+// requirement this record has missed, and both are worth knowing. The two are compared by name, and the comparison is reported in
+// both directions. A digest that matches proves the bytes are the same bytes; it does not prove either list is complete, so the
+// digests are reported beside the lists rather than in place of them.
+if (phase === 'requiredset') {
+  const stage = process.argv[3];
+  const dClosureStage = process.argv[4] || 'dc142-07';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const dPath = R + '/d-closure-' + dClosureStage + '-142.json';
+  for (const p of [dPath]) if (!exists(p)) throw new Error('absent: ' + p);
+  const d = JSON.parse(fs.readFileSync(dPath, 'utf8'));
+
+  // The required physical set. Each entry says what the packet requires and why, and the name is the name the packet produced.
+  const required = [];
+  const req = (role, name, why) => required.push({ role, name, why });
+  // The runtime supply. The prerequisite record names the ten roles that were admitted; the files inside the runtime role are
+  // listed by the manifest the runtime was materialised under, which is the record that actually names each one.
+  const prereq = JSON.parse(fs.readFileSync(R + '/t-prerequisites-tpr142-02-142.json', 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(R + '/runtime-manifest-142.json', 'utf8'));
+  const runtimePrefix = manifest.destination || '';
+  for (const f of (manifest.files || [])) {
+    const rel = runtimePrefix && f.path.startsWith(runtimePrefix + '/') ? f.path.slice(runtimePrefix.length + 1) : f.path;
+    req('runtime_file', 'runtime/' + rel, 'one file of the packet runtime supply, from runtime-manifest');
+  }
+  // The admitted roles are a separate list. A role is not a file; what a role has to show is its record, and each record is
+  // checked against the preserved set below.
+  const admittedRoles = (prereq.roles || []).map((r) => ({ role: r.role, kind: r.kind,
+    record: String(r.path || '').split('/').pop() }));
+  // The producer objects and their depfiles.
+  const producers = JSON.parse(fs.readFileSync(R + '/p-producers-142b.json', 'utf8'));
+  for (const row of producers.rows || []) req('producer_object', row.basename, 'one of the fixed 61 producer objects');
+  for (const m of d.members) {
+    if (m.role === 'depfile') req('depfile', m.rel.replace(/^producers\//, ''), 'the compiler statement of what built that object');
+    else if (m.role === 'source_view') req('source_view', m.rel, 'a source the compiler read');
+    else if (m.role === 'profile') req('profile', m.rel.replace(/^profile\//, ''), 'the profile that turned sources into objects');
+    else if (m.role === 'image' || m.role === 'image_map') req(m.role, m.rel, 'the linked image and its map');
+    else if (m.role === 'host_result' || m.role === 'host_inner_report' || m.role === 'host_raw' || m.role === 'host_unit_elf') {
+      req(m.role, m.rel, 'one member of the host chain the consumer reads');
+    } else if (m.role === 'guest_channel_e9' || m.role === 'guest_channel_serial' || m.role === 'guest_inner_report' || m.role === 'guest_raw') {
+      req(m.role, m.rel, 'one member of a guest trial');
+    }
+  }
+  const byRole = {};
+  for (const r of required) byRole[r.role] = (byRole[r.role] || 0) + 1;
+
+  // The actual read set, out of the consumers' own reports.
+  const read = [];
+  const readAdd = (consumer, what, count) => read.push({ consumer, what, count });
+  readAdd('depfile closure reader', 'producer objects and depfiles, and every prerequisite every depfile names',
+    { objects: d.depfile_closure.objects, depfiles: d.depfile_closure.depfiles, edges: d.depfile_closure.edges,
+      resolved: d.depfile_closure.resolved });
+  readAdd('host consumer', 'build inputs, unit ELFs, result records, inner reports, raw channels',
+    d.host_consumer.counts);
+  readAdd('resource judge', 'the two guest channels of every resource trial', { trials: d.resource_judge.length,
+    checked_obligations: d.resource_judge.reduce((n, j) => n + j.checked, 0) });
+  readAdd('member identity check', 'every member of the preserved set, hashed on both sides',
+    { members: d.counts.total, identical: d.counts.identical });
+  readAdd('trial set check', 'the trials recorded for every scene the packet requires', { scenes: Object.keys(d.trial_set.required).length });
+
+  // The comparison, by name, in both directions. The read set names files; the required set names files. The names in the read set
+  // come from the member table, which is what the consumers were pointed at.
+  const readNames = new Set(d.members.filter((m) => m.role !== 'role_record' && m.role !== 'canonical_record').map((m) => m.rel));
+  // Every role that names a file takes part in the comparison. Excluding a role here would be the easiest way to make the two
+  // lists agree, so nothing is excluded: a role that names no file simply never appears in the required names.
+  const reqNames = new Set(required.filter((r) => r.role !== 'runtime_file').map((r) => r.name));
+  const readNotRequired = [...readNames].filter((n) => !reqNames.has(n) && ![...reqNames].some((q) => n.endsWith(q))).sort();
+  const requiredNotRead = [...reqNames].filter((q) => ![...readNames].some((n) => n === q || n.endsWith(q))).sort();
+  // Every admitted role has to have its record in the set that was read. A role whose record is missing is an admission nobody can
+  // check, which is worse than a missing file.
+  // A role record is not a file the consumers opened; it is a record this packet preserved. So the check is against every
+  // member of the preserved set, not only the ones a consumer read.
+  const allMemberNames = d.members.map((m) => m.rel);
+  const roleRecordsRead = admittedRoles.filter((r) => allMemberNames.some((n) => n.endsWith(r.record)));
+  const roleRecordsMissing = admittedRoles.filter((r) => !allMemberNames.some((n) => n.endsWith(r.record)));
+
+  const summary = {
+    task: A.task, stage,
+    required_physical_set: { by_role: byRole, total: required.length, members: required },
+    admitted_roles: { required: admittedRoles.length, records_read: roleRecordsRead.length,
+      records_missing: roleRecordsMissing, roles: admittedRoles },
+    actual_consumer_read_set: read,
+    comparison: {
+      read_not_required: readNotRequired.slice(0, 20),
+      read_not_required_count: readNotRequired.length,
+      required_not_read: requiredNotRead.slice(0, 20),
+      required_not_read_count: requiredNotRead.length,
+      why: 'a required file that was never read is a gap in the evidence; a read file that is not required is an extra or a '
+        + 'missing requirement. The two lists are compared by name rather than by digest, because a digest says the bytes are '
+        + 'the same bytes and says nothing about whether either list is complete',
+    },
+    digests_beside_the_lists: {
+      preserved_set_members: d.counts.total,
+      preserved_set_identical: d.counts.identical,
+      depfile_edges: d.depfile_closure.edges,
+      host_cases: d.host_consumer.counts.cases,
+      resource_trials: d.resource_judge.length,
+    },
+    ok: required.length > 0 && requiredNotRead.length === 0 && roleRecordsMissing.length === 0
+      && d.counts.total === d.counts.identical,
+    ok_means: 'every artefact the packet requires is named here and every one of them was in the preserved set the consumers read; '
+      + 'and every role the prerequisite consumer admitted has its record in that set too',
+  };
+  const outPath = R + '/required-set-' + stage + '-142.json';
+  if (exists(outPath)) throw new Error('REFUSED: ' + outPath + ' already exists');
+  fs.writeFileSync(outPath, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, by_role: byRole, total: required.length, read_not_required: readNotRequired.length,
+    required_not_read: requiredNotRead.slice(0, 12), required_not_read_count: requiredNotRead.length,
+    admitted_roles: admittedRoles.length, role_records_missing: roleRecordsMissing.length, ok: summary.ok }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
+
+
+// ================================================================ publish
+// The packet's own payload. The engine is tools/gtos-dsh-142/publish-142.mjs, called as a CLI with its four verbs, and the point
+// of doing it that way is that the archive and the seal are produced by a program that was tested on a rehearsal payload first and
+// then ran unmodified on the real one.
+//
+// A rehearsal and a production run differ in two things only: the destination, and whether the payload carries the final report.
+// Everything else - the engine, its arguments, the verification - is the same code path, which is what makes the rehearsal
+// evidence about the production run rather than about a second program.
+if (phase === 'publish') {
+  const stage = process.argv[3];
+  const mode = process.argv[4] || 'test';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  if (!['test', 'production'].includes(mode)) throw new Error('bad mode: ' + mode);
+  const engine = HERE + '/publish-142.mjs';
+  if (!exists(engine)) throw new Error('absent engine: ' + engine);
+  const dest = mode === 'test' ? S + '/tmp/publish-' + stage : R + '/archive-142';
+  const destHost = toHost(dest);
+  fs.mkdirSync(destHost, { recursive: true });
+
+  // The history is append-only: every attempt, its exit code and its stderr, whether it succeeded or refused.
+  const historyPath = R + '/publish-attempts-142.jsonl';
+  const attempt = (step, argv, result) => {
+    const row = { at: new Date().toISOString(), mode, step, argv: argv.map((a) => a.replace(/\\/g, '/')), status: result.status,
+      ok: result.status === 0, stderr: (result.stderr || '').trim().slice(0, 600) || null };
+    fs.appendFileSync(historyPath, JSON.stringify(row) + '\n', { encoding: 'utf8' });
+    return row;
+  };
+  // The step name is the record label; the verb is what the engine is asked to do. A repeated step is the same verb again,
+  // which is the whole point of the refusal it has to produce.
+  const VERB = { plan: 'plan', archive: 'archive', seal: 'seal', verify: 'verify',
+    'archive-again': 'archive', 'seal-again': 'seal' };
+  const runEngine = (step, argv) => {
+    const verb = VERB[step];
+    if (!verb) throw new Error('unknown step: ' + step);
+    const r = spawnSync(NODE, [engine, verb, ...argv], { windowsHide: true, timeout: 600000, maxBuffer: 64 * 1024 * 1024,
+      encoding: 'utf8' });
+    const row = attempt(step, [engine, ...argv], r);
+    let parsed = null;
+    try { parsed = JSON.parse(r.stdout || 'null'); } catch { parsed = null; }
+    return { row, parsed, stdout: r.stdout || '', stderr: r.stderr || '' };
+  };
+
+  // The member list. The roles are the packet's own: the report, the selection and required set, the plan, the engine, the runner,
+  // the contract, and the records each goal left behind. Nothing here is picked by size or by convenience.
+  const reportFinal = R + '/report-142-final.md';
+  const members = [];
+  const add = (from, as, role) => {
+    if (!exists(from)) throw new Error('absent member: ' + from);
+    members.push({ from, path: as, role });
+  };
+  // The frozen runner and the references it depends on, which is the supported entry the whole packet ran through.
+  add(R + '/frozen-runners/run-142-r01.mjs', 'engine/runner/run-142-r01.mjs', 'runner');
+  for (const name of fs.readdirSync(R + '/frozen-runners').sort()) {
+    if (name.endsWith('.json')) add(R + '/frozen-runners/' + name, 'engine/runner/' + name, 'runner_record');
+  }
+  for (const name of fs.readdirSync(R + '/references').sort()) {
+    add(R + '/references/' + name, 'engine/references/' + name, 'reference');
+  }
+  add(engine, 'engine/publish-142.mjs', 'publisher');
+  add(HERE + '/drive-142.mjs', 'engine/drive-142.mjs', 'driver');
+  add(HERE + '/host-consume-142.mjs', 'engine/host-consume-142.mjs', 'consumer');
+  add(HERE + '/references/resource-semantics-142.mjs', 'engine/resource-semantics-142.mjs', 'judge');
+  // The dispatch, the taskbook identity and the continuation, which are what the packet answers.
+  add(R + '/dispatch-142.json', 'control/dispatch-142.json', 'dispatch');
+  add(R + '/continuation-142-r01.json', 'control/continuation-142-r01.json', 'continuation');
+  add(R + '/authority-142.json', 'control/authority-142.json', 'authority');
+  add(R + '/contract-142.json', 'control/contract-142.json', 'contract');
+  add(R + '/acceptance-objectives-142.json', 'control/acceptance-objectives-142.json', 'acceptance');
+  add(R + '/p-selection-142c.json', 'control/p-selection-142c.json', 'selection');
+  add(R + '/required-set-rs142-05-142.json', 'control/required-set.json', 'required_set');
+  if (mode === 'production') add(reportFinal, 'report/report-142-final.md', 'report');
+  // The records each goal produced, by the name it wrote them under.
+  const recordNames = fs.readdirSync(R).filter((f) => /^(m|p|t|h|g|d|r|s|q|v|e)-.*-142[bc]?\.json$/.test(f)
+    || /^role-.*-142[bc]?\.json$/.test(f)).sort();
+  for (const name of recordNames) add(R + '/' + name, 'records/' + name, 'record');
+  // The guest matrix and the resource matrix, which are the guest goal's whole evidence.
+  for (const name of ['g-matrix-gm142-03-142.json', 'g-matrix-gm142-50-142.json']) {
+    add(R + '/' + name, 'records/' + name, 'matrix');
+  }
+  const dClosure = fs.readdirSync(R).filter((f) => /^d-closure-.*-142\.json$/.test(f)).sort().pop();
+  if (dClosure) add(R + '/' + dClosure, 'records/' + dClosure, 'd_closure');
+
+  // The report's own numbers, checked against the records before anything is written. Each entry says which record answers it, so
+  // a number that drifts from its record is a refusal with a reason rather than a discrepancy nobody notices.
+  const numberChecks = [];
+  if (mode === 'production') {
+    const reportText = fs.readFileSync(reportFinal, 'utf8');
+    const m = /<!-- NUMBERS (\{[^}]*\}) -->/.exec(reportText);
+    if (!m) throw new Error('the report declares no numbers block');
+    const declared = JSON.parse(m[1]);
+    const dRec = JSON.parse(fs.readFileSync(R + '/d-closure-' + (process.argv[5] || 'dc142-07') + '-142.json', 'utf8'));
+    const rsRec = JSON.parse(fs.readFileSync(R + '/required-set-rs142-05-142.json', 'utf8'));
+    const mxRec = JSON.parse(fs.readFileSync(R + '/g-matrix-gm142-03-142.json', 'utf8'));
+    const rnRec = JSON.parse(fs.readFileSync(R + '/r-negatives-rn142-03-142.json', 'utf8'));
+    const hnRec = JSON.parse(fs.readFileSync(R + '/h-negatives-142a.json', 'utf8'));
+    const actual = {
+      required_files: rsRec.required_physical_set.total,
+      admitted_roles: rsRec.admitted_roles.required,
+      preserved_members: dRec.counts.total,
+      producer_objects: rsRec.required_physical_set.by_role.producer_object,
+      depfiles: rsRec.required_physical_set.by_role.depfile,
+      source_view: rsRec.required_physical_set.by_role.source_view,
+      guest_scenes: new Set(mxRec.trials.map((t) => t.scene)).size,
+      guest_trials: mxRec.trials.length,
+      host_cases: dRec.host_consumer.counts.cases,
+      host_negatives: typeof hnRec.negatives === 'number' ? hnRec.negatives : (hnRec.negatives || []).length,
+      d_negatives: dRec.negatives.length,
+      resource_positives: rnRec.counts.positives,
+      resource_mutations: rnRec.counts.negatives,
+      depfile_edges: dRec.depfile_closure.edges,
+      aliased_reads: dRec.path_aliases.aliased_reads,
+      commits: null,
+    };
+    for (const [key, want] of Object.entries(declared)) {
+      if (key === 'commits') continue;
+      const got = actual[key];
+      numberChecks.push({ number: key, declared: want, from_records: got, agrees: want === got });
+    }
+    const bad = numberChecks.filter((c) => !c.agrees);
+    if (bad.length) throw new Error('the report does not agree with the records: ' + JSON.stringify(bad));
+  }
+
+  const spec = {
+    task: A.task, mode, stage,
+    what: 'the payload this packet publishes: the supported entry it ran through, the publisher and its consumers, the control '
+      + 'records that define the packet, the records each goal produced, and the final report',
+    members,
+    required_set: {
+      runner: 1, publisher: 1, driver: 1, consumer: 1, judge: 1, dispatch: 1, continuation: 1, authority: 1, contract: 1,
+      acceptance: 1, selection: 1, required_set: 1,
+      report: mode === 'production' ? 1 : 0,
+    },
+  };
+  const specPath = destHost + '/spec.json';
+  if (exists(specPath)) throw new Error('REFUSED: ' + specPath + ' already exists');
+  fs.writeFileSync(specPath, JSON.stringify(spec, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+
+  const planPath = destHost + '/plan.json';
+  const payloadPath = destHost + '/' + (mode === 'test' ? 'payload.tar' : 'GTOS-DSH-142-payload.tar');
+  const receiptPath = destHost + '/' + (mode === 'test' ? 'receipt.json' : 'GTOS-DSH-142-seal.json');
+  const verifyPath = destHost + '/' + (mode === 'test' ? 'verification.json' : 'GTOS-DSH-142-verification.json');
+
+  const plan = runEngine('plan', [specPath, planPath]);
+  if (!plan.row.ok) throw new Error('plan refused: ' + plan.row.stderr);
+  const archive = runEngine('archive', [planPath, payloadPath]);
+  if (!archive.row.ok) throw new Error('archive refused: ' + archive.row.stderr);
+  const seal = runEngine('seal', [payloadPath, receiptPath]);
+  if (!seal.row.ok) throw new Error('seal refused: ' + seal.row.stderr);
+  const verify = runEngine('verify', [payloadPath, receiptPath, planPath]);
+
+  // The refusals, measured rather than asserted: the same archive written twice, and the same payload sealed twice. Both must
+  // refuse with CreateNew, and the payload must be unchanged by the attempts.
+  const beforeAttempt = pin(payloadPath);
+  const secondArchive = runEngine('archive-again', [planPath, payloadPath]);
+  const secondSeal = runEngine('seal-again', [payloadPath, receiptPath]);
+  const afterAttempt = pin(payloadPath);
+  const refusals = [
+    { what: 'a second archive at the same path', refused: secondArchive.row.status !== 0,
+      named_createnew: /CreateNew/.test(secondArchive.row.stderr || ''), stderr: secondArchive.row.stderr },
+    { what: 'a second seal of the same payload', refused: secondSeal.row.status !== 0,
+      named_createnew: /CreateNew/.test(secondSeal.row.stderr || ''), stderr: secondSeal.row.stderr },
+  ];
+  const payloadUnchanged = beforeAttempt.sha256 === afterAttempt.sha256;
+
+  const verification = verify.parsed;
+  fs.writeFileSync(verifyPath, JSON.stringify({
+    ...verification,
+    refusals,
+    payload_unchanged_by_refused_attempts: payloadUnchanged,
+    ok: verification && verification.ok === true && refusals.every((r) => r.refused && r.named_createnew) && payloadUnchanged,
+  }, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+
+  const summary = {
+    task: A.task, phase: 'publish', stage, mode,
+    report_numbers: numberChecks.length ? { checked: numberChecks.length, all_agree: numberChecks.every((c) => c.agrees),
+      detail: numberChecks } : null,
+    engine, engine_pin: pin(engine),
+    spec: pin(specPath), plan: pin(planPath), payload: pin(payloadPath), receipt: pin(receiptPath),
+    verification: pin(verifyPath),
+    member_count: plan.parsed && plan.parsed.member_count,
+    roles: plan.parsed && plan.parsed.roles,
+    total_bytes: plan.parsed && plan.parsed.total_bytes,
+    ordinal_digest: plan.parsed && plan.parsed.ordinal_digest,
+    payload_sha256: seal.parsed && seal.parsed.payload.sha256,
+    verified: verification && verification.ok === true,
+    matched: verification && verification.matched,
+    only_in_payload: verification && verification.only_in_payload,
+    only_in_plan: verification && verification.only_in_plan,
+    refusals,
+    payload_unchanged_by_refused_attempts: payloadUnchanged,
+    ok: !!(plan.row.ok && archive.row.ok && seal.row.ok && verify.row.ok && verification && verification.ok === true
+      && refusals.every((r) => r.refused && r.named_createnew) && payloadUnchanged
+      && (numberChecks.length === 0 || numberChecks.every((c) => c.agrees))),
+    ok_means: 'the same engine that was rehearsed produced the payload and the one successful seal; the payload was parsed from '
+      + 'its own bytes and compared with the plan in both directions with equal ordinal digests; and the second archive and the '
+      + 'second seal both refused with CreateNew without changing the payload',
+  };
+  const outPath = R + '/publish-' + stage + '-142.json';
+  if (exists(outPath)) throw new Error('REFUSED: ' + outPath + ' already exists');
+  fs.writeFileSync(outPath, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify(summary, null, 2));
   process.exit(summary.ok ? 0 : 1);
 }
 
