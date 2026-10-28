@@ -914,8 +914,23 @@ if (phase === 'hunit') {
   stages.push(ldRun);
   const elfHost = toHost(elfFile);
   const elf = exists(elfHost) ? pin(elfHost) : null;
+  // Every file this unit was compiled from, hashed here at the moment the unit exists. The consumer re-reads each one and
+  // compares, so "built from the current tree" is a statement about bytes rather than a sentence in a description field.
+  const inputs = [];
+  const addInput = (logical, hostPath, role) => {
+    const b = fs.readFileSync(hostPath);
+    inputs.push({ logical, role, host_path: hostPath, bytes: b.length, sha256: sha(b) });
+  };
+  for (const logical of [...productionUnits, ...testUnits, startSource, linkerScript]) {
+    addInput(logical, toHost(srcRoot + '/' + logical), logical.startsWith('tests/') ? 'test' : 'production');
+  }
+  for (const name of extraNames) addInput('producer/' + name, toHost(producerRoot + '/' + name), 'producer-object');
+  addInput('profile/Makefile', R + '/profile-142/Makefile', 'profile');
+  addInput('profile/kernel-cxxflags', R + '/profile-142/kernel-cxxflags', 'profile');
+  addInput('profile/host-test-delta-runtime.txt', DELTA_PATH, 'seam');
   const summary = {
     phase: 'hunit', tag, elfFile, elf,
+    inputs,
     units: { production: productionUnits.length, test: testUnits.length, objects: objs.length },
     seam: { path: deltaPin.path, bytes: deltaPin.bytes, sha256: deltaPin.sha256, macros: DELTA,
       flags_count: SEAM.length },
@@ -930,6 +945,144 @@ if (phase === 'hunit') {
   process.exit(summary.ok ? 0 : 1);
 }
 
+// ================================================================ unit
+// The two units the required host set also names, built the same way the runtime unit is: the production body, the unit's own
+// test, its own entry, and the repository's own link script, under the same frozen seam. They do not touch paging, so they keep
+// the conventional layout.
+if (phase === 'unit') {
+  const stageRoot = process.argv[3];
+  const wave = process.argv[4] || 'wave-03';
+  const tag = process.argv[5] || 'u142';
+  const helperLogical = process.argv[6] || '';
+  const testLogical = process.argv[7];
+  const startLogical = process.argv[8];
+  const ldLogical = process.argv[9] || 'tests/safe_tss.ld';
+  const extras = (process.argv[10] || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const rootAlnum = stageRoot.replace(/[^a-z0-9]/g, '');
+  if (!/^[a-z][a-z0-9]*$/.test(rootAlnum)) throw new Error('bad stage root: ' + stageRoot);
+  let seq = 0;
+  const stageName = () => rootAlnum + '-' + String(++seq).padStart(2, '0');
+  const mk = fs.readFileSync(R + '/profile-142/Makefile', 'utf8');
+  const baseLine = mk.split('\n').find((l) => l.startsWith('BASE_CXXFLAGS :='));
+  const baseFlags = baseLine.replace('BASE_CXXFLAGS :=', '').trim()
+    .replace('$(OPTIMIZATION)', '-O2').split(/\s+/).filter(Boolean);
+  const intFlags = fs.readFileSync(R + '/profile-142/kernel-cxxflags', 'utf8').trim().split(/\s+/).filter(Boolean);
+  const CXXFLAGS = [...baseFlags, ...intFlags];
+  const DELTA_PATH = R + '/profile-142/host-test-delta-runtime.txt';
+  const DELTA = fs.readFileSync(DELTA_PATH, 'utf8').split('\n').map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
+  const SEAM = [...CXXFLAGS, ...DELTA.map((m) => '-D' + m)];
+  const deltaPin = pin(DELTA_PATH);
+  const srcRoot = S + '/' + wave;
+  const objRoot = S + '/test-build/' + tag;
+  fs.mkdirSync(toHost(objRoot), { recursive: true });
+  const base = path.basename(testLogical, '.cpp');
+  const helperList = helperLogical ? helperLogical.split(',') : [];
+  const helperObjs = helperList.map((h) => objRoot + '/' + path.basename(h, '.cpp') + '.o');
+  const testObj = objRoot + '/' + base + '.o';
+  const startObj = objRoot + '/start.o';
+  const elfFile = objRoot + '/' + base + '.elf';
+  const mapFile = objRoot + '/' + base + '.map';
+  const stages = [];
+  const problems = [];
+  const compiled = [];
+  for (let i = 0; i < helperList.length; i++) {
+    if (!exists(toHost(srcRoot + '/' + helperList[i]))) { problems.push({ logical: helperList[i], why: 'not in the wave' }); continue; }
+    freezeContractInLedger();
+    const r = run(writeSpec(stageName(), 'test.cpp.build', 'cpp-unit-build', 'cxx',
+      { sourceFile: srcRoot + '/' + helperList[i], objectFile: helperObjs[i], cxxflags: SEAM,
+        host_test_delta_path: deltaPin.path, sourceRoot: srcRoot, objectRoot: objRoot }, 480));
+    stages.push(r); compiled.push(helperList[i]);
+    if (r.status !== 0) problems.push({ logical: helperList[i], why: 'compile failed', detail: r.detail });
+  }
+  if (exists(toHost(srcRoot + '/' + testLogical))) {
+    freezeContractInLedger();
+    const r = run(writeSpec(stageName(), 'test.cpp.build', 'cpp-unit-build', 'cxx',
+      { sourceFile: srcRoot + '/' + testLogical, objectFile: testObj, cxxflags: SEAM,
+        host_test_delta_path: deltaPin.path, sourceRoot: srcRoot, objectRoot: objRoot }, 480));
+    stages.push(r); compiled.push(testLogical);
+    if (r.status !== 0) problems.push({ logical: testLogical, why: 'compile failed', detail: r.detail });
+  } else problems.push({ logical: testLogical, why: 'not in the wave' });
+  if (exists(toHost(srcRoot + '/' + startLogical))) {
+    freezeContractInLedger();
+    const r = run(writeSpec(stageName(), 'assembly', 'assembly', 'as',
+      { sourceFile: srcRoot + '/' + startLogical, objectFile: startObj, sourceRoot: srcRoot, objectRoot: objRoot }, 240));
+    stages.push(r); compiled.push(startLogical);
+    if (r.status !== 0) problems.push({ logical: startLogical, why: 'assembly failed', detail: r.detail });
+  } else problems.push({ logical: startLogical, why: 'not in the wave' });
+  const prod = JSON.parse(fs.readFileSync(R + '/p-producers-142b.json', 'utf8'));
+  const prodByBase = new Map(prod.rows.map((r) => [r.basename, r]));
+  const producerRoot = S + '/producers/p142b';
+  const extraObjs = [];
+  for (const name of extras) {
+    const hostPath = toHost(producerRoot + '/' + name);
+    if (!exists(hostPath)) { problems.push({ logical: name, why: 'the extra object is not on disk' }); continue; }
+    const row = prodByBase.get(name);
+    if (!row || row.sha256 !== sha(fs.readFileSync(hostPath))) { problems.push({ logical: name, why: 'not its verified bytes' }); continue; }
+    extraObjs.push(producerRoot + '/' + name);
+  }
+  if (problems.length) {
+    console.log(JSON.stringify({ phase: 'unit', ok: false, problems: problems.slice(0, 6),
+      stages: stages.map((s) => ({ stage: s.stage, status: s.status, detail: s.detail.slice(0, 200) })) }, null, 2));
+    process.exit(1);
+  }
+  freezeContractInLedger();
+  const ldRun = run(writeSpec(stageName(), 'image.link', 'image-link', 'ld',
+    { individuals: [startObj, ...helperObjs, testObj, ...extraObjs], mapFile, elfFile,
+      linkerScript: srcRoot + '/' + ldLogical, objectRoot: objRoot }, 300));
+  stages.push(ldRun);
+  const elfHost = toHost(elfFile);
+  const elf = exists(elfHost) ? pin(elfHost) : null;
+  const inputs = [];
+  const addInput = (logical, hostPath, role) => {
+    const b = fs.readFileSync(hostPath);
+    inputs.push({ logical, role, host_path: hostPath, bytes: b.length, sha256: sha(b) });
+  };
+  for (const logical of compiled) addInput(logical, toHost(srcRoot + '/' + logical), logical.startsWith('tests/') ? 'test' : 'production');
+  for (const name of extras) addInput('producer/' + name, toHost(producerRoot + '/' + name), 'producer-object');
+  addInput('profile/Makefile', R + '/profile-142/Makefile', 'profile');
+  addInput('profile/kernel-cxxflags', R + '/profile-142/kernel-cxxflags', 'profile');
+  addInput('profile/host-test-delta-runtime.txt', DELTA_PATH, 'seam');
+  const summary = { phase: 'unit', tag, unit: base, elfFile, elf, inputs,
+    seam: { path: deltaPin.path, bytes: deltaPin.bytes, sha256: deltaPin.sha256, macros: DELTA, flags_count: SEAM.length },
+    stages: stages.map((s) => ({ stage: s.stage, status: s.status })),
+    ok: ldRun.status === 0 && elf !== null };
+  const target = R + '/h-unit-build-' + base + '-' + tag + '-142.json';
+  if (exists(target)) throw new Error('REFUSED: ' + target + ' already exists');
+  fs.writeFileSync(target, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ phase: 'unit', unit: base, elf, ok: summary.ok,
+    stages: stages.map((s) => ({ stage: s.stage, status: s.status })) }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
+
+// ================================================================ rununit
+// Run a built unit once, as its own guarded process, with the same host-unit route the runtime cases use.
+if (phase === 'rununit') {
+  const stage = process.argv[3];
+  const tag = process.argv[4] || 'u142';
+  const elfBase = process.argv[5];
+  const selectorArg = process.argv[6];
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const elfLinux = S + '/test-build/' + tag + '/' + elfBase;
+  if (!exists(toHost(elfLinux))) throw new Error('no unit ELF at ' + elfLinux);
+  const workRoot = S + '/unit-run/' + stage;
+  fs.mkdirSync(toHost(workRoot + '/logs'), { recursive: true });
+  const options = { testElfLinux: elfLinux, workRoot, limit: 240 };
+  if (selectorArg !== undefined && selectorArg !== '') options.caseSelector = Number(selectorArg);
+  freezeContractInLedger();
+  const spec = writeSpec(stage, 'test.cpp.run', 'host-unit-run', 'hostunit', options, 300);
+  out.push(run(spec));
+  const evidence = R + '/evidence/' + stage + '.json';
+  let d = null;
+  if (exists(evidence)) { try { d = JSON.parse(fs.readFileSync(evidence, 'utf8')); } catch { d = null; } }
+  console.log(JSON.stringify({ stage, elf: pin(toHost(elfLinux)),
+    verdict: d ? d.verdict : null,
+    inner_report: d ? d.inner_report : null, raw: d ? d.raw : null,
+    ok: d ? d.ok : null,
+    out: out.map((r) => ({ stage: r.stage, status: r.status, detail: r.detail.slice(0, 200) })) }, null, 2));
+  process.exit(d && d.ok ? 0 : 1);
+}
+
 // ================================================================ hrun
 // Run one case of the runtime unit as its own process. Each case is a separate launch because a successful Activate publishes a
 // process-wide owner that has no destroy path: two activations cannot share a process, so a second case in the same process would
@@ -938,7 +1091,8 @@ if (phase === 'hrun') {
   const caseNumber = Number(process.argv[3]);
   const tag = process.argv[4] || 'h142';
   if (!Number.isInteger(caseNumber) || caseNumber < 1 || caseNumber > 11) throw new Error('case must be 1..11');
-  const stage = 'hcase142-' + String(caseNumber).padStart(2, '0');
+  const suffix = process.argv[5] || '';
+  const stage = 'hcase142' + suffix + '-' + String(caseNumber).padStart(2, '0');
   const elfLinux = S + '/test-build/' + tag + '/runtime_test.elf';
   if (!exists(toHost(elfLinux))) throw new Error('no unit ELF at ' + elfLinux);
   const workRoot = S + '/unit-run/' + stage;
@@ -965,9 +1119,10 @@ if (phase === 'hrun') {
     raw_bytes: rawText === null ? 0 : rawText.length,
     raw_sha256: rawText === null ? null : sha(Buffer.from(rawText, 'utf8')),
     raw_text: rawText,
-    ok: r.status === 0 && rep !== null && rep.ok === true,
+    // The runner record carries ok rather than status for this route, so a stage that exited zero is recognised either way.
+    ok: (r.status === 0 || r.ok === true) && rep !== null && rep.ok === true,
   };
-  const target = R + '/h-case-' + String(caseNumber).padStart(2, '0') + '-142.json';
+  const target = R + '/h-case' + suffix + '-' + String(caseNumber).padStart(2, '0') + '-142.json';
   if (exists(target)) throw new Error('REFUSED: ' + target + ' already exists');
   fs.writeFileSync(target, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
   console.log(JSON.stringify({ case: caseNumber, stage, ok: summary.ok, status: r.status,
@@ -979,167 +1134,286 @@ if (phase === 'hrun') {
 // Call the production host consumer on the real chain, then call the same entry again on seven deliberately damaged copies of it.
 // The point of the negatives is not that they fail; it is that they fail through the same entry, with the specific defect named,
 // and without launching anything.
-if (phase === 'hconsume') {
-  const tag = process.argv[3] || 'h142d';
-  // A record that already exists is kept. The first attempt is a record of a real failure: it read the permission bits through a
-  // share that does not carry them, and it looked for the raw channels one directory too high. Both are corrected below, and the
-  // corrected records are written beside the old ones rather than over them.
-  const suffix = process.argv[4] || '';
-  const { consumeRuntimeChain } = await import('file:///' + HERE + '/host-consume-142.mjs');
-  const A2 = JSON.parse(fs.readFileSync(R + '/authority-142.json', 'utf8'));
-  const inv = JSON.parse(fs.readFileSync(A2.runtime_source_inventory.path, 'utf8'));
-  const build = JSON.parse(fs.readFileSync(R + '/h-unit-build-' + tag + '-142.json', 'utf8'));
-  const unitElfLinux = build.elfFile;
-  const unitElfHost = toHost(unitElfLinux);
 
-  // The contract is composed from what the records say, then every part of it is checked against the artefacts by the consumer.
-  // A contract written by hand here would only restate the consumer's own assumptions.
-  const innerOriginals = inv.files.filter((f) => f.mode_octal === '0755')
-    .map((f) => ({ logical: f.logical, bytes: f.bytes, sha256: f.sha256, mode_octal: f.mode_octal }));
+// ================================================================ hconsume
+// The host consumer, called on the chain this packet actually produced. The contract names which stage ran each case and which
+// ELF each unit is; how many cases the runtime unit has, and that all three units are required, are the consumer's own constants.
+// A contract that lists fewer cases than the consumer requires is refused, so shrinking the contract changes nothing.
+if (phase === 'hconsume') {
+  const stage = process.argv[3];
+  const tag = process.argv[4] || 'h142f';
+  const suffix = process.argv[5] || 'c';
+  const bdTag = process.argv[6] || 'u142';
+  const stTag = process.argv[7] || 'u142b';
+  const outSuffix = process.argv[8] || '';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const buildRecord = R + '/h-unit-build-' + tag + '-142.json';
+  const bdRecord = R + '/h-unit-build-boot_diagnostic.test-' + bdTag + '-142.json';
+  const stRecord = R + '/h-unit-build-safe_tss_test-' + stTag + '-142.json';
+  for (const p of [buildRecord, bdRecord, stRecord]) if (!exists(p)) throw new Error('absent build record: ' + p);
+  const bd = JSON.parse(fs.readFileSync(bdRecord, 'utf8'));
+  const st = JSON.parse(fs.readFileSync(stRecord, 'utf8'));
+  const runtimeElfLinux = S + '/test-build/' + tag + '/runtime_test.elf';
+  const runtimeElfHost = toHost(runtimeElfLinux);
   const cases = [];
-  for (let c = 1; c <= 11; c += 1) {
-    const rec = JSON.parse(fs.readFileSync(R + '/h-case-' + String(c).padStart(2, '0') + '-142.json', 'utf8'));
-    cases.push({ case: c, stage: rec.stage, return_code: 0, test_elf: unitElfLinux,
-      raw_path: toHost(S + '/unit-run/' + rec.stage + '/logs/child-output-' + rec.stage + '.raw'),
-      raw_sha256: rec.raw_sha256, raw_bytes: rec.raw_bytes });
+  for (let n = 1; n <= 11; n++) {
+    cases.push({ case: n, stage: 'hcase142' + suffix + '-' + String(n).padStart(2, '0') });
   }
   const contract = {
     task: A.task,
-    what: 'the identity the production host consumer checks: the runtime inner originals, the start ELF with the sources and seam it '
-      + 'was built from, and every case with the return code, argv and raw channel it must have',
-    runtime: { inventory: pin(A2.runtime_source_inventory.path), inner_originals: innerOriginals },
-    start_elf: { path: unitElfLinux, bytes: build.elf.bytes, sha256: build.elf.sha256,
-      source: 'tests/runtime_test.cpp and its ten production units, from the current committed tree',
-      seam_sha256: build.seam.sha256, seam_macros: build.seam.macros,
-      units: { production: build.units.production, test: build.units.test, objects: build.units.objects } },
-    cases_expected: 11,
-    cases,
+    what: 'the host chain this packet produced: three units, the runtime unit case by case, each case its own guarded process',
+    units: [
+      { role: 'runtime', elf: pin(runtimeElfHost), elf_linux: runtimeElfLinux, cases },
+      { role: 'boot_diagnostic', elf: pin(toHost(bd.elfFile)), elf_linux: bd.elfFile,
+        cases: [{ case: 1, stage: 'bdrun142-01' }] },
+      { role: 'safe_tss', elf: pin(toHost(st.elfFile)), elf_linux: st.elfFile,
+        cases: [{ case: 1, stage: 'saferun142-01' }] },
+    ],
+    note: 'the case counts and the membership of the set are the consumer own constants; this contract names stages and ELFs only',
   };
-  const contractPath = R + '/h-contract-142' + suffix + '.json';
+  const contractPath = R + '/h-contract-142' + (outSuffix || 'e') + '.json';
   if (exists(contractPath)) throw new Error('REFUSED: ' + contractPath + ' already exists');
   fs.writeFileSync(contractPath, JSON.stringify(contract, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
-
   const control = {
     task: A.task,
+    build_record_path: buildRecord,
     contract_path: contractPath,
-    runtime_root: A2.runtime_destination,
-    runtime_host_root: toHost(A2.runtime_destination),
-    start_elf_host_path: unitElfHost,
+    unit_elf_host_path: runtimeElfHost,
+    unit_elf_linux: runtimeElfLinux,
     results_dir: R + '/results',
-    logs_dir: toHost(S + '/unit-run'),
   };
-  const verdict = consumeRuntimeChain(control);
-  const verdictPath = R + '/h-consumption-142' + suffix + '.json';
+  const controlPath = R + '/stage-output/hconsume-' + stage + '.json';
+  fs.writeFileSync(controlPath, JSON.stringify(control, null, 2) + '\n', { encoding: 'utf8' });
+  const verdictPath = R + '/h-consumption-142' + (outSuffix || 'e') + '.json';
   if (exists(verdictPath)) throw new Error('REFUSED: ' + verdictPath + ' already exists');
-  fs.writeFileSync(verdictPath, JSON.stringify({ control, verdict }, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
-
-  // The negative fixtures. Each is a real copy of the chain with exactly one thing changed, so a refusal can be attributed.
-  const fixtureRoot = toHost(S + '/tmp/neg-h142' + suffix);
-  fs.mkdirSync(fixtureRoot, { recursive: true });
-  const orderLogBefore = exists(ORDER_LOG) ? fs.readFileSync(ORDER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).length : 0;
-
-  // A damaged runtime tree: one inner original replaced by a file of the same size but different bytes, and one removed.
-  const damagedRuntime = fixtureRoot + '/runtime';
-  if (exists(damagedRuntime)) throw new Error('REFUSED: fixture exists ' + damagedRuntime);
-  fs.mkdirSync(damagedRuntime + '/' + path.posix.dirname(innerOriginals[0].logical), { recursive: true });
-  fs.mkdirSync(damagedRuntime + '/' + path.posix.dirname(innerOriginals[1].logical), { recursive: true });
-  const copyWithFlip = (from, to) => {
-    const b = fs.readFileSync(from);
-    const flipped = Buffer.from(b);
-    flipped[Math.floor(flipped.length / 2)] ^= 0xff;
-    fs.writeFileSync(to, flipped);
-    return { bytes: flipped.length, sha256: sha(flipped), differs_at_same_size: flipped.length === b.length };
+  // The order log is read before and after, so "this consumer started nothing" is measured against the guard's own ledger of
+  // every launch this packet made, not only against the consumer's own counter.
+  const ledgerBefore = exists(ORDER_LOG) ? fs.readFileSync(ORDER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).length : 0;
+  const consumer = (await import('file:///' + HERE + '/host-consume-142.mjs')).consumeHostChain;
+  const verdict = consumer(control);
+  const ledgerAfter = exists(ORDER_LOG) ? fs.readFileSync(ORDER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).length : 0;
+  verdict.no_child_measurement = {
+    consumer_spawn_attempts: verdict.spawn_attempts,
+    order_log_lines_before: ledgerBefore,
+    order_log_lines_after: ledgerAfter,
+    order_log_unchanged: ledgerBefore === ledgerAfter,
+    why: 'the order log records every stage this packet starts; a consumer that launched something to find out would have moved it',
   };
-  const sameSizeDrift = copyWithFlip(toHost(A2.runtime_destination + '/' + innerOriginals[0].logical),
-    damagedRuntime + '/' + innerOriginals[0].logical);
-  const absentMember = innerOriginals[1].logical;
-
-  const negatives = [];
-  const runNegative = (name, mutate, expect) => {
-    const c = JSON.parse(JSON.stringify(control));
-    const note = mutate(c);
-    const v = consumeRuntimeChain(c);
-    negatives.push({ name, expected_refusal: true, refused: v.refused, accepted: v.accepted,
-      problems: v.problems.slice(0, 4), problem_count: v.problems.length,
-      spawn_attempts: v.spawn_attempts, mutation: note || null,
-      matched_expectation: expect ? v.problems.some((p) => expect(p)) : null });
-  };
-
-  runNegative('inner-hash-drift-same-size', (c) => { c.runtime_host_root = damagedRuntime; return sameSizeDrift; },
-    (p) => /different bytes at the same size/.test(p.why));
-  runNegative('inner-member-absent', (c) => { c.runtime_host_root = damagedRuntime; return { absent: absentMember }; },
-    (p) => p.member === absentMember && /absent/.test(p.why));
-  runNegative('case-removed-from-contract', (c) => {
-    const k = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
-    k.cases = k.cases.slice(0, 10);
-    const p2 = fixtureRoot + '/contract-10-cases.json';
-    fs.writeFileSync(p2, JSON.stringify(k, null, 2) + '\n', { flag: 'wx' });
-    c.contract_path = p2;
-    return { cases: 10 };
-  }, (p) => /does not carry every case/.test(p.why));
-  runNegative('return-code-expectation-drift', (c) => {
-    const k = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
-    k.cases[0].return_code = 7;
-    const p2 = fixtureRoot + '/contract-wrong-rc.json';
-    fs.writeFileSync(p2, JSON.stringify(k, null, 2) + '\n', { flag: 'wx' });
-    c.contract_path = p2;
-    return { case: 1, expected_return_code: 7 };
-  }, (p) => /return code is not the expected one/.test(p.why));
-  runNegative('argv-expectation-drift', (c) => {
-    const k = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
-    k.cases[2].test_elf = k.cases[2].test_elf + '.other';
-    const p2 = fixtureRoot + '/contract-wrong-argv.json';
-    fs.writeFileSync(p2, JSON.stringify(k, null, 2) + '\n', { flag: 'wx' });
-    c.contract_path = p2;
-    return { case: 3, test_elf: k.cases[2].test_elf };
-  }, (p) => /different argv/.test(p.why));
-  runNegative('raw-channel-absent', (c) => {
-    // Every case is pointed at a directory that exists and holds nothing, so the only difference from the accepted chain is that
-    // the channels are not there. The directory is created first: a missing directory would make the defect an absent directory
-    // rather than an absent channel.
-    const empty = fixtureRoot + '/no-raw';
-    fs.mkdirSync(empty, { recursive: true });
-    const k = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
-    for (const row of k.cases) row.raw_path = empty + '/' + row.stage + '.raw';
-    const p2 = fixtureRoot + '/contract-no-raw.json';
-    fs.writeFileSync(p2, JSON.stringify(k, null, 2) + '\n', { flag: 'wx' });
-    c.contract_path = p2;
-    return { raw_channels_expected_at: empty };
-  }, (p) => /absent raw channel/.test(p.why));
-  runNegative('result-record-absent', (c) => { c.results_dir = fixtureRoot + '/no-results';
-    fs.mkdirSync(c.results_dir, { recursive: true }); return { results_dir: c.results_dir }; },
-  (p) => /unreadable result/.test(p.why));
-
-  // The calibration: the consumer started no child, and the guard's own run counter did not move across the whole set of negatives.
-  const orderLogAfter = exists(ORDER_LOG) ? fs.readFileSync(ORDER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).length : 0;
-  const noChild = {
-    consumer_spawn_attempts: negatives.reduce((n, x) => n + x.spawn_attempts, 0) + verdict.spawn_attempts,
-    order_log_lines_before: orderLogBefore,
-    order_log_lines_after: orderLogAfter,
-    order_log_unchanged: orderLogBefore === orderLogAfter,
-    why: 'the order log records every stage this packet starts; if a negative had launched something to find out, the count would '
-      + 'have moved. It did not, and the consumer own spawn counter is zero.',
-  };
-  const summary = {
-    phase: 'hconsume', tag,
-    contract: pin(contractPath),
+  fs.writeFileSync(verdictPath, JSON.stringify(verdict, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, contract: pin(contractPath), verdict: pin(verdictPath),
     accepted: verdict.accepted, refused: verdict.refused,
-    counts: verdict.counts, problems: verdict.problems.length,
-    observed: verdict.observed,
-    negatives,
-    negatives_all_refused: negatives.every((n) => n.refused && n.matched_expectation !== false),
-    no_child: noChild,
-    ok: verdict.accepted === true && negatives.every((n) => n.refused === true) && noChild.order_log_unchanged
-      && noChild.consumer_spawn_attempts === 0,
+    counts: verdict.counts, problems: verdict.problems.slice(0, 6), problem_count: verdict.problems.length,
+    no_child: verdict.no_child_measurement,
+    units: verdict.observed.units.map((u) => ({ role: u.role, listed: u.listed_cases, elf: u.elf && u.elf.matches })) }, null, 2));
+  process.exit(verdict.accepted ? 0 : 1);
+}
+
+// ================================================================ hneg
+// The same consumer, on the same chain, with exactly one real dependency broken in each case. Every negative is a fresh copy of
+// the whole chain into a tree this phase owns: the result records, the inner reports, the raw channels, the contract and the build
+// record. The mutation is applied to the copy, and where the mutation changes a file that another record hashes, the copy is
+// resealed so the records stay consistent with each other and the only broken thing is the one thing the negative names.
+//
+// That resealing is the point. A negative that leaves a hash stale is refused because the hash does not match, which proves the
+// hash is checked and nothing else. Resealing first means the refusal has to come from the consumer actually reading the fact the
+// negative destroyed.
+if (phase === 'hneg') {
+  const stage = process.argv[3];
+  const outSuffix = process.argv[4] || 'a';
+  const tag = 'h142f';
+  const suffix = 'c';
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  const bdTag = 'u142';
+  const stTag = 'u142b';
+  const treeRoot = S + '/tmp/neg-' + stage;
+  const buildRecordReal = R + '/h-unit-build-' + tag + '-142.json';
+  const contractReal = R + '/h-contract-142h.json';
+  for (const p of [buildRecordReal, contractReal]) if (!exists(p)) throw new Error('absent: ' + p);
+  const stageNames = [];
+  for (let n = 1; n <= 11; n++) stageNames.push('hcase142' + suffix + '-' + String(n).padStart(2, '0'));
+  stageNames.push('bdrun142-01', 'saferun142-01');
+  const consume = (await import('file:///' + HERE + '/host-consume-142.mjs')).consumeHostChain;
+  const runtimeElfLinux = S + '/test-build/' + tag + '/runtime_test.elf';
+
+  const writeJson = (p, v) => fs.writeFileSync(toHost(p), JSON.stringify(v, null, 2) + '\n', { encoding: 'utf8' });
+  // A record may name either domain. The records written by the bridge carry host paths and the inner reports carry Linux paths,
+  // so a translation is applied only to the Linux form. Applying it to a host path a second time produces a path with the share
+  // name in it twice, which is exactly what a first attempt here did.
+  const hostOf = (p) => (/^[A-Za-z]:[\\/]/.test(p) || /^[\\/]{2}/.test(p) ? p.replace(/\//g, '\\') : toHost(p));
+  // Reseal the raw channel into the inner report, and the inner report into the result record. After this the three agree with
+  // each other, so a negative that changed the raw channel is refused for what it did rather than for a hash it left behind.
+  const resealInner = (dest, s) => {
+    const recPath = dest + '/results/' + s + '.json';
+    const rec = JSON.parse(fs.readFileSync(toHost(recPath), 'utf8'));
+    const innerPath = rec.inner_report.path;
+    const inner = JSON.parse(fs.readFileSync(hostOf(innerPath), 'utf8'));
+    const raw = fs.readFileSync(hostOf(inner.child.output_path));
+    inner.child.output_bytes = raw.length;
+    inner.child.output_sha256 = sha(raw);
+    writeJson(innerPath, inner);
+    const b = fs.readFileSync(toHost(innerPath));
+    rec.inner_report.bytes = b.length;
+    rec.inner_report.sha256 = sha(b);
+    writeJson(recPath, rec);
   };
-  const target = R + '/h-negatives-142' + suffix + '.json';
+  const copyChain = (dest) => {
+    fs.mkdirSync(toHost(dest + '/results'), { recursive: true });
+    fs.mkdirSync(toHost(dest + '/logs'), { recursive: true });
+    for (const s of stageNames) {
+      const rec = JSON.parse(fs.readFileSync(R + '/results/' + s + '.json', 'utf8'));
+      const innerDst = dest + '/logs/inner-report-' + s + '.json';
+      const rawDst = dest + '/logs/child-output-' + s + '.raw';
+      fs.writeFileSync(toHost(innerDst), fs.readFileSync(hostOf(rec.inner_report.path)));
+      fs.writeFileSync(toHost(rawDst), fs.readFileSync(hostOf(rec.raw.path)));
+      const inner = JSON.parse(fs.readFileSync(toHost(innerDst), 'utf8'));
+      inner.child.output_path = rawDst;
+      writeJson(innerDst, inner);
+      rec.inner_report.path = innerDst;
+      rec.inner_report.linux_path = innerDst;
+      rec.raw.path = rawDst;
+      rec.raw.linux_path = rawDst;
+      const ib = fs.readFileSync(toHost(innerDst));
+      rec.inner_report.bytes = ib.length;
+      rec.inner_report.sha256 = sha(ib);
+      writeJson(dest + '/results/' + s + '.json', rec);
+    }
+    fs.copyFileSync(toHost(buildRecordReal), toHost(dest + '/build.json'));
+    fs.copyFileSync(toHost(contractReal), toHost(dest + '/contract.json'));
+    return dest;
+  };
+  const controlFor = (dest) => ({
+    task: A.task,
+    build_record_path: dest + '/build.json',
+    contract_path: dest + '/contract.json',
+    unit_elf_host_path: toHost(runtimeElfLinux),
+    unit_elf_linux: runtimeElfLinux,
+    results_dir: dest + '/results',
+  });
+  const readModify = (p, f) => { const v = JSON.parse(fs.readFileSync(toHost(p), 'utf8')); f(v); writeJson(p, v); return v; };
+  const rawOf = (dest, s) => dest + '/logs/child-output-' + s + '.raw';
+  const innerOf = (dest, s) => dest + '/logs/inner-report-' + s + '.json';
+  const recOf = (dest, s) => dest + '/results/' + s + '.json';
+
+  const negatives = [
+    { name: 'child-return-code-nonzero', why: 'the child failed and the record was resealed to say so',
+      expect: ['the child did not exit zero'],
+      mutate: (dest) => {
+        readModify(innerOf(dest, 'hcase142c-05'), (v) => { v.child.returncode = 1; });
+        resealInner(dest, 'hcase142c-05');
+      } },
+    { name: 'child-argv-rewritten', why: 'the case ran a different binary than the one the unit names',
+      expect: ['launched with a different argv'],
+      mutate: (dest) => {
+        readModify(innerOf(dest, 'hcase142c-07'), (v) => { v.argv[0] = S + '/test-build/u142b/safe_tss_test.elf'; });
+        resealInner(dest, 'hcase142c-07');
+      } },
+    { name: 'inner-report-deleted', why: 'the run left no account of itself, so the record is the only voice',
+      expect: ['absent inner report'],
+      mutate: (dest) => { fs.unlinkSync(toHost(innerOf(dest, 'hcase142c-02'))); } },
+    { name: 'exit-layers-disagree', why: 'the guard failed a launch the child reports as clean',
+      expect: ['the three exit layers disagree'],
+      mutate: (dest) => {
+        readModify(recOf(dest, 'hcase142c-04'), (v) => { v.guard_row.exit_code = 1; });
+      } },
+    { name: 'transport-timed-out', why: 'the transport ran out of time and the record still carries the case',
+      expect: ['the transport timed out'],
+      mutate: (dest) => {
+        readModify(recOf(dest, 'hcase142c-06'), (v) => { v.transport.timed_out = true; });
+      } },
+    { name: 'raw-channel-truncated', why: 'the channel is not the bytes the run produced, and nothing was resealed',
+      expect: ['raw channel for case 3 is a different size'],
+      mutate: (dest) => {
+        const p = toHost(rawOf(dest, 'hcase142c-03'));
+        const b = fs.readFileSync(p);
+        fs.writeFileSync(p, b.subarray(0, b.length - 4));
+      } },
+    { name: 'pass-marker-removed', why: 'the unit no longer says it passed, and the hashes were resealed to hide it',
+      expect: ['carries no pass marker'],
+      mutate: (dest) => {
+        const p = toHost(rawOf(dest, 'hcase142c-08'));
+        fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('RUNTIME UNIT PASS', 'RUNTIME UNIT DONE'));
+        resealInner(dest, 'hcase142c-08');
+      } },
+    { name: 'case-marker-removed', why: 'the channel is from another case, and the hashes were resealed to hide it',
+      expect: ['is not from this case'],
+      mutate: (dest) => {
+        const p = toHost(rawOf(dest, 'hcase142c-09'));
+        fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('CASE 9', 'CASE 1'));
+        resealInner(dest, 'hcase142c-09');
+      } },
+    { name: 'unit-dropped-from-set', why: 'the set is one unit short and the contract no longer mentions it',
+      expect: ['required unit is absent'],
+      mutate: (dest) => {
+        readModify(dest + '/contract.json', (v) => { v.units = v.units.filter((u) => u.role !== 'safe_tss'); });
+      } },
+    { name: 'unit-case-dropped', why: 'a case is quietly removed instead of repaired',
+      expect: ['does not carry every case'],
+      mutate: (dest) => {
+        readModify(dest + '/contract.json', (v) => {
+          const u = v.units.find((x) => x.role === 'runtime');
+          u.cases = u.cases.filter((c) => c.case !== 10);
+        });
+      } },
+    { name: 'unit-elf-rewritten', why: 'the unit points at a different binary than the one that ran',
+      expect: ['ELF for safe_tss has different bytes at the same size'],
+      mutate: (dest) => {
+        readModify(dest + '/contract.json', (v) => {
+          const u = v.units.find((x) => x.role === 'safe_tss');
+          u.elf.sha256 = 'f'.repeat(64);
+        });
+      } },
+    { name: 'build-input-rewritten', why: 'the unit claims a source it was not built from',
+      expect: ['build input', 'has different bytes at the same size'],
+      mutate: (dest) => {
+        readModify(dest + '/build.json', (v) => {
+          const i = v.inputs.find((x) => x.role === 'production');
+          i.sha256 = 'e'.repeat(64);
+        });
+      } },
+  ];
+
+  const results = [];
+  let acceptedByMistake = 0;
+  let wrongReason = 0;
+  for (const neg of negatives) {
+    const dest = treeRoot + '/' + neg.name;
+    if (exists(toHost(dest))) throw new Error('REFUSED: the negative tree already exists: ' + dest);
+    copyChain(dest);
+    const before = exists(ORDER_LOG) ? fs.readFileSync(ORDER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).length : 0;
+    neg.mutate(dest);
+    const v = consume(controlFor(dest));
+    const after = exists(ORDER_LOG) ? fs.readFileSync(ORDER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).length : 0;
+    const texts = v.problems.map((p) => [p.why, p.role, p.case, p.member, p.path].filter(Boolean).join(' '));
+    const hit = neg.expect.every((e) => texts.some((t) => t.includes(e)));
+    if (!v.refused) acceptedByMistake += 1;
+    if (v.refused && !hit) wrongReason += 1;
+    results.push({ name: neg.name, why: neg.why, refused: v.refused, expected: neg.expect, hit_target: hit,
+      problems: texts.slice(0, 4), problem_count: v.problems.length,
+      spawn_attempts: v.spawn_attempts, order_log_moved: before !== after,
+      tree: dest });
+  }
+  const summary = {
+    phase: 'hneg', stage, tree_root: treeRoot,
+    negatives: results.length,
+    refused: results.filter((r) => r.refused).length,
+    hit_target: results.filter((r) => r.hit_target).length,
+    accepted_by_mistake: acceptedByMistake,
+    wrong_reason: wrongReason,
+    any_spawn: results.some((r) => r.spawn_attempts > 0),
+    any_order_log_movement: results.some((r) => r.order_log_moved),
+    results,
+    ok: results.length === negatives.length && acceptedByMistake === 0 && wrongReason === 0,
+    ok_means: 'each negative is a fresh copy of the whole chain with exactly one real dependency broken; the same consumer had to '
+      + 'refuse it for the reason the negative names, and had to start nothing while doing it',
+  };
+  const target = R + '/h-negatives-142' + outSuffix + '.json';
   if (exists(target)) throw new Error('REFUSED: ' + target + ' already exists');
   fs.writeFileSync(target, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
-  console.log(JSON.stringify({ accepted: verdict.accepted, counts: verdict.counts,
-    problems: verdict.problems.slice(0, 3), problem_count: verdict.problems.length,
-    negatives: negatives.map((n) => n.name + ':' + (n.refused ? 'refused' : 'ACCEPTED')
-      + ':' + (n.matched_expectation === false ? 'wrong-reason' : 'expected')),
-    no_child: noChild, ok: summary.ok }, null, 2));
+  console.log(JSON.stringify({ stage, negatives: summary.negatives, refused: summary.refused,
+    hit_target: summary.hit_target, accepted_by_mistake: summary.accepted_by_mistake,
+    wrong_reason: summary.wrong_reason, any_spawn: summary.any_spawn,
+    failures: results.filter((r) => !r.refused || !r.hit_target).map((r) => ({ name: r.name, refused: r.refused,
+      expected: r.expected, problems: r.problems })), ok: summary.ok }, null, 2));
   process.exit(summary.ok ? 0 : 1);
 }
 
