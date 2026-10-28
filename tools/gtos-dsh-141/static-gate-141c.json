@@ -1,0 +1,262 @@
+{
+  "task": "GTOS-DSH-141",
+  "what": "the production static byte gate over the image this packet linked, with the input pins verified, the initialiser list derived from the input objects, and seven single-obligation negatives",
+  "gate": {
+    "module": "references/static-image-141.mjs",
+    "sha256": "993922f21ade38a8106dbd0d95b6119bc4c62fe12633e849ffa6be2b0cac3d46"
+  },
+  "image": {
+    "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/image/fixed61c.elf",
+    "host": "\\\\wsl$\\Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/image/fixed61c.elf",
+    "bytes": 745272,
+    "sha256": "de402ffd3d533a6970bee522a9c3c297e3e064ab455cc33217644b0a33d58938"
+  },
+  "map": {
+    "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/image/fixed61c.map",
+    "host": "\\\\wsl$\\Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/image/fixed61c.map",
+    "bytes": 269730,
+    "sha256": "bb4b57149dea583cecaf021b0507292363fc98f71f93dc6e4b6346ceb2645ed8"
+  },
+  "link": {
+    "parent_link_argv_sha256": "29a71be188000f8c237223e987637b7d61f82bccd3657957ff4d9f7cd7ce6bbf",
+    "linker_script": {
+      "path": "F:/GTOS-Chromium/artifacts/native-memory-selftest-owner-flat59-static-image-readiness-20261025-a/publication-103-v01/native/readiness-inputs/linker.ld",
+      "bytes": 626,
+      "sha256": "7bb1601b8c159a1831dfcdca9182de842cf858f5dd96bf2618b4b61dee7490d9"
+    },
+    "order_from": "F:/GTOS-Chromium/artifacts/native-runtime-object-lifecycle-pre-dispatch-and-evidence-20261026-a/publication-116-v01/native/native/source-root/spec-lk2a-01.json",
+    "order": [
+      "arp.o",
+      "etherframe.o",
+      "icmp.o",
+      "ipv4.o",
+      "tcp.o",
+      "udp.o",
+      "amd_am79c973.o",
+      "raw_data_registration.o",
+      "memorymanagement.o",
+      "driver.o",
+      "port.o",
+      "interrupts.o",
+      "interruptstubs.asm.o",
+      "gdt.o",
+      "multitasking.o",
+      "native_runtime.o",
+      "native_fp.o",
+      "native_fp.asm.o",
+      "bootstrap.o",
+      "physical.o",
+      "paging.o",
+      "process_address_space.o",
+      "native_surface.o",
+      "native_windows.o",
+      "resources.o",
+      "native_realtime.o",
+      "elf32.o",
+      "boot_log.o",
+      "cpu.o",
+      "cpu_startup.o",
+      "cpu_memory_types.o",
+      "cpu_startup_trampoline.asm.o",
+      "cpu_work_interrupts.asm.o",
+      "shell.o",
+      "modern_desktop.o",
+      "modern_painter.o",
+      "modern_render.o",
+      "modern_geometry.o",
+      "canvas.o",
+      "framebuffer.o",
+      "vga.o",
+      "utf8.o",
+      "catalog.o",
+      "font.o",
+      "pinyin.o",
+      "keyboard.o",
+      "mouse.o",
+      "vm.o",
+      "package.o",
+      "syscalls.o",
+      "keymap.o",
+      "ata.o",
+      "liveblockdevice.o",
+      "appstore.o",
+      "settings.o",
+      "selftest.o",
+      "loader.asm.o",
+      "kernel.o",
+      "boot_diagnostic.o",
+      "cpu_work_pool.o",
+      "cpu_work_queue.o"
+    ],
+    "reused": 60,
+    "rebuilt": [
+      {
+        "name": "boot_diagnostic.o",
+        "bytes": 4268,
+        "sha256": "4fe9c99344bb8016b0771e824764ec32e02074b77ce26d34518f5a41e07acf6d",
+        "why": "no catalog pin covers this name, and the current source is 7954 bytes where the last published copy is 7003, so the object the parent link consumed cannot be the object the current source produces"
+      }
+    ],
+    "baseline_image": {
+      "path": "F:/GTOS-Chromium/artifacts/native-runtime-object-lifecycle-pre-dispatch-and-evidence-20261026-a/publication-116-v01/native/products/provider-static-elf.elf",
+      "bytes": 745124,
+      "sha256": "cbf17148b07df5712b14ebefdbd610f8f446f342b237aae16fc291f3f4a6871d"
+    },
+    "reproduced_baseline": false,
+    "reproduced_baseline_note": "the parent image cannot be reproduced because one of its inputs came from a source that has since changed; that object was rebuilt here and the difference is reported rather than hidden"
+  },
+  "initializers": {
+    "derived_from_inputs": [
+      "_GLOBAL__sub_I__ZN4gtos7process17NativeSurfaceBankC2Ev",
+      "_GLOBAL__sub_I__ZN4gtos7process13NativeWindowsC2Ev",
+      "_GLOBAL__sub_I_bootLogEmergencyScreen"
+    ],
+    "per_object": [
+      {
+        "object": "native_surface.o",
+        "symbol": "_GLOBAL__sub_I__ZN4gtos7process17NativeSurfaceBankC2Ev"
+      },
+      {
+        "object": "native_windows.o",
+        "symbol": "_GLOBAL__sub_I__ZN4gtos7process13NativeWindowsC2Ev"
+      },
+      {
+        "object": "kernel.o",
+        "symbol": "_GLOBAL__sub_I_bootLogEmergencyScreen"
+      }
+    ],
+    "note": "read out of each object own initialiser array and its relocations; the gate then has to find this exact ordered list in the image, so the list is a fact about the inputs and not a reading of the output"
+  },
+  "base": {
+    "accepted": true,
+    "bytes": 745272,
+    "entry": 1238222,
+    "script_symbols": {
+      "kernel_start": 1048576,
+      "kernel_readonly_start": 1048576,
+      "kernel_readonly_end": 1699840,
+      "kernel_end": 6389760,
+      "start_ctors": 1699840,
+      "end_ctors": 1699852
+    },
+    "constructors": [
+      {
+        "address": 1699840,
+        "target": 1141040,
+        "symbols": [
+          "_GLOBAL__sub_I__ZN4gtos7process17NativeSurfaceBankC2Ev"
+        ]
+      },
+      {
+        "address": 1699844,
+        "target": 1147088,
+        "symbols": [
+          "_GLOBAL__sub_I__ZN4gtos7process13NativeWindowsC2Ev"
+        ]
+      },
+      {
+        "address": 1699848,
+        "target": 1261152,
+        "symbols": [
+          "_GLOBAL__sub_I_bootLogEmergencyScreen"
+        ]
+      }
+    ],
+    "undefined_symbols": [],
+    "writable_executable_loads": 0,
+    "executable_stack_requested": false,
+    "multiboot": {
+      "offset": 4096,
+      "flags": 7
+    },
+    "constructors_executed": false,
+    "target_execution": false,
+    "init_ready": "unknown"
+  },
+  "map_relations": [
+    {
+      "symbol": "kernel_start",
+      "value": 1048576,
+      "in_image": true,
+      "named_in_map": true
+    },
+    {
+      "symbol": "kernel_readonly_start",
+      "value": 1048576,
+      "in_image": true,
+      "named_in_map": true
+    },
+    {
+      "symbol": "kernel_readonly_end",
+      "value": 1699840,
+      "in_image": true,
+      "named_in_map": true
+    },
+    {
+      "symbol": "kernel_end",
+      "value": 6389760,
+      "in_image": true,
+      "named_in_map": true
+    },
+    {
+      "symbol": "start_ctors",
+      "value": 1699840,
+      "in_image": true,
+      "named_in_map": true
+    },
+    {
+      "symbol": "end_ctors",
+      "value": 1699852,
+      "in_image": true,
+      "named_in_map": true
+    }
+  ],
+  "map_relations_all_named": true,
+  "negatives": [
+    {
+      "name": "entry-is-not-the-loader",
+      "why": "the entry points four bytes past the loader definition, still inside executable code",
+      "refused": true,
+      "error": "entry equals real loader definition"
+    },
+    {
+      "name": "wrong-kernel-start",
+      "why": "the image is declared to start somewhere it does not",
+      "refused": true,
+      "error": "kernel start address"
+    },
+    {
+      "name": "constructor-list-from-elsewhere",
+      "why": "a constructor list that does not match the inputs, in order",
+      "refused": true,
+      "error": "exact ordered constructor ownership"
+    },
+    {
+      "name": "constructor-list-shortened",
+      "why": "a constructor list with one initialiser dropped, which is what a stale object would produce",
+      "refused": true,
+      "error": "exact ordered constructor ownership"
+    },
+    {
+      "name": "entry-byte-not-executable",
+      "why": "the entry address is moved out of the executable load segment",
+      "refused": true,
+      "error": "entry equals real loader definition"
+    },
+    {
+      "name": "undefined-symbol-introduced",
+      "why": "one symbol section index is set to SHN_UNDEF, which is what an unresolved reference looks like",
+      "refused": true,
+      "error": "unresolved image symbol of any name, value or binding: [{\"name\":\"\",\"value\":1048576,\"binding\":0}]"
+    },
+    {
+      "name": "not-an-elf",
+      "why": "the bytes are not an i386 executable at all",
+      "refused": true,
+      "error": "ELF32 little-endian i386 executable required"
+    }
+  ],
+  "ok": true,
+  "negatives_refused": 7,
+  "negatives_total": 7
+}

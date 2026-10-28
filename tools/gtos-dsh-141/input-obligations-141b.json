@@ -1,0 +1,170 @@
+{
+  "task": "GTOS-DSH-141",
+  "what": "the four declaration-level obligations of the link: a source pin, a profile pin, a tool pin and a dependency file, each exercised in both directions",
+  "real": {
+    "source": {
+      "path": "F:/GTOS-Chromium/artifacts/native-admitted-image-runtime-recovery-and-delivery-20261026-a/publication-124-v01/native/candidate/src/common/boot_diagnostic.cpp",
+      "bytes": 7003,
+      "sha256": "c71557b60a7c60d32976407cd62829ee4452e7c80f6c1b735f696f86a8e90272",
+      "accepted": true,
+      "problems": []
+    },
+    "profile": {
+      "files": [
+        {
+          "path": "F:/GTOS-Chromium/artifacts/native-gui-leaf-objects-flat42-20261025-a/publication-099-v01/native/profile/Makefile",
+          "sha256": "694386268bf43191d0a8971f1fc96e8fbbffad07b043c1cea4126f5ea99266bd"
+        },
+        {
+          "path": "F:/GTOS-Chromium/artifacts/native-gui-leaf-objects-flat42-20261025-a/publication-099-v01/native/profile/kernel-cxxflags",
+          "sha256": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611"
+        }
+      ],
+      "accepted": true,
+      "problems": []
+    },
+    "tools": [
+      {
+        "path": "\\\\wsl$\\Ubuntu-20.04/usr/bin/x86_64-linux-gnu-ld.bfd",
+        "bytes": 1732192,
+        "sha256": "476b24d5cc1fef54f80412d06e7430b2dcf4e2b6f1525ee17e6eaaf16b28a00f"
+      },
+      {
+        "path": "\\\\wsl$\\Ubuntu-20.04/usr/bin/x86_64-linux-gnu-g++-9",
+        "bytes": 1158288,
+        "sha256": "0c0b987719385f8e242819dfef6a3e97b4b2540ce4035dbc11565df2966bd69e"
+      },
+      {
+        "path": "\\\\wsl$\\Ubuntu-20.04/usr/bin/x86_64-linux-gnu-as",
+        "bytes": 696624,
+        "sha256": "8d45684bbd6420e3e97907257c510f199bb6c5f9b02ea8ee0a590c1a8b662ead"
+      }
+    ],
+    "tools_accepted": true,
+    "tools_problems": [],
+    "depfile": {
+      "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.d",
+      "target": "native_runtime.o",
+      "must_name": [
+        "native_runtime.cpp"
+      ],
+      "accepted": true,
+      "problems": []
+    }
+  },
+  "source_drift": {
+    "present": true,
+    "path": "F:/GTOS-Chromium/artifacts/native-complete-runtime-tests-cold-repeats-and-physical-closure-20261028-a/worktree-141/src/common/boot_diagnostic.cpp",
+    "bytes": 7954,
+    "sha256": "66868076b1014d6370f6de86072a0b5e9424f4769e3eb015941465227f0cd6a1",
+    "pinned": "c71557b60a7c60d32976407cd62829ee4452e7c80f6c1b735f696f86a8e90272",
+    "pinned_bytes": 7003,
+    "differs": true
+  },
+  "note": "the pinned source is accepted against its own pin, which is what that obligation says. Separately, the source in the worktree is not that source: it is 951 bytes larger, which is why the object that depends on it was rebuilt for the link instead of reused. Both facts are recorded; a checker that reported only the first would be hiding the one input this packet could not reuse.",
+  "negatives": [
+    {
+      "name": "wrong-source-pin",
+      "why": "the source is declared with the bytes of a different revision",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "source",
+          "why": "the source on disk is not the declared source",
+          "path": "F:/GTOS-Chromium/artifacts/native-admitted-image-runtime-recovery-and-delivery-20261026-a/publication-124-v01/native/candidate/src/common/boot_diagnostic.cpp",
+          "declared": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "actual": "c71557b60a7c60d32976407cd62829ee4452e7c80f6c1b735f696f86a8e90272",
+          "declared_bytes": 7003,
+          "actual_bytes": 7003
+        }
+      ]
+    },
+    {
+      "name": "wrong-source-size",
+      "why": "the source is declared at a size it does not have",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "source",
+          "why": "the source on disk is not the declared source",
+          "path": "F:/GTOS-Chromium/artifacts/native-admitted-image-runtime-recovery-and-delivery-20261026-a/publication-124-v01/native/candidate/src/common/boot_diagnostic.cpp",
+          "declared": "c71557b60a7c60d32976407cd62829ee4452e7c80f6c1b735f696f86a8e90272",
+          "actual": "c71557b60a7c60d32976407cd62829ee4452e7c80f6c1b735f696f86a8e90272",
+          "declared_bytes": 7004,
+          "actual_bytes": 7003
+        }
+      ]
+    },
+    {
+      "name": "wrong-profile-pin",
+      "why": "a profile file is declared with a hash it does not have",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "profile",
+          "why": "a profile file is not the declared profile",
+          "path": "F:/GTOS-Chromium/artifacts/native-gui-leaf-objects-flat42-20261025-a/publication-099-v01/native/profile/Makefile",
+          "declared": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "actual": "694386268bf43191d0a8971f1fc96e8fbbffad07b043c1cea4126f5ea99266bd"
+        }
+      ]
+    },
+    {
+      "name": "wrong-tool-pin",
+      "why": "the linker is declared with a hash it does not have",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "tool",
+          "why": "the tool on disk is not the declared tool",
+          "path": "\\\\wsl$\\Ubuntu-20.04/usr/bin/x86_64-linux-gnu-ld.bfd",
+          "declared": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "actual": "476b24d5cc1fef54f80412d06e7430b2dcf4e2b6f1525ee17e6eaaf16b28a00f"
+        }
+      ]
+    },
+    {
+      "name": "wrong-dep-target",
+      "why": "a dependency file is declared to describe an object it does not describe",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "depfile",
+          "why": "the dependency file describes a different target",
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.d",
+          "declared": "physical.o",
+          "actual": "native_runtime.o"
+        }
+      ]
+    },
+    {
+      "name": "dep-missing-a-source",
+      "why": "a dependency file is required to name a source it does not name",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "depfile",
+          "why": "the dependency file does not name a source it must name",
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.d",
+          "missing": "physical.cpp",
+          "prerequisites": 40
+        }
+      ]
+    },
+    {
+      "name": "dep-absent",
+      "why": "the dependency file does not exist",
+      "refused": true,
+      "problems": [
+        {
+          "obligation": "depfile",
+          "why": "the dependency file is not readable",
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/no_such_object.d"
+        }
+      ]
+    }
+  ],
+  "negatives_refused": 7,
+  "negatives_total": 7,
+  "ok": true
+}

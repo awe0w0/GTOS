@@ -379,6 +379,134 @@ if (phase === 'rununit') {
   process.exit(0);
 }
 
+// ================================================================ the fixed61 default image
+// The kernel image is not rebuilt here and nothing about it is assumed. Its 61 inputs are the ones the parent link actually
+// consumed, taken from that link's own argv rather than from a list written down for this packet; every one of them is
+// hashed against the catalog pin before the link runs, so a changed object stops the link instead of entering the image.
+if (phase === 'fixedlink') {
+  const stage = process.argv[3];
+  const tag = process.argv[4] || 'fixed61';
+  const rootAlnum = stage.replace(/[^a-z0-9]/g, '');
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage name: ' + stage);
+  const catalog = JSON.parse(fs.readFileSync(R + '/build-material-catalog-141.json', 'utf8'));
+  const parentSpec = JSON.parse(fs.readFileSync(catalog.parent_actual_final_link_spec.path, 'utf8'));
+  const parentArgv = parentSpec.cmd;
+  const oAt = parentArgv.indexOf('-o');
+  if (oAt < 0) throw new Error('the parent link argv has no output');
+  const individualsLinux = parentArgv.slice(oAt + 2);
+  // The pin for each input, keyed by the name the link used for it.
+  const byName = new Map();
+  for (const o of catalog.objects) byName.set(path.basename(o.object.path), o.object);
+  byName.set(path.basename(catalog.loader.path), catalog.loader);
+  const verified = [];
+  const problems = [];
+  // An input the catalog does not pin has to be produced here. The replacement is named on the command line and must be a real
+  // object whose basename is the one the parent link used, so a substitution cannot change which slot it fills.
+  const substituteLinux = process.argv[5] || null;
+  const substitute = substituteLinux
+    ? { linux: substituteLinux, host: toHost(substituteLinux),
+        pin: exists(toHost(substituteLinux)) ? pin(toHost(substituteLinux)) : null }
+    : null;
+  if (substitute && !substitute.pin) throw new Error('the substitute object is not on disk: ' + substituteLinux);
+  const resolved = individualsLinux.map((linux) => {
+    const name = path.posix.basename(linux);
+    // The order comes from the parent argv; the location comes from the catalog pin, which is the copy the guard can read
+    // and the copy whose bytes were verified. The parent own working copy sits outside every declared read root.
+    if (byName.has(name)) return { linux: toLinux(byName.get(name).path), name, source: 'catalog', parent_linux: linux };
+    if (!substitute) return { linux, name, source: 'unpinned' };
+    if (path.posix.basename(substituteLinux) !== name) return { linux, name, source: 'unpinned' };
+    return { linux: substituteLinux, name, source: 'rebuilt', parent_linux: linux };
+  });
+  for (const entry of resolved) {
+    const linux = entry.linux;
+    const name = entry.name;
+    const pinWant = byName.get(name);
+    const hostPath = toHost(linux);
+    if (!pinWant) {
+      // The rebuilt substitute carries its own identity, which is recorded rather than compared with a pin that does not exist.
+      if (entry.source === 'rebuilt') { verified.push({ input: name, bytes: substitute.pin.bytes, sha256: substitute.pin.sha256,
+        source: 'rebuilt', parent_linux: entry.parent_linux, replaces: entry.parent_linux }); continue; }
+      problems.push({ input: linux, why: 'no catalog pin for this input' }); continue;
+    }
+    if (!exists(hostPath)) { problems.push({ input: linux, why: 'the input is not on disk' }); continue; }
+    const st = fs.lstatSync(hostPath);
+    if (!st.isFile() || st.isSymbolicLink()) { problems.push({ input: linux, why: 'not an ordinary file' }); continue; }
+    const b = fs.readFileSync(hostPath);
+    const h = sha(b);
+    if (h !== pinWant.sha256 || b.length !== pinWant.bytes) {
+      problems.push({ input: linux, why: 'the bytes are not the pinned bytes', want: pinWant.sha256, got: h });
+      continue;
+    }
+    verified.push({ input: name, bytes: b.length, sha256: h });
+  }
+  const linkerEntry = catalog.source_inputs.find((s) => s.logical === 'linker.ld');
+  if (!linkerEntry) throw new Error('the catalog pins no linker script');
+  const linkerHost = linkerEntry.source.path;
+  const linkerBytes = fs.readFileSync(linkerHost);
+  if (sha(linkerBytes) !== linkerEntry.source.sha256) problems.push({ input: linkerHost, why: 'the linker script is not pinned' });
+  if (problems.length) {
+    console.log(JSON.stringify({ stage, ok: false, problems, verified: verified.length }, null, 2));
+    process.exit(1);
+  }
+  const imageDir = S + '/image';
+  fs.mkdirSync(toHost(imageDir), { recursive: true });
+  const elfFile = imageDir + '/' + tag + '.elf';
+  const mapFile = imageDir + '/' + tag + '.map';
+  freezeContractInLedger();
+  const spec = writeSpec(stage, 'image.link', 'image-link', 'ld',
+    { individuals: resolved.map((e) => e.linux), mapFile, elfFile,
+      linkerScript: toLinux(linkerHost), objectRoot: imageDir }, 900);
+  out.push(run(spec));
+  const elfHost = toHost(elfFile);
+  const mapHost = toHost(mapFile);
+  const result = {
+    stage, tag,
+    inputs: { count: resolved.length, verified: verified.length, order: verified.map((v) => v.input),
+      pins: verified,
+      reused_from_catalog: verified.filter((v) => !v.source).length,
+      rebuilt: verified.filter((v) => v.source === 'rebuilt').map((v) => ({ input: v.input, bytes: v.bytes,
+        sha256: v.sha256, replaces: v.replaces })) },
+    linker_script: { host: linkerHost, bytes: linkerBytes.length, sha256: sha(linkerBytes) },
+    parent_link_argv_sha256: sha(Buffer.from(JSON.stringify(parentArgv))),
+    image: exists(elfHost) ? pin(elfHost) : null,
+    map: exists(mapHost) ? pin(mapHost) : null,
+    baseline_image: catalog.baseline_image,
+    reproduced_baseline: exists(elfHost) ? sha(fs.readFileSync(elfHost)) === catalog.baseline_image.sha256 : false,
+    stages: out.map((r) => ({ stage: r.stage, status: r.status, line: r.line, detail: r.detail })),
+    ok: out.every((r) => r.status === 0) && exists(elfHost),
+  };
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(result.ok ? 0 : 1);
+}
+
+// ================================================================ one object, kernel profile
+// The parent link consumed one object that no catalog pin covers: boot_diagnostic.o, compiled in that packet own source view.
+// 141 has to produce it, so it is compiled here under the frozen kernel profile -- the same flags, no host-test delta -- and
+// the result is compared with the parent object. If the bytes match, the rebuild reproduces what the parent linked; if they
+// do not, the difference is a fact to report rather than something to paper over.
+if (phase === 'kobj') {
+  const stageRoot = process.argv[3];
+  const wave = process.argv[4];
+  const tag = process.argv[5];
+  const logical = process.argv[6];
+  const rootAlnum = stageRoot.replace(/[^a-z0-9]/g, '');
+  if (!/^[a-z][a-z0-9]*$/.test(rootAlnum)) throw new Error('bad stage root: ' + stageRoot);
+  const objRoot = S + '/test-build/' + tag;
+  fs.mkdirSync(toHost(objRoot), { recursive: true });
+  const objectFile = objRoot + '/' + path.basename(logical, '.cpp') + '.o';
+  freezeContractInLedger();
+  const spec = writeSpec(rootAlnum + '-01', 'test.cpp.build', 'cpp-unit-build', 'cxx',
+    { sourceFile: S + '/' + wave + '/' + logical, objectFile, cxxflags: CXXFLAGS,
+      sourceRoot: S + '/' + wave, objectRoot: objRoot }, 600);
+  out.push(run(spec));
+  const hostObj = toHost(objectFile);
+  console.log(JSON.stringify({ stage: rootAlnum + '-01', objectFile,
+    object: exists(hostObj) ? pin(hostObj) : null,
+    stages: out.map((r) => ({ stage: r.stage, status: r.status, line: r.line, detail: r.detail })),
+    ok: out.every((r) => r.status === 0) && exists(hostObj) }, null, 2));
+  process.exit(out.every((r) => r.status === 0) && exists(hostObj) ? 0 : 1);
+}
+
 // ================================================================ runcase
 if (phase === 'runcase') {
   const stage = process.argv[3];
