@@ -2932,8 +2932,9 @@ if (phase === 'publish') {
   const engine = HERE + '/publish-143.mjs';
   if (!exists(engine)) throw new Error('absent engine: ' + engine);
   // A transaction is terminal, so a packet whose report changes after it was sealed publishes a second transaction beside the first
-  // rather than reopening the first. The suffix is what makes that a new destination instead of the same one.
-  const dest = mode === 'test' ? S + '/tmp/publish-' + stage : R + '/archive-143' + (process.argv[5] || '');
+  // rather than reopening the first. The suffix is what makes that a new destination instead of the same one. It is the sixth
+  // argument because the fifth already names a D closure to check the report against; passing an empty fifth skips that.
+  const dest = mode === 'test' ? S + '/tmp/publish-' + stage : R + '/archive-143' + (process.argv[6] || '');
   const destHost = toHost(dest);
   fs.mkdirSync(destHost, { recursive: true });
 
