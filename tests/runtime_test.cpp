@@ -238,6 +238,24 @@ void DiffFrameSet(const u32* before, u32 beforeCount) {
         if (!found) ++frameSetRemoved;
     }
 }
+// The set as one number, so the set can leave the process. A consumer that never had access to this unit's memory can compare
+// two digests and know whether the sets are equal; comparing counts cannot tell it that, and comparing a sum of free and
+// allocated frames cannot either. FNV-1a over each frame number in the order the walk found them, which is ascending, so the
+// digest is a function of the set and not of the walk that found it.
+u32 FrameSetDigestOf(const u32* set, u32 count) {
+    u32 digest = 2166136261U;
+    for (u32 i = 0; i < count; ++i) {
+        const u32 frame = set[i] >> 12;
+        for (u32 byte = 0; byte < 4; ++byte) { digest ^= (frame >> (byte * 8)) & 0xFFU; digest *= 16777619U; }
+    }
+    return digest;
+}
+// Published so the recovery judge can be a real judge: it reads these numbers out of the guarded raw channel and compares
+// them, instead of being told by this file what it concluded.
+void SayFrameSet(const char* label) {
+    Say("   FRAMESET "); Say(label); Say(" count "); SayHex(frameSetCount);
+    Say(" digest "); SayHex(FrameSetDigestOf(frameSet, frameSetCount)); Say("\n");
+}
 
 // Buffers the runtime writes into. Production requires them to be kernel-mapped memory, so they are file-scope objects
 // inside the modelled kernel image rather than host stack locals.
@@ -966,6 +984,7 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
 
         Expect(frameSetComplete, "the frame walk covered every addressable frame");
         for (u32 i = 0; i < frameSetCount; ++i) baseline[baselineCount++] = frameSet[i];
+        SayFrameSet("baseline");
 
         BuildData(23);
         NativeImage image;
@@ -985,6 +1004,7 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
 
 
         Expect(frameSetComplete, "the frame walk covered every addressable frame");
+        SayFrameSet("after-reap");
         DiffFrameSet(baseline, baselineCount);
         ExpectHex(frameSetAdded, 0, "no frame the objects took is still held");
         ExpectHex(frameSetRemoved, 0, "no permanent runtime frame was given up");
@@ -1064,6 +1084,7 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         CaptureFrameSet(frames2);
         Expect(frameSetComplete, "the second frame walk covered every addressable frame");
         for (u32 i = 0; i < frameSetCount; ++i) baseline2[baseline2Count++] = frameSet[i];
+        SayFrameSet("leak-baseline");
 
         u32 block2 = 0;
         Expect(frames2.allocateContiguous(4, block2), "four contiguous frames are taken the second time");
@@ -1079,6 +1100,7 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
                   "the four-frame leak leaves the count as divisible by four as it started");
         CaptureFrameSet(frames2);
         Expect(frameSetComplete, "the second frame walk covered every addressable frame");
+        SayFrameSet("leak-after");
         DiffFrameSet(baseline2, baseline2Count);
         ExpectHex(frameSetAdded, 4, "the frame set gained four frames");
         ExpectHex(frameSetRemoved, 0, "the frame set lost nothing");
@@ -1087,17 +1109,18 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
         }
         // A digest over the set has to differ, because the set differs. This is the property the scene relies on: equal
         // digests mean equal sets, not equal counts.
-        u32 digestBefore = 2166136261U;
-        for (u32 i = 0; i < baseline2Count; ++i) {
-            const u32 frame = baseline2[i] >> 12;
-            for (u32 byte = 0; byte < 4; ++byte) { digestBefore ^= (frame >> (byte * 8)) & 0xFFU; digestBefore *= 16777619U; }
-        }
-        u32 digestAfter = 2166136261U;
-        for (u32 i = 0; i < frameSetCount; ++i) {
-            const u32 frame = frameSet[i] >> 12;
-            for (u32 byte = 0; byte < 4; ++byte) { digestAfter ^= (frame >> (byte * 8)) & 0xFFU; digestAfter *= 16777619U; }
-        }
+        const u32 digestBefore = FrameSetDigestOf(baseline2, baseline2Count);
+        const u32 digestAfter = FrameSetDigestOf(frameSet, frameSetCount);
         Expect(digestBefore != digestAfter, "the frame-set digest separates the two sets the totals cannot");
+        // The same-count case the count-based checks cannot see: one frame given back and a different one taken. The totals
+        // are identical to the leak above, so a judge that compares counts accepts it; the digest does not.
+        static u32 replaced[kMaximumTracked];
+        u32 replacedCount = 0;
+        for (u32 i = 0; i < frameSetCount; ++i) replaced[replacedCount++] = frameSet[i];
+        Expect(replacedCount == frameSetCount, "the replacement set has the same size as the leak set");
+        replaced[0] = replaced[0] == baseline2[0] ? baseline2[1] : baseline2[0];
+        Expect(replacedCount == frameSetCount && FrameSetDigestOf(replaced, replacedCount) != digestAfter,
+               "an equal-size set with a different member has a different digest");
     }
     }
 
