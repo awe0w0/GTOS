@@ -1,0 +1,404 @@
+{
+  "task": "GTOS-DSH-141",
+  "what": "the production observation comparator imported and run over real snapshots of the artefacts the guarded runs produced, a frame-set layer over the sets the unit published from the production allocator, and a requirement layer, with a real-interval repeat and seven single-condition mutations",
+  "layers": {
+    "comparator": {
+      "module": "references/observation-diff-141.mjs",
+      "sha256": "ae38a72721d239472f69312cd21ef2c4c5b58cbce9133654ba2550259bc55b74"
+    },
+    "frame_set": {
+      "produced_by": "tests/runtime_test.cpp: CaptureFrameSet over the production allocator, FrameSetDigestOf, SayFrameSet; published in the guarded raw channels of cases 9 and 11"
+    },
+    "requirement": {
+      "keys": [
+        "slot_capacity",
+        "objects_live",
+        "objects_created",
+        "objects_reaped",
+        "frames_held_after_reap",
+        "capacity_reason",
+        "protect_consulted",
+        "protect_refused",
+        "pages_at_refusal",
+        "late_create_returned",
+        "unit_marker",
+        "recover_baseline_count",
+        "recover_after_reap_count",
+        "recover_baseline_digest",
+        "recover_after_reap_digest",
+        "leak_baseline_count",
+        "leak_after_count",
+        "leak_baseline_digest",
+        "leak_after_digest"
+      ]
+    },
+    "path_mapper": {
+      "module": "references/host-path-141.mjs",
+      "sha256": "e128c7b00dafcdcd784736bda06509749bd29ac78b9f0e2281e8d114316061a7"
+    }
+  },
+  "subject": {
+    "files": [
+      {
+        "key": "unit.elf",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/runtime_test.elf",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/runtime_test.elf",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/runtime_test.elf",
+          "bytes": 5377632,
+          "sha256": "816d1ee9fb249f011807fc4eaae657533ed8026917ad8df2898e58dbbe8f0e1f"
+        }
+      },
+      {
+        "key": "native_runtime.o",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.o",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.o",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.o",
+          "bytes": 31244,
+          "sha256": "fd74e2826f46fc4ac34950a24c46495fe9e62c085cf7ebcd1aeece345ee7da0b"
+        }
+      },
+      {
+        "key": "paging.o",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/paging.o",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/paging.o",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/paging.o",
+          "bytes": 7824,
+          "sha256": "1619df044f263f61f96776770946993eaac339a0e9530fac534bf43c1125a085"
+        }
+      },
+      {
+        "key": "physical.o",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/physical.o",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/physical.o",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/physical.o",
+          "bytes": 10676,
+          "sha256": "ca0c2cf50ce617a9d474e7105290414b5161b713db483357cf252afafef55511"
+        }
+      },
+      {
+        "key": "process_address_space.o",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/process_address_space.o",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/process_address_space.o",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/process_address_space.o",
+          "bytes": 21456,
+          "sha256": "63f5153d443285bb820ffab9399c4480a1ee281465562c14eb115937608ad507"
+        }
+      },
+      {
+        "key": "native_runtime.d",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.d",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.d",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/native_runtime.d",
+          "bytes": 2629,
+          "sha256": "e12c73603b2fc9ea8d4e0df3f714cd89f44279e23c310b51c939e30448413869"
+        }
+      },
+      {
+        "key": "link.map",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/test.map",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/test.map",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/test.map",
+          "bytes": 69222,
+          "sha256": "9087b59201b3289a556e6cf66c2294c4cddb2af42914b4964461708d7c9c82c4"
+        }
+      },
+      {
+        "key": "raw.case9",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-46/logs/child-output-rc141-46.raw",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-46/logs/child-output-rc141-46.raw",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-46/logs/child-output-rc141-46.raw",
+          "bytes": 217,
+          "sha256": "59c33888c27c81177b9c8403baf50a3522e3012824ff4522cd7297ca21866dcf"
+        }
+      },
+      {
+        "key": "raw.case10",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-47/logs/child-output-rc141-47.raw",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-47/logs/child-output-rc141-47.raw",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-47/logs/child-output-rc141-47.raw",
+          "bytes": 229,
+          "sha256": "2361b90b26b1e4cefaf8a98fd053b233873b1159d4b3074eed097d96316e5083"
+        }
+      },
+      {
+        "key": "raw.case11",
+        "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-48/logs/child-output-rc141-48.raw",
+        "host": "//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-48/logs/child-output-rc141-48.raw",
+        "pin": {
+          "path": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-48/logs/child-output-rc141-48.raw",
+          "bytes": 223,
+          "sha256": "1b96f11be4779a9ce7fa0fcfe0f1664784f807144b55bb39dcb77f40e1a93841"
+        }
+      }
+    ],
+    "values": {
+      "slot_capacity": 4,
+      "objects_live": 4,
+      "objects_created": 4,
+      "objects_reaped": 4,
+      "frames_held_after_reap": 0,
+      "capacity_reason": "the slot table is full",
+      "protect_consulted": 1,
+      "protect_refused": 1,
+      "pages_at_refusal": 2,
+      "late_create_returned": "false",
+      "unit_marker": "PASS",
+      "recover_baseline_count": 20,
+      "recover_after_reap_count": 20,
+      "recover_baseline_digest": 2728327605,
+      "recover_after_reap_digest": 2728327605,
+      "leak_baseline_count": 0,
+      "leak_after_count": 4,
+      "leak_baseline_digest": 2166136261,
+      "leak_after_digest": 452078773
+    },
+    "values_provenance": {
+      "from_case10_raw": [
+        "protect_consulted",
+        "protect_refused",
+        "pages_at_refusal",
+        "late_create_returned",
+        "unit_marker"
+      ],
+      "from_case9_and_11_framesets": [
+        "recover_*",
+        "leak_*",
+        "frames_held_after_reap"
+      ],
+      "declared": {
+        "slot_capacity": {
+          "value": 4,
+          "source": "include/process/native_runtime.h: MaximumProcesses"
+        },
+        "objects_created_and_reaped": {
+          "value": 4,
+          "source": "tests/runtime_test.cpp case 9: four objects created, four reaped"
+        }
+      },
+      "frame_sets": {
+        "9:baseline": {
+          "count": 20,
+          "digest": 2728327605,
+          "from": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-46/logs/child-output-rc141-46.raw"
+        },
+        "9:after-reap": {
+          "count": 20,
+          "digest": 2728327605,
+          "from": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-46/logs/child-output-rc141-46.raw"
+        },
+        "11:leak-baseline": {
+          "count": 0,
+          "digest": 2166136261,
+          "from": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-48/logs/child-output-rc141-48.raw"
+        },
+        "11:leak-after": {
+          "count": 4,
+          "digest": 452078773,
+          "from": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/unit-run/rc141-48/logs/child-output-rc141-48.raw"
+        }
+      }
+    }
+  },
+  "repeat": {
+    "zero_differences": true,
+    "differences": [],
+    "missing": [],
+    "set_problems": [],
+    "files_pinned": 10,
+    "note": "the two snapshots were taken a real interval apart and every file was read twice, so a zero difference is a statement about the artefacts rather than about the clock"
+  },
+  "mutations": [
+    {
+      "name": "four-frame-leak",
+      "why": "four frames moved from free to allocated and never came back; the sum of free and allocated is unchanged, so the check 139 used passes while the machine is four frames poorer",
+      "expected_layer": "by_frame_set",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": false,
+      "by_frame_set": true,
+      "differences": [
+        {
+          "at": "values.leak_after_count",
+          "kind": "number",
+          "before": 4,
+          "after": 8
+        },
+        {
+          "at": "values.leak_after_digest",
+          "kind": "number",
+          "before": 452078773,
+          "after": 368911290
+        }
+      ],
+      "missing": [],
+      "set_problems": [
+        "the leak set grew by 8 frames, the constructed leak is four"
+      ]
+    },
+    {
+      "name": "equal-size-changed-set",
+      "why": "the same number of frames and a different set of them: one frame given back and another taken. A count comparison accepts it, a sum accepts it, and the digest does not",
+      "expected_layer": "by_frame_set",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": false,
+      "by_frame_set": true,
+      "differences": [
+        {
+          "at": "values.recover_after_reap_digest",
+          "kind": "number",
+          "before": 2728327605,
+          "after": -1570637494
+        }
+      ],
+      "missing": [],
+      "set_problems": [
+        "the recovered set is not the baseline set, although its size may match"
+      ]
+    },
+    {
+      "name": "equal-size-changed-artefact",
+      "why": "an artefact whose byte count is identical and whose content is not: the size comparison passes and the identity does not",
+      "expected_layer": "by_comparator",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": false,
+      "by_frame_set": false,
+      "differences": [
+        {
+          "at": "files.native_runtime.o.sha256",
+          "kind": "string",
+          "before": "fd74e2826f46fc4ac34950a24c46495fe9e62c085cf7ebcd1aeece345ee7da0b",
+          "after": "2d18757b16c295e1b7fd5e261082a4a179962865ce8ba285790eaf53669d19aa"
+        }
+      ],
+      "missing": [],
+      "set_problems": []
+    },
+    {
+      "name": "sibling-damaged",
+      "why": "a live sibling object was overwritten while another attempt was refused; its size is unchanged",
+      "expected_layer": "by_comparator",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": false,
+      "by_frame_set": false,
+      "differences": [
+        {
+          "at": "files.process_address_space.o.sha256",
+          "kind": "string",
+          "before": "63f5153d443285bb820ffab9399c4480a1ee281465562c14eb115937608ad507",
+          "after": "4cf7a18d57ffe3f3a66e5ec689145c00f3296b702d956c4fc1ac3b97496cc83b"
+        }
+      ],
+      "missing": [],
+      "set_problems": []
+    },
+    {
+      "name": "wrong-capacity-reason",
+      "why": "the refusal is attributed to the wrong capacity, which changes no number at all",
+      "expected_layer": "by_comparator",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": false,
+      "by_frame_set": false,
+      "differences": [
+        {
+          "at": "values.capacity_reason",
+          "kind": "string",
+          "before": "the slot table is full",
+          "after": "the frame allocator is exhausted"
+        }
+      ],
+      "missing": [],
+      "set_problems": []
+    },
+    {
+      "name": "paired-absent-fields",
+      "why": "two fields are absent on both sides; the comparator is right to call two absent values equal, and the requirement layer is what refuses the incomplete record",
+      "expected_layer": "by_requirement",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": true,
+      "by_frame_set": false,
+      "differences": [
+        {
+          "at": "values.slot_capacity",
+          "kind": "removed",
+          "before": "4",
+          "after": null
+        },
+        {
+          "at": "values.pages_at_refusal",
+          "kind": "removed",
+          "before": "2",
+          "after": null
+        }
+      ],
+      "missing": [
+        {
+          "key": "slot_capacity",
+          "before": "present",
+          "after": "absent"
+        },
+        {
+          "key": "pages_at_refusal",
+          "before": "present",
+          "after": "absent"
+        }
+      ],
+      "set_problems": []
+    },
+    {
+      "name": "leaked-object",
+      "why": "an object that was created and never reaped, which leaves its frames held and its slot live",
+      "expected_layer": "by_comparator",
+      "refused": true,
+      "refused_by_expected_layer": true,
+      "by_comparator": true,
+      "by_requirement": false,
+      "by_frame_set": false,
+      "differences": [
+        {
+          "at": "values.objects_live",
+          "kind": "number",
+          "before": 4,
+          "after": 5
+        },
+        {
+          "at": "values.objects_reaped",
+          "kind": "number",
+          "before": 4,
+          "after": 3
+        },
+        {
+          "at": "values.frames_held_after_reap",
+          "kind": "number",
+          "before": 0,
+          "after": 7
+        }
+      ],
+      "missing": [],
+      "set_problems": []
+    }
+  ],
+  "mutations_refused": 7,
+  "mutations_refused_by_expected_layer": 7,
+  "mutations_total": 7,
+  "ok": true
+}

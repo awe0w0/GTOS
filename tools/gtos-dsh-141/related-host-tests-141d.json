@@ -1,0 +1,223 @@
+{
+  "task": "GTOS-DSH-141",
+  "what": "the mandatory related host tests, judged from each unit own evidence and raw channel rather than from the summary a runner wrote, plus fourteen single-condition mutations of the collected set that the same judge must refuse",
+  "requirement": {
+    "set": [
+      {
+        "role": "runtime",
+        "what": "the NativeRuntime host unit, every case"
+      },
+      {
+        "role": "boot_diagnostic",
+        "what": "the BootDiagnostic host unit"
+      },
+      {
+        "role": "safe_tss",
+        "what": "the safe-TSS observation host unit"
+      }
+    ],
+    "runtime_cases": 11,
+    "note": "the set is independent of the caller: no argument removes a unit, and the runtime unit is required rather than optional, which is the 140 defect this file exists to correct"
+  },
+  "sources": {
+    "runtime_unit": {
+      "path": "F:/GTOS-Chromium/artifacts/native-complete-runtime-tests-cold-repeats-and-physical-closure-20261028-a/runtime-host-unit-141d.json",
+      "bytes": 8047,
+      "sha256": "a3c34d82c8482e57d99d1f125f272f57dd57c4acd483d32a5d5a4432df0bd01d"
+    },
+    "runtime_cases": [
+      {
+        "case": 1,
+        "stage": "rc141-38"
+      },
+      {
+        "case": 2,
+        "stage": "rc141-39"
+      },
+      {
+        "case": 3,
+        "stage": "rc141-40"
+      },
+      {
+        "case": 4,
+        "stage": "rc141-41"
+      },
+      {
+        "case": 5,
+        "stage": "rc141-42"
+      },
+      {
+        "case": 6,
+        "stage": "rc141-43"
+      },
+      {
+        "case": 7,
+        "stage": "rc141-44"
+      },
+      {
+        "case": 8,
+        "stage": "rc141-45"
+      },
+      {
+        "case": 9,
+        "stage": "rc141-46"
+      },
+      {
+        "case": 10,
+        "stage": "rc141-47"
+      },
+      {
+        "case": 11,
+        "stage": "rc141-48"
+      }
+    ],
+    "boot_diagnostic_stage": "bdrun141-01",
+    "safe_tss_stage": "saferun141-02"
+  },
+  "base": {
+    "ok": true,
+    "problems": [],
+    "units_seen": [
+      "runtime",
+      "boot_diagnostic",
+      "safe_tss"
+    ],
+    "runtime_cases": 11,
+    "runtime_elf": {
+      "linux": "/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/runtime_test.elf",
+      "host": "\\\\wsl$\\Ubuntu-20.04/var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/runtime_test.elf",
+      "bytes": 5377632,
+      "sha256": "816d1ee9fb249f011807fc4eaae657533ed8026917ad8df2898e58dbbe8f0e1f"
+    },
+    "boot_diagnostic": {
+      "tool_returncode": 0,
+      "raw_sha256": "08962a07843b4c8ce377a1829b8bffb7db58a3b28b5efc0be7db5ee1472e2034",
+      "inner_sha256": "a0d3b04568d0358b411d4e00d77fe54b31c8173810f6889b127bfb7e0e848d4c",
+      "accepted": true
+    },
+    "safe_tss": {
+      "tool_returncode": 0,
+      "raw_sha256": "6b94472a2f6d96df0f61967aca25743ba03ee9672f88baaf1c45a6e0d58da982",
+      "inner_sha256": "730c7a75c370f8c92d1259673a39b089044a890f4334da89c8845ff32933ec54",
+      "accepted": true
+    }
+  },
+  "mutations": [
+    {
+      "name": "drop-runtime-unit",
+      "why": "the unit the gate exists for is left out",
+      "refused": true,
+      "problems": [
+        "required unit absent: runtime (the NativeRuntime host unit, every case)"
+      ]
+    },
+    {
+      "name": "drop-runtime-case-10",
+      "why": "a case is quietly removed instead of repaired",
+      "refused": true,
+      "problems": [
+        "the runtime unit lists 10 cases, the requirement is 11",
+        "the runtime unit is missing case 10"
+      ]
+    },
+    {
+      "name": "row-exit-rewritten-to-zero",
+      "why": "the row claims success the run did not report",
+      "refused": true,
+      "problems": [
+        "case 10: the row says exit 0, the evidence says 81"
+      ]
+    },
+    {
+      "name": "raw-identity-fabricated",
+      "why": "a made-up hash is offered as the channel",
+      "refused": true,
+      "problems": [
+        "case 5: the row identity is not the raw channel on disk"
+      ]
+    },
+    {
+      "name": "raw-bytes-shrunk",
+      "why": "an empty channel is counted as a silent pass",
+      "refused": true,
+      "problems": [
+        "case 5: the row byte count is not the one on disk"
+      ]
+    },
+    {
+      "name": "pass-marker-fabricated",
+      "why": "the verdict is read from a summary instead of the channel",
+      "refused": true,
+      "problems": [
+        "case 5: the raw channel carries no pass marker"
+      ]
+    },
+    {
+      "name": "swap-runtime-elf",
+      "why": "a case ran a different image from its siblings",
+      "refused": true,
+      "problems": [
+        "case 5 ran /mnt/f/elsewhere/runtime_test.elf instead of /var/tmp/gtos-dsh-141-e759-complete-closure-view/test-build/h148/runtime_test.elf"
+      ]
+    },
+    {
+      "name": "wrong-selector",
+      "why": "the case number in the record is not the one the unit was given",
+      "refused": true,
+      "problems": [
+        "case 5 was selected with 6"
+      ]
+    },
+    {
+      "name": "drop-boot-diagnostic",
+      "why": "a required unit disappears and the summary still says all passed",
+      "refused": true,
+      "problems": [
+        "required unit absent: boot_diagnostic (the BootDiagnostic host unit)"
+      ]
+    },
+    {
+      "name": "raw-says-pass-exit-says-fail",
+      "why": "the marker is left in place beside a non-zero exit status",
+      "refused": true,
+      "problems": [
+        "safe_tss exited 1"
+      ]
+    },
+    {
+      "name": "safe-tss-raw-removed",
+      "why": "the channel the verdict is read from is emptied",
+      "refused": true,
+      "problems": [
+        "safe_tss has no readable raw channel"
+      ]
+    },
+    {
+      "name": "safe-tss-inner-removed",
+      "why": "the tool return code has no source left",
+      "refused": true,
+      "problems": [
+        "safe_tss has no readable inner report"
+      ]
+    },
+    {
+      "name": "not-an-accepted-stage",
+      "why": "a stage the bridge did not accept is counted anyway",
+      "refused": true,
+      "problems": [
+        "boot_diagnostic was not an accepted guarded stage"
+      ]
+    },
+    {
+      "name": "boot-diagnostic-no-marker",
+      "why": "a silent run is counted as a pass",
+      "refused": true,
+      "problems": [
+        "boot_diagnostic raw channel contains no PASS marker"
+      ]
+    }
+  ],
+  "mutations_refused": 14,
+  "mutations_total": 14,
+  "ok": true
+}
