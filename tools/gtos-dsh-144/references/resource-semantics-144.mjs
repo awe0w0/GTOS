@@ -201,26 +201,65 @@ export function parseFrameSets(text) {
   return { points, deltas, locators, malformed };
 }
 
+// The index of the lowest set bit of a 32-bit word, as an integer in 0..31, or -1 when no bit is set.
+//
+// `Math.log2(word & -word)` is the obvious way to write this and it is wrong for bit 31. A word is parsed as a positive number up to
+// 0xFFFFFFFF, and `&` converts both operands to int32, so for 0x80000000 the expression is -2147483648 & -2147483648, which is negative;
+// Math.log2 of a negative number is NaN. That is not a rounding worry: the real baseline-to-victim difference has fourteen members and one
+// of them is frame 2655, which is bit 31 of word 82, and it came out as null. A member set containing null is not a set of frames, and a
+// count that happens to be right cannot make it one. clz32 is defined on the unsigned 32-bit value, so the index is exact for every bit
+// including the top one.
+function lowBitIndex(word) {
+  const x = word >>> 0;
+  if (x === 0) return -1;
+  return 31 - Math.clz32(x);
+}
+// A member is a frame number the allocator can address. Anything else -- a NaN, a fraction, a negative, a value outside the bitmap -- is
+// not a member and is reported rather than pushed into the set.
+function isFrameMember(value, bitCount) {
+  return Number.isInteger(value) && value >= 0 && value < bitCount;
+}
+
 // The bit-level difference between two assembled points. The guest prints its own ADDED/REMOVED counts; these are recomputed from
 // the words so the printed pair is a claim that can be wrong rather than the only account of what moved.
+//
+// The result carries `invalid`, which is empty for every input this reader can produce. It exists so that the enumeration is checkable at
+// the point it is made: if a member were ever not a bounded integer, the difference would say so instead of returning a set with a hole in
+// it, and the obligation that consumes the set refuses.
 export function frameSetDiff(before, after) {
   if (!before || !after) return null;
   const n = Math.max(before.wordsDense.length, after.wordsDense.length);
+  const bitCount = Math.max(before.bitCount, after.bitCount, n * 32);
   const added = [];
   const removed = [];
+  const invalid = [];
   let addedWords = 0;
   let removedWords = 0;
   for (let w = 0; w < n; w++) {
-    const a = before.wordsDense[w] === undefined ? 0 : before.wordsDense[w];
-    const b = after.wordsDense[w] === undefined ? 0 : after.wordsDense[w];
-    let gain = b & ~a;
-    let lost = a & ~b;
+    const a = (before.wordsDense[w] === undefined ? 0 : before.wordsDense[w]) >>> 0;
+    const b = (after.wordsDense[w] === undefined ? 0 : after.wordsDense[w]) >>> 0;
+    let gain = (b & ~a) >>> 0;
+    let lost = (a & ~b) >>> 0;
     if (gain) addedWords += 1;
     if (lost) removedWords += 1;
-    while (gain) { const bit = gain & -gain; added.push(w * 32 + Math.log2(bit)); gain &= gain - 1; }
-    while (lost) { const bit = lost & -lost; removed.push(w * 32 + Math.log2(bit)); lost &= lost - 1; }
+    while (gain) {
+      const frame = w * 32 + lowBitIndex(gain & -gain);
+      if (isFrameMember(frame, bitCount)) { if (!added.includes(frame)) added.push(frame); } else invalid.push({ side: 'added', frame });
+      gain = (gain & (gain - 1)) >>> 0;
+    }
+    while (lost) {
+      const frame = w * 32 + lowBitIndex(lost & -lost);
+      if (isFrameMember(frame, bitCount)) { if (!removed.includes(frame)) removed.push(frame); } else invalid.push({ side: 'removed', frame });
+      lost = (lost & (lost - 1)) >>> 0;
+    }
   }
-  return { added, removed, addedWords, removedWords,
+  added.sort((x, y) => x - y);
+  removed.sort((x, y) => x - y);
+  return { added, removed, addedWords, removedWords, invalid,
+    bitCount,
+    every_member_is_a_bounded_integer: invalid.length === 0
+      && added.every((v) => isFrameMember(v, bitCount)) && removed.every((v) => isFrameMember(v, bitCount)),
+    no_duplicate_members: new Set(added).size === added.length && new Set(removed).size === removed.length,
     identical: added.length === 0 && removed.length === 0 };
 }
 
@@ -571,6 +610,7 @@ export function judgeResourceSemantics(scene, channels) {
   add('frame.sibling_live', 'the sibling is live', has(p, fam, 'SIBLING LIVE'), null);
   add('frame.sibling_intact', 'the sibling survived the pressure intact', has(p, fam, 'SIBLING INTACT'), null);
   const cost = one(p, fam, 'OBJECT COST');
+  const victimCost = one(p, fam, 'VICTIM COST');
   add('frame.cost_measured', 'the cost of one object in frames was measured', cost !== null && cost > 0, { cost });
 
   // The frame arithmetic across the sibling: the allocated count rose by exactly the object cost, and the free count fell by the
@@ -714,6 +754,59 @@ export function judgeResourceSemantics(scene, channels) {
   add('frame.new_victim_data', 'the object in the reused slot holds its own bytes', has(p, fam, 'NEW VICTIM DATA MATCHES'), null);
   add('frame.neighbours_held', 'both live neighbours are unchanged by the reuse',
     has(p, fam, 'SIBLING HELD') && has(p, fam, 'RECOVERED HELD'), null);
+
+  // -------------------------------------------------------------- the slot and identifier numbers themselves
+  // Everything above reads a statement: `SLOT REUSED` says the slot came back, `NEW GENERATION` says the identifier is new. The scene also
+  // prints the numbers those statements are about, and until now this judge did not read them. A statement is a caption; the number is the
+  // claim. These obligations consume the numbers the run already prints, so a run that said "reused" while reusing a different slot, or that
+  // called an identifier new while reissuing the old one, would be refused here instead of being believed.
+  const siblingSlot = one(p, fam, 'SIBLING SLOT');
+  const victimSlot = one(p, fam, 'VICTIM SLOT');
+  const victimSlotAfter = one(p, fam, 'VICTIM SLOT AFTER');
+  const newVictimSlot = one(p, fam, 'NEW VICTIM SLOT');
+  add('frame.slot_numbers_measured', 'every slot number the reuse block is about was printed',
+    siblingSlot !== null && victimSlot !== null && victimSlotAfter !== null && newVictimSlot !== null,
+    { siblingSlot, victimSlot, victimSlotAfter, newVictimSlot });
+  // Two objects alive at the same moment cannot occupy one slot. The sibling and the victim are both live when the victim is created, so
+  // their slot numbers have to differ; this is the numeric form of "the victim was given a slot of its own".
+  add('frame.live_slots_distinct', 'the two live objects hold different slots',
+    siblingSlot !== null && victimSlot !== null && siblingSlot !== victimSlot, { siblingSlot, victimSlot });
+  // The vacated slot is the same slot, read before and after the reap. `VICTIM SLOT VACATED` states it; the two numbers are what make the
+  // statement checkable, and they are the numbers the reuse below depends on.
+  add('frame.victim_slot_vacated_is_the_same_slot',
+    'the slot the victim occupied before the reap is the slot it is reported to have vacated after it',
+    victimSlot !== null && victimSlotAfter !== null && victimSlot === victimSlotAfter
+      && has(p, fam, 'VICTIM SLOT VACATED'),
+    { victimSlot, victimSlotAfter, vacated_stated: has(p, fam, 'VICTIM SLOT VACATED') });
+  // The reuse claim, in numbers: the slot the new object took is the slot the victim vacated, and it is not the sibling's. The statement
+  // `SLOT REUSED` alone would be satisfied by any new object anywhere.
+  add('frame.new_victim_slot_is_the_vacated_one',
+    'the new object took exactly the slot the victim vacated, and not the slot the live sibling holds',
+    newVictimSlot !== null && victimSlotAfter !== null && siblingSlot !== null
+      && newVictimSlot === victimSlotAfter && newVictimSlot !== siblingSlot,
+    { newVictimSlot, victimSlotAfter, siblingSlot });
+  const newVictimId = one(p, fam, 'NEW VICTIM ID');
+  const victimId = one(p, fam, 'VICTIM ID');
+  add('frame.identifier_numbers_measured', 'every identifier number the reuse block is about was printed',
+    siblingId !== null && victimId !== null && recoveredId !== null && newVictimId !== null,
+    { siblingId, victimId, recoveredId, newVictimId });
+  // Four objects, four numbers, no two the same. This is the identifier form of the directory obligation above: a reused slot must not
+  // resurrect an old identifier, and the object in the slot has to be a different object, which it can only be by number.
+  const idNumbers = [siblingId, victimId, recoveredId, newVictimId];
+  add('frame.identifier_numbers_distinct',
+    'the four objects the scene creates carry four distinct identifiers',
+    idNumbers.every((v) => v !== null && v > 0) && new Set(idNumbers).size === 4, { ids: idNumbers });
+  add('frame.new_victim_id_is_a_new_generation',
+    'the object in the reused slot has an identifier of its own rather than the retired one',
+    newVictimId !== null && victimId !== null && newVictimId !== victimId && newVictimId > victimId,
+    { victimId, newVictimId, new_generation_stated: has(p, fam, 'NEW GENERATION') });
+  // The cost the scene prints for the victim is the cost it printed for one object, and it is also what the allocated count rose by. Read
+  // as numbers, the three agree; read as statements they are three unrelated lines.
+  add('frame.victim_cost_matches_the_object_cost',
+    'the cost printed for the victim equals the object cost, and the allocated count rose by that cost when the victim was made',
+    cost !== null && victimCost !== null && victimCost === cost && afterVictimAllocated !== null && afterSiblingAllocated !== null
+      && (afterVictimAllocated - afterSiblingAllocated) === victimCost,
+    { cost, victimCost, afterSiblingAllocated, afterVictimAllocated });
 
   // The end equals the prepared baseline on all three numbers, and the table is empty and accounted for.
   const finalReaped = one(p, fam, 'FINAL REAPED');
@@ -861,6 +954,81 @@ export function judgeResourceSemantics(scene, channels) {
     { rows: POINTS.map((n) => { const pt = sets.points.get(n);
       return { point: n, bits: pt ? pt.setBits : null, declared: pt && pt.declared ? pt.declared.owned : null }; }) });
 
+  // -------------------------------------------------------------- the range, which every point must share
+  // A point's header declares how many frames the allocator can address at that moment. If two points disagree, the two dumps are not
+  // dumps of the same allocator and comparing their bits is comparing two different address spaces: a frame number means one thing in one
+  // and something else in the other, and a difference computed across them is arithmetic on unrelated numbers. So the range is required
+  // to be the same at all six points, and it is required to be the range the scene is built around.
+  const declaredRanges = POINTS.map((n) => { const pt = sets.points.get(n); return pt && pt.declared ? pt.declared.frames : null; });
+  const rangeSet = [...new Set(declaredRanges)];
+  add('frameset.same_addressable_range',
+    'all six points declare the same number of addressable frames, so their bitmaps describe one allocator rather than two',
+    rangeSet.length === 1 && rangeSet[0] !== null,
+    { ranges: POINTS.map((n, i) => ({ point: n, frames: declaredRanges[i] })) });
+
+  // A dump-shape obligation was drafted here and is deliberately not added. It would have required the offsets to be 0, 16, 32, ... with
+  // sixteen words per line and every padding bit above the declared range clear -- and every one of those is already enforced:
+  // `frameset.dumps_internally_consistent` refuses a point whose lines are not contiguous, whose line count does not cover the range, whose
+  // set bits disagree with its declared owned count, or which has a bit above the addressable range set. That was checked by mutating a real
+  // channel rather than by reading the code: a padding bit set in the last line is refused by `frameset.dumps_internally_consistent` for the
+  // owned-count mismatch, and a relabelled offset is refused there for the resulting hole. A second obligation that can only fail when the
+  // first one already has adds a name and no coverage, so the shape claim stays where it was.
+
+  // -------------------------------------------------------------- the members are frames, and they are exact
+  // Every difference this judge computes is required to be a set of bounded integers with no duplicates. This is the obligation that the
+  // 144 reader could not state, because its enumeration returned null for the top bit and a set containing null is not a set of frames.
+  const allDiffs = [
+    ['before-after', refusalDiff], ['victim-withdrawn', withdrawDiff], ['baseline-final', finalDiff],
+    ['baseline-victim', baselineToVictim],
+  ].filter(([, d]) => d !== null);
+  add('frameset.members_are_bounded_integers',
+    'every frame the differences enumerate is an integer inside the addressable range, with no null, no fraction and no duplicate',
+    allDiffs.length === 4 && allDiffs.every(([, d]) => d.every_member_is_a_bounded_integer && d.no_duplicate_members && d.invalid.length === 0),
+    { diffs: allDiffs.map(([label, d]) => ({ label, added: d.added.length, removed: d.removed.length,
+      invalid: d.invalid.slice(0, 4), bounded: d.every_member_is_a_bounded_integer, unique: d.no_duplicate_members })) });
+
+  // A second enumeration, written differently on purpose: it walks every bit of every word in order and asks whether the two points differ
+  // there, rather than isolating the low bit of a gain word. If the two disagree, the fast enumeration is wrong and the member list cannot
+  // be trusted; agreeing means the members are the set the bits define, not the set one loop happened to produce.
+  const bruteForceDiff = (beforePt, afterPt) => {
+    if (!beforePt || !afterPt) return null;
+    const words = Math.max(beforePt.wordsDense.length, afterPt.wordsDense.length);
+    const a = []; const b = [];
+    for (let w = 0; w < words; w++) {
+      const x = (beforePt.wordsDense[w] === undefined ? 0 : beforePt.wordsDense[w]) >>> 0;
+      const y = (afterPt.wordsDense[w] === undefined ? 0 : afterPt.wordsDense[w]) >>> 0;
+      for (let bit = 0; bit < 32; bit++) {
+        const inA = (x >>> bit) & 1;
+        const inB = (y >>> bit) & 1;
+        if (!inA && inB) a.push(w * 32 + bit);
+        if (inA && !inB) b.push(w * 32 + bit);
+      }
+    }
+    return { added: a, removed: b };
+  };
+  const bruteChecks = [['before-after', beforeSet, afterSet], ['victim-withdrawn', victimSet, withdrawnSet],
+    ['baseline-final', baselineSet, finalSet], ['baseline-victim', baselineSet, victimSet]].map(([label, x, y]) => {
+    const fast = frameSetDiff(x, y);
+    const slow = bruteForceDiff(x, y);
+    const agree = fast !== null && slow !== null
+      && JSON.stringify(fast.added) === JSON.stringify(slow.added)
+      && JSON.stringify(fast.removed) === JSON.stringify(slow.removed);
+    return { label, agree, fastAdded: fast ? fast.added.length : null, slowAdded: slow ? slow.added.length : null };
+  });
+  add('frameset.bit_walk_agrees_with_enumeration',
+    'a bit-by-bit walk of the same two bitmaps produces exactly the member lists the fast enumeration produces',
+    bruteChecks.every((c) => c.agree === true), { checks: bruteChecks });
+
+  // The high bit is the case the 144 enumeration got wrong, so the real record is required to carry a member at or above bit 31 of some
+  // word when the bits say there is one. This is not a demand that a particular frame appear: it is the statement that if the highest bit
+  // of any word moved, the member list contains that frame as a number, which is exactly what a null cannot be.
+  const highBitMembers = allDiffs.flatMap(([label, d]) => [...d.added.map((f) => ({ label, side: 'added', f })),
+    ...d.removed.map((f) => ({ label, side: 'removed', f }))]).filter((m) => (m.f & 31) === 31);
+  add('frameset.top_bit_members_are_numbers',
+    'every member that sits at the top bit of its word is present in the difference as a number, not as a null or a NaN',
+    highBitMembers.every((m) => Number.isInteger(m.f) && m.f >= 0),
+    { top_bit_members: highBitMembers.map((m) => ({ label: m.label, side: m.side, frame: m.f })) });
+
   facts.frameSets = {
     points: POINTS.map((n) => { const pt = sets.points.get(n);
       return { point: n, frames: pt && pt.declared ? pt.declared.frames : null,
@@ -976,6 +1144,44 @@ export const MUTATIONS = [
       return lines.join('\n').replace(/^(FRAMEREC DIAG SET final FRAMES [0-9A-F]{8} OWNED )([0-9A-F]{8})/m,
         (m, a, v) => a + bump(v));
     } },
+  // The obligations this packet added, and the mutations that are supposed to refuse through them.
+  //
+  // The three below each change one property of the dump that the older obligations were blind to: the range a point declares, the shape of
+  // its lines and the padding above its range, and whether all six points are there to be differenced at all. A judge that kept the
+  // pre-145 set would accept every one of these channels, which is what makes them negatives rather than noise.
+  { id: 'frameset-range-differs', scenes: ['runtime-frame-recovery-smp1'], targets: 'frameset.same_addressable_range',
+    // One point declares a range the others do not. The words are untouched, so the only way to see this is to compare the six headers: a
+    // reader that trusted each point on its own would compare bitmaps of two different address spaces and report a clean difference.
+    apply: (t) => t.replace(/^(FRAMEREC DIAG SET victim FRAMES )([0-9A-F]{8})/m,
+      (m, a, v) => (v === '00007FF0' ? a + '00007FE8' : a + '00007FF0')) },
+  { id: 'frameset-point-dropped', scenes: ['runtime-frame-recovery-smp1'], targets: 'frameset.members_are_bounded_integers',
+    // Every line of one point is removed, so one of the four differences cannot be formed at all. The boundedness of a member cannot be
+    // expressed by a channel -- the parser only ever produces integers -- so what a channel can show is that the obligation is not vacuous
+    // when a difference is missing. The boundedness itself is tested against the production functions directly.
+    apply: (t) => t.split('\n').filter((l) => !/^FRAMEREC DIAG (SET|BM) withdrawn /.test(l.trim())).join('\n') },
+  // The slot and identifier numbers. Each mutation changes one number and leaves every statement alone, which is the case a judge reading
+  // only the words cannot see: `SLOT REUSED` is still printed, `NEW GENERATION` is still printed, and only the numbers disagree.
+  { id: 'frame-new-slot-differs', scenes: ['runtime-frame-recovery-smp1'], targets: 'frame.new_victim_slot_is_the_vacated_one',
+    // The new object reports a slot the victim never held. The words still say the slot was reused.
+    apply: (t) => t.replace(/^(FRAMEREC DIAG NEW VICTIM SLOT )([0-9A-F]{8})$/m,
+      (m, a, v) => a + (v === '00000002' ? '00000003' : '00000002')) },
+  { id: 'frame-slot-vacated-differs', scenes: ['runtime-frame-recovery-smp1'], targets: 'frame.victim_slot_vacated_is_the_same_slot',
+    // The slot the victim is reported to have vacated is not the one it occupied, so `VICTIM SLOT VACATED` is a statement without a number
+    // behind it.
+    apply: (t) => t.replace(/^(FRAMEREC DIAG VICTIM SLOT AFTER )([0-9A-F]{8})$/m,
+      (m, a, v) => a + (v === '00000002' ? '00000003' : '00000002')) },
+  { id: 'frame-id-reissued', scenes: ['runtime-frame-recovery-smp1'], targets: 'frame.identifier_numbers_distinct',
+    // The object in the reused slot is given the retired identifier, so two of the four objects share a number while `NEW GENERATION` is
+    // still printed.
+    apply: (t) => {
+      const victim = /^FRAMEREC DIAG VICTIM ID ([0-9A-F]{8})$/m.exec(t);
+      if (!victim) return t;
+      return t.replace(/^(FRAMEREC DIAG NEW VICTIM ID )([0-9A-F]{8})$/m, (m, a) => a + victim[1]);
+    } },
+  { id: 'frame-victim-cost-lies', scenes: ['runtime-frame-recovery-smp1'], targets: 'frame.victim_cost_matches_the_object_cost',
+    // The cost printed for the victim no longer equals the object cost, and no longer equals the rise in the allocated count.
+    apply: (t) => t.replace(/^(FRAMEREC DIAG VICTIM COST )([0-9A-F]{8})$/m,
+      (m, a, v) => a + (parseInt(v, 16) + 1).toString(16).toUpperCase().padStart(8, '0')) },
   // A line the reader has no rule for. Nothing above it is disturbed, so only an obligation that accounts for every line can refuse
   // it -- which is the point: an unreadable line must not be an unjudged line.
   { id: 'unreadable-line', targets: 'channel.every_line_accounted_for',
