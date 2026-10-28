@@ -66,6 +66,64 @@ function samePin(pin, actual) {
 const bad = (why) => ({ ok: false, why });
 const good = (detail, binding) => ({ ok: true, detail, binding: binding || null });
 
+// ---------------------------------------------------------------- reading a record's paths from somewhere else
+//
+// A record names the paths its tools wrote, and those paths are absolute. That is right for the packet that produced
+// them and wrong for anyone who has the bytes somewhere else, which is exactly the position a later packet is in when it
+// has to consume a sealed package: the bytes are in the package, and the record still says `/var/tmp/<the producer's root>/...`.
+//
+// The wrong fix is to rewrite the record's paths. A record whose paths were rewritten to point at a copy is no longer the
+// record the producer wrote, and the copy would then be checked against a description of itself.
+//
+// The right fix is what 144's host consumer already does: the caller supplies an explicit map from the path a record
+// names to the path the bytes are at now, and this reader opens the mapped path while still comparing against the pin the
+// record carries. A wrong or stale mapping fails the pin comparison, so the map cannot be used to make a drifted file
+// pass. And a mapping nothing needed is reported, because an unused alias is either dead weight or evidence that the
+// record no longer names what the caller thought it did.
+//
+// Nothing here is module state: the reader is built per call from the ctx the caller passed, so two consumers in one
+// process cannot see each other's aliases.
+function normalizeKey(p) {
+  return String(p === null || p === undefined ? '' : p).replace(/\\/g, '/');
+}
+
+function makeReader(ctx) {
+  const table = new Map();
+  const supplied = (ctx && ctx.aliases) || {};
+  for (const [from, to] of Object.entries(supplied)) {
+    if (typeof from === 'string' && typeof to === 'string') table.set(normalizeKey(from), to);
+  }
+  const stats = { supplied: table.size, used: 0, distinct_used: [], unused: [] };
+  const usedKeys = new Set();
+  const resolveOne = (p) => {
+    if (typeof p !== 'string' || !p) return p;
+    const hit = table.get(normalizeKey(p));
+    if (hit === undefined) return p;
+    stats.used += 1;
+    usedKeys.add(normalizeKey(p));
+    return hit;
+  };
+  const readMapped = (p) => readBytes(resolveOne(p));
+  const identifyMapped = (p) => {
+    const target = resolveOne(p);
+    const b = readBytes(target);
+    // The identity keeps the path the RECORD wrote, not the path the bytes were found at. Two consequences, both wanted:
+    // a pin written against the original path still compares equal, and the report says which member of the package was
+    // read rather than which local file it happens to be.
+    return b === null ? null : { path: p, bytes: b.length, sha256: sha256(b) };
+  };
+  return {
+    readBytes: readMapped,
+    identify: identifyMapped,
+    finish() {
+      stats.distinct_used = [...usedKeys];
+      stats.unused = [...table.keys()].filter((k) => !usedKeys.has(k));
+      if (ctx && typeof ctx === 'object') ctx.alias_use = stats;
+      return stats;
+    },
+  };
+}
+
 // ---------------------------------------------------------------- per-role consumption
 //
 // Each case below reads the artifacts the role is a claim about. Where a record names a list of pins, every pin is
@@ -73,6 +131,20 @@ const good = (detail, binding) => ({ ok: true, detail, binding: binding || null 
 // boolean the record wrote about itself, and nothing here accepts a pin object with no path.
 
 export function consumeRole(role, r, ctx) {
+  // Every read in this function goes through these two names. Shadowing the module-level pair for the whole body is what
+  // makes the alias map apply to all twenty-four read sites without any of them having to remember to ask for it -- a
+  // reader that has to remember is a reader that will forget at the one site that matters.
+  const reader = makeReader(ctx);
+  const identify = reader.identify;
+  const readBytes = reader.readBytes;
+  try {
+    return consumeRoleInner(role, r, ctx, identify, readBytes);
+  } finally {
+    reader.finish();
+  }
+}
+
+function consumeRoleInner(role, r, ctx, identify, readBytes) {
   switch (role) {
     // ---- the sources, the headers, and the order that was frozen before anything was built.
     case 'source_profile_contract': {
