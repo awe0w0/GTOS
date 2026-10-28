@@ -1154,8 +1154,11 @@ if (phase === 'pstatic') {
   if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
   const sel = JSON.parse(fs.readFileSync(R + '/p-selection-142c.json', 'utf8'));
   const C = JSON.parse(fs.readFileSync(R + '/build-material-catalog-142.json', 'utf8'));
-  const imageLinux = S + '/image/' + imageTag + '.elf';
-  const mapLinux = S + '/image/' + imageTag + '.map';
+  // The image directory is a parameter, so the same gate can be pointed at a relocated copy of the same bytes. A gate that could
+  // only read the original location would be testing a path rather than an image.
+  const imageDir = process.argv[6] || (S + '/image');
+  const imageLinux = imageDir + '/' + imageTag + '.elf';
+  const mapLinux = imageDir + '/' + imageTag + '.map';
   const control = {
     task: A.task, stage,
     image: imageLinux, map: mapLinux,
