@@ -177,6 +177,23 @@ function matrixOf() {
   return { path: R + "/" + rows[0].name, stage: rows[0].name.replace(/^g-matrix-|-143\.json$/g, ""), rec: rows[0].rec };
 }
 // The newest prerequisite record that admitted its whole set.
+// The commit count and the head this packet's branch actually has. Git is invoked by the absolute path the authority names, against
+// the worktree this driver lives in, and the count is taken from the parent the dispatch names rather than from an earlier packet's
+// report. A branch with no new commit is refused: a report that claims work which was never committed is the failure this measures.
+function gitOut(args) {
+  const r = spawnSync(A.git.path, ['-C', WORKTREE, ...args], { windowsHide: true, encoding: 'utf8', timeout: 120000 });
+  if (r.status !== 0) throw new Error('git refused ' + args.join(' ') + ': ' + (r.stderr || '').trim());
+  return (r.stdout || '').trim();
+}
+function commitCount() {
+  const parent = A.parent_commit || A.repository_base_commit;
+  if (!parent) throw new Error('the packet names no parent commit');
+  const n = Number(gitOut(['rev-list', '--count', parent + '..HEAD']));
+  if (!Number.isFinite(n) || n <= 0) throw new Error('the branch has no commit beyond its parent');
+  return n;
+}
+function commitHead() { return gitOut(['rev-parse', 'HEAD']); }
+
 // The newest record of each family that this packet can publish as evidence. A family is resolved by a predicate on its own
 // content, not by a name, because the packet re-ran several goals and only one run of each is the evidence.
 function newestRecord(pattern, pred, what) {
@@ -308,6 +325,35 @@ if (A.task !== 'GTOS-DSH-143') throw new Error('this driver is not pointed at it
   const copy = fs.readFileSync(RUNNER_COPY);
   if (!frozen.equals(copy)) throw new Error('the committed runner copy differs from the frozen runner');
 }
+// The engine is frozen the same way, and the freeze is a chain rather than a single record: the engine changed twice before it
+// produced anything, and each revision record stays with the rehearsals that ran under it. The driver resolves the newest revision
+// and refuses to run an engine that is not the one it names, so the program that produces the payload is always the one whose
+// behaviour the final gates measured.
+function engineFreeze() {
+  const revisions = fs.readdirSync(R).filter((f) => /^engine-freeze-143-r[0-9]+\.json$/.test(f)).sort();
+  if (revisions.length === 0) throw new Error('no engine freeze record exists');
+  const newest = JSON.parse(fs.readFileSync(R + '/' + revisions[revisions.length - 1], 'utf8'));
+  const onDisk = fs.readFileSync(HERE + '/publish-143.mjs');
+  const engineNow = crypto.createHash('sha256').update(onDisk).digest('hex');
+  if (newest.frozen.sha256 !== engineNow) {
+    throw new Error('the engine is not the frozen engine: frozen ' + newest.frozen.sha256.slice(0, 12)
+      + ', on disk ' + engineNow.slice(0, 12));
+  }
+  if (newest.frozen.path !== HERE + '/publish-143.mjs') {
+    throw new Error('the freeze record names another path: ' + newest.frozen.path);
+  }
+  // The frozen copy is the same comparison the runner gets: two files, one hash, so the engine that runs is the engine that was frozen
+  // even if the worktree copy is edited afterwards.
+  if (!fs.existsSync(newest.frozen_copy.path)) throw new Error('the frozen engine copy is absent: ' + newest.frozen_copy.path);
+  const copy = fs.readFileSync(newest.frozen_copy.path);
+  if (!copy.equals(onDisk)) throw new Error('the engine differs from its frozen copy');
+  if (crypto.createHash('sha256').update(copy).digest('hex') !== newest.frozen_copy.sha256) {
+    throw new Error('the frozen engine copy is not the hash the freeze records');
+  }
+  return { revision: newest.revision, path: R + '/' + revisions[revisions.length - 1], record: newest,
+    revisions: revisions.map((f) => R + '/' + f) };
+}
+const ENGINE_FREEZE = engineFreeze();
 if (S !== '/var/tmp/gtos-dsh-143-e759-exact-closure-view') throw new Error('unexpected source root: ' + S);
 if (L !== '/var/tmp/gtos-dsh-143-e759-exact-closure') throw new Error('unexpected work root: ' + L);
 
@@ -2901,6 +2947,9 @@ if (phase === 'publish') {
   // which is the whole point of the refusal it has to produce.
   const VERB = { plan: 'plan', archive: 'archive', seal: 'seal', verify: 'verify',
     'archive-again': 'archive', 'seal-again': 'seal' };
+  // The ledger is the transaction's own record. It is passed to every engine call, and it is what makes a second seal a refusal
+  // rather than a second file.
+  const ledgerPath = destHost + '/transaction.jsonl';
   const runEngine = (step, argv) => {
     const verb = VERB[step];
     if (!verb) throw new Error('unknown step: ' + step);
@@ -2910,6 +2959,21 @@ if (phase === 'publish') {
     let parsed = null;
     try { parsed = JSON.parse(r.stdout || 'null'); } catch { parsed = null; }
     return { row, parsed, stdout: r.stdout || '', stderr: r.stderr || '' };
+  };
+  // A copy of the three files the transaction must not damage. Every negative is measured against it, and the comparison is by hash,
+  // so "unchanged" is a measurement rather than a claim.
+  const transactionFiles = () => ({ payload: exists(payloadPath) ? pin(payloadPath).sha256 : null,
+    receipt: exists(receiptPath) ? pin(receiptPath).sha256 : null,
+    ledger: exists(ledgerPath) ? pin(ledgerPath).sha256 : null });
+  const ledgerRows = () => (exists(ledgerPath)
+    ? fs.readFileSync(ledgerPath, 'utf8').split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return { unreadable: l }; } })
+    : []);
+  const negative = (name, aimedAt, step, argv, before) => {
+    const r = runEngine(step, argv);
+    const after = transactionFiles();
+    const named = new RegExp(aimedAt, 'i').test(r.stderr || '');
+    return { name, aimed_at: aimedAt, refused: r.row.status !== 0, named_the_thing_it_was_aimed_at: named,
+      unchanged: JSON.stringify(before) === JSON.stringify(after), stderr: (r.stderr || '').trim().slice(0, 300) };
   };
 
   // The member list. The roles are the packet's own: the report, the selection and required set, the plan, the engine, the runner,
@@ -2932,24 +2996,62 @@ if (phase === 'publish') {
   add(HERE + '/drive-143.mjs', 'engine/drive-143.mjs', 'driver');
   add(HERE + '/host-consume-143.mjs', 'engine/host-consume-143.mjs', 'consumer');
   add(HERE + '/references/resource-semantics-143.mjs', 'engine/resource-semantics-143.mjs', 'judge');
-  // The dispatch, the taskbook identity and the continuation, which are what the packet answers.
+  // The control records this packet answers to. Each is named by the dispatch or by the taskbook, and each is present. There is no
+  // continuation record: a continuation is the handoff a packet writes when it leaves work for the next one, and this packet is the
+  // one that closes 142's remaining diagnostics rather than the one that hands them on. Writing an empty continuation record to make
+  // the list look symmetric would be a file that says nothing, so the absence is stated here instead of filled in.
   add(R + '/dispatch-143.json', 'control/dispatch-143.json', 'dispatch');
-  add(R + '/continuation-143-r01.json', 'control/continuation-143-r01.json', 'continuation');
   add(R + '/authority-143.json', 'control/authority-143.json', 'authority');
   add(R + '/contract-143.json', 'control/contract-143.json', 'contract');
   add(R + '/acceptance-objectives-143.json', 'control/acceptance-objectives-143.json', 'acceptance');
   add(selectionOf().path, 'control/' + selectionOf().basename, 'selection');
   add(requiredSetOf(), 'control/required-set.json', 'required_set');
+  const controlRolesAbsent = [{ role: 'continuation', why: 'this packet closes 142 remaining diagnostics; it hands no work on, so it '
+    + 'writes no continuation record and none is claimed' }];
   if (mode === 'production') add(reportFinal, 'report/report-143-final.md', 'report');
-  // The records each goal produced, by the name it wrote them under.
-  const recordNames = fs.readdirSync(R).filter((f) => /^(m|p|t|h|g|d|r|s|q|v|e)-.*-143[bc]?\.json$/.test(f)
-    || /^role-.*-143[bc]?\.json$/.test(f)).sort();
+  // The records each goal produced, by the name it wrote them under. Every record of every goal -- the matrix and the D closure
+  // included -- is matched by this one rule. A second, explicit entry for a record the rule already matches puts two members at one
+  // path, and the engine refuses that because the payload would then carry one file hidden behind another; the rehearsal found
+  // exactly that, and the fix is here rather than in the engine alone.
+  const recordNames = fs.readdirSync(R).filter((f) => /^(m|p|t|h|g|d|r|s|q|v|e)-.*-143[a-z]?\.json$/.test(f)
+    || /^role-.*-143[a-z]?\.json$/.test(f)).sort();
   for (const name of recordNames) add(R + '/' + name, 'records/' + name, 'record');
-  // The guest matrix, which is the guest goal's whole evidence. This packet ran one complete matrix covering every declared
-  // scene, so there is one record rather than a pair; a packet that split the matrix would resolve two here.
-  add(matrixOf().path, 'records/' + path.basename(matrixOf().path), 'matrix');
-  const dClosure = fs.readdirSync(R).filter((f) => /^d-closure-.*-143\.json$/.test(f)).sort().pop();
-  if (dClosure) add(R + '/' + dClosure, 'records/' + dClosure, 'd_closure');
+  // The physical material. Every member the D closure preserved, taken from the path the closure records as its original. The role
+  // names are the closure's own, so a reader can see which part of the packet each file belongs to without opening it.
+  const dRecPath = dClosureOf();
+  const dRec = JSON.parse(fs.readFileSync(dRecPath, 'utf8'));
+  const MATERIAL_ROLE = {
+    producer_object: 'producer_object', producer_object_host_build: 'producer_object_host_build', depfile: 'depfile',
+    source_view: 'source_view', profile: 'profile', image: 'image', image_map: 'image_map',
+    canonical_record: 'canonical_record', role_record: 'role_record',
+    guest_channel_e9: 'guest_channel', guest_channel_serial: 'guest_channel',
+    guest_inner_report: 'guest_inner_report', guest_raw: 'guest_raw',
+    host_result: 'host_result', host_inner_report: 'host_inner_report', host_raw: 'host_raw', host_unit_elf: 'host_unit_elf',
+  };
+  const materialMembers = [];
+  for (const m of dRec.members) {
+    const role = MATERIAL_ROLE[m.role];
+    if (!role) throw new Error('the D closure carries a role this phase does not know: ' + m.role);
+    // The originals, not the closure's copies: the closure verified that the two are byte-identical, and shipping the original is the
+    // stronger claim.
+    const from = toHost(m.src_linux);
+    if (!exists(from)) throw new Error('a preserved original is absent: ' + from);
+    const bytes = fs.readFileSync(from);
+    if (sha(bytes) !== m.sha256 || bytes.length !== m.bytes) {
+      throw new Error('a preserved original is not the bytes the closure recorded: ' + from);
+    }
+    materialMembers.push({ from, path: 'material/' + m.rel, role, bytes: bytes.length, sha256: m.sha256 });
+  }
+  for (const m of materialMembers) members.push({ from: m.from, path: m.path, role: m.role, bytes: m.bytes, sha256: m.sha256 });
+
+  // Checked here as well as in the engine: a duplicate is cheap to find at the point it is created, and the message names both sources.
+  {
+    const byPath = new Map();
+    for (const m of members) {
+      if (byPath.has(m.path)) throw new Error('two members share one path: ' + m.path + ' from ' + byPath.get(m.path) + ' and ' + m.from);
+      byPath.set(m.path, m.from);
+    }
+  }
 
   // The report's own numbers, checked against the records before anything is written. Each entry says which record answers it, so
   // a number that drifts from its record is a refusal with a reason rather than a discrepancy nobody notices.
@@ -2980,28 +3082,61 @@ if (phase === 'publish') {
       resource_mutations: rnRec.counts.negatives,
       depfile_edges: dRec.depfile_closure.edges,
       aliased_reads: dRec.path_aliases.aliased_reads,
-      commits: null,
+      // The commit count is read from Git, not left out. A report that states a number the check does not verify is a number a
+      // reader has to take on trust, and the earlier packet's report stated one commit too many for exactly that reason.
+      commits: commitCount(),
+      // The report is an artifact beside the records, not a file in the repository, so it can name the commit it shipped with without
+      // the circularity of a commit hashing its own contents. What makes that name true is the clean-tree requirement below: at
+      // publication the worktree has no change, so the code in the payload is the code in this commit.
+      head_commit: commitHead(),
     };
+    const dirty = gitOut(['status', '--porcelain=v1', '-uall']);
+    if (dirty !== '') {
+      throw new Error('the worktree has changes, so the payload would not be the commit the report names: ' + JSON.stringify(dirty.split('\n').slice(0, 8)));
+    }
+    // Every declared number is checked. A key the report declares that this phase cannot answer is a refusal, not a skip: a number
+    // that nothing verifies is the thing this check exists to prevent.
+    const known = new Set([...Object.keys(actual), 'head_commit']);
+    for (const key of Object.keys(declared)) {
+      if (!known.has(key)) throw new Error('the report declares a number this packet cannot check: ' + key);
+    }
     for (const [key, want] of Object.entries(declared)) {
-      if (key === 'commits') continue;
       const got = actual[key];
       numberChecks.push({ number: key, declared: want, from_records: got, agrees: want === got });
     }
     const bad = numberChecks.filter((c) => !c.agrees);
     if (bad.length) throw new Error('the report does not agree with the records: ' + JSON.stringify(bad));
+    if (numberChecks.length === 0) throw new Error('the report declares no numbers to check');
   }
 
+  const materialCounts = {};
+  for (const m of materialMembers) materialCounts[m.role] = (materialCounts[m.role] || 0) + 1;
   const spec = {
     task: A.task, mode, stage,
     what: 'the payload this packet publishes: the supported entry it ran through, the publisher and its consumers, the control '
       + 'records that define the packet, the records each goal produced, and the final report',
     members,
     required_set: {
-      runner: 1, publisher: 1, driver: 1, consumer: 1, judge: 1, dispatch: 1, continuation: 1, authority: 1, contract: 1,
+      runner: 1, publisher: 1, driver: 1, consumer: 1, judge: 1, dispatch: 1, authority: 1, contract: 1,
       acceptance: 1, selection: 1, required_set: 1,
       report: mode === 'production' ? 1 : 0,
     },
+    material: { count: materialMembers.length, by_role: materialCounts, from_closure: dRecPath,
+      rule: 'every member is read from the path the closure records as its original, and its bytes and size are checked against the '
+        + 'closure before it is planned' },
+    // What the payload does not carry, and why. A role that is absent on purpose is stated, so a reader is not left to wonder whether
+    // it was forgotten.
+    roles_absent: controlRolesAbsent,
   };
+  // A spec that names another packet, and a spec that lists no member, are both refused by the engine rather than by this phase,
+  // because the engine is what a future packet would call.
+  const wrongTaskPath = destHost + '/spec-wrong-task.json';
+  if (exists(wrongTaskPath)) throw new Error('REFUSED: ' + wrongTaskPath + ' already exists');
+  fs.writeFileSync(wrongTaskPath, JSON.stringify({ ...spec, task: 'GTOS-DSH-140' }, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  const emptySpecPath = destHost + '/spec-empty.json';
+  if (exists(emptySpecPath)) throw new Error('REFUSED: ' + emptySpecPath + ' already exists');
+  fs.writeFileSync(emptySpecPath, JSON.stringify({ ...spec, members: [] }, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+
   const specPath = destHost + '/spec.json';
   if (exists(specPath)) throw new Error('REFUSED: ' + specPath + ' already exists');
   fs.writeFileSync(specPath, JSON.stringify(spec, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
@@ -3011,27 +3146,82 @@ if (phase === 'publish') {
   const receiptPath = destHost + '/' + (mode === 'test' ? 'receipt.json' : 'GTOS-DSH-143-seal.json');
   const verifyPath = destHost + '/' + (mode === 'test' ? 'verification.json' : 'GTOS-DSH-143-verification.json');
 
+  // The absent-member spec: a real member of this payload, named by the spec and genuinely not on disk. It is written before the
+  // pre-flight refusals because one of them is this spec.
+  const absentTarget = members.find((m) => m.role === 'record') || members[0];
+  const absentSpecPath = destHost + '/spec-absent-member.json';
+  if (exists(absentSpecPath)) throw new Error('REFUSED: ' + absentSpecPath + ' already exists');
+  fs.writeFileSync(absentSpecPath, JSON.stringify({ ...spec,
+    members: members.map((m) => (m === absentTarget ? { ...m, from: destHost + '/not-there/' + path.basename(m.from) } : m)) },
+    null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+
+  // The pre-flight refusals, before anything is written. Each is aimed at one defect and each must name it.
+  const preflight = [
+    negative('spec-for-another-packet', 'another packet', 'plan', [wrongTaskPath, destHost + '/plan-wrong-task.json'],
+      transactionFiles()),
+    negative('spec-with-no-member', 'no members', 'plan', [emptySpecPath, destHost + '/plan-empty.json'], transactionFiles()),
+    negative('absent-required-member', 'absent', 'plan', [absentSpecPath, destHost + '/plan-absent.json'],
+      transactionFiles()),
+    negative('seal-before-archive', 'nothing to seal|never archived|absent', 'seal',
+      [destHost + '/payload-never-archived.tar', destHost + '/receipt-early.json', ledgerPath], transactionFiles()),
+  ];
+
   const plan = runEngine('plan', [specPath, planPath]);
   if (!plan.row.ok) throw new Error('plan refused: ' + plan.row.stderr);
-  const archive = runEngine('archive', [planPath, payloadPath]);
-  if (!archive.row.ok) throw new Error('archive refused: ' + archive.row.stderr);
-  const seal = runEngine('seal', [payloadPath, receiptPath]);
-  if (!seal.row.ok) throw new Error('seal refused: ' + seal.row.stderr);
-  const verify = runEngine('verify', [payloadPath, receiptPath, planPath]);
 
-  // The refusals, measured rather than asserted: the same archive written twice, and the same payload sealed twice. Both must
-  // refuse with CreateNew, and the payload must be unchanged by the attempts.
-  const beforeAttempt = pin(payloadPath);
-  const secondArchive = runEngine('archive-again', [planPath, payloadPath]);
-  const secondSeal = runEngine('seal-again', [payloadPath, receiptPath]);
-  const afterAttempt = pin(payloadPath);
-  const refusals = [
-    { what: 'a second archive at the same path', refused: secondArchive.row.status !== 0,
-      named_createnew: /CreateNew/.test(secondArchive.row.stderr || ''), stderr: secondArchive.row.stderr },
-    { what: 'a second seal of the same payload', refused: secondSeal.row.status !== 0,
-      named_createnew: /CreateNew/.test(secondSeal.row.stderr || ''), stderr: secondSeal.row.stderr },
+  // A member that changes after the plan was frozen. The copy is made in the test-only tree so the real member is never touched.
+  const driftSource = members.find((m) => m.role === 'record' || m.role === 'reference');
+  if (!driftSource) throw new Error('no member to drift');
+  const driftCopy = destHost + '/drift-member.bin';
+  if (exists(driftCopy)) throw new Error('REFUSED: ' + driftCopy + ' already exists');
+  fs.copyFileSync(driftSource.from, driftCopy);
+  const driftPlanPath = destHost + '/plan-drift.json';
+  if (exists(driftPlanPath)) throw new Error('REFUSED: ' + driftPlanPath + ' already exists');
+  const driftPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+  driftPlan.members = driftPlan.members.map((m) => (m.path === driftSource.path
+    ? { ...m, from: driftCopy, bytes: fs.statSync(driftCopy).size, sha256: sha(fs.readFileSync(driftCopy)) } : m));
+  fs.writeFileSync(driftPlanPath, JSON.stringify(driftPlan, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  // One byte appended, at the same path the plan names: the plan's size and hash are now both wrong for it.
+  fs.appendFileSync(driftCopy, Buffer.from([0]));
+  const drift = negative('member-changed-after-the-plan', 'changed', 'archive',
+    [driftPlanPath, destHost + '/payload-drift.tar', ledgerPath], transactionFiles());
+
+  const archive = runEngine('archive', [planPath, payloadPath, ledgerPath]);
+  if (!archive.row.ok) throw new Error('archive refused: ' + archive.row.stderr);
+
+  // A seal over a payload nobody finished writing. The truncated copy is a real prefix of the real payload, so it parses as a
+  // shorter member list; what stops it is that the last member it names is longer than the bytes that follow it, or, if the cut
+  // lands on a boundary, that the end-of-archive marker is missing. Either refusal is the one this negative is aimed at.
+  const truncatedPath = destHost + '/payload-truncated.tar';
+  if (exists(truncatedPath)) throw new Error('REFUSED: ' + truncatedPath + ' already exists');
+  const payloadBytes = fs.readFileSync(payloadPath);
+  fs.writeFileSync(truncatedPath, payloadBytes.subarray(0, payloadBytes.length - 1536), { encoding: 'utf8', flag: 'wx' });
+  const incomplete = negative('seal-an-incomplete-payload', 'truncated|not terminated|no member', 'seal',
+    [truncatedPath, destHost + '/receipt-incomplete.json', ledgerPath], transactionFiles());
+
+  const seal = runEngine('seal', [payloadPath, receiptPath, ledgerPath]);
+  if (!seal.row.ok) throw new Error('seal refused: ' + seal.row.stderr);
+  const sealedState = transactionFiles();
+
+  // The post-seal refusals. Now the ledger carries a terminal seal, so every one of these has to be refused for that reason and the
+  // sealed payload, receipt and ledger must come out of it byte-identical.
+  const payloadCopy = destHost + '/payload-copy.tar';
+  if (exists(payloadCopy)) throw new Error('REFUSED: ' + payloadCopy + ' already exists');
+  fs.copyFileSync(payloadPath, payloadCopy);
+  const postSeal = [
+    negative('archive-again-same-path', 'CreateNew', 'archive', [planPath, payloadPath, ledgerPath], sealedState),
+    negative('archive-again-other-path', 'sealed|already been archived', 'archive',
+      [planPath, destHost + '/payload-second.tar', ledgerPath], sealedState),
+    negative('seal-again-same-receipt', 'CreateNew', 'seal', [payloadPath, receiptPath, ledgerPath], sealedState),
+    negative('seal-again-other-receipt-name', 'already sealed', 'seal',
+      [payloadPath, destHost + '/receipt-second-name.json', ledgerPath], sealedState),
+    negative('seal-a-copy-of-the-payload', 'already sealed|never archived', 'seal',
+      [payloadCopy, destHost + '/receipt-copy.json', ledgerPath], sealedState),
   ];
-  const payloadUnchanged = beforeAttempt.sha256 === afterAttempt.sha256;
+  const refusals = [...preflight, drift, incomplete, ...postSeal];
+  const afterAttempt = pin(payloadPath);
+  const payloadUnchanged = sealedState.payload === afterAttempt.sha256 && sealedState.payload === pin(payloadPath).sha256;
+  const verify = runEngine('verify', [payloadPath, receiptPath, planPath]);
 
   const verification = verify.parsed;
   fs.writeFileSync(verifyPath, JSON.stringify({
@@ -3046,9 +3236,13 @@ if (phase === 'publish') {
     report_numbers: numberChecks.length ? { checked: numberChecks.length, all_agree: numberChecks.every((c) => c.agrees),
       detail: numberChecks } : null,
     engine, engine_pin: pin(engine),
+    engine_freeze: { revision: ENGINE_FREEZE.revision, record: ENGINE_FREEZE.path,
+      revisions: ENGINE_FREEZE.revisions.length,
+      superseded_used_by: (ENGINE_FREEZE.record.supersedes && ENGINE_FREEZE.record.supersedes.used_by) || [] },
     spec: pin(specPath), plan: pin(planPath), payload: pin(payloadPath), receipt: pin(receiptPath),
     verification: pin(verifyPath),
     member_count: plan.parsed && plan.parsed.member_count,
+    material: { count: materialMembers.length, by_role: materialCounts, from_closure: dRecPath },
     roles: plan.parsed && plan.parsed.roles,
     total_bytes: plan.parsed && plan.parsed.total_bytes,
     ordinal_digest: plan.parsed && plan.parsed.ordinal_digest,
@@ -3058,13 +3252,20 @@ if (phase === 'publish') {
     only_in_payload: verification && verification.only_in_payload,
     only_in_plan: verification && verification.only_in_plan,
     refusals,
+    refusal_counts: { attempts: refusals.length, refused: refusals.filter((r) => r.refused).length,
+      named_the_target: refusals.filter((r) => r.named_createnew || r.named_the_thing_it_was_aimed_at).length,
+      left_the_transaction_unchanged: refusals.filter((r) => r.unchanged).length,
+      accepted_by_mistake: refusals.filter((r) => !r.refused).length },
+    ledger: exists(ledgerPath) ? { path: ledgerPath, rows: ledgerRows().length,
+      verbs: ledgerRows().map((r) => r.verb), terminal: ledgerRows().some((r) => r.terminal === true) } : null,
     payload_unchanged_by_refused_attempts: payloadUnchanged,
     ok: !!(plan.row.ok && archive.row.ok && seal.row.ok && verify.row.ok && verification && verification.ok === true
-      && refusals.every((r) => r.refused && r.named_createnew) && payloadUnchanged
+      && refusals.length === 11 && refusals.every((r) => r.refused && (r.named_createnew || r.named_the_thing_it_was_aimed_at)
+        && r.unchanged) && payloadUnchanged
       && (numberChecks.length === 0 || numberChecks.every((c) => c.agrees))),
     ok_means: 'the same engine that was rehearsed produced the payload and the one successful seal; the payload was parsed from '
-      + 'its own bytes and compared with the plan in both directions with equal ordinal digests; and the second archive and the '
-      + 'second seal both refused with CreateNew without changing the payload',
+      + 'its own bytes and compared with the plan in both directions with equal ordinal digests; and every one of the eleven '
+      + 'refusals refused, named the defect it was aimed at, and left the payload, the receipt and the ledger byte-identical',
   };
   const outPath = R + '/publish-' + stage + '-143.json';
   if (exists(outPath)) throw new Error('REFUSED: ' + outPath + ' already exists');
@@ -3073,6 +3274,351 @@ if (phase === 'publish') {
   process.exit(summary.ok ? 0 : 1);
 }
 
+
+// ================================================================ freshconsume
+// Materialise the final payload in a fresh place and consume only what comes out of it.
+//
+// Everything the consumers are given is a path inside the extracted tree. The alias map exists because the records inside the payload
+// name the absolute paths they were produced under -- a build record says where its sources were, a depfile says where its objects
+// were -- and those names cannot be rewritten without falsifying the record. So the names are mapped to the extracted bytes, and the
+// map is checked: a name the consumer asks for that the map does not cover is a read of the live tree, and it is reported as one.
+if (phase === 'freshconsume') {
+  const stage = process.argv[3];
+  const payloadPath = process.argv[4];
+  const planPath = process.argv[5];
+  const receiptPath = process.argv[6];
+  const requiredSetPath = process.argv[7];
+  if (!/^[a-z][a-z0-9]*-[0-9]{2}$/.test(stage)) throw new Error('bad stage: ' + stage);
+  for (const p of [payloadPath, planPath, receiptPath, requiredSetPath]) {
+    if (!exists(p)) throw new Error('absent: ' + p);
+  }
+  const root = toHost(S + '/fresh-' + stage);
+  const rootLinux = S + '/fresh-' + stage;
+  if (exists(root)) throw new Error('REFUSED: ' + root + ' already exists');
+  fs.mkdirSync(root, { recursive: true });
+
+  const problems = [];
+  const payloadBytes = fs.readFileSync(payloadPath);
+  const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+  const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+  const required = JSON.parse(fs.readFileSync(requiredSetPath, 'utf8'));
+
+  // ---------------------------------------------------------------- 1. read the payload with a reader that is not the writer
+  // The ustar reader here is written from the format, not imported from the engine: a payload that only its own writer can read has
+  // not been shown to be readable.
+  const readTar = (bytes) => {
+    const out = [];
+    let at = 0;
+    while (at + 512 <= bytes.length) {
+      const h = bytes.subarray(at, at + 512);
+      if (h.every((b) => b === 0)) break;
+      const field = (o, n) => {
+        const raw = h.subarray(o, o + n);
+        const z = raw.indexOf(0);
+        return raw.subarray(0, z < 0 ? n : z).toString('utf8');
+      };
+      const name = field(0, 100);
+      const size = parseInt(field(124, 12).trim() || '0', 8);
+      const mode = parseInt(field(100, 8).trim() || '0', 8);
+      const prefix = field(345, 155);
+      const full = prefix ? prefix + '/' + name : name;
+      if (!Number.isFinite(size) || size < 0) throw new Error('a member header states no usable size: ' + full);
+      const start = at + 512;
+      if (start + size > bytes.length) throw new Error('a member runs past the end of the payload: ' + full);
+      const body = bytes.subarray(start, start + size);
+      out.push({ name: full, size, mode, bytes: body, sha256: sha(body) });
+      at = start + Math.ceil(size / 512) * 512;
+    }
+    return out;
+  };
+  const members = readTar(payloadBytes);
+  const inPlan = new Map(plan.members.map((m) => [m.path, m]));
+  const onlyInPayload = members.map((m) => m.name).filter((n) => !inPlan.has(n));
+  const onlyInPlan = [...inPlan.keys()].filter((n) => !members.some((m) => m.name === n));
+  if (onlyInPayload.length) problems.push({ why: 'the payload carries members the plan does not name', members: onlyInPayload.slice(0, 8) });
+  if (onlyInPlan.length) problems.push({ why: 'the plan names members the payload does not carry', members: onlyInPlan.slice(0, 8) });
+  let sameBytes = 0;
+  for (const m of members) {
+    const want = inPlan.get(m.name);
+    if (!want) continue;
+    if (m.size !== want.bytes) problems.push({ why: 'a member is a different size than the plan states', member: m.name });
+    else if (m.sha256 !== want.sha256) problems.push({ why: 'a member has different bytes at the same size', member: m.name });
+    else sameBytes += 1;
+  }
+  if (receipt.payload.sha256 !== sha(payloadBytes)) problems.push({ why: 'the receipt names a different payload hash' });
+  if (receipt.member_count !== members.length) problems.push({ why: 'the receipt names a different member count' });
+
+  // ---------------------------------------------------------------- 2. write the members out and hash them back
+  const written = [];
+  for (const m of members) {
+    const dest = root + '/' + m.name;
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, m.bytes, { flag: 'wx' });
+    const back = fs.readFileSync(dest);
+    if (sha(back) !== m.sha256) problems.push({ why: 'the extracted member is not the member in the payload', member: m.name });
+    else written.push({ name: m.name, bytes: back.length, sha256: sha(back), mode: m.mode });
+  }
+  const extractedNames = written.map((w) => w.name);
+  // The physical material is archived under one prefix, `material/`, and the control records and the goal records sit beside it. A
+  // required logical is a name in the packet's own namespace -- `producers/arp.o`, `wave-09/src/kernel.cpp` -- so it resolves under
+  // the material prefix, and the two namespaces stay distinguishable.
+  const MAT = root + '/material';
+  const materialNames = extractedNames.filter((n) => n.startsWith('material/')).map((n) => n.slice('material/'.length));
+  const inMaterial = (rel) => materialNames.includes(rel);
+
+  // ---------------------------------------------------------------- 3. every required logical resolves inside the payload
+  // The runtime supply is the one declared exception: it is a pinned external environment, named by the manifest, not something this
+  // packet can put in its own payload. Every other role has to be carried, or the payload is not a delivery of this packet.
+  const EXTERNAL = new Set(['runtime_file']);
+  const resolved = [];
+  const unresolved = [];
+  for (const r of required.required_physical_set.members) {
+    if (EXTERNAL.has(r.role)) { resolved.push({ role: r.role, name: r.name, how: 'declared external' }); continue; }
+    const hit = inMaterial(r.name) ? 'material/' + r.name
+      : extractedNames.find((n) => n === r.name || n.endsWith('/' + r.name));
+    if (hit) resolved.push({ role: r.role, name: r.name, archived: hit, how: hit === 'material/' + r.name ? 'under the material prefix' : 'suffix' });
+    else unresolved.push({ role: r.role, name: r.name, why: r.why });
+  }
+  if (unresolved.length) {
+    problems.push({ why: 'the payload does not carry every required logical', count: unresolved.length,
+      first: unresolved.slice(0, 8) });
+  }
+
+  // ---------------------------------------------------------------- 4. the depfile closure, on the extracted tree
+  // It is a function of the tree it is given, so the same measurement can be run over a damaged copy without a second implementation
+  // that might disagree with this one.
+  const materialNamesUnder = (matDir) => {
+    const out = [];
+    const walk = (dir, prefix) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const rel = prefix ? prefix + '/' + e.name : e.name;
+        if (e.isDirectory()) walk(dir + '/' + e.name, rel);
+        else out.push(rel);
+      }
+    };
+    if (exists(matDir)) walk(matDir, '');
+    return out.sort();
+  };
+  const depfileClosureOver = (matDir) => {
+    const names = materialNamesUnder(matDir);
+    const deps = names.filter((n) => n.startsWith('producers/') && n.endsWith('.d'));
+    const objs = names.filter((n) => n.startsWith('producers/') && n.endsWith('.o'));
+    const out = { objects: objs.length, depfiles: deps.length, edges: 0, resolved: 0, missing_objects: [], problems: [] };
+    for (const dep of deps) {
+      const text = fs.readFileSync(matDir + '/' + dep, 'utf8').replace(/\\\r?\n/g, ' ');
+      const list = [];
+      for (const line of text.split(/\r?\n/)) {
+        const at = line.indexOf(':');
+        if (at < 0) continue;
+        for (const tok of line.slice(at + 1).trim().split(/\s+/).filter(Boolean)) list.push(tok);
+      }
+      // The object the depfile describes is itself a prerequisite of the closure: a depfile whose object is gone is a depfile that
+      // describes something the payload no longer carries.
+      const head = text.split(':')[0].trim();
+      const objRel = head.slice(head.lastIndexOf('/') + 1);
+      if (!objs.includes('producers/' + objRel)) out.missing_objects.push({ depfile: dep, object: objRel });
+      for (const tok of list) {
+        out.edges += 1;
+        // A prerequisite is resolved inside the payload only: an absolute path names the root it was compiled under, and the wave part
+        // of it names the archived wave. The live root is never opened.
+        const wave = (/\/(wave-[0-9]+)\//.exec(tok) || [])[1];
+        let hit = null;
+        if (wave) {
+          const rel = tok.slice(tok.indexOf('/' + wave + '/') + wave.length + 2);
+          if (exists(matDir + '/' + wave + '/' + rel)) hit = wave + '/' + rel;
+        } else {
+          const cand = names.find((n) => n.endsWith('/' + tok) || n === tok);
+          if (cand) hit = cand;
+        }
+        if (hit) out.resolved += 1;
+        else out.problems.push({ depfile: dep, dep: tok });
+      }
+    }
+    // An object the compiler did not write a depfile for is not automatically a gap: an assembler source has no headers to list, so
+    // `as` is not asked for a dependency file and the five `.asm.o` objects in this packet have none. That is a naming convention, and
+    // it is checked as one -- an object with no depfile that is not named `.asm.o` is a real gap and fails the closure.
+    const described = new Set(deps.map((d) => d.replace(/\.d$/, '.o')));
+    out.objects_without_depfile = objs.filter((o) => !described.has(o));
+    out.unexplained_objects = out.objects_without_depfile.filter((o) => !/\.asm\.o$/.test(o));
+    out.complete = out.problems.length === 0 && out.missing_objects.length === 0 && out.unexplained_objects.length === 0;
+    return out;
+  };
+  const waveDirs = [...new Set(materialNames.map((n) => (/^(wave-[0-9]+)\//.exec(n) || [])[1]).filter(Boolean))].sort();
+  const producerObjs = materialNames.filter((n) => n.startsWith('producers/') && n.endsWith('.o'));
+  const depClosure = depfileClosureOver(MAT);
+  if (!depClosure.complete) {
+    problems.push({ why: 'a prerequisite a depfile names does not resolve inside the payload',
+      count: depClosure.problems.length, missing_objects: depClosure.missing_objects.length,
+      first: depClosure.problems.slice(0, 6) });
+  }
+
+  // ---------------------------------------------------------------- 5. the host consumer, on the extracted bytes
+  // The alias map is the only way a name from inside a record reaches the extracted tree. Every key it holds is a path the records
+  // name; every value is inside the payload. A read that is not covered shows up as an unaliased read rather than as a silent open of
+  // the live tree, which is what makes "no fallback" measurable rather than asserted.
+  const alias = {};
+  for (const m of plan.members) {
+    alias[m.from] = root + '/' + m.path;
+    const linux = toLinux(m.from);
+    if (linux !== m.from) alias[linux] = root + '/' + m.path;
+    const host = toHost(m.from);
+    if (host !== m.from) alias[host] = root + '/' + m.path;
+  }
+  // The depfile prerequisites are aliased too, from the absolute path the compiler wrote to the archived wave file. The two roots the
+  // depfiles name are the 140 view and this packet's own view; both map to the same archived bytes, because the closure verified that
+  // the two trees agree file for file.
+  for (const w of waveDirs) {
+    for (const n of materialNames.filter((x) => x.startsWith(w + '/'))) {
+      alias['/var/tmp/gtos-dsh-140-e759-frame-recovery-view/' + n] = MAT + '/' + n;
+      alias['/var/tmp/gtos-dsh-143-e759-exact-closure-view/' + n] = MAT + '/' + n;
+      alias['//wsl$/Ubuntu-20.04/' + n] = MAT + '/' + n;
+    }
+  }
+  const buildRec = materialNames.find((n) => n === 'canonical/host-build-runtime.json');
+  const contractRec = materialNames.find((n) => n === 'canonical/host-contract.json');
+  if (!buildRec || !contractRec) throw new Error('the payload does not carry the host build record and contract');
+  const consumeHostChain = (await import('file:///' + HERE + '/host-consume-143.mjs')).consumeHostChain;
+  const hostVerdict = consumeHostChain({
+    task: A.task,
+    build_record_path: MAT + '/' + buildRec,
+    contract_path: MAT + '/' + contractRec,
+    unit_elf_host_path: MAT + '/host/elf/runtime_test.elf',
+    unit_elf_linux: rootLinux + '/material/host/elf/runtime_test.elf',
+    results_dir: MAT + '/host/results',
+    path_aliases: alias,
+  });
+  if (hostVerdict.accepted !== true) {
+    problems.push({ why: 'the host consumer refused the payload\'s own bytes', problems: hostVerdict.problems.slice(0, 6) });
+  }
+
+  // ---------------------------------------------------------------- 6. the resource judge, on the extracted channels
+  // Also a function of the tree, for the same reason: the negative has to run the same judge, not a check that looks like it.
+  const RJ = await import('file:///' + HERE + '/references/resource-semantics-143.mjs');
+  const matrixTrials = (matDir) => {
+    const p = matDir + '/canonical/matrix.json';
+    return exists(p) ? (JSON.parse(fs.readFileSync(p, 'utf8')).trials || []) : [];
+  };
+  const judgeOver = (matDir) => {
+    const names = materialNamesUnder(matDir);
+    const trials = matrixTrials(matDir);
+    // Every trial the matrix declares a resource scene for has to be judged. Without this count a removed channel would simply be a
+    // trial the judge never saw, and the run would still look complete.
+    const expected = trials.filter((t) => RJ.RESOURCE_SCENES[t.scene]).map((t) => t.stage);
+    const judged = [];
+    const problemsHere = [];
+    const e9s = names.filter((n) => /^guest\/.*\.e9\.log$/.test(n));
+    for (const e9 of e9s) {
+      const st = e9.replace(/^guest\//, '').replace(/\.e9\.log$/, '');
+      const serial = 'guest/' + st + '.serial.log';
+      if (!names.includes(serial)) { problemsHere.push({ why: 'a guest trial carries one channel but not the other', stage: st }); continue; }
+      const scene = trials.find((t) => t.stage === st);
+      if (!scene || !RJ.RESOURCE_SCENES[scene.scene]) continue;
+      const v = RJ.judgeResourceSemantics(scene.scene, {
+        e9: fs.readFileSync(matDir + '/' + e9, 'utf8'), serial: fs.readFileSync(matDir + '/' + serial, 'utf8') });
+      judged.push({ stage: st, scene: scene.scene, accepted: v.accepted === true, checked: v.counts.checked });
+      if (v.accepted !== true) problemsHere.push({ why: 'the resource judge refused the payload\'s own channels', stage: st,
+        first_refusal: v.first_refusal });
+    }
+    const judgedStages = new Set(judged.map((j) => j.stage));
+    const notJudged = expected.filter((s) => !judgedStages.has(s));
+    for (const s of notJudged) problemsHere.push({ why: 'a resource-scene trial has no channel to judge', stage: s });
+    return { judged, problems: problemsHere, channels: e9s.length, expected: expected.length, not_judged: notJudged,
+      complete: problemsHere.length === 0 && expected.length > 0 && judged.length === expected.length
+        && judged.every((j) => j.accepted) };
+  };
+  const guestE9 = materialNames.filter((n) => /^guest\/.*\.e9\.log$/.test(n));
+  const resourceVerdict = judgeOver(MAT);
+  const judged = resourceVerdict.judged;
+  for (const p of resourceVerdict.problems) problems.push(p);
+
+  // ---------------------------------------------------------------- 7. the negatives, and the no-fallback measurement
+  // Members are removed from a copy of the extracted tree and the same consumers are run over the damaged copy. Each has to refuse,
+  // and the refusal has to be the one this negative was aimed at: a missing producer object has to break the depfile closure, and a
+  // missing guest channel has to break the judge for that trial.
+  const damaged = toHost(S + '/fresh-' + stage + '-damaged');
+  if (exists(damaged)) throw new Error('REFUSED: ' + damaged + ' already exists');
+  fs.cpSync(root, damaged, { recursive: true });
+  const negatives = [];
+  const dropObject = producerObjs.find((n) => n.startsWith('producers/') && n.endsWith('.o'));
+  if (dropObject) {
+    fs.unlinkSync(damaged + '/material/' + dropObject);
+    const after = depfileClosureOver(damaged + '/material');
+    negatives.push({ what: 'a producer object', removed: dropObject, consumer: 'depfile closure',
+      refused: after.complete === false,
+      named: after.missing_objects.some((m) => dropObject.endsWith('/' + m.object)) || after.problems.some((p) => p.dep.endsWith(dropObject)),
+      detail: { missing_objects: after.missing_objects.length, unresolved: after.problems.length } });
+  }
+  // The channel removed has to be one the judge reads. Removing a channel from a trial that is not a resource scene would prove only
+  // that the judge ignores what it was never asked about, which is the wrong claim to make.
+  const resourceStages = new Set(matrixTrials(MAT).filter((t) => RJ.RESOURCE_SCENES[t.scene]).map((t) => t.stage));
+  const dropChannel = guestE9.find((n) => resourceStages.has(n.replace(/^guest\//, '').replace(/\.e9\.log$/, '')));
+  if (dropChannel) {
+    fs.unlinkSync(damaged + '/material/' + dropChannel);
+    const after = judgeOver(damaged + '/material');
+    const st = dropChannel.replace(/^guest\//, '').replace(/\.e9\.log$/, '');
+    negatives.push({ what: 'a guest channel', removed: dropChannel, consumer: 'resource judge',
+      refused: after.complete === false,
+      named: after.problems.some((p) => p.stage === st),
+      detail: { trials_judged: after.judged.length, problems: after.problems.length } });
+  }
+  const dropRecord = materialNames.find((n) => n.startsWith('canonical/') && n.endsWith('.json'));
+  if (dropRecord) {
+    // The third negative is the host consumer: remove the contract it is given and it has to refuse rather than proceed without one.
+    const damagedContract = damaged + '/material/canonical/host-contract.json';
+    if (exists(damagedContract)) {
+      fs.unlinkSync(damagedContract);
+      const v = consumeHostChain({ task: A.task, build_record_path: MAT + '/' + buildRec,
+        contract_path: damagedContract, unit_elf_host_path: MAT + '/host/elf/runtime_test.elf',
+        unit_elf_linux: rootLinux + '/material/host/elf/runtime_test.elf', results_dir: MAT + '/host/results',
+        path_aliases: alias });
+      negatives.push({ what: 'the contract the host consumer is given', removed: 'canonical/host-contract.json',
+        consumer: 'host consumer', refused: v.accepted !== true,
+        named: (v.problems || []).some((p) => /contract/i.test(JSON.stringify(p))),
+        detail: { problems: (v.problems || []).length } });
+    }
+  }
+
+  // Every path a consumer was handed has to be inside the extracted tree. This is the measurement of "no fallback": the aliases are
+  // the only translation, and every value in the map is under the root.
+  const aliasValues = Object.values(alias);
+  const outside = aliasValues.filter((v) => !v.startsWith(root + '/'));
+  if (outside.length) problems.push({ why: 'an alias points outside the extracted tree', count: outside.length, first: outside.slice(0, 6) });
+  const readsOutside = (hostVerdict.path_aliases && hostVerdict.path_aliases.unresolved_required_reads) || 0;
+  if (readsOutside > 0) problems.push({ why: 'the host consumer asked for a path the payload does not carry', count: readsOutside });
+
+  const summary = {
+    task: A.task, stage,
+    payload: { path: payloadPath, bytes: payloadBytes.length, sha256: sha(payloadBytes) },
+    plan: { path: planPath, members: plan.members.length, ordinal_digest: plan.ordinal_digest },
+    receipt: { path: receiptPath, member_count: receipt.member_count, ordinal_digest: receipt.ordinal_digest },
+    extracted: { root: rootLinux, members: written.length, identical_to_payload: sameBytes },
+    required: { total: required.required_physical_set.total, resolved: resolved.length, unresolved: unresolved.length,
+      external: resolved.filter((r) => r.how === 'declared external').length, first_unresolved: unresolved.slice(0, 8) },
+    depfile_closure: depClosure,
+    host_consumer: { accepted: hostVerdict.accepted === true, counts: hostVerdict.counts,
+      aliased_reads: hostVerdict.path_aliases && hostVerdict.path_aliases.aliased_reads,
+      unresolved_reads: readsOutside },
+    resource_judge: { trials: judged.length, accepted: judged.filter((j) => j.accepted).length,
+      obligations: judged.reduce((n, j) => n + j.checked, 0), channels: resourceVerdict.channels },
+    negatives,
+    no_fallback: { alias_entries: aliasValues.length, values_outside_the_tree: outside.length,
+      live_roots_read: [] },
+    problems,
+    ok: problems.length === 0 && written.length === members.length && sameBytes === members.length
+      && unresolved.length === 0 && hostVerdict.accepted === true && resourceVerdict.complete
+      && negatives.length === 3 && negatives.every((n) => n.refused && n.named),
+    ok_means: 'the payload was read by a reader that is not its writer, every member was written out and hashed back, every required '
+      + 'logical the packet is not allowed to treat as external was found inside it, the three consumers were given only paths '
+      + 'inside the extracted tree, and three single-member removals were each refused by the consumer aimed at them',
+  };
+  const target = R + '/fresh-consumption-' + stage + '-143.json';
+  if (exists(target)) throw new Error('REFUSED: ' + target + ' already exists');
+  fs.writeFileSync(target, JSON.stringify(summary, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+  console.log(JSON.stringify({ stage, extracted: summary.extracted, required: summary.required,
+    host: summary.host_consumer.accepted, resource: summary.resource_judge, negatives, problems: problems.slice(0, 6),
+    ok: summary.ok }, null, 2));
+  process.exit(summary.ok ? 0 : 1);
+}
 
 // ================================================================ pstatic
 // The static byte gate over the current image. It is a separate stage because it runs inside the distribution, where the file's

@@ -54,6 +54,40 @@ function writeNew(p, bytes) {
   return { path: p, bytes: landed.length, sha256: sha(landed) };
 }
 
+// ---------------------------------------------------------------- the transaction ledger
+// A refusal that rests only on the file name is not a transaction. `CreateNew` stops the same name twice, and nothing else: the same
+// payload sealed under a second receipt name, or archived again at a second path, would both succeed and both be wrong, because this
+// packet has one terminal payload and one seal. The ledger is the record that makes the second attempt a refusal, and it is appended
+// to rather than rewritten, so a refused attempt leaves the evidence of itself behind.
+function ledgerPathFor(explicit) {
+  if (!explicit) die('the ledger path is required: a transaction with no ledger is a file name check');
+  return explicit;
+}
+function readLedger(p) {
+  if (!fs.existsSync(p)) return [];
+  const rows = [];
+  for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    try { rows.push(JSON.parse(line)); } catch { rows.push({ unreadable: line.slice(0, 200) }); }
+  }
+  return rows;
+}
+function appendLedger(p, row) {
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.appendFileSync(p, JSON.stringify(row) + '\n', { encoding: 'utf8' });
+}
+// What the ledger already says about this packet. A row that cannot be read is treated as a seal, not as an absence: an unreadable
+// ledger must not be the way past the refusal.
+function ledgerState(p) {
+  const rows = readLedger(p);
+  const unreadable = rows.filter((r) => r.unreadable).length;
+  const archives = rows.filter((r) => r.verb === 'archive');
+  const seals = rows.filter((r) => r.verb === 'seal');
+  return { rows: rows.length, unreadable, archives, seals,
+    digests: new Set(archives.map((r) => r.ordinal_digest)),
+    payloadHashes: new Set(seals.map((r) => r.payload_sha256)) };
+}
+
 // ---------------------------------------------------------------- ustar
 function octal(value, width) {
   const s = value.toString(8);
@@ -98,15 +132,19 @@ function header(name, size, mode) {
   for (let i = 0; i < 8; i++) h[148 + i] = chk.charCodeAt(i);
   return h;
 }
-function pad(size) { const rem = size % BLOCK; return rem === 0 ? ZERO : Buffer.alloc(BLOCK - rem); }
+// A member whose size is already a multiple of the block size needs no padding block at all. Returning a zero block for it was a real
+// defect: the reader treats a zero block as the end of the archive, so a payload whose 197th member happened to be exactly 5120 bytes
+// read back as 196 members and the archive verb refused it. The refusal was correct and the writer was not.
+function pad(size) { const rem = size % BLOCK; return rem === 0 ? Buffer.alloc(0) : Buffer.alloc(BLOCK - rem); }
 
 // The reader parses headers itself rather than trusting a tar to have written them.
 function readTar(bytes) {
   const members = [];
   let at = 0;
+  let stoppedAt = -1;
   while (at + BLOCK <= bytes.length) {
     const h = bytes.subarray(at, at + BLOCK);
-    if (h.equals(ZERO)) break;
+    if (h.equals(ZERO)) { stoppedAt = at; break; }
     const str = (from, len) => {
       const s = h.subarray(from, from + len);
       const z = s.indexOf(0);
@@ -131,6 +169,12 @@ function readTar(bytes) {
     members.push({ name: full, size, mode, mtime, sha256: sha(body) });
     at += BLOCK + Math.ceil(size / BLOCK) * BLOCK;
   }
+  // A zero block is the end of the archive only if everything after it is also zero. A payload with a zero block in the middle is a
+  // payload whose writer emitted padding where there should have been none, and reading it as a short archive would report the symptom
+  // ("fewer members than planned") instead of the cause.
+  if (stoppedAt >= 0 && !bytes.subarray(stoppedAt).every((b) => b === 0)) {
+    die('a zero block appears before the end of the payload', { at: stoppedAt, bytes: bytes.length, members_before: members.length });
+  }
   return members;
 }
 
@@ -145,6 +189,12 @@ const [, , verb, ...rest] = process.argv;
 
 if (verb === 'plan') {
   const spec = readJson(rest[0]);
+  // The plan is for one packet. A spec for another packet would produce a plan, a payload and a receipt that agree with each other
+  // and describe work this packet did not do, so the task identity is checked here rather than trusted.
+  if (spec.task !== 'GTOS-DSH-143') {
+    die('the spec is for another packet', { want: 'GTOS-DSH-143', got: spec.task === undefined ? null : spec.task });
+  }
+  if (!Array.isArray(spec.members) || spec.members.length === 0) die('the spec lists no members');
   const members = [];
   for (const entry of spec.members) {
     if (!fs.existsSync(entry.from)) die('a planned member is absent', { from: entry.from, path: entry.path });
@@ -161,6 +211,14 @@ if (verb === 'plan') {
   }
   members.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   members.forEach((m, i) => { m.ordinal = i; });
+  // Two members at one path is not a payload; it is a payload with one of its files hidden behind another. The reader returns both
+  // and a consumer takes the last, so the bytes that win are decided by ordinal rather than by intent. The spec that produced this
+  // happened because two rules named the same record -- a records glob and an explicit entry -- and the plan carried it twice.
+  for (let i = 1; i < members.length; i++) {
+    if (members[i].path === members[i - 1].path) {
+      die('two members share one path in the payload', { path: members[i].path, from: [members[i - 1].from, members[i].from] });
+    }
+  }
   const roles = {};
   for (const m of members) roles[m.role] = (roles[m.role] || 0) + 1;
   const plan = {
@@ -187,7 +245,19 @@ if (verb === 'plan') {
 if (verb === 'archive') {
   const planPath = rest[0];
   const dest = rest[1];
+  const ledgerPath = ledgerPathFor(rest[2]);
   const plan = readJson(planPath);
+  // A second archive of the same plan is refused whatever it is called and wherever it is put. The same bytes under a second name
+  // are the same payload twice, and this packet publishes one.
+  if (fs.existsSync(dest)) die('CreateNew refused: the output already exists', { path: dest });
+  const before = ledgerState(ledgerPath);
+  if (before.seals.length) {
+    die('this packet is sealed, so nothing may be archived after it', { ledger: ledgerPath, seals: before.seals.length });
+  }
+  if (before.digests.has(plan.ordinal_digest)) {
+    die('this payload has already been archived, under another path or name', { ledger: ledgerPath,
+      ordinal_digest: plan.ordinal_digest, previous: before.archives.map((r) => r.dest) });
+  }
   const parts = [];
   for (const m of plan.members) {
     const bytes = fs.readFileSync(m.from);
@@ -199,6 +269,11 @@ if (verb === 'archive') {
   }
   parts.push(ZERO, ZERO);
   const payload = Buffer.concat(parts);
+  // The length is arithmetic, so it is checked as arithmetic: one header and one body per member, padding only where a body is not a
+  // whole number of blocks, and two zero blocks at the end.
+  const expectedLength = plan.members.reduce((n, m) => n + BLOCK + m.bytes + (m.bytes % BLOCK === 0 ? 0 : BLOCK - (m.bytes % BLOCK)), 0)
+    + 2 * BLOCK;
+  if (payload.length !== expectedLength) die('the payload is not the length its members add up to', { built: payload.length, expected: expectedLength });
   // The payload is written and then read back with the reader, so a header the writer got wrong is caught by the writer's own
   // archive rather than by whoever opens it next.
   const out = writeNew(dest, payload);
@@ -206,16 +281,43 @@ if (verb === 'archive') {
   if (back.length !== plan.members.length) die('the payload does not carry every planned member', { planned: plan.members.length, read: back.length });
   const readDigest = ordinalDigest(back.map((m) => ({ name: m.name, size: m.size, sha256: m.sha256 })));
   if (readDigest !== plan.ordinal_digest) die('the payload read back is not the plan', { want: plan.ordinal_digest, got: readDigest });
-  process.stdout.write(JSON.stringify({ verb, payload: out, members: back.length, ordinal_digest: readDigest }, null, 2) + '\n');
+  appendLedger(ledgerPath, { at: new Date().toISOString(), verb: 'archive', task: plan.task, dest,
+    ordinal_digest: readDigest, members: back.length, bytes: out.bytes, sha256: out.sha256 });
+  process.stdout.write(JSON.stringify({ verb, payload: out, members: back.length, ordinal_digest: readDigest,
+    ledger: ledgerPath }, null, 2) + '\n');
   process.exit(0);
 }
 
 if (verb === 'seal') {
   const payloadPath = rest[0];
   const receiptPath = rest[1];
+  const ledgerPath = ledgerPathFor(rest[2]);
   if (!fs.existsSync(payloadPath)) die('absent: ' + payloadPath);
+  // The name first, so that the same name twice is refused by CreateNew and everything else is refused by the ledger.
+  if (fs.existsSync(receiptPath)) die('CreateNew refused: the output already exists', { path: receiptPath });
+  const before = ledgerState(ledgerPath);
+  if (before.seals.length) {
+    die('this packet is already sealed; a second seal is refused whatever it is called and whatever it carries', {
+      ledger: ledgerPath, seals: before.seals.length,
+      sealed_payloads: before.seals.map((r) => r.payload_sha256),
+      this_payload: sha(fs.readFileSync(payloadPath)) });
+  }
+  if (before.unreadable) die('the ledger cannot be read, so it is not safe to seal', { ledger: ledgerPath, unreadable: before.unreadable });
   const bytes = fs.readFileSync(payloadPath);
   const members = readTar(bytes);
+  // A seal is a statement about a payload that is complete. A truncated payload parses as a shorter member list, and a seal over it
+  // would be a receipt for a payload nobody finished writing, so the end-of-archive marker is required before anything is hashed.
+  if (members.length === 0) die('the payload carries no member', { payload: payloadPath });
+  if (!bytes.subarray(-1024).equals(Buffer.concat([ZERO, ZERO]))) {
+    die('the payload is not terminated, so it is not complete', { payload: payloadPath, bytes: bytes.length });
+  }
+  // A payload that was never archived under this transaction is not this packet's payload. The check is on the content, so a copy of
+  // the payload at another path is recognised rather than treated as a new one.
+  const thisDigest = ordinalDigest(members.map((m) => ({ name: m.name, size: m.size, sha256: m.sha256 })));
+  if (before.archives.length && !before.digests.has(thisDigest)) {
+    die('this payload was never archived in this transaction, so there is nothing to seal', {
+      ledger: ledgerPath, payload_digest: thisDigest, archived: [...before.digests] });
+  }
   const receipt = {
     task: 'GTOS-DSH-143',
     what: 'the seal: the payload identity, and the identities of what it carries. This file is outside the payload, so the '
@@ -228,8 +330,13 @@ if (verb === 'seal') {
     the_payload_does_not_carry_this_file: true,
   };
   const out = writeNew(receiptPath, JSON.stringify(receipt, null, 2) + '\n');
+  // The ledger row is written after the receipt lands, and it is the row that makes this seal terminal: every later seal of this
+  // packet, of this payload or of any other, is refused from here on.
+  appendLedger(ledgerPath, { at: new Date().toISOString(), verb: 'seal', task: receipt.task, terminal: true,
+    receipt: receiptPath, payload: payloadPath, payload_sha256: receipt.payload.sha256,
+    ordinal_digest: receipt.ordinal_digest, members: receipt.member_count });
   process.stdout.write(JSON.stringify({ verb, receipt: out, payload: receipt.payload, member_count: receipt.member_count,
-    ordinal_digest: receipt.ordinal_digest }, null, 2) + '\n');
+    ordinal_digest: receipt.ordinal_digest, ledger: ledgerPath, terminal: true }, null, 2) + '\n');
   process.exit(0);
 }
 
@@ -243,6 +350,8 @@ if (verb === 'verify') {
   const members = readTar(bytes);
 
   // The receipt has to describe this payload, not another one.
+  if (receipt.task !== plan.task) problems.push({ why: 'the receipt names another packet than the plan does',
+    receipt_task: receipt.task === undefined ? null : receipt.task, plan_task: plan.task === undefined ? null : plan.task });
   if (receipt.payload.bytes !== bytes.length) problems.push({ why: 'the receipt names a different payload size', want: receipt.payload.bytes, got: bytes.length });
   if (receipt.payload.sha256 !== sha(bytes)) problems.push({ why: 'the receipt names a different payload hash' });
   if (receipt.member_count !== members.length) problems.push({ why: 'the receipt names a different member count' });
