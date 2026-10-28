@@ -2931,7 +2931,9 @@ if (phase === 'publish') {
   if (!['test', 'production'].includes(mode)) throw new Error('bad mode: ' + mode);
   const engine = HERE + '/publish-143.mjs';
   if (!exists(engine)) throw new Error('absent engine: ' + engine);
-  const dest = mode === 'test' ? S + '/tmp/publish-' + stage : R + '/archive-143';
+  // A transaction is terminal, so a packet whose report changes after it was sealed publishes a second transaction beside the first
+  // rather than reopening the first. The suffix is what makes that a new destination instead of the same one.
+  const dest = mode === 'test' ? S + '/tmp/publish-' + stage : R + '/archive-143' + (process.argv[5] || '');
   const destHost = toHost(dest);
   fs.mkdirSync(destHost, { recursive: true });
 
