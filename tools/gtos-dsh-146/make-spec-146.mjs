@@ -20,6 +20,8 @@ import path from 'node:path';
 
 const R = 'F:/GTOS-Chromium/artifacts/native-end-to-end-consumers-and-independent-required-closure-20261028-a';
 const RUN = process.argv[2] || '01';
+// The required set is the second derivation: the first named the parent publisher, which this packet never runs.
+const REQUIRED_RECORD = R + '/d-required-146-02.json';
 const SPEC_STAGE = 'spec-146-' + RUN;
 const REQUIRED_SET = R + '/d-required-146-02.json';
 const ROLE_DIR = R + '/stage-output/roles-146-02';
@@ -100,9 +102,15 @@ for (const entry of required.entries) {
   used.set(candidate.toLowerCase(), entry.source);
   if (!exists(toHost(entry.source))) throw new Error('a required file is absent: ' + entry.source);
   const bytes = fs.readFileSync(toHost(entry.source));
-  members.push({ path: candidate, role, from: entry.source, bytes: bytes.length, sha256: sha(bytes),
+  // `from` is the path the engine can OPEN, which for a requirement in the Linux domain is the share path. The contract path
+  // is kept beside it, because that is the name the record and the reader of the package will look for, and it is the key the
+  // alias table uses. Recording `from` as the contract path made the engine refuse with "a planned member is absent" -- the
+  // file was there, under a name this host cannot open.
+  members.push({ path: candidate, role, from: toHost(entry.source), contract_path: entry.source,
+    bytes: bytes.length, sha256: sha(bytes),
     satisfies: entry.requirements > 1 ? entry.roles : undefined });
   aliases[entry.source] = candidate;
+  if (toHost(entry.source) !== entry.source) aliases[toHost(entry.source)] = candidate;
 }
 
 const requirementMembers = members.length;
@@ -113,7 +121,7 @@ const add = (packagePath, role, from, what) => {
   if (used.has(packagePath.toLowerCase())) throw new Error('a record collides with a requirement: ' + packagePath);
   const bytes = fs.readFileSync(toHost(from));
   used.set(packagePath.toLowerCase(), from);
-  members.push({ path: packagePath, role, from, bytes: bytes.length, sha256: sha(bytes) });
+  members.push({ path: packagePath, role, from: toHost(from), bytes: bytes.length, sha256: sha(bytes) });
 };
 
 const CONTEXT = [
@@ -152,6 +160,12 @@ const EVIDENCE = [
   ['io-semantic-146-01.json', 'the IO classifier, its tiers and its negatives'],
   ['q-mislocated-verify-146.json', 'the mislocation this packet found in its own publisher, and the fix'],
 ];
+// The rehearsal is evidence, so it is carried. It pins the spec it rehearsed (`spec-146-01`), which is one step earlier in
+// this packet's own chain; that is forward-only and readable, not a self-reference: nothing in the payload pins the payload.
+if (exists(R + '/d-consumers-146-01.json')) {
+  EVIDENCE.push(['d-consumers-146-01.json', 'the TEST_ONLY rehearsal: plan, archive, seal, verify, extraction and fresh '
+    + 'consumption of the extracted tree by the four consumer families, with five negatives refused']);
+}
 const evidence = [];
 for (const [name, what] of EVIDENCE) {
   const p = R + '/' + name;
