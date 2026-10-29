@@ -48,7 +48,7 @@
     ]
   },
   "files": {
-    "tools/build-filestore-probe.py": "de3e130a9af504f95b048b57183cfe333f59213b0c33756f0a417839b4d723c9",
+    "tools/build-filestore-probe.py": "29af1f5dfe805823367d8580f439f6b780fad08223fc1bafe535f01d717884aa",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "docs/littlefs/LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d",
     "include/storage/littlefs/lfs.h": "b1befd7288d08815accc8f9af744c55686c0b9e3ac0061c32ceee38a1b3eb96d",
@@ -152,18 +152,18 @@
   "full_kernel_status_sha256": "cad39e3b4b75e15f9360f4a8ea010cbc9d67fcec1397660d93dfad8201d56f19",
   "coherence_self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44",
   "source_identity": {
-    "version": 3,
-    "frozen_from_worktree": "F:/GTOS-Chromium/artifacts/native-storage-contract-recovery-and-parallel-browser-integration-20261029-a/worktree-152",
-    "supersedes_source_lock_sha256": "0dcbd7941b75a05e48d01bce26bf8e8a26e156a1949ebb79f6680fc370e82b03",
-    "frozen_utc": "2026-10-29T14:25:27.809Z",
+    "version": 4,
+    "frozen_from_worktree": "F:/GTOS-Chromium/artifacts/native-browser-fronts-and-storage-atomic-replacement-20261029-a/worktree-153",
+    "supersedes_source_lock_sha256": "b67d51cb6cd1de381bfbcefae243840448667ecf9ac5e8a873cc23f3b201d404",
+    "frozen_utc": "2026-10-29T14:37:30.544Z",
     "bindings_total": 32,
     "bindings_changed": 1,
     "changed_paths": [
       "tools/build-filestore-probe.py"
     ],
     "previous_hashes": {
-      "tools/build-filestore-probe.py": "8cdbc5b1a3d3f9525425d12b0ff551eceb96b77b0d8a686ff59fa60da8f17b12"
+      "tools/build-filestore-probe.py": "de3e130a9af504f95b048b57183cfe333f59213b0c33756f0a417839b4d723c9"
     },
-    "note": "Hashes re-measured from the tree after this packet changed the files; every previous binding kept and its old value retained in previous_hashes. This block is bookkeeping, not qualification: the probes re-derive objects, ELFs and guests from these sources."
+    "note": "Re-measured after the probe gained the portable loader fallback, the regular-file execute check and an honest diagnosis status. Every other binding kept."
   }
 }

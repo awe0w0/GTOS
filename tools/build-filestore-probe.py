@@ -3,10 +3,14 @@
 import argparse,datetime,hashlib,json,os,pathlib,re,shutil,subprocess,sys,traceback
 
 LOADER='/usr/lib/x86_64-linux-gnu/ld-2.31.so'
-def stock_cmd(argv):
-    # The work root can be written but not executed, so a stock verifier that was just built there is started through the loader
-    # instead of being execve'd. Qualification of a published tree executes it directly; this is only for in-work-root diagnosis.
-    return [LOADER,'--library-path','/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu']+[str(argv[0])]+list(argv[1:])
+def exec_target_ok(argv):
+    # Only regular files are executed: a directory, device or other non-file on an execution path is refused before it is launched.
+    return pathlib.Path(argv[0]).is_file() if argv else False
+def stock_cmd(argv,loader=LOADER):
+    # The work root can be written but not executed, so a stock verifier built there is started through the loader when the
+    # distribution has one. An image without that loader keeps the plain exec, so the default CI path is unchanged by this.
+    if not os.path.exists(loader):return [str(a) for a in argv]
+    return [loader,'--library-path','/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu']+[str(argv[0])]+list(argv[1:])
 def sha(path):return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 def observe(text,phase,cut=None):
     lines=text.splitlines()
@@ -79,6 +83,7 @@ def main():
             target=out/'source-snapshot'/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,target)
     def run(cmd,log,expected=0,timeout=180):
         cmd=[str(x) for x in cmd]
+        assert cmd and exec_target_ok(cmd),'execute target is not a regular file: '+str(cmd[:1])
         with log.open('wb') as f:
             try:code=subprocess.run(cmd,cwd=repo,stdout=f,stderr=subprocess.STDOUT,timeout=timeout).returncode
             except subprocess.TimeoutExpired:code=124
@@ -281,8 +286,8 @@ def main():
             state['artifacts_manifest']={'path':str(manifest),'sha256':sha(manifest),
                 'files':len(json.loads(manifest.read_text())['files'])};save()
         assert all(sha(path)==value for path,value in state['inputs'].items()),'Source changed during qualification'
-        guest_phase=not args.build_only and args.phase!='build'
-        state.update(all_required_checks_pass=True,filesystem_backend_guest_pass=guest_phase,
+        guest_phase=not args.build_only and args.phase!='build' and not args.diagnose_cut
+        state.update(all_required_checks_pass=not args.diagnose_cut,filesystem_backend_guest_pass=guest_phase,
             source_before_after_identical=True,qualification_reused=args.build_only or args.phase=='run',
             actual_ata_cold_boots=(len(state['guests'])+2+2*len(state['cuts'])) if guest_phase else 0,
             all_replacement_sector_boundaries=guest_phase)
