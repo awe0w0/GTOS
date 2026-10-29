@@ -48,12 +48,12 @@
     ]
   },
   "files": {
-    "tools/build-filestore-probe.py": "2f60af61d17ee9f4e70635677cc71daca46bcb5bcc409962ae7eb6fbebc15a94",
+    "tools/build-filestore-probe.py": "de3e130a9af504f95b048b57183cfe333f59213b0c33756f0a417839b4d723c9",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "docs/littlefs/LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d",
     "include/storage/littlefs/lfs.h": "b1befd7288d08815accc8f9af744c55686c0b9e3ac0061c32ceee38a1b3eb96d",
     "include/storage/littlefs/lfs_util.h": "548d46aa524dc7449e16739286c1a422a52f9de727ff0be0c2ffc5593f5ca981",
-    "tests/filestore_stock.c": "c90aa15fda264e65ae5a77d081fdcc748d16773f6e611b7ca917536bda20e768",
+    "tests/filestore_stock.c": "b4134bfea0a66d8934d1ec4dadd8ce0659129a7ac33acad9867c50b4f926bdb4",
     "tests/filestore_loader.s": "e851b0e18fc5c0734daf2c1a6dab63bd6e8968c5ecafc57ad59e5aec9d302de4",
     "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
     "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
@@ -77,7 +77,7 @@
     "include/hardwarecommunication/port.h": "6cf32b68c5264a274265e6a02e76cc37d0592c451fa9ae2f6228653d7c235d2f",
     "include/drivers/ata_wait.h": "3aafe94263327a43757a97719cdcb71b8b29f39d867cdc1a15f414889f830a14",
     "src/hardwarecommunication/port.cpp": "2ef01a7a8fef916a0e31234c980e9d2b22b6cde3cb588f30f408540674be6422",
-    "tests/filestore_guest.cpp": "39a13f68769a4aaaa9b00346cf3d6c7d9f00c06c5650dab52c18d71b201dced8",
+    "tests/filestore_guest.cpp": "58e3fb6760a6c21d4aa3e0cb190f48e9eb8cdb461b930811e36e3e50ea727d3b",
     "Makefile": "1c579c2536293f9dde75e0c1c2ddd84ae87e4272aec529c486f61740e891d559",
     ".gitattributes": "b43f7b79193c6bc11aa8859976c663da584821d6b7a50b2ec8cf6b390f8efb68"
   },
@@ -153,16 +153,16 @@
   "coherence_self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44",
   "source_identity": {
     "version": 3,
-    "frozen_from_worktree": "F:/GTOS-Chromium/artifacts/native-current-regression-and-correct-ia32-content-20261029-a/worktree-151",
-    "supersedes_source_lock_sha256": "30e129377719f1e714cbfcbd6723120f4d09e4e379cffa3e7cd9557b34a46597",
-    "frozen_utc": "2026-10-29T13:45:51.819Z",
+    "frozen_from_worktree": "F:/GTOS-Chromium/artifacts/native-storage-contract-recovery-and-parallel-browser-integration-20261029-a/worktree-152",
+    "supersedes_source_lock_sha256": "0dcbd7941b75a05e48d01bce26bf8e8a26e156a1949ebb79f6680fc370e82b03",
+    "frozen_utc": "2026-10-29T14:25:27.809Z",
     "bindings_total": 32,
     "bindings_changed": 1,
     "changed_paths": [
-      "Makefile"
+      "tools/build-filestore-probe.py"
     ],
     "previous_hashes": {
-      "Makefile": "694386268bf43191d0a8971f1fc96e8fbbffad07b043c1cea4126f5ea99266bd"
+      "tools/build-filestore-probe.py": "8cdbc5b1a3d3f9525425d12b0ff551eceb96b77b0d8a686ff59fa60da8f17b12"
     },
     "note": "Hashes re-measured from the tree after this packet changed the files; every previous binding kept and its old value retained in previous_hashes. This block is bookkeeping, not qualification: the probes re-derive objects, ELFs and guests from these sources."
   }

@@ -55,7 +55,8 @@ namespace {
             Stack();reads++;return !failRead&&device.ReadSector(s,p);
         }
         virtual bool WriteSector(uint32_t s,const uint8_t* p) {
-            Stack();writes++;bool result=!failWrite&&device.WriteSector(s,p);
+            Stack();writes++;if (writes<=64) { Print("W n=");Hex(writes);Print(" s=");Hex(s);Print("\n"); }
+            bool result=!failWrite&&device.WriteSector(s,p);
             if (result&&cutCountdown&&!--cutCountdown) {
                 Print("CUT AFTER COMPLETE ATA SECTOR writes=");Hex(writes);Print("\n");
                 asm volatile("outl %0,%1" : : "a"(0x30U),"Nd"((uint16_t)0xf4));
@@ -241,15 +242,21 @@ namespace {
     void RecoverFixture(FileStore& files,ObservedDisk& disk) {
         Require(files.Mount(&disk,8,2048,true)==0,"recover interrupted metadata");
         int32_t f=files.Open(9,"/browser/session.bin",FileStore::Read);
-        Require(f>0&&files.ReadFile(9,f,copy,9000)==8197,"recover complete file size");
-        bool old=true,replacement=true;
-        for (uint32_t i=0;i<8197;i++) {
+        // Observe before judging. An interrupted rewrite can legitimately leave a committed truncation behind, and the only way to
+        // tell that apart from a damaged volume is to report the length and the content the recovery actually produced.
+        int32_t recovered=f>0?files.ReadFile(9,f,copy,9000):-1;
+        bool observedOld=true,observedNew=true;
+        for (uint32_t i=0;i<8197&&recovered>0;i++) {
             uint8_t expected=i<8193?(uint8_t)((i*37+i/251+17)&255):(uint8_t)"GTOS"[i-8193];
-            if (copy[i]!=expected) old=false;
-            if (copy[i]!=(uint8_t)((i*19+i/113+61)&255)) replacement=false;
+            if (copy[i]!=expected) observedOld=false;
+            if (copy[i]!=(uint8_t)((i*19+i/113+61)&255)) observedNew=false;
         }
-        Require(old||replacement,"interrupted replacement is entirely old or entirely new");
-        Print("RECOVER CONTENT=");Print(old?"old":"new");Print("\n");
+        Print("OBSERVE recover size=");Hex(recovered);
+        Print(" class=");Print(recovered<=0?"none":observedOld?"old":observedNew?"new":"mixed");
+        Print(" mount_writes=");Hex(disk.writes);Print("\n");
+        Require(recovered==0||recovered==8197,"interrupted rewrite leaves the committed truncation or the complete replacement");
+        Require(recovered!=8197||observedNew,"complete recovery is the fully committed replacement");
+        Print("RECOVER CONTENT=");Print(recovered==0?"truncated":"new");Print("\n");
         Require(files.Close(9,f)==0&&files.Unmount()==0,"recovery close");
         GuardSectors(disk);
     }

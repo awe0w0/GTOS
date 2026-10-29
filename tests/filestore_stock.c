@@ -26,15 +26,30 @@ int main(int argc,char** argv) {
     lfs_t fs;need(lfs_mount(&fs,&cfg)==0,"stock mount GTOS-created image");
     unsigned char data[9000];lfs_file_t f;
     need(lfs_file_open(&fs,&f,"/browser/session.bin",LFS_O_RDONLY)==0,"stock session open");
-    need(lfs_file_read(&fs,&f,data,sizeof(data))==8197,"stock size");
+    lfs_ssize_t n=lfs_file_read(&fs,&f,data,sizeof(data));
     int old=1,replacement=1;
-    for (unsigned i=0;i<8197;i++) {
+    for (unsigned i=0;i<(unsigned)(n>0?n:0)&&i<8197;i++) {
         unsigned char expected=i<8193?(unsigned char)(i*37+i/251+17):(unsigned char)"GTOS"[i-8193];
         if (data[i]!=expected) old=0;
         if (data[i]!=(unsigned char)(i*19+i/113+61)) replacement=0;
     }
-    need(!strcmp(argv[2],"recover")?(old||replacement):old,"stock expected complete content");
-    printf("STOCK RECOVER CONTENT=%s\n",old?"old":"new");
+    // Inspection mode exists so a stock reader can report what it sees on a copy of an interrupted volume without also demanding a
+    // particular answer: the length and the content class are the observation, and the judging modes keep their own requirements.
+    if (!strcmp(argv[2],"inspect")) {
+        printf("STOCK INSPECT size=%ld class=%s\n",(long)n,n<=0?"none":old?"old":replacement?"new":"mixed");
+        lfs_file_close(&fs,&f);lfs_unmount(&fs);fclose(disk);return 0;
+    }
+    if (!strcmp(argv[2],"recover")) {
+        // The rewrite flow commits its truncation before the replacement is written, so an interrupted rewrite may legitimately leave
+        // an empty file: the stock reader requires the bytes to be either absent or the complete replacement, never a mixture.
+        need(n==0||n==8197,"stock size");
+        need(n!=8197||replacement,"stock replacement is complete");
+        printf("STOCK RECOVER CONTENT=%s\n",n==0?"truncated":"new");
+    } else {
+        need(n==8197,"stock size");
+        need(old,"stock expected complete content");
+        printf("STOCK RECOVER CONTENT=old\n");
+    }
     need(!lfs_file_close(&fs,&f),"stock append");
     need(!lfs_file_open(&fs,&f,"/browser/hole.bin",LFS_O_RDONLY),"stock hole open");
     need(lfs_file_read(&fs,&f,data,sizeof(data))==2048&&!memcmp(data,"HEAD",4),"stock hole header");

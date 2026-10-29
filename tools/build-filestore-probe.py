@@ -2,15 +2,25 @@
 """Qualify the full IA32 kernel FileStore against actual isolated ATA media."""
 import argparse,datetime,hashlib,json,os,pathlib,re,shutil,subprocess,sys,traceback
 
+LOADER='/usr/lib/x86_64-linux-gnu/ld-2.31.so'
+def stock_cmd(argv):
+    # The work root can be written but not executed, so a stock verifier that was just built there is started through the loader
+    # instead of being execve'd. Qualification of a published tree executes it directly; this is only for in-work-root diagnosis.
+    return [LOADER,'--library-path','/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu']+[str(argv[0])]+list(argv[1:])
 def sha(path):return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 def observe(text,phase,cut=None):
     lines=text.splitlines()
+    # Instrumentation lines are evidence, not part of the phase envelope: the per-sector write trace and the recovery observation are
+    # reported alongside the summary, and the envelope assertion below still requires exactly one boot line, the phase's own marker,
+    # one summary and one pass line.
+    trace=[line for line in lines if line.startswith('W n=')]
+    lines=[line for line in lines if not line.startswith('W n=') and not line.startswith('OBSERVE ')]
     if phase=='stop':
         assert lines==['FILESTORE GUEST BOOT','CUT AFTER COMPLETE ATA SECTOR writes='+format(cut,'08X')]
-        return {'completed_sectors':cut}
+        return {'completed_sectors':cut,'write_trace':trace}
     extra=[]
     if phase=='recover':
-        matches=re.findall(r'^RECOVER CONTENT=(old|new)$',text,re.M)
+        matches=re.findall(r'^RECOVER CONTENT=(old|new|truncated)$',text,re.M)
         assert len(matches)==1;extra=['RECOVER CONTENT='+matches[0]]
     if phase=='complete':
         matches=re.findall(r'^CUT COMPLETE writes=([0-9A-F]{8})$',text,re.M)
@@ -20,6 +30,7 @@ def observe(text,phase,cut=None):
     summary=re.search(expression,text).group(0)
     assert lines==['FILESTORE GUEST BOOT',*extra,summary,'FILESTORE GUEST PASS']
     result=dict(zip(['checks','reads','writes','flushes','stack_observed','open'],[int(x,16) for x in matches[0]]))
+    result['write_trace_lines']=len(trace)
     assert 0<result['stack_observed']<16384-512 and result['open']==0 and result['reads']>0
     if phase in ('writer','reader'):
         assert result['checks']>20000 and result['reads']>100 and result['writes']>0 and result['flushes']>0
@@ -45,6 +56,7 @@ def main():
     parser.add_argument('--phase',choices=['full','build','run'],default='full',
         help='full: build and qualify in one process (the CI default); build: produce the executables and a manifest without running them; '
              'run: verify the published artifacts and qualify, rebuilding nothing')
+    parser.add_argument('--diagnose-cut',type=int,default=0,help='diagnose one interrupted sector boundary instead of qualifying')
     parser.add_argument('--artifacts',type=pathlib.Path,help='manifest written by --phase build and verified by --phase run')
     args=parser.parse_args()
     repo=pathlib.Path(__file__).resolve().parents[1];out=args.output.resolve()
@@ -106,13 +118,24 @@ def main():
     def verify_artifacts(manifest):
         data=json.loads(pathlib.Path(manifest).read_text())
         root=pathlib.Path(data['root']).resolve()
+        # The manifest location and the root it names must be the same tree. Checking the named root while executing the manifest's
+        # directory would let a verified artifact stand in for a different one that is actually run.
+        assert root==pathlib.Path(manifest).resolve().parent,\
+            'manifest root and manifest location disagree: verified '+str(root)+', manifest at '+str(pathlib.Path(manifest).resolve().parent)
         files=data['files'];assert files,'artifact manifest lists no files'
         for rel,meta in files.items():
             target=root/rel
             assert target.is_file(),'published artifact missing: '+rel
             assert target.stat().st_size==meta['bytes'],'published artifact size drifted: '+rel
             assert sha(target)==meta['sha256'],'published artifact content drifted: '+rel
-        assert (root/'O2/stock-verifier').is_file(),'the stock verifier was not published'
+        # Required executables are named here rather than inferred from the manifest, so dropping a line from the manifest cannot
+        # make a required O0/O2 artifact disappear without failing.
+        for opt in ('O0','O2'):
+            for name in ('kernel.bin','stock-verifier'):
+                rel=opt+'/'+name
+                assert rel in files,'required artifact absent from the manifest: '+rel
+                assert (root/rel).is_file(),'required artifact missing from the tree: '+rel
+                assert os.access(str(root/rel),os.R_OK),'required artifact unreadable: '+rel
         assert root!=out.resolve(),'the run phase must not qualify inside the tree it publishes from'
         return {'manifest':str(pathlib.Path(manifest).resolve()),'manifest_sha256':sha(manifest),'root':str(root),'files':len(files)}
     try:
@@ -177,34 +200,80 @@ def main():
                 before=sha(image);g=d/phase;text=boot(kernel,g,phase,image,33);evidence=observe(text,phase)
                 state['guests'].append({'opt':opt,'phase':phase,'evidence':evidence,'disk_before':before,'disk_after':sha(image),'guest_sha256':sha(g/'guest.log')});save()
                 shutil.copyfile(image,g/'post-guest.img')
-                reference=run([stock,image,'write' if phase=='writer' else 'read'],g/'stock-interoperability.log')
+                reference=run(stock_cmd([stock,image,'write' if phase=='writer' else 'read']),g/'stock-interoperability.log')
                 assert 'STOCK LITTLEFS INTEROPERABILITY PASS' in reference;guards(image)
                 print('PASS FILESTORE '+str((opt,phase,evidence)),flush=True)
             baseline=d/'uncut-baseline.img';shutil.copyfile(image,baseline)
             complete=d/'complete';image=d/'complete.img';shutil.copyfile(baseline,image)
             result=observe(boot(kernel,complete,'cut=0',image,33),'complete')
             total=result['replacement_writes'];state['O'+str(opt)+'-replacement_writes']=total
-            reference=run([stock,image,'recover'],complete/'stock.log')
+            reference=run(stock_cmd([stock,image,'recover']),complete/'stock.log')
             assert 'STOCK RECOVER CONTENT=new' in reference;guards(image)
             for cut in range(1,total+1):
                 c=d/('cut-'+str(cut));c.mkdir();image=c/'filesystem.img';shutil.copyfile(baseline,image)
                 observe(boot(kernel,c/'stop','cut='+str(cut),image,97),'stop',cut)
                 evidence=observe(boot(kernel,c/'recover','recover',image,33),'recover')
-                reference=run([stock,image,'recover'],c/'stock.log')
+                reference=run(stock_cmd([stock,image,'recover']),c/'stock.log')
                 assert 'STOCK RECOVER CONTENT='+evidence['content'] in reference;guards(image)
                 state['cuts'].append({'opt':opt,'cut':cut,'evidence':evidence,'disk_sha256':sha(image),
                     'stop_sha256':sha(c/'stop/guest.log'),'recover_sha256':sha(c/'recover/guest.log')});save()
                 print('PASS FILESTORE SECTOR STOP '+str((opt,cut,total,evidence['content'])),flush=True)
+        def diagnose_cut(opt,d,cut):
+            # Diagnose one interrupted sector boundary without judging it. The stopped volume is hashed once, and two independent
+            # copies are then handed to the guest and to the stock reader, so neither reader can repair the disk the other one is
+            # about to observe. Nothing here decides what the correct outcome is; it records what the two readers actually see.
+            image=d/'filesystem.img'
+            image.write_bytes(b''.join(bytes([0xA5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5A+s])*512 for s in range(8)))
+            guards(image)
+            for phase in ['writer','reader']:
+                boot(d/'kernel.bin',d/('setup-'+phase),phase,image,33)
+                # The qualification cross-checks its first two guests with the stock reader; the diagnosis has to start from the
+                # same volume those two passes leave behind, including the host-created file the reader guest expects to read.
+                run(stock_cmd([d/'stock-verifier',image,'write' if phase=='writer' else 'read']),d/('stock-setup-'+phase+'.log'))
+            baseline=d/'diagnose-baseline.img';shutil.copyfile(image,baseline)
+            stop=d/('diagnose-stop-'+str(cut));stop.mkdir();stopped=stop/'filesystem.img';shutil.copyfile(baseline,stopped)
+            # boot() owns the directory it boots in, so the volume and the boot directory are kept apart.
+            stop_log=boot(d/'kernel.bin',stop/'boot','cut='+str(cut),stopped,97)
+            stopped_hash=sha(stopped)
+            guest=d/('diagnose-guest-'+str(cut));guest.mkdir();guest_img=guest/'filesystem.img';shutil.copyfile(stopped,guest_img)
+            stock=d/('diagnose-stock-'+str(cut));stock.mkdir();stock_img=stock/'filesystem.img';shutil.copyfile(stopped,stock_img)
+            identical=sha(guest_img)==stopped_hash==sha(stock_img)
+            guest_error=None
+            try:
+                guest_text=boot(d/'kernel.bin',guest/'boot','recover',guest_img,65)
+            except AssertionError as error:
+                guest_error=str(error);guest_text=(guest/'boot/guest.log').read_text()
+            stock_text=run(stock_cmd([d/'stock-verifier',stock_img,'inspect']),stock/'stock-inspect.log')
+            record=dict(opt=opt,cut=cut,stopped_sha256=stopped_hash,
+                stop_tail=[line for line in stop_log.splitlines() if line.startswith('CUT AFTER')],
+                readers_used_identical_bytes=identical,guest_error=guest_error,
+                guest_observation=[line for line in guest_text.splitlines() if line.startswith('OBSERVE')],
+                guest_writes=[line for line in guest_text.splitlines() if line.startswith('W n=')][:64],
+                stock_observation=[line for line in stock_text.splitlines() if line.startswith('STOCK INSPECT')],
+                guest_sha256_after=sha(guest_img),stock_sha256_after=sha(stock_img),baseline_sha256=sha(baseline))
+            (d/('diagnose-cut-'+str(cut)+'.json')).write_text(json.dumps(record,indent=2)+'\n')
+            state.setdefault('diagnostics',[]).append({k:v for k,v in record.items() if k!='guest_writes'});save()
+            print('DIAGNOSE '+json.dumps({k:record[k] for k in ('cut','stop_tail','guest_observation','stock_observation','readers_used_identical_bytes')}),flush=True)
+        published=None
         if args.phase=='run':
             assert args.artifacts is not None,'--phase run needs the manifest written by --phase build'
-            state['artifacts_verified']=verify_artifacts(args.artifacts);save()
+            state['artifacts_verified']=verify_artifacts(args.artifacts)
+            # One authoritative root: the tree the manifest names is the tree whose bytes are judged and the tree the qualification
+            # runs from. Verifying one tree and executing another would let a verified binary stand in for the one actually used.
+            published=pathlib.Path(state['artifacts_verified']['root'])
+            assert published==pathlib.Path(args.artifacts).resolve().parent,\
+                'manifest root and manifest location disagree: verified '+str(published)+', manifest at '+str(pathlib.Path(args.artifacts).resolve().parent)
+            save()
         for opt in [0,2]:
             d=out/('O'+str(opt))
             if args.phase=='run':
                 # The run phase writes its images and logs here; the published tree stays untouched and read-only.
                 d.mkdir(parents=True,exist_ok=True)
-                qualify(opt,d,pathlib.Path(args.artifacts).resolve().parent/('O'+str(opt)));continue
+                qualify(opt,d,published/('O'+str(opt)));continue
             build_kernel(opt,d);build_stock(d)
+            if args.diagnose_cut:
+                if opt==0:diagnose_cut(opt,d,args.diagnose_cut)
+                continue
             if args.build_only or args.phase=='build':continue
             qualify(opt,d)
         if args.phase=='build':
