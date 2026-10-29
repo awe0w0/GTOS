@@ -48,7 +48,7 @@
     ]
   },
   "files": {
-    "tools/build-filestore-probe.py": "c4b607b0b434254cca13bb3efc0eeb54c291bc651e6f43ccdf028da1a849ebe0",
+    "tools/build-filestore-probe.py": "2f60af61d17ee9f4e70635677cc71daca46bcb5bcc409962ae7eb6fbebc15a94",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "docs/littlefs/LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d",
     "include/storage/littlefs/lfs.h": "b1befd7288d08815accc8f9af744c55686c0b9e3ac0061c32ceee38a1b3eb96d",
@@ -78,7 +78,7 @@
     "include/drivers/ata_wait.h": "3aafe94263327a43757a97719cdcb71b8b29f39d867cdc1a15f414889f830a14",
     "src/hardwarecommunication/port.cpp": "2ef01a7a8fef916a0e31234c980e9d2b22b6cde3cb588f30f408540674be6422",
     "tests/filestore_guest.cpp": "39a13f68769a4aaaa9b00346cf3d6c7d9f00c06c5650dab52c18d71b201dced8",
-    "Makefile": "694386268bf43191d0a8971f1fc96e8fbbffad07b043c1cea4126f5ea99266bd",
+    "Makefile": "1c579c2536293f9dde75e0c1c2ddd84ae87e4272aec529c486f61740e891d559",
     ".gitattributes": "b43f7b79193c6bc11aa8859976c663da584821d6b7a50b2ec8cf6b390f8efb68"
   },
   "executed_objects": {
@@ -152,18 +152,18 @@
   "full_kernel_status_sha256": "cad39e3b4b75e15f9360f4a8ea010cbc9d67fcec1397660d93dfad8201d56f19",
   "coherence_self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44",
   "source_identity": {
-    "version": 2,
-    "frozen_from_commit": "b16338929223bc42594989fedde6509ac2ce72ca",
-    "supersedes_source_lock_sha256": "6fea39193d74a20bd860d6231519afc5dd36dfc97c342916ea7e7ac07e1abcb9",
-    "frozen_utc": "2026-10-29T11:02:38.173Z",
+    "version": 3,
+    "frozen_from_worktree": "F:/GTOS-Chromium/artifacts/native-current-regression-and-correct-ia32-content-20261029-a/worktree-151",
+    "supersedes_source_lock_sha256": "30e129377719f1e714cbfcbd6723120f4d09e4e379cffa3e7cd9557b34a46597",
+    "frozen_utc": "2026-10-29T13:45:51.819Z",
     "bindings_total": 32,
-    "bindings_changed": 4,
+    "bindings_changed": 1,
     "changed_paths": [
-      "src/storage/filestore.cpp",
-      "include/storage/filestore.h",
-      "Makefile",
-      ".gitattributes"
+      "Makefile"
     ],
-    "note": "Hashes re-measured from the tree; every previous binding kept. Behaviour is not claimed here: the qualification probes re-derive objects, ELFs and guests from these sources."
+    "previous_hashes": {
+      "Makefile": "694386268bf43191d0a8971f1fc96e8fbbffad07b043c1cea4126f5ea99266bd"
+    },
+    "note": "Hashes re-measured from the tree after this packet changed the files; every previous binding kept and its old value retained in previous_hashes. This block is bookkeeping, not qualification: the probes re-derive objects, ELFs and guests from these sources."
   }
 }

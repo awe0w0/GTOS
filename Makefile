@@ -4,6 +4,9 @@ LD ?= ld
 OBJCOPY ?= objcopy
 PYTHON ?= python3
 OPTIMIZATION ?= -O2
+# Default is the tool CI uses; a relocated toolchain sets this to tools/grub-mkrescue-i386-pc.sh and
+# names its module directory, because grub-mkrescue would otherwise build a module-less image.
+GRUB_MKRESCUE ?= grub-mkrescue
 BASE_CXXFLAGS := $(OPTIMIZATION) -m32 -std=c++11 -Iinclude -ffreestanding -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fno-stack-protector -fno-pie -fno-asynchronous-unwind-tables -fcheck-new -Wno-write-strings -MMD -MP
 CXXFLAGS ?= $(BASE_CXXFLAGS)
 # Keep the mandatory kernel policy last, even when callers override CXXFLAGS.
@@ -105,7 +108,7 @@ GTOS.iso: GTOS.bin apps/catch.gtapp obj/native/fault.elf obj/native/peer.elf obj
 	cp apps/fonts/README.md obj/iso/boot/licenses/noto-font-provenance.md
 	cp apps/fonts/han_manifest.json obj/iso/boot/licenses/
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS Desktop" {\n multiboot /boot/GTOS.bin\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > obj/iso/boot/grub/grub.cfg
-	grub-mkrescue --output=$@ obj/iso
+	$(GRUB_MKRESCUE) --output=$@ obj/iso
 GTOS-legacy.iso: GTOS.bin apps/catch.gtapp obj/native/fault.elf obj/native/peer.elf obj/browser-probe/browser-probe.elf docs/desktop-font-license.txt apps/fonts/OFL.txt apps/fonts/README.md apps/fonts/han_manifest.json Makefile
 	mkdir -p obj/iso-legacy/boot/grub obj/iso-legacy/boot/licenses
 	cp GTOS.bin obj/iso-legacy/boot/GTOS.bin
@@ -118,13 +121,13 @@ GTOS-legacy.iso: GTOS.bin apps/catch.gtapp obj/native/fault.elf obj/native/peer.
 	cp apps/fonts/README.md obj/iso-legacy/boot/licenses/noto-font-provenance.md
 	cp apps/fonts/han_manifest.json obj/iso-legacy/boot/licenses/
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS Legacy VGA" {\n multiboot /boot/GTOS.bin legacy\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > obj/iso-legacy/boot/grub/grub.cfg
-	grub-mkrescue --output=$@ obj/iso-legacy
+	$(GRUB_MKRESCUE) --output=$@ obj/iso-legacy
 # Slow peer only for concurrent UI/IRQ acceptance; normal boot remains fast.
 GTOS-native-test.iso: GTOS.iso obj/native/peer-concurrent.elf
 	mkdir -p obj/iso-native-test
 	cp -a obj/iso/. obj/iso-native-test/
 	cp obj/native/peer-concurrent.elf obj/iso-native-test/boot/native-peer.elf
-	grub-mkrescue --output=$@ obj/iso-native-test
+	$(GRUB_MKRESCUE) --output=$@ obj/iso-native-test
 # The normal desktop and disabled-profile acceptance keep their original policy.
 GTOS-native-fp-test.iso: GTOS.iso obj/native-fp-desktop/fault.elf obj/native-fp-desktop/peer.elf Makefile
 	mkdir -p obj/iso-native-fp-test
@@ -132,7 +135,7 @@ GTOS-native-fp-test.iso: GTOS.iso obj/native-fp-desktop/fault.elf obj/native-fp-
 	cp obj/native-fp-desktop/fault.elf obj/iso-native-fp-test/boot/native-fault.elf
 	cp obj/native-fp-desktop/peer.elf obj/iso-native-fp-test/boot/native-peer.elf
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS Native FP Acceptance" {\n set gfxpayload=800x600x32\n multiboot /boot/GTOS.bin native-fp-test\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > obj/iso-native-fp-test/boot/grub/grub.cfg
-	grub-mkrescue --output=$@ obj/iso-native-fp-test
+	$(GRUB_MKRESCUE) --output=$@ obj/iso-native-fp-test
 # Supplementary diagnostic only, never the strict ownership acceptance ISO.
 $(FP_DIAGNOSTIC_ISO): $(FP_DIAGNOSTIC_BINARY) apps/catch.gtapp $(FP_DIAGNOSTIC_OBJDIR)/fault.elf $(FP_DIAGNOSTIC_OBJDIR)/peer.elf obj/browser-probe/browser-probe.elf Makefile
 	mkdir -p $(FP_DIAGNOSTIC_OBJDIR)/iso/boot/grub
@@ -142,7 +145,7 @@ $(FP_DIAGNOSTIC_ISO): $(FP_DIAGNOSTIC_BINARY) apps/catch.gtapp $(FP_DIAGNOSTIC_O
 	cp $(FP_DIAGNOSTIC_OBJDIR)/peer.elf $(FP_DIAGNOSTIC_OBJDIR)/iso/boot/native-peer.elf
 	cp obj/browser-probe/browser-probe.elf $(FP_DIAGNOSTIC_OBJDIR)/iso/boot/browser-probe.elf
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS FP Desktop DIAGNOSTIC ONLY" {\n set gfxpayload=800x600x32\n multiboot /boot/GTOS.bin native-fp-test native-fp-diagnostic\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > $(FP_DIAGNOSTIC_OBJDIR)/iso/boot/grub/grub.cfg
-	grub-mkrescue --output=$@ $(FP_DIAGNOSTIC_OBJDIR)/iso
+	$(GRUB_MKRESCUE) --output=$@ $(FP_DIAGNOSTIC_OBJDIR)/iso
 # Reclaim diagnostics: separate CPL3 payloads that own a live window, so the
 # kernel can prove StopGroup/Reap reclaim a real object instead of a bare process.
 # They are built only into the dedicated reclaim ISO and never replace the
@@ -186,7 +189,7 @@ $(RECLAIM_ISO): $(RECLAIM_BINARY) apps/catch.gtapp $(RECLAIM_USER_OBJDIR)/reclai
 	cp apps/fonts/README.md $(RECLAIM_OBJDIR)/iso/boot/licenses/noto-font-provenance.md
 	cp apps/fonts/han_manifest.json $(RECLAIM_OBJDIR)/iso/boot/licenses/
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS Reclaim Diagnostic" {\n set gfxpayload=800x600x32\n multiboot /boot/GTOS.bin\n module /boot/catch.gtapp\n module /boot/native-fault.elf\n module /boot/native-peer.elf\n module /boot/browser-probe.elf\n boot\n}\n' > $(RECLAIM_OBJDIR)/iso/boot/grub/grub.cfg
-	grub-mkrescue --output=$@ $(RECLAIM_OBJDIR)/iso
+	$(GRUB_MKRESCUE) --output=$@ $(RECLAIM_OBJDIR)/iso
 run: GTOS.iso
 	./tools/run-qemu.sh
 clean:

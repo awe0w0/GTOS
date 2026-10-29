@@ -42,6 +42,10 @@ def main():
     parser.add_argument('--cxx',default=os.environ.get('CXX','g++'))
     parser.add_argument('--cc',default=os.environ.get('CC','gcc'))
     parser.add_argument('--build-only',action='store_true')
+    parser.add_argument('--phase',choices=['full','build','run'],default='full',
+        help='full: build and qualify in one process (the CI default); build: produce the executables and a manifest without running them; '
+             'run: verify the published artifacts and qualify, rebuilding nothing')
+    parser.add_argument('--artifacts',type=pathlib.Path,help='manifest written by --phase build and verified by --phase run')
     args=parser.parse_args()
     repo=pathlib.Path(__file__).resolve().parents[1];out=args.output.resolve()
     assert not out.exists(),'Use a fresh output directory; prior runs are retained.'
@@ -84,6 +88,33 @@ def main():
             '-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-monitor','none','-serial','none',
             '-debugcon','file:'+str(directory/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],directory/'qemu.log',expected,120)
         guards(image);return (directory/'guest.log').read_text()
+    def publish_artifacts():
+        # Everything the run phase executes or reads back is listed here by relative path, exact size and hash. The manifest is the
+        # contract between the two phases: a build that did not produce a file cannot publish it, and a run cannot accept one that
+        # changed after publication.
+        files={}
+        for path in sorted(out.rglob('*')):
+            if not path.is_file() or path.name=='artifacts.json':continue
+            if path.suffix in ('.log','.img','.d'):continue
+            if path.name in ('status.json','exception.log'):continue  # mutable run records, not artifacts
+            files[str(path.relative_to(out))]={'bytes':path.stat().st_size,'sha256':sha(path)}
+        assert files,'the build phase produced no artifacts to publish'
+        manifest=out/'artifacts.json'
+        manifest.write_text(json.dumps({'root':str(out),'generated_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            'files':files},indent=2)+'\n')
+        return manifest
+    def verify_artifacts(manifest):
+        data=json.loads(pathlib.Path(manifest).read_text())
+        root=pathlib.Path(data['root']).resolve()
+        files=data['files'];assert files,'artifact manifest lists no files'
+        for rel,meta in files.items():
+            target=root/rel
+            assert target.is_file(),'published artifact missing: '+rel
+            assert target.stat().st_size==meta['bytes'],'published artifact size drifted: '+rel
+            assert sha(target)==meta['sha256'],'published artifact content drifted: '+rel
+        assert (root/'O2/stock-verifier').is_file(),'the stock verifier was not published'
+        assert root!=out.resolve(),'the run phase must not qualify inside the tree it publishes from'
+        return {'manifest':str(pathlib.Path(manifest).resolve()),'manifest_sha256':sha(manifest),'root':str(root),'files':len(files)}
     try:
         bind(__file__)
         profile_path=repo/'docs/littlefs/source-lock.json';profile=None
@@ -105,8 +136,8 @@ def main():
         for name in ['docs/littlefs/LICENSE.md','include/storage/littlefs/lfs.h','include/storage/littlefs/lfs_util.h',
             'tests/filestore_stock.c','tests/filestore_loader.s','tests/native_process_smoke.ld','tools/audit-kernel-instructions.py']:
             bind(name)
-        for opt in [0,2]:
-            d=out/('O'+str(opt));(d/'kernel').mkdir(parents=True);objects=[];component=[]
+        def build_kernel(opt,d):
+            (d/'kernel').mkdir(parents=True);objects=[];component=[]
             sources=['src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','src/storage/littlefs_port.cpp','src/storage/filestore.cpp',
                 'src/drivers/ata.cpp','src/hardwarecommunication/port.cpp','tests/filestore_guest.cpp']
             for name in sources:
@@ -131,39 +162,61 @@ def main():
                 assert state['kernels']['O'+str(opt)]==profile['executed_kernels']['O'+str(opt)],'Executed kernel differs'
                 for key,value in profile['executed_objects'].items():
                     if key.startswith('O'+str(opt)+'-'):assert state['objects'][key]==value,'Executed object differs '+key
-            if args.build_only:continue
+        def build_stock(d):
+            # The stock LittleFS verifier is a host binary the qualification executes, so it belongs to the build phase: a phase
+            # that publishes artifacts must produce every executable it later runs, and a phase that runs must never rebuild one.
             run([cc,'-std=c99','-O2','-Wall','-Wextra','-Werror','-Iinclude/storage/littlefs','tests/filestore_stock.c',
                 'src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','-o',d/'stock-verifier'],d/'stock-build.log')
+        def qualify(opt,d,src=None):
+            # Published executables come from the read-only tree; every byte this phase writes goes to the output tree.
+            src=src or d;kernel=src/'kernel.bin';stock=src/'stock-verifier'
             image=d/'filesystem.img'
             image.write_bytes(b''.join(bytes([0xA5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5A+s])*512 for s in range(8)))
             guards(image)
             for phase in ['writer','reader']:
-                before=sha(image);g=d/phase;text=boot(d/'kernel.bin',g,phase,image,33);evidence=observe(text,phase)
+                before=sha(image);g=d/phase;text=boot(kernel,g,phase,image,33);evidence=observe(text,phase)
                 state['guests'].append({'opt':opt,'phase':phase,'evidence':evidence,'disk_before':before,'disk_after':sha(image),'guest_sha256':sha(g/'guest.log')});save()
                 shutil.copyfile(image,g/'post-guest.img')
-                reference=run([d/'stock-verifier',image,'write' if phase=='writer' else 'read'],g/'stock-interoperability.log')
+                reference=run([stock,image,'write' if phase=='writer' else 'read'],g/'stock-interoperability.log')
                 assert 'STOCK LITTLEFS INTEROPERABILITY PASS' in reference;guards(image)
                 print('PASS FILESTORE '+str((opt,phase,evidence)),flush=True)
             baseline=d/'uncut-baseline.img';shutil.copyfile(image,baseline)
             complete=d/'complete';image=d/'complete.img';shutil.copyfile(baseline,image)
-            result=observe(boot(d/'kernel.bin',complete,'cut=0',image,33),'complete')
+            result=observe(boot(kernel,complete,'cut=0',image,33),'complete')
             total=result['replacement_writes'];state['O'+str(opt)+'-replacement_writes']=total
-            reference=run([d/'stock-verifier',image,'recover'],complete/'stock.log')
+            reference=run([stock,image,'recover'],complete/'stock.log')
             assert 'STOCK RECOVER CONTENT=new' in reference;guards(image)
             for cut in range(1,total+1):
                 c=d/('cut-'+str(cut));c.mkdir();image=c/'filesystem.img';shutil.copyfile(baseline,image)
-                observe(boot(d/'kernel.bin',c/'stop','cut='+str(cut),image,97),'stop',cut)
-                evidence=observe(boot(d/'kernel.bin',c/'recover','recover',image,33),'recover')
-                reference=run([d/'stock-verifier',image,'recover'],c/'stock.log')
+                observe(boot(kernel,c/'stop','cut='+str(cut),image,97),'stop',cut)
+                evidence=observe(boot(kernel,c/'recover','recover',image,33),'recover')
+                reference=run([stock,image,'recover'],c/'stock.log')
                 assert 'STOCK RECOVER CONTENT='+evidence['content'] in reference;guards(image)
                 state['cuts'].append({'opt':opt,'cut':cut,'evidence':evidence,'disk_sha256':sha(image),
                     'stop_sha256':sha(c/'stop/guest.log'),'recover_sha256':sha(c/'recover/guest.log')});save()
                 print('PASS FILESTORE SECTOR STOP '+str((opt,cut,total,evidence['content'])),flush=True)
+        if args.phase=='run':
+            assert args.artifacts is not None,'--phase run needs the manifest written by --phase build'
+            state['artifacts_verified']=verify_artifacts(args.artifacts);save()
+        for opt in [0,2]:
+            d=out/('O'+str(opt))
+            if args.phase=='run':
+                # The run phase writes its images and logs here; the published tree stays untouched and read-only.
+                d.mkdir(parents=True,exist_ok=True)
+                qualify(opt,d,pathlib.Path(args.artifacts).resolve().parent/('O'+str(opt)));continue
+            build_kernel(opt,d);build_stock(d)
+            if args.build_only or args.phase=='build':continue
+            qualify(opt,d)
+        if args.phase=='build':
+            manifest=publish_artifacts()
+            state['artifacts_manifest']={'path':str(manifest),'sha256':sha(manifest),
+                'files':len(json.loads(manifest.read_text())['files'])};save()
         assert all(sha(path)==value for path,value in state['inputs'].items()),'Source changed during qualification'
-        state.update(all_required_checks_pass=True,filesystem_backend_guest_pass=not args.build_only,
-            source_before_after_identical=True,qualification_reused=args.build_only,
-            actual_ata_cold_boots=0 if args.build_only else len(state['guests'])+2+2*len(state['cuts']),
-            all_replacement_sector_boundaries=not args.build_only)
+        guest_phase=not args.build_only and args.phase!='build'
+        state.update(all_required_checks_pass=True,filesystem_backend_guest_pass=guest_phase,
+            source_before_after_identical=True,qualification_reused=args.build_only or args.phase=='run',
+            actual_ata_cold_boots=(len(state['guests'])+2+2*len(state['cuts'])) if guest_phase else 0,
+            all_replacement_sector_boundaries=guest_phase)
     except BaseException as error:
         state['failure']=str(error);(out/'exception.log').write_text(traceback.format_exc());print(state['failure'],flush=True)
     finally:
