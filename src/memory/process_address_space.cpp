@@ -181,6 +181,11 @@ bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryMana
         for (uint32_t i = 0; i < count; ++i) ClearPage(base + i * 4096);
         metadataBase = base; metadataPages = count;
         pages = (Page*)base; pageLimit = capacityPages;
+    } else {
+        // The inline case has to establish the ownership array itself. Prepare already writes dynamicLimit, because it cannot
+        // assume the constructor ran: a freestanding harness enters with zeroed storage, and MetadataLayout then rejects the
+        // space it just built because pageLimit is zero and pages does not point at the inline array.
+        pages = inlinePages; pageLimit = capacityPages;
     }
     if (!AllocateFrame(directory)) {
         if (metadataBase) {

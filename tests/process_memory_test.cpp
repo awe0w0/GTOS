@@ -8,6 +8,14 @@ extern "C" {
     bool gtos_process_memory_test_bsp = true;
     uint32_t gtos_process_memory_test_invalidations = 0;
     uint32_t gtos_process_memory_test_invalidated[512];
+    // The ProtectRange witnesses. `src/memory/process_address_space.cpp` declares all four whenever
+    // GTOS_PROCESS_MEMORY_TEST is defined, so a binary that compiles that unit and links neither this file nor the runtime
+    // boundary unit cannot link at all. This binary owns exactly one definition of each; the runtime host test defines the
+    // same four in tests/runtime_boundary.cpp, and no binary compiles both, so there is no duplicate definition either way.
+    uint32_t gtos_process_memory_test_fail_protect_after = 0;
+    uint32_t gtos_process_memory_test_protect_calls = 0;
+    uint32_t gtos_process_memory_test_protect_refusals = 0;
+    uint32_t gtos_process_memory_test_protect_pages_at_refusal = 0;
     void gtos_process_memory_test_invalidate(uint32_t address) {
         if (gtos_process_memory_test_invalidations < 512)
             gtos_process_memory_test_invalidated[gtos_process_memory_test_invalidations] = address;
@@ -647,9 +655,154 @@ namespace {
         gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
         CHECK(first.Destroy()); CHECK(used() == baseline);
     }
+    // The ProtectRange witnesses are counters, not flags, so every case resets them: a case that inherits another case's
+    // calls can report a number without being able to say which call produced it.
+    void seamReset() {
+        gtos_process_memory_test_fail_protect_after = 0;
+        gtos_process_memory_test_protect_calls = 0;
+        gtos_process_memory_test_protect_refusals = 0;
+        gtos_process_memory_test_protect_pages_at_refusal = 0;
+    }
+    // Walks the loader's own Create sequence against the real address space: prepare, map code, map data, copy, protect.
+    // NativeRuntime::Create is what CallProtocol reaches in production and this is its fifth stage; the sequence is
+    // reproduced here at the layer this binary can link, and the rollback it uses is the same Destroy.
+    void protectRangeSeam() {
+        seamReset();
+        CHECK(first.Prepare(kernel, frames));
+        const uint32_t prepared = used();
+        CHECK(first.MapNewPage(UserBase, true));
+        CHECK(first.MapNewPage(UserBase + 4096, true));
+        CHECK(used() >= prepared + 2); // Both data frames, plus whatever page table the mapping needed.
+        fill(input, 4096, 0x5A);
+        CHECK(first.CopyToUser(UserBase, input, 4096));
+        CHECK(first.CopyToUser(UserBase + 4096, input, 4096));
+        const uint32_t codeFrame = physical(first, UserBase), dataFrame = physical(first, UserBase + 4096);
+
+        // Default path: no injection. The protection the loader asks for goes through the real loop, one consultation,
+        // no refusal, the page keeps its frame and its content and loses only its writability.
+        CHECK(gtos_process_memory_test_protect_calls == 0 && gtos_process_memory_test_protect_refusals == 0);
+        CHECK(first.ProtectPage(UserBase, false));
+        CHECK(gtos_process_memory_test_protect_calls == 1 && gtos_process_memory_test_protect_refusals == 0);
+        CHECK((entry(first, UserBase) & 2u) == 0u);
+        CHECK(physical(first, UserBase) == codeFrame);
+        CHECK(first.CopyFromUser(output, UserBase, 4096) && all(output, 4096, 0x5A));
+        CHECK((entry(first, UserBase + 4096) & 2u) == 2u); // The data page is not in the protected range.
+
+        // Boundary and illegal ranges: the seam is consulted and refuses nothing, and the real validation rejects with
+        // the real reason. A refusal counted here would mean the seam, not the range check, ended the call.
+        struct BadRange { uint32_t address, bytes; ProcessMemoryError error; };
+        // The arena itself is a legal range: from UserBase, the largest length still inside it ends exactly at the exclusive
+        // limit, so that call is rejected because its pages are missing and not because its arithmetic overflowed. One byte
+        // more is the range error. Both are needed; only the second one tests the limit.
+        const BadRange bad[] = {
+            {UserBase, 0, ProcessMemoryBadRange},
+            {UserBase, 4095, ProcessMemoryBadRange},
+            {UserBase + 1, 4096, ProcessMemoryBadRange},
+            {UserBase, 0x80000001u, ProcessMemoryBadRange},
+            {UserBase, 0x80000000u, ProcessMemoryNotMapped},
+            {UserBase + 8192, 4096, ProcessMemoryNotMapped},
+        };
+        for (uint32_t i = 0; i < sizeof(bad) / sizeof(bad[0]); ++i) {
+            const uint32_t count = used(), hash = processHash(first);
+            const uint32_t calls = gtos_process_memory_test_protect_calls;
+            CHECK(!first.ProtectRange(bad[i].address, bad[i].bytes, true));
+            CHECK(first.GetLastError() == bad[i].error);
+            CHECK(gtos_process_memory_test_protect_calls == calls + 1);
+            CHECK(gtos_process_memory_test_protect_refusals == 0);
+            CHECK(used() == count && processHash(first) == hash);
+        }
+
+        // A live peer object, so the failed attempt can be shown not to reach it. The footprint `first` already occupies is
+        // measured here, because the reclamation checks below have to name the count Destroy must return to rather than the
+        // count the peer alone would leave: `first` was prepared before the peer existed.
+        const uint32_t withFirstOnly = used();
+        CHECK(second.Prepare(kernel, frames));
+        CHECK(second.MapNewPage(UserBase, true));
+        const uint32_t firstFootprint = withFirstOnly - baseline;
+        const uint32_t peerUsed = used(), peerHash = processHash(second);
+
+        // The fifth stage refused after both frames and both page tables were already taken. The threshold is the page
+        // count that stage really sees, so a refusal recorded at any other count would be a different, earlier failure.
+        const uint32_t beforeRefusal = used(), hashBeforeRefusal = processHash(first);
+        const uint32_t callsBefore = gtos_process_memory_test_protect_calls;
+        gtos_process_memory_test_protect_refusals = 0;
+        gtos_process_memory_test_protect_pages_at_refusal = 0;
+        gtos_process_memory_test_fail_protect_after = 2;
+        const bool late = first.ProtectPage(UserBase, false);
+        gtos_process_memory_test_fail_protect_after = 0;
+        CHECK(!late);
+        CHECK(first.GetLastError() == ProcessMemoryNoMemory);
+        CHECK(gtos_process_memory_test_protect_calls - callsBefore == 1);
+        CHECK(gtos_process_memory_test_protect_refusals == 1);
+        CHECK(gtos_process_memory_test_protect_pages_at_refusal == 2);
+        // Nothing was published or partially applied: same frames, same writability, same content, same count.
+        CHECK(used() == beforeRefusal && processHash(first) == hashBeforeRefusal);
+        CHECK(physical(first, UserBase) == codeFrame && physical(first, UserBase + 4096) == dataFrame);
+        CHECK((entry(first, UserBase) & 2u) == 0u); // Still read-only from the earlier successful call.
+        CHECK(first.CopyFromUser(output, UserBase + 4096, 4096) && all(output, 4096, 0x5A));
+        CHECK(used() == peerUsed && processHash(second) == peerHash);
+
+        // The loader's rollback for a refused Create is Destroy on the same object. Every frame it took returns to the
+        // allocator, and the peer keeps its own frames and its own layout.
+        CHECK(first.Destroy());
+        CHECK(used() + firstFootprint == peerUsed && processHash(second) == peerHash);
+
+        // The same instance retried with the seam withdrawn: the fifth stage succeeds and the object is fully reclaimed.
+        seamReset();
+        CHECK(first.Prepare(kernel, frames));
+        CHECK(first.MapNewPage(UserBase, true) && first.MapNewPage(UserBase + 4096, true));
+        CHECK(first.CopyToUser(UserBase, input, 4096));
+        CHECK(first.ProtectPage(UserBase, false));
+        CHECK(gtos_process_memory_test_protect_calls == 1 && gtos_process_memory_test_protect_refusals == 0);
+        CHECK((entry(first, UserBase) & 2u) == 0u);
+        CHECK(first.Destroy());
+        CHECK(used() + firstFootprint == peerUsed && processHash(second) == peerHash);
+        CHECK(second.Destroy());
+        CHECK(used() == baseline);
+
+        // A whole-range refusal: three pages already owned, the seam refuses the range at page count three, and no page of
+        // the range was modified. This is the shape CreateElf uses for a read-only segment.
+        seamReset();
+        CHECK(first.Prepare(kernel, frames));
+        CHECK(first.MapNewPage(UserBase, true));
+        CHECK(first.MapNewPage(UserBase + 4096, true));
+        CHECK(first.MapNewPage(UserBase + 8192, true));
+        const uint32_t rangeHash = processHash(first), rangeUsed = used();
+        gtos_process_memory_test_fail_protect_after = 3;
+        CHECK(!first.ProtectRange(UserBase, 3 * 4096, false));
+        gtos_process_memory_test_fail_protect_after = 0;
+        CHECK(first.GetLastError() == ProcessMemoryNoMemory);
+        CHECK(gtos_process_memory_test_protect_refusals == 1);
+        CHECK(gtos_process_memory_test_protect_pages_at_refusal == 3);
+        CHECK(used() == rangeUsed && processHash(first) == rangeHash);
+        for (uint32_t i = 0; i < 3; ++i) CHECK((entry(first, UserBase + i * 4096) & 2u) == 2u);
+        CHECK(first.Destroy());
+        CHECK(used() == baseline);
+
+        // Stability: the armed/unarmed cycle repeated on the same instance must end at the same count every time and leave
+        // nothing behind. A seam that is not restored is visible here as a rising count.
+        for (uint32_t round = 0; round < 8; ++round) {
+            seamReset();
+            CHECK(first.Prepare(kernel, frames));
+            CHECK(first.MapNewPage(UserBase, true) && first.MapNewPage(UserBase + 4096, true));
+            gtos_process_memory_test_fail_protect_after = 2;
+            CHECK(!first.ProtectPage(UserBase, false));
+            CHECK(first.GetLastError() == ProcessMemoryNoMemory);
+            CHECK(gtos_process_memory_test_protect_refusals == 1);
+            gtos_process_memory_test_fail_protect_after = 0;
+            CHECK(first.ProtectPage(UserBase, false));
+            CHECK(gtos_process_memory_test_protect_refusals == 1);
+            CHECK(first.Destroy());
+            CHECK(used() == baseline);
+        }
+        seamReset();
+        CHECK(gtos_process_memory_test_protect_calls == 0 && gtos_process_memory_test_protect_refusals == 0
+              && gtos_process_memory_test_protect_pages_at_refusal == 0);
+    }
     void dynamicVirtualMemory() {
         dynamicRegionsAndPermissions(); dynamicQuotaAndOwnership(); dynamicInvalidationsAndContext();
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
+        protectRangeSeam();
     }
 }
 extern "C" int processMemoryTests() {

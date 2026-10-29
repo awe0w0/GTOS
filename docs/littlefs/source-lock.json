@@ -68,8 +68,8 @@
     "include/storage/littlefs-sdk/assert.h": "df99bf754f0cec830ab0b0bbaa0ea25de3c4c3e8f2dbcd9c4bde0c04fb81bd75",
     "src/storage/littlefs/lfs_util.c": "f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec",
     "src/storage/littlefs_port.cpp": "3bba4f3e303c4e32f3dd39dd092dbde970d934dfc1c9e2dc2b47ddabf1cb00fd",
-    "src/storage/filestore.cpp": "f633b40d34f18cf83ae8ad026670e7d964bb4250c30b5e02292d22efd3f814a2",
-    "include/storage/filestore.h": "496ff464bc3227b57f185f4a92f77c73f8dec3ae8f354fc94e48a302ddb7ffb3",
+    "src/storage/filestore.cpp": "f0a91225a3f6d602f7009a97f618c5aff370e4fb86ef4391cdd8a724a627d3bf",
+    "include/storage/filestore.h": "e6ae0440fb71d3e5b27f0bad9b591a6d707bb0cc0e1515fb5869c9e3f2f53785",
     "include/storage/blockdevice.h": "1db8446209b8501907bf87ef9f5d1a41b5b948bddac8b85223d2c81d14189a41",
     "include/memory/criticalsection.h": "d7d544556e76ebb204b353d81b5d612a02d290f6ec0e416fc640cfa38ce56617",
     "src/drivers/ata.cpp": "874588677d553c77b59242c38c2153d950463ce28dabc6e6137ba4d13c06102e",
@@ -78,8 +78,8 @@
     "include/drivers/ata_wait.h": "3aafe94263327a43757a97719cdcb71b8b29f39d867cdc1a15f414889f830a14",
     "src/hardwarecommunication/port.cpp": "2ef01a7a8fef916a0e31234c980e9d2b22b6cde3cb588f30f408540674be6422",
     "tests/filestore_guest.cpp": "39a13f68769a4aaaa9b00346cf3d6c7d9f00c06c5650dab52c18d71b201dced8",
-    "Makefile": "f57820c749a9d42ebef93be2788c40cff943307c756038ab93470d6bda25b92b",
-    ".gitattributes": "7b69ffb156d9caac1bf986f9e21c539845a81b2e45df4cb358a7a15650d2a611"
+    "Makefile": "694386268bf43191d0a8971f1fc96e8fbbffad07b043c1cea4126f5ea99266bd",
+    ".gitattributes": "b43f7b79193c6bc11aa8859976c663da584821d6b7a50b2ec8cf6b390f8efb68"
   },
   "executed_objects": {
     "O0-lfs.o": "5ecb5c2d46dfd9e39957ec4cf6f66cb61be9c337161665efa1f8d0b99ae63702",
@@ -150,5 +150,20 @@
   },
   "qualification_workspace_path": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-filesystem-01",
   "full_kernel_status_sha256": "cad39e3b4b75e15f9360f4a8ea010cbc9d67fcec1397660d93dfad8201d56f19",
-  "coherence_self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44"
+  "coherence_self_review_status_sha256": "7401bb82fbaf40639134b63ee07a1e3855e75fd04ed3fb0706ad027622103d44",
+  "source_identity": {
+    "version": 2,
+    "frozen_from_commit": "b16338929223bc42594989fedde6509ac2ce72ca",
+    "supersedes_source_lock_sha256": "6fea39193d74a20bd860d6231519afc5dd36dfc97c342916ea7e7ac07e1abcb9",
+    "frozen_utc": "2026-10-29T11:02:38.173Z",
+    "bindings_total": 32,
+    "bindings_changed": 4,
+    "changed_paths": [
+      "src/storage/filestore.cpp",
+      "include/storage/filestore.h",
+      "Makefile",
+      ".gitattributes"
+    ],
+    "note": "Hashes re-measured from the tree; every previous binding kept. Behaviour is not claimed here: the qualification probes re-derive objects, ELFs and guests from these sources."
+  }
 }
