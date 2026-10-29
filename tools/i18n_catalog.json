@@ -913,5 +913,50 @@
     "id": "NativeImageUnavailable",
     "en": "Native image unavailable",
     "zh-CN": "原生 PNG 不可用"
+  },
+  {
+    "id": "NativeWindow1",
+    "en": "Native window 1",
+    "zh-CN": "原生窗口 1"
+  },
+  {
+    "id": "NativeWindow2",
+    "en": "Native window 2",
+    "zh-CN": "原生窗口 2"
+  },
+  {
+    "id": "NativeWindow3",
+    "en": "Native window 3",
+    "zh-CN": "原生窗口 3"
+  },
+  {
+    "id": "NativeWindow4",
+    "en": "Native window 4",
+    "zh-CN": "原生窗口 4"
+  },
+  {
+    "id": "CloseRequested",
+    "en": "Close requested",
+    "zh-CN": "请求关闭"
+  },
+  {
+    "id": "NativeApplicationWindow",
+    "en": "Native application window",
+    "zh-CN": "原生应用窗口"
+  },
+  {
+    "id": "WindowTooSmallToPresent",
+    "en": "Window too small to present",
+    "zh-CN": "窗口过小无法显示"
+  },
+  {
+    "id": "WaitingForFirstFrame",
+    "en": "Waiting for the first frame",
+    "zh-CN": "正在等候第一帧"
+  },
+  {
+    "id": "EscClosesThisWindow",
+    "en": "Esc closes this window",
+    "zh-CN": "按 Esc 关闭此窗口"
   }
 ]
