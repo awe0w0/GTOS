@@ -3,10 +3,13 @@
 
 The port refuses every GTOS browser graph from its root build file, and the refusal is right: the runtime the browser needs does
 not exist. This patch keeps that refusal as the default and adds one named way past it, so that a bring-up can generate the real
-Content graph without claiming the platform runs a browser. It is applied to a *copy* — the shared port tree is never written.
+Content graph without claiming the platform runs a browser. It is applied to *a copy* — the shared port tree is never written.
+
+Each input is classified by identity, not by a substring: the unchanged block, the exact patched block, or neither. "Neither" is an
+error, because a file this script does not recognise must never be reported as already patched.
 
 Usage: bringup-patch.py <root BUILD.gn> <dotfile .gn>
-Both files must already be copies outside the shared tree; the script rewrites them in place and prints what it changed.
+Exit status: 0 patched or already patched, 2 input not recognised, 1 usage.
 """
 import pathlib
 import sys
@@ -49,24 +52,32 @@ INTERPRETER_PATCHED = '''# The repository points this at a hermetic interpreter 
 script_executable = "/usr/bin/python3.8"'''
 
 
-def patch(path, old, new, name):
+def apply(path, original, patched, name):
+    """Classify the file by identity and rewrite it only when it still carries the original text exactly once."""
     text = pathlib.Path(path).read_text()
-    if new.split('\n')[-1] in text and old not in text:
-        print('%s: already patched' % name)
-        return
-    if text.count(old) != 1:
-        raise SystemExit('%s: the block to replace is not exactly once in %s' % (name, path))
-    pathlib.Path(path).write_text(text.replace(old, new))
-    print('%s: patched %s (%d bytes)' % (name, path, len(text.replace(old, new))))
+    originals = text.count(original)
+    patched_count = text.count(patched)
+    if originals == 1 and patched_count == 0:
+        pathlib.Path(path).write_text(text.replace(original, patched))
+        print('%s: patched %s' % (name, path))
+        return 0
+    if originals == 0 and patched_count == 1:
+        print('%s: already patched %s' % (name, path))
+        return 0
+    raise SystemExit('%s: %s carries neither the original block nor the patched block exactly once '
+                     '(original %d, patched %d); refusing to guess' % (name, path, originals, patched_count))
 
 
 def main(argv):
     if len(argv) != 3:
         raise SystemExit('usage: bringup-patch.py <root BUILD.gn> <dotfile .gn>')
-    patch(argv[1], GUARD, PATCHED, 'root build file')
-    patch(argv[2], INTERPRETER, INTERPRETER_PATCHED, 'dotfile')
+    apply(argv[1], GUARD, PATCHED, 'root build file')
+    apply(argv[2], INTERPRETER, INTERPRETER_PATCHED, 'dotfile')
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    try:
+        sys.exit(main(sys.argv))
+    except SystemExit:
+        raise
