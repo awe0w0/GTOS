@@ -199,6 +199,16 @@ extern "C" uint32_t gtos_host_runtime_cr0() { return gtos_host_runtime_cr0_value
 // native_runtime.cpp declares these two at file scope with C++ linkage, so they are defined the same way here.
 void printf(char* text) { (void)text; for (;;) asm volatile("cli; hlt" : : : "memory"); }
 void printfHex32(uint32_t) { for (;;) asm volatile("cli; hlt" : : : "memory"); }
+// A pure virtual call reaches a table slot that has no definition. The kernel image answers that with its own handler; this image
+// is linked separately from the kernel, and the compiler only emits the abstract tables that name this symbol at -O0, so the host
+// side owes the same contract at every optimization level. It does not return, because returning would resume in the slot that
+// does not exist; it says what happened on the descriptor the unit already uses and ends the process with its own status, which
+// a runner can tell from a pass and from a fault.
+extern "C" void __cxa_pure_virtual() {
+    static const char text[] = "runtime unit: pure virtual call\n";
+    WriteStderr(text, (unsigned)(sizeof(text) - 1));
+    for (;;) asm volatile("int $0x80" : : "a"(1), "b"(97) : "memory");
+}
 
 // The port layer executes IN/OUT, which a host cannot do. Activate refuses before it ever samples the realtime clock, so
 // these are never reached; reaching one halts rather than answering, which is the honest signal.
