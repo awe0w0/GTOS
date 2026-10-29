@@ -294,6 +294,12 @@ static void BootDiagnosticHalt(const char *marker) {
     printf("\n");
     for (;;) asm volatile("cli; hlt");
 }
+// The abstract base classes in the storage and app layers put a pure-virtual slot in their vtables, and a freestanding link
+// has to supply the function that slot points at: the C++ runtime's own handler is not part of this kernel. At -O2 the
+// compiler does not emit those tables and the link never asked for this symbol; at -O0 it does, which is why the integer
+// audit's O0 build failed to link. Reaching a pure virtual is a kernel fault, so it takes the ordinary panic path and halts
+// with its own code instead of jumping to an address that was never defined.
+extern "C" void __cxa_pure_virtual() { Panic("PURE VIRTUAL CALL", "E20"); }
 typedef void (*constructor)();
 extern "C" constructor start_ctors, end_ctors;
 extern "C" void callConstructors() {
