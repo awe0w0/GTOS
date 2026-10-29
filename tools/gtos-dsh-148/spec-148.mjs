@@ -137,13 +137,30 @@ const buildSpec = (requiredSetPath) => {
     members.push({ path: 'roles/' + path.basename(role.path), role: 'role_record', from: role.path, bytes: b.length,
       sha256: sha(b) });
   }
+  // The records the package tree already carries are the same records this loop would add, because the package was built by
+  // copying them. A payload cannot carry two members at one path, so the package's copy is replaced by the report root's
+  // copy -- and only when the two are the same bytes, which is what makes "the same record" a fact rather than an assumption.
+  const byPath = new Map(members.map((m) => [m.path, m]));
+  const replaced = [];
   for (const name of fs.readdirSync(R).sort()) {
     // Every record of every judge's series, so a re-run of a judge is carried without this list being edited. The failed
     // records travel too: a payload that carried only the successes could not show what was found and fixed.
     if (!/^(f-negatives-148|f-qualification-148|c-negatives-148-\d+|c-chain-148-\d+|stage-148-\d+|required-set-148-\d+|setup-148-\d+|h-roles-summary-148)\.json$/.test(name)) continue;
     const b = fs.readFileSync(R + '/' + name);
-    members.push({ path: 'judgements/' + name, role: 'judgement', from: R + '/' + name, bytes: b.length, sha256: sha(b) });
+    const entry = { path: 'judgements/' + name, role: 'judgement', from: R + '/' + name, bytes: b.length, sha256: sha(b) };
+    const existing = byPath.get(entry.path);
+    if (existing) {
+      if (existing.sha256 !== entry.sha256) {
+        throw new Error('the package and the report root disagree about ' + entry.path + ': ' + existing.sha256
+          + ' against ' + entry.sha256 + '. One of them is stale, and a payload that carried either would be a payload that '
+          + 'contradicted itself.');
+      }
+      replaced.push(entry.path);
+    }
+    byPath.set(entry.path, entry);
   }
+  members.length = 0;
+  members.push(...[...byPath.values()].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)));
   // The evidence the seal re-reads. Each is the newest record of its series that says it held, chosen by reading the
   // records rather than by naming a number, because a spec that hard-coded `stage-148-04` would keep pinning a superseded
   // judgement after a later run had found something the earlier one did not look for.

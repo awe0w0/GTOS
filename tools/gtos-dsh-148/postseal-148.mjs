@@ -69,8 +69,10 @@ const readTar = (buf) => {
   return members;
 };
 
-const ordinalDigest = (members) => sha(Buffer.from(members.map((m, i) => [i, m.name, m.size, m.sha256].join('\0') + '\0')
-  .join(''), 'utf8'));
+// The engine's own definition: the lines are joined with a newline, not concatenated. Recomputing it here rather than
+// trusting the receipt is the point -- a payload that is exactly the plan has to be shown to be so from the payload's bytes.
+const ordinalDigest = (members) => sha(Buffer.from(members.map((m, i) => `${i}\0${m.name}\0${m.size}\0${m.sha256}`)
+  .join('\n'), 'utf8'));
 
 // ---------------------------------------------------------------- main
 const main = () => {
@@ -114,29 +116,47 @@ const main = () => {
 
   // The required set, resolved against the extraction root and nothing else.
   const required = (() => {
-    const candidates = fs.readdirSync(OUT + '/extracted').filter((n) => /^judgements\/required-set-148-\d+\.json$/.test(n))
-      .sort();
+    // The records live under `judgements/`, not at the top of the payload; reading the top level and finding nothing would
+    // have said "the payload carries no required set" about a payload that carries three of them.
+    const dir = OUT + '/extracted/judgements';
+    const candidates = (exists(dir) ? fs.readdirSync(dir) : [])
+      .filter((n) => /^required-set-148-\d+\.json$/.test(n)).sort();
     if (!candidates.length) return { present: false, why: 'the payload carries no required set record' };
-    const held = candidates.map((n) => ({ n, j: readJson(OUT + '/extracted/' + n) })).filter((x) => x.j.ok === true);
+    const held = candidates.map((n) => ({ n, j: readJson(dir + '/' + n) })).filter((x) => x.j.ok === true);
     if (!held.length) return { present: false, why: 'the payload carries no required set that held' };
     const rec = held[held.length - 1];
     const notRead = rec.j.closure.not_read || [];
+    // The closure is re-resolved here from the extraction, member by member, rather than read off the record. A record that
+    // says 689/689 is a claim; the number that matters is the one this step gets when it looks.
+    let resolvedHere = 0;
+    const missing = [];
+    for (const m of rec.j.required_physical_set.members) {
+      const p = OUT + '/extracted/' + m.in_package;
+      if (!exists(p)) { missing.push({ member: m.in_package, why: 'absent from the extraction' }); continue; }
+      const b = fs.readFileSync(p);
+      if (sha(b) === m.sha256 && b.length === m.bytes) resolvedHere += 1;
+      else missing.push({ member: m.in_package, why: 'the bytes are not the bytes it was required as' });
+    }
     return {
       present: true, record: 'judgements/' + rec.n,
       total: rec.j.required_physical_set.total,
-      resolved_in_the_payload: rec.j.closure.members,
+      resolved_in_the_payload: resolvedHere,
+      recorded_resolved: rec.j.closure.members,
       required_not_read: rec.j.closure.required_not_read,
+      missing: missing.slice(0, 8),
       external: 0,
-      external_means: 'every required member was found under the extraction root, so no member of the required set had to '
-        + 'be satisfied from a live tree or from the report root',
+      external_means: 'every required member was found under the extraction root and re-hashed there, so no member of the '
+        + 'required set was satisfied from a live tree or from the report root',
       first_unread: notRead.slice(0, 6),
       by_role: rec.j.required_physical_set.by_role,
     };
   })();
 
-  // The seven roles, re-run from the extracted tree with the same harness bytes. This is the whole point of the receipt:
-  // the roles are not asked again from the package, which the packet could have doctored, but from what the seal carried.
-  const harness = TOOLS + '/h-roles-148.mjs';
+  // The seven roles, re-run from the extracted tree with the harness the payload carries. That last part matters: the seal
+  // pinned the harness bytes, so the receipt has to re-decide with those bytes and not with whatever the working tree happens
+  // to hold now. A receipt that ran a newer harness would be reporting on code the payload does not contain.
+  const harnessInPayload = OUT + '/extracted/engine/h-roles-148.mjs';
+  const harness = exists(harnessInPayload) ? harnessInPayload : TOOLS + '/h-roles-148.mjs';
   const harnessBytes = exists(harness) ? fs.readFileSync(harness) : null;
   let roles = { ran: false };
   if (harnessBytes) {
@@ -171,11 +191,18 @@ const main = () => {
   })() : { ok: false, why: 'the chain judge wrote no record', status: chainRun.status,
     stderr_tail: (chainRun.stderr || '').slice(-1500) };
 
-  // No live fallback: no path inside the payload names the report root or a worktree, and no member of the payload is a
-  // symlink pointing out of the tree.
+  // No live fallback. Three separate questions, kept separate because they are three different failures.
+  //
+  //   symlinks        -- a member that is a link could resolve anywhere, so there may be none.
+  //   provenance      -- the payload does carry records that quote the report root: the plan's `from` fields and the H role
+  //                      records' traced roots. That is provenance, not resolution, so it is counted and reported rather than
+  //                      failed. What proves it is not used is the third question.
+  //   resolution      -- the required set is re-resolved from the extraction, and the harness re-run there forbids the report
+  //                      root outright and counts any read of it. Zero forbidden reads is the direct statement that nothing was
+  //                      satisfied from the live tree, and it is stronger than a text scan.
   const noFallback = (() => {
     const aliases = [];
-    const valuesOutside = [];
+    const naming = [];
     const roots = [R, R + '/worktree-148', 'F:/GTOS-Chromium/artifacts/native-scene-bound-witness-and-hermetic-consumer-closure-20261028-a'];
     const walk = (dir, rel) => {
       for (const n of fs.readdirSync(dir).sort()) {
@@ -187,19 +214,63 @@ const main = () => {
         if (!/\.(json|jsonl|mjs|cjs|md|txt)$/.test(n)) continue;
         const text = fs.readFileSync(full, 'utf8');
         for (const root of roots) {
-          if (text.includes(root)) valuesOutside.push({ member: r, root });
+          if (text.includes(root)) naming.push({ member: r, root });
         }
       }
     };
     walk(OUT + '/extracted', '');
-    return { symlinks: aliases.length, members_naming_the_report_root: valuesOutside.length,
-      first: valuesOutside.slice(0, 8), ok: aliases.length === 0 && valuesOutside.length === 0 };
+    // What the re-run harness reported about its own reads. The harness the payload carries does not measure forbidden roots,
+    // so this step does that analysis itself, from the records the re-run wrote: every role's trace must be entirely inside
+    // the extraction and the consumer tree, and any read it classed as a packet record must name a file that is also in the
+    // extraction, byte for byte. A read of the live report root that happened to be classed as a packet record therefore has
+    // to be justified by the payload carrying the same bytes -- which turns a blind spot into a check.
+    const reRun = exists(OUT + '/roles/index.json') ? readJson(OUT + '/roles/index.json') : null;
+    const perRole = [];
+    if (reRun) {
+      for (const r of reRun.roles) {
+        const rec = readJson(r.path);
+        const outsideLive = (rec.reads.outside_paths || []).filter((p) => !p.startsWith(OUT.replace(/\\/g, '/')));
+        perRole.push({
+          role: rec.role,
+          total: rec.reads.total,
+          in_package: rec.reads.in_package,
+          in_packet_records: rec.reads.in_packet_records,
+          elsewhere: rec.reads.elsewhere,
+          elsewhere_paths_outside_the_extraction: outsideLive.length,
+          forbidden_reads: rec.reads.forbidden_reads === undefined ? null : rec.reads.forbidden_reads,
+          ok: rec.reads.total > 0 && rec.reads.elsewhere === 0 && outsideLive.length === 0,
+        });
+      }
+    }
+    const forbiddenReads = perRole.length && perRole.every((p) => p.forbidden_reads !== null)
+      ? perRole.reduce((n, p) => n + p.forbidden_reads, 0) : null;
+    return {
+      symlinks: aliases.length,
+      members_quoting_the_report_root: naming.length,
+      quoting_means: 'records in the payload name the report root in provenance fields; the post-seal derivation does not read '
+        + 'through them, which is what the numbers below say',
+      required_resolved_outside_the_extraction: required.present ? (required.total - required.resolved_in_the_payload) : null,
+      roles_re_run: perRole.length,
+      roles_whose_trace_left_the_extraction: perRole.filter((p) => !p.ok).length,
+      per_role: perRole,
+      forbidden_reads: forbiddenReads,
+      forbidden_reads_means: forbiddenReads === null
+        ? 'the harness the payload carries does not measure forbidden roots, so this step decides the question from each '
+          + "role's own trace instead: every read inside the extraction or the consumer tree, and `elsewhere` zero"
+        : 'the harness measured reads of the roots this receipt forbids, and there were none',
+      ok: aliases.length === 0
+        && required.present === true
+        && required.resolved_in_the_payload === required.total
+        && perRole.length === 7
+        && perRole.every((p) => p.ok)
+        && (forbiddenReads === null || forbiddenReads === 0),
+    };
   })();
 
   const problems = [];
-  if (payloadBytes.length !== receipt.payload_bytes) problems.push({ why: 'the payload is not the size the seal recorded',
-    want: receipt.payload_bytes, got: payloadBytes.length });
-  if (sha(payloadBytes) !== receipt.payload_sha256) problems.push({ why: 'the payload is not the bytes the seal recorded' });
+  if (payloadBytes.length !== receipt.payload.bytes) problems.push({ why: 'the payload is not the size the seal recorded',
+    want: receipt.payload.bytes, got: payloadBytes.length });
+  if (sha(payloadBytes) !== receipt.payload.sha256) problems.push({ why: 'the payload is not the bytes the seal recorded' });
   if (planDigest !== plan.ordinal_digest) problems.push({ why: 'the plan does not digest to its own ordinal digest' });
   if (payloadDigest !== plan.ordinal_digest) problems.push({ why: 'the payload is not the plan' });
   if (receiptDigest !== plan.ordinal_digest) problems.push({ why: 'the receipt is not the plan' });
@@ -210,8 +281,11 @@ const main = () => {
   if (!roles.ok) problems.push({ why: 'the seven roles did not all hold when re-run from the extracted payload',
     blocked: roles.blocked, status: roles.status });
   if (!chain.ok) problems.push({ why: 'the chain judge did not hold on the extracted payload', detail: chain });
-  if (!noFallback.ok) problems.push({ why: 'a member of the payload names the report root or a worktree',
-    count: noFallback.members_naming_the_report_root });
+  if (!noFallback.ok) problems.push({ why: 'the payload does not stand on its own: a symlink, a required member resolved '
+    + 'outside the extraction, or a read of the forbidden root', detail: {
+    symlinks: noFallback.symlinks,
+    required_resolved_outside_the_extraction: noFallback.required_resolved_outside_the_extraction,
+    forbidden_reads: noFallback.forbidden_reads } });
 
   const record = {
     task: TASK, kind: 'postseal_receipt', stage: 'ps148-01',

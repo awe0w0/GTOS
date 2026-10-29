@@ -80,7 +80,7 @@ const writeNew = (p, text) => {
 // from. The fact that matters is that nothing was read from a live artifact tree.
 const TRACED = ['readFileSync', 'readdirSync', 'existsSync', 'statSync', 'lstatSync', 'openSync', 'readlinkSync', 'opendirSync'];
 const normalPath = (p) => String(p).replace(/\\/g, '/').replace(/^([A-Za-z]):/, (m, d) => d.toLowerCase() + ':');
-const withTrace = async (fn, roots) => {
+const withTrace = async (fn, roots, forbiddenRoots) => {
   const original = {};
   const reads = [];
   for (const name of TRACED) {
@@ -102,19 +102,28 @@ const withTrace = async (fn, roots) => {
   };
   const buckets = { in_package: 0, in_consumer: 0, in_packet_records: 0, in_work_root: 0, elsewhere: 0 };
   const outside = [];
+  const forbidden = [];
   for (const r of reads) {
     const w = where(r.path);
     buckets[w] += 1;
     if (w === 'elsewhere') outside.push(r.path);
+    if (forbiddenRoots.some((f) => under(r.path, normalPath(f)))) forbidden.push(r.path);
   }
   return { value, error, trace: {
     total: reads.length,
     ...buckets,
     outside_paths: [...new Set(outside)].slice(0, 16),
     roots: roots.map(([name, root]) => ({ name, root })),
-    // The stability fact. `elsewhere` is the only bucket that could hide a live fallback, and it is the one that has to be
-    // empty -- not `total - in_package`, which would count the consumer's own source file as a fallback.
-    no_live_fallback: buckets.elsewhere === 0,
+    // Roots that must not be read at all. When this harness runs in place the 147 origin root is forbidden, so a role that
+    // reached back into the tree this packet preserved would be visible. When the post-seal receipt re-runs it from the
+    // extracted payload, the report root is forbidden too: from there nothing may be read from the live root, and the
+    // `in_packet_records` bucket -- correct in an in-place run -- would otherwise hide exactly that read.
+    forbidden: forbiddenRoots.map(normalPath),
+    forbidden_reads: forbidden.length,
+    forbidden_paths: [...new Set(forbidden)].slice(0, 12),
+    // The stability fact. `elsewhere` and `forbidden` are the two ways a live fallback could hide, and both have to be empty
+    // -- not `total - in_package`, which would count the consumer's own source file as a fallback.
+    no_live_fallback: buckets.elsewhere === 0 && forbidden.length === 0,
     kind: 'installed around the entry call across its await points: every fs call the business decision made while it ran',
   } };
 };
@@ -842,7 +851,15 @@ const runRole = async (spec) => {
     // they are this run's own output, not the payload.
     ['in_work_root', LINUX_WORK_HOST],
   ];
-  const positive = await withTrace(() => spec.run(), roots);
+  // The roots that must not be read at all. The 147 origin tree is always forbidden -- this packet preserved it, and a role
+  // that reached back into it would be deciding from the tree the payload is supposed to replace. `GTOS_H_ROLES_FORBID` adds
+  // more, which is how the post-seal receipt forbids the live report root when it re-runs this harness from the extraction.
+  const forbiddenRoots = [
+    'F:/GTOS-Chromium/artifacts/native-scene-bound-witness-and-hermetic-consumer-closure-20261028-a',
+    '//wsl$/Ubuntu-20.04/var/tmp/gtos-dsh-147-e759-scene-bound-view',
+    ...String(process.env.GTOS_H_ROLES_FORBID || '').split(';').map((s) => s.trim()).filter(Boolean),
+  ];
+  const positive = await withTrace(() => spec.run(), roots, forbiddenRoots);
 
   const v = positive.value ? spec.verdict(positive.value) : { ok: false, decided: 0, met: 0, detail: { error: String(positive.error && positive.error.message) } };
   const obligations = positive.value ? spec.obligations(positive.value) : [{ name: 'the-entry-returned', value: false }];
@@ -898,6 +915,8 @@ const runRole = async (spec) => {
       in_work_root: positive.trace.in_work_root,
       elsewhere: positive.trace.elsewhere, outside_paths: positive.trace.outside_paths,
       kind: positive.trace.kind, roots: positive.trace.roots,
+      forbidden: positive.trace.forbidden, forbidden_reads: positive.trace.forbidden_reads,
+      forbidden_paths: positive.trace.forbidden_paths,
       no_live_fallback: positive.trace.no_live_fallback },
     negatives,
     negatives_passed: negatives.filter((n) => n.ok).length,
@@ -961,8 +980,10 @@ const main = async () => {
       no_live_fallback: {
         value: records.every((r) => r.reads && r.reads.total > 0 && r.reads.elsewhere === 0),
         per_role: records.map((r) => ({ role: r.role, total: r.reads && r.reads.total,
-          in_package: r.reads && r.reads.in_package, elsewhere: r.reads && r.reads.elsewhere })),
-        means: 'a role that quietly read the 147 root or the live staged runtime would show a non-zero elsewhere count',
+          in_package: r.reads && r.reads.in_package, elsewhere: r.reads && r.reads.elsewhere,
+          forbidden_reads: r.reads && r.reads.forbidden_reads })),
+        means: 'a role that quietly read the 147 origin tree or the live staged runtime would show a non-zero count in '
+          + '`elsewhere` or in `forbidden_reads`; the second is the one the post-seal receipt turns on for the report root',
       },
       // 2. The trace wraps real execution. It has to be non-empty -- a trace of zero reads is a wrapper that measured nothing
       // -- and it has to have seen the bucket that carries this role's subject: the package for the six roles whose business
