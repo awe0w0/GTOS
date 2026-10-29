@@ -32,6 +32,10 @@ static char moduleName[] = "test-module";
 static char command[] = "test=memory";
 static uint8_t section[40];
 static uint8_t physicalStorage[sizeof(PhysicalMemoryManager)] __attribute__((aligned(4096)));
+// initialize reserves the manager's own pages, so a manager that happens to sit near the top of this test's stack would take the
+// very frames the 4 GiB block means to test, and that block would then measure where the stack happened to be rather than the
+// boundary. This manager gets its own storage at a fixed low address instead, so the block does not move with the environment.
+static uint8_t managerStorage[sizeof(PhysicalMemoryManager)] __attribute__((aligned(4096)));
 
 static void zero(void* destination, uint32_t size) {
     for (uint32_t i = 0; i < size; ++i) ((uint8_t*)destination)[i] = 0;
@@ -114,7 +118,7 @@ static void heapTests() {
     CHECK(heap.tryFree(p));
 }
 static void physicalTests() {
-    PhysicalMemoryManager frames;
+    PhysicalMemoryManager& frames = *new (managerStorage) PhysicalMemoryManager;
     uint32_t address = 123;
     CHECK(!frames.allocate(address) && address == 0);
     CHECK(!frames.free(0x100000));
