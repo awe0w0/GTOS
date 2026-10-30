@@ -62,5 +62,12 @@ gn gen --root=<view> out/gtos-content-bringup \
 ## 5. 本轮实际做到哪
 
 - 已确认首错成因链、真实可用 rustc/rust-src、真实 C 工具链 ABI；已确认没有 Linux 三元组冒充的空间（映射必须配合 spec 与 sysroot）。
-- **未执行**第 4 节第 1–4 步：没有写 spec、没有 build-std、没有改 GN、没有生成完整图。C1/C2/C3 仍全部未取得。
 - 旧的 GN 首错记录与 r04 的 `REPLAY ok` 结果都保留原样，`REPLAY ok` 只说明重放合同通过，不表示 Content 配置或编译成功。
+
+### r16 更正与新增（上面“未执行第 4 节第 1–4 步”已过时）
+
+- **spec 已写**：`i686-unknown-gtos.json`，edition 2024（当前 `library/` 源码要求 2024；`compiler_builtins` 同样要求）。Cargo 要识别 `.json` 目标还需要 `-Zjson-target-spec`。`rustc --print target-libdir --target <spec>` 指向 `.../bin-rust/lib/rustlib/i686-unknown-gtos/lib`；目录不存在正是此前 `E0463` 的直接原因。
+- **目标 std 组件已真实构建**：`libcore.rlib` 66,884,068 B、`libcompiler_builtins.rlib` 1,933,742 B；`library/` 源码（约 83M）复制进 `bin-rust/lib/rustlib/src/rust`，供 `rustc` 的 `sysroot` 解析。
+- **探针已真实编译**：`#[unsafe(no_mangle)]` 的 `gtos_rust_probe.rs` 编译出 `gtos_rust_probe.o` 1128 B `a08eab0b0e3a70c7…`、`libgtos_rust_probe.rmeta` 3193 B `24a610dc59ab3db2…`（stage `c4-content-154-34`，rc 0）。这只证明目标 sysroot 可用，不证明 ABI、不证明 Chromium 可链接。
+- **仍未做到**：Cargo `-Z build-std` 路径被缺失的离线 `rustc-literal-escaper`（`proc_macro`/sysroot）挡住，与上面直接构建 `core` 的路径是两件事；C ABI 消费方（布局/参数/返回/浮点，softfloat 仍未证）、GTOS Rust 的 GN 映射与 sysroot 接线、`target_os="gtos" target_cpu="x86"` 下 `//content/shell:content_shell_app` 的 GN/Ninja 构建都未取得，**C1/C2/C3 仍全部未取得**。
+
