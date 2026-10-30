@@ -30,6 +30,18 @@
 
 static_assert(sizeof(void *) == 4, "the GTOS file ABI is a 32-bit interface");
 
+// The reduced SDK headers on the probe side carry a subset of errno. These are the standard values, defined only where the header is silent, so
+// the same unit compiles against both the libxml SDK and the probe's narrower one and reports the same numbers either way.
+#ifndef ENOTSUP
+#define ENOTSUP 95
+#endif
+#ifndef EOVERFLOW
+#define EOVERFLOW 75
+#endif
+
+// The reduced SDK headers also leave strlen undeclared; its definition is the runtime's, and strcat below is written in terms of it.
+extern "C" size_t strlen(const char *);
+
 /*
  * The standard streams. The GTOS stdio layer ships an object that defines the streams as unavailable (its own file name says so), and the
  * C names libxml2's headers reference are not among its definitions. These are those names: null, matching the layer's own statement, and
@@ -122,6 +134,7 @@ extern "C" int vfprintf(FILE *stream, const char *format, va_list arguments) {
   }
   const char *text = on_stack;
   char *heap = nullptr;
+  size_t bytes = static_cast<size_t>(produced);
   if (static_cast<size_t>(produced) >= sizeof(on_stack)) {
     // Longer than the stack buffer: format the whole conversion instead of truncating it.
     heap = static_cast<char *>(malloc(static_cast<size_t>(produced) + 1));
@@ -138,9 +151,11 @@ extern "C" int vfprintf(FILE *stream, const char *format, va_list arguments) {
       errno = EILSEQ;
       return -1;
     }
+    // The second pass is authoritative: it may be shorter than the first (locale or `%n`-free differences still exist), and writing the first
+    // count would put stale bytes of the buffer on the stream.
+    bytes = static_cast<size_t>(again);
     text = heap;
   }
-  const size_t bytes = static_cast<size_t>(produced);
   const size_t written = bytes == 0 ? 0 : fwrite(text, 1, bytes, stream);
   free(heap);
   if (written != bytes) {
