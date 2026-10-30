@@ -156,7 +156,14 @@ run_host_binary() {
     # When the publish step recorded what it published, every start verifies the size and full digest of the file it is about to
     # load. This is the same check run_published_binary performs, applied at the one place a program is actually started, so the
     # real entries cannot bypass it by taking the staged path straight from the manifest.
-    if [ -n "${GTOS_PUBLISH_RECORD:-}" ] && [ -f "${GTOS_PUBLISH_RECORD:-/nonexistent}" ]; then
+    # A record that is configured but absent is not evidence: without it nothing says which bytes were published, so the start is
+    # refused rather than run unverified. The old form skipped verification in exactly that case, which made a missing record
+    # file indistinguishable from a successful check.
+    if [ -n "${GTOS_PUBLISH_RECORD:-}" ]; then
+        if [ ! -f "$GTOS_PUBLISH_RECORD" ]; then
+            echo "run_host_binary: GTOS_PUBLISH_RECORD is set but there is no record at $GTOS_PUBLISH_RECORD, so $binary cannot be verified" >&2
+            return 2
+        fi
         recorded=$(awk -v path="$binary" '$1 == path { print $2, $3 }' "$GTOS_PUBLISH_RECORD" | tail -n 1)
         if [ -z "$recorded" ]; then
             echo "run_host_binary: $binary is not recorded as published in $GTOS_PUBLISH_RECORD" >&2
