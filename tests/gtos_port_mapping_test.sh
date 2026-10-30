@@ -30,6 +30,13 @@ check $? 'known-target-triples.txt lists i686-unknown-gtos on its own line'
 grep -q 'i386-unknown-gtos' "$port/build/config/clang/BUILD.gn"
 check $? 'build/config/clang/BUILD.gn has a GTOS runtime-library directory'
 
+# Two more things the graph needed, both easy to lose in a rebase: the visibility config that Chromium's runtime targets remove,
+# and the shared-library tools that make a target of that type generatable at all.
+grep -q 'symbol_visibility_hidden' "$port/build/config/BUILDCONFIG.gn"
+check $? 'BUILDCONFIG.gn offers the GTOS toolchain the visibility config its dependencies remove'
+grep -q 'tool("solink")' "$port/build/toolchain/gtos/BUILD.gn"
+check $? 'the GTOS toolchain defines a solink tool'
+
 # The gate: if this stops matching, either the backend arrived (good, and this unit should be updated) or the gate was deleted
 # without one (bad, and this must fail).
 grep -q 'GTOS V8 runtime backend is not implemented' "$port/v8/BUILD.gn"
