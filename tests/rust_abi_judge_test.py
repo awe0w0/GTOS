@@ -109,9 +109,12 @@ def main():
         launcher = scratch / ('launcher-' + str(exit_code) + '-' + str(len(text)) + '.sh')
         payload = scratch / ('payload-' + launcher.stem + '.txt')
         payload.write_text(text)
-        launcher.write_text('#!/bin/sh\ncat ' + shquote(str(payload)) + '\nexit ' + str(exit_code) + '\n')
+        launcher.write_text('cat ' + shquote(str(payload)) + '\nexit ' + str(exit_code) + '\n')
         launcher.chmod(0o755)
-        env['GTOS_HOST_LAUNCHER'] = str(launcher)
+        # The launcher is named as "sh <script>" rather than as the script itself: a stage runs under an execution allow-list fixed
+        # before this file existed, and a new executable inside the work root cannot be on it. Naming the shell, which is already
+        # allowed, keeps these cases about the stage's exit propagation rather than about the allow-list.
+        env['GTOS_HOST_LAUNCHER'] = 'sh ' + str(launcher)
         env['GTOS_ABI_RUN_LOG'] = str(scratch / ('run-' + launcher.stem + '.log'))
         done = subprocess.run(['sh', 'tests/rust_abi_run_test.sh', 'run'], cwd=str(root), env=env, text=True,
                               capture_output=True)
