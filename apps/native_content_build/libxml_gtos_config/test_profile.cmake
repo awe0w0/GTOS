@@ -104,6 +104,10 @@ macro(expect_fatal name body want_text)
   set(driver "${SCRATCH}/refuse-${name}.cmake")
   file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")\n${body}\nmessage(STATUS \"NO-REFUSAL\")\n")
   execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  # CMake wraps long messages at the terminal width, so a refusal message can carry a newline in the middle of the phrase being looked for
+  # ("declares no\ntarget"). The comparison is on the words, not on where CMake decided to break the line: this collapse made a passing
+  # refusal read as a failure until the rerun on 2026-10-31 exposed it.
+  string(REGEX REPLACE "[ \t\r\n]+" " " err "${err}")
   set(case_failed 0)
   if(rc EQUAL 0)
     message(STATUS "  ${name}: the call returned success, it had to refuse")
@@ -311,6 +315,8 @@ macro(expect_generated_bad name body want_text)
   set(driver "${SCRATCH}/generated-${name}.cmake")
   file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")\nlibxml_check_generated(\"${bad_path}\")\nmessage(STATUS \"NO-REFUSAL\")\n")
   execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  # Fold the terminal wrap before matching, for the same reason as expect_fatal: "is only" arrives as "is\nonly" once CMake has wrapped it.
+  string(REGEX REPLACE "[ \t\r\n]+" " " err "${err}")
   if(rc EQUAL 0)
     fail_case("${name}" "an invalid header passed")
   elseif(NOT err MATCHES "${want_text}")
