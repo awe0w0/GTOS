@@ -81,16 +81,25 @@ double exp_series(double t) {
 }
 
 double ln(double x) {
-  const DoubleBits bits = {x};
+  // A subnormal has a zero exponent field, so the field is not the scale: multiply by 2^54 to reach the normal range and pay the 54·ln2 back
+  // in the result. Without this log10 of anything below 2.2e-308 was off by tens of decades and the old test never looked at those values.
+  double normalised = x;
+  int extra = 0;
+  DoubleBits bits = {x};
+  if (((bits.bits >> 52) & 0x7ffULL) == 0 && (bits.bits & 0x000fffffffffffffULL) != 0) {
+    normalised = x * 18014398509481984.0; // 2^54
+    extra = -54;
+    bits.value = normalised;
+  }
   int exponent = (int)((bits.bits >> 52) & 0x7ffULL) - 1023;
-  DoubleBits mantissa = {x};
+  DoubleBits mantissa = {normalised};
   mantissa.bits = (bits.bits & 0x000fffffffffffffULL) | 0x3ff0000000000000ULL;
   double m = mantissa.value;
   if (m > 1.4142135623730951) {
     m *= 0.5;
     exponent += 1;
   }
-  return (double)exponent * kLn2 + ln_near_one(m);
+  return (double)(exponent + extra) * kLn2 + ln_near_one(m);
 }
 
 } // namespace
@@ -102,6 +111,8 @@ extern "C" double fabs(double x) {
 }
 
 extern "C" double floor(double x) {
+  // Zero is returned as given: the truncation below would turn -0.0 into +0.0, and floor(-0.0) is -0.0.
+  if (x == 0.0) return x;
   if (is_nan(x) || is_infinite(x) || fabs(x) >= 4503599627370496.0) return x;
   const long long truncated = (long long)x;
   const double result = (double)truncated;
@@ -109,8 +120,11 @@ extern "C" double floor(double x) {
 }
 
 extern "C" double ceil(double x) {
+  if (x == 0.0) return x;
   if (is_nan(x) || is_infinite(x) || fabs(x) >= 4503599627370496.0) return x;
   const long long truncated = (long long)x;
+  // ceil of a value in (-1, 0) is -0.0, not +0.0: the truncation to zero loses the sign that the caller can observe.
+  if (truncated == 0 && x < 0.0) return -0.0;
   const double result = (double)truncated;
   return result < x ? result + 1.0 : result;
 }
