@@ -26,6 +26,25 @@
 
 static_assert(sizeof(void *) == 4 && sizeof(unsigned) == 4, "the GTOS file ABI is a 32-bit interface");
 
+// The pinned LLVM libc header set carries the common errno names only: its non-Linux branch defines a small generic subset, and the file ABI
+// has errors outside that subset. These are the standard numbers, which are the ones GTOS's ABI mirrors (its negative codes are the errno
+// values), so every caller comparing against the same headers sees the same number.
+#ifndef ENAMETOOLONG
+#define ENAMETOOLONG 36
+#endif
+#ifndef ENOSYS
+#define ENOSYS 38
+#endif
+#ifndef ENOTEMPTY
+#define ENOTEMPTY 39
+#endif
+#ifndef EOVERFLOW
+#define EOVERFLOW 75
+#endif
+#ifndef ENOTSUP
+#define ENOTSUP 95
+#endif
+
 namespace {
 
 int call(unsigned operation, const void *request, unsigned bytes) {
@@ -66,37 +85,60 @@ int fail_with(int error) {
   return -1;
 }
 
-unsigned open_flags(int flags) {
+// Everything this layer understands. A bit outside it is refused: dropping an unknown open flag turns a caller's O_DIRECTORY or O_SYNC into
+// a silently ordinary open, and the caller then reports success for a contract nobody kept.
+const int kAccessMask = 3;
+const int kKnownFlags = O_CREAT | O_EXCL | O_TRUNC | O_APPEND;
+
+int open_flags(int flags) {
   unsigned result;
-  switch (flags & 3) {
+  switch (flags & kAccessMask) {
   case O_RDONLY: result = GTOS_FILE_READ; break;
   case O_WRONLY: result = GTOS_FILE_WRITE; break;
   case O_RDWR: result = GTOS_FILE_READ_WRITE; break;
-  default: return 0;
+  default: errno = EINVAL; return -1;
+  }
+  if (flags & ~(kAccessMask | kKnownFlags)) {
+    errno = EINVAL;
+    return -1;
   }
   if (flags & O_CREAT) result |= GTOS_FILE_CREATE;
   if (flags & O_EXCL) result |= GTOS_FILE_EXCLUSIVE;
   if (flags & O_TRUNC) result |= GTOS_FILE_TRUNCATE;
   if (flags & O_APPEND) result |= GTOS_FILE_APPEND;
-  return result;
+  return static_cast<int>(result);
 }
 
 // The ABI takes a NUL-terminated path with its final NUL counted (GTOS_FILE_PATH_LIMIT bytes at most) and rejects a trailing empty name.
-unsigned path_size(const char *path) {
-  if (path == 0) return 0;
-  const size_t bytes = strlen(path) + 1;
-  if (bytes < 2 || bytes > GTOS_FILE_PATH_LIMIT) return 0;
-  return static_cast<unsigned>(bytes);
+// The scan is bounded rather than strlen(): a path that has no terminator inside the ABI's own limit is ENAMETOOLONG, and reading further
+// would be reading whatever the caller happens to have after the buffer.
+int path_bytes(const char *path, unsigned *bytes) {
+  if (path == 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  unsigned length = 0;
+  while (length < GTOS_FILE_PATH_LIMIT && path[length] != 0) ++length;
+  if (length == GTOS_FILE_PATH_LIMIT) {
+    errno = ENAMETOOLONG;
+    return -1;
+  }
+  if (length == 0) {
+    errno = ENOENT;
+    return -1;
+  }
+  *bytes = length + 1;
+  return 0;
 }
 
 } // namespace
 
 extern "C" int open(const char *path, int flags, ...) {
-  const unsigned bytes = path_size(path);
-  if (bytes == 0) return fail_with(EINVAL);
-  const unsigned translated = open_flags(flags);
-  if (translated == 0) return fail_with(EINVAL);
-  const GtosFileOpenRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes, translated};
+  unsigned bytes = 0;
+  if (path_bytes(path, &bytes) != 0) return -1;
+  const int translated = open_flags(flags);
+  if (translated < 0) return -1;
+  const GtosFileOpenRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes, static_cast<unsigned>(translated)};
   const int handle = call(GTOS_SYS_FILE_OPEN, &request, sizeof(request));
   if (handle < 0) return translate(handle);
   return handle;
@@ -151,6 +193,7 @@ extern "C" ssize_t write(int fd, const void *buffer, size_t bytes) {
 
 extern "C" off_t lseek(int fd, off_t offset, int whence) {
   if (fd <= 0) return fail_with(EBADF);
+  if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) return fail_with(EINVAL);
   const long long wanted = static_cast<long long>(offset);
   const GtosFileSeekRequest request{GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd), static_cast<unsigned>(wanted),
                                     static_cast<unsigned>(wanted >> 32), static_cast<unsigned>(whence)};
@@ -160,8 +203,9 @@ extern "C" off_t lseek(int fd, off_t offset, int whence) {
 }
 
 extern "C" int stat(const char *path, struct stat *buffer) {
-  const unsigned bytes = path_size(path);
-  if (bytes == 0 || buffer == 0) return fail_with(EINVAL);
+  unsigned bytes = 0;
+  if (path_bytes(path, &bytes) != 0) return -1;
+  if (buffer == 0) return fail_with(EINVAL);
   GtosFileInfo info{};
   const GtosFileStatRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes,
                                     reinterpret_cast<unsigned>(&info), sizeof(info)};
