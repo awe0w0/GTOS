@@ -153,6 +153,30 @@ int main(void) {
   record("fmod", gtos_fmod(1e300, 1e300), fmod(1e300, 1e300), 1e300, 1e300);
   record("fmod", gtos_fmod(-6.0, 4.0), fmod(-6.0, 4.0), -6.0, 4.0);
 
+  // The infinite and not-a-number boundaries, including the divisions that produce them: an infinity input, an infinity divisor, a zero
+  // divisor, and the exact largest finite power of two (which the old 709.0 threshold in exp() used to reject).
+  const double infinity = 1.0 / 0.0;
+  record("pow", gtos_pow(2.0, 1023.0), pow(2.0, 1023.0), 2.0, 1023.0);
+  record("pow", gtos_pow(2.0, 1024.0), pow(2.0, 1024.0), 2.0, 1024.0);
+  record("pow", gtos_pow(2.0, -1074.0), pow(2.0, -1074.0), 2.0, -1074.0);
+  record("log10", gtos_log10(infinity), log10(infinity), infinity, 0.0);
+  record("log10", gtos_log10(-0.0), log10(-0.0), -0.0, 0.0);
+  record("log10", gtos_log10(-1.0), log10(-1.0), -1.0, 0.0);
+  record("fmod", gtos_fmod(infinity, 3.0), fmod(infinity, 3.0), infinity, 3.0);
+  record("fmod", gtos_fmod(3.0, infinity), fmod(3.0, infinity), 3.0, infinity);
+  record("fmod", gtos_fmod(3.0, 0.0), fmod(3.0, 0.0), 3.0, 0.0);
+  record("fabs", gtos_fabs(-infinity), fabs(-infinity), -infinity, 0.0);
+  record("floor", gtos_floor(-infinity), floor(-infinity), -infinity, 0.0);
+  record("ceil", gtos_ceil(infinity), ceil(infinity), infinity, 0.0);
+
+  {
+    volatile double zero = 0.0;
+    const double quotient = 1.0 / zero;
+    record("fabs", gtos_fabs(quotient), fabs(quotient), quotient, 0.0);
+    const double undefined = zero / zero;
+    record("fabs", gtos_fabs(undefined), fabs(undefined), undefined, 0.0);
+  }
+
   if (failures != 0) {
     printf("math closure: %d failures in %d comparisons\n", failures, comparisons);
     return 1;

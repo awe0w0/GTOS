@@ -57,8 +57,11 @@ double ln_near_one(double m) {
 
 // exp(t) = 2^k · exp(r), with |r| <= ln2/2 and a 14-term Taylor series for exp(r).
 double exp_series(double t) {
-  if (t > 709.0) return 1.0 / 0.0;
-  if (t < -745.0) return 0.0;
+  // ln(DBL_MAX) = 709.782712893384. A tighter threshold rejects finite results — pow(2, 1023) is 8.98846567431158e307 and its exponent
+  // t = 1023*ln2 = 709.0896 used to fall into the overflow branch.
+  if (t > 709.782712893384) return 1.0 / 0.0;
+  // Below this the result is below the smallest subnormal (exp(-745.133...) = 5e-324), so it underflows to zero.
+  if (t < -745.1332191019412) return 0.0;
   const double k = (t < 0.0 ? -0.5 : 0.5) + t / kLn2;
   const long long shift = (long long)k;
   const double r = t - (double)shift * kLn2;
