@@ -17,8 +17,9 @@
 i386_launcher_choose() {
     mode=${1:-all}
     if [ -n "${ELF32_I386_LAUNCHER:-}" ]; then
-        if [ ! -x "${ELF32_I386_LAUNCHER}" ]; then
-            echo "ELF32_I386_LAUNCHER is not an executable file: ${ELF32_I386_LAUNCHER}" >&2
+        # A directory is executable but cannot be loaded, so the executor must be a regular file as well as executable.
+        if [ ! -f "${ELF32_I386_LAUNCHER}" ] || [ ! -x "${ELF32_I386_LAUNCHER}" ]; then
+            echo "ELF32_I386_LAUNCHER is not a regular executable file: ${ELF32_I386_LAUNCHER}" >&2
             return 2
         fi
         printf 'launcher %s\n' "${ELF32_I386_LAUNCHER}"
