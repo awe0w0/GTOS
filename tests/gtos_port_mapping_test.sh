@@ -37,6 +37,20 @@ check $? 'BUILDCONFIG.gn offers the GTOS toolchain the visibility config its dep
 grep -q 'tool("solink")' "$port/build/toolchain/gtos/BUILD.gn"
 check $? 'the GTOS toolchain defines a solink tool'
 
+# The Rust side of the toolchain. These six tools are what moved the base graph past "no tool named rust_rlib", so they are asserted
+# individually rather than as a block: a rebase that drops one of them should name the one it dropped.
+for tool in rust_rlib rust_bin rust_staticlib rust_cdylib rust_dylib rust_macro; do
+    grep -q "tool(\"$tool\")" "$port/build/toolchain/gtos/BUILD.gn"
+    check $? "the GTOS toolchain defines a $tool tool"
+done
+# The block those tools are copied from reads four things, and the GTOS template supplies each of them by name now.
+for supplied in 'python_path =' 'extra_ldflags =' 'cxx = ' 'default_executable_extension =' 'default_shlib_extension =' 'default_shlib_subdir ='; do
+    grep -q -- "$supplied" "$port/build/toolchain/gtos/BUILD.gn"
+    check $? "the GTOS toolchain supplies $supplied"
+done
+grep -q 'import("//build/config/rust.gni")' "$port/build/toolchain/gtos/BUILD.gn"
+check $? 'the GTOS toolchain imports the Rust configuration its tools read'
+
 # The gate: if this stops matching, either the backend arrived (good, and this unit should be updated) or the gate was deleted
 # without one (bad, and this must fail).
 grep -q 'GTOS V8 runtime backend is not implemented' "$port/v8/BUILD.gn"
@@ -58,5 +72,5 @@ if [ "$failures" -ne 0 ]; then
     echo "GTOS port mapping: $failures failure(s)" >&2
     exit 1
 fi
-echo 'PASS GTOS port mapping: the Rust triple, the clang_lib directory and the V8 refusal are all where the C1 record says'
+echo 'PASS GTOS port mapping: the Rust triple, the clang_lib directory, the shared-library and Rust tools, and the V8 refusal are all where the C1 record says'
 echo 'This says nothing about whether the port builds: no object, link or guest run is exercised here'
