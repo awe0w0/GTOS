@@ -11,13 +11,17 @@
  * Every function below is real code with a documented limit, not a stub that pretends:
  *   * strcat/bsearch follow their C definitions;
  *   * toupper is the C locale (ASCII case), which is what libxml2's ASCII names need;
- *   * time() cannot be epoch time on GTOS: the clock ABI offers only a coarse monotonic uptime and says so ("not epoch time"), so this
- *     returns that uptime and is documented as such instead of inventing a date;
- *   * fprintf/vfprintf format through the native vsnprintf and write the bytes with fwrite, bounded by one 512-byte buffer — a bigger
- *     conversion is truncated and the return value says how much was produced, not how much was written.
+ *   * time() is epoch seconds from the realtime extension (GTOS_SYS_REALTIME_READ, 0x4714), which is a validated CMOS UTC calendar plus
+ *     delivered PIT time. It deliberately does not use the monotonic clock ABI (0x4712): that one documents itself as "not epoch time",
+ *     and returning uptime from time() is exactly the kind of silently wrong answer this file is supposed to avoid. A missing RTC is
+ *     ENOTSUP with -1, not 1970 and not uptime;
+ *   * fprintf/vfprintf format through the native vsnprintf, then write every produced byte with fwrite. A conversion longer than the
+ *     stack buffer is formatted again into a heap buffer of the exact size rather than truncated, and a short write or a null stream is
+ *     reported as -1 with errno set instead of returning the byte count as if the text had been written.
  */
-#include <process/clock_abi.h>
+#include <process/realtime_abi.h>
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,28 +76,76 @@ extern "C" void *bsearch(const void *key, const void *base, size_t count, size_t
 }
 
 extern "C" time_t time(time_t *output) {
-  GtosClockReadResult result{};
-  const GtosClockReadRequest request{GTOS_CLOCK_ABI_VERSION, GTOS_CLOCK_ID_MONOTONIC, 0,
-                                     reinterpret_cast<unsigned>(&result), sizeof(result)};
-  unsigned status = GTOS_SYS_CLOCK_READ;
+  GtosRealtimeReadResult result{};
+  const GtosRealtimeReadRequest request{GTOS_REALTIME_ABI_VERSION, 0, reinterpret_cast<unsigned>(&result), sizeof(result)};
+  unsigned status = GTOS_SYS_REALTIME_READ;
   asm volatile("int $0x80" : "+a"(status) : "b"(reinterpret_cast<unsigned>(&request)), "c"(sizeof(request)) : "memory", "cc");
-  time_t seconds = 0;
-  if (static_cast<int>(status) == 0 && result.version == GTOS_CLOCK_ABI_VERSION) {
-    seconds = static_cast<time_t>(result.microseconds / 1000000ULL);
+  const bool ok = static_cast<int>(status) == 0 && result.version == GTOS_REALTIME_ABI_VERSION &&
+                  result.unit == GTOS_REALTIME_UNIT_MICROSECONDS &&
+                  (result.capabilities & GTOS_REALTIME_REQUIRED_CAPABILITIES) == GTOS_REALTIME_REQUIRED_CAPABILITIES;
+  if (!ok) {
+    // No calendar is a real failure to report, not a zero second: the caller of time() distinguishes "unknown" from "1970".
+    errno = static_cast<int>(status) == GTOS_REALTIME_ERR_UNSUPPORTED ? ENOTSUP
+            : static_cast<int>(status) == GTOS_REALTIME_ERR_OVERFLOW  ? EOVERFLOW
+                                                                      : EIO;
+    if (output != nullptr) *output = static_cast<time_t>(-1);
+    return static_cast<time_t>(-1);
   }
-  if (output != nullptr) *output = seconds;
-  return seconds;
+  const unsigned long long seconds = result.microseconds / 1000000ULL;
+  const unsigned long long limit = static_cast<unsigned long long>(static_cast<time_t>(-1) > 0 ? static_cast<time_t>(-1) : 0);
+  if (limit != 0 && seconds > limit) {
+    errno = EOVERFLOW;
+    if (output != nullptr) *output = static_cast<time_t>(-1);
+    return static_cast<time_t>(-1);
+  }
+  const time_t value = static_cast<time_t>(seconds);
+  if (output != nullptr) *output = value;
+  return value;
 }
 
 extern "C" int vfprintf(FILE *stream, const char *format, va_list arguments) {
-  char buffer[512];
-  const int produced = vsnprintf(buffer, sizeof(buffer), format, arguments);
-  // The GTOS stdio layer marks the standard streams unavailable (its own object is named that). A null stream here means "nowhere to
-  // write": the text is formatted and dropped instead of dereferencing null, so an error path that logs cannot take the process down.
-  if (stream == nullptr) return produced;
-  if (produced > 0) {
-    const size_t counted = static_cast<size_t>(produced) < sizeof(buffer) ? static_cast<size_t>(produced) : sizeof(buffer) - 1;
-    fwrite(buffer, 1, counted, stream);
+  // The GTOS stdio layer ships its standard streams as unavailable (the object is named standard_streams_unavailable). A null stream is
+  // therefore a real "this went nowhere" and has to be visible to the caller: returning the formatted length would let an error path
+  // believe its message was written.
+  if (stream == nullptr) {
+    errno = EBADF;
+    return -1;
+  }
+  char on_stack[512];
+  va_list counted;
+  va_copy(counted, arguments);
+  const int produced = vsnprintf(on_stack, sizeof(on_stack), format, counted);
+  va_end(counted);
+  if (produced < 0) {
+    errno = EILSEQ;
+    return -1;
+  }
+  const char *text = on_stack;
+  char *heap = nullptr;
+  if (static_cast<size_t>(produced) >= sizeof(on_stack)) {
+    // Longer than the stack buffer: format the whole conversion instead of truncating it.
+    heap = static_cast<char *>(malloc(static_cast<size_t>(produced) + 1));
+    if (heap == nullptr) {
+      errno = ENOMEM;
+      return -1;
+    }
+    va_list full;
+    va_copy(full, arguments);
+    const int again = vsnprintf(heap, static_cast<size_t>(produced) + 1, format, full);
+    va_end(full);
+    if (again < 0 || again > produced) {
+      free(heap);
+      errno = EILSEQ;
+      return -1;
+    }
+    text = heap;
+  }
+  const size_t bytes = static_cast<size_t>(produced);
+  const size_t written = bytes == 0 ? 0 : fwrite(text, 1, bytes, stream);
+  free(heap);
+  if (written != bytes) {
+    errno = EIO;
+    return -1;
   }
   return produced;
 }
