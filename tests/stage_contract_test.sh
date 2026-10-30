@@ -20,8 +20,10 @@ check() {
     fi
 }
 
-# Every staged unit refuses a stage it does not define.
-for script in elf32_test.sh host_runner_test.sh skia_alpha_probe_test.sh i18n_test.sh native_fp_qmp_test.sh cpu_memory_types_test.sh; do
+# Every staged unit refuses a stage it does not define. The five units at the end of the list were given their stages in this window,
+# and a unit with stages is exactly the kind that grows an unrefused branch if nobody checks.
+for script in elf32_test.sh host_runner_test.sh skia_alpha_probe_test.sh i18n_test.sh native_fp_qmp_test.sh cpu_memory_types_test.sh \
+    settings_sanitizer_test.sh boot_log_host_test.sh live_storage_host_test.sh runtime_test.sh; do
     check "$script refuses an unknown stage" sh "tests/$script" nonsense
 done
 
@@ -31,14 +33,20 @@ check 'native_fp_qmp_test.sh refuses a run stage with no stand-in emulator' \
     env GTOS_FAKE_QEMU_DIR=/nonexistent-gtos-fp-qmp sh tests/native_fp_qmp_test.sh run
 
 # A staged run without its supply must refuse rather than fall back to building or starting something unrecorded.
-for script in elf32_test.sh skia_alpha_probe_test.sh i18n_test.sh cpu_memory_types_test.sh; do
+for script in elf32_test.sh skia_alpha_probe_test.sh i18n_test.sh cpu_memory_types_test.sh settings_sanitizer_test.sh \
+    boot_log_host_test.sh live_storage_host_test.sh runtime_test.sh; do
     check "$script refuses a run stage without its supply" \
         env -u GTOS_PUBLISH_MANIFEST -u GTOS_HOST_PUBLISH_ROOT -u GTOS_PUBLISH_RECORD -u ELF32_I386_LAUNCHER \
         sh "tests/$script" run
+done
+
+# A staged build that was given no output directory must refuse too, or it would write into an empty path.
+for script in settings_sanitizer_test.sh boot_log_host_test.sh live_storage_host_test.sh; do
+    check "$script refuses a build stage with no directory" sh "tests/$script" build
 done
 
 if [ "$failures" -ne 0 ]; then
     echo "stage contract: $failures failure(s)" >&2
     exit 1
 fi
-echo 'PASS stage contract: unknown stages and unsupplied run stages are refused with status 2'
+echo 'PASS stage contract: unknown stages, unsupplied run stages and build stages with no directory are refused with status 2'
