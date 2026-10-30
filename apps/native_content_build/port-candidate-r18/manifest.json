@@ -1,0 +1,147 @@
+{
+ "task": "GTOS-DSH-154",
+ "kind": "private_port_candidate",
+ "round": "r18",
+ "purpose": "an overlay the packet owns, so port edits are made here and never in the shared checkouts",
+ "base": {
+  "port": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src",
+  "full": "/mnt/f/GTOS-Chromium/sources/chromium-full/src",
+  "view": "/var/tmp/gtos-dsh-154-mainline/view/root"
+ },
+ "refreshed_at": "2026-10-30T14:56:57Z",
+ "files": [
+  {
+   "path": ".gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/.gn",
+   "origin_bytes": 25730,
+   "origin_sha256": "4a0276377f72c90c6a77bad46e6badf7b4e1a123f87adccd8bc6e61d05f70ecd",
+   "origin_mtime_utc": "2026-10-29T19:22:09Z",
+   "overlay_bytes": 25730,
+   "overlay_sha256": "4a0276377f72c90c6a77bad46e6badf7b4e1a123f87adccd8bc6e61d05f70ecd",
+   "edited": false,
+   "shared_tree": false,
+   "note": "composed view: the port renders the dotfile form GN accepts"
+  },
+  {
+   "path": "BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/BUILD.gn",
+   "origin_bytes": 55982,
+   "origin_sha256": "da7d35f0fb9db03b621f89995483767d57c96f59cc1990ede34ec6049405ffa7",
+   "origin_mtime_utc": "2026-10-29T19:22:09Z",
+   "overlay_bytes": 55982,
+   "overlay_sha256": "da7d35f0fb9db03b621f89995483767d57c96f59cc1990ede34ec6049405ffa7",
+   "edited": false,
+   "shared_tree": false,
+   "note": "composed view: the port narrows the root targets it can describe"
+  },
+  {
+   "path": "build/config/BUILDCONFIG.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/config/BUILDCONFIG.gn",
+   "origin_bytes": 35432,
+   "origin_sha256": "f6fd0c5dcaa76fd833cd04a9dd7f081943c3ef28ca10c545fbb3640e11892126",
+   "origin_mtime_utc": "2026-10-30T13:03:40Z",
+   "overlay_bytes": 35432,
+   "overlay_sha256": "f6fd0c5dcaa76fd833cd04a9dd7f081943c3ef28ca10c545fbb3640e11892126",
+   "edited": false,
+   "shared_tree": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/config/clang/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/config/clang/BUILD.gn",
+   "origin_bytes": 10521,
+   "origin_sha256": "e30467f05002af51f125dfe764294844228ceef5adc3454e261256f803120289",
+   "origin_mtime_utc": "2026-10-30T12:59:39Z",
+   "overlay_bytes": 10521,
+   "overlay_sha256": "e30467f05002af51f125dfe764294844228ceef5adc3454e261256f803120289",
+   "edited": false,
+   "shared_tree": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/config/rust.gni",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/config/rust.gni",
+   "origin_bytes": 18827,
+   "origin_sha256": "a9751813e83b350f8d4ffafc595bcb7b8170ee6696fec4ed2155790dde167fce",
+   "origin_mtime_utc": "2026-10-30T12:44:26Z",
+   "overlay_bytes": 18827,
+   "overlay_sha256": "a9751813e83b350f8d4ffafc595bcb7b8170ee6696fec4ed2155790dde167fce",
+   "edited": false,
+   "shared_tree": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/rust/known-target-triples.txt",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/rust/known-target-triples.txt",
+   "origin_bytes": 1306,
+   "origin_sha256": "9fdd4875f6b952d79964bc89eb50fea91adcf4dd621852e7bd5c8998e0d4a987",
+   "origin_mtime_utc": "2026-10-30T12:44:26Z",
+   "overlay_bytes": 1306,
+   "overlay_sha256": "9fdd4875f6b952d79964bc89eb50fea91adcf4dd621852e7bd5c8998e0d4a987",
+   "edited": false,
+   "shared_tree": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/toolchain/gtos/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/toolchain/gtos/BUILD.gn",
+   "origin_bytes": 11578,
+   "origin_sha256": "49a88a72403342e8112978f159ba6ffa7e4453b16bb79cef67bbe9fb2e6c74b6",
+   "origin_mtime_utc": "2026-10-30T13:43:11Z",
+   "overlay_bytes": 11578,
+   "overlay_sha256": "49a88a72403342e8112978f159ba6ffa7e4453b16bb79cef67bbe9fb2e6c74b6",
+   "edited": false,
+   "shared_tree": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "components/crash/core/common/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/components/crash/core/common/BUILD.gn",
+   "origin_bytes": 5253,
+   "origin_sha256": "a8e0bb7ca0bb32efe1755644dae927fe4fee547a410793650f378548fc9b7422",
+   "origin_mtime_utc": "2026-10-06T11:24:22Z",
+   "overlay_bytes": 5455,
+   "overlay_sha256": "8ee88af38b12ed41f9166a934637eb5a5b1a133e664f9e0933920537706b1fc7",
+   "edited": true,
+   "shared_tree": false,
+   "note": "the crash-key stub default covers GTOS, as it already covers Fuchsia"
+  },
+  {
+   "path": "content/test/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/content/test/BUILD.gn",
+   "origin_bytes": 167361,
+   "origin_sha256": "5178363263363c3e4c7aea4a8fd74a900598c8757e1b3a009d0f41b8a9efebc2",
+   "origin_mtime_utc": "2026-10-06T11:25:01Z",
+   "overlay_bytes": 167481,
+   "overlay_sha256": "0b88488b2711e92398cb75044339f6079c4303a25b302c00934ec97599b5a2be",
+   "edited": true,
+   "shared_tree": false,
+   "note": "the fixture appends to data without assigning it; the empty assignment restores what the appends mean"
+  },
+  {
+   "path": "third_party/libxml/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/third_party/libxml/BUILD.gn",
+   "origin_bytes": 8558,
+   "origin_sha256": "253b4e1d51d5468fad704b19d9f2408f5886e4fe555a00147372b2c016d73d2f",
+   "origin_mtime_utc": "2026-10-30T14:53:30Z",
+   "overlay_bytes": 9360,
+   "overlay_sha256": "06e4445aa948176cab5e7b6821c25be33d17144daaa1c07bf559b374560894af",
+   "edited": true,
+   "shared_tree": false,
+   "note": "the GTOS branch names the missing configure output instead of failing on an unset variable"
+  },
+  {
+   "path": "v8/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/v8/BUILD.gn",
+   "origin_bytes": 321341,
+   "origin_sha256": "4b4bdd85972ad1dbd6cb3e6367778bed644b321f2baa4621ce0be31675e4da66",
+   "origin_mtime_utc": "2026-10-06T14:24:35Z",
+   "overlay_bytes": 322196,
+   "overlay_sha256": "7d5f28ecf364619c6ae191c575ee8d4f07015be64c370aca8f091ee036167aed",
+   "edited": true,
+   "shared_tree": false,
+   "note": "the GTOS gate becomes a default-off bring-up switch so the graph can be asked what it still lacks"
+  }
+ ],
+ "problems": []
+}

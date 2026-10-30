@@ -1,0 +1,123 @@
+{
+ "task": "GTOS-DSH-154",
+ "round": "r18",
+ "what": "the private port candidate: every edit the GTOS port needs, as patches against the pinned checkouts",
+ "overlay": "/mnt/f/GTOS-Chromium/artifacts/native-ci-v8-content-execution-resume-20261029-a/port-candidate-154-r18/overlay",
+ "base": {
+  "port": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src",
+  "full": "/mnt/f/GTOS-Chromium/sources/chromium-full/src",
+  "view": "/var/tmp/gtos-dsh-154-mainline/view/root"
+ },
+ "files": [
+  {
+   "path": ".gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/.gn",
+   "origin_sha256": "4a0276377f72c90c6a77bad46e6badf7b4e1a123f87adccd8bc6e61d05f70ecd",
+   "overlay_sha256": "4a0276377f72c90c6a77bad46e6badf7b4e1a123f87adccd8bc6e61d05f70ecd",
+   "edited": false,
+   "note": "composed view: the port renders the dotfile form GN accepts"
+  },
+  {
+   "path": "BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/BUILD.gn",
+   "origin_sha256": "da7d35f0fb9db03b621f89995483767d57c96f59cc1990ede34ec6049405ffa7",
+   "overlay_sha256": "da7d35f0fb9db03b621f89995483767d57c96f59cc1990ede34ec6049405ffa7",
+   "edited": false,
+   "note": "composed view: the port narrows the root targets it can describe"
+  },
+  {
+   "path": "build/config/BUILDCONFIG.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/config/BUILDCONFIG.gn",
+   "origin_sha256": "f6fd0c5dcaa76fd833cd04a9dd7f081943c3ef28ca10c545fbb3640e11892126",
+   "overlay_sha256": "f6fd0c5dcaa76fd833cd04a9dd7f081943c3ef28ca10c545fbb3640e11892126",
+   "edited": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/config/clang/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/config/clang/BUILD.gn",
+   "origin_sha256": "e30467f05002af51f125dfe764294844228ceef5adc3454e261256f803120289",
+   "overlay_sha256": "e30467f05002af51f125dfe764294844228ceef5adc3454e261256f803120289",
+   "edited": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/config/rust.gni",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/config/rust.gni",
+   "origin_sha256": "a9751813e83b350f8d4ffafc595bcb7b8170ee6696fec4ed2155790dde167fce",
+   "overlay_sha256": "a9751813e83b350f8d4ffafc595bcb7b8170ee6696fec4ed2155790dde167fce",
+   "edited": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/rust/known-target-triples.txt",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/rust/known-target-triples.txt",
+   "origin_sha256": "9fdd4875f6b952d79964bc89eb50fea91adcf4dd621852e7bd5c8998e0d4a987",
+   "overlay_sha256": "9fdd4875f6b952d79964bc89eb50fea91adcf4dd621852e7bd5c8998e0d4a987",
+   "edited": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "build/toolchain/gtos/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/build/toolchain/gtos/BUILD.gn",
+   "origin_sha256": "49a88a72403342e8112978f159ba6ffa7e4453b16bb79cef67bbe9fb2e6c74b6",
+   "overlay_sha256": "49a88a72403342e8112978f159ba6ffa7e4453b16bb79cef67bbe9fb2e6c74b6",
+   "edited": false,
+   "note": "shared port file, kept as written by the earlier window"
+  },
+  {
+   "path": "components/crash/core/common/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/components/crash/core/common/BUILD.gn",
+   "origin_sha256": "a8e0bb7ca0bb32efe1755644dae927fe4fee547a410793650f378548fc9b7422",
+   "overlay_sha256": "8ee88af38b12ed41f9166a934637eb5a5b1a133e664f9e0933920537706b1fc7",
+   "edited": true,
+   "note": "the crash-key stub default covers GTOS, as it already covers Fuchsia"
+  },
+  {
+   "path": "content/test/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/content/test/BUILD.gn",
+   "origin_sha256": "5178363263363c3e4c7aea4a8fd74a900598c8757e1b3a009d0f41b8a9efebc2",
+   "overlay_sha256": "0b88488b2711e92398cb75044339f6079c4303a25b302c00934ec97599b5a2be",
+   "edited": true,
+   "note": "the fixture appends to data without assigning it; the empty assignment restores what the appends mean"
+  },
+  {
+   "path": "third_party/libxml/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/third_party/libxml/BUILD.gn",
+   "origin_sha256": "253b4e1d51d5468fad704b19d9f2408f5886e4fe555a00147372b2c016d73d2f",
+   "overlay_sha256": "06e4445aa948176cab5e7b6821c25be33d17144daaa1c07bf559b374560894af",
+   "edited": true,
+   "note": "the GTOS branch names the missing configure output instead of failing on an unset variable"
+  },
+  {
+   "path": "v8/BUILD.gn",
+   "origin": "/var/tmp/gtos-dsh-154-mainline/view/root/v8/BUILD.gn",
+   "origin_sha256": "4b4bdd85972ad1dbd6cb3e6367778bed644b321f2baa4621ce0be31675e4da66",
+   "overlay_sha256": "7d5f28ecf364619c6ae191c575ee8d4f07015be64c370aca8f091ee036167aed",
+   "edited": true,
+   "note": "the GTOS gate becomes a default-off bring-up switch so the graph can be asked what it still lacks"
+  }
+ ],
+ "patches": [
+  {
+   "name": "components__crash__core__common__BUILD.gn.patch",
+   "lines": 14,
+   "sha256": "9a444a8708eb4432ccd93341752edf7a2765d53cad86540b384c31c19fb00bdd"
+  },
+  {
+   "name": "content__test__BUILD.gn.patch",
+   "lines": 12,
+   "sha256": "7d5620433afa9e88901f5630839c2691fe7c82b7e885cc8796818aeb8758ab97"
+  },
+  {
+   "name": "third_party__libxml__BUILD.gn.patch",
+   "lines": 18,
+   "sha256": "3dee7123eb29d74100b1164710620420b64b8fa92c0ace805ece6c06810aafe5"
+  },
+  {
+   "name": "v8__BUILD.gn.patch",
+   "lines": 26,
+   "sha256": "0037f55ba757da35004d01100999af166dd326bd25f2235a79075b09e98c51fc"
+  }
+ ]
+}

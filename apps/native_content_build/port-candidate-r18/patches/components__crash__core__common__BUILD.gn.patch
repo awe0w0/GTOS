@@ -1,0 +1,14 @@
+--- a/components/crash/core/common/BUILD.gn
++++ b/components/crash/core/common/BUILD.gn
+@@ -8,7 +8,10 @@
+ 
+ declare_args() {
+   # If set to true, this will stub out and disable the entire crash key system.
+-  use_crash_key_stubs = is_fuchsia
++  # GTOS has no crashpad, breakpad or OS crash reporter, so it takes the same
++  # answer Fuchsia already takes: the stub implementation, compiled in and
++  # recorded in the buildflag header.
++  use_crash_key_stubs = is_fuchsia || is_gtos
+ }
+ 
+ group("common") {

@@ -1,0 +1,18 @@
+--- a/third_party/libxml/BUILD.gn
++++ b/third_party/libxml/BUILD.gn
+@@ -10,6 +10,15 @@
+   os_include = "mac"
+ } else if (is_win) {
+   os_include = "win32"
++} else if (is_gtos) {
++  # GTOS is freestanding: there is no libc, no configure run against one, and therefore no OS-specific generated headers. The linux
++  # directory beside this file is not a substitute: it is configure output for a libc GTOS does not have, and pointing a GTOS build
++  # at it would compile against a platform that is not the one being built. Naming a directory that does not exist would only move
++  # this failure from the scope error below to a missing include, so the file states the missing dependency where the directory
++  # would have been named.
++  assert(
++      false,
++      "GTOS has no libxml configure output: third_party/libxml/gtos/{config.h,include/libxml/xmlversion.h} would have to come from a real configure run against a GTOS libc, which this target does not have")
+ }
+ 
+ import("//third_party/libxml/libxml_visibility.gni")

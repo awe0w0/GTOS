@@ -66,6 +66,7 @@ SURFACE_BUILD_DIR=$generation/native-surface \
 ./tests/rust_abi_run_test.sh
 ./tests/rust_builtins_test.sh
 ./tests/gtos_port_mapping_test.sh
+./tests/port_candidate_test.sh
 ./tests/suite_wiring_test.sh
 ./tests/rust_target_spec_test.sh
 ./tests/skia_alpha_probe_test.sh

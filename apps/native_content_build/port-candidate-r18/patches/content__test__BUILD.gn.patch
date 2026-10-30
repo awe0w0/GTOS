@@ -1,0 +1,12 @@
+--- a/content/test/BUILD.gn
++++ b/content/test/BUILD.gn
+@@ -3445,6 +3445,9 @@
+ 
+   data_deps = [ "//testing/buildbot/filters:content_unittests_filters" ]
+ 
++  # `data` is appended to below; GN rejects an append to a variable that was never assigned in this scope.
++  data = []
++
+   if (!is_ios) {
+     data_deps += [
+       "//third_party/perfetto/protos/perfetto/config:descriptor",
