@@ -1,0 +1,29 @@
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -8,7 +8,25 @@
+ # you add a new build file, there must be some path of dependencies from this
+ # file to your new one or GN won't know about it.
+ 
+-if (is_gtos) {
++# The browser runtime is not implemented, and that is the default answer for every target: an invocation that says nothing
++# about the frontier bring-up meets exactly the refusal below, with the same message. A bring-up invocation names itself, and then
++# only the graph it asked for is generated — the platform is still not claimed to run a browser.
++declare_args() {
++  # Set by an explicit bring-up invocation only. Everything else, including every ordinary build and every test, keeps the
++  # refusal, so no target that would need the missing runtime is silently admitted.
++  gtos_frontier_bringup = false
++}
++
++# GN has no conditional expression, so the state is named in two branches; this line is what an operator reads to know which
++# answer a generation got.
++_frontier_note = "GTOS-FRONTIER current_os=" + current_os + " target_os=" + target_os
++if (gtos_frontier_bringup) {
++  print(_frontier_note + " bringup=true")
++} else {
++  print(_frontier_note + " bringup=false")
++}
++
++if (is_gtos && !gtos_frontier_bringup) {
+   assert(
+       false,
+       "GTOS browser runtime is not implemented: libc/C++ runtime, VM, threads, IPC, Ozone and networking are required. The real freestanding platform qualification target is --root-target=//tools/gtos:platform_identity_probe.")

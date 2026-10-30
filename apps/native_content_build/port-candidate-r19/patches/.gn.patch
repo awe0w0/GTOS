@@ -1,0 +1,13 @@
+--- a/.gn
++++ b/.gn
+@@ -11,7 +11,9 @@
+ buildconfig = "//build/config/BUILDCONFIG.gn"
+ 
+ # The hermetic Python interpreter to use by default.
+-script_executable = "//third_party/cpython3/host/bin/python3"
++# The repository points this at a hermetic interpreter it does not carry, which every exec_script in the graph needs.
++# A host-side generation runs its scripts with the host interpreter, so this candidate names it explicitly.
++script_executable = "/usr/bin/python3.8"
+ 
+ # These arguments override the default values for items in a declare_args
+ # block. "gn args" in turn can override these.

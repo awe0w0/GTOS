@@ -1,0 +1,26 @@
+--- a/v8/BUILD.gn
++++ b/v8/BUILD.gn
+@@ -4,10 +4,21 @@
+ 
+ # LINT.IfChange
+ 
+-if (current_os == "gtos") {
++# The GTOS runtime backend is not implemented: qualified libc/C++, VM, thread/TLS/FP, entropy and file services are required, and
++# host snapshot tools must retain the host OS. That refusal is the default below and every ordinary build of this tree keeps it.
++#
++# gtos_v8_bringup exists so the refusal can be distinguished from a missing gate. A reviewer sets it on purpose to ask the graph
++# what it would still lack; the answer is a real GN or Ninja failure naming the next missing piece, not this sentence. It is false by
++# default, it is declared here rather than in a global .gni so a build that never reaches V8 never sees it, and it does not weaken
++# the refusal for any target that is not explicitly brought up.
++declare_args() {
++  gtos_v8_bringup = false
++}
++
++if (current_os == "gtos" && !gtos_v8_bringup) {
+   assert(
+       false,
+-      "GTOS V8 runtime backend is not implemented: qualified libc/C++, VM, thread/TLS/FP, entropy and file services are required. Host snapshot tools must retain the host OS.")
++      "GTOS V8 runtime backend is not implemented: qualified libc/C++, VM, thread/TLS/FP, entropy and file services are required. Host snapshot tools must retain the host OS. Pass gtos_v8_bringup=true only to measure what the graph still lacks.")
+ }
+ 
+ import("//build/config/android/config.gni")

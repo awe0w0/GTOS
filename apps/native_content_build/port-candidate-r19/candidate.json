@@ -1,0 +1,106 @@
+{
+ "task": "GTOS-DSH-154",
+ "round": "r19",
+ "what": "the private GTOS port candidate: the r18 qualification bytes as replayable control files, plus the freestanding SDK wiring that tells the GTOS toolchain where its headers are",
+ "base": {
+  "port": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src",
+  "full": "/mnt/f/GTOS-Chromium/sources/chromium-full/src"
+ },
+ "sdk": {
+  "dir": "/mnt/f/GTOS-Chromium/artifacts/native-ci-v8-content-execution-resume-20261029-a/worktree-154/apps/native_v8_runtime",
+  "libcxx_include": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libc++/src/include",
+  "clang_include": "/mnt/f/GTOS-Chromium/toolchains/chromium-clang-llvm24-62397f8b-57/lib/clang/24/include"
+ },
+ "carried_from": "/var/tmp/gtos-dsh-154-mainline/port-r18/view-root-07",
+ "files": [
+  {
+   "path": ".gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/.gn",
+   "origin_sha256": "27e062db0b7a1bba9c81c1a51cd3b0358ca3fb036137c30b066df40280646f45",
+   "overlay_sha256": "4a0276377f72c90c6a77bad46e6badf7b4e1a123f87adccd8bc6e61d05f70ecd",
+   "bytes": 25730,
+   "how": "the r18 view bytes, which were the qualified frontier state and had no patch",
+   "patch": ".gn.patch",
+   "patch_sha256": "cd8756c34f5f3a180e311dfbafde3e6dcfc0a1ed795f2c62347af2c52802e3a7",
+   "edited": true
+  },
+  {
+   "path": "BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/BUILD.gn",
+   "origin_sha256": "c1efb2fe61ce734f9826cec51702428cfa8732867b6480649082e88aea6e2fd0",
+   "overlay_sha256": "da7d35f0fb9db03b621f89995483767d57c96f59cc1990ede34ec6049405ffa7",
+   "bytes": 55982,
+   "how": "the r18 view bytes, which were the qualified frontier state and had no patch",
+   "patch": "BUILD.gn.patch",
+   "patch_sha256": "e5232d669f927e290a5cc9ca53a812e9fd3cb83e703676914d5efbd56d54a777",
+   "edited": true
+  },
+  {
+   "path": "components/crash/core/common/BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/components/crash/core/common/BUILD.gn",
+   "origin_sha256": "a8e0bb7ca0bb32efe1755644dae927fe4fee547a410793650f378548fc9b7422",
+   "overlay_sha256": "8ee88af38b12ed41f9166a934637eb5a5b1a133e664f9e0933920537706b1fc7",
+   "bytes": 5455,
+   "how": "pinned origin + the r18 patch, byte-identical to the r18 view",
+   "patch": "components__crash__core__common__BUILD.gn.patch",
+   "patch_sha256": "9a444a8708eb4432ccd93341752edf7a2765d53cad86540b384c31c19fb00bdd",
+   "edited": true
+  },
+  {
+   "path": "content/test/BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/content/test/BUILD.gn",
+   "origin_sha256": "5178363263363c3e4c7aea4a8fd74a900598c8757e1b3a009d0f41b8a9efebc2",
+   "overlay_sha256": "0b88488b2711e92398cb75044339f6079c4303a25b302c00934ec97599b5a2be",
+   "bytes": 167481,
+   "how": "pinned origin + the r18 patch, byte-identical to the r18 view",
+   "patch": "content__test__BUILD.gn.patch",
+   "patch_sha256": "7d5620433afa9e88901f5630839c2691fe7c82b7e885cc8796818aeb8758ab97",
+   "edited": true
+  },
+  {
+   "path": "v8/BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/v8/BUILD.gn",
+   "origin_sha256": "4b4bdd85972ad1dbd6cb3e6367778bed644b321f2baa4621ce0be31675e4da66",
+   "overlay_sha256": "7d5f28ecf364619c6ae191c575ee8d4f07015be64c370aca8f091ee036167aed",
+   "bytes": 322196,
+   "how": "pinned origin + the r18 patch, byte-identical to the r18 view",
+   "patch": "v8__BUILD.gn.patch",
+   "patch_sha256": "0037f55ba757da35004d01100999af166dd326bd25f2235a79075b09e98c51fc",
+   "edited": true
+  },
+  {
+   "path": "third_party/libxml/BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-full/src/third_party/libxml/BUILD.gn",
+   "origin_sha256": "253b4e1d51d5468fad704b19d9f2408f5886e4fe555a00147372b2c016d73d2f",
+   "overlay_sha256": "1f1b817094a5cc88641b93331cd5445c053e013b284c684a0770d158a806cff3",
+   "bytes": 9451,
+   "how": "pinned origin + the r18 patch, then this round's condition replaces the unconditional refusal",
+   "patch": "third_party__libxml__BUILD.gn.patch",
+   "patch_sha256": "60af5f28302dce9715c1dbb178f37ddcf54bf2d90731a6e2578fd1a2f994821b",
+   "edited": true
+  },
+  {
+   "path": "build/config/gtos/BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/build/config/gtos/BUILD.gn",
+   "origin_sha256": "cdbc134649b5deeb2cf4aa87234b637977e78378d6d7e8f3cc0b79cc6faafeac",
+   "overlay_sha256": "aacb5f51f70ea5938d172639d7c360f9817ab4799c1d6a42b56cadc9bbf6d0a5",
+   "bytes": 2120,
+   "how": "pinned origin transformed by this generator",
+   "patch": "build__config__gtos__BUILD.gn.patch",
+   "patch_sha256": "fb0303152442792dc0eabd7abd7e527988fd56f8f9794538b0050f96da4b70d9",
+   "edited": true
+  },
+  {
+   "path": "build/toolchain/gtos/BUILD.gn",
+   "origin": "/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/build/toolchain/gtos/BUILD.gn",
+   "origin_sha256": "49a88a72403342e8112978f159ba6ffa7e4453b16bb79cef67bbe9fb2e6c74b6",
+   "overlay_sha256": "167bac3e52fb475a55050346979c08b1619f06053942ec984653e4e57a05800b",
+   "bytes": 11853,
+   "how": "pinned origin transformed by this generator",
+   "patch": "build__toolchain__gtos__BUILD.gn.patch",
+   "patch_sha256": "4c100374ae056233d9031ea51d0af05c752169770d3b8024b5c7dfc28b117792",
+   "edited": true
+  }
+ ],
+ "generated_at": "2026-10-30T16:58:26Z"
+}

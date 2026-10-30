@@ -88,4 +88,7 @@ python3 -m unittest discover -s tests -p 'storage_tool_test.py'
 python3 -m unittest discover -s tests -p 'settings_tool_test.py'
 ./tests/storage_test.sh
 ./tests/storage_recovery_test.sh
+# The r19 port candidate: the composer's refusals and the bytes its eight patches produce. It runs against the committed
+# candidate, not a copy of the logic, and it needs nothing from GN: the guarded GN replay is a separate stage.
+python3 -B ./tests/port_candidate_r19_test.py . "$generation/port-candidate-r19"
 echo "All deterministic module tests passed"

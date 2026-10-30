@@ -1,0 +1,54 @@
+--- a/build/config/gtos/BUILD.gn
++++ b/build/config/gtos/BUILD.gn
+@@ -1,8 +1,51 @@
+ # Copyright 2026 The Chromium Authors
+ # Use of this source code is governed by a BSD-style license in LICENSE.
+ 
++# Freestanding header and flag supply for the GTOS target.
++#
++# Neither pinned checkout carries a libc. `third_party/libc++/src/include` has the C++ library headers and the reviewed GTOS SDK
++# has the C ones, its type and macro headers, and the C++ config the runtime was qualified against. Nothing in the host's
++# /usr/include belongs to this target, so the toolchain passes -nostdinc and every directory the compiler may read is named here.
++#
++# The paths are arguments so a later round can point this at a rebuilt SDK without editing the file. They are not guesses: they
++# are the directories the qualified V8 build compiled against.
++declare_args() {
++  # Holds `sdk/` (libc++ config for GTOS) and `c-sdk/` (LLVM libc headers, types and macros).
++  gtos_sdk_dir = ""
++  # libc++ headers from the pinned checkout.
++  gtos_libcxx_include = ""
++  # The clang resource directory: stddef.h, stdint.h, stdarg.h and the compiler's own builtins.
++  gtos_clang_include = ""
++}
++
++assert(gtos_sdk_dir != "", "Set gtos_sdk_dir to the reviewed GTOS SDK")
++assert(gtos_libcxx_include != "", "Set gtos_libcxx_include to the pinned libc++ headers")
++assert(gtos_clang_include != "", "Set gtos_clang_include to the clang resource include directory")
++
++config("sdk") {
++  assert(is_gtos)
++  # The qualification build's order: GTOS SDK C++ config, libc++, GTOS SDK C headers, then the compiler's own headers.
++  cflags = [
++    "-isystem" + gtos_sdk_dir + "/sdk",
++    "-isystem" + gtos_libcxx_include,
++    "-isystem" + gtos_sdk_dir + "/c-sdk",
++    "-isystem" + gtos_clang_include,
++    # The GTOS userspace ABI the runtime was qualified against: IA32 with SSE2 for floating point, emulated TLS because the
++    # target has no thread-pointer register contract of its own.
++    "-msse2",
++    "-mfpmath=sse",
++    "-mno-sse3",
++    "-mno-ssse3",
++    "-mno-sse4",
++    "-mno-avx",
++    "-femulated-tls",
++    "-fstack-usage",
++  ]
++}
++
+ config("platform") {
+   assert(is_gtos)
+   defines = [ "__GTOS__=1" ]
+   include_dirs = [ "//" ]
++  configs = [ ":sdk" ]
+ }
