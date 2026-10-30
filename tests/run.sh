@@ -16,6 +16,18 @@ python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
 ./tests/elf32_test.sh
 ./tests/i386_launcher_test.sh
 ./tests/host_publish_identity_test.sh
+# The supply's own unit is the one unit whose two steps are separate processes rather than separate machines: prepare publishes,
+# verify starts only what was published. A single host has no execution allow-list between the steps, so both run here with the
+# supply's paths in a directory of this checkout's own.
+mkdir -p out/host-supply/publish
+GTOS_HOST_PUBLISH_ROOT=$PWD/out/host-supply/publish \
+GTOS_PUBLISH_MANIFEST=$PWD/out/host-supply/manifest.txt \
+GTOS_PUBLISH_RECORD=$PWD/out/host-supply/record.txt \
+    ./tests/host_runner_test.sh prepare
+GTOS_HOST_PUBLISH_ROOT=$PWD/out/host-supply/publish \
+GTOS_PUBLISH_MANIFEST=$PWD/out/host-supply/manifest.txt \
+GTOS_PUBLISH_RECORD=$PWD/out/host-supply/record.txt \
+    ./tests/host_runner_test.sh verify
 ./tests/stage_contract_test.sh
 ./tests/browser_probe_test.sh
 ./tests/rust_abi_probe_test.sh
