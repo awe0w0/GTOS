@@ -26,13 +26,16 @@ libs=${RUST_LIBS:?RUST_LIBS must name the directory that holds libcore.rlib and 
 cc=${CC:-gcc}
 ld=${LD:-ld}
 nm=${NM:-nm}
+# The helpers the Rust side calls: the library the target was built with by default, or one built with its C ABI names exported
+# (compiler_builtins' `unmangled-names` feature, see harness-154/build-unmangled-builtins.sh).
+builtins=${RUST_BUILTINS:-"$libs/libcompiler_builtins.rlib"}
 if [ "$mode" = float ]; then rust_source=abi_float.rs c_source=consumer_float.c crate=gtos_abi_float; else
     rust_source=abi_export.rs c_source=consumer.c crate=gtos_abi_export; fi
 
 "$rustc" -Z unstable-options --target "$spec" --edition 2024 -O --emit=obj --crate-type=lib \
     --crate-name "$crate" \
     --extern core="$libs/libcore.rlib" \
-    --extern compiler_builtins="$libs/libcompiler_builtins.rlib" \
+    --extern compiler_builtins="$builtins" \
     -L "$libs" -o "$out/$crate.o" "$source_dir/$rust_source"
 
 "$cc" -m32 -msoft-float -mno-sse -mno-mmx -mno-sse2 -std=c11 -Os -Wall -Wextra -Werror -ffreestanding -nostdlib \
@@ -40,7 +43,7 @@ if [ "$mode" = float ]; then rust_source=abi_float.rs c_source=consumer_float.c 
     -c "$source_dir/$c_source" -o "$out/consumer.o"
 
 if ! "$ld" -m elf_i386 --build-id=none -z max-page-size=4096 -T "$source_dir/link.ld" \
-    -o "$out/abi-consumer.elf" "$out/consumer.o" "$out/$crate.o" "$libs/libcompiler_builtins.rlib" 2> "$out/link.err"; then
+    -o "$out/abi-consumer.elf" "$out/consumer.o" "$out/$crate.o" "$builtins" 2> "$out/link.err"; then
     printf 'LINK FAILED for mode %s; see %s\n' "$mode" "$out/link.err"
     exit 0
 fi

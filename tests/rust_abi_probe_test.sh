@@ -65,10 +65,14 @@ else
     echo 'ok the integer image needs no soft-float helper'
 fi
 
-# The float boundary, recorded rather than assumed: the objects must compile, and the link must fail naming the unmangled helpers.
+# The float boundary, recorded rather than assumed. Two cases:
+#   plain   the library the target was built with exports the helpers only under Rust-mangled names, so the C reference is
+#           unresolved; the test asserts which names the link reports.
+#   fixed   a library built with compiler_builtins' `unmangled-names` feature makes the same link succeed; the test then asserts
+#           the helpers are defined and the call site is real. RUST_BUILTINS_UNMANGLED says where that library is.
 sh "$repo/tools/build-rust-abi-probe.sh" "$work/float" float > "$work/float.log" 2>&1 || { sed -n '1,200p' "$work/float.log" >&2; exit 1; }
-if grep -q 'LINK FAILED' "$work/float.log"; then echo 'ok the float boundary does not link yet'; else
-    echo 'FAIL the float boundary linked, so the gap this test records has changed' >&2; failures=$((failures + 1)); fi
+if grep -q 'LINK FAILED' "$work/float.log"; then echo 'ok the float boundary does not link against the plain library'; else
+    echo 'FAIL the float boundary linked against the plain library, so the gap this test records has changed' >&2; failures=$((failures + 1)); fi
 # The measured set, not a guess: `weight * 2.0` folds into an addition, and the saturating `as u32` conversion is what brings in
 # the comparisons. A future compiler changing this set is exactly what this check should report.
 for helper in __addsf3 __gesf2 __gtsf2 __fixunssfsi; do
@@ -76,9 +80,41 @@ for helper in __addsf3 __gesf2 __gtsf2 __fixunssfsi; do
         echo "FAIL the float link does not name $helper" >&2; failures=$((failures + 1)); fi
 done
 
+if [ -n "${RUST_BUILTINS_UNMANGLED:-}" ]; then
+    RUST_BUILTINS=$RUST_BUILTINS_UNMANGLED sh "$repo/tools/build-rust-abi-probe.sh" "$work/float-fixed" float \
+        > "$work/float-fixed.log" 2>&1 || { sed -n '1,200p' "$work/float-fixed.log" >&2; exit 1; }
+    if grep -q 'LINK FAILED' "$work/float-fixed.log"; then
+        echo 'FAIL the float boundary still does not link with the unmangled library:' >&2
+        sed -n '1,20p' "$work/float-fixed/link.err" >&2
+        failures=$((failures + 1))
+    else
+        echo 'ok the float boundary links once the helpers carry their C ABI names'
+    fi
+    if [ -s "$work/float-fixed/undefined.txt" ]; then
+        echo 'FAIL the fixed float image has undefined symbols:' >&2
+        sed 's/^/    /' "$work/float-fixed/undefined.txt" >&2
+        failures=$((failures + 1))
+    else
+        echo 'ok the fixed float image has no undefined symbols'
+    fi
+    # A weak definition satisfies the reference; the call has to reach it, so the helper must be defined in the image. readelf
+    # prints the binding as its own column, which is why the pattern looks for WEAK/GLOBAL and the name at the end.
+    if grep -Eq '(WEAK|GLOBAL).* (__addsf3)$' "$work/float-fixed/readelf.txt"; then echo 'ok __addsf3 is defined in the fixed float image'; else
+        echo 'FAIL __addsf3 is not defined in the fixed float image' >&2; failures=$((failures + 1)); fi
+    if grep -Eq 'call.*<gtos_abi_scale>' "$work/float-fixed/disassembly.txt"; then echo 'ok the C side calls gtos_abi_scale'; else
+        echo 'FAIL the C side does not call gtos_abi_scale' >&2; failures=$((failures + 1)); fi
+    if grep -Eq '\b(fld|fst|fstp|fadd|fsub|fmul|fdiv|fild|fistp)[a-z]*\b' "$work/float-fixed/disassembly.txt"; then
+        echo 'FAIL the fixed float image contains x87 instructions' >&2; failures=$((failures + 1))
+    else
+        echo 'ok the fixed float image contains no x87 instructions'
+    fi
+else
+    echo 'skip the unmangled-library float case: RUST_BUILTINS_UNMANGLED is not set'
+fi
+
 if [ "$failures" -ne 0 ]; then
     echo "rust ABI consumer: $failures failure(s)" >&2
     exit 1
 fi
-echo 'PASS rust ABI consumer: integer/pointer/struct image links with no undefined symbols and no x87; float link names its missing helpers'
-echo 'Guest execution, C++ objects, varargs, by-value struct passing and a resolved float boundary remain untested by this script'
+echo 'PASS rust ABI consumer: integer/pointer/struct image links with no undefined symbols and no x87; the float boundary names its missing helpers against the plain library'
+echo 'Guest execution, C++ objects, varargs and by-value struct passing remain untested by this script'
