@@ -20,7 +20,7 @@ python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/cpu_test.sh
 ./tests/cpu_startup_test.sh
 ./tests/cpu_work_queue_test.sh
-python3 tests/cpu_memory_types_test.py
+./tests/cpu_memory_types_test.sh
 ./tests/package_vm.sh
 ./tests/i18n_test.sh
 ./tests/settings_test.sh

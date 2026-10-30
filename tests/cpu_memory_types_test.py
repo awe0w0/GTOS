@@ -20,6 +20,12 @@ parser.add_argument("--source", type=Path,
 parser.add_argument("--include", type=Path, action="append",
                     help="Include root (repeat as needed; default: repository include/)")
 parser.add_argument("--cxx", default=os.environ.get("CXX", "g++"))
+parser.add_argument("--stage", choices=["all", "build", "run"], default="all",
+                    help="build compiles only; run inspects the object and starts an already-published mock; all does both")
+parser.add_argument("--work", type=Path,
+                    help="directory that holds the compiled objects, for a build step and a later run step")
+parser.add_argument("--executable", type=Path,
+                    help="published mock executable to start in --stage run")
 args = parser.parse_args()
 source_path = args.source.resolve()
 includes = args.include or [root / "include"]
@@ -314,19 +320,50 @@ if "asm volatile" in source:
 compiler = shlex.split(args.cxx)
 common = (root / "tools/kernel-cxxflags").read_text().split() + ["-O2", "-std=c++11", "-Wall", "-Wextra", "-Werror"]
 include_flags = [flag for path in includes for flag in ["-I", str(path.resolve())]]
-with tempfile.TemporaryDirectory(prefix="gtos-memory-types-") as directory:
-    build = Path(directory)
-    production_object = build / "cpu_memory_types.o"
+temporary = None
+if args.work is None:
+    temporary = tempfile.TemporaryDirectory(prefix="gtos-memory-types-")
+    work = Path(temporary.name)
+else:
+    work = args.work.resolve()
+    work.mkdir(parents=True, exist_ok=True)
+production_object = work / "cpu_memory_types.o"
+mock_source = work / "cpu_memory_types_mock.cpp"
+built_executable = work / "cpu_memory_types_mock"
+
+
+def build():
+    """Compile the real i386 production object and the host mock from the same source text."""
     subprocess.run(compiler + common + ["-m32", "-ffreestanding", "-fno-exceptions",
                    "-fno-rtti", "-fno-pie", "-fno-stack-protector"] + include_flags
                    + ["-c", str(source_path), "-o", str(production_object)], check=True)
-    undefined = subprocess.check_output(["nm", "-u", str(production_object)], text=True)
+    mock_source.write_text(prefix + source + test)
+    subprocess.run(compiler + common + include_flags
+                   + [str(mock_source), "-o", str(built_executable)], check=True)
+
+
+def inspect_and_run(executable):
+    """Check the production object's dependencies, then start the mock and let its assertions decide."""
+    if not production_object.exists():
+        raise SystemExit("no production object at %s; run the build step first" % production_object)
+    if not Path(executable).exists():
+        raise SystemExit("no executable at %s; publish it in the build step first" % executable)
+    undefined = subprocess.check_output([os.environ.get("NM", "nm"), "-u", str(production_object)], text=True)
     if undefined.strip():
         raise SystemExit("Unexpected production-object dependencies:\n" + undefined)
     print("production i386 compile passed; no undefined symbols", flush=True)
-    mock_source = build / "cpu_memory_types_mock.cpp"
-    mock_source.write_text(prefix + source + test)
-    executable = build / "cpu_memory_types_mock"
-    subprocess.run(compiler + common + include_flags
-                   + [str(mock_source), "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True)
+
+
+try:
+    if args.stage in ("all", "build"):
+        build()
+    if args.stage == "all":
+        inspect_and_run(built_executable)
+    elif args.stage == "run":
+        if args.executable is None:
+            raise SystemExit("--stage run needs --executable, the published mock to start")
+        inspect_and_run(args.executable)
+finally:
+    if temporary is not None:
+        temporary.cleanup()
