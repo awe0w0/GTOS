@@ -31,6 +31,7 @@ python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/package_vm.sh
 ./tests/i18n_test.sh
 ./tests/settings_test.sh
+./tests/settings_sanitizer_test.sh
 ./tests/desktop_test.sh
 python3 -m unittest discover -s tests -p 'package*_test.py'
 python3 -m unittest discover -s tests -p 'storage_tool_test.py'
