@@ -42,13 +42,13 @@ else
     echo 'ok the image asks for no interpreter'
 fi
 
-for symbol in _start gtos_abi_add gtos_abi_pair gtos_abi_store; do
+for symbol in _start gtos_abi_add gtos_abi_pair gtos_abi_store gtos_abi_pair_value gtos_abi_wide; do
     if grep -Eq "\b$symbol\b" "$work/first/readelf.txt"; then echo "ok $symbol is defined in the image"; else
         echo "FAIL $symbol is missing from the image" >&2; failures=$((failures + 1)); fi
 done
 
-calls=$(grep -Ec 'call.*<gtos_abi_(add|pair|store)>' "$work/first/disassembly.txt" || true)
-if [ "$calls" -ge 3 ]; then echo "ok the C side calls all three integer Rust functions ($calls call sites)"; else
+calls=$(grep -Ec 'call.*<gtos_abi_(add|pair|store|pair_value|wide)>' "$work/first/disassembly.txt" || true)
+if [ "$calls" -ge 5 ]; then echo "ok the C side calls all five integer Rust functions ($calls call sites)"; else
     echo "FAIL the C side has only $calls Rust call sites" >&2; failures=$((failures + 1)); fi
 
 # No x87 instruction anywhere: the target spec asks for soft float, so the C side is compiled with -msoft-float and the Rust side
@@ -116,5 +116,5 @@ if [ "$failures" -ne 0 ]; then
     echo "rust ABI consumer: $failures failure(s)" >&2
     exit 1
 fi
-echo 'PASS rust ABI consumer: integer/pointer/struct image links with no undefined symbols and no x87; the float boundary names its missing helpers against the plain library'
-echo 'Guest execution, C++ objects, varargs and by-value struct passing remain untested by this script'
+echo 'PASS rust ABI consumer: five call shapes link with no undefined symbols and no x87, including a by-value struct and a 64-bit return; the float boundary names its missing helpers against the plain library'
+echo 'Guest execution, varargs, C++ objects and exceptions remain untested by this script'
