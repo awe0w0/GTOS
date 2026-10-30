@@ -18,14 +18,14 @@ kernel_flags=$(cat tools/kernel-cxxflags)
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-elf32.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 
-# The i386 executor is named, never looked up: an i386 static ELF cannot start on this host, and a CI that changes its execution
-# architecture because some emulator happens to be on PATH is not reporting the same thing twice.
-if [ -n "${ELF32_I386_LAUNCHER:-}" ]; then
-    i386_launcher=$ELF32_I386_LAUNCHER
-elif [ -x ../gtos-runtime/root/usr/bin/qemu-i386 ]; then
-    i386_launcher=../gtos-runtime/root/usr/bin/qemu-i386
-else
+# The executor choice lives in tests/i386-launcher.sh so it can be tested without compiling anything. A restricted run refuses
+# without an executor; the ordinary no-argument entry may start the image directly, which is what a 32-bit host does.
+. ./tests/i386-launcher.sh
+i386_choice=$(i386_launcher_choose "$stage")
+if i386_launcher_is_native "$i386_choice"; then
     i386_launcher=
+else
+    i386_launcher=$(i386_launcher_path "$i386_choice")
 fi
 
 if [ "$stage" = build ] || [ "$stage" = all ]; then
@@ -97,11 +97,7 @@ fi
 for target in host i386; do
     for optimization in 0 2; do
         echo "ELF32 $target freestanding -O$optimization"
-        if [ "$target" = i386 ]; then
-            if [ -z "$i386_launcher" ]; then
-                echo 'ELF32 i386 executor is not available: set ELF32_I386_LAUNCHER to a real qemu-i386' >&2
-                exit 2
-            fi
+        if [ "$target" = i386 ] && [ -n "$i386_launcher" ]; then
             LD_LIBRARY_PATH=${ELF32_I386_LIBRARY_PATH:-../gtos-runtime/root/usr/lib/x86_64-linux-gnu} \
                 "$i386_launcher" "$build/test_${target}_O$optimization"
         else
