@@ -1,13 +1,13 @@
 #!/bin/sh
 # Which unit scripts tests/run.sh actually runs.
 #
-# Twelve of the scripts in tests/ are not wired into tests/run.sh. What each one needs was measured rather than guessed: seven
+# Eleven of the scripts in tests/ are not wired into tests/run.sh. What each one needs was measured rather than guessed: seven
 # native_* units and runtime_test.sh take artifact or SDK paths as arguments, wuffs_gif_probe_test.sh takes an output path,
-# host_runner_test.sh needs the supply's publish root and manifest, and two build a host program and start it in the same step
-# (boot_log_host_test.sh, live_storage_host_test.sh) so they cannot pass inside an execution allow-list that only runs files that
-# existed when the step began. memory_bootstrap_test.sh needed nothing and was measured at 486 checks with no failures;
-# settings_sanitizer_test.sh needed nothing once it was given build/run steps, and was measured passing under both sanitizers against
-# its published image. Both are now wired.
+# host_runner_test.sh needs the supply's publish root and manifest, and live_storage_host_test.sh builds a host program and starts it
+# in the same step, so it cannot pass inside an execution allow-list that only runs files that existed when the step began.
+# memory_bootstrap_test.sh needed nothing and was measured at 486 checks with no failures; settings_sanitizer_test.sh and
+# boot_log_host_test.sh needed nothing once they were given build/run steps, and both were measured passing against their published
+# images, the boot log at 541146 checks under each of two optimisation levels. Those three are now wired.
 #
 # Wiring the rest is separate work that has to verify each one, so this test does not pretend they pass. What it does is record the
 # set: a script that is neither run nor recorded here fails the test, and a recorded script that has since been wired or deleted
@@ -16,8 +16,7 @@ set -eu
 cd "$(dirname "$0")/.."
 failures=0
 
-recorded_not_run='boot_log_host_test.sh
-host_runner_test.sh
+recorded_not_run='host_runner_test.sh
 live_storage_host_test.sh
 native_address_test.sh
 native_gfx_types_test.sh
