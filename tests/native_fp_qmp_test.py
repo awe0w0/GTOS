@@ -74,6 +74,42 @@ class QmpReaderTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'bounded'):
             reader.read()
 
+    def test_crlf_reply_is_accepted(self):
+        # QEMU terminates its replies with '\r\n'. The reader splits on '\n', so the line keeps a trailing carriage return, and JSON
+        # treating trailing whitespace as nothing is what makes that harmless rather than a parse failure.
+        os.write(self.write, b'{"return":{}}\r\n')
+        self.assertEqual(self.reader().read(), {'return': {}})
+
+    def test_complete_reply_of_exactly_the_bound_is_accepted(self):
+        # The bound is one mebibyte and it is exclusive: a reply that reaches it exactly still gets parsed. The line is placed in the
+        # buffer without its newline so the only thing the pipe has to carry is the byte that completes it.
+        line = self.reply_of_size(1024 * 1024)
+        reader = self.reader()
+        reader.buffer = line[:-1]
+        os.write(self.write, line[-1:])
+        self.assertEqual(reader.read(), self.expected_reply(1024 * 1024))
+
+    def test_bound_wins_over_a_newline_that_arrives_with_it(self):
+        # One byte over the bound, and the newline in that same read does not rescue it: the size check runs before the line is
+        # handed out, so an oversized reply is refused rather than parsed.
+        line = self.reply_of_size(1024 * 1024 + 1)
+        reader = self.reader()
+        reader.buffer = line[:-1]
+        os.write(self.write, line[-1:])
+        with self.assertRaisesRegex(RuntimeError, 'bounded'):
+            reader.read()
+
+    @staticmethod
+    def reply_padding(size):
+        # One JSON object line of exactly <size> bytes including its newline: {"pad":"xxx..."} plus '\n'.
+        return size - len(b'{"pad":"') - len(b'"}') - 1
+
+    def reply_of_size(self, size):
+        return b'{"pad":"' + b'x' * self.reply_padding(size) + b'"}\n'
+
+    def expected_reply(self, size):
+        return {'pad': 'x' * self.reply_padding(size)}
+
 
 def emulator_source():
     """A stand-in emulator that answers nothing and exits 33, like a QEMU that stopped before the greeting.
