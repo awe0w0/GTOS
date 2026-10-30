@@ -65,7 +65,7 @@ extern "C" void NativeProcessSmoke(void* multiboot,uint32_t magic) {
     FileNeed(runtime.Activate(tasks,gdt,paging,frames,NativeFpSse2)&&runtime.FpEnabled()&&runtime.FpError()==NativeFpOk
         &&!runtime.AttachFiles(files),"real FP/core activation freezes endpoint");
     kernelDirectory=paging.getStatistics().directoryAddress;const uint32_t initial=frames.getStatistics().freeFrames;
-    FileTap tap(interrupts,runtime,tasks,syscalls);FileNeed((boot->flags&8)&&boot->moduleCount==6,"six actual native ELF modes");
+    FileTap tap(interrupts,runtime,tasks,syscalls);FileNeed((boot->flags&8)&&boot->moduleCount==7,"seven actual native ELF modules");
     const MultibootModule* modules=(const MultibootModule*)boot->modules;
     Task ring0(&gdt,Ring0Task);FileNeed(tasks.AddTask(&ring0),"ring0 continuation");
     Elf32LoadPlan peerPlan={};uint32_t peer=0;
@@ -124,9 +124,21 @@ extern "C" void NativeProcessSmoke(void* multiboot,uint32_t magic) {
         FileNeed(!p.error&&p.ack==10&&p.bad_calls==100&&badCount[peer]==100&&p.raw_calls==callCount[peer],"peer rejects every live/stale foreign handle");
         FileNeed(runtime.RequestExit(peer,0)&&runtime.Reap()==1,"peer final safe Reap");
     }
+    if (!reader) {
+        // The eighth module is the business consumer: the private POSIX subset over this same endpoint. Its own record says whether the
+        // translation of flags, path bounds, errno, dup offsets, seek origins and close invalidation held on real media.
+        Elf32LoadPlan plan;const uint32_t id=Admit(runtime,modules[6],plan);
+        const NativeStatus status=Wait(runtime,tasks,id,0,true);const FileRecord record=Record(runtime,id);
+        { InterruptGuard guard;LogCase(record,status,plan,Cost(plan),baseline,store->OpenCount()); }
+        FileNeed(record.version==1&&record.mode==7&&!record.error&&record.stage==2&&record.checks>=25&&(record.mask&0x1ff)==0x1ff,
+            "posix translation suite covers its nine families");
+        FileNeed(status.observedCs==0x23&&!status.faultVector&&!status.exitCode,"posix translation suite exited normally at CPL3");
+        FileNeed(runtime.Reap()==1&&!store->OpenCount(),"posix suite handles reclaimed and none left open");
+        { InterruptGuard guard;LogReap(id,files,runtime,baseline); }
+    }
     const NativeFileStatistics f=files.Statistics();const NativeFpStatistics p=runtime.FpStatistics();
-    FileNeed(frames.getStatistics().freeFrames==initial&&!store->OpenCount()&&f.reclaims==(reader?1U:6U)&&f.released==(reader?0U:12U)
-        &&f.reclaimFailures==(reader?0U:1U)&&p.initialized==(reader?1U:6U)&&p.invalidated==p.initialized&&!p.invariantFailures,"all exact baselines restored");
+    FileNeed(frames.getStatistics().freeFrames==initial&&!store->OpenCount()&&f.reclaims==(reader?1U:7U)&&f.released==(reader?0U:12U)
+        &&f.reclaimFailures==(reader?0U:1U)&&p.initialized==(reader?1U:7U)&&p.invalidated==p.initialized&&!p.invariantFailures,"all exact baselines restored");
     FileNeed(ioErrorCount==(reader?0U:15U),"all actual read/write/close error paths");
     FileNeed(store->Unmount()==0,"clean unmount after all native owners reclaimed");
     InterruptGuard guard;printf((char*)"FILE FINAL");Value(" free=",frames.getStatistics().freeFrames);Value(" expected=",initial);Value(" checks=",fileChecks);

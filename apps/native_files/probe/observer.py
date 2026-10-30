@@ -58,16 +58,27 @@ def verify(text,phase,plans):
         assert r['reclaims']==i+1 and r['released']==(0 if reader else 2*(i+1)) and r['failures']==int(i>=3 and not reader)
         assert r['last']==(0xfffffffb if mode==3 else 0) and r['fp_fail']==0 and r['fp_init']==id and r['fp_invalid']==i+1
         cases.append(c);reaps.append(r)
-    peer=None
+    peer=None;suite=None
     if not reader:
         peer=fields(lines[index],'FILE PEER',PEER);index+=1
+        # The eighth module: the private POSIX subset on this same endpoint. Its checks and family mask are its own report, so the observer
+        # only accepts the exact numbers it printed — 32 assertions over nine families, stage 2, a normal CPL3 exit and no handle left open.
+        c=fields(lines[index],'FILE CASE',CASE);index+=1
+        assert c['mode']==7 and c['id']==7 and c['error']==0 and c['stage']==2 and c['checks']==32 and c['mask']==0x1ff
+        assert c['calls']==0 and c['bad']==0 and c['png']==0 and c['file']==c['dir']==0 and c['cs']==0x23
+        assert c['exit']==0 and c['vector']==0 and c['pf']==0 and c['open']==0
+        r=fields(lines[index],'FILE REAP',REAP);index+=1
+        assert r['id']==7 and r['open']==0 and r['reclaims']==7 and r['fp_init']==7 and r['fp_invalid']==7 and r['fp_fail']==0 and r['last']==0
+        suite=(c,r)
         assert peer=={'id':1,'error':0,'checks':112,'commands':10,'bad':100,'observed_bad':100,'calls':124,'observed_calls':124}
     f=fields(lines[index],'FILE FINAL',FINAL);index+=1
     assert index==len(lines)-1 and f['free']==f['expected']>0 and f['open']==f['fp_fail']==0
     assert f['free']==baseline+(0 if reader else plans[4]['static_cost'])
-    assert f['calls']==sum(c['calls'] for c in cases)+(0 if reader else peer['calls'])
-    assert f['reclaims']==f['fp_init']==f['fp_invalid']==(1 if reader else 6)
+    # The business consumer adds the calls its translation layer made on its own behalf (26: opens, reads, writes, seeks, dup, stat, close);
+    # its record only counts the raw ABI operations the module issued itself, which is none.
+    assert f['calls']==sum(c['calls'] for c in cases)+(0 if reader else peer['calls']+26)
+    assert f['reclaims']==f['fp_init']==f['fp_invalid']==(1 if reader else 7)
     assert f['released']==(0 if reader else 12) and f['failures']==(0 if reader else 1) and f['io_errors']==(0 if reader else 15)
     assert 0<f['trap_stack_observed']<16384-512 and f['checks']>(100 if reader else 45000)
     assert f['reads']>10 and (f['writes']==f['flushes']==0 if reader else f['writes']>100 and f['flushes']>20)
-    return {'cases':cases,'reaps':reaps,'peer':peer,'final':f}
+    return {'cases':cases,'reaps':reaps,'peer':peer,'suite':suite,'final':f}

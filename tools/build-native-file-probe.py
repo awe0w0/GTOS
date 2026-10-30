@@ -80,12 +80,13 @@ def main():
         assert policy==['-mgeneral-regs-only','-mno-sse','-mno-mmx','-msoft-float','-fno-tree-vectorize']
         common=['-m32','-ffreestanding','-nostdlib','-nostdinc','-fno-builtin','-fno-stack-protector','-fno-pie',
             '-fno-asynchronous-unwind-tables','-ffunction-sections','-fdata-sections','-fstack-usage','-Iinclude',
-            '-Iinclude/storage/littlefs-sdk','-Iinclude/storage/littlefs','-Itests','-I'+str(probe),'-Wall','-Wextra','-Werror',*policy]
+            '-Iinclude/storage/littlefs-sdk','-Iinclude/storage/littlefs','-Itests','-I'+str(probe),
+            '-I'+str(repo/'apps/native_libxml_file/include'),'-Wall','-Wextra','-Werror',*policy]
         cpp=['-std=c++11','-fno-exceptions','-fno-rtti','-fno-threadsafe-statics','-fno-use-cxa-atexit','-Wno-write-strings']
         sources=['src/gdt.cpp','src/multitasking.cpp','src/syscalls.cpp','src/hardwarecommunication/interrupts.cpp','src/hardwarecommunication/port.cpp',
-            'src/process/native_runtime.cpp','src/process/native_realtime.cpp','src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/native_files.cpp',
+            'src/process/native_runtime.cpp','src/process/native_realtime.cpp','src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/native_files.cpp','src/process/native_windows.cpp',
             'src/process/elf32.cpp','src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp',
-            'src/storage/filestore.cpp','src/storage/littlefs_port.cpp','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','src/drivers/ata.cpp']
+            'src/storage/filestore.cpp','src/storage/littlefs_port.cpp','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','src/drivers/ata.cpp','tests/i386_pure_virtual_runtime.cpp']
         assembly=['tests/native_process_loader.s','src/process/native_fp.s','src/hardwarecommunication/interruptstubs.s']
         spec=importlib.util.spec_from_file_location('native_file_observer',probe/'observer.py');observer=importlib.util.module_from_spec(spec);spec.loader.exec_module(observer)
         bind(probe/'observer.py');bind(probe/'linker.ld');bind(probe/'stock.c');bind('tests/native_process_smoke.ld');bind('tools/audit-kernel-instructions.py')
@@ -116,20 +117,32 @@ def main():
                     run([clang,*flags,'-O'+str(opt),'-MD','-MF',obj.with_suffix('.d'),'-c',src,'-o',obj],obj.with_suffix('.log'));deps(obj.with_suffix('.d'))
                     assert sha(obj)==profile['executed_objects'][level+'-'+obj.name],'Qualified actual default provider changed'
                     state['objects'][level+'-actual-'+obj.name]=sha(obj);providers.append(obj)
+            posix_object=d/'kernel'/'posix_file.o'
+            posix_source=repo/'apps/native_libxml_file/posix_file.cpp';bind(posix_source)
+            run([cxx,*common,*cpp,'-U__linux__','-U__APPLE__','-D__GTOS__=1','-isystem'+str(repo/'apps/native_v8_integration/c-sdk'),'-isystem'+str(repo/'apps/native_v8_integration/sdk'),'-O'+str(opt),'-MD','-MF',posix_object.with_suffix('.d'),'-c',posix_source,'-o',posix_object],posix_object.with_suffix('.log'));deps(posix_object.with_suffix('.d'))
+            state['objects'][level+'-posix_file.o']=sha(posix_object)
             elfs=[];plans={}
-            for mode in range(7):
-                app=d/('mode'+str(mode));app.mkdir();src=probe/('unavailable.cc' if mode==6 else 'main.cc');bind(src);bind('apps/native_process_info_probe/start.s')
+            for mode in range(8):
+                app=d/('mode'+str(mode));app.mkdir()
+                # Mode 7 is the business consumer: the private POSIX subset over the same endpoint, so the layer libxml2 links against is
+                # qualified on real media instead of only under the raw ABI.
+                src=(probe/'unavailable.cc' if mode==6 else probe/'main.cc') if mode<7 else (repo/'apps/native_libxml_file/probe/file_suite.cpp')
+                bind(src);bind('apps/native_process_info_probe/start.s')
                 user_compiler=clang if actual else cxx
-                run([user_compiler,*common,*cpp,'-O'+str(opt),'-DGTOS_FILE_MODE='+str(mode),'-MD','-MF',app/'main.d','-c',src,'-o',app/'main.o'],app/'main.log');deps(app/'main.d')
+                # Every module sees the user-space SDK, not just the kernel headers: the business consumer includes the real C headers.
+                user_extra=['-U__linux__','-U__APPLE__','-D__GTOS__=1','-isystem'+str(repo/'apps/native_v8_integration/c-sdk'),
+                            '-isystem'+str(repo/'apps/native_v8_integration/sdk')]
+                run([user_compiler,*common,*cpp,*user_extra,'-O'+str(opt),'-DGTOS_FILE_MODE='+str(mode),'-MD','-MF',app/'main.d','-c',src,'-o',app/'main.o'],app/'main.log');deps(app/'main.d')
                 run([bins['as'],'--32','apps/native_process_info_probe/start.s','-o',app/'start.o'],app/'start.log')
-                run([bins['ld'],'-melf_i386','--gc-sections','-T',probe/'linker.ld','-Map',app/'user.map','-o',app/'user.elf',app/'start.o',app/'main.o',*providers],app/'link.log')
+                extras=[posix_object] if mode==7 else []
+                run([bins['ld'],'-melf_i386','--gc-sections','-T',probe/'linker.ld','-Map',app/'user.map','-o',app/'user.elf',app/'start.o',app/'main.o',*extras,*providers],app/'link.log')
                 assert not run([bins['nm'],'-u',app/'user.elf'],app/'undefined.log').strip()
                 run([bins['objcopy'],'--strip-all',app/'user.elf',app/'user.stripped.elf'],app/'strip.log')
                 plans[mode]=observer.geometry(app/'user.stripped.elf');state['elfs'][level+'-mode'+str(mode)]={'sha256':sha(app/'user.stripped.elf'),**plans[mode]};elfs.append(app/'user.stripped.elf')
             kernels={}
             for fixture in ['kernel','unavailable_kernel']:
                 src=probe/(fixture+'.cpp');bind(src);obj=d/(fixture+'.o')
-                run([cxx,*common,*cpp,'-O'+str(opt),'-MD','-MF',obj.with_suffix('.d'),'-c',src,'-o',obj],obj.with_suffix('.log'));deps(obj.with_suffix('.d'))
+                run([cxx,*common,*cpp,'-U__linux__','-U__APPLE__','-D__GTOS__=1','-isystem'+str(repo/'apps/native_v8_integration/c-sdk'),'-isystem'+str(repo/'apps/native_v8_integration/sdk'),'-O'+str(opt),'-MD','-MF',obj.with_suffix('.d'),'-c',src,'-o',obj],obj.with_suffix('.log'));deps(obj.with_suffix('.d'))
                 state['objects'][level+'-'+obj.name]=sha(obj);binary=d/(fixture+'.bin')
                 run([bins['ld'],'-melf_i386','--gc-sections','-T','tests/native_process_smoke.ld','-Map',d/(fixture+'.map'),'-o',binary,*objects,obj],d/(fixture+'-link.log'))
                 assert not run([bins['nm'],'-u',binary],d/(fixture+'-undefined.log')).strip()
@@ -151,7 +164,7 @@ def main():
             image=d/'filesystem.img';image.write_bytes(b''.join(bytes([0xa5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5a+s])*512 for s in range(8)));guards(image)
             for phase in ['writer','reader','detached','unmounted']:
                 guest=d/phase;media=image if phase in ['writer','reader'] else None;before=sha(image)
-                text=boot(kernels['kernel' if media else 'unavailable_kernel'],guest,phase,elfs[:6] if media else [elfs[6]],media,opt)
+                text=boot(kernels['kernel' if media else 'unavailable_kernel'],guest,phase,elfs[:6]+[elfs[7]] if media else [elfs[6]],media,opt)
                 evidence=observer.verify(text,phase,plans);(guest/'observations.json').write_text(json.dumps(evidence,indent=2)+'\n')
                 guards(image);after=sha(image)
                 if phase=='reader':assert before==after,'Cold reader altered ATA image'
