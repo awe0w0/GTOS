@@ -75,23 +75,40 @@ class QmpReaderTests(unittest.TestCase):
             reader.read()
 
 
+def emulator_source():
+    """A stand-in emulator that answers nothing and exits 33, like a QEMU that stopped before the greeting.
+
+    It writes the guest's PASS marker only when GTOS_FAKE_QEMU_FRESH=1, so one emitted file serves both the fresh-pass and the
+    stale-pass case. The file is written by --emit-emulator because a program cannot be started by the same execution allow-list
+    that created it; the caller emits it in one step and starts it in the next.
+    """
+    return ('#!' + sys.executable + '\n'
+        'import os, sys\n'
+        'from pathlib import Path\n'
+        'log = sys.argv[sys.argv.index("-debugcon") + 1][5:]\n'
+        'if os.environ.get("GTOS_FAKE_QEMU_FRESH") == "1":\n'
+        '    Path(log).write_text("NATIVE FP SMOKE PASS\\n")\n'
+        'sys.exit(33)\n')
+
+
 class EarlyExitTests(unittest.TestCase):
     def run_emulator(self, directory, write_fresh_pass):
         root = Path(directory)
-        emulator = root / 'fake-qemu'
-        emulator.write_text('#!' + sys.executable + '\n'
-            'import os, sys\n'
-            'from pathlib import Path\n'
-            'log = sys.argv[sys.argv.index("-debugcon") + 1][5:]\n'
-            + ('Path(log).write_text("NATIVE FP SMOKE PASS\\n")\n' if write_fresh_pass else '')
-            + 'os._exit(33)\n')
-        emulator.chmod(0o700)
+        staged = os.environ.get('GTOS_FAKE_QEMU')
+        if staged:
+            emulator = Path(staged)
+            self.assertTrue(emulator.is_file(), 'the staged fake emulator is missing: ' + str(emulator))
+        else:
+            emulator = root / 'fake-qemu'
+            emulator.write_text(emulator_source())
+            emulator.chmod(0o700)
         output = root / 'evidence'
         output.mkdir()
         (output / 'guest.log').write_text('NATIVE FP SMOKE PASS\n')
+        environment = dict(os.environ, GTOS_FAKE_QEMU_FRESH='1' if write_fresh_pass else '0')
         result = subprocess.run([sys.executable, str(Path(runner.__file__)),
             '--qemu', str(emulator), '--iso', str(root / 'unused.iso'),
-            '--output', str(output)], capture_output=True, text=True, timeout=3)
+            '--output', str(output)], capture_output=True, text=True, timeout=3, env=environment)
         return result, output
 
     def test_success_before_greeting_has_initialized_counter(self):
@@ -109,4 +126,10 @@ class EarlyExitTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 3 and sys.argv[1] == '--emit-emulator':
+        target = Path(sys.argv[2])
+        target.write_text(emulator_source())
+        target.chmod(0o700)
+        print('emitted ' + str(target))
+        sys.exit(0)
     unittest.main()

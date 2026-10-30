@@ -4,15 +4,17 @@ set -eu
 repo=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
-"$repo/tools/build-browser-probe.sh" "$work/first"
-"$repo/tools/build-browser-probe.sh" "$work/second"
+# The builder is a shell script, so it is started through the interpreter: the repository mount is not executable, and this
+# script is read, not executed, from it.
+sh "$repo/tools/build-browser-probe.sh" "$work/first"
+sh "$repo/tools/build-browser-probe.sh" "$work/second"
 cmp "$work/first/browser-probe.elf" "$work/second/browser-probe.elf"
-test -z "$(nm -u "$work/first/browser-probe.elf")"
+test -z "$(${NM:-nm} -u "$work/first/browser-probe.elf")"
 if grep -Eq '\b(xmm[0-9]|mm[0-7]|fld|fstp|fadd|fsub|fmul|fdiv)\b' "$work/first/disassembly.txt"; then
     echo 'Unexpected FP/SIMD instruction in integer-only fixture' >&2
     exit 1
 fi
-python3 - "$work/first/inventory.json" <<'PY'
+${PYTHON:-python3} - "$work/first/inventory.json" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1]))
 assert r['elf_bits'] == 32 and r['machine'] == 'i386'

@@ -9,7 +9,7 @@ python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
 ./tests/process_memory_test.sh
 ./tests/native_process_test.sh
 ./tests/native_fp_test.sh
-python3 -m unittest discover -s tests -p 'native_fp_qmp_test.py'
+./tests/native_fp_qmp_test.sh
 ./tests/elf32_test.sh
 ./tests/i386_launcher_test.sh
 ./tests/host_publish_identity_test.sh
