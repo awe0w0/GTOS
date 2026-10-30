@@ -69,5 +69,13 @@ gn gen --root=<view> out/gtos-content-bringup \
 - **spec 已写**：`i686-unknown-gtos.json`，edition 2024（当前 `library/` 源码要求 2024；`compiler_builtins` 同样要求）。Cargo 要识别 `.json` 目标还需要 `-Zjson-target-spec`。`rustc --print target-libdir --target <spec>` 指向 `.../bin-rust/lib/rustlib/i686-unknown-gtos/lib`；目录不存在正是此前 `E0463` 的直接原因。
 - **目标 std 组件已真实构建**：`libcore.rlib` 66,884,068 B、`libcompiler_builtins.rlib` 1,933,742 B；`library/` 源码（约 83M）复制进 `bin-rust/lib/rustlib/src/rust`，供 `rustc` 的 `sysroot` 解析。
 - **探针已真实编译**：`#[unsafe(no_mangle)]` 的 `gtos_rust_probe.rs` 编译出 `gtos_rust_probe.o` 1128 B `a08eab0b0e3a70c7…`、`libgtos_rust_probe.rmeta` 3193 B `24a610dc59ab3db2…`（stage `c4-content-154-34`，rc 0）。这只证明目标 sysroot 可用，不证明 ABI、不证明 Chromium 可链接。
-- **仍未做到**：Cargo `-Z build-std` 路径被缺失的离线 `rustc-literal-escaper`（`proc_macro`/sysroot）挡住，与上面直接构建 `core` 的路径是两件事；C ABI 消费方（布局/参数/返回/浮点，softfloat 仍未证）、GTOS Rust 的 GN 映射与 sysroot 接线、`target_os="gtos" target_cpu="x86"` 下 `//content/shell:content_shell_app` 的 GN/Ninja 构建都未取得，**C1/C2/C3 仍全部未取得**。
+- **仍未做到**：Cargo `-Z build-std` 路径被缺失的离线 `rustc-literal-escaper`（`proc_macro`/sysroot）挡住，与上面直接构建 `core` 的路径是两件事；GTOS Rust 的 GN 映射与 sysroot 接线、`target_os="gtos" target_cpu="x86"` 下 `//content/shell:content_shell_app` 的 GN/Ninja 构建都未取得，**C1/C2/C3 仍全部未取得**。
+
+### r16 追加：C ABI 消费方与运行库 C 名字（已真实测过）
+
+- **C 调用方已真实链接**：`apps/native_content_build/rust/abi/{abi_export.rs,consumer.c,link.ld}` 由 `tools/build-rust-abi-probe.sh` 构建，`tests/rust_abi_probe_test.sh` 断言两次构建字节一致、无未定义符号、ELF32/i386/EXEC、入口 `0x40000000`、无解释器、结构体布局两侧同断言（8 字节，偏移 0/4/6）、三个真实调用点、无 x87。**整数/指针/结构体边界通，float 边界本身是下一项证据的分界**。
+- **float 边界两次测量**：用目标默认 `libcompiler_builtins.rlib` 链接失败，报 `__addsf3`、`__gesf2`、`__gtsf2`、`__fixunssfsi` 未定义；`weight * 2.0` 折成加法，所以 `__mulsf3` 不在这一组里。
+- **成因已定位并解决**：`compiler_builtins` 的 C 名字在 `unmangled-names` feature 之后（`library/compiler-builtins/compiler-builtins/Cargo.toml:58`）。rustc 可直接用 `--cfg 'feature="unmangled-names"'`（外加 `compiler-builtins`、`arch`）从 toolchain 自带源码构建，**不需要 Cargo、不需要网络、不需要 vendored crate**：`tools/build-gtos-rustlib.sh` 做这件事，`tests/rust_builtins_test.sh` 断言 C 名字存在、两次构建字节一致、默认库没有这些名字（对照）、归档成员是 ELF32 i386 目标对象。同一链接在换上该库后成功，无未定义符号、真实调用 `gtos_abi_scale`、无 x87。
+- **因此 Cargo `-Z build-std` 不再是运行库的前置条件**：运行库可用 rustc 直出。剩下的前置是把它接进 GN（`//build/config/clang/BUILD.gn` 的 `clang_lib("compiler_builtins")` 目前在 gtos 上 `assert(false) # Unhandled target platform`）。
+- **GN 侧已推进到的最远点**（每一步都是实测首错，见 `R/c1-gn-rust-frontier-154-r16.md`）：`enable_rust=true` 下先缺 `rust_abi_target`（已在 port 的 `build/config/rust.gni` 增加 gtos 分支 → `i686-unknown-gtos`，并在 `known-target-triples.txt` 增行），再缺 `gtos_clang_bin`，再是上面的 `clang_lib` 平台分支。**仍未生成任何 object，不宣称 C1。**
 
