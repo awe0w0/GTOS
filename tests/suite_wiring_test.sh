@@ -2,7 +2,8 @@
 # Which unit scripts tests/run.sh actually runs.
 #
 # Eight of the scripts in tests/ are not wired into tests/run.sh. What each one needs was measured rather than guessed: seven native_*
-# units take artifact or SDK paths as arguments, and wuffs_gif_probe_test.sh takes an output path.
+# units take artifact or SDK paths as arguments, and wuffs_gif_probe_test.sh takes an output path and then downloads its dependency
+# files, which is not something a default suite run may do here.
 #
 # Six units were measured and wired in this window. memory_bootstrap_test.sh needed nothing (486 checks, no failures).
 # settings_sanitizer_test.sh, boot_log_host_test.sh and live_storage_host_test.sh needed nothing once they were given build/run steps,
