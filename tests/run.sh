@@ -14,6 +14,7 @@ python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
 ./tests/i386_launcher_test.sh
 ./tests/host_publish_identity_test.sh
 ./tests/browser_probe_test.sh
+./tests/rust_abi_probe_test.sh
 ./tests/skia_alpha_probe_test.sh
 python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/keymap_test.sh
