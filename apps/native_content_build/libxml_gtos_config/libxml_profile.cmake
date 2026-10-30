@@ -70,3 +70,25 @@ function(libxml_derive_profile build_gn_path)
   # WITH_THREADS, WITH_ICONV, WITH_ZLIB, WITH_ICU and WITH_MODULES are not source-list questions: they say whether the target has a
   # thread ABI and whether the libraries are there, so they come from the compiler probes in CMakeLists.txt.
 endfunction()
+
+# The other half of "did the templates get an answer": a generated header that kept "@NAME@" or a bare "#if " is not a configuration,
+# it is a compile error waiting to happen thousands of lines away. The first run of this project shipped exactly that (WITH_HTTP was
+# missing), so the check is part of the derivation instead of being a comment in the generator. Kept here, next to the derivation, so
+# test_profile.cmake can run it on files whose defects are known.
+function(libxml_check_generated generated_path)
+  if(NOT EXISTS "${generated_path}")
+    message(FATAL_ERROR "no generated file at ${generated_path}")
+  endif()
+  file(SIZE "${generated_path}" generated_size)
+  if(generated_size LESS 256)
+    message(FATAL_ERROR "generated ${generated_path} is only ${generated_size} bytes")
+  endif()
+  file(READ "${generated_path}" generated_text)
+  if(generated_text MATCHES "@[A-Za-z_0-9]+@")
+    string(REGEX MATCH "@[A-Za-z_0-9]+@" leftover "${generated_text}")
+    message(FATAL_ERROR "${generated_path} still contains ${leftover}: this project left a template variable unanswered")
+  endif()
+  if(generated_text MATCHES "(^|\n)#[ \t]*if[ \t]*\n")
+    message(FATAL_ERROR "${generated_path} contains an empty #if, which is what an unanswered template variable looks like")
+  endif()
+endfunction()

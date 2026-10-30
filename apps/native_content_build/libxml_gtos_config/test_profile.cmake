@@ -177,6 +177,70 @@ else()
   message(STATUS "PASS missing-file refused")
 endif()
 
+# libxml_check_generated(): the post-condition on what the templates produced. A real generator run shipped an unsubstituted
+# "#if " once (WITH_HTTP), so both defects are exercised explicitly, along with a file that is fine and a file that is too small.
+macro(check_generated name content expect_ok)
+  math(EXPR cases "${cases} + 1")
+  set(path "${SCRATCH}/gen-${name}.h")
+  file(WRITE "${path}" "${content}")
+  set(driver "${SCRATCH}/gen-${name}.cmake")
+  file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")
+libxml_check_generated(\"${path}\")
+")
+  execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(${expect_ok})
+    if(rc EQUAL 0)
+      message(STATUS "PASS generated-${name}")
+    else()
+      message(STATUS "FAIL generated-${name}: rejected a valid file: ${err}")
+      math(EXPR failures "${failures} + 1")
+    endif()
+  else()
+    if(rc EQUAL 0)
+      message(STATUS "FAIL generated-${name}: accepted a defective file")
+      math(EXPR failures "${failures} + 1")
+    else()
+      message(STATUS "PASS generated-${name} refused")
+    endif()
+  endif()
+endmacro()
+
+set(good_header "#define LIBXML_VERSION_NUMBER 21600
+#define LIBXML_HTML_ENABLED
+#if 1
+#define LIBXML_OUTPUT_ENABLED
+#endif
+/* padding so the file is longer than the 256 byte floor this check enforces; a header this short is not a configuration anyway.
+   ........................................................ ........................................................
+   ........................................................ ........................................................
+   ........................................................ ........................................................ */
+")
+check_generated(valid "${good_header}" TRUE)
+
+set(leftover "@WITH_HTTP@
+#if 1
+#define LIBXML_OUTPUT_ENABLED
+#endif
+........................................................ ........................................................
+........................................................ ........................................................
+........................................................ ........................................................
+")
+check_generated(leftover "${leftover}" FALSE)
+
+set(empty_if "#if 1
+#define LIBXML_OUTPUT_ENABLED
+#endif
+#if 
+#define LIBXML_HTTP_STUBS_ENABLED
+#endif
+........................................................ ........................................................
+........................................................ ........................................................
+........................................................ ........................................................
+")
+check_generated(empty-if "${empty_if}" FALSE)
+
+check_generated(tiny "#define LIBXML_VERSION_NUMBER 21600\n" FALSE)
+
 file(REMOVE_RECURSE "${SCRATCH}")
 
 if(failures GREATER 0)

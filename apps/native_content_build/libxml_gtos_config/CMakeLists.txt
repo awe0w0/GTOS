@@ -141,6 +141,11 @@ else()
   set(WITH_ICONV 0)
 endif()
 set(WITH_ICU 0)
+# libxml2 2.16 removed HTTP support and kept only the stub API; the template's own comment says so, and nothing in the pinned
+# checkout compiles nanohttp.c any more (grep of its BUILD.gn source list). So this is a statement about the pinned version, not
+# about GTOS: the stubs are what the header offers, and they are on for every platform that builds 2.16, including Chromium's
+# pre-generated linux configuration.
+set(WITH_HTTP 1)
 if(HAVE_ZLIB_H)
   set(WITH_ZLIB 1)
 else()
@@ -157,12 +162,12 @@ file(MAKE_DIRECTORY "${out_dir}/include/libxml")
 configure_file("${LIBXML_SRC}/config.h.cmake.in" "${out_dir}/config.h")
 configure_file("${LIBXML_SRC}/include/libxml/xmlversion.h.in" "${out_dir}/include/libxml/xmlversion.h")
 
-# Empty output is not a pass: the two files are the whole point of this project.
+# Empty output is not a pass: the two files are the whole point of this project. libxml_check_generated() also rejects output that kept
+# a template variable this project never answered — that leaves "@NAME@" or a bare "#if " behind, which the compiler reports as a
+# syntax error thousands of lines away from the cause. The first run of this generator shipped exactly that (WITH_HTTP), so the check
+# is part of the derivation and has its own test.
 foreach(generated "${out_dir}/config.h" "${out_dir}/include/libxml/xmlversion.h")
-  file(SIZE "${generated}" generated_size)
-  if(generated_size LESS 256)
-    message(FATAL_ERROR "generated ${generated} is only ${generated_size} bytes")
-  endif()
+  libxml_check_generated("${generated}")
 endforeach()
 
 # Probe results next to the headers, so the profile can be read back without rerunning the generator.
@@ -176,7 +181,7 @@ file(WRITE "${out_dir}/probes.txt"
 "HAVE_DLOPEN ${HAVE_DLOPEN}\nHAVE_SHLLOAD ${HAVE_SHLLOAD}\nHAVE_LIBREADLINE ${HAVE_LIBREADLINE}\n"
 "HAVE_LIBHISTORY ${HAVE_LIBHISTORY}\n"
 "WITH_THREADS ${WITH_THREADS}\nWITH_THREAD_ALLOC ${WITH_THREAD_ALLOC}\nWITH_ICONV ${WITH_ICONV}\n"
-"WITH_ZLIB ${WITH_ZLIB}\nWITH_ICU ${WITH_ICU}\nWITH_C14N ${WITH_C14N}\nWITH_CATALOG ${WITH_CATALOG}\n"
+"WITH_ZLIB ${WITH_ZLIB}\nWITH_ICU ${WITH_ICU}\nWITH_HTTP ${WITH_HTTP}\nWITH_C14N ${WITH_C14N}\nWITH_CATALOG ${WITH_CATALOG}\n"
 "WITH_DEBUG ${WITH_DEBUG}\nWITH_HTML ${WITH_HTML}\nWITH_OUTPUT ${WITH_OUTPUT}\nWITH_PATTERN ${WITH_PATTERN}\n"
 "WITH_READER ${WITH_READER}\nWITH_REGEXPS ${WITH_REGEXPS}\nWITH_RELAXNG ${WITH_RELAXNG}\n"
 "WITH_SCHEMAS ${WITH_SCHEMAS}\nWITH_SCHEMATRON ${WITH_SCHEMATRON}\nWITH_VALID ${WITH_VALID}\n"
