@@ -78,8 +78,63 @@ publish_host_binary() {
         echo "publish_host_binary: the published file is not read-only: $published ($published_mode)" >&2
         return 2
     fi
+    # The record binds the published path to the size and digest that were actually published, so a later run can refuse bytes it
+    # did not publish even when the mode still says read-only.
+    if [ -n "${GTOS_PUBLISH_RECORD:-}" ]; then
+        printf '%s %s %s\n' "$published" "$(stat -c %s "$published")" "$published_digest" >> "$GTOS_PUBLISH_RECORD" || return 2
+    fi
     printf '%s\n' "$published"
     return 0
+}
+
+# verify_published <path> <expected sha256> <expected size>
+#       Refuse a published image whose bytes or size no longer match the identity that was published. A read-only mode does not
+#       prevent root from rewriting a file, and a byte swap of the same size is invisible to a size check alone, so both are
+#       compared with the record the publish step produced.
+verify_published() {
+    if [ "$#" -ne 3 ]; then
+        echo "verify_published takes a path, a sha256 and a size" >&2
+        return 2
+    fi
+    published_path=$1 expected_digest=$2 expected_size=$3
+    if [ ! -f "$published_path" ]; then
+        echo "verify_published: not a regular file: $published_path" >&2
+        return 2
+    fi
+    actual_digest=$(sha256sum "$published_path" | cut -d' ' -f1)
+    actual_size=$(stat -c %s "$published_path" 2>/dev/null || echo '')
+    if [ "$actual_size" != "$expected_size" ]; then
+        echo "verify_published: size drifted for $published_path: $actual_size, expected $expected_size" >&2
+        return 2
+    fi
+    if [ "$actual_digest" != "$expected_digest" ]; then
+        echo "verify_published: bytes drifted for $published_path: $actual_digest, expected $expected_digest" >&2
+        return 2
+    fi
+    return 0
+}
+
+# run_published_binary <binary> [args...]
+#       Start a published image only after checking it against the size and digest recorded when it was published. A path with no
+#       record was not published by this run, and bytes that do not match the record are refused instead of started.
+run_published_binary() {
+    if [ "$#" -lt 1 ]; then
+        echo "run_published_binary takes a binary and its arguments" >&2
+        return 2
+    fi
+    image=$1
+    if [ -z "${GTOS_PUBLISH_RECORD:-}" ] || [ ! -f "${GTOS_PUBLISH_RECORD:-/nonexistent}" ]; then
+        echo "run_published_binary: no publish record to verify $image against" >&2
+        return 2
+    fi
+    record=$(awk -v path="$image" '$1 == path { print $2, $3 }' "$GTOS_PUBLISH_RECORD" | tail -n 1)
+    if [ -z "$record" ]; then
+        echo "run_published_binary: $image is not recorded as published in $GTOS_PUBLISH_RECORD" >&2
+        return 2
+    fi
+    verify_published "$image" "${record#* }" "${record%% *}" || return 2
+    shift
+    run_host_binary "$image" "$@"
 }
 
 # run_host_binary <binary> [args...]
@@ -103,6 +158,12 @@ run_host_binary() {
             echo "run_host_binary: a launcher is named but GTOS_HOST_PUBLISH_ROOT is not, so the image it would load is writable" >&2
             return 2
         fi
+        # A launcher may only load an image the publish step produced: an image outside the publish root, however read-only it
+        # looks, was never published by this run and its identity is therefore unbound.
+        case $binary in
+            "$GTOS_HOST_PUBLISH_ROOT"/*) ;;
+            *) echo "run_host_binary: a launcher may only load a published image under $GTOS_HOST_PUBLISH_ROOT: $binary" >&2; return 2 ;;
+        esac
         image_mode=$(stat -c %a "$binary" 2>/dev/null || echo '')
         if [ -z "$image_mode" ] || [ $((0$image_mode & 0222)) -ne 0 ]; then
             echo "run_host_binary: a launcher may only load a read-only published image: $binary" >&2
