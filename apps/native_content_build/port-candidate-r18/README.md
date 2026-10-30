@@ -12,12 +12,11 @@ patches.
 
     candidate.json   the manifest: each path, the origin it was captured from, both digests, whether it is edited, and the patches
     patches/         one unified diff per edited file, `-p1` against a checkout of the source root
-    apply.py         compose a build root from the pinned checkouts plus this candidate's overlay
-    refresh.py       rebuild the manifest from the overlay that is on disk
+    apply.py         compose a build root from the pinned checkouts and these patches
 
-The byte-exact overlay itself (`overlay/` with the full files) stays outside the repository, under the packet's own artifacts
-directory: `port-candidate-154-r18/`. Committing four full files, one of which is a 9436-line V8 build file, would drown the
-review in text that is mostly unchanged; the patches are the change.
+The byte-exact overlay the patches were generated from also stays on the artifact side, under the packet's own artifacts
+directory (`port-candidate-154-r18/overlay/`). It is not needed to compose: the patches are the change, and `apply.py` rebuilds the
+bytes from the origin plus the patch, refusing if the result does not match the digest in the manifest.
 
 ## How the edits were chosen
 
@@ -39,17 +38,23 @@ Each patch is the smallest change that removes a real, measured obstruction, and
 ## How to replay
 
     python3 apply.py --check-only --view /tmp/unused          # pin check: refuse if a shared origin moved
-    python3 apply.py --view /var/tmp/gtos-port-r18/view       # compose links + real overlay files
-    python3 refresh.py                                        # after editing the overlay, re-pin the manifest
+    python3 apply.py --view /var/tmp/gtos-port-r18/view       # compose links + patched real files
 
-`apply.py` refuses to compose into any path under `sources/`, refuses when a shared origin's digest no longer matches the pinned
-one, and never writes an overlay file through a link into a shared tree: each symlinked ancestor is materialised inside the view
-first. That last rule is not hypothetical. The first composition this round wrote through a `third_party` symlink into the pinned
-libxml file; it was restored from the checkout's own git object and the composer was changed so it cannot happen again.
+Composition links every entry of the two pinned checkouts, then, for each edited file, copies the origin into the view, applies the
+patch to that copy, and compares the result with the digest the manifest records. It refuses:
+
+* any destination under a shared source root;
+* a shared origin whose digest no longer matches the pinned one;
+* an applied file whose digest is not the recorded one.
+
+It also never writes through a link into a shared tree: each symlinked ancestor is replaced by a real directory of links inside the
+view first. That rule is not hypothetical. The first composition this round wrote through a `third_party` symlink into the pinned
+libxml file. It was restored from the checkout's own git object and the composer was changed so it cannot happen again.
 
 ## What the candidate does and does not prove
 
-Composing this candidate and asking GN for `//content/shell:content_shell_app` measured four rungs: the V8 refusal (rc 1, still
-default), then the crash-key assertion, then the `data +=` fixture defect, then `//ui/menus/BUILD.gn`'s platform assertion, which
-has no GTOS backend. The generated build graph therefore stops at the browser UI layer, and no object, link or guest run is
-claimed from it. See `artifacts/.../c1-content-frontier-154-r18.md` for the stage-by-stage records.
+Composing this candidate and asking GN for `//content/shell:content_shell_app` measured seven rungs: the V8 refusal (rc 1, still
+default), then the crash-key assertion, then the `data +=` fixture defect, then `//ui/menus/BUILD.gn`'s platform assertion, then the
+libxml configure requirement — reached from `//content/common`, from `//base` and even from `//third_party/zlib`. GN therefore never
+produces a build graph for any target tried, and no object, link or guest run is claimed from it. See
+`artifacts/.../c1-content-frontier-154-r18.md` for the stage-by-stage records.

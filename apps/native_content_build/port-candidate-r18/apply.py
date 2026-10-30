@@ -14,13 +14,14 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 MANIFEST = HERE / 'manifest.json'
-OVERLAY = HERE / 'overlay'
+PATCHES = HERE / 'patches'
 SHARED_ROOTS = (Path('/mnt/f/GTOS-Chromium/sources'),)
 
 
@@ -83,7 +84,9 @@ def materialize_parents(view, rel):
 def compose(manifest, view):
     port = Path(manifest['base']['port'])
     full = Path(manifest['base']['full'])
-    overlay_paths = {entry['path'] for entry in manifest['files']}
+    # Only the edited files become real files in the view. The rest of the manifest records what was read, so they are composed as
+    # links like everything else: skipping them would leave the view without the files the candidate did not change.
+    overlay_paths = {entry['path'] for entry in manifest['files'] if entry.get('edited')}
     overlay_dirs = set()
     for rel in overlay_paths:
         parent = os.path.dirname(rel)
@@ -145,16 +148,20 @@ def compose(manifest, view):
     for name in sorted(os.listdir(full)):
         if not os.path.lexists(view / name):
             link(str(full / name), str(view / name))
-    # 4. The overlay itself, as real files, with its own digests recorded.
+    # 4. The candidate itself, as real files: each patch is applied to a copy of the file it was generated from, inside the view.
     applied = []
     shared_writes = []
     for entry in manifest['files']:
-        source = OVERLAY / entry['path']
+        if not entry.get('edited'):
+            continue
+        patch = PATCHES / (entry['path'].replace('/', '__') + '.patch')
+        if not patch.is_file():
+            raise SystemExit('refusing to compose: no patch for edited file ' + entry['path'])
         parent = materialize_parents(view, entry['path'])
         target = parent / os.path.basename(entry['path'])
         view_real = Path(os.path.realpath(view))
         if target.is_symlink():
-            # The overlay replaces a path the composition linked to a shared tree. Removing that link and writing a real file is the
+            # The candidate replaces a path the composition linked to a shared tree. Removing that link and writing a real file is the
             # whole point; writing through it would put the edit in the shared tree instead.
             resolved = Path(os.path.realpath(target))
             if resolved == view_real or view_real in resolved.parents:
@@ -163,13 +170,23 @@ def compose(manifest, view):
         real_parent = Path(os.path.realpath(parent))
         if under_shared(real_parent) or (real_parent != view_real and view_real not in real_parent.parents):
             shared_writes.append(str(real_parent))
-            raise SystemExit('refusing to write overlay file into %s: it is not inside the view' % real_parent)
-        shutil.copyfile(source, target)
+            raise SystemExit('refusing to write into %s: it is not inside the view' % real_parent)
+        # The copy starts from the file the patch was generated against, so the patch applies to exactly the bytes it names.
+        shutil.copyfile(entry['origin'], target)
+        patched = subprocess.run(['patch', '-p1', '--silent', '--force', '--input', str(patch), str(target)],
+                                 text=True, capture_output=True)
+        if patched.returncode != 0:
+            raise SystemExit('refusing to compose: %s does not apply to %s: %s'
+                             % (patch.name, entry['origin'], patched.stderr.strip()))
         real_files += 1
         recorded = digest(target)
+        if recorded != entry['overlay_sha256']:
+            raise SystemExit('refusing to compose: %s produced %s, not the recorded %s'
+                             % (entry['path'], recorded, entry['overlay_sha256']))
         applied.append({'path': entry['path'], 'sha256': recorded, 'bytes': target.stat().st_size,
                         'origin': entry['origin'], 'origin_sha256': entry['origin_sha256'],
-                        'matches_origin': recorded == entry['origin_sha256'],
+                        'patch': patch.name, 'patch_sha256': digest(patch),
+                        'matches_recorded': True,
                         'real_path': str(Path(os.path.realpath(target)))})
     return {'links': links, 'real_files': real_files, 'real_dirs': real_dirs, 'applied': applied,
             'shared_writes': shared_writes}
