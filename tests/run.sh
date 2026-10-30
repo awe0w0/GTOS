@@ -64,6 +64,8 @@ SURFACE_BUILD_DIR=$generation/native-surface \
 ./tests/browser_probe_test.sh
 ./tests/rust_abi_probe_test.sh
 ./tests/rust_abi_run_test.sh
+# The judge is only useful if it can disagree: the crafted logs and the three stage-exit cases live beside it.
+python3 -B ./tests/rust_abi_judge_test.py . "$generation/abi-judge"
 ./tests/rust_builtins_test.sh
 ./tests/gtos_port_mapping_test.sh
 ./tests/port_candidate_test.sh
