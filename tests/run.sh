@@ -19,6 +19,7 @@ python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
 ./tests/rust_builtins_test.sh
 ./tests/gtos_port_mapping_test.sh
 ./tests/suite_wiring_test.sh
+./tests/rust_target_spec_test.sh
 ./tests/skia_alpha_probe_test.sh
 python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/keymap_test.sh
