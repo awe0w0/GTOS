@@ -22,15 +22,34 @@ compile() {
       src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp \
       src/process/native_windows.cpp src/process/native_surface.cpp -o "$2"
 }
+# The strict sanitizer build is the same test body with address and undefined-behaviour instrumentation. It is a function so that the
+# three ways of asking for it -- a local run, the build step, and the run step -- compile exactly the same thing; while it was spelled
+# out only in the local branch, the two-step supply had no way to publish or start it at all.
+compile_sanitized() {
+    "${CXX:-g++}" $kernel_flags -m64 -std=c++11 -O1 -g -Iinclude \
+      -DGTOS_DESKTOP_HOST_TEST -DGTOS_MEMORY_TEST -DGTOS_DESKTOP_SANITIZE -fno-exceptions -fno-rtti \
+      -fno-builtin -fno-pie -no-pie -Wall -Wextra -Werror \
+      -fsanitize=address,undefined -fno-omit-frame-pointer \
+      tests/desktop_tests.cpp src/drivers/framebuffer.cpp src/gui/modern_geometry.cpp \
+      src/gui/modern_painter.cpp src/gui/modern_desktop.cpp src/gui/modern_render.cpp \
+      src/common/boot_log.cpp src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp \
+      src/process/native_windows.cpp src/process/native_surface.cpp -o "$1"
+}
 
 if [ "$stage" = build ] || [ "$stage" = all ]; then
     python3 tests/desktop_catalog_test.py
     compile -m32 "$build/test32"
     compile -m64 "$build/test64"
+    if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
+        compile_sanitized "$build/sanitized"
+    fi
 fi
 if [ "$stage" = build ]; then
     stage_binary desktop32 "$build/test32"
     stage_binary desktop64 "$build/test64"
+    if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
+        stage_binary desktop-sanitized "$build/sanitized"
+    fi
     exit 0
 fi
 if [ "$stage" = run ]; then
@@ -40,6 +59,11 @@ if [ "$stage" = run ]; then
     desktop64=$(staged_binary desktop64)
     qemu-i386 "$desktop32"
     run_host_binary "$desktop64"
+    if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
+        # Resolved in its own statement: an assignment's status is the substitution's, but inside a command's arguments it is not.
+        sanitized=$(staged_binary desktop-sanitized) || exit 2
+        ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 run_host_binary "$sanitized"
+    fi
     exit 0
 fi
 if [ "$stage" != all ]; then
@@ -66,13 +90,8 @@ fi
 
 run_host_binary "$build/test64"
 if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
-    "${CXX:-g++}" $kernel_flags -m64 -std=c++11 -O1 -g -Iinclude \
-      -DGTOS_DESKTOP_HOST_TEST -DGTOS_MEMORY_TEST -DGTOS_DESKTOP_SANITIZE -fno-exceptions -fno-rtti \
-      -fno-builtin -fno-pie -no-pie -Wall -Wextra -Werror \
-      -fsanitize=address,undefined -fno-omit-frame-pointer \
-      tests/desktop_tests.cpp src/drivers/framebuffer.cpp src/gui/modern_geometry.cpp \
-      src/gui/modern_painter.cpp src/gui/modern_desktop.cpp src/gui/modern_render.cpp \
-      src/common/boot_log.cpp src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp \
-      src/process/native_windows.cpp src/process/native_surface.cpp -o "$build/sanitized"
+    # The local entry compiles and starts in one go, which is what an ordinary host does; the two-step supply above compiles it in the
+    # build step and starts the published copy in the run step. Both use the same function.
+    compile_sanitized "$build/sanitized"
     ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 run_host_binary "$build/sanitized"
 fi

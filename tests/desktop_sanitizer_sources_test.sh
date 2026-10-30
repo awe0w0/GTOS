@@ -34,8 +34,9 @@ check() {
 
 check 'the real script passes' 0 'PASS desktop sanitizer sources' "$python" -B tests/desktop_sanitizer_sources_test.py
 
-# Remove one source from the sanitizer list only. The line is the one ending in -o "$build/sanitized".
-sed 's|      src/process/native_windows.cpp src/process/native_surface.cpp -o "\$build/sanitized"|      src/process/native_surface.cpp -o "$build/sanitized"|' \
+# Remove one source from the sanitizer list only. The line is the one in the sanitizer build, which links to "$1"; the ordinary build
+# links to "$2", so the two lines stay distinguishable now that both live in functions.
+sed 's|      src/process/native_windows.cpp src/process/native_surface.cpp -o "\$1"|      src/process/native_surface.cpp -o "$1"|' \
     tests/desktop_test.sh > "$root/missing-sanitized.sh"
 if cmp -s tests/desktop_test.sh "$root/missing-sanitized.sh"; then
     echo 'FAIL the copy is identical, so this case would not exercise anything' >&2
