@@ -80,6 +80,16 @@ chmod 0555 ../gtos-runtime/root/usr/bin/qemu-i386
 check 'a neighbouring runtime is used without a variable' 0 'launcher ../gtos-runtime/root/usr/bin/qemu-i386' choose run -u ELF32_I386_LAUNCHER
 rm -rf "$root/gtos-runtime"
 
+# A directory at the neighbour path is executable but cannot be loaded. The neighbour branch is a guess about the checkout, so it
+# must apply the same regular-file test as a named executor: a restricted run refuses, and the ordinary entry falls back to a
+# direct start instead of handing a directory to the caller as its executor.
+mkdir -p "$root/gtos-runtime/root/usr/bin/qemu-i386"
+check 'a directory at the neighbour path is not chosen as an executor' 0 native choose all -u ELF32_I386_LAUNCHER
+check 'a directory at the neighbour path leaves a restricted run refused' 2 '' choose run -u ELF32_I386_LAUNCHER
+grep -q 'needs an executor' "$root/stderr" && echo 'ok the neighbour-directory refusal names the missing executor' || {
+    echo 'FAIL the neighbour-directory refusal is not specific' >&2; failures=$((failures + 1)); }
+rm -rf "$root/gtos-runtime"
+
 check 'the choice line is classified as native or not' 0 'native' sh -c '. "$REPO/tests/i386-launcher.sh"; i386_launcher_is_native native && echo native || echo other'
 check 'the executor path is recovered from the choice line' 0 "$root/launcher" sh -c '. "$REPO/tests/i386-launcher.sh"; i386_launcher_path "launcher '"$root"'/launcher"'
 

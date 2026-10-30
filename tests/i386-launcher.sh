@@ -25,7 +25,9 @@ i386_launcher_choose() {
         printf 'launcher %s\n' "${ELF32_I386_LAUNCHER}"
         return 0
     fi
-    if [ -x ../gtos-runtime/root/usr/bin/qemu-i386 ]; then
+    # The neighbouring runtime is a guess about the checkout, so it gets the same test as a named executor: a directory at that
+    # path is executable but cannot be loaded, and choosing it would turn "no emulator here" into a broken start.
+    if [ -f ../gtos-runtime/root/usr/bin/qemu-i386 ] && [ -x ../gtos-runtime/root/usr/bin/qemu-i386 ]; then
         printf 'launcher %s\n' ../gtos-runtime/root/usr/bin/qemu-i386
         return 0
     fi
