@@ -1,0 +1,166 @@
+/*
+ * The libm subset xpath.c needs, and nothing more.
+ *
+ * Why this exists: Chromium's libxml2 contract keeps XPath enabled, `xmlInitParserInternal` (threads.c) calls `xmlInitXPathInternal`, and
+ * xpath.c uses `fabs`, `floor`, `ceil`, `fmod`, `log10` and `pow` — plus `exit` once. The pinned GTOS user-space set has no libm, so a link
+ * of the full 26-source parsing set stops on exactly one symbol (`xmlInitXPathInternal`) until these are provided. Rather than leave the link
+ * open or fake the call, this implements the six functions for the ranges XPath actually reaches: number-to-string scaling with powers of
+ * ten, rounding of doubles, remainder, and the logarithm behind the exponent of a formatted number.
+ *
+ * Accuracy claim, measured not assumed: `math_closure_test.c` compares every function against the host's libm over a grid and prints the
+ * maximum relative error; the numbers it prints are the claim. The algorithms are standard: exact bit operations for fabs, truncate-and-adjust
+ * for floor/ceil, binary scaling for fmod (exact), atanh series for the logarithm, range-reduced Taylor for exp, and pow = exp(y·ln x).
+ *
+ * Not claimed: this is not a complete libm (no trig, no exp2/ldexp, no long double, no denormal-specific handling beyond what the series
+ * produce), and the error figures are for the sampled ranges, not a proven bound over all doubles.
+ */
+#ifdef GTOS_MATH_TEST
+#define fabs gtos_fabs
+#define floor gtos_floor
+#define ceil gtos_ceil
+#define fmod gtos_fmod
+#define log10 gtos_log10
+#define pow gtos_pow
+#define exit gtos_exit
+#endif
+
+#ifndef GTOS_MATH_TEST
+#include <process/abi.h>
+#endif
+
+namespace {
+
+const double kLn2 = 0.693147180559945309417232121458176568;
+const double kLn10 = 2.302585092994045684017991454684364208;
+const double kTwoPi = 6.283185307179586476925286766559005768;
+
+union DoubleBits {
+  double value;
+  unsigned long long bits;
+};
+
+int is_nan(double value) { return value != value; }
+int is_infinite(double value) { return !is_nan(value) && (value > 1.7976931348623157e308 || value < -1.7976931348623157e308); }
+
+// ln(m) for m in [1, 2), through ln(m) = 2·atanh((m-1)/(m+1)); the series converges fast on that interval.
+double ln_near_one(double m) {
+  const double z = (m - 1.0) / (m + 1.0);
+  const double z2 = z * z;
+  double term = z;
+  double sum = 0.0;
+  for (int k = 1; k < 60; k += 2) {
+    sum += term / (double)k;
+    term *= z2;
+  }
+  return 2.0 * sum;
+}
+
+// exp(t) = 2^k · exp(r), with |r| <= ln2/2 and a 14-term Taylor series for exp(r).
+double exp_series(double t) {
+  if (t > 709.0) return 1.0 / 0.0;
+  if (t < -745.0) return 0.0;
+  const double k = (t < 0.0 ? -0.5 : 0.5) + t / kLn2;
+  const long long shift = (long long)k;
+  const double r = t - (double)shift * kLn2;
+  double term = 1.0;
+  double sum = 1.0;
+  for (int i = 1; i <= 18; ++i) {
+    term *= r / (double)i;
+    sum += term;
+  }
+  // Scale by 2^shift with a loop: no ldexp in the pinned set, and |shift| stays small for XPath's numbers.
+  double scale = 1.0;
+  double base = shift < 0 ? 0.5 : 2.0;
+  unsigned long long steps = shift < 0 ? (unsigned long long)(-shift) : (unsigned long long)shift;
+  while (steps != 0) {
+    if (steps & 1ULL) scale *= base;
+    base *= base;
+    steps >>= 1;
+  }
+  return sum * scale;
+}
+
+double ln(double x) {
+  const DoubleBits bits = {x};
+  int exponent = (int)((bits.bits >> 52) & 0x7ffULL) - 1023;
+  DoubleBits mantissa = {x};
+  mantissa.bits = (bits.bits & 0x000fffffffffffffULL) | 0x3ff0000000000000ULL;
+  double m = mantissa.value;
+  if (m > 1.4142135623730951) {
+    m *= 0.5;
+    exponent += 1;
+  }
+  return (double)exponent * kLn2 + ln_near_one(m);
+}
+
+} // namespace
+
+extern "C" double fabs(double x) {
+  DoubleBits bits = {x};
+  bits.bits &= 0x7fffffffffffffffULL;
+  return bits.value;
+}
+
+extern "C" double floor(double x) {
+  if (is_nan(x) || is_infinite(x) || fabs(x) >= 4503599627370496.0) return x;
+  const long long truncated = (long long)x;
+  const double result = (double)truncated;
+  return result > x ? result - 1.0 : result;
+}
+
+extern "C" double ceil(double x) {
+  if (is_nan(x) || is_infinite(x) || fabs(x) >= 4503599627370496.0) return x;
+  const long long truncated = (long long)x;
+  const double result = (double)truncated;
+  return result < x ? result + 1.0 : result;
+}
+
+extern "C" double fmod(double x, double y) {
+  if (is_nan(x) || is_nan(y) || is_infinite(x) || y == 0.0) return 1.0 / 0.0 - 1.0 / 0.0;
+  if (is_infinite(y)) return x;
+  double remainder = fabs(x);
+  const double divisor = fabs(y);
+  if (remainder < divisor) return x;
+  // Binary scaling keeps every subtraction exact: remainder and divisor are the same floating value scaled by powers of two.
+  double scaled = divisor;
+  while (scaled * 2.0 <= remainder) scaled *= 2.0;
+  while (remainder >= divisor) {
+    while (scaled > remainder) scaled *= 0.5;
+    remainder -= scaled;
+  }
+  return x < 0.0 ? -remainder : remainder;
+}
+
+extern "C" double log10(double x) {
+  if (is_nan(x)) return x;
+  if (x == 0.0) return -1.0 / 0.0;
+  if (x < 0.0) return 1.0 / 0.0 - 1.0 / 0.0;
+  if (is_infinite(x)) return x;
+  return ln(x) / kLn10;
+}
+
+extern "C" double pow(double x, double y) {
+  if (y == 0.0) return 1.0;
+  if (is_nan(x) || is_nan(y)) return 1.0 / 0.0 - 1.0 / 0.0;
+  if (x == 0.0) return y > 0.0 ? 0.0 : 1.0 / 0.0;
+  const int negative_base = x < 0.0;
+  if (negative_base) {
+    const double rounded = floor(y);
+    if (rounded != y) return 1.0 / 0.0 - 1.0 / 0.0;
+  }
+  const double magnitude = exp_series(y * ln(fabs(x)));
+  return negative_base && fmod(y, 2.0) != 0.0 ? -magnitude : magnitude;
+}
+
+// xpath.c's one call is a fatal path. GTOS has a real process exit (GTOS_SYS_EXIT, EBX = status), so this terminates the process the same way
+// the loader expects instead of unwinding into nothing.
+extern "C" void exit(int status) {
+#ifndef GTOS_MATH_TEST
+  unsigned operation = GTOS_SYS_EXIT;
+  asm volatile("int $0x80" : "+a"(operation) : "b"((unsigned)status) : "memory", "cc");
+#else
+  (void)status;
+#endif
+  for (;;) {
+  }
+}
