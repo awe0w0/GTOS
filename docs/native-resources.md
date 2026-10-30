@@ -119,3 +119,16 @@ and explicit QEMU firmware path. The builder deliberately does not claim a full
 stack or guest pass itself; the exact stack proof and guest results are separate
 immutable evidence. CI reports are recorded after publication in the workspace
 handoff rather than anticipated here.
+
+`tests/native_resource_host_test.sh` takes two optional steps as well. `build`
+compiles into a directory the caller keeps and publishes both images through the
+execution supply without starting them, and `run` starts only those published
+copies, with the build step's directory passed read-only as
+`RESOURCE_BUILD_DIR`. Under an execution allow-list a step cannot start a
+program it has just linked, so the single-step form above is for ordinary hosts:
+
+```sh
+bash tests/native_resource_host_test.sh build apps/png_resource_probe/resource.png "$BUILD_DIR"
+RESOURCE_BUILD_DIR="$BUILD_DIR" bash tests/native_resource_host_test.sh run \
+  apps/png_resource_probe/resource.png "$RUN_DIR"
+```
