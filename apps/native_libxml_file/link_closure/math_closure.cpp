@@ -57,13 +57,18 @@ double ln_near_one(double m) {
 
 // exp(t) = 2^k · exp(r), with |r| <= ln2/2 and a 14-term Taylor series for exp(r).
 double exp_series(double t) {
-  // ln(DBL_MAX) = 709.782712893384. A tighter threshold rejects finite results — pow(2, 1023) is 8.98846567431158e307 and its exponent
-  // t = 1023*ln2 = 709.0896 used to fall into the overflow branch.
-  if (t > 709.782712893384) return 1.0 / 0.0;
+  // ln(DBL_MAX) = 709.7827128933839. A tighter threshold rejects finite results — pow(2, 1023) is 8.98846567431158e307 and its exponent
+  // t = 1023*ln2 = 709.0896 used to fall into the overflow branch. The constant matters in the last digit: 1024*ln2 = 709.78271289338404
+  // equals the rounded 709.782712893384, so a threshold written with the short constant lets pow(2,1024) through as a finite number.
+  if (t > 709.7827128933839) return 1.0 / 0.0;
   // Below this the result is below the smallest subnormal (exp(-745.133...) = 5e-324), so it underflows to zero.
   if (t < -745.1332191019412) return 0.0;
   const double k = (t < 0.0 ? -0.5 : 0.5) + t / kLn2;
-  const long long shift = (long long)k;
+  long long shift = (long long)k;
+  // The scaling loop squares 2.0 once per bit, so a shift of 1024 makes 2^1024 an intermediate and the product overflows even when the
+  // exponent is finite: t = 1023.75*ln2 = 709.6 has only bit 10 set, and the sum < 1 that should bring it back arrives after the inf.
+  // Clamping to 1023 puts the remainder (0.35 .. 0.69) in r, where the series stays below 2 and 2^1023 * sum is representable.
+  if (shift > 1023) shift = 1023;
   const double r = t - (double)shift * kLn2;
   double term = 1.0;
   double sum = 1.0;
@@ -158,8 +163,15 @@ extern "C" double log10(double x) {
 
 extern "C" double pow(double x, double y) {
   if (y == 0.0) return 1.0;
+  // 1 to any power is 1, including a not-a-number exponent: IEEE 754 makes this one of the cases whose result ignores the NaN, and the test
+  // checks it directly because the generic NaN branch below would otherwise answer NaN.
+  if (x == 1.0) return 1.0;
   if (is_nan(x) || is_nan(y)) return 1.0 / 0.0 - 1.0 / 0.0;
-  if (x == 0.0) return y > 0.0 ? 0.0 : 1.0 / 0.0;
+  if (x == 0.0) {
+    // -0 raised to an odd positive integer is -0: `x == 0.0` cannot tell the two zeros apart, so the sign is taken from the value itself.
+    if (y > 0.0) return (__builtin_signbit(x) && fmod(y, 2.0) != 0.0) ? -0.0 : 0.0;
+    return 1.0 / 0.0;
+  }
   const int negative_base = x < 0.0;
   if (negative_base) {
     const double rounded = floor(y);

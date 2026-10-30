@@ -159,6 +159,22 @@ int main(void) {
   record("pow", gtos_pow(2.0, 1023.0), pow(2.0, 1023.0), 2.0, 1023.0);
   record("pow", gtos_pow(2.0, 1024.0), pow(2.0, 1024.0), 2.0, 1024.0);
   record("pow", gtos_pow(2.0, -1074.0), pow(2.0, -1074.0), 2.0, -1074.0);
+  record("pow", gtos_pow(2.0, 1023.75), pow(2.0, 1023.75), 2.0, 1023.75);
+  record("pow", gtos_pow(2.0, 1023.9), pow(2.0, 1023.9), 2.0, 1023.9);
+  record("pow", gtos_pow(2.0, 709.78), pow(2.0, 709.78), 2.0, 709.78);
+  record("pow", gtos_pow(2.0, -1075.0), pow(2.0, -1075.0), 2.0, -1075.0);
+  record("pow", gtos_pow(-0.0, 3.0), pow(-0.0, 3.0), -0.0, 3.0);
+  record("pow", gtos_pow(-0.0, 2.0), pow(-0.0, 2.0), -0.0, 2.0);
+  record("pow", gtos_pow(-infinity, 3.0), pow(-infinity, 3.0), -infinity, 3.0);
+  record("pow", gtos_pow(-infinity, 2.0), pow(-infinity, 2.0), -infinity, 2.0);
+  {
+    // 1^anything is 1 and anything^0 is 1, including the not-a-number argument: these are the pow cases whose result must ignore a NaN input,
+    // so they are checked directly instead of being inferred from a NaN result elsewhere.
+    volatile double zero = 0.0;
+    const double nan_value = zero / zero;
+    record("pow", gtos_pow(1.0, nan_value), pow(1.0, nan_value), 1.0, nan_value);
+    record("pow", gtos_pow(nan_value, 0.0), pow(nan_value, 0.0), nan_value, 0.0);
+  }
   record("log10", gtos_log10(infinity), log10(infinity), infinity, 0.0);
   record("log10", gtos_log10(-0.0), log10(-0.0), -0.0, 0.0);
   record("log10", gtos_log10(-1.0), log10(-1.0), -1.0, 0.0);
