@@ -7,6 +7,7 @@
 # says the two compilers agree about the i386 calling convention, struct layout and function-pointer table for real, by value.
 # It does not say GTOS accepts the image, which is a separate claim with its own evidence.
 #
+#   rust_abi_run_test.sh               build and run in one go, into a temporary generation (what the suite calls)
 #   rust_abi_run_test.sh build <dir>   compile and publish; prints the STAGED line
 #   rust_abi_run_test.sh run           start the published image and judge its values
 set -eu
@@ -34,10 +35,8 @@ if [ "$stage" = all ]; then
         GTOS_PUBLISH_RECORD=$root/record.txt RUST_LIBS=$RUST_LIBS RUSTC=${RUSTC:-rustc} \
         sh "$0" build "$root/build" > "$root/build.log" 2>&1 || { sed -n '1,120p' "$root/build.log" >&2; exit 1; }
     choice=$(i386_launcher_choose all) || exit 2
-    launcher=''
     if ! i386_launcher_is_native "$choice"; then
-        launcher=$(i386_launcher_path "$choice")
-        GTOS_HOST_LAUNCHER=$launcher
+        GTOS_HOST_LAUNCHER=$(i386_launcher_path "$choice")
         export GTOS_HOST_LAUNCHER
     fi
     GTOS_HOST_PUBLISH_ROOT=$root/publish GTOS_PUBLISH_MANIFEST=$root/manifest.txt \
@@ -45,7 +44,7 @@ if [ "$stage" = all ]; then
         sh "$0" run
     exit 0
 fi
-if [ "$stage" = build ] || [ "$stage" = all ]; then
+if [ "$stage" = build ]; then
     if [ -z "${RUST_LIBS:-}" ]; then
         echo 'skip rust ABI run: RUST_LIBS is not set, so this checkout has no i686-unknown-gtos core to build against'
         exit 0
