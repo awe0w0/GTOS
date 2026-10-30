@@ -127,14 +127,23 @@ extern "C" void NativeProcessSmoke(void* multiboot,uint32_t magic) {
     if (!reader) {
         // The eighth module is the business consumer: the private POSIX subset over this same endpoint. Its own record says whether the
         // translation of flags, path bounds, errno, dup offsets, seek origins and close invalidation held on real media.
-        Elf32LoadPlan plan;const uint32_t id=Admit(runtime,modules[6],plan);
+        Elf32LoadPlan plan;const uint32_t id=Admit(runtime,modules[6],plan);const uint32_t suiteCost=Cost(plan);
         const NativeStatus status=Wait(runtime,tasks,id,0,true);const FileRecord record=Record(runtime,id);
-        { InterruptGuard guard;LogCase(record,status,plan,Cost(plan),baseline,store->OpenCount()); }
+        // The peer is already reaped at this point, so the live figure is `initial` and not `baseline` (which was sampled with the peer alive).
+        // The retained cost is `Cost(plan)` exactly: measured `1d58 - 1d50 = 8` against `pageCount=3`, and `Cost(plan) = 3 + 2 + 2 + 1 = 8`. The
+        // five main-loop modules retain `Cost(plan)+3` (measured `1d51 - 1d45 = 0xc` against `Cost(plan)=9`). That difference is recorded as
+        // measured and not explained, instead of hiding it by folding a "+3" into this stage as well.
+        // The retained cost is `Cost(plan)` exactly: measured `1d58 - 1d50 = 8` against `pageCount=3`, and `Cost(plan) = 3 + 2 + 2 + 1 = 8`. The
+        // five main-loop modules retain `Cost(plan)+3` (measured `1d51 - 1d45 = 0xc` against `Cost(plan)=9`). That difference is recorded as
+        // measured and not explained, instead of hiding it by folding a "+3" into this stage as well.
+        { InterruptGuard guard;LogCase(record,status,plan,suiteCost,initial,store->OpenCount()); }
+        FileNeed(initial-frames.getStatistics().freeFrames==suiteCost,"eighth module retains exactly its own VM cost");
         FileNeed(record.version==1&&record.mode==7&&!record.error&&record.stage==2&&record.checks>=25&&(record.mask&0x1ff)==0x1ff,
             "posix translation suite covers its nine families");
         FileNeed(status.observedCs==0x23&&!status.faultVector&&!status.exitCode,"posix translation suite exited normally at CPL3");
         FileNeed(runtime.Reap()==1&&!store->OpenCount(),"posix suite handles reclaimed and none left open");
-        { InterruptGuard guard;LogReap(id,files,runtime,baseline); }
+        FileNeed(frames.getStatistics().freeFrames==initial,"eighth module restores the initial frame count");
+        { InterruptGuard guard;LogReap(id,files,runtime,initial); }
     }
     const NativeFileStatistics f=files.Statistics();const NativeFpStatistics p=runtime.FpStatistics();
     FileNeed(frames.getStatistics().freeFrames==initial&&!store->OpenCount()&&f.reclaims==(reader?1U:7U)&&f.released==(reader?0U:12U)
