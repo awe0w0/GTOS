@@ -25,7 +25,7 @@ compile_i386() { # <optimization> <output>
     ${CXX:-g++} $kernel_flags -m32 -std=c++11 -O"$1" -Iinclude \
         -fno-exceptions -fno-rtti -fno-builtin -fno-stack-protector -fno-pie -no-pie \
         -nostdlib -static -Wall -Wextra -Werror -Wl,-e,_start \
-        tests/live_storage_host.cpp tests/live_storage_i386_runtime.cpp tests/settings_runtime.cpp src/drivers/ata.cpp \
+        tests/live_storage_host.cpp tests/i386_pure_virtual_runtime.cpp tests/settings_runtime.cpp src/drivers/ata.cpp \
         src/storage/liveblockdevice.cpp src/storage/appstore.cpp \
         src/storage/settings.cpp src/apps/package.cpp -o "$2"
 }
