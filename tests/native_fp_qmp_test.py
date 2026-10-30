@@ -130,14 +130,13 @@ def emulator_source():
 class EarlyExitTests(unittest.TestCase):
     def run_emulator(self, directory, write_fresh_pass):
         root = Path(directory)
+        # The stand-in is published by the shell before this suite runs: a program this test wrote for itself would bypass the
+        # identity the publish step records, so there is no fallback that invents one.
         staged = os.environ.get('GTOS_FAKE_QEMU')
-        if staged:
-            emulator = Path(staged)
-            self.assertTrue(emulator.is_file(), 'the staged fake emulator is missing: ' + str(emulator))
-        else:
-            emulator = root / 'fake-qemu'
-            emulator.write_text(emulator_source())
-            emulator.chmod(0o700)
+        self.assertTrue(staged, 'GTOS_FAKE_QEMU must name the published stand-in emulator')
+        emulator = Path(staged)
+        self.assertTrue(emulator.is_file(), 'the staged fake emulator is missing: ' + str(emulator))
+        self.assertEqual(emulator.stat().st_mode & 0o222, 0, 'the staged fake emulator must be read-only: ' + str(emulator))
         output = root / 'evidence'
         output.mkdir()
         (output / 'guest.log').write_text('NATIVE FP SMOKE PASS\n')
@@ -165,7 +164,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == '--emit-emulator':
         target = Path(sys.argv[2])
         target.write_text(emulator_source())
-        target.chmod(0o700)
+        target.chmod(0o555)
         print('emitted ' + str(target))
         sys.exit(0)
     unittest.main()

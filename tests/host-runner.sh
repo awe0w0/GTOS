@@ -21,6 +21,28 @@
 # published, read-only copy: a launcher pointed at a writable file is refused, because the point of publishing is that what runs
 # cannot change underneath it.
 
+# suite_generation <output-root>
+#       Creates and prints a new generation directory under the root, for one run of the suite. Every run gets its own, so the
+#       outputs of the previous run (manifests, records, published images, raw logs) are still there afterwards: a suite that
+#       reuses fixed directories either overwrites the evidence of the last run or has to delete it first, and deleting it is how
+#       a unit that refuses to reuse its artifact directory gets bypassed.
+suite_generation() {
+    if [ "$#" -ne 1 ]; then
+        echo "suite_generation takes exactly one output root" >&2
+        return 2
+    fi
+    root=$1
+    if ! mkdir -p "$root"; then
+        echo "suite_generation: cannot create $root" >&2
+        return 2
+    fi
+    if [ ! -d "$root" ] || [ ! -w "$root" ]; then
+        echo "suite_generation: $root is not a writable directory" >&2
+        return 2
+    fi
+    mktemp -d "$root/generation-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX"
+}
+
 # publish_host_binary <binary>
 publish_host_binary() {
     if [ "$#" -ne 1 ]; then

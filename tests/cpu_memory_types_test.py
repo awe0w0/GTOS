@@ -8,6 +8,7 @@ source under test. This is not a replacement for privileged QEMU/hardware tests.
 """
 import argparse
 import os
+import re
 from pathlib import Path
 import shlex
 import subprocess
@@ -25,7 +26,9 @@ parser.add_argument("--stage", choices=["all", "build", "run"], default="all",
 parser.add_argument("--work", type=Path,
                     help="directory that holds the compiled objects, for a build step and a later run step")
 parser.add_argument("--executable", type=Path,
-                    help="published mock executable to start in --stage run")
+                    help="published mock executable the caller started in --stage run")
+parser.add_argument("--run-log", type=Path,
+                    help="output captured from the mock the caller started; this stage judges it rather than starting anything")
 args = parser.parse_args()
 source_path = args.source.resolve()
 includes = args.include or [root / "include"]
@@ -342,28 +345,44 @@ def build():
                    + [str(mock_source), "-o", str(built_executable)], check=True)
 
 
-def inspect_and_run(executable):
-    """Check the production object's dependencies, then start the mock and let its assertions decide."""
+def inspect(executable, run_log=None):
+    """Check the production object's dependencies, then judge what the started mock printed.
+
+    The mock is started by the caller through the shared runner, not from here. A program the test starts directly is a program
+    that skipped the identity check the run stage exists for: the published copy's size and digest are decided before it is
+    allowed to execute, and that decision belongs at the one place a program is started. So this function reads the log of a
+    real run and only decides whether it passed.
+    """
     if not production_object.exists():
         raise SystemExit("no production object at %s; run the build step first" % production_object)
-    if not Path(executable).exists():
-        raise SystemExit("no executable at %s; publish it in the build step first" % executable)
+    if run_log is None:
+        raise SystemExit("no run log; the mock has to be started by the caller and its output read here")
     undefined = subprocess.check_output([os.environ.get("NM", "nm"), "-u", str(production_object)], text=True)
     if undefined.strip():
         raise SystemExit("Unexpected production-object dependencies:\n" + undefined)
     print("production i386 compile passed; no undefined symbols", flush=True)
-    subprocess.run([str(executable)], check=True)
+    log = Path(run_log).read_text()
+    print(log, end="" if log.endswith("\n") else "\n", flush=True)
+    # The mock prints its own verdict and count. Requiring both keeps "it ran" apart from "it measured something": a program that
+    # started and printed nothing must not pass, and neither must one that reports zero assertions.
+    verdict = re.search(r"^memory-type mock checks passed: (\d+) assertions", log, re.MULTILINE)
+    if verdict is None:
+        raise SystemExit("the mock ran but printed no verdict line (%s)" % run_log)
+    if int(verdict.group(1)) == 0:
+        raise SystemExit("the mock reported zero assertions (%s)" % run_log)
 
 
 try:
     if args.stage in ("all", "build"):
         build()
     if args.stage == "all":
-        inspect_and_run(built_executable)
+        if args.run_log is None:
+            raise SystemExit("--stage all needs --run-log: the caller starts the mock and this reads what it printed")
+        inspect(built_executable, args.run_log)
     elif args.stage == "run":
-        if args.executable is None:
-            raise SystemExit("--stage run needs --executable, the published mock to start")
-        inspect_and_run(args.executable)
+        if args.run_log is None:
+            raise SystemExit("--stage run needs --run-log, the output of the published mock the caller started")
+        inspect(args.executable, args.run_log)
 finally:
     if temporary is not None:
         temporary.cleanup()
