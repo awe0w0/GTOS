@@ -1,0 +1,22 @@
+--- a/build/toolchain/gtos/BUILD.gn
++++ b/build/toolchain/gtos/BUILD.gn
+@@ -17,7 +17,9 @@
+     _triple = invoker.triple
+     _elf = invoker.elf
+     _clang = "$gtos_clang_bin/clang"
+-    _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -mno-sse -mno-sse2"
++    # -nostdinc: the only headers this target may read are the ones //build/config/gtos:sdk names. Without it every
++    # translation unit searched the host's /usr/include and failed on bits/libc-header-start.h.
++    _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -msse2 -mfpmath=sse -mno-sse3 -mno-ssse3 -mno-sse4 -mno-avx -nostdinc"
+ 
+     tool("cc") {
+       depfile = "{{output}}.d"
+@@ -31,7 +33,7 @@
+     tool("cxx") {
+       depfile = "{{output}}.d"
+       depsformat = "gcc"
+-      command = "$_clang -x c++ $_common -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
+       description = "GTOS CXX {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
