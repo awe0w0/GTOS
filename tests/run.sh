@@ -40,16 +40,18 @@ GTOS_HOST_PUBLISH_ROOT=$PWD/out/runtime-unit/publish \
 GTOS_PUBLISH_RECORD=$PWD/out/runtime-unit/record.txt \
     ./tests/runtime_test.sh --run-all "$runtime_image"
 # The surface unit was a single build-and-start script with no caller. It builds into a directory it refuses to reuse, publishes the
-# four images, and then starts only the published copies, which is the same two-step shape every other measured staged unit has.
-rm -rf out/native-surface
-mkdir -p out/native-surface/publish out/native-surface-run
-GTOS_HOST_PUBLISH_ROOT=$PWD/out/native-surface/publish \
-GTOS_PUBLISH_MANIFEST=$PWD/out/native-surface/manifest.txt \
-GTOS_PUBLISH_RECORD=$PWD/out/native-surface/record.txt \
+# four images, and then starts only the published copies, which is the same two-step shape every other measured staged unit has. The
+# artifact directory is the one thing this block must not pre-create: the build refuses a directory that already exists, which is what
+# running the suite end to end found.
+rm -rf out/native-surface out/native-surface-publish out/native-surface-run
+mkdir -p out/native-surface-publish
+GTOS_HOST_PUBLISH_ROOT=$PWD/out/native-surface-publish \
+GTOS_PUBLISH_MANIFEST=$PWD/out/native-surface-manifest.txt \
+GTOS_PUBLISH_RECORD=$PWD/out/native-surface-record.txt \
     ./tests/native_surface_host_test.sh build out/native-surface > /dev/null
-GTOS_PUBLISH_MANIFEST=$PWD/out/native-surface/manifest.txt \
-GTOS_PUBLISH_RECORD=$PWD/out/native-surface/record.txt \
-GTOS_HOST_PUBLISH_ROOT=$PWD/out/native-surface/publish \
+GTOS_PUBLISH_MANIFEST=$PWD/out/native-surface-manifest.txt \
+GTOS_PUBLISH_RECORD=$PWD/out/native-surface-record.txt \
+GTOS_HOST_PUBLISH_ROOT=$PWD/out/native-surface-publish \
 SURFACE_BUILD_DIR=$PWD/out/native-surface \
     ./tests/native_surface_host_test.sh run out/native-surface-run
 ./tests/stage_contract_test.sh
