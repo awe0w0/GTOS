@@ -28,6 +28,17 @@ GTOS_HOST_PUBLISH_ROOT=$PWD/out/host-supply/publish \
 GTOS_PUBLISH_MANIFEST=$PWD/out/host-supply/manifest.txt \
 GTOS_PUBLISH_RECORD=$PWD/out/host-supply/record.txt \
     ./tests/host_runner_test.sh verify
+# The NativeRuntime unit had a staged interface and no caller, so its Create capacity, rollback and slot-reuse measurements had no
+# recorded result. Build the image from the current sources, publish it read-only, then start only the published copy: the two
+# selector refusals and all twelve cases, one case per process because a successful Activate publishes an owner with no destroy path.
+mkdir -p out/runtime-unit/publish
+./tests/runtime_test.sh --build out/runtime-unit > /dev/null
+runtime_image=$(GTOS_HOST_PUBLISH_ROOT=$PWD/out/runtime-unit/publish \
+    GTOS_PUBLISH_RECORD=$PWD/out/runtime-unit/record.txt \
+    ./tests/runtime_test.sh --publish out/runtime-unit/runtime_test.elf | tail -n 1)
+GTOS_HOST_PUBLISH_ROOT=$PWD/out/runtime-unit/publish \
+GTOS_PUBLISH_RECORD=$PWD/out/runtime-unit/record.txt \
+    ./tests/runtime_test.sh --run-all "$runtime_image"
 ./tests/stage_contract_test.sh
 ./tests/browser_probe_test.sh
 ./tests/rust_abi_probe_test.sh

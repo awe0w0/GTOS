@@ -1,14 +1,15 @@
 #!/bin/sh
 # Which unit scripts tests/run.sh actually runs.
 #
-# Nine of the scripts in tests/ are not wired into tests/run.sh. What each one needs was measured rather than guessed: seven native_*
-# units and runtime_test.sh take artifact or SDK paths as arguments, and wuffs_gif_probe_test.sh takes an output path.
+# Eight of the scripts in tests/ are not wired into tests/run.sh. What each one needs was measured rather than guessed: seven native_*
+# units take artifact or SDK paths as arguments, and wuffs_gif_probe_test.sh takes an output path.
 #
-# Five units were measured and wired in this window: memory_bootstrap_test.sh needed nothing (486 checks, no failures), and
-# settings_sanitizer_test.sh, boot_log_host_test.sh and live_storage_host_test.sh needed nothing once they were given build/run steps
-# and were measured passing against their published images - the boot log at 541146 checks under each of two optimisation levels, and
-# live storage at 3812 checks for its 64-bit module and 3826 for its freestanding 32-bit one. host_runner_test.sh is the fifth: run.sh
-# now gives its two steps the supply paths they need.
+# Six units were measured and wired in this window. memory_bootstrap_test.sh needed nothing (486 checks, no failures).
+# settings_sanitizer_test.sh, boot_log_host_test.sh and live_storage_host_test.sh needed nothing once they were given build/run steps,
+# and were measured passing against their published images: the boot log at 541146 checks under each of two optimisation levels, and
+# live storage at 3812 checks for its 64-bit module and 3826 for its freestanding 32-bit one. host_runner_test.sh needed the supply
+# paths, which run.sh now gives its two steps. runtime_test.sh had a staged interface and no caller, and its twelve cases now run
+# against a published image.
 #
 # Wiring the rest is separate work that has to verify each one, so this test does not pretend they pass. What it does is record the
 # set: a script that is neither run nor recorded here fails the test, and a recorded script that has since been wired or deleted
@@ -24,7 +25,6 @@ native_surface_host_test.sh
 native_window_desktop_test.sh
 native_window_host_test.sh
 native_window_sdk_test.sh
-runtime_test.sh
 wuffs_gif_probe_test.sh'
 
 is_recorded() {
