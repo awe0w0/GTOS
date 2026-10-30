@@ -1,249 +1,359 @@
-# Unit test for libxml_profile.cmake: the shipped derivation, run on seventeen synthetic BUILD.gn files, no compiler involved.
+# Unit test for libxml_profile.cmake: the shipped parser and the shipped contract resolution, run on synthetic BUILD.gn files. No
+# compiler is involved and nothing here needs the target toolchain; the generator run measures the compiler side.
 #
-#   cmake -P test_profile.cmake            (uses $TMPDIR, $TEMP or /tmp for its scratch files, and removes them)
-#   cmake -P test_profile.cmake -DSCRATCH=<dir>
+#   cmake -P test_profile.cmake -DSCRATCH=<fresh directory> [-DBUILD_GN=<real BUILD.gn>] [-DCALIBRATE=wrong]
 #
-# What it covers: the ordinary answer (a listed source turns its feature on and an unlisted one leaves it off), the comment case (a
-# source that only appears commented out does not count), the header case (a file listed somewhere else in the file, e.g. as an
-# input rather than a source, does not count unless it is listed as "src/<name>,"), the refusal when one of the three sources
-# libxml2 cannot be built without disappears, and the order-independence of the source list. It does not test the compiler probes,
-# the templates, or anything a build would do with the output — those need the target toolchain and are measured by the generator
-# run itself.
+# The scratch directory must not exist: this test creates a new tree, refuses to reuse one, and never deletes anything it did not
+# create in this run. (The r20 version started with an unconditional REMOVE_RECURSE of whatever path it was handed.)
+#
+# What it covers, and why in this shape:
+#   * the parser: a target's `sources` list is what compiles, not a name that appears somewhere in the file. Cases: comments, an
+#     `inputs` list, a sibling target, a false conditional branch, a true one, the one-line list form, the missing-target refusal and
+#     the unknown-conditional refusal.
+#   * the contract: upstream/Chromium declare the feature set, the source list can make a feature impossible, and a missing SDK
+#     capability has to be downgraded by name instead of quietly becoming 0. Cases: SAX1 on from SAX2.c, pattern/valid off while
+#     their files are still compiled, ICU downgraded explicitly, and three refusals that must not pass silently.
+#   * the generated-header check: a valid file passes; a template variable, an empty #if and a truncated file are refused.
+#   * the calibration: with -DCALIBRATE=wrong one deliberately wrong expectation is compared, and the run must fail. Without this,
+#     a comparison bug like r20's `foreach(pair IN LISTS expected)` on a macro argument would keep every case green.
+
 cmake_minimum_required(VERSION 3.16)
 
 include("${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake")
 
 if(NOT DEFINED SCRATCH)
   if(DEFINED ENV{TMPDIR})
-    set(SCRATCH "$ENV{TMPDIR}/libxml-profile-test")
+    set(SCRATCH "$ENV{TMPDIR}/libxml-profile-test-r21")
   elseif(DEFINED ENV{TEMP})
-    set(SCRATCH "$ENV{TEMP}/libxml-profile-test")
+    set(SCRATCH "$ENV{TEMP}/libxml-profile-test-r21")
   else()
-    set(SCRATCH "/tmp/libxml-profile-test")
+    set(SCRATCH "/tmp/libxml-profile-test-r21")
   endif()
 endif()
-file(REMOVE_RECURSE "${SCRATCH}")
+if(EXISTS "${SCRATCH}")
+  message(FATAL_ERROR "refusing to reuse ${SCRATCH}: pass a directory that does not exist yet, this test does not delete old trees")
+endif()
 file(MAKE_DIRECTORY "${SCRATCH}")
 
 set(failures 0)
 set(cases 0)
 
-# A macro, not a function: libxml_derive_profile() answers through PARENT_SCOPE, and a macro keeps that scope the top level.
-macro(check_profile name gn_text expected)
+# A macro, not a function: the counters and the values under test live at the top level, and macros do not open a scope.
+macro(fail_case name detail)
+  math(EXPR failures "${failures} + 1")
+  message(STATUS "FAIL ${name}: ${detail}")
+endmacro()
+
+# compare <name> <variable> <expected>
+macro(compare name variable want)
+  if(NOT "${${variable}}" STREQUAL "${want}")
+    fail_case("${name}" "${variable} is '${${variable}}', expected '${want}'")
+  endif()
+endmacro()
+
+# check_expectations <name> <pair>...   -- each pair is "VARIABLE=value"
+# The arguments arrive as one semicolon-separated string per call site, which is exactly the macro caveat CMake documents: a macro
+# parameter is a string replacement, so `foreach(IN LISTS expected)` looked up a variable that never existed and the first five cases
+# compared nothing. The list is materialised here on purpose.
+macro(check_expectations name)
   math(EXPR cases "${cases} + 1")
-  set(gn_path "${SCRATCH}/${name}.gn")
-  file(WRITE "${gn_path}" "${gn_text}")
-  libxml_derive_profile("${gn_path}")
+  set(expected_list "${ARGN}")
+  if(expected_list STREQUAL "")
+    fail_case("${name}" "the case passed no expectations at all, so it could only ever pass vacuously")
+    return()
+  endif()
   set(case_failed 0)
-  foreach(pair IN LISTS expected)
+  foreach(pair IN LISTS expected_list)
     string(REPLACE "=" ";" kv "${pair}")
     list(GET kv 0 var)
     list(GET kv 1 want)
     if(NOT "${${var}}" STREQUAL "${want}")
-      message(STATUS "FAIL ${name}: ${var} is '${${var}}', expected '${want}'")
+      message(STATUS "  ${name}: ${var} is '${${var}}', expected '${want}'")
       set(case_failed 1)
     endif()
   endforeach()
   if(case_failed)
     math(EXPR failures "${failures} + 1")
+    message(STATUS "FAIL ${name}")
   else()
     message(STATUS "PASS ${name}")
   endif()
 endmacro()
 
-# The shape of a real BUILD.gn: an indented sources list with trailing commas.
-set(typical "source_set(\"libxml\") {
+# expect_parse <name> <gn_text> <sources, '+'-separated so a CMake list separator cannot split the expectation>
+macro(expect_parse name gn_text want_sources)
+  math(EXPR cases "${cases} + 1")
+  set(gn_path "${SCRATCH}/${name}.gn")
+  file(WRITE "${gn_path}" "${gn_text}")
+  libxml_parse_target_sources("${gn_path}" "libxml" parsed_sources parsed_other parsed_skipped)
+  set(expected_sources "${want_sources}")
+  string(REPLACE "+" ";" expected_sources "${expected_sources}")
+  if("${parsed_sources}" STREQUAL "${expected_sources}")
+    message(STATUS "PASS ${name}")
+  else()
+    math(EXPR failures "${failures} + 1")
+    message(STATUS "FAIL ${name}: sources are '${parsed_sources}', expected '${expected_sources}'")
+  endif()
+endmacro()
+
+# expect_fatal <name> <body> <text the failure must name>
+# A refusal is only a pass if the subprocess fails *and* says why; the driver is a separate cmake -P run because FATAL_ERROR ends the
+# process it happens in.
+macro(expect_fatal name body want_text)
+  math(EXPR cases "${cases} + 1")
+  set(driver "${SCRATCH}/refuse-${name}.cmake")
+  file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")\n${body}\nmessage(STATUS \"NO-REFUSAL\")\n")
+  execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  set(case_failed 0)
+  if(rc EQUAL 0)
+    message(STATUS "  ${name}: the call returned success, it had to refuse")
+    set(case_failed 1)
+  elseif(NOT err MATCHES "${want_text}")
+    message(STATUS "  ${name}: refused with '${err}' which does not name '${want_text}'")
+    set(case_failed 1)
+  endif()
+  if(case_failed)
+    math(EXPR failures "${failures} + 1")
+    message(STATUS "FAIL ${name}")
+  else()
+    message(STATUS "PASS ${name} (refused: ${want_text})")
+  endif()
+endmacro()
+
+# ---------------------------------------------------------------- parser cases
+
+set(typical "static_library(\"libxml\") {
   sources = [
     \"src/HTMLparser.c\",
+    \"src/HTMLtree.c\",
     \"src/SAX2.c\",
-    \"src/catalog.c\",
-    \"src/pattern.c\",
-    \"src/valid.c\",
-    \"src/xmlIO.c\",
-    \"src/xpath.c\",
-  ]
-}
-")
-
-check_profile(typical "${typical}"
-  "WITH_HTML=1;WITH_PUSH=1;WITH_CATALOG=1;WITH_PATTERN=1;WITH_VALID=1;WITH_OUTPUT=1;WITH_XPATH=1;WITH_C14N=0;WITH_SAX1=0")
-
-# Order must not matter, and neither must extra sources the profile does not know.
-set(reordered "source_set(\"libxml\") {
-  sources = [
-    \"src/xmlIO.c\",
-    \"src/xpath.c\",
-    \"src/valid.c\",
-    \"src/pattern.c\",
-    \"src/catalog.c\",
-    \"src/SAX2.c\",
-    \"src/HTMLparser.c\",
-    \"src/encoding.c\",
-  ]
-}
-")
-check_profile(reordered "${reordered}"
-  "WITH_HTML=1;WITH_PUSH=1;WITH_CATALOG=1;WITH_PATTERN=1;WITH_VALID=1;WITH_OUTPUT=1;WITH_XPATH=1;WITH_C14N=0")
-
-# A commented-out entry is not a compiled source: r19's frontier needed exactly this distinction.
-set(commented "source_set(\"libxml\") {
-  sources = [
-    \"src/HTMLparser.c\",
-    \"src/valid.c\",
-    \"src/xmlIO.c\",
     # \"src/pattern.c\",
     #\"src/c14n.c\",
   ]
 }
 ")
-check_profile(commented "${commented}" "WITH_PATTERN=0;WITH_C14N=0;WITH_HTML=1")
+expect_parse(typical "${typical}" "HTMLparser.c+HTMLtree.c+SAX2.c")
 
-# A name that appears as an input or in a comment prologue, but never as "src/<name>," in the sources list.
-set(not_a_source "source_set(\"libxml\") {
+# `inputs` is not `sources`: r20's whole-file regex counted this and turned WITH_PATTERN on.
+set(with_inputs "static_library(\"libxml\") {
   sources = [
-    \"src/HTMLparser.c\",
-    \"src/valid.c\",
     \"src/xmlIO.c\",
   ]
   inputs = [
     \"src/pattern.c\",
-  ]
-}
-")
-check_profile(not_a_source "${not_a_source}" "WITH_PATTERN=0;WITH_HTML=1")
-
-# Turning a feature on by adding its source, and off again by removing it.
-set(added_c14n "source_set(\"libxml\") {
-  sources = [
-    \"src/HTMLparser.c\",
     \"src/valid.c\",
-    \"src/xmlIO.c\",
-    \"src/c14n.c\",
   ]
 }
 ")
-check_profile(added_c14n "${added_c14n}" "WITH_C14N=1;WITH_PATTERN=0")
+expect_parse(with_inputs "${with_inputs}" "xmlIO.c")
 
-# The refusal path: libxml2 cannot be built without its HTML parser, its I/O core or its validator, so a BUILD.gn that stops listing
-# one of them has to fail loudly instead of quietly switching the feature off. Each case is a separate cmake -P run, because a
-# FATAL_ERROR ends the run it happens in.
-foreach(core_file HTMLparser.c xmlIO.c valid.c)
-  math(EXPR cases "${cases} + 1")
-  set(gn_path "${SCRATCH}/missing-${core_file}.gn")
-  file(WRITE "${gn_path}" "source_set(\"libxml\") {
+# A sibling target compiles its own sources; they are not libxml's, even though the file mentions them first.
+set(sibling "source_set(\"xml_reader\") {
+  sources = [
+    \"src/pattern.c\",
+  ]
+}
+
+static_library(\"libxml\") {
   sources = [
     \"src/xmlIO.c\",
-    \"src/valid.c\",
-    \"src/HTMLparser.c\",
   ]
 }
 ")
-  set(driver "${SCRATCH}/missing-${core_file}.cmake")
-  file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")
-# Drop the core file from the list by passing a file that does not name it.
-libxml_derive_profile(\"${SCRATCH}/missing-${core_file}.gn\")
-")
-  # Remove the core file from that copy, leaving the other two.
-  file(READ "${gn_path}" body)
-  string(REPLACE "    \"src/${core_file}\",\n" "" body "${body}")
-  file(WRITE "${gn_path}" "${body}")
-  execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
-  if(rc EQUAL 0)
-    message(STATUS "FAIL missing-${core_file}: the derivation accepted a BUILD.gn without it")
-    message(STATUS "     output: ${out}${err}")
-    math(EXPR failures "${failures} + 1")
-  else()
-    string(FIND "${err}" "${core_file}" position)
-    if(position EQUAL -1)
-      message(STATUS "FAIL missing-${core_file}: refused, but the message does not name the file")
-      math(EXPR failures "${failures} + 1")
-    else()
-      message(STATUS "PASS missing-${core_file} refused")
-    endif()
-  endif()
-endforeach()
+expect_parse(sibling "${sibling}" "xmlIO.c")
 
-# A missing BUILD.gn is also a refusal, not an empty profile.
-math(EXPR cases "${cases} + 1")
-set(driver "${SCRATCH}/missing-file.cmake")
-file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")
-libxml_derive_profile(\"${SCRATCH}/does-not-exist/BUILD.gn\")
+# A per-OS branch is not compiled for GTOS: counted as skipped, never as a source.
+set(conditional_false "static_library(\"libxml\") {
+  sources = [
+    \"src/xmlIO.c\",
+  ]
+  if (is_win) {
+    sources += [
+      \"src/win32_io.c\",
+    ]
+  }
+}
 ")
-execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
-if(rc EQUAL 0)
-  message(STATUS "FAIL missing-file: the derivation accepted a path that does not exist")
-  math(EXPR failures "${failures} + 1")
+expect_parse(conditional_false "${conditional_false}" "xmlIO.c")
+
+# ... and a branch that is true for GTOS is compiled.
+set(conditional_true "static_library(\"libxml\") {
+  sources = [
+    \"src/xmlIO.c\",
+  ]
+  if (is_gtos) {
+    sources += [
+      \"src/gtos_io.c\",
+    ]
+  }
+}
+")
+expect_parse(conditional_true "${conditional_true}" "gtos_io.c+xmlIO.c")
+
+# The one-line list form, and a source that is a file but not a libxml .c.
+set(inline_list "static_library(\"libxml\") {
+  sources = [ \"src/xmlIO.c\" ]
+  sources += [ \"chromium/disabled_libxml_features.cc\" ]
+}
+")
+expect_parse(inline_list "${inline_list}" "xmlIO.c")
+
+# `configs`/`deps` are not source lists either.
+set(other_lists "static_library(\"libxml\") {
+  sources = [
+    \"src/xmlIO.c\",
+  ]
+  configs += [
+    \"//build/config/compiler:no_chromium_code\",
+  ]
+  deps = [
+    \"//third_party/zlib\",
+  ]
+}
+")
+expect_parse(other_lists "${other_lists}" "xmlIO.c")
+
+# A conditional this configuration cannot decide must refuse rather than guess.
+set(unknown_conditional "static_library(\"libxml\") {
+  sources = [
+    \"src/xmlIO.c\",
+  ]
+  if (use_system_libxml) {
+    sources += [
+      \"src/extra.c\",
+    ]
+  }
+}
+")
+set(unknown_path "${SCRATCH}/unknown_conditional.gn")
+file(WRITE "${unknown_path}" "${unknown_conditional}")
+expect_fatal(unknown_conditional
+  "libxml_parse_target_sources(\"${unknown_path}\" \"libxml\" s o k)"
+  "use_system_libxml")
+
+# A file without the target must refuse, and name the target it wanted.
+set(no_target "source_set(\"libxml_utils\") {
+  sources = [
+    \"src/xmlIO.c\",
+  ]
+}
+")
+set(no_target_path "${SCRATCH}/no_target.gn")
+file(WRITE "${no_target_path}" "${no_target}")
+expect_fatal(no_target
+  "libxml_parse_target_sources(\"${no_target_path}\" \"libxml\" s o k)"
+  "declares no target")
+
+# ---------------------------------------------------------------- contract cases
+
+# The sources the pinned BUILD.gn really compiles, trimmed to the ones the contract names.
+set(real_sources "HTMLparser.c;HTMLtree.c;SAX2.c;pattern.c;threads.c;valid.c;xmlIO.c;xmlreader.c;xmlwriter.c;xpath.c")
+set(no_capability "icu=0;threads=0;iconv=0;zlib=0;lzma=0;modules=0")
+
+libxml_resolve_contract("${real_sources}" "${no_capability}" "WITH_ICU;WITH_THREADS")
+check_expectations(contract_on
+  "WITH_HTML=1;WITH_OUTPUT=1;WITH_PUSH=1;WITH_READER=1;WITH_WRITER=1;WITH_XPATH=1;WITH_SAX1=1"
+  "WITH_PATTERN=0;WITH_VALID=0;WITH_C14N=0;WITH_CATALOG=0;WITH_DEBUG=0;WITH_REGEXPS=0;WITH_RELAXNG=0;WITH_SCHEMAS=0"
+  "WITH_SCHEMATRON=0;WITH_XINCLUDE=0;WITH_XPTR=0;WITH_ICONV=0;WITH_ZLIB=0;WITH_LZMA=0;WITH_MODULES=0;WITH_ISO8859X=0"
+  "WITH_HTTP=0;WITH_WINPATH=0;WITH_ICU=0;WITH_THREADS=0")
+
+# The two "compiled but empty" cases have to say so: that is the r20 mistake this contract exists to prevent.
+string(FIND "${WITH_PATTERN_REASON}" "compiled but empty" pattern_reason_at)
+if(pattern_reason_at LESS 0)
+  fail_case(contract_reason "WITH_PATTERN_REASON does not record that pattern.c compiles to an empty object: '${WITH_PATTERN_REASON}'")
 else()
-  message(STATUS "PASS missing-file refused")
+  math(EXPR cases "${cases} + 1")
+  message(STATUS "PASS contract_reason (pattern.c and valid.c are recorded as compiled-but-empty)")
 endif()
 
-# libxml_check_generated(): the post-condition on what the templates produced. A real generator run shipped an unsubstituted
-# "#if " once (WITH_HTTP), so both defects are exercised explicitly, along with a file that is fine and a file that is too small.
-macro(check_generated name content expect_ok)
+# A capability that is missing without a named downgrade is a refusal, not a silent 0.
+expect_fatal(contract_needs_capability
+  "libxml_resolve_contract(\"${real_sources}\" \"${no_capability}\" \"\")\nmessage(STATUS \"\")"
+  "needs the 'icu'")
+
+# A feature whose implementing source is not compiled cannot be honoured either.
+expect_fatal(contract_needs_source
+  "libxml_resolve_contract(\"SAX2.c;xmlIO.c;xmlreader.c;xmlwriter.c;xpath.c\" \"${no_capability}\" \"WITH_ICU;WITH_THREADS\")"
+  "does not compile src/")
+
+# A downgrade for a feature that does not exist is a typo, and typos must not look like policy.
+expect_fatal(contract_unknown_downgrade
+  "libxml_resolve_contract(\"${real_sources}\" \"${no_capability}\" \"WITH_ICU;WITH_THREADS;WITH_NONSENSE\")"
+  "not a feature in the")
+
+# ---------------------------------------------------------------- generated-header cases
+
+set(good_header "${SCRATCH}/good.xmlversion.h")
+file(WRITE "${good_header}" "#ifndef LIBXML_XMLVERSION_H\n#define LIBXML_XMLVERSION_H\n#define LIBXML_VERSION 21600\n#if 0\n#define LIBXML_HTTP_ENABLED\n#endif\n#define LIBXML_OUTPUT_ENABLED\n")
+foreach(filler RANGE 1 12)
+  file(APPEND "${good_header}" "/* padding so the size check has something to measure */\n")
+endforeach()
+file(APPEND "${good_header}" "#endif\n")
+
+macro(expect_generated_ok name)
   math(EXPR cases "${cases} + 1")
-  set(path "${SCRATCH}/gen-${name}.h")
-  file(WRITE "${path}" "${content}")
-  set(driver "${SCRATCH}/gen-${name}.cmake")
-  file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")
-libxml_check_generated(\"${path}\")
-")
-  execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
-  if(${expect_ok})
-    if(rc EQUAL 0)
-      message(STATUS "PASS generated-${name}")
-    else()
-      message(STATUS "FAIL generated-${name}: rejected a valid file: ${err}")
-      math(EXPR failures "${failures} + 1")
-    endif()
+  execute_process(COMMAND "${CMAKE_COMMAND}" -P "${SCRATCH}/check-generated.cmake" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(rc EQUAL 0)
+    message(STATUS "PASS ${name}")
   else()
-    if(rc EQUAL 0)
-      message(STATUS "FAIL generated-${name}: accepted a defective file")
-      math(EXPR failures "${failures} + 1")
-    else()
-      message(STATUS "PASS generated-${name} refused")
-    endif()
+    fail_case("${name}" "the check refused a good header: ${err}")
   endif()
 endmacro()
 
-set(good_header "#define LIBXML_VERSION_NUMBER 21600
-#define LIBXML_HTML_ENABLED
-#if 1
-#define LIBXML_OUTPUT_ENABLED
-#endif
-/* padding so the file is longer than the 256 byte floor this check enforces; a header this short is not a configuration anyway.
-   ........................................................ ........................................................
-   ........................................................ ........................................................
-   ........................................................ ........................................................ */
-")
-check_generated(valid "${good_header}" TRUE)
+file(WRITE "${SCRATCH}/check-generated.cmake"
+  "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")\nlibxml_check_generated(\"${good_header}\")\n")
+expect_generated_ok(generated_ok)
 
-set(leftover "@WITH_HTTP@
-#if 1
-#define LIBXML_OUTPUT_ENABLED
-#endif
-........................................................ ........................................................
-........................................................ ........................................................
-........................................................ ........................................................
-")
-check_generated(leftover "${leftover}" FALSE)
+macro(expect_generated_bad name body want_text)
+  math(EXPR cases "${cases} + 1")
+  set(bad_path "${SCRATCH}/${name}.h")
+  file(WRITE "${bad_path}" "${body}")
+  set(driver "${SCRATCH}/generated-${name}.cmake")
+  file(WRITE "${driver}" "include(\"${CMAKE_CURRENT_LIST_DIR}/libxml_profile.cmake\")\nlibxml_check_generated(\"${bad_path}\")\nmessage(STATUS \"NO-REFUSAL\")\n")
+  execute_process(COMMAND "${CMAKE_COMMAND}" -P "${driver}" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(rc EQUAL 0)
+    fail_case("${name}" "an invalid header passed")
+  elseif(NOT err MATCHES "${want_text}")
+    fail_case("${name}" "refused with '${err}' which does not name '${want_text}'")
+  else()
+    message(STATUS "PASS ${name} (refused: ${want_text})")
+  endif()
+endmacro()
 
-set(empty_if "#if 1
-#define LIBXML_OUTPUT_ENABLED
-#endif
-#if 
-#define LIBXML_HTTP_STUBS_ENABLED
-#endif
-........................................................ ........................................................
-........................................................ ........................................................
-........................................................ ........................................................
-")
-check_generated(empty-if "${empty_if}" FALSE)
+set(filler_text "")
+foreach(filler RANGE 1 12)
+  string(APPEND filler_text "/* padding so the size check has something to measure */\n")
+endforeach()
 
-check_generated(tiny "#define LIBXML_VERSION_NUMBER 21600\n" FALSE)
+expect_generated_bad(generated_leftover "@LEFT@\n${filler_text}" "contains @LEFT@")
+expect_generated_bad(generated_empty_if "#if\n#define LIBXML_X@\n${filler_text}" "empty #if|still contains")
+expect_generated_bad(generated_tiny "#if 0\n" "is only")
 
-file(REMOVE_RECURSE "${SCRATCH}")
+# ---------------------------------------------------------------- the real file, when the caller names it
+
+if(DEFINED BUILD_GN)
+  math(EXPR cases "${cases} + 1")
+  libxml_parse_target_sources("${BUILD_GN}" "libxml" real_parsed real_other real_skipped)
+  list(LENGTH real_parsed real_count)
+  if(NOT real_count EQUAL 26)
+    fail_case(build_gn_real "the real BUILD.gn parses to ${real_count} compiled .c files, expected 26: ${real_parsed}")
+  else()
+    message(STATUS "PASS build_gn_real (26 compiled .c files, ${real_skipped} entries skipped as per-OS)")
+  endif()
+endif()
+
+# ---------------------------------------------------------------- calibration
+
+# Deliberately wrong, and it must fail this run: this is the case that would have caught r20's macro bug, where the expectation list
+# was never compared and all thirteen cases passed while measuring nothing.
+if(DEFINED CALIBRATE AND CALIBRATE STREQUAL "wrong")
+  message(STATUS "calibration: expecting WITH_HTML to be 0 although the contract turns it on")
+  check_expectations(calibration_wrong_expectation "WITH_HTML=0")
+endif()
+
+# ---------------------------------------------------------------- result
 
 if(failures GREATER 0)
   message(FATAL_ERROR "${failures} of ${cases} cases failed")
 endif()
-message(STATUS "profile test: ${cases} cases passed")
+message(STATUS "all ${cases} cases passed in ${SCRATCH}")
