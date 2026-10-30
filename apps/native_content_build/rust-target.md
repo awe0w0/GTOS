@@ -49,8 +49,9 @@ gn gen --root=<view> out/gtos-content-bringup \
 1. **target spec**：按 clang `i686-unknown-none-elf` 的 data-layout 写 `i686-unknown-gtos.json`：`arch: "x86"`、`pointer-width: 32`、`elf`、`panic-strategy: "abort"`、`relocation-model: "static"`、`disable-redzone: true`、`features: "+soft-float,-mmx,-sse,-sse2"`、`is-builtin: false`。
 2. **构建 std**（在自有 L/S，不写共享树）：
    ```
-   rustc -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem \
-         --target <spec> --sysroot <private-sysroot> --crate-type rlib --out-dir <dir> <dummy-crate>
+   # build-std belongs to Cargo, not to rustc: rustc only takes --target <spec>.
+   cargo -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem \
+         build --target <spec> --release --offline --target-dir <private-dir>
    ```
    产物落到私有 sysroot 的 `lib/rustlib/i686-unknown-gtos/lib/`。
 3. **GN 映射**（私有 candidate，最小）：`build/config/rust.gni` 增加 `is_gtos && current_cpu == "x86"` → `rust_abi_target = "i686-unknown-gtos"`；`build/rust/known-target-triples.txt` 增一行；为 gtos 增加一个真实 `rust_toolchain`（rustc 路径、sysroot、`current_os = "gtos"`），并接 `//build/rust/std`。
