@@ -20,10 +20,10 @@ check() {
     fi
 }
 
-# Every staged unit refuses a stage it does not define. The five units at the end of the list were given their stages in this window,
-# and a unit with stages is exactly the kind that grows an unrefused branch if nobody checks.
+# Every staged unit refuses a stage it does not define. Most of the list was given its stages in this window, and a unit with stages
+# is exactly the kind that grows an unrefused branch if nobody checks.
 for script in elf32_test.sh host_runner_test.sh skia_alpha_probe_test.sh i18n_test.sh native_fp_qmp_test.sh cpu_memory_types_test.sh \
-    settings_sanitizer_test.sh boot_log_host_test.sh live_storage_host_test.sh runtime_test.sh; do
+    settings_sanitizer_test.sh boot_log_host_test.sh live_storage_host_test.sh runtime_test.sh native_surface_host_test.sh; do
     check "$script refuses an unknown stage" sh "tests/$script" nonsense
 done
 
@@ -40,13 +40,22 @@ for script in elf32_test.sh skia_alpha_probe_test.sh i18n_test.sh cpu_memory_typ
         sh "tests/$script" run
 done
 
+# The surface unit's run stage reads its static evidence from a directory the build stage names, so it refuses to start without one.
+check 'native_surface_host_test.sh refuses a run stage with no build directory' \
+    env -u SURFACE_BUILD_DIR sh tests/native_surface_host_test.sh run /tmp
+
 # A staged build that was given no output directory must refuse too, or it would write into an empty path.
-for script in settings_sanitizer_test.sh boot_log_host_test.sh live_storage_host_test.sh; do
+for script in settings_sanitizer_test.sh boot_log_host_test.sh live_storage_host_test.sh native_surface_host_test.sh; do
     check "$script refuses a build stage with no directory" sh "tests/$script" build
 done
+
+# The surface build also refuses to reuse a directory, because the evidence it writes is only meaningful for the sources it was
+# built from; reusing a directory would mix two builds under one set of logs.
+check 'native_surface_host_test.sh refuses to reuse an artifact directory' \
+    sh tests/native_surface_host_test.sh build .
 
 if [ "$failures" -ne 0 ]; then
     echo "stage contract: $failures failure(s)" >&2
     exit 1
 fi
-echo 'PASS stage contract: unknown stages, unsupplied run stages and build stages with no directory are refused with status 2'
+echo 'PASS stage contract: unknown stages, unsupplied run stages, build stages with no directory and a reused build directory are refused with status 2'

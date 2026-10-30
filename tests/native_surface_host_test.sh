@@ -20,6 +20,7 @@ usage() {
 
 compile_all() { # <out>
     local out=$1
+    mkdir -p "$out"
     "$compiler" --version > "$out/compiler.txt"
     printf 'CXX=%q bash %q %q\n' "$compiler" "$repo/tests/native_surface_host_test.sh" "${out}-reproduced" > "$out/reproduce.sh"
     sha256sum "$repo/include/process/surface_abi.h" "$repo/include/process/native_surface.h" \
