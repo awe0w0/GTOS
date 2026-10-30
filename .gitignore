@@ -1,4 +1,6 @@
 obj/
+# tests/run.sh writes each run's surface outputs into out/generation-<stamp>-<random>/; those are run products, not sources.
+out/
 *.o
 *.d
 *.bin
