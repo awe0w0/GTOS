@@ -153,6 +153,17 @@ run_host_binary() {
         echo "run_host_binary: not a regular file: $binary" >&2
         return 2
     fi
+    # When the publish step recorded what it published, every start verifies the size and full digest of the file it is about to
+    # load. This is the same check run_published_binary performs, applied at the one place a program is actually started, so the
+    # real entries cannot bypass it by taking the staged path straight from the manifest.
+    if [ -n "${GTOS_PUBLISH_RECORD:-}" ] && [ -f "${GTOS_PUBLISH_RECORD:-/nonexistent}" ]; then
+        recorded=$(awk -v path="$binary" '$1 == path { print $2, $3 }' "$GTOS_PUBLISH_RECORD" | tail -n 1)
+        if [ -z "$recorded" ]; then
+            echo "run_host_binary: $binary is not recorded as published in $GTOS_PUBLISH_RECORD" >&2
+            return 2
+        fi
+        verify_published "$binary" "${recorded#* }" "${recorded%% *}" || return 2
+    fi
     if [ -n "${GTOS_HOST_LAUNCHER:-}" ]; then
         if [ -z "${GTOS_HOST_PUBLISH_ROOT:-}" ]; then
             echo "run_host_binary: a launcher is named but GTOS_HOST_PUBLISH_ROOT is not, so the image it would load is writable" >&2
@@ -160,9 +171,17 @@ run_host_binary() {
         fi
         # A launcher may only load an image the publish step produced: an image outside the publish root, however read-only it
         # looks, was never published by this run and its identity is therefore unbound.
-        case $binary in
-            "$GTOS_HOST_PUBLISH_ROOT"/*) ;;
-            *) echo "run_host_binary: a launcher may only load a published image under $GTOS_HOST_PUBLISH_ROOT: $binary" >&2; return 2 ;;
+        # Ownership is decided on resolved paths: a path that merely starts with the publish root's characters, such as
+        # "<root>/../outside/image", is not inside it.
+        resolved_root=$(realpath "$GTOS_HOST_PUBLISH_ROOT" 2>/dev/null || echo '')
+        resolved_image=$(realpath "$binary" 2>/dev/null || echo '')
+        if [ -z "$resolved_root" ] || [ -z "$resolved_image" ]; then
+            echo "run_host_binary: cannot resolve the publish root or the image: $binary" >&2
+            return 2
+        fi
+        case $resolved_image in
+            "$resolved_root"/*) ;;
+            *) echo "run_host_binary: a launcher may only load a published image under $resolved_root: $resolved_image" >&2; return 2 ;;
         esac
         image_mode=$(stat -c %a "$binary" 2>/dev/null || echo '')
         if [ -z "$image_mode" ] || [ $((0$image_mode & 0222)) -ne 0 ]; then
