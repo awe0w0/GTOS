@@ -42,7 +42,7 @@ else
     echo 'ok the image asks for no interpreter'
 fi
 
-for symbol in _start gtos_abi_add gtos_abi_pair gtos_abi_store gtos_abi_pair_value gtos_abi_wide; do
+for symbol in _start gtos_abi_add gtos_abi_pair gtos_abi_store gtos_abi_pair_value gtos_abi_wide gtos_abi_table; do
     if grep -Eq "\b$symbol\b" "$work/first/readelf.txt"; then echo "ok $symbol is defined in the image"; else
         echo "FAIL $symbol is missing from the image" >&2; failures=$((failures + 1)); fi
 done
@@ -50,6 +50,15 @@ done
 calls=$(grep -Ec 'call.*<gtos_abi_(add|pair|store|pair_value|wide)>' "$work/first/disassembly.txt" || true)
 if [ "$calls" -ge 5 ]; then echo "ok the C side calls all five integer Rust functions ($calls call sites)"; else
     echo "FAIL the C side has only $calls Rust call sites" >&2; failures=$((failures + 1)); fi
+
+# The table case: the C side must fetch the table and call through it, so the call sites are indirect and cannot be recognised by the
+# Rust symbol names. Two indirect calls and one reference to the exported table accessor is what an agreeing pair of layouts looks
+# like in the disassembly.
+indirect=$(grep -Ec 'call +\*' "$work/first/disassembly.txt" || true)
+if [ "$indirect" -ge 2 ]; then echo "ok the C side calls through a function-pointer table ($indirect indirect call sites)"; else
+    echo "FAIL the C side has only $indirect indirect call sites" >&2; failures=$((failures + 1)); fi
+if grep -Eq 'call.*<gtos_abi_table>' "$work/first/disassembly.txt"; then echo 'ok the table is fetched through its exported accessor'; else
+    echo 'FAIL the C side never calls gtos_abi_table' >&2; failures=$((failures + 1)); fi
 
 # No x87 instruction anywhere: the target spec asks for soft float, so the C side is compiled with -msoft-float and the Rust side
 # with the spec's +soft-float. Codegen that reached for x87 would mean the two sides disagree about how a float travels.

@@ -21,6 +21,17 @@ extern void gtos_abi_store(unsigned *p);
 extern unsigned gtos_abi_pair_value(struct pair p);
 extern unsigned long long gtos_abi_wide(unsigned a, unsigned b);
 
+// The same shape the Rust side declares, so a wrong offset or calling convention in the table shows up as a wrong result rather
+// than as a link failure. The assertion is the C half of the Rust size assertion.
+struct abi_table {
+    unsigned (*add)(unsigned, unsigned);
+    unsigned long long (*wide)(unsigned, unsigned);
+};
+
+_Static_assert(sizeof(struct abi_table) == 8, "struct abi_table must be 8 bytes on i686");
+
+extern const struct abi_table *gtos_abi_table(void);
+
 static unsigned output;
 
 void _start(void) {
@@ -32,8 +43,14 @@ void _start(void) {
     unsigned folded = gtos_abi_pair(&sample);
     unsigned copied = gtos_abi_pair_value(sample);
     unsigned long long wide = gtos_abi_wide(sum, folded);
+    // Calling the same two functions through the table is the case a name-based link cannot cover: if the table's offsets or the
+    // member types were wrong, these two values would not match the direct calls.
+    const struct abi_table *table = gtos_abi_table();
+    unsigned table_sum = table->add(sample.low, sample.high);
+    unsigned long long table_wide = table->wide(sum, folded);
     gtos_abi_store(&output);
     // One observable result, so the program a real target would run has something to write; nothing here starts it. The wide
     // return is folded back to 32 bits on purpose: returning it is what is being checked, not what it is worth here.
-    output = sum ^ folded ^ copied ^ (unsigned)(wide >> 32) ^ (unsigned)wide;
+    output = sum ^ folded ^ copied ^ (unsigned)(wide >> 32) ^ (unsigned)wide ^ table_sum ^ (unsigned)(table_wide >> 32) ^
+             (unsigned)table_wide ^ (sum == table_sum ? 0u : 0xDEADu) ^ (wide == table_wide ? 0u : 0xBEEFu);
 }

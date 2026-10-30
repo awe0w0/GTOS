@@ -55,6 +55,29 @@ pub extern "C" fn gtos_abi_wide(a: u32, b: u32) -> u64 {
     ((a as u64) << 32) | (b as u64)
 }
 
+// A table of function pointers, which is how a runtime hands a backend a set of entry points without the backend naming each one.
+// The struct is repr(C) and the table is a const, so the C side can declare the same shape and call through it; the two entries are
+// the same functions the C side also calls by name, so a wrong offset or a wrong calling convention shows up as a wrong result.
+#[repr(C)]
+pub struct AbiTable {
+    pub add: extern "C" fn(u32, u32) -> u32,
+    pub wide: extern "C" fn(u32, u32) -> u64,
+}
+
+pub static ABI_TABLE: AbiTable = AbiTable {
+    add: gtos_abi_add,
+    wide: gtos_abi_wide,
+};
+
+const _: () = assert!(core::mem::size_of::<AbiTable>() == 8);
+const _: () = assert!(core::mem::offset_of!(AbiTable, add) == 0);
+const _: () = assert!(core::mem::offset_of!(AbiTable, wide) == 4);
+
+#[unsafe(no_mangle)]
+pub extern "C" fn gtos_abi_table() -> *const AbiTable {
+    &ABI_TABLE
+}
+
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
