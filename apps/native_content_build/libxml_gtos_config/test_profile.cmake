@@ -269,6 +269,31 @@ expect_fatal(no_target
   "libxml_parse_target_sources(\"${no_target_path}\" \"libxml\" s o k)"
   "declares no target")
 
+# ---------------------------------------------------------------- conditional cases
+
+# libxml_condition_state is three-valued and the parse is explicit: `||` clauses, `&&` terms, leading `!`. These are the exact shapes the
+# pinned BUILD.gn uses, including the two the old substring test got wrong.
+macro(expect_condition name text want)
+  math(EXPR cases "${cases} + 1")
+  libxml_condition_state("${text}" state)
+  if("${state}" STREQUAL "${want}")
+    message(STATUS "PASS ${name} (${text} -> ${state})")
+  else()
+    fail_case("${name}" "${text} is ${state}, expected ${want}")
+  endif()
+endmacro()
+
+expect_condition(cond_is_gtos "is_gtos" true)
+expect_condition(cond_not_win "!is_win" true)
+expect_condition(cond_gtos_or_win "is_gtos || is_win" true)
+expect_condition(cond_win_and_gtos "is_win && is_gtos" false)
+expect_condition(cond_linux_or_mac "is_linux || is_mac" false)
+expect_condition(cond_not_gtos "!is_gtos" false)
+expect_condition(cond_double_negation "!!is_win" false)
+expect_condition(cond_unknown_atom "is_mystery_platform" unknown)
+expect_condition(cond_unknown_in_or "is_gtos || is_mystery_platform" true)
+expect_condition(cond_unknown_and "is_win && is_mystery_platform" false)
+
 # ---------------------------------------------------------------- contract cases
 
 # The sources the pinned BUILD.gn really compiles, trimmed to the ones the contract names.
