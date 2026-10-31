@@ -127,6 +127,12 @@ int main(void) {
   }
   record("pow", gtos_pow(10.0, 0.0), pow(10.0, 0.0), 10.0, 0.0);
   record("pow", gtos_pow(0.0, 3.0), pow(0.0, 3.0), 0.0, 3.0);
+  record("pow", gtos_pow(-0.0, 0.5), pow(-0.0, 0.5), -0.0, 0.5);
+  record("pow", gtos_pow(-0.0, -1.0), pow(-0.0, -1.0), -0.0, -1.0);
+  record("pow", gtos_pow(-0.0, -2.0), pow(-0.0, -2.0), -0.0, -2.0);
+  record("pow", gtos_pow(-0.0, 0.0), pow(-0.0, 0.0), -0.0, 0.0);
+  record("pow", gtos_pow(0.0 / 0.0, 0.0), pow(0.0 / 0.0, 0.0), 0.0 / 0.0, 0.0);
+
 
   // The results the old comparison skipped outright: signed zeros, the identities, subnormal logarithms, and the places where the answer is
   // NaN or an infinity rather than a number.

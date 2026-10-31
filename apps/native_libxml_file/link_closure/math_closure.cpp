@@ -39,6 +39,17 @@ union DoubleBits {
   unsigned long long bits;
 };
 
+// An odd integer exponent is what decides the sign of a zero or infinite base. `fmod(y, 2) != 0` is not that test: it is also true for every
+// non-integer, so pow(-0, 0.5) came back -0 and pow(-0, -1) came back +inf.
+int is_odd_integer(double value) {
+  // No fabs/floor/fmod here: those names are gtos_ macros at this point in the file, and this helper sits above their definitions.
+  const double magnitude = value < 0.0 ? -value : value;
+  if (magnitude != magnitude) return 0;                       // NaN
+  const double truncated = (double)(long long)magnitude;       // the exponents this can decide are far below 2^63
+  if (truncated != magnitude) return 0;                        // not an integer
+  return ((long long)truncated & 1LL) != 0;                    // odd integers only
+}
+
 int is_nan(double value) { return value != value; }
 int is_infinite(double value) { return !is_nan(value) && (value > 1.7976931348623157e308 || value < -1.7976931348623157e308); }
 
@@ -165,12 +176,16 @@ extern "C" double pow(double x, double y) {
   if (y == 0.0) return 1.0;
   // 1 to any power is 1, including a not-a-number exponent: IEEE 754 makes this one of the cases whose result ignores the NaN, and the test
   // checks it directly because the generic NaN branch below would otherwise answer NaN.
+  // x^0 is 1 for every x, NaN and zero included, so this is decided before the NaN test.
+  if (y == 0.0) return 1.0;
   if (x == 1.0) return 1.0;
   if (is_nan(x) || is_nan(y)) return 1.0 / 0.0 - 1.0 / 0.0;
   if (x == 0.0) {
-    // -0 raised to an odd positive integer is -0: `x == 0.0` cannot tell the two zeros apart, so the sign is taken from the value itself.
-    if (y > 0.0) return (__builtin_signbit(x) && fmod(y, 2.0) != 0.0) ? -0.0 : 0.0;
-    return 1.0 / 0.0;
+    // `x == 0.0` cannot tell the two zeros apart, so the sign comes from the value itself, and only an odd integer exponent keeps it.
+    const int signed_zero = is_odd_integer(y) && __builtin_signbit(x);
+    if (y > 0.0) return signed_zero ? -0.0 : 0.0;
+    // A negative exponent divides by a zero: the result is an infinity, negative only for -0 raised to an odd negative integer.
+    return signed_zero ? -1.0 / 0.0 : 1.0 / 0.0;
   }
   const int negative_base = x < 0.0;
   if (negative_base) {
@@ -178,7 +193,7 @@ extern "C" double pow(double x, double y) {
     if (rounded != y) return 1.0 / 0.0 - 1.0 / 0.0;
   }
   const double magnitude = exp_series(y * ln(fabs(x)));
-  return negative_base && fmod(y, 2.0) != 0.0 ? -magnitude : magnitude;
+  return negative_base && is_odd_integer(y) ? -magnitude : magnitude;
 }
 
 // xpath.c's one call is a fatal path. GTOS has a real process exit (GTOS_SYS_EXIT, EBX = status), so this terminates the process the same way
