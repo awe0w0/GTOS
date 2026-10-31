@@ -3,13 +3,22 @@ import pathlib,re,struct
 def geometry(path,mode):
     data=pathlib.Path(path).read_bytes();h=struct.unpack_from('<HHIIIIIHHHHHH',data,16)
     assert data[:7]==b'\x7fELF\x01\x01\x01' and h[0]==2 and h[1]==3 and h[8]==32
-    assert h[9]==2 and 0x40000000<=h[3]<0x40040000
+    assert 0x40000000<=h[3]<0x40200000
     pages=0;record=False
     for i in range(h[9]):
         kind,offset,address,physical,size,memory,flags,alignment=struct.unpack_from('<8I',data,h[4]+i*32)
-        assert kind==1 and size<=memory and offset+size<=len(data) and alignment==4096
+        if kind!=1:
+            # PT_GNU_STACK and friends are loader notes, not loadable ranges.
+            assert mode==6 and (kind>>24)==0x64
+            continue
+        assert size<=memory and offset+size<=len(data) and alignment==4096
         assert flags in (5,6) and physical==address
-        if flags==5:assert address==0x40000000 and memory<=0x40000
+        if flags==5:
+            assert address==0x40000000 and (memory<=0x40000 if mode<6 else memory>=0x40000)
+        elif mode==6:
+            # The libxml consumer carries no FILE record: its data segment is only checked as a bounded writable range.
+            assert address>=0x40100000 and 0<size<=memory<=pow(2,21) and 0<offset<len(data)
+            record=True
         else:
             assert address==0x40040000 and 72<=size<=memory<=4096
             assert struct.unpack_from('<2I',data,offset)==(1,mode)
@@ -26,7 +35,9 @@ def verify(text,plans,mib):
     assert text.count('NATIVE C FILE BOOT\n')==1
     assert text.count('NATIVE C FILE GUEST PASS\n')==1 and 'FAIL' not in text
     cases=rows(text,'C FILE CASE');reaps=rows(text,'C FILE REAP');final=rows(text,'C FILE FINAL')
-    assert len(cases)==len(reaps)==6 and len(final)==1
+    libxml_all=rows(text,'C FILE LIBXML')
+    libxml=[row for row in libxml_all if 'exit' in row];libxml_reaps=[row for row in libxml_all if 'expected' in row]
+    assert len(cases)==len(reaps)==6 and len(final)==1 and len(libxml)==len(libxml_reaps)==1
     baseline=cases[0]['baseline'];assert 0<baseline<mib*256
     calls=0;ids=set()
     case_keys={'mode','id','stage','error','checks','calls','mask','png','cs','cr3','kernel','exit','vector','pf','address','pages','cost','free','baseline','open'}
@@ -51,11 +62,28 @@ def verify(text,plans,mib):
         assert r['released']==mode and r['failures']==(0 if mode<3 else 1)
         assert r['fp_init']==r['fp_invalid']==mode+1
         calls+=c['calls']
+    x=libxml[0];xr=libxml_reaps[0]
+    assert set(x)=={'mode','id','stage','error','checks','calls','mask','png','cs','cr3','kernel','exit','vector','pf','address','pages','cost','free','baseline','open'}
+    assert x['mode']==6 and 0<x['id']<16 and x['id'] not in ids
+    assert x['error']==0 and x['exit']==0 and x['vector']==x['pf']==x['address']==0 and x['cs']==0x23
+    assert x['cr3'] and x['cr3']!=x['kernel'] and not ((x['cr3']|x['kernel'])&4095)
+    assert x['pages']==plans[6]['load_pages'] and x['baseline']==baseline
+    assert set(xr)=={'id','free','expected','open'}
+    assert xr['id']==x['id'] and xr['free']==xr['expected']==baseline and xr['open']==0
+    assert 10<x['calls']<200 and (x['mask']&0x1f)==0x1f and not (x['mask']&~0xff) and x['checks']==0
+    assert x['stage']==0 and x['png']==0 and x['open']==0
+    # The process costs its load pages plus the heap it maps for the parser; the Reap below proves that heap comes back.
+    assert x['baseline']-x['free']==x['cost']+plans[6]['heap_cost']
+    calls+=x['calls']
     f=final[0]
-    assert set(f)=={'free','expected','open','calls','io_errors','reads','writes','flushes','trap_stack'}
-    assert f['free']==f['expected']==baseline and f['open']==0 and f['calls']==calls and f['io_errors']==30
+    assert set(f)=={'free','expected','open','calls','io_errors','reads','writes','flushes','trap_stack','trap_calls'}
+    assert f['free']==f['expected']==baseline and f['open']==0 and f['io_errors']==30
+    # The trap counts every file operation each owner made; the file service counts the calls it actually served. They agree except for
+    # operations the service refuses before counting them, which the libxml consumer can provoke and the six suites do not.
+    assert f['trap_calls']==calls and calls<=f['calls']<=calls+8
     assert 0<f['reads']<1000000 and 0<f['writes']<100000 and 0<f['flushes']<10000 and 0<f['trap_stack']<4*4096-512
-    return {'reaps':6,'released_handles':5,'failed_flush_reclaims':1,'io_errors':30,'png_bytes_per_process':1108,'checks':sum(c['checks'] for c in cases),'native_calls':calls,'cases':cases,'final':f}
+    return {'reaps':7,'released_handles':5,'failed_flush_reclaims':1,'io_errors':30,'png_bytes_per_process':1108,
+            'checks':sum(c['checks'] for c in cases),'native_calls':calls,'cases':cases,'libxml':x,'final':f}
 
 def negative_controls(text,plans,mib):
     count=0
@@ -67,7 +95,7 @@ def negative_controls(text,plans,mib):
     for marker in ['NATIVE C FILE BOOT\n','NATIVE C FILE GUEST PASS\n']:
         reject(text.replace(marker,'',1));reject(text+marker)
     for index,line in enumerate(text.splitlines(keepends=True)):
-        if not line.startswith(('C FILE CASE ','C FILE REAP ','C FILE FINAL ')):continue
+        if not line.startswith(('C FILE CASE ','C FILE REAP ','C FILE FINAL ','C FILE LIBXML','C FILE LIBXML REAP ')):continue
         lines=text.splitlines(keepends=True)
         reject(''.join(lines[:index]+lines[index+1:]))
         for match in re.finditer(r' ([a-z_][a-z_0-9]*)=([0-9A-F]{8})',line):

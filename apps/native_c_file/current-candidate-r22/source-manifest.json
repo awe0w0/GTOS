@@ -1,5 +1,8 @@
 {
   "deltas": [
+    "apps/native_c_file/probe/kernel.cpp",
+    "apps/native_c_file/probe/kernel_common.h",
+    "apps/native_c_file/probe/observer.py",
     "include/gdt.h",
     "include/memory/physical.h",
     "include/memory/process_address_space.h",
@@ -60,6 +63,12 @@
       "process_cost": 16,
       "sha256": "eb5a132c998f2011dba7c0c00e600333d0e02f9bb537d029b7a1a65ad04aaea4"
     },
+    "O0-mode6": {
+      "heap_cost": 17,
+      "load_pages": 204,
+      "process_cost": 209,
+      "sha256": "61c741e64d8e5c184c364d6b7b9404ec7375bdb9c28941f9cd154cfdaaa709eb"
+    },
     "O2-mode0": {
       "heap_cost": 17,
       "load_pages": 7,
@@ -95,6 +104,12 @@
       "load_pages": 7,
       "process_cost": 12,
       "sha256": "8bef84e56a699cac2363c9df7e11e2c45f01592fcba9e5dff8929bf66e113122"
+    },
+    "O2-mode6": {
+      "heap_cost": 17,
+      "load_pages": 169,
+      "process_cost": 174,
+      "sha256": "b685f254ec749a04d9bb9fb76a276d318fa5a438f87f619e2b87c16394b98733"
     }
   },
   "elfs_equal_legacy": {
@@ -104,12 +119,14 @@
     "O0-mode3": false,
     "O0-mode4": false,
     "O0-mode5": false,
+    "O0-mode6": false,
     "O2-mode0": true,
     "O2-mode1": true,
     "O2-mode2": true,
     "O2-mode3": true,
     "O2-mode4": true,
-    "O2-mode5": true
+    "O2-mode5": true,
+    "O2-mode6": false
   },
   "entry_head": "ec911e1c5cee144deacf597de86650bbb6e19710",
   "files": {
@@ -416,11 +433,11 @@
     "apps/native_c_file/llvm-libc/src/string/memory_utils/utils.h": "a5afdd0cbe674ab3de3156c3f9be85f70cb5a8bbd0c9b717cf0beca905127468",
     "apps/native_c_file/llvm-libc/src/string/memory_utils/x86_64/inline_memcpy.h": "6370b89f785ef227558fae2ad3e7cb49ce05ac64d920f7d082cc7408e6670601",
     "apps/native_c_file/platform_file.cpp": "359d0e1b579545ca6e1559e64fb082302f9d123a39fbed72fa56d636f052fe1a",
-    "apps/native_c_file/probe/kernel.cpp": "4b32ac36b6b361a31ad41bfb8b2c864d271542ea7d0ef0fc1431b84c11a22285",
-    "apps/native_c_file/probe/kernel_common.h": "f9885f7ac5494eea0c716022fc39550bce7fdcaf068f19280bfa777640b9f610",
+    "apps/native_c_file/probe/kernel.cpp": "dfa89228037583f6e5ce11b202790eb83e1020ebf8848faca4f330b6399e3450",
+    "apps/native_c_file/probe/kernel_common.h": "b33fb3fba67b9015f46c02aad1227648fdfb4387e7e85a10d70fbaf24d11cfe6",
     "apps/native_c_file/probe/linker.ld": "d4ea67b7f9ba2b472e964864b55e29d14bf7e11cecfb1b9db23f2a5db4a64f22",
     "apps/native_c_file/probe/main.cc": "5a993a2f957da34914d3c99ad3dece7fc5993beee7441d005ee15d2d2b0eb2db",
-    "apps/native_c_file/probe/observer.py": "4e1a5425c2026283b0715561a878baa1ff86f8ea7afc639c44f995ce827296fb",
+    "apps/native_c_file/probe/observer.py": "8b90bcc911e3252ac7d3847cf8e26da020b5de7d5da0e33150b408d063960cc7",
     "apps/native_c_file/probe/record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
     "apps/native_c_file/probe/stock.c": "91846b0f27b000a2f7f8c7fd8c9a4f9085409009ffe690973ceb1dd2bfcc3c37",
     "apps/native_c_file/sdk/errno.h": "c507574b2a26f3e7753b4734c7349663b6b9a7a9f863887bebaec63245720866",
@@ -700,28 +717,28 @@
     "tests/native_process_smoke.cpp": "8b98ffaf3933774a2beb262ddc9c0374686c07bd8190e78eb8fb97f8b4690cf2",
     "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
     "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
-    "tools/build-native-c-file-probe.py": "f3ccf38525c081b1d12a87490348643606806e53cdd161b49327d8dc9508b1ee",
+    "tools/build-native-c-file-probe.py": "cb6f6769af62e5c57cdcd97caa5274bfe973f062235f958b8eadfa34d4e13b5d",
     "tools/build-native-file-probe.py": "dd02f5a2ebf391ab4af54b4bf879453fb87c92a6457251b2404bda9cebbe7ea2",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "tools/self-review-native-c-file.py": "bff5ee9c06cd53dd07d62dec89fb699ff35bf486bcd5b5bb884ef4ec1c0715e8"
   },
-  "frozen_at": "2026-10-31T10:48:30.142359+00:00",
+  "frozen_at": "2026-10-31T13:11:04.771212+00:00",
   "kernel_metadata": {
     "O0": {
       "load_ranges": [
         [
           4096,
-          152988
+          155580
         ],
         [
           155648,
-          155652
+          155653
         ]
       ],
-      "normalized_sha256": "508a3fdb9d0227169cd5702dd260fd7a1b0b85cfdfa4b41fc948bb6adffa8716",
+      "normalized_sha256": "ba0b3bdc4d83453732f6bbf589086565b70f7f3f35b6c8b5e0dba7c1aa1e94cf",
       "run_ref_offsets": [
-        167525,
-        173271
+        167545,
+        173291
       ],
       "run_refs_in_loaded_segments": []
     },
@@ -729,17 +746,17 @@
       "load_ranges": [
         [
           4096,
-          120780
+          124364
         ],
         [
-          122880,
-          122884
+          126976,
+          126981
         ]
       ],
-      "normalized_sha256": "ec25dcdc911d7ca5439473c5c876ee3e4fe8ec7f9dd6cdcacb321fbc7a717dce",
+      "normalized_sha256": "aabcadb637043837cadca6d402475529c2bdbde83b2360bb8278c15e074e0dfb",
       "run_ref_offsets": [
-        130645,
-        133429
+        134793,
+        137577
       ],
       "run_refs_in_loaded_segments": []
     }
@@ -749,24 +766,24 @@
     "O2": 2
   },
   "kernels": {
-    "O0": "c6c0939c957b45f27cade41d3195574559b8bc57b67ca02d9d4018f3c0540dda",
-    "O2": "f3401bea21f12afb136336915f1544fe73c4f7105c3ef73aa389e7fcb28ad15e"
+    "O0": "0d1b950d5e1997a9534871f88c0856210bbb5baa2c76fa231a5ccc68170b1770",
+    "O2": "09ca9d70d41f181a68cf614523c3382cc0f64aec52bd404d621021db7ff54ebd"
   },
   "kernels_bytes": {
-    "O0": 199980,
-    "O2": 153096
+    "O0": 200032,
+    "O2": 157444
   },
   "kernels_equal_legacy": {
     "O0": false,
     "O2": false
   },
   "kernels_normalized": {
-    "O0": "508a3fdb9d0227169cd5702dd260fd7a1b0b85cfdfa4b41fc948bb6adffa8716",
-    "O2": "ec25dcdc911d7ca5439473c5c876ee3e4fe8ec7f9dd6cdcacb321fbc7a717dce"
+    "O0": "ba0b3bdc4d83453732f6bbf589086565b70f7f3f35b6c8b5e0dba7c1aa1e94cf",
+    "O2": "aabcadb637043837cadca6d402475529c2bdbde83b2360bb8278c15e074e0dfb"
   },
   "loaded_kernels": {
-    "O0": "7387d9889acd41a98b2b8001e9c67be5a7ff839f7a23f2d1787a1a79e5c7a8e3",
-    "O2": "06d8092c1863aa99aa54dca885f1db6f084c626b096ba9de058e4011c8a810c7"
+    "O0": "31a7793e379f5727269793aeab7b0baa8decbdc38a5506f9ce4a6965354f8b24",
+    "O2": "c12d8a1cb94bb05ae3646cbaa22c3bfb2214ed09619ba452dbc02e00a787aabf"
   },
   "loaded_kernels_equal_legacy": {
     "O0": false,
@@ -797,7 +814,7 @@
     "O0-kernel-paging.o": "12aa96264f342717c3ae32e7b6951bf13fe5ce4ce45f2285711273f3d4365c3d",
     "O0-kernel-physical.o": "cc4b98d51c31c0dd8a26f46106382c7cb7d4c444227a1c9b54d6ba53baf15b62",
     "O0-kernel-port.o": "7faa1d7efa1bc2105e2d26eb7c768e29d1239e2966db2c81a9ca249a1c7000c1",
-    "O0-kernel-probe.o": "be6780353da1cd8a4c40f2b23867f6ed08f4a9a07fd0ec576d63192dc582e12a",
+    "O0-kernel-probe.o": "59babcd38f28c16a4abf56c5132399af8c16e2f51c4bf9a3c02551dcdad4f95c",
     "O0-kernel-process_address_space.o": "8f64fd968c8cd14abf410829dc9614012d052af7d9fd45fe63eb3f135d481423",
     "O0-kernel-pure_virtual.o": "bdf2eeaa0d0a11beeeab3bafc798ecc38be0b48a11a694cba767622ddee96924",
     "O0-kernel-resources.o": "7db0f496791c2bcd09532dcadef1320c657345297feee8f8fbbbb51e98298266",
@@ -866,7 +883,7 @@
     "O2-kernel-paging.o": "ded146ffa8753c2a275912c3fbeaef77027f2974e8f048e70411a16ad4f92333",
     "O2-kernel-physical.o": "3e52be58b3a75b38572464914164355066ee64994886ed5f424dd215bb74b616",
     "O2-kernel-port.o": "af94c065991152112aecc3750e7eae818a65fa6b6ff4b64caba3eec95bb21b06",
-    "O2-kernel-probe.o": "83405f0c8666b43ac0a53fe30d46ec7e5cf7a271722dd64f7c46f235a0a4593e",
+    "O2-kernel-probe.o": "10bd5b8781b5b8009526cc0be7deede34dfb6b41cdf26e46629d9c559d3850fc",
     "O2-kernel-process_address_space.o": "7348d3f583ead7e3a1d012243aae966f57f6bee8e4bfa30b33691967123c9844",
     "O2-kernel-pure_virtual.o": "2f6620ba2661ed0c4f03ef430ba5cab5ce5004304ed9ce4820ae239500e7f241",
     "O2-kernel-resources.o": "092f628beab307bbe83371a838bcd09c369f22d83319864d544661d339347b4a",
@@ -1100,7 +1117,7 @@
     ]
   },
   "qualified_object_root": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-c-file-02",
-  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22b-31-c1/out",
+  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22c-03-d1/out",
   "schema": "gtos-native-c-file-current-candidate/1",
   "tool_drift": [
     "tools/build-native-c-file-probe.py"

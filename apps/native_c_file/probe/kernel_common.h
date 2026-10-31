@@ -14,6 +14,8 @@ using namespace gtos::storage;
 using namespace gtos::drivers;
 namespace {
     uint32_t fileChecks,ids[16],idCount,kernelDirectory,callCount[16],callMask[16],badCount[16],maxTrapStack,ioErrorCount;
+    // True for the six FILE suites, which publish a record at FILE_RECORD_VA; false for the libxml consumer, which has no record.
+    bool observeRecord=true;
     PhysicalMemoryManager* fileFrames;
     void FileFinish(bool pass) __attribute__((noreturn));
     void FileFinish(bool pass) {
@@ -68,6 +70,18 @@ namespace {
                 NativeStatus s={};if (runtime.Status(ids[n],s)&&s.live&&s.directory==cr3) { id=ids[n];initial=s; }
             }
             FileNeed(id&&id<16,"admitted owner derived from current CR3");
+            if (!observeRecord) {
+                // The libxml consumer carries no FILE record, so there is no record page to read and no per-record command to inject.
+                // What still has to hold is that the call came from the admitted CPL3 owner and left the scheduler and VM untouched.
+                const uint32_t free=fileFrames->getStatistics().freeFrames,count=tasks.TaskCount(),ticks=tasks.Ticks();
+                const uint32_t returned=original.HandlerInterrupt(esp);NativeStatus observed={};
+                FileNeed(returned==esp&&tasks.CurrentTask()==current&&Directory()==cr3&&tasks.Ticks()==ticks
+                    &&tasks.TaskCount()==(int)count&&fileFrames->getStatistics().freeFrames==free,"file call preserves scheduler and VM ownership");
+                FileNeed(runtime.Status(id,observed)&&observed.systemCalls==initial.systemCalls+1&&observed.observedCs==0x23
+                    &&observed.observedCr3==cr3,"runtime records authoritative owner");
+                callCount[id]++;callMask[id]|=1U<<(operation-0x4720);
+                return returned;
+            }
             // The management ReadMemory API deliberately requires kernel CR3.
             // This trap observer reads only its fixed, admitted, one-page record
             // through the actual current mapping, after independent PDE/PTE checks.

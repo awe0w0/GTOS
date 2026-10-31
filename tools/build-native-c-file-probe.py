@@ -55,8 +55,12 @@ def kernel_facts(path,run_token):
         if found<0:break
         offsets.append(found);start=found+1
     loaded_refs=[offset for offset in offsets if any(begin<=offset<end for begin,end in ranges)]
+    # The placeholder keeps the run directory's length: a shorter one would shift every byte after it, so two builds of the same sources in
+    # differently named run roots would compare unequal for a reason that has nothing to do with the kernel.
+    placeholder=b'<run>/'+b'#'*(len(run_token)-6)
+    assert len(placeholder)==len(run_token)
     return {'bytes':data,'load_ranges':ranges,'run_ref_offsets':offsets,'run_refs_in_loaded_segments':loaded_refs,
-            'normalized_sha256':hashlib.sha256(data.replace(run_token,b'<run>/')).hexdigest()}
+            'normalized_sha256':hashlib.sha256(data.replace(run_token,placeholder)).hexdigest()}
 
 def compare_kernel(facts,level,frozen):
     """Return the rule that justified a changed kernel file, or raise when the change is not the run directory.
@@ -128,8 +132,13 @@ def main():
     parser.add_argument('--qualified-object-root',type=pathlib.Path)
     parser.add_argument('--entry-head')
     parser.add_argument('--guests-only',action='store_true')
+    parser.add_argument('--libxml-root')
+    parser.add_argument('--libxml-config')
+    parser.add_argument('--private-subset')
+    parser.add_argument('--printf-runtime')
+    parser.add_argument('--native-file-library')
     parser.add_argument('--published-root',type=pathlib.Path)
-    args=parser.parse_args();repo=pathlib.Path(__file__).resolve().parents[1];base=repo/'apps/native_c_file';probe=base/'probe';out=args.output.resolve()
+    args=parser.parse_args();modules=6+(1 if args.libxml_root else 0);repo=pathlib.Path(__file__).resolve().parents[1];base=repo/'apps/native_c_file';probe=base/'probe';out=args.output.resolve()
     assert not out.exists(),'Use a fresh directory; keep prior logs/cache.';out.mkdir(parents=True)
     manifest_path=args.source_manifest.resolve() if args.source_manifest is not None else None
     candidate=json.loads(manifest_path.read_text()) if manifest_path is not None and manifest_path.exists() else None
@@ -233,14 +242,63 @@ def main():
             'src/storage/filestore.cpp','src/storage/littlefs_port.cpp','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','src/drivers/ata.cpp','apps/native_v8_runtime/runtime/memory.cc']
         integer=args.integer_builtins.resolve();bind(integer)
         assert sha(integer)==clock_profile['integer_builtins_sha256'],'Require pinned real integer builtins archive'
+        def build_libxml_module(d,opt):
+            """Compile the pinned libxml2 consumer and link it as the seventh guest module."""
+            import re
+            out=d/'libxml';out.mkdir(parents=True,exist_ok=True)
+            src=pathlib.Path(args.libxml_root);assert src.is_dir(),'The pinned libxml sources are missing: '+str(src)
+            buildGn=pathlib.Path(re.sub(r'/src$','',str(src))+'/BUILD.gn').read_text()
+            sources=[name for name in re.findall(r'^[ \t]*"src/([A-Za-z0-9_]+\.c)",',buildGn,re.M)]
+            assert len(sources)>=20,'The BUILD.gn source list is not the pinned one: '+str(len(sources))
+            cfg=pathlib.Path(args.libxml_config);assert cfg.is_dir(),'The libxml configuration is missing: '+str(cfg)
+            subset=pathlib.Path(args.private_subset)
+            clangInclude=str(clang.parent.parent/'lib/clang/24/include')
+            xmlflags=['--target=i686-unknown-none-elf','-ffreestanding','-fno-stack-protector','-fno-pic','-fno-pie','-fno-unwind-tables',
+                '-fno-asynchronous-unwind-tables','-mno-mmx','-msse2','-mfpmath=sse','-mno-sse3','-mno-ssse3','-mno-sse4','-mno-avx','-nostdinc',
+                '-isystem',str(legacy/'sdk'),'-isystem',str(libcxx/'include'),'-isystem',str(legacy/'c-sdk'),'-isystem',clangInclude,
+                '-D__GTOS__=1','-DLIBXML_STATIC=','-femulated-tls','-O'+str(opt),'-I'+str(subset/'include'),'-I'+str(repo/'include'),
+                '-I'+str(cfg),'-I'+str(cfg/'include'),'-I'+str(src/'include'),'-I'+str(src)]
+            compiled=0
+            for name in sources:
+                run([clang,'-x','c','-std=c99',*xmlflags,'-MD','-MF',out/(name+'.d'),'-c',src/name,'-o',out/(name+'.o')],out/(name+'.err'));compiled+=1
+            for name in ('posix_file.cpp','link_closure/libc_closure.cpp','link_closure/math_closure.cpp','probe/main.cpp'):
+                source=subset/name
+                run([clang,*xmlflags,'-fno-exceptions','-fno-rtti','-fno-threadsafe-statics','-c',source,'-o',out/(source.name+'.o')],out/(source.name+'.err'));compiled+=1
+            startObj=out/'start.o'
+            run([bins['as'],'--32',subset/'probe/exit-start.s','-o',startObj],out/'start.log')
+            # Exactly the seven objects the printf unit qualified: the tree also holds heap.o and libc_errno.o, which the FILE library
+            # already links, and linking both would define malloc twice.
+            measured=['2accc7918144ae071581dce79aec5cd991e13225a90a0ffb9243e62869a0cb4d/native_printf_libc.snprintf.o',
+                '9c873c85e6f0c9915e81bceb27b1d99e03b87915bb879557d8f1ac6ee196053a/native_printf_libc.vsnprintf.o',
+                '6d0c352e0dbca07f2e6fe9e76c41b83237a82af690c499c56c30c7a68d268f3b/native_printf_libc.snprintf_modular.o',
+                '69a74036b6699827904d5dd4486d57ed110bf421ea0c66dd0c3f01e4c9d64b61/native_printf_libc.vsnprintf_modular.o',
+                '84e54bb3d7b4e446632cbac526b74b45d4157fc7b720de60ca4736771e08be27/native_printf_libc.float_impl.o',
+                '636c90b9b60b18437ad2629e3d9c41905a1f6044cfa58aef189a092cf6adc6c0/native_printf_libc.error_to_string.o',
+                '5fe56d41fe59c161b496966e32fc6303bcd94aec1e4b16ba73e3bfa47370d2f5/native_runtime.abort.o']
+            printfObjects=[pathlib.Path(args.printf_runtime)/name for name in measured]
+            missing=[str(pathlib.Path(args.printf_runtime)/name) for name in measured if not (pathlib.Path(args.printf_runtime)/name).is_file()]
+            assert not missing,'The measured printf runtime is incomplete: '+str(missing)
+            library=sorted(pathlib.Path(args.native_file_library).glob('*.o'))
+            assert len(library)>=10,'The qualified native FILE library is incomplete: '+str(len(library))
+            elf=d/'user.elf';strip=d/'user.stripped.elf'
+            objects=[obj for obj in sorted(out.glob('*.o')) if obj!=startObj]
+            run([bins['ld'],'-melf_i386','-static','-T',subset/'probe/linker.ld','-o',elf,startObj,*objects,*library,*printfObjects],out/'link.log')
+            undefined=run([bins['nm'],'-u',elf],out/'undefined.log').strip()
+            assert not undefined,'The libxml consumer has undefined symbols:\n'+undefined
+            run([bins['objcopy'],'--strip-all',elf,strip],out/'strip.log')
+            symbols=run([bins['nm'],'-C',elf],out/'symbols.log')
+            assert ' T xmlReadMemory' in symbols and ' T xmlReadFile' in symbols,'The parser the consumer calls was not linked in'
+            print('LIBXML MODULE objects='+str(compiled)+' library='+str(len(library))+' printf='+str(len(printfObjects)),flush=True)
+            return strip
+
         def prepare_images(d,binary,elfs):
             """Write the ISO and the disk image. This runs in the build stage, which boots nothing."""
             guest=d/'guest';(guest/'iso/boot/grub').mkdir(parents=True,exist_ok=True);shutil.copyfile(binary,guest/'iso/boot/native.bin')
             for mode,elf in enumerate(elfs):shutil.copyfile(elf,guest/'iso/boot'/('file'+str(mode)+'.elf'))
-            (guest/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native LLVM FILE" {\n multiboot /boot/native.bin\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(6))+' boot\n}\n')
-            modules=pathlib.Path(os.environ['GTOS_GRUB_MODULES']) if os.environ.get('GTOS_GRUB_MODULES') else \
+            (guest/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native LLVM FILE" {\n multiboot /boot/native.bin\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(modules))+' boot\n}\n')
+            grubModules=pathlib.Path(os.environ['GTOS_GRUB_MODULES']) if os.environ.get('GTOS_GRUB_MODULES') else \
                     bins['grub-mkrescue'].parent.parent/'lib/grub/i386-pc'
-            rescue=[bins['grub-mkrescue']]+(['--directory='+str(modules)] if modules.is_dir() else [])
+            rescue=[bins['grub-mkrescue']]+(['--directory='+str(grubModules)] if grubModules.is_dir() else [])
             run(rescue+['--output='+str(guest/'native.iso'),guest/'iso'],guest/'grub.log')
             volume=(guest/'native.iso').read_bytes()[17*2048:17*2048+6]
             assert volume[0]==0 and volume[1:6]==b'CD001','The guest image has no El Torito boot record: '+str(guest/'native.iso')
@@ -272,7 +330,7 @@ def main():
             if args.guests_only:
                 assert args.published_root is not None,'Guests-only needs the published artifact root'
                 assert candidate is not None,'Guests-only compares the published images against the frozen candidate'
-                plans={mode:{k:v for k,v in candidate['elfs'][level+'-mode'+str(mode)].items() if k!='sha256'} for mode in range(6)}
+                plans={mode:{k:v for k,v in candidate['elfs'][level+'-mode'+str(mode)].items() if k!='sha256'} for mode in range(modules)}
                 published=args.published_root/level
                 entry=json.loads((args.published_root/'published.json').read_text())['artifacts'][level]
                 for name,key in [('native.iso','iso'),('filesystem.img','image'),('stock-reader','reader')]:
@@ -312,6 +370,13 @@ def main():
                 run([bins['objcopy'],'--strip-all',app/'user.elf',app/'user.stripped.elf'],app/'strip.log')
                 plans[mode]=observer.geometry(app/'user.stripped.elf',mode)
                 state['elfs'][level+'-mode'+str(mode)]={'sha256':sha(app/'user.stripped.elf'),**plans[mode]};elfs.append(app/'user.stripped.elf')
+            if modules>6:
+                # The real libxml consumer, compiled from the pinned sources in this run, is the seventh guest module.
+                app=d/'mode6';app.mkdir();bind(args.private_subset+'/probe/main.cpp');bind(args.private_subset+'/probe/exit-start.s')
+                bind(args.private_subset+'/probe/linker.ld')
+                strip=build_libxml_module(app,opt)
+                plans[6]=observer.geometry(strip,6)
+                state['elfs'][level+'-mode6']={'sha256':sha(strip),**plans[6]};elfs.append(strip)
             for name in core:
                 src=repo/name;bind(src);obj=d/('byte_helpers.o' if name.endswith('/memory.cc') else pathlib.Path(name).stem+'.o');kernel.append(obj)
                 options=['-x','c','-std=c99','-DLFS_DEFINES=storage/littlefs_port.h'] if name.endswith('.c') else cpp
