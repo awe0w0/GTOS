@@ -151,6 +151,28 @@ verify_published() {
     return 0
 }
 
+# verify_publish_record <binary>
+#       Check that the record names this image, and that its size and digest still match, without starting it. Returns 0 when the record
+#       verifies and 2 when it does not: a caller that refuses on 2 has started nothing.
+verify_publish_record() {
+    if [ "$#" -ne 1 ]; then
+        echo "verify_publish_record takes a binary" >&2
+        return 2
+    fi
+    image=$1
+    if [ -z "${GTOS_PUBLISH_RECORD:-}" ] || [ ! -f "${GTOS_PUBLISH_RECORD:-/nonexistent}" ]; then
+        echo "verify_publish_record: no publish record to verify $image against" >&2
+        return 2
+    fi
+    record=$(awk -v path="$image" '$1 == path { print $2, $3 }' "$GTOS_PUBLISH_RECORD" | tail -n 1)
+    if [ -z "$record" ]; then
+        echo "verify_publish_record: $image is not recorded as published in $GTOS_PUBLISH_RECORD" >&2
+        return 2
+    fi
+    verify_published "$image" "${record#* }" "${record%% *}" || return 2
+    return 0
+}
+
 # run_published_binary <binary> [args...]
 #       Start a published image only after checking it against the size and digest recorded when it was published. A path with no
 #       record was not published by this run, and bytes that do not match the record are refused instead of started.

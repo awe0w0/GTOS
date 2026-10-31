@@ -65,9 +65,25 @@ if [ "$stage" = run ]; then
 
     # The i386 executor, if this host has one: a named regular file when GTOS_DESKTOP_I386_EXECUTOR is given (that is what a strict run
     # uses, because the name is part of the grant), otherwise whatever the runtime tree or PATH provides.
+    # The record is checked before anything starts. A manifest can name an image whose record entry is missing or whose bytes no longer
+    # match what was published; without this check that refusal would surface as the program's own 2 and be read as a real status.
+    verify_publish_record "$desktop32" || exit "$GTOS_EXIT_SUPPLY"
+    verify_publish_record "$desktop64" || exit "$GTOS_EXIT_SUPPLY"
+
     executor=
-    if [ -n "${GTOS_DESKTOP_I386_EXECUTOR:-}" ]; then
-        if [ ! -f "$GTOS_DESKTOP_I386_EXECUTOR" ] || [ ! -x "$GTOS_DESKTOP_I386_EXECUTOR" ]; then
+    if [ "${GTOS_DESKTOP_STRICT:-0}" = 1 ]; then
+        # A strict run says what it starts: the executor is the file named here, resolved, and nothing found by a search stands in for it.
+        if [ -z "${GTOS_DESKTOP_I386_EXECUTOR:-}" ]; then
+            echo "desktop_test: a strict run needs GTOS_DESKTOP_I386_EXECUTOR to name the i386 executor" >&2
+            exit "$GTOS_EXIT_SUPPLY"
+        fi
+        if [ -L "$GTOS_DESKTOP_I386_EXECUTOR" ] || [ ! -f "$GTOS_DESKTOP_I386_EXECUTOR" ] || [ ! -x "$GTOS_DESKTOP_I386_EXECUTOR" ]; then
+            echo "desktop_test: GTOS_DESKTOP_I386_EXECUTOR is not an executable regular file: $GTOS_DESKTOP_I386_EXECUTOR" >&2
+            exit "$GTOS_EXIT_SUPPLY"
+        fi
+        executor=$GTOS_DESKTOP_I386_EXECUTOR
+    elif [ -n "${GTOS_DESKTOP_I386_EXECUTOR:-}" ]; then
+        if [ -L "$GTOS_DESKTOP_I386_EXECUTOR" ] || [ ! -f "$GTOS_DESKTOP_I386_EXECUTOR" ] || [ ! -x "$GTOS_DESKTOP_I386_EXECUTOR" ]; then
             echo "desktop_test: GTOS_DESKTOP_I386_EXECUTOR is not an executable regular file: $GTOS_DESKTOP_I386_EXECUTOR" >&2
             exit "$GTOS_EXIT_SUPPLY"
         fi
@@ -77,14 +93,8 @@ if [ "$stage" = run ]; then
         if [ -x "$runtime/usr/bin/qemu-i386" ]; then
             executor=$runtime/usr/bin/qemu-i386
         elif command -v qemu-i386 >/dev/null 2>&1; then
-            executor=qemu-i386
+            executor=$(command -v qemu-i386)
         fi
-    fi
-    if [ "${GTOS_DESKTOP_STRICT:-0}" = 1 ] && [ -z "$executor" ]; then
-        # A strict run is asking for the qualification, not for a compatible fallback: without a named executor the 32-bit image cannot
-        # be started, and saying so is the answer.
-        echo "desktop_test: a strict run needs an i386 executor, and none was named or found" >&2
-        exit "$GTOS_EXIT_SUPPLY"
     fi
 
     # The 32-bit width. Its status is the program's status: 2 is 2, not a refusal, and 126 from this kernel means the host could not

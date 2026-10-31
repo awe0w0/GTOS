@@ -74,6 +74,49 @@ start_run "$root" >"$root/tampered.log" 2>&1 || status=$?
 [ "$status" -eq 70 ] && tampered=1 || tampered=0
 check "$tampered" "a copy whose bytes changed is refused with the supply status (got $status)"
 
+# A manifest can be valid while the record is not. That refusal must be the supply's, and nothing may start: otherwise it surfaces as the
+# program's own 2 and is read as a real status.
+saved_record=$(cat "$GTOS_PUBLISH_RECORD")
+: > "$GTOS_PUBLISH_RECORD"
+status=0
+start_run "$root" >"$root/no-record-entries.log" 2>&1 || status=$?
+starts=$(grep -c 'starting the' "$root/no-record-entries.log" || true)
+[ "$status" -eq 70 ] && [ "$starts" -eq 0 ] && noentries=1 || noentries=0
+check "$noentries" "a valid manifest with an empty record is refused and starts nothing (got $status, $starts starts)"
+printf '%s\n' "$saved_record" > "$GTOS_PUBLISH_RECORD"
+
+mv "$GTOS_PUBLISH_RECORD" "$GTOS_PUBLISH_RECORD.absent"
+status=0
+start_run "$root" >"$root/no-record.log" 2>&1 || status=$?
+starts=$(grep -c 'starting the' "$root/no-record.log" || true)
+[ "$status" -eq 70 ] && [ "$starts" -eq 0 ] && norecord=1 || norecord=0
+check "$norecord" "a valid manifest with no record at all is refused and starts nothing (got $status, $starts starts)"
+mv "$GTOS_PUBLISH_RECORD.absent" "$GTOS_PUBLISH_RECORD"
+
+# A named executor is used as named, and strict mode does not accept a search result in its place: a qemu-i386 on PATH is the compatible
+# path, and asking for a strict run without naming one is a refusal that starts nothing.
+fake=$root/fake-executor
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "$GTOS_FAKE_EXECUTOR_LOG"\nexec "$@"\n' > "$fake"
+chmod 0755 "$fake"
+export GTOS_FAKE_EXECUTOR_LOG=$root/fake-executor.log
+: > "$GTOS_FAKE_EXECUTOR_LOG"
+status=0
+GTOS_DESKTOP_I386_EXECUTOR=$fake ./tests/desktop_test.sh run >"$root/named-executor.log" 2>&1 || status=$?
+named=$(grep -c 'desktop32' "$GTOS_FAKE_EXECUTOR_LOG" || true)
+[ "$status" -eq 0 ] && [ "$named" -ge 1 ] && namedok=1 || namedok=0
+check "$namedok" "a named executor starts the 32-bit image through that exact file (rc=$status, $named launches)"
+
+status=0
+PATH="$root:$PATH" GTOS_DESKTOP_STRICT=1 ./tests/desktop_test.sh run >"$root/strict-path.log" 2>&1 || status=$?
+starts=$(grep -c 'starting the' "$root/strict-path.log" || true)
+[ "$status" -eq 70 ] && [ "$starts" -eq 0 ] && strictpath=1 || strictpath=0
+check "$strictpath" "strict mode refuses a PATH executor it was not given and starts nothing (got $status, $starts starts)"
+
+status=0
+GTOS_DESKTOP_STRICT=1 GTOS_DESKTOP_I386_EXECUTOR=$root ./tests/desktop_test.sh run >"$root/strict-dir.log" 2>&1 || status=$?
+[ "$status" -eq 70 ] && strictdir=1 || strictdir=0
+check "$strictdir" "strict mode refuses an executor that is not a regular file (got $status)"
+
 # The program's own status arrives unchanged. The test body is built to return it; if the wrapper mapped 2 to 70, this is where it shows.
 for code in 2 7 9; do
     case_root=$root/status-$code
