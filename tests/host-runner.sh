@@ -230,8 +230,10 @@ run_host_binary() {
 # the list was made. The scripts that do both therefore accept a stage argument, and these two functions carry the artifact
 # between the two runs.
 #
-#   stage_binary <key> <binary>   publish <binary> and append "<key>=<published path>" to $GTOS_PUBLISH_MANIFEST
-#   staged_binary <key>           print the path recorded for <key>, failing if the manifest does not name it
+#   stage_binary <key> <binary>   publish <binary> and append "<key>=<published path>" and "<key>.sha256=<digest>" to
+#                                 $GTOS_PUBLISH_MANIFEST
+#   staged_binary <key>           print the path recorded for <key>, failing if the manifest does not name it or if the file at that
+#                                 path is not the image the manifest recorded by digest
 #
 # The manifest is the record of which artifact runs, written where the first run can write and the second can only read.
 stage_binary() {
@@ -245,8 +247,14 @@ stage_binary() {
         return 2
     fi
     published=$(publish_host_binary "$2") || return 2
+    digest=$(sha256sum "$published" | cut -d' ' -f1)
+    if [ -z "$digest" ]; then
+        echo "stage_binary: could not hash the published image: $published" >&2
+        return 2
+    fi
     printf '%s=%s\n' "$1" "$published" >> "$manifest" || return 2
-    printf 'STAGED %s %s\n' "$1" "$published"
+    printf '%s.sha256=%s\n' "$1" "$digest" >> "$manifest" || return 2
+    printf 'STAGED %s %s %s\n' "$1" "$published" "$digest"
     return 0
 }
 
@@ -269,5 +277,27 @@ staged_binary() {
         echo "staged_binary: $1 is not recorded in $manifest" >&2
         return 2
     fi
-    printf '%s\n' "${entry#*=}"
+    published=${entry#*=}
+    # The name in the manifest is not the identity of the image: the digest recorded when it was published is.
+    recorded=$(grep "^$1\.sha256=" "$manifest" | tail -n 1)
+    if [ -z "$recorded" ]; then
+        if [ "${GTOS_PUBLISH_ALLOW_UNRECORDED:-0}" != 1 ]; then
+            echo "staged_binary: $1 has no recorded digest in $manifest; refusing to start an unrecorded image" >&2
+            return 2
+        fi
+        echo "staged_binary: WARNING $1 has no recorded digest and GTOS_PUBLISH_ALLOW_UNRECORDED=1" >&2
+        printf '%s\n' "$published"
+        return 0
+    fi
+    expected=${recorded#*=}
+    actual=$(sha256sum "$published" 2>/dev/null | cut -d' ' -f1)
+    if [ -z "$actual" ]; then
+        echo "staged_binary: cannot read the published image: $published" >&2
+        return 2
+    fi
+    if [ "$actual" != "$expected" ]; then
+        echo "staged_binary: $1 is not the image that was published: $published has $actual, the manifest records $expected" >&2
+        return 2
+    fi
+    printf '%s\n' "$published"
 }
