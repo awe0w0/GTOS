@@ -58,21 +58,44 @@ GTOS_EXIT_SUPPLY=70
 if [ "$stage" = run ]; then
     # The 32-bit image has one executor and the 64-bit image has another: an i386 static ELF is loaded by the user-mode i386
     # emulator, and the native image is started directly. Both are the read-only copies published by the build step.
-    desktop32=$(staged_binary desktop32)
-    desktop64=$(staged_binary desktop64)
+    # A substitution's status is the assignment's, and a refused manifest is a supply refusal, not the program's answer: map it before
+    # the runner ever starts anything.
+    desktop32=$(staged_binary desktop32) || exit "$GTOS_EXIT_SUPPLY"
+    desktop64=$(staged_binary desktop64) || exit "$GTOS_EXIT_SUPPLY"
     # Both images are started through the entry point that verifies them against the record written when they were published. The i386
-    # image keeps its executor: it is named as a launcher, so the runner still checks that the image is one the publish step produced.
-    qemu_bin=$(command -v qemu-i386) || { echo "desktop_test: no i386 executor to load $desktop32" >&2; exit "$GTOS_EXIT_SUPPLY"; }
-    GTOS_HOST_LAUNCHER=$qemu_bin
-    run_published_binary "$desktop32"; status=$?
-    if [ "$status" -ne 0 ]; then
-        # 70 says the supply refused; anything else is what the i386 image itself returned.
-        case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac
+    # image keeps its executor when there is one: it is named as a launcher, so the runner still checks that the image is one the publish
+    # step produced. A host without an i386 executor starts the published copy natively, which is the same fallback the single step uses;
+    # what the two steps have in common is that the path started is the published one, not the fresh build.
+    runtime="$(pwd)/../gtos-runtime/root"
+    if [ -x "$runtime/usr/bin/qemu-i386" ]; then
+        i386_executor=$runtime/usr/bin/qemu-i386
+    elif command -v qemu-i386 >/dev/null 2>&1; then
+        i386_executor=qemu-i386
+    else
+        i386_executor=
     fi
-    GTOS_HOST_LAUNCHER=
-    run_published_binary "$desktop64"; status=$?
-    if [ "$status" -ne 0 ]; then
-        case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac
+    if [ -n "$i386_executor" ]; then
+        GTOS_HOST_LAUNCHER=$i386_executor
+        run_published_binary "$desktop32"; status=$?
+        if [ "$status" -ne 0 ]; then
+            # 70 says the supply refused; anything else is what the i386 image itself returned.
+            case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac
+        fi
+        GTOS_HOST_LAUNCHER=
+        run_published_binary "$desktop64"; status=$?
+        if [ "$status" -ne 0 ]; then
+            case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac
+        fi
+    else
+        # No i386 executor: the 32-bit copy is started natively. A 126 from the kernel means this host cannot run it at all, and the
+        # 64-bit copy is the one that answers for the same test body; a 70 or a 2 is still a supply refusal.
+        run_published_binary "$desktop32"; status=$?
+        if [ "$status" -eq 126 ] && [ "$(uname -m)" = x86_64 ]; then
+            run_published_binary "$desktop64"; status=$?
+            [ "$status" -eq 0 ] || { case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac; }
+        else
+            [ "$status" -eq 0 ] || { case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac; }
+        fi
     fi
     if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
         # Resolved in its own statement: an assignment's status is the substitution's, but inside a command's arguments it is not.

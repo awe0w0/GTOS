@@ -84,7 +84,18 @@ python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
 ./tests/settings_test.sh
 ./tests/settings_sanitizer_test.sh
 ./tests/desktop_sanitizer_sources_test.sh
-./tests/desktop_test.sh
+# The desktop unit is two steps for the same reason the supply is: a step cannot start the program it has just linked, so the build step
+# publishes each image and records it, and the run step starts only those copies. Both steps read and write this generation's directory.
+mkdir -p "$generation/desktop/publish"
+GTOS_HOST_PUBLISH_ROOT=$generation/desktop/publish \
+GTOS_PUBLISH_MANIFEST=$generation/desktop/manifest.txt \
+GTOS_PUBLISH_RECORD=$generation/desktop/record.txt \
+    ./tests/desktop_test.sh build
+GTOS_HOST_PUBLISH_ROOT=$generation/desktop/publish \
+GTOS_PUBLISH_MANIFEST=$generation/desktop/manifest.txt \
+GTOS_PUBLISH_RECORD=$generation/desktop/record.txt \
+    ./tests/desktop_test.sh run
+./tests/desktop_two_stage_test.sh
 python3 -m unittest discover -s tests -p 'package*_test.py'
 python3 -m unittest discover -s tests -p 'storage_tool_test.py'
 python3 -m unittest discover -s tests -p 'settings_tool_test.py'

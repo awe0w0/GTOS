@@ -63,7 +63,10 @@ if [ "$mode" = prepare ] || [ "$mode" = all ]; then
     else
         fail 'the second publication overwrote or reused the first'
     fi
-    printf 'first=%s\nsecond=%s\n' "$first" "$second" >> "$manifest"
+    # The manifest records what runs: the path and the digest published with it. A path alone no longer resolves, because a run that
+    # starts an image whose bytes were never recorded cannot tell it from one somebody else left behind.
+    printf 'first=%s\nsecond=%s\nfirst.sha256=%s\nsecond.sha256=%s\n' "$first" "$second" \
+        "$(sha256sum "$first" | cut -d' ' -f1)" "$(sha256sum "$second" | cut -d' ' -f1)" >> "$manifest"
     # A launcher may not load a writable image, and may not run without a publish root to bind it to.
     cp tests/host_runner_probe.sh "$work/writable.sh"
     chmod 0755 "$work/writable.sh"
