@@ -700,19 +700,19 @@
     "tests/native_process_smoke.cpp": "8b98ffaf3933774a2beb262ddc9c0374686c07bd8190e78eb8fb97f8b4690cf2",
     "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
     "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
-    "tools/build-native-c-file-probe.py": "57b364bf7edc00f89c6859937392300ca6737360ab5800990110e8728ebd0e39",
+    "tools/build-native-c-file-probe.py": "1c98097246b38b04332c9eb3a9179c606bb48e68f64edb4a11ce8cb76103b00d",
     "tools/build-native-file-probe.py": "dd02f5a2ebf391ab4af54b4bf879453fb87c92a6457251b2404bda9cebbe7ea2",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "tools/self-review-native-c-file.py": "bff5ee9c06cd53dd07d62dec89fb699ff35bf486bcd5b5bb884ef4ec1c0715e8"
   },
-  "frozen_at": "2026-10-31T07:56:54.116244+00:00",
+  "frozen_at": "2026-10-31T09:15:21.760251+00:00",
   "kernel_run_refs": {
     "O0": 2,
     "O2": 2
   },
   "kernels": {
-    "O0": "c0b42024d2a728216f8bcbc3e7c4599af2ff61645f25bb31b2f416bd44ef244b",
-    "O2": "e6e511dcf1fdbe027b119339bd4208c6ae74ecb13400823f317dea41407ff6ea"
+    "O0": "080e9c4ce6fd5290c9249e77cb3fdd51562197e6a6ac0f0987c564202a80b170",
+    "O2": "74ec746a95bdcb7b2a9d78249275d852cc0d25ca33c99fc861d184452e0d5221"
   },
   "kernels_bytes": {
     "O0": 199972,
@@ -733,6 +733,10 @@
   "loaded_kernels_equal_legacy": {
     "O0": false,
     "O2": false
+  },
+  "loaded_normalized": {
+    "O0": "7387d9889acd41a98b2b8001e9c67be5a7ff839f7a23f2d1787a1a79e5c7a8e3",
+    "O2": "06d8092c1863aa99aa54dca885f1db6f084c626b096ba9de058e4011c8a810c7"
   },
   "lock_path": "/mnt/f/GTOS-Chromium/artifacts/native-ci-v8-content-execution-resume-20261029-a/worktree-154/apps/native_c_file/source-lock.json",
   "macro_prefix_map": "/mnt/f/GTOS-Chromium/artifacts/native-ci-v8-content-execution-resume-20261029-a/worktree-154=/mnt/f/GTOS-Chromium/sources/GTOS",
@@ -1062,7 +1066,7 @@
     ]
   },
   "qualified_object_root": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-c-file-02",
-  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22b-16/out",
+  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22b-20/out",
   "schema": "gtos-native-c-file-current-candidate/1",
   "tool_drift": [
     "tools/build-native-c-file-probe.py"

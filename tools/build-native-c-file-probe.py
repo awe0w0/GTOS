@@ -12,13 +12,23 @@ def elf32_sections(data):
     for index in range(shnum):
         base=shoff+index*shentsize
         name,kind,flags,address,offset,size=struct.unpack_from('<IIIIII',data,base)
-        raw.append((name,kind,offset,size))
-    string_table=raw[shstrndx];names=data[string_table[2]:string_table[2]+string_table[3]]
+        raw.append((name,kind,flags,offset,size))
+    string_table=raw[shstrndx];names=data[string_table[3]:string_table[3]+string_table[4]]
     sections={}
-    for name,kind,offset,size in raw:
+    for name,kind,flags,offset,size in raw:
         end=names.index(b'\0',name)
-        sections[names[name:end].decode('utf-8','replace')]=(kind,offset,size)
+        sections[names[name:end].decode('utf-8','replace')]=(kind,flags,offset,size)
     return sections
+
+
+def elf32_identity(data):
+    """The parts of a relocatable object that are not section content: the header fields that describe the ABI."""
+    assert data[:5]==b'\x7fELF\x01', 'not a 32-bit ELF object'
+    kind,machine,version,entry,programs,shoff,flags=struct.unpack_from('<HHIIIII',data,0x10)
+    return {'ident':data[:16],'type':kind,'machine':machine,'version':version,'entry':entry,'phoff':programs,'flags':flags,
+            'ehsize':struct.unpack_from('<H',data,0x28)[0],'phentsize':struct.unpack_from('<H',data,0x2a)[0],
+            'phnum':struct.unpack_from('<H',data,0x2c)[0],'shentsize':struct.unpack_from('<H',data,0x2e)[0],
+            'shnum':struct.unpack_from('<H',data,0x30)[0],'shstrndx':struct.unpack_from('<H',data,0x32)[0]}
 
 
 def provider_identity(rebuilt_path,qualified_path,want,roots):
@@ -34,13 +44,18 @@ def provider_identity(rebuilt_path,qualified_path,want,roots):
     reference=qualified.read_bytes()
     assert hashlib.sha256(reference).hexdigest()==want,'The recorded object does not match the recorded identity: '+str(qualified)
     build_root,recorded_root=roots
+    recorded_header=elf32_identity(reference);rebuilt_header=elf32_identity(data)
+    assert recorded_header==rebuilt_header,'ELF header changed: '+str(sorted(k for k in recorded_header if recorded_header[k]!=rebuilt_header[k]))
     left=elf32_sections(reference);right=elf32_sections(data)
     assert set(left)==set(right),'Section set changed: '+str(sorted(set(left)^set(right)))
     replaced=[]
     for label in sorted(left):
-        kind,offset,size=left[label];kind2,offset2,size2=right[label]
+        kind,flags,offset,size=left[label];kind2,flags2,offset2,size2=right[label]
         assert kind==kind2,'Section kind changed: '+label
-        if kind==8:continue
+        assert flags==flags2,'Section flags changed: '+label
+        if kind==8:
+            assert size==size2,'NOBITS section size changed: '+label+' '+str(size)+' -> '+str(size2)
+            continue
         recorded=reference[offset:offset+size];rebuilt=data[offset2:offset2+size2]
         if recorded==rebuilt:continue
         if recorded.replace(recorded_root.encode(),build_root.encode())==rebuilt:replaced.append(label);continue
@@ -62,12 +77,13 @@ def main():
     parser.add_argument('--tool-drift')
     parser.add_argument('--qualified-object-root',type=pathlib.Path)
     parser.add_argument('--entry-head')
+    parser.add_argument('--stock-reader-root',type=pathlib.Path)
     args=parser.parse_args();repo=pathlib.Path(__file__).resolve().parents[1];base=repo/'apps/native_c_file';probe=base/'probe';out=args.output.resolve()
     assert not out.exists(),'Use a fresh directory; keep prior logs/cache.';out.mkdir(parents=True)
     manifest_path=args.source_manifest.resolve() if args.source_manifest is not None else None
     candidate=json.loads(manifest_path.read_text()) if manifest_path is not None and manifest_path.exists() else None
     recorded={'objects':{},'elfs':{},'kernels':{},'loaded_kernels':{},'kernels_normalized':{},'kernel_run_refs':{},
-              'kernels_bytes':{},'kernel_paths':{}};provider_objects={};path_only_kernels=[]
+              'kernels_bytes':{},'kernel_paths':{},'loaded_normalized':{}};provider_objects={};path_only_kernels=[]
     run_token=(str(out) + '/').encode()
     state={'scope':'21 pinned LLVM byte-oriented regular-file providers with native callbacks; not full stdio/POSIX/libc++ streams/browser',
         'all_required_checks_pass':False,'native_c_file_guest_pass':False,'native_isolate_pass':False,'browser_guest_pass':False,
@@ -225,6 +241,9 @@ def main():
                     recorded['kernels'][level]=state['kernels'][level];recorded['loaded_kernels'][level]=state['loaded_kernels'][level]
                     recorded['kernels_normalized'][level]=normalized;recorded['kernels_bytes'][level]=len(kernel_bytes)
                     recorded['kernel_run_refs'][level]=kernel_bytes.count(run_token);recorded['kernel_paths'][level]=str(binary)
+                    loaded_normalized=pathlib.Path(str(binary)+'.normalized')
+                    loaded_normalized.write_bytes(kernel_bytes.replace(run_token,b'<run>/'))
+                    recorded['loaded_normalized'][level]=helper.loaded_sha(loaded_normalized)
                 else:
                     assert normalized==candidate['kernels_normalized'][level],'Kernel changed beyond the run directory: '+level
                     if state['kernels'][level]!=candidate['kernels'][level]:
@@ -234,6 +253,9 @@ def main():
                         path_only_kernels.append(level)
                     for key,h in level_objects.items():assert h==candidate['objects'][key],'Object changed since the freeze: '+key
                     for key,v in level_elfs.items():assert v==candidate['elfs'][key],'ELF changed since the freeze: '+key
+                    loaded_normalized=pathlib.Path(str(binary)+'.normalized')
+                    loaded_normalized.write_bytes(kernel_bytes.replace(run_token,b'<run>/'))
+                    assert helper.loaded_sha(loaded_normalized)==candidate['loaded_normalized'][level],'Loaded kernel changed since the freeze: '+level
                     if level not in path_only_kernels:
                         assert state['loaded_kernels'][level]==candidate['loaded_kernels'][level],'Loaded kernel changed since the freeze: '+level
             if args.build_only:
@@ -246,7 +268,12 @@ def main():
             guest=d/'guest';(guest/'iso/boot/grub').mkdir(parents=True);shutil.copyfile(binary,guest/'iso/boot/native.bin')
             for mode,elf in enumerate(elfs):shutil.copyfile(elf,guest/'iso/boot'/('file'+str(mode)+'.elf'))
             (guest/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native LLVM FILE" {\n multiboot /boot/native.bin\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(6))+' boot\n}\n')
-            run([bins['grub-mkrescue'],'--output='+str(guest/'native.iso'),guest/'iso'],guest/'grub.log')
+            modules=pathlib.Path(os.environ['GTOS_GRUB_MODULES']) if os.environ.get('GTOS_GRUB_MODULES') else \
+                    bins['grub-mkrescue'].parent.parent/'lib/grub/i386-pc'
+            rescue=[bins['grub-mkrescue']]+(['--directory='+str(modules)] if modules.is_dir() else [])
+            run(rescue+['--output='+str(guest/'native.iso'),guest/'iso'],guest/'grub.log')
+            volume=(guest/'native.iso').read_bytes()[17*2048:17*2048+6]
+            assert volume[0]==0 and volume[1:6]==b'CD001','The guest image has no El Torito boot record: '+str(guest/'native.iso')
             image=guest/'filesystem.img';image.write_bytes(b''.join(bytes([0xa5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5a+s])*512 for s in range(8)));helper.guards(image)
             mib=32 if opt==0 else 64
             run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg,thread=single',
@@ -255,8 +282,12 @@ def main():
                 '-debugcon','file:'+str(guest/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],guest/'host.log',33,240)
             text=(guest/'guest.log').read_text();evidence=observer.verify(text,plans,mib);controls=observer.negative_controls(text,plans,mib)
             (guest/'observations.json').write_text(json.dumps(evidence,indent=2)+'\n');helper.guards(image);before=sha(image)
-            run([cc,'-std=c99','-O2','-Wall','-Wextra','-Werror','-Iinclude/storage/littlefs','-Isrc/process',probe/'stock.c','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','-o',d/'stock-reader'],d/'stock-build.log')
-            assert run([d/'stock-reader',image],guest/'stock.log')=='STOCK C FILE INTEROPERABILITY PASS\n' and sha(image)==before
+            reader=(args.stock_reader_root/level/'stock-reader') if args.stock_reader_root else (d/'stock-reader')
+            reader.parent.mkdir(parents=True,exist_ok=True)
+            run([cc,'-std=c99','-O2','-Wall','-Wextra','-Werror','-Iinclude/storage/littlefs','-Isrc/process',probe/'stock.c','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','-o',reader.with_suffix('.new')],d/'stock-build.log')
+            if reader.exists():reader.write_bytes(reader.with_suffix('.new').read_bytes());reader.chmod(0o755)
+            else:shutil.move(str(reader.with_suffix('.new')),str(reader))
+            assert run([reader,image],guest/'stock.log')=='STOCK C FILE INTEROPERABILITY PASS\n' and sha(image)==before
             state['guests'].append({'opt':opt,'memory_mib':mib,'evidence':evidence,'negative_observer_controls':controls,'disk_sha256':before,'guest_log_sha256':sha(guest/'guest.log')});save()
             print('PASS TRUE NATIVE C FILE '+level,flush=True)
         if use_candidate and candidate is None:
@@ -272,7 +303,7 @@ def main():
                 'qualified_object_root':str(args.qualified_object_root.resolve()) if args.qualified_object_root else None,
                 'objects':recorded['objects'],'elfs':recorded['elfs'],'kernels':recorded['kernels'],
                 'kernels_normalized':recorded['kernels_normalized'],'kernels_bytes':recorded['kernels_bytes'],
-                'kernel_run_refs':recorded['kernel_run_refs'],
+                'kernel_run_refs':recorded['kernel_run_refs'],'loaded_normalized':recorded['loaded_normalized'],
                 'loaded_kernels':recorded['loaded_kernels'],'tools':state['tools'],
                 'macro_prefix_map':args.macro_prefix_map,
                 'objects_equal_legacy':{k:(v==lock['objects'].get(k)) for k,v in recorded['objects'].items()},
