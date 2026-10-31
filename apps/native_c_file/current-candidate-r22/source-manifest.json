@@ -700,31 +700,69 @@
     "tests/native_process_smoke.cpp": "8b98ffaf3933774a2beb262ddc9c0374686c07bd8190e78eb8fb97f8b4690cf2",
     "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
     "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
-    "tools/build-native-c-file-probe.py": "1c98097246b38b04332c9eb3a9179c606bb48e68f64edb4a11ce8cb76103b00d",
+    "tools/build-native-c-file-probe.py": "f3ccf38525c081b1d12a87490348643606806e53cdd161b49327d8dc9508b1ee",
     "tools/build-native-file-probe.py": "dd02f5a2ebf391ab4af54b4bf879453fb87c92a6457251b2404bda9cebbe7ea2",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "tools/self-review-native-c-file.py": "bff5ee9c06cd53dd07d62dec89fb699ff35bf486bcd5b5bb884ef4ec1c0715e8"
   },
-  "frozen_at": "2026-10-31T09:15:21.760251+00:00",
+  "frozen_at": "2026-10-31T10:48:30.142359+00:00",
+  "kernel_metadata": {
+    "O0": {
+      "load_ranges": [
+        [
+          4096,
+          152988
+        ],
+        [
+          155648,
+          155652
+        ]
+      ],
+      "normalized_sha256": "508a3fdb9d0227169cd5702dd260fd7a1b0b85cfdfa4b41fc948bb6adffa8716",
+      "run_ref_offsets": [
+        167525,
+        173271
+      ],
+      "run_refs_in_loaded_segments": []
+    },
+    "O2": {
+      "load_ranges": [
+        [
+          4096,
+          120780
+        ],
+        [
+          122880,
+          122884
+        ]
+      ],
+      "normalized_sha256": "ec25dcdc911d7ca5439473c5c876ee3e4fe8ec7f9dd6cdcacb321fbc7a717dce",
+      "run_ref_offsets": [
+        130645,
+        133429
+      ],
+      "run_refs_in_loaded_segments": []
+    }
+  },
   "kernel_run_refs": {
     "O0": 2,
     "O2": 2
   },
   "kernels": {
-    "O0": "080e9c4ce6fd5290c9249e77cb3fdd51562197e6a6ac0f0987c564202a80b170",
-    "O2": "74ec746a95bdcb7b2a9d78249275d852cc0d25ca33c99fc861d184452e0d5221"
+    "O0": "c6c0939c957b45f27cade41d3195574559b8bc57b67ca02d9d4018f3c0540dda",
+    "O2": "f3401bea21f12afb136336915f1544fe73c4f7105c3ef73aa389e7fcb28ad15e"
   },
   "kernels_bytes": {
-    "O0": 199972,
-    "O2": 153092
+    "O0": 199980,
+    "O2": 153096
   },
   "kernels_equal_legacy": {
     "O0": false,
     "O2": false
   },
   "kernels_normalized": {
-    "O0": "32e51252d8c1a45bfbb056460cbb78d9a5b9fb76f5808530b1fe6f738c64782e",
-    "O2": "43393c9580f5f41beff29733c51265048e949a3f281832c4c1d605f69816881f"
+    "O0": "508a3fdb9d0227169cd5702dd260fd7a1b0b85cfdfa4b41fc948bb6adffa8716",
+    "O2": "ec25dcdc911d7ca5439473c5c876ee3e4fe8ec7f9dd6cdcacb321fbc7a717dce"
   },
   "loaded_kernels": {
     "O0": "7387d9889acd41a98b2b8001e9c67be5a7ff839f7a23f2d1787a1a79e5c7a8e3",
@@ -733,10 +771,6 @@
   "loaded_kernels_equal_legacy": {
     "O0": false,
     "O2": false
-  },
-  "loaded_normalized": {
-    "O0": "7387d9889acd41a98b2b8001e9c67be5a7ff839f7a23f2d1787a1a79e5c7a8e3",
-    "O2": "06d8092c1863aa99aa54dca885f1db6f084c626b096ba9de058e4011c8a810c7"
   },
   "lock_path": "/mnt/f/GTOS-Chromium/artifacts/native-ci-v8-content-execution-resume-20261029-a/worktree-154/apps/native_c_file/source-lock.json",
   "macro_prefix_map": "/mnt/f/GTOS-Chromium/artifacts/native-ci-v8-content-execution-resume-20261029-a/worktree-154=/mnt/f/GTOS-Chromium/sources/GTOS",
@@ -1066,7 +1100,7 @@
     ]
   },
   "qualified_object_root": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-c-file-02",
-  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22b-20/out",
+  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22b-31-c1/out",
   "schema": "gtos-native-c-file-current-candidate/1",
   "tool_drift": [
     "tools/build-native-c-file-probe.py"
@@ -1081,7 +1115,7 @@
       "sha256": "6cb2d84ccd9fd3485d4e47ba032e626be65692601c38fad46866a6b565f3100f"
     },
     "clang": {
-      "path": "/var/tmp/gtos-dsh-154-mainline/rt/usr/bin/clang",
+      "path": "/var/tmp/gtos-dsh-154-mainline/rt/usr/bin/clang++",
       "sha256": "656e40312a04cf2fb2da46f98669416183b1ef49592bafb69ee6504443f0d2e7"
     },
     "cxx": {

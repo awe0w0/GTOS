@@ -31,6 +31,56 @@ def elf32_identity(data):
             'shnum':struct.unpack_from('<H',data,0x30)[0],'shstrndx':struct.unpack_from('<H',data,0x32)[0]}
 
 
+def elf32_load_ranges(path):
+    """The file ranges of the PT_LOAD segments, so a change can be attributed to loaded content or to table metadata."""
+    data=pathlib.Path(path).read_bytes();assert data[:4]==b'\x7fELF' and data[4]==1 and data[5]==1,'Not a 32-bit little-endian ELF: '+str(path)
+    phoff=struct.unpack_from('<I',data,28)[0];phentsize=struct.unpack_from('<H',data,42)[0];phnum=struct.unpack_from('<H',data,44)[0]
+    assert phoff and phentsize==32 and phnum,'No program header table: '+str(path)
+    ranges=[]
+    for index in range(phnum):
+        base=phoff+index*phentsize
+        kind=struct.unpack_from('<I',data,base)[0]
+        if kind!=1:continue
+        offset=struct.unpack_from('<I',data,base+4)[0];filesz=struct.unpack_from('<I',data,base+16)[0]
+        ranges.append((offset,offset+filesz))
+    assert ranges,'No PT_LOAD segment: '+str(path)
+    return tuple(sorted(ranges))
+
+def kernel_facts(path,run_token):
+    """Read a kernel: its bytes, its loadable ranges, where the run directory sits, and the hash with that directory replaced."""
+    data=pathlib.Path(path).read_bytes();ranges=elf32_load_ranges(path)
+    offsets=[];start=0
+    while True:
+        found=data.find(run_token,start)
+        if found<0:break
+        offsets.append(found);start=found+1
+    loaded_refs=[offset for offset in offsets if any(begin<=offset<end for begin,end in ranges)]
+    return {'bytes':data,'load_ranges':ranges,'run_ref_offsets':offsets,'run_refs_in_loaded_segments':loaded_refs,
+            'normalized_sha256':hashlib.sha256(data.replace(run_token,b'<run>/')).hexdigest()}
+
+def compare_kernel(facts,level,frozen):
+    """Return the rule that justified a changed kernel file, or raise when the change is not the run directory.
+
+    The loaded image is compared on the real file. The whole-file hash may differ only because the linker writes the object paths into tables
+    that are not loaded; those occurrences are checked by count, by region and by the length the different path adds.
+    """
+    assert not facts['run_refs_in_loaded_segments'],'The run directory is inside a loaded segment: '+level+' '+str(facts['run_refs_in_loaded_segments'])
+    metadata=frozen['metadata']
+    if metadata is None:
+        assert facts['normalized_sha256']==frozen['normalized'],'Kernel changed beyond the run directory: '+level
+        return 'normalized-only (the frozen record has no offset table)'
+    assert facts['load_ranges']==tuple(tuple(each) for each in metadata['load_ranges']),'Kernel segment layout changed: '+level
+    recorded=metadata['run_ref_offsets'];assert len(facts['run_ref_offsets'])==len(recorded),'Kernel run-directory occurrences changed: '+level
+    assert not metadata['run_refs_in_loaded_segments'],'The frozen kernel held the run directory in a loaded segment: '+level
+    assert facts['normalized_sha256']==frozen['normalized'],'Kernel changed beyond the run directory: '+level
+    # The tables follow the last loadable segment; an occurrence anywhere else would be content the loader maps.
+    boundary=facts['load_ranges'][-1][1]
+    assert all(offset>=boundary for offset in facts['run_ref_offsets']),'Kernel run directory moved into a loaded region: '+level
+    assert all(offset>=metadata['load_ranges'][-1][1] for offset in recorded),'The frozen kernel held the run directory in a loaded region: '+level
+    grown=len(facts['bytes'])-frozen['bytes']
+    assert grown==len(recorded)*(len(facts['run_token'])-frozen['token_length']),'Kernel length change is not the run directory: '+level
+    return 'same path count outside the loadable segments, length change explained by the path'
+
 def provider_identity(rebuilt_path,qualified_path,want,roots):
     """Compare a rebuilt provider object with the recorded one.
 
@@ -77,13 +127,14 @@ def main():
     parser.add_argument('--tool-drift')
     parser.add_argument('--qualified-object-root',type=pathlib.Path)
     parser.add_argument('--entry-head')
-    parser.add_argument('--stock-reader-root',type=pathlib.Path)
+    parser.add_argument('--guests-only',action='store_true')
+    parser.add_argument('--published-root',type=pathlib.Path)
     args=parser.parse_args();repo=pathlib.Path(__file__).resolve().parents[1];base=repo/'apps/native_c_file';probe=base/'probe';out=args.output.resolve()
     assert not out.exists(),'Use a fresh directory; keep prior logs/cache.';out.mkdir(parents=True)
     manifest_path=args.source_manifest.resolve() if args.source_manifest is not None else None
     candidate=json.loads(manifest_path.read_text()) if manifest_path is not None and manifest_path.exists() else None
     recorded={'objects':{},'elfs':{},'kernels':{},'loaded_kernels':{},'kernels_normalized':{},'kernel_run_refs':{},
-              'kernels_bytes':{},'kernel_paths':{},'loaded_normalized':{}};provider_objects={};path_only_kernels=[]
+              'kernels_bytes':{},'kernel_paths':{},'kernel_metadata':{}};provider_objects={};path_only_kernels=[]
     run_token=(str(out) + '/').encode()
     state={'scope':'21 pinned LLVM byte-oriented regular-file providers with native callbacks; not full stdio/POSIX/libc++ streams/browser',
         'all_required_checks_pass':False,'native_c_file_guest_pass':False,'native_isolate_pass':False,'browser_guest_pass':False,
@@ -182,8 +233,56 @@ def main():
             'src/storage/filestore.cpp','src/storage/littlefs_port.cpp','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','src/drivers/ata.cpp','apps/native_v8_runtime/runtime/memory.cc']
         integer=args.integer_builtins.resolve();bind(integer)
         assert sha(integer)==clock_profile['integer_builtins_sha256'],'Require pinned real integer builtins archive'
+        def prepare_images(d,binary,elfs):
+            """Write the ISO and the disk image. This runs in the build stage, which boots nothing."""
+            guest=d/'guest';(guest/'iso/boot/grub').mkdir(parents=True,exist_ok=True);shutil.copyfile(binary,guest/'iso/boot/native.bin')
+            for mode,elf in enumerate(elfs):shutil.copyfile(elf,guest/'iso/boot'/('file'+str(mode)+'.elf'))
+            (guest/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native LLVM FILE" {\n multiboot /boot/native.bin\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(6))+' boot\n}\n')
+            modules=pathlib.Path(os.environ['GTOS_GRUB_MODULES']) if os.environ.get('GTOS_GRUB_MODULES') else \
+                    bins['grub-mkrescue'].parent.parent/'lib/grub/i386-pc'
+            rescue=[bins['grub-mkrescue']]+(['--directory='+str(modules)] if modules.is_dir() else [])
+            run(rescue+['--output='+str(guest/'native.iso'),guest/'iso'],guest/'grub.log')
+            volume=(guest/'native.iso').read_bytes()[17*2048:17*2048+6]
+            assert volume[0]==0 and volume[1:6]==b'CD001','The guest image has no El Torito boot record: '+str(guest/'native.iso')
+            image=guest/'filesystem.img'
+            image.write_bytes(b''.join(bytes([0xa5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5a+s])*512 for s in range(8)))
+            helper.guards(image)
+            return guest/'native.iso',image
+
+        def boot(level,opt,d,iso,image_source,reader,plans):
+            """Boot one published image and cross-check the disk with the published reader."""
+            guest=d/'guest';guest.mkdir(parents=True,exist_ok=True)
+            image=guest/'filesystem.img';shutil.copyfile(image_source,image)
+            assert sha(image)==sha(image_source),'The working copy is not the published image: '+str(image_source)
+            mib=32 if opt==0 else 64
+            run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg,thread=single',
+                '-icount','shift=0,align=off,sleep=off','-cpu','max','-rtc','base=2000-01-01T00:00:00,clock=vm','-m',str(mib),'-smp','1' if opt==0 else '4',
+                '-cdrom',str(iso),'-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-monitor','none','-serial','none',
+                '-debugcon','file:'+str(guest/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],guest/'host.log',33,240)
+            text=(guest/'guest.log').read_text();evidence=observer.verify(text,plans,mib);controls=observer.negative_controls(text,plans,mib)
+            (guest/'observations.json').write_text(json.dumps(evidence,indent=2)+'\n');helper.guards(image);before=sha(image)
+            assert run([str(reader),str(image)],guest/'stock.log')=='STOCK C FILE INTEROPERABILITY PASS\n' and sha(image)==before
+            state['guests'].append({'opt':opt,'memory_mib':mib,'evidence':evidence,'negative_observer_controls':controls,
+                                    'disk_sha256':before,'guest_log_sha256':sha(guest/'guest.log'),
+                                    'image_source':str(image_source),'reader':str(reader)});save()
+            print('PASS TRUE NATIVE C FILE '+level,flush=True)
+
         for opt in [0,2]:
             level='O'+str(opt);d=out/level;(d/'library').mkdir(parents=True);library=[];kernel=[]
+            if args.guests_only:
+                assert args.published_root is not None,'Guests-only needs the published artifact root'
+                assert candidate is not None,'Guests-only compares the published images against the frozen candidate'
+                plans={mode:{k:v for k,v in candidate['elfs'][level+'-mode'+str(mode)].items() if k!='sha256'} for mode in range(6)}
+                published=args.published_root/level
+                entry=json.loads((args.published_root/'published.json').read_text())['artifacts'][level]
+                for name,key in [('native.iso','iso'),('filesystem.img','image'),('stock-reader','reader')]:
+                    path=published/name
+                    assert path.is_file(),'The published '+name+' is missing: '+str(path)
+                    assert sha(path)==entry[key]['sha256'],'The published '+name+' is not the copy that was recorded: '+str(path)
+                    assert path.stat().st_size==entry[key]['bytes'],'The published '+name+' changed size: '+str(path)
+                boot(level,opt,d,published/'native.iso',published/'filesystem.img',published/'stock-reader',plans)
+                continue
+
             sources=[base/'llvm-libc'/p for p in manifest['sources']]+[base/'platform_file.cpp',base/'standard_streams_unavailable.cpp']
             byte_sources=[string/'llvm-libc'/('src/wchar/' if n.startswith('w') else 'src/string/')/(n+'.cpp') for n in profile['actual_gn_objects']]
             sources+=byte_sources+[clock/'runtime/heap.cc',clock/'runtime/emutls.cc',clock/'llvm-libc/src/errno/libc_errno.cpp']
@@ -234,30 +333,40 @@ def main():
             level_objects={k:v for k,v in state['objects'].items() if k.startswith(level+'-')}
             level_elfs={k:v for k,v in state['elfs'].items() if k.startswith(level+'-')}
             if use_candidate:
-                kernel_bytes=pathlib.Path(binary).read_bytes()
-                normalized=hashlib.sha256(kernel_bytes.replace(run_token,b'<run>/')).hexdigest()
+                facts=kernel_facts(binary,run_token);facts['run_token']=run_token
+                kernel_bytes=facts['bytes'];normalized=facts['normalized_sha256']
+                metadata={'load_ranges':[list(each) for each in facts['load_ranges']],'run_ref_offsets':facts['run_ref_offsets'],
+                          'run_refs_in_loaded_segments':facts['run_refs_in_loaded_segments'],'normalized_sha256':normalized}
+                assert not facts['run_refs_in_loaded_segments'],'The run directory is inside a loaded segment: '+level
                 if candidate is None:
                     recorded['objects'].update(level_objects);recorded['elfs'].update(level_elfs)
                     recorded['kernels'][level]=state['kernels'][level];recorded['loaded_kernels'][level]=state['loaded_kernels'][level]
                     recorded['kernels_normalized'][level]=normalized;recorded['kernels_bytes'][level]=len(kernel_bytes)
-                    recorded['kernel_run_refs'][level]=kernel_bytes.count(run_token);recorded['kernel_paths'][level]=str(binary)
-                    loaded_normalized=pathlib.Path(str(binary)+'.normalized')
-                    loaded_normalized.write_bytes(kernel_bytes.replace(run_token,b'<run>/'))
-                    recorded['loaded_normalized'][level]=helper.loaded_sha(loaded_normalized)
+                    recorded['kernel_run_refs'][level]=len(facts['run_ref_offsets']);recorded['kernel_paths'][level]=str(binary)
+                    recorded['kernel_metadata'][level]=metadata
                 else:
-                    assert normalized==candidate['kernels_normalized'][level],'Kernel changed beyond the run directory: '+level
+                    # The loaded image is hashed from the real file; nothing is normalised before that comparison.
+                    assert state['loaded_kernels'][level]==candidate['loaded_kernels'][level],'Loaded kernel changed since the freeze: '+level
                     if state['kernels'][level]!=candidate['kernels'][level]:
-                        frozen_token=(candidate['run_root'] + '/').encode()
-                        assert kernel_bytes.count(run_token)==candidate['kernel_run_refs'][level],'Kernel run-directory occurrences changed: '+level
-                        assert len(kernel_bytes)-candidate['kernels_bytes'][level]==(len(run_token)-len(frozen_token))*candidate['kernel_run_refs'][level],'Kernel length change is not the run directory: '+level
+                        frozen_record={'metadata':(candidate.get('kernel_metadata') or {}).get(level),
+                                       'normalized':candidate['kernels_normalized'][level],
+                                       'bytes':candidate['kernels_bytes'][level],
+                                       'token_length':len((candidate['run_root'] + '/').encode())}
+                        metadata_rule=compare_kernel(facts,level,frozen_record)
                         path_only_kernels.append(level)
+                        state.setdefault('kernel_metadata_rule',{})[level]=metadata_rule
                     for key,h in level_objects.items():assert h==candidate['objects'][key],'Object changed since the freeze: '+key
                     for key,v in level_elfs.items():assert v==candidate['elfs'][key],'ELF changed since the freeze: '+key
-                    loaded_normalized=pathlib.Path(str(binary)+'.normalized')
-                    loaded_normalized.write_bytes(kernel_bytes.replace(run_token,b'<run>/'))
-                    assert helper.loaded_sha(loaded_normalized)==candidate['loaded_normalized'][level],'Loaded kernel changed since the freeze: '+level
-                    if level not in path_only_kernels:
-                        assert state['loaded_kernels'][level]==candidate['loaded_kernels'][level],'Loaded kernel changed since the freeze: '+level
+                state.setdefault('kernel_metadata',{})[level]=metadata
+            reader=d/'stock-reader'
+            run([cc,'-std=c99','-O2','-Wall','-Wextra','-Werror','-Iinclude/storage/littlefs','-Isrc/process',probe/'stock.c',
+                 'src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','-o',reader],d/'stock-build.log')
+            iso,image=prepare_images(d,binary,elfs)
+            state.setdefault('artifacts',{})[level]={'iso':{'path':str(iso),'sha256':sha(iso),'bytes':iso.stat().st_size},
+                                                     'image':{'path':str(image),'sha256':sha(image),'bytes':image.stat().st_size},
+                                                     'reader':{'path':str(reader),'sha256':sha(reader),'bytes':reader.stat().st_size},
+                                                     'kernel':{'path':str(binary),'sha256':sha(binary),'bytes':binary.stat().st_size},
+                                                     'elfs':[{'path':str(elf),'sha256':sha(elf),'bytes':elf.stat().st_size} for elf in elfs]};save()
             if args.build_only:
                 if not use_candidate:
                     assert lock,'Build-only needs completed source lock'
@@ -265,31 +374,6 @@ def main():
                     for key,h in level_objects.items():assert h==lock['objects'][key],key
                     for key,v in level_elfs.items():assert v==lock['elfs'][key],key
                 continue
-            guest=d/'guest';(guest/'iso/boot/grub').mkdir(parents=True);shutil.copyfile(binary,guest/'iso/boot/native.bin')
-            for mode,elf in enumerate(elfs):shutil.copyfile(elf,guest/'iso/boot'/('file'+str(mode)+'.elf'))
-            (guest/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native LLVM FILE" {\n multiboot /boot/native.bin\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(6))+' boot\n}\n')
-            modules=pathlib.Path(os.environ['GTOS_GRUB_MODULES']) if os.environ.get('GTOS_GRUB_MODULES') else \
-                    bins['grub-mkrescue'].parent.parent/'lib/grub/i386-pc'
-            rescue=[bins['grub-mkrescue']]+(['--directory='+str(modules)] if modules.is_dir() else [])
-            run(rescue+['--output='+str(guest/'native.iso'),guest/'iso'],guest/'grub.log')
-            volume=(guest/'native.iso').read_bytes()[17*2048:17*2048+6]
-            assert volume[0]==0 and volume[1:6]==b'CD001','The guest image has no El Torito boot record: '+str(guest/'native.iso')
-            image=guest/'filesystem.img';image.write_bytes(b''.join(bytes([0xa5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5a+s])*512 for s in range(8)));helper.guards(image)
-            mib=32 if opt==0 else 64
-            run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg,thread=single',
-                '-icount','shift=0,align=off,sleep=off','-cpu','max','-rtc','base=2000-01-01T00:00:00,clock=vm','-m',str(mib),'-smp','1' if opt==0 else '4',
-                '-cdrom',guest/'native.iso','-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-monitor','none','-serial','none',
-                '-debugcon','file:'+str(guest/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],guest/'host.log',33,240)
-            text=(guest/'guest.log').read_text();evidence=observer.verify(text,plans,mib);controls=observer.negative_controls(text,plans,mib)
-            (guest/'observations.json').write_text(json.dumps(evidence,indent=2)+'\n');helper.guards(image);before=sha(image)
-            reader=(args.stock_reader_root/level/'stock-reader') if args.stock_reader_root else (d/'stock-reader')
-            reader.parent.mkdir(parents=True,exist_ok=True)
-            run([cc,'-std=c99','-O2','-Wall','-Wextra','-Werror','-Iinclude/storage/littlefs','-Isrc/process',probe/'stock.c','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','-o',reader.with_suffix('.new')],d/'stock-build.log')
-            if reader.exists():reader.write_bytes(reader.with_suffix('.new').read_bytes());reader.chmod(0o755)
-            else:shutil.move(str(reader.with_suffix('.new')),str(reader))
-            assert run([reader,image],guest/'stock.log')=='STOCK C FILE INTEROPERABILITY PASS\n' and sha(image)==before
-            state['guests'].append({'opt':opt,'memory_mib':mib,'evidence':evidence,'negative_observer_controls':controls,'disk_sha256':before,'guest_log_sha256':sha(guest/'guest.log')});save()
-            print('PASS TRUE NATIVE C FILE '+level,flush=True)
         if use_candidate and candidate is None:
             manifest_path.write_text(json.dumps({
                 'schema':'gtos-native-c-file-current-candidate/1',
@@ -303,7 +387,7 @@ def main():
                 'qualified_object_root':str(args.qualified_object_root.resolve()) if args.qualified_object_root else None,
                 'objects':recorded['objects'],'elfs':recorded['elfs'],'kernels':recorded['kernels'],
                 'kernels_normalized':recorded['kernels_normalized'],'kernels_bytes':recorded['kernels_bytes'],
-                'kernel_run_refs':recorded['kernel_run_refs'],'loaded_normalized':recorded['loaded_normalized'],
+                'kernel_run_refs':recorded['kernel_run_refs'],'kernel_metadata':recorded['kernel_metadata'],
                 'loaded_kernels':recorded['loaded_kernels'],'tools':state['tools'],
                 'macro_prefix_map':args.macro_prefix_map,
                 'objects_equal_legacy':{k:(v==lock['objects'].get(k)) for k,v in recorded['objects'].items()},

@@ -67,6 +67,21 @@ publish_host_binary() {
         echo "publish_host_binary: publish root is not a directory: $publish_root" >&2
         return 2
     fi
+    # A directory the run itself can write is not a publication: the same run could replace the copy after it was compared. When the run
+    # declares its writable root, a publish root inside it (or equal to it) is refused, whatever the mode of the copy looks like.
+    if [ -n "${GTOS_RUN_ROOT:-}" ]; then
+        resolved_run_root=$(realpath "$GTOS_RUN_ROOT" 2>/dev/null || echo '')
+        resolved_publish_root=$(realpath "$publish_root" 2>/dev/null || echo '')
+        if [ -z "$resolved_run_root" ] || [ -z "$resolved_publish_root" ]; then
+            echo "publish_host_binary: cannot resolve the run root or the publish root: $GTOS_RUN_ROOT / $publish_root" >&2
+            return 2
+        fi
+        case $resolved_publish_root in
+            "$resolved_run_root"|"$resolved_run_root"/*)
+                echo "publish_host_binary: the publish root is inside the run's writable root ($resolved_publish_root in $resolved_run_root), so what it holds can be rewritten by the run that published it" >&2
+                return 2 ;;
+        esac
+    fi
     if [ ! -w "$publish_root" ]; then
         echo "publish_host_binary: publish root is not writable: $publish_root" >&2
         return 2
@@ -281,13 +296,10 @@ staged_binary() {
     # The name in the manifest is not the identity of the image: the digest recorded when it was published is.
     recorded=$(grep "^$1\.sha256=" "$manifest" | tail -n 1)
     if [ -z "$recorded" ]; then
-        if [ "${GTOS_PUBLISH_ALLOW_UNRECORDED:-0}" != 1 ]; then
-            echo "staged_binary: $1 has no recorded digest in $manifest; refusing to start an unrecorded image" >&2
-            return 2
-        fi
-        echo "staged_binary: WARNING $1 has no recorded digest and GTOS_PUBLISH_ALLOW_UNRECORDED=1" >&2
-        printf '%s\n' "$published"
-        return 0
+        # There is no setting that trades this refusal for a start: an image with no recorded digest was not published, so nothing
+        # says what its bytes are, and a run that starts it cannot tell a published image from one somebody else left behind.
+        echo "staged_binary: $1 has no recorded digest in $manifest; refusing to start an image whose bytes were never recorded" >&2
+        return 2
     fi
     expected=${recorded#*=}
     actual=$(sha256sum "$published" 2>/dev/null | cut -d' ' -f1)

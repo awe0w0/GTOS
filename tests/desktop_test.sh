@@ -52,6 +52,9 @@ if [ "$stage" = build ]; then
     fi
     exit 0
 fi
+# The supply has its own status. Every other status a caller sees is the status of the program that was started, verbatim: a suite that
+# collapses them cannot tell "the image was refused" from "the program said 2".
+GTOS_EXIT_SUPPLY=70
 if [ "$stage" = run ]; then
     # The 32-bit image has one executor and the 64-bit image has another: an i386 static ELF is loaded by the user-mode i386
     # emulator, and the native image is started directly. Both are the read-only copies published by the build step.
@@ -59,14 +62,21 @@ if [ "$stage" = run ]; then
     desktop64=$(staged_binary desktop64)
     # Both images are started through the entry point that verifies them against the record written when they were published. The i386
     # image keeps its executor: it is named as a launcher, so the runner still checks that the image is one the publish step produced.
-    qemu_bin=$(command -v qemu-i386) || { echo "desktop_test: no i386 executor to load $desktop32" >&2; exit 2; }
+    qemu_bin=$(command -v qemu-i386) || { echo "desktop_test: no i386 executor to load $desktop32" >&2; exit "$GTOS_EXIT_SUPPLY"; }
     GTOS_HOST_LAUNCHER=$qemu_bin
-    run_published_binary "$desktop32" || exit 2
+    run_published_binary "$desktop32"; status=$?
+    if [ "$status" -ne 0 ]; then
+        # 70 says the supply refused; anything else is what the i386 image itself returned.
+        case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac
+    fi
     GTOS_HOST_LAUNCHER=
-    run_published_binary "$desktop64" || exit 2
+    run_published_binary "$desktop64"; status=$?
+    if [ "$status" -ne 0 ]; then
+        case $status in 2|70) exit "$GTOS_EXIT_SUPPLY" ;; *) exit "$status" ;; esac
+    fi
     if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
         # Resolved in its own statement: an assignment's status is the substitution's, but inside a command's arguments it is not.
-        sanitized=$(staged_binary desktop-sanitized) || exit 2
+        sanitized=$(staged_binary desktop-sanitized) || exit "$GTOS_EXIT_SUPPLY"
         ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 run_host_binary "$sanitized"
     fi
     exit 0
