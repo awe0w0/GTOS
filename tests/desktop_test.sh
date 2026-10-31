@@ -57,8 +57,13 @@ if [ "$stage" = run ]; then
     # emulator, and the native image is started directly. Both are the read-only copies published by the build step.
     desktop32=$(staged_binary desktop32)
     desktop64=$(staged_binary desktop64)
-    qemu-i386 "$desktop32"
-    run_host_binary "$desktop64"
+    # Both images are started through the entry point that verifies them against the record written when they were published. The i386
+    # image keeps its executor: it is named as a launcher, so the runner still checks that the image is one the publish step produced.
+    qemu_bin=$(command -v qemu-i386) || { echo "desktop_test: no i386 executor to load $desktop32" >&2; exit 2; }
+    GTOS_HOST_LAUNCHER=$qemu_bin
+    run_published_binary "$desktop32" || exit 2
+    GTOS_HOST_LAUNCHER=
+    run_published_binary "$desktop64" || exit 2
     if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
         # Resolved in its own statement: an assignment's status is the substitution's, but inside a command's arguments it is not.
         sanitized=$(staged_binary desktop-sanitized) || exit 2
