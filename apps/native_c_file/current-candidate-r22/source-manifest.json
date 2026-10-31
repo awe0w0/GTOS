@@ -65,9 +65,9 @@
     },
     "O0-mode6": {
       "heap_cost": 17,
-      "load_pages": 204,
-      "process_cost": 209,
-      "sha256": "61c741e64d8e5c184c364d6b7b9404ec7375bdb9c28941f9cd154cfdaaa709eb"
+      "load_pages": 207,
+      "process_cost": 212,
+      "sha256": "1310e13a5a84c0e41cf3cc11e5d5aceb9c5dc9110eddf8344d93739418005e19"
     },
     "O2-mode0": {
       "heap_cost": 17,
@@ -107,9 +107,9 @@
     },
     "O2-mode6": {
       "heap_cost": 17,
-      "load_pages": 169,
-      "process_cost": 174,
-      "sha256": "b685f254ec749a04d9bb9fb76a276d318fa5a438f87f619e2b87c16394b98733"
+      "load_pages": 173,
+      "process_cost": 178,
+      "sha256": "af56d1f549f11763b601cd9db2b8ac398330202301af37020f5a06587479612e"
     }
   },
   "elfs_equal_legacy": {
@@ -437,7 +437,7 @@
     "apps/native_c_file/probe/kernel_common.h": "b33fb3fba67b9015f46c02aad1227648fdfb4387e7e85a10d70fbaf24d11cfe6",
     "apps/native_c_file/probe/linker.ld": "d4ea67b7f9ba2b472e964864b55e29d14bf7e11cecfb1b9db23f2a5db4a64f22",
     "apps/native_c_file/probe/main.cc": "5a993a2f957da34914d3c99ad3dece7fc5993beee7441d005ee15d2d2b0eb2db",
-    "apps/native_c_file/probe/observer.py": "8b90bcc911e3252ac7d3847cf8e26da020b5de7d5da0e33150b408d063960cc7",
+    "apps/native_c_file/probe/observer.py": "c084f6d6dff2805da852fa2e14e9fea558f25a186fbea205a97259f0ea24128d",
     "apps/native_c_file/probe/record.h": "19d1da35ea8e5aad5cef1949a2f89d8a18998c74f5c23eb6bd1a1bee46dca1f1",
     "apps/native_c_file/probe/stock.c": "91846b0f27b000a2f7f8c7fd8c9a4f9085409009ffe690973ceb1dd2bfcc3c37",
     "apps/native_c_file/sdk/errno.h": "c507574b2a26f3e7753b4734c7349663b6b9a7a9f863887bebaec63245720866",
@@ -717,12 +717,12 @@
     "tests/native_process_smoke.cpp": "8b98ffaf3933774a2beb262ddc9c0374686c07bd8190e78eb8fb97f8b4690cf2",
     "tests/native_process_smoke.ld": "fe783fab2abe0af973328f477857d413e9d2fb41c049ac21cded10fb05113bf5",
     "tools/audit-kernel-instructions.py": "fa5fd0e5903f92e4587f42ee3dd000d75291ee76922f29ad59c5cf007caeddfa",
-    "tools/build-native-c-file-probe.py": "cb6f6769af62e5c57cdcd97caa5274bfe973f062235f958b8eadfa34d4e13b5d",
+    "tools/build-native-c-file-probe.py": "5c5ec45756a95ae64d4b17a8b1eca4e8a939281679fb047c0ba8a8691e8b96c0",
     "tools/build-native-file-probe.py": "dd02f5a2ebf391ab4af54b4bf879453fb87c92a6457251b2404bda9cebbe7ea2",
     "tools/kernel-cxxflags": "b751184561c14259cbcec4f9f85988b4f0ef4d41e5d78a9e96840444ed4ff611",
     "tools/self-review-native-c-file.py": "bff5ee9c06cd53dd07d62dec89fb699ff35bf486bcd5b5bb884ef4ec1c0715e8"
   },
-  "frozen_at": "2026-10-31T13:11:04.771212+00:00",
+  "frozen_at": "2026-10-31T13:53:24.524460+00:00",
   "kernel_metadata": {
     "O0": {
       "load_ranges": [
@@ -766,8 +766,8 @@
     "O2": 2
   },
   "kernels": {
-    "O0": "0d1b950d5e1997a9534871f88c0856210bbb5baa2c76fa231a5ccc68170b1770",
-    "O2": "09ca9d70d41f181a68cf614523c3382cc0f64aec52bd404d621021db7ff54ebd"
+    "O0": "1c1abdc98d73905b87d5f98e0a674b23e24cbf785015356036b5c52a024704b5",
+    "O2": "4153e807bc928d524891a9044def8c39d6e86a2ac0b68b35a3fb3c1b6003794b"
   },
   "kernels_bytes": {
     "O0": 200032,
@@ -1117,7 +1117,7 @@
     ]
   },
   "qualified_object_root": "/mnt/f/GTOS-Chromium/artifacts/native-file-coherence-20261012-a/native-c-file-02",
-  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22c-03-d1/out",
+  "run_root": "/var/tmp/gtos-dsh-154-mainline/r22/candidate-freeze-r22c-04-e1/out",
   "schema": "gtos-native-c-file-current-candidate/1",
   "tool_drift": [
     "tools/build-native-c-file-probe.py"

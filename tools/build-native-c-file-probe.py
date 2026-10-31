@@ -46,6 +46,11 @@ def elf32_load_ranges(path):
     assert ranges,'No PT_LOAD segment: '+str(path)
     return tuple(sorted(ranges))
 
+# The rig's clock is the guest's clock, and the consumer is told what it is: -rtc base=2000-01-01T00:00:00,clock=vm means the guest starts
+# at this epoch second, so a time() reading is checked against the command line that boots it instead of against a guessed date.
+RTC_BASE='base=2000-01-01T00:00:00,clock=vm'
+RTC_EPOCH=946684800
+
 def kernel_facts(path,run_token):
     """Read a kernel: its bytes, its loadable ranges, where the run directory sits, and the hash with that directory replaced."""
     data=pathlib.Path(path).read_bytes();ranges=elf32_load_ranges(path)
@@ -263,7 +268,10 @@ def main():
                 run([clang,'-x','c','-std=c99',*xmlflags,'-MD','-MF',out/(name+'.d'),'-c',src/name,'-o',out/(name+'.o')],out/(name+'.err'));compiled+=1
             for name in ('posix_file.cpp','link_closure/libc_closure.cpp','link_closure/math_closure.cpp','probe/main.cpp'):
                 source=subset/name
-                run([clang,*xmlflags,'-fno-exceptions','-fno-rtti','-fno-threadsafe-statics','-c',source,'-o',out/(source.name+'.o')],out/(source.name+'.err'));compiled+=1
+                # The consumer compares time() with RTC_EPOCH, which is the epoch of the -rtc base in RTC_BASE above; the definition is
+                # derived from that one constant so the two cannot drift apart.
+                extra=['-DGTOS_RTC_EPOCH=%d'%RTC_EPOCH] if name=='probe/main.cpp' else []
+                run([clang,*xmlflags,*extra,'-fno-exceptions','-fno-rtti','-fno-threadsafe-statics','-c',source,'-o',out/(source.name+'.o')],out/(source.name+'.err'));compiled+=1
             startObj=out/'start.o'
             run([bins['as'],'--32',subset/'probe/exit-start.s','-o',startObj],out/'start.log')
             # Exactly the seven objects the printf unit qualified: the tree also holds heap.o and libc_errno.o, which the FILE library
@@ -314,7 +322,7 @@ def main():
             assert sha(image)==sha(image_source),'The working copy is not the published image: '+str(image_source)
             mib=32 if opt==0 else 64
             run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg,thread=single',
-                '-icount','shift=0,align=off,sleep=off','-cpu','max','-rtc','base=2000-01-01T00:00:00,clock=vm','-m',str(mib),'-smp','1' if opt==0 else '4',
+                '-icount','shift=0,align=off,sleep=off','-cpu','max','-rtc',RTC_BASE,'-m',str(mib),'-smp','1' if opt==0 else '4',
                 '-cdrom',str(iso),'-boot','d','-drive','file='+str(image)+',format=raw,if=ide,index=0','-nic','none','-display','none','-monitor','none','-serial','none',
                 '-debugcon','file:'+str(guest/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],guest/'host.log',33,240)
             text=(guest/'guest.log').read_text();evidence=observer.verify(text,plans,mib);controls=observer.negative_controls(text,plans,mib)

@@ -67,7 +67,8 @@ def verify(text,plans,mib):
     assert x['mode']==6 and 0<x['id']<16 and x['id'] not in ids
     assert x['error']==0 and x['exit']==0 and x['vector']==x['pf']==x['address']==0 and x['cs']==0x23
     assert x['cr3'] and x['cr3']!=x['kernel'] and not ((x['cr3']|x['kernel'])&4095)
-    assert x['pages']==plans[6]['load_pages'] and x['baseline']==baseline
+    # The same admission cost gate the six suites have: the loader charges the plan's pages, its tables and its bookkeeping.
+    assert x['pages']==plans[6]['load_pages'] and x['cost']==plans[6]['process_cost'] and x['baseline']==baseline
     assert set(xr)=={'id','free','expected','open'}
     assert xr['id']==x['id'] and xr['free']==xr['expected']==baseline and xr['open']==0
     assert 10<x['calls']<200 and (x['mask']&0x1f)==0x1f and not (x['mask']&~0xff) and x['checks']==0
