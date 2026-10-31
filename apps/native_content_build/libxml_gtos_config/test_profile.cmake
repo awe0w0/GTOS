@@ -291,8 +291,13 @@ expect_condition(cond_linux_or_mac "is_linux || is_mac" false)
 expect_condition(cond_not_gtos "!is_gtos" false)
 expect_condition(cond_double_negation "!!is_win" false)
 expect_condition(cond_unknown_atom "is_mystery_platform" unknown)
-expect_condition(cond_unknown_in_or "is_gtos || is_mystery_platform" true)
-expect_condition(cond_unknown_and "is_win && is_mystery_platform" false)
+# The contract is refusal, not partial evaluation: an unknown atom anywhere makes the whole condition unknown, so neither the true
+# clause on the left nor the false clause on the left may decide the answer.
+expect_condition(cond_unknown_in_or "is_gtos || is_mystery_platform" unknown)
+expect_condition(cond_unknown_and "is_win && is_mystery_platform" unknown)
+expect_condition(cond_unknown_sandwich "is_gtos && is_mystery_platform && is_gtos" unknown)
+expect_condition(cond_empty_term "is_win &&" unknown)
+expect_condition(cond_leading_operator "|| is_win" unknown)
 
 # ---------------------------------------------------------------- contract cases
 
