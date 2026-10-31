@@ -151,8 +151,8 @@ extern "C" int vfprintf(FILE *stream, const char *format, va_list arguments) {
       errno = EILSEQ;
       return -1;
     }
-    // The second pass is authoritative: it may be shorter than the first (locale or `%n`-free differences still exist), and writing the first
-    // count would put stale bytes of the buffer on the stream.
+    // The second pass is authoritative: it can be shorter than the first, and writing the first count would put stale bytes of the buffer on
+    // the stream. The return value follows the same rule, which is why it is the written byte count below and not the first pass count.
     bytes = static_cast<size_t>(again);
     text = heap;
   }
@@ -162,7 +162,8 @@ extern "C" int vfprintf(FILE *stream, const char *format, va_list arguments) {
     errno = EIO;
     return -1;
   }
-  return produced;
+  // What was actually written: a second pass that came back shorter used to report the longer first count.
+  return static_cast<int>(bytes);
 }
 
 extern "C" int fprintf(FILE *stream, const char *format, ...) {
