@@ -2238,7 +2238,11 @@ static void RunTests() {
 #ifdef GTOS_DESKTOP_SANITIZE
 int main() {
     RunTests();
+#ifdef GTOS_DESKTOP_EXIT_CODE
+    return GTOS_DESKTOP_EXIT_CODE;
+#else
     return 0;
+#endif
 }
 #else
 extern "C" void _start() {
@@ -2249,6 +2253,12 @@ extern "C" void _start() {
     for (void (**ctor)(void) = __init_array_start; ctor != __init_array_end; ++ctor)
         (*ctor)();
     RunTests();
+#ifdef GTOS_DESKTOP_EXIT_CODE
+    // A wrapper that cannot be asked to return a non-zero status cannot show that it forwards one. The suite's default build has no
+    // such definition, so an ordinary run still ends at 0.
+    Exit(GTOS_DESKTOP_EXIT_CODE);
+#else
     Exit(0);
+#endif
 }
 #endif
