@@ -230,7 +230,20 @@ endfunction()
 #     naming it in LIBXML_DOWNGRADES, so a missing capability can never silently become "off";
 #   * a feature Chromium disables is off, and the reason says so.
 # The result is the *honoured* feature set: what xmlversion.h is allowed to declare. It is not a statement that anything links.
+#
+# The optional fourth argument is where the names in `downgrades` came from: "caller" (the default, the historical meaning) or "default",
+# meaning this configuration turned the feature off on its own because building it would only work after the SDK gained the capability. The
+# derived reason and the `<FEATURE>_DOWNGRADE_ORIGIN` variable both say which, because "requested explicitly" must not describe a decision the
+# caller never made.
 function(libxml_resolve_contract compiled_sources capabilities downgrades)
+  if(ARGC GREATER 3)
+    set(downgrade_origin "${ARGV3}")
+  else()
+    set(downgrade_origin "caller")
+  endif()
+  if(NOT downgrade_origin STREQUAL "caller" AND NOT downgrade_origin STREQUAL "default")
+    message(FATAL_ERROR "downgrade origin must be 'caller' or 'default', not '${downgrade_origin}'")
+  endif()
   list(LENGTH compiled_sources compiled_count)
   if(compiled_count EQUAL 0)
     message(FATAL_ERROR "no compiled sources were passed to libxml_resolve_contract()")
@@ -295,7 +308,12 @@ function(libxml_resolve_contract compiled_sources capabilities downgrades)
           list(FIND downgrades "${feature_name}" downgrade_at)
           if(NOT downgrade_at LESS 0)
             set(value 0)
-            string(APPEND reason "; capability '${capability}' is absent and this downgrade was requested explicitly")
+            if(downgrade_origin STREQUAL "caller")
+              string(APPEND reason "; capability '${capability}' is absent and this downgrade was requested explicitly by the caller")
+            else()
+              string(APPEND reason "; capability '${capability}' is absent and this configuration turns the feature off by default")
+            endif()
+            set(${feature_name}_DOWNGRADE_ORIGIN "${downgrade_origin}" PARENT_SCOPE)
           else()
             message(FATAL_ERROR "${feature_name} needs the '${capability}' capability, which this SDK does not provide. Either provide it "
                                 "or name ${feature_name} in -DLIBXML_DOWNGRADES=... so the reduction is explicit and reported")

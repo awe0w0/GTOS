@@ -30,9 +30,15 @@ endforeach()
 
 # A feature the contract enables but the SDK cannot provide has to be named here, so a reduction is a recorded decision instead of a
 # silent 0 that a later reader would mistake for "libxml2 has no such feature".
+# Three states, not two: the caller may name the reductions, may name none of them (and then a missing capability is a hard error), or may say
+# nothing at all — in which case *this configuration* reduces the feature set and the report must say so instead of describing its own decision
+# as a caller request.
 if(NOT DEFINED LIBXML_DOWNGRADES)
   set(LIBXML_DOWNGRADES "WITH_ICU;WITH_THREADS" CACHE STRING
       "contract features this configuration knowingly turns off because the SDK cannot provide their capability")
+  set(LIBXML_DOWNGRADE_ORIGIN "default")
+else()
+  set(LIBXML_DOWNGRADE_ORIGIN "caller")
 endif()
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
@@ -63,7 +69,7 @@ message(STATUS "  compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "  flags:    ${CMAKE_C_FLAGS}")
 message(STATUS "  source:   ${LIBXML_SRC}")
 message(STATUS "  BUILD.gn: ${LIBXML_BUILD_GN}")
-message(STATUS "  downgrades: ${LIBXML_DOWNGRADES}")
+message(STATUS "  downgrades: ${LIBXML_DOWNGRADES} (origin: ${LIBXML_DOWNGRADE_ORIGIN})")
 
 # ---------------------------------------------------------------- version, from the checkout's own VERSION file
 file(READ "${LIBXML_SRC}/VERSION" libxml_version_raw)
@@ -147,7 +153,7 @@ set(libxml_capabilities
     "zlib=${HAVE_ZLIB_H}"
     "lzma=0"
     "modules=0")
-libxml_resolve_contract("${libxml_sources}" "${libxml_capabilities}" "${LIBXML_DOWNGRADES}")
+libxml_resolve_contract("${libxml_sources}" "${libxml_capabilities}" "${LIBXML_DOWNGRADES}" "${LIBXML_DOWNGRADE_ORIGIN}")
 
 foreach(with_var WITH_C14N WITH_CATALOG WITH_DEBUG WITH_HTML WITH_HTTP WITH_ICONV WITH_ICU WITH_ISO8859X WITH_MODULES
         WITH_OUTPUT WITH_PATTERN WITH_PUSH WITH_READER WITH_REGEXPS WITH_RELAXNG WITH_SAX1 WITH_SCHEMAS WITH_SCHEMATRON
@@ -198,7 +204,12 @@ foreach(with_var WITH_C14N WITH_CATALOG WITH_DEBUG WITH_HTML WITH_HTTP WITH_ICON
         WITH_THREADS WITH_THREAD_ALLOC WITH_VALID WITH_WINPATH WITH_WRITER WITH_XINCLUDE WITH_XPATH WITH_XPTR WITH_ZLIB)
   string(APPEND probe_text "${with_var} ${${with_var}}\n")
 endforeach()
-string(APPEND probe_text "--- downgrades requested explicitly\n")
+# The heading says where the reduction came from: a caller request and this configuration's own default are different facts.
+if(LIBXML_DOWNGRADE_ORIGIN STREQUAL "caller")
+  string(APPEND probe_text "--- downgrades requested explicitly by the caller\n")
+else()
+  string(APPEND probe_text "--- downgrades this configuration applies by default (not requested by the caller)\n")
+endif()
 foreach(feature IN LISTS LIBXML_DOWNGRADES)
   string(APPEND probe_text "downgrade ${feature} (${${feature}_REASON})\n")
 endforeach()

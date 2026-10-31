@@ -301,6 +301,32 @@ expect_fatal(contract_needs_source
   "libxml_resolve_contract(\"SAX2.c;xmlIO.c;xmlreader.c;xmlwriter.c;xpath.c\" \"${no_capability}\" \"WITH_ICU;WITH_THREADS\")"
   "does not compile src/")
 
+# The same reduction with the two origins: the caller's request and this configuration's own default must not read the same, because the
+# r21 configuration used to describe its default ICU/threads reduction as a caller request.
+libxml_resolve_contract("${real_sources}" "${no_capability}" "WITH_ICU;WITH_THREADS" "caller")
+string(FIND "${WITH_ICU_REASON}" "requested explicitly by the caller" caller_reason_at)
+if(caller_reason_at LESS 0 OR NOT "${WITH_ICU_DOWNGRADE_ORIGIN}" STREQUAL "caller")
+  fail_case(contract_caller_origin "the caller-named reduction does not say the caller asked: '${WITH_ICU_REASON}' origin='${WITH_ICU_DOWNGRADE_ORIGIN}'")
+else()
+  math(EXPR cases "${cases} + 1")
+  message(STATUS "PASS contract_caller_origin (a caller-named reduction says the caller asked for it)")
+endif()
+
+libxml_resolve_contract("${real_sources}" "${no_capability}" "WITH_ICU;WITH_THREADS" "default")
+string(FIND "${WITH_ICU_REASON}" "turns the feature off by default" default_reason_at)
+string(FIND "${WITH_ICU_REASON}" "requested explicitly" default_caller_words_at)
+if(default_reason_at LESS 0 OR NOT default_caller_words_at LESS 0 OR NOT "${WITH_ICU_DOWNGRADE_ORIGIN}" STREQUAL "default")
+  fail_case(contract_default_origin
+    "the configuration's own reduction is not described as its default, or still claims a caller request: '${WITH_ICU_REASON}' origin='${WITH_ICU_DOWNGRADE_ORIGIN}'")
+else()
+  math(EXPR cases "${cases} + 1")
+  message(STATUS "PASS contract_default_origin (the configuration's own reduction says so and does not claim a caller request)")
+endif()
+
+expect_fatal(contract_bad_origin
+  "libxml_resolve_contract(\"${real_sources}\" \"${no_capability}\" \"WITH_ICU;WITH_THREADS\" \"because\")"
+  "downgrade origin must be")
+
 # A downgrade for a feature that does not exist is a typo, and typos must not look like policy.
 expect_fatal(contract_unknown_downgrade
   "libxml_resolve_contract(\"${real_sources}\" \"${no_capability}\" \"WITH_ICU;WITH_THREADS;WITH_NONSENSE\")"
