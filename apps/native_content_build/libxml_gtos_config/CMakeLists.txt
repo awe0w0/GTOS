@@ -33,9 +33,19 @@ endforeach()
 # Three states, not two: the caller may name the reductions, may name none of them (and then a missing capability is a hard error), or may say
 # nothing at all — in which case *this configuration* reduces the feature set and the report must say so instead of describing its own decision
 # as a caller request.
+# The list is a CACHE variable, so on a second configure in the same build directory it is already defined — and a build directory can also
+# carry a cache from an earlier generation. Deciding the origin from `DEFINED` alone relabelled this configuration's own default as a caller
+# request in both situations (measured: cmake2.log said `(origin: caller)` for a run that never passed -DLIBXML_DOWNGRADES).
+#
+# The effective value decides it: a list equal to the built-in default is this configuration's default, whichever configure or cache put it
+# there; anything else came from the caller. The only case this cannot separate is a caller who passes exactly the built-in default, and for
+# that case the wording "this configuration turns the feature off by default" is still true.
+set(libxml_downgrades_default "WITH_ICU;WITH_THREADS")
 if(NOT DEFINED LIBXML_DOWNGRADES)
-  set(LIBXML_DOWNGRADES "WITH_ICU;WITH_THREADS" CACHE STRING
+  set(LIBXML_DOWNGRADES "${libxml_downgrades_default}" CACHE STRING
       "contract features this configuration knowingly turns off because the SDK cannot provide their capability")
+endif()
+if("${LIBXML_DOWNGRADES}" STREQUAL "${libxml_downgrades_default}")
   set(LIBXML_DOWNGRADE_ORIGIN "default")
 else()
   set(LIBXML_DOWNGRADE_ORIGIN "caller")
