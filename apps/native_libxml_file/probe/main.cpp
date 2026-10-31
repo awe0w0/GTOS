@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -36,6 +37,7 @@
 #define GTOS_LIBXML_INVALID "/fixtures/invalid.xml"
 #define GTOS_LIBXML_SCRATCH "/fixtures/libxml-scratch.xml"
 #define GTOS_LIBXML_ABSENT "/fixtures/no-such-file.xml"
+#define GTOS_LIBXML_FORMATTED "/fixtures/formatted.txt"
 
 enum {
   kStatFailed = 1u << 0,
@@ -59,6 +61,10 @@ enum {
   kAbsentAccepted = 1u << 18,
   kTimeDisagrees = 1u << 19,
   kLongFormatWrong = 1u << 20,
+  kStreamFormatWrong = 1u << 21,
+  kNullStreamAccepted = 1u << 22,
+  kRefusedWriteAccepted = 1u << 23,
+  kEnomemAccepted = 1u << 24,
 };
 
 // One well-formed document with two elements, an attribute and text. The closing tag of the second document is deliberately mismatched:
@@ -104,6 +110,63 @@ static int attr_is(xmlNodePtr node, const char *name, const char *expected) {
   return same;
 }
 
+// The stream side of the formatting closure, on the FILE the FILE library opens. Every failure branch the closure documents is reached
+// here on purpose, and each one has to leave the stream usable afterwards.
+static unsigned stream_failures(const char *payload, unsigned payloadBytes) {
+  unsigned failures = 0;
+
+  // A conversion longer than the stack buffer: the closure has to format the whole thing into its own allocation and write every byte.
+  FILE *out = fopen(GTOS_LIBXML_FORMATTED, "w");
+  if (out == 0) return kStreamFormatWrong;
+  const int produced = fprintf(out, "%s", payload);
+  if (produced != (int)payloadBytes || fflush(out) != 0 || fclose(out) != 0) failures |= kStreamFormatWrong;
+  static char readback[4400];
+  const int again = open(GTOS_LIBXML_FORMATTED, O_RDONLY);
+  if (again <= 0) {
+    failures |= kStreamFormatWrong;
+  } else {
+    const unsigned got = read_all(again, readback, sizeof(readback) - 1);
+    if (got != payloadBytes || memcmp(readback, payload, payloadBytes) != 0) failures |= kStreamFormatWrong;
+    if (close(again) != 0) failures |= kCloseFailed;
+  }
+
+  // A null stream is not a silent success: the caller has to be able to tell that the message went nowhere.
+  errno = 0;
+  if (fprintf(0, "%s", "nowhere") != -1 || errno != EBADF) failures |= kNullStreamAccepted;
+
+  // A stream opened for reading refuses the write, which is the short-write branch of vfprintf (the byte count does not match).
+  FILE *reader = fopen(GTOS_LIBXML_FIXTURE, "r");
+  if (reader == 0) {
+    failures |= kRefusedWriteAccepted;
+  } else {
+    errno = 0;
+    if (fwrite("x", 1, 1, reader) != 0) failures |= kRefusedWriteAccepted;
+    if (fprintf(reader, "%s", "nope") != -1) failures |= kRefusedWriteAccepted;
+    if (fclose(reader) != 0) failures |= kCloseFailed;
+  }
+
+  // A conversion whose formatted length is larger than the guest heap: the closure's allocation fails, and it says so instead of writing a
+  // truncated line. The stream must still work afterwards, which is the recovery half of the same check.
+  FILE *wide = fopen(GTOS_LIBXML_FORMATTED, "w");
+  if (wide == 0) return failures | kEnomemAccepted;
+  errno = 0;
+  const int tooBig = fprintf(wide, "%*s", 1 << 20, "");
+  if (tooBig != -1 || errno != ENOMEM) failures |= kEnomemAccepted;
+  const int recovered = fprintf(wide, "%s", "recovered");
+  if (recovered != 9 || fclose(wide) != 0) failures |= kEnomemAccepted;
+  const int after = open(GTOS_LIBXML_FORMATTED, O_RDONLY);
+  if (after > 0) {
+    char tail[32];
+    const unsigned got = read_all(after, tail, sizeof(tail) - 1);
+    tail[got] = 0;
+    if (got != 9 || strcmp(tail, "recovered") != 0) failures |= kEnomemAccepted;
+    if (close(after) != 0) failures |= kCloseFailed;
+  } else {
+    failures |= kEnomemAccepted;
+  }
+  return failures;
+}
+
 extern "C" int NativeEntry(void) {
   unsigned failures = 0;
 
@@ -125,6 +188,7 @@ extern "C" int NativeEntry(void) {
   const unsigned longBytes = (unsigned)(sizeof(longPayload) - 1);
   if (longWritten != (int)longBytes || strcmp(longOutput, longPayload) != 0) failures |= kLongFormatWrong;
   if (smallWritten != (int)longBytes || small[sizeof(small) - 1] != 0 || strlen(small) != sizeof(small) - 1) failures |= kLongFormatWrong;
+  failures |= stream_failures(longPayload, longBytes);
 
   // time() against this rig's own base: the builder passes the epoch of the -rtc base it boots with, and one boot cannot move the clock
   // by more than a day. Both entry points have to agree, because they are two paths through the same closure.
