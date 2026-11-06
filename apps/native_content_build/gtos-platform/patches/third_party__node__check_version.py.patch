@@ -1,0 +1,19 @@
+--- a/third_party/node/check_version.py
++++ b/third_party/node/check_version.py
+@@ -4,11 +4,14 @@
+ # found in the LICENSE file.
+ 
+ import argparse
+-import node
+ import os
+ import sys
+ 
+-_HERE_PATH = os.path.dirname(__file__)
++# Python resolves a symlinked entry script's sys.path[0] to its origin. Keep
++# the adjacent helper/tool in the explicitly selected private checkout.
++_HERE_PATH = os.path.dirname(os.path.abspath(__file__))
++sys.path.insert(0, _HERE_PATH)
++import node
+ 
+ 
+ def main(argv):

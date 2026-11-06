@@ -255,3 +255,12 @@ retain upstream unsupported behavior. It does not assert full std runtime
 support, Content C1/C2/C3, or guest execution of these Rust adapters. gnrt
 regeneration itself has not been run; the existing generated GN rule and its
 template/configuration are updated together.
+
+`codex-c-ninja-n30` reached 1,698 actions before the actual Node version check
+imported its helper from the canonical checkout, selecting the shared-drive
+Node instead of the private executable. `check_version.py` now inserts its
+logical checkout directory before importing that helper. The version check
+itself remains unchanged. `codex-c-node-version-test-nv01` executes six real
+action checks: upstream canonical-import failure, patched leaf-link entry,
+ordinary entry, true version mismatch, missing private tool, and recovery.
+All pass with the pinned Python/Node; this does not constitute Content C1.
