@@ -1,0 +1,33 @@
+--- a/build/rust/gni_impl/rustc_print_cfg.py
++++ b/build/rust/gni_impl/rustc_print_cfg.py
+@@ -23,7 +23,7 @@ def rustc_name():
+         return "rustc"
+ 
+ 
+-def capture_rustc_cfg(rust_prefix, target, output_path):
++def capture_rustc_cfg(rust_prefix, target, output_path, target_spec=None):
+     """Invokes `rustc --print=cfg --target=<target>` and saves results.
+ 
+     Results are saved to a file at `output_path`."""
+@@ -33,7 +33,9 @@ def capture_rustc_cfg(rust_prefix, target, output_path):
+     # TODO(lukasza): Check if command-line flags other `--target` may affect the
+     # output of `--print-cfg`.  If so, then consider also passing extra `args`
+     # (derived from `rustflags` maybe?).
+-    args = [rustc_path, "--print=cfg", f"--target={target}"]
++    args = [rustc_path, "--print=cfg", f"--target={target_spec or target}"]
++    if target_spec is not None:
++        args.append("-Zunstable-options")
+ 
+     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+     with open(output_path, 'w') as output_file:
+@@ -45,8 +47,9 @@ def main():
+     parser.add_argument('--rust-prefix', required=True, help='rust path prefix')
+     parser.add_argument('--target', required=True, help='rust target triple')
+     parser.add_argument('--output-path', required=True, help='output file')
++    parser.add_argument('--target-spec', help='custom target JSON used instead of the built-in triple')
+     args = parser.parse_args()
+-    capture_rustc_cfg(args.rust_prefix, args.target, args.output_path)
++    capture_rustc_cfg(args.rust_prefix, args.target, args.output_path, args.target_spec)
+     return 0
+ 
+ 

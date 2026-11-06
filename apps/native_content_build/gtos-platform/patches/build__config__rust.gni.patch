@@ -1,0 +1,29 @@
+--- a/build/config/rust.gni
++++ b/build/config/rust.gni
+@@ -200,6 +200,15 @@ if (enable_rust) {
+ # (see '*_toolchain_supports_platform above') to enable experimentation with
+ # other toolchains.
+ rust_abi_target = ""
++rust_target_json = ""
++if (is_gtos) {
++  declare_args() {
++    # Explicit JSON for the independent GTOS IA32 ABI, not a built-in triple.
++    gtos_rust_target_json = ""
++  }
++  assert(gtos_rust_target_json != "", "Set the GTOS Rust target JSON")
++  rust_target_json = gtos_rust_target_json
++}
+ if (is_linux || is_chromeos) {
+   if (current_cpu == "arm64") {
+     rust_abi_target = "aarch64-unknown-linux-gnu"
+@@ -440,6 +449,10 @@ rustc_wrapper_inputs = [
+   "//build/rust/gni_impl/rustc_wrapper.py",
+ ]
+ 
++if (is_gtos) {
++  rustc_wrapper_inputs += [ rust_target_json ]
++}
++
+ if (host_os == "win") {
+   rustc_wrapper_inputs += [ "//third_party/rust-toolchain/bin/rustc.exe" ]
+ } else {

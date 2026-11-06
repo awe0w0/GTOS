@@ -146,3 +146,23 @@ version and output. Unchanged actions remain idle; deliberate Python failures
 propagate through Ninja. `codex-c-unit-u10` passed 15 regressions, including real
 root `.gn` patch application. The application's containment check accepts the
 private view itself as a parent while continuing to refuse shared roots.
+
+Rust target invocations use `gtos_rust_target_json` for the actual JSON path,
+while keeping `i686-unknown-gtos` as the sysroot/output ABI name. Use the committed
+`apps/native_rust_target/i686-unknown-gtos.json`, whose IA32/SSE2 ABI matches this
+Content toolchain. The older `native_content_build/rust` soft-float experiment
+is a separate profile. The cfg action and compiler both receive the JSON with
+`-Zunstable-options`; both track it as an input. GTOS Rust disables default host
+link libraries. The Rust compiler wrapper uses the same pinned CPython as GN.
+
+`codex-c-rust-test-z02` passed five real-compiler checks: the bare custom triple
+fails, the JSON reports GTOS IA32/SSE2 without Unix/Linux identity, the Linux
+host target retains its behavior, and malformed/missing specifications fail.
+`codex-c-ninja-n10` then built the actual formal graph's core rule successfully:
+`local_rustc_sysroot/lib/rustlib/i686-unknown-gtos/lib/libcore_core.rlib`,
+65,478,856 B, SHA256
+`f0546af512792600c4267b0dc3f8c27aa72bf4d8b9d26fd9169e30615985217a`.
+Its metadata, response file, flags and dependency file are retained alongside it.
+`codex-c-dependency-test-d03` retained all six C/C++ SDK dependency regressions
+with Rust disabled. This core build does not qualify full Rust std, OS services,
+Content object/link generation, or browser execution.

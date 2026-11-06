@@ -1,14 +1,40 @@
 --- a/build/toolchain/gtos/BUILD.gn
 +++ b/build/toolchain/gtos/BUILD.gn
-@@ -27 +27,3 @@
+@@ -24,7 +24,9 @@ template("gtos_freestanding_toolchain") {
+     tool("cc") {
+       depfile = "{{output}}.d"
+       depsformat = "gcc"
 -      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
 +      # SDK headers are system includes, but their changes must invalidate objects.
 +      # -MMD would omit them from both Ninja's dependency log and the evidence.
 +      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
-@@ -36 +38 @@
+       description = "GTOS CC {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+@@ -33,7 +35,7 @@ template("gtos_freestanding_toolchain") {
+     tool("cxx") {
+       depfile = "{{output}}.d"
+       depsformat = "gcc"
 -      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
 +      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
-@@ -100,0 +103 @@
+       description = "GTOS CXX {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+@@ -98,14 +100,15 @@ template("gtos_freestanding_toolchain") {
+       command = "cp -af {{source}} {{output}}"
+       description = "GTOS COPY {{source}}"
+     }
 +    if (toolchain_has_rust) {
-@@ -108 +111,0 @@
+       # Rust tools, copied from build/toolchain/gcc_toolchain.gni
+-      python_path = "python3"
++      python_path =
++          rebase_path("//third_party/cpython3/host/bin/python3", root_build_dir)
+       extra_ldflags = ""
+       cxx = "$gtos_clang_bin/clang++"
+       default_executable_extension = ""
+       default_shlib_extension = ".so"
+       default_shlib_subdir = ""
 -    if (toolchain_has_rust) {
+       rustc_wrapper_path =
+           rebase_path("//build/rust/gni_impl/rustc_wrapper.py", root_build_dir)
+       rustc_wrapper = "\"$python_path\" \"$rustc_wrapper_path\""

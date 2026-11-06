@@ -1,0 +1,43 @@
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -973,14 +973,18 @@ config("compiler") {
+ 
+   # Rust compiler flags setup.
+   # ---------------------------
+-  rustflags += [
+-    # By default Rust passes `-nodefaultlibs` to the linker, however this
+-    # conflicts with our `--unwind=none` flag for Android dylibs, as the latter
+-    # is then unused and produces a warning/error. So this removes the
+-    # `-nodefaultlibs` from the linker invocation from Rust, which would be used
+-    # to compile dylibs on Android, such as for constructing unit test APKs.
+-    "-Cdefault-linker-libraries",
+-  ]
++  if (is_gtos) {
++    rustflags += [ "-Cdefault-linker-libraries=no" ]
++  } else {
++    rustflags += [
++      # By default Rust passes `-nodefaultlibs` to the linker, however this
++      # conflicts with our `--unwind=none` flag for Android dylibs, as the latter
++      # is then unused and produces a warning/error. So this removes the
++      # `-nodefaultlibs` from the linker invocation from Rust, which would be used
++      # to compile dylibs on Android, such as for constructing unit test APKs.
++      "-Cdefault-linker-libraries",
++    ]
++  }
+ 
+   rustflags += [
+     # To make Rust .d files compatible with ninja
+@@ -1004,7 +1008,12 @@ config("compiler") {
+     # sequences, ignoring the platform, when stderr is not a terminal.
+     rustflags += [ "--color=always" ]
+   }
+-  if (rust_abi_target != "") {
++  if (is_gtos) {
++    rustflags += [
++      "-Zunstable-options",
++      "--target=" + rebase_path(rust_target_json, root_build_dir),
++    ]
++  } else if (rust_abi_target != "") {
+     rustflags += [ "--target=$rust_abi_target" ]
+   }
+   if (!use_thin_lto || !toolchain_supports_rust_thin_lto) {

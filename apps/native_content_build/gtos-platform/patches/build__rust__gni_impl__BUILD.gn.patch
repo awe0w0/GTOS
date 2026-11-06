@@ -1,0 +1,16 @@
+--- a/build/rust/gni_impl/BUILD.gn
++++ b/build/rust/gni_impl/BUILD.gn
+@@ -83,6 +83,13 @@ action("rustc_print_cfg") {
+     rebase_path(rustc_print_cfg_path, root_build_dir),
+   ]
+   inputs = []
++  if (is_gtos) {
++    inputs += [ rust_target_json ]
++    args += [
++      "--target-spec",
++      rebase_path(rust_target_json, root_build_dir),
++    ]
++  }
+   if (host_os == "win") {
+     inputs += [ "${rust_sysroot}/bin/rustc.exe" ]
+   } else {
