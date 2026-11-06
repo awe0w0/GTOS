@@ -15,5 +15,9 @@
     "source": "apps/native_v8_runtime/sdk/__external_threading",
     "sha256": "ad3581974c60408854ab7cba9f6c5b7cc29789eb4e2249fc9136de9b44c990b2",
     "change": "native Content guard; declarations and namespace unchanged"
+  },
+  {
+    "source": "apps/native_c_clock/sdk/time.h",
+    "sha256": "ff4deee1ab52f753f085a6ae497afc12cbcd4201f49b8fdad6a520fd1ba74b03"
   }
 ]

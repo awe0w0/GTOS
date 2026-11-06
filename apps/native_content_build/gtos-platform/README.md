@@ -376,3 +376,24 @@ RW/BSS segment and faulted before reporting. The test linker layout now uses
 an explicit, file-backed RW segment; all six images meet their real verdicts.
 Old failures remain. These units use Linux reporting and an injected identity
 boundary, so they do not qualify the native kernel/thread backend or C1/C2/C3.
+
+The native Perfetto clock adapter reuses the qualified C clock selectors
+(`CLOCK_MONOTONIC=1`, `CLOCK_REALTIME=2`), signed 64-bit seconds and 16-byte
+timespec. Monotonic/raw/boot measurements use the delivered-PIT monotonic
+provider; no suspend accounting exists. CPU-accounting measurements report
+unavailable as zero, like the existing WASM port, rather than using wall time.
+Conversion rejects service failures, negative fields, invalid nanoseconds and
+signed nanosecond overflow. `TimeGm` calls the native LLVM calendar provider,
+whose current implementation is UTC without a timezone database. Host timegm
+and host clock branches stay intact.
+
+`codex-c-perfetto-time-build-t01` / `run-r01` pass sixteen frozen ELF32 images:
+O0/O2 normal clocks, INT64_MAX nanosecond boundary, duration helpers, dates from
+1900 through 2100, leap dates, month/second normalization and errno preservation.
+UTC conversion links the actual pinned LLVM `mktime.cpp` and `time_utils.cpp`,
+not a replacement calendar model. Two wrong-expectation images return 1;
+twelve service/field/overflow rejection images log and terminate with SIGILL.
+Host header compilation and the 19 platform regressions also pass. The clock
+boundary, logging/errno sinks and Linux reporting are unit dependencies; this
+does not establish new native clock guest behavior, full calendar correctness,
+runtime integration of all libc time functions or Content C1/C2/C3.

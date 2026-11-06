@@ -13,6 +13,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/perfetto/include/perfetto/base/time.h': 'c0c1498a52e97f557b5bc27b0d60c2c4d51aee621fdac16a41ff940a295cf8ee',
     'third_party/perfetto/include/perfetto/base/thread_utils.h': 'a2a30174d7abacbb8c2a8fc179982b6af2e66609ddbff7ebf550a587f72fced7',
     'third_party/perfetto/include/perfetto/ext/base/thread_checker.h': 'c8664a4a3d9ca94a5e740ecb7c388049647edb66d181bbb1fa324c9423af3a77',
     'third_party/perfetto/src/base/thread_checker.cc': '9a550bb7d2b5b89fc5e6e031f952222077c6ae4bb513ff75c278905464853e35',
@@ -55,6 +56,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/time.h': 'sdk/time.h',
     'third_party/perfetto/src/base/ctrl_c_handler_gtos.cc': 'perfetto/ctrl_c_handler_gtos.cc',
     'build/config/gtos/include/__external_threading': 'sdk/__external_threading',
     'build/config/gtos/include/inttypes.h': 'sdk/inttypes.h',
