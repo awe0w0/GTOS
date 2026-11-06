@@ -297,3 +297,19 @@ old bytes, unchanged timestamps and stale-version refusal.
 `codex-c-source-snapshot-w01` records 44 materialized sources and nine pinned
 tools; `codex-c-gn-g28` verifies it and generates the formal 21,680-target graph.
 These are source/build checks and do not establish Content C1/C2/C3.
+
+The formal `codex-c-ninja-n32` build reached 1,794 actions, then exposed a GTOS
+compiler-rule bug: `{{output}}` expands to both `.o` and the additional `.dwo`,
+so it cannot be used as a single `-o`/`-MF` argument. C/C++ rules now use the
+same `target_out_dir/label_name/source_name_part.o` layout as the upstream GCC
+toolchain and bind that primary output explicitly. This also matches the
+existing split-DWARF config. The pinned GN did not emit `source_out_dir` in
+compiler edges for the intermediate command template; that rejected attempt
+is retained. The formal C1 output locator consequently becomes
+`obj/content/shell/content_shell_app/shell_main_delegate.o`, still the same
+production translation unit and dependency graph.
+
+`codex-c-dependency-test-ds04` passes nine real GN/Clang/Ninja checks, including
+system-header changes and compiler rejection, both C/C++ object/debug pairs,
+unchanged builds, and recompilation after a `.dwo` is removed. It extracts the
+actual `split_dwarf` config, rather than substituting a test-only output rule.
