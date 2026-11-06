@@ -336,3 +336,25 @@ wrong ABI layout, and Perfetto native/host/unknown-platform controls.
 `codex-c-unit-ucs02` passes the 19 platform/application regressions. These
 validate declarations, compiler behavior and private patch application, not
 new threading runtime behavior, linking, a Perfetto runtime or a guest run.
+
+The formal `codex-c-ninja-n35` / `n37` builds now compile real GTOS Perfetto
+sources including base64, crash keys, CPU info, event fd and dynamic string
+writer. Their primary objects, split debug outputs and SDK depfiles exist.
+The native directory adapter has separate O0/O2 unit execution evidence (see
+`apps/native_libxml_file/README.md`); runtime linking and guest I/O for that
+new adapter remain pending. C1 is still the formal shell delegate TU, not one
+of these dependency objects.
+
+GTOS has no POSIX signal-handler service. The native base target selects
+`ctrl_c_handler_gtos.cc`, which diagnoses and fails a request through the
+existing Perfetto crash mechanism. It cannot silently report an installation.
+Windows/POSIX keep their original source; the pinned caller search finds the
+requests in Perfetto's command-line and Unix RPC daemon tools, with no match
+in the checked Base/Content trees. Signal-handler support remains unavailable.
+
+`codex-c-perfetto-control-build-p01` / `run-r01` exercise that actual source:
+two no-request controls return zero; four O0/O2 null/non-null requests print
+the diagnostic and terminate with SIGILL. The logging sink and Linux reporting
+are test dependencies. The original host source compiles and accidental host
+selection of the native source is refused. This verifies the explicit failure
+policy, not a working GTOS signal service or a guest execution.

@@ -15,6 +15,7 @@ spec.loader.exec_module(candidate)
 INPUTS = {
     'build/config/gtos/BUILD.gn': 'aacb5f51f70ea5938d172639d7c360f9817ab4799c1d6a42b56cadc9bbf6d0a5',
     'third_party/perfetto/include/perfetto/base/build_config.h': '01c8b46ffc3aeb50287c3821249ba6c3ce662f0fe1a2f17958e28cac33bfc62c',
+    'third_party/perfetto/src/base/BUILD.gn': '718b055ac9e786276fb6263b76f761b7dc2a6e133199040e97f2f6ea00fb06f1',
     'third_party/devtools-frontend/src/scripts/build/esbuild.js': '52d417868256adbe0f95558d591b641f0d07e34e162d01451ae6dbaf84542a8f',
     'third_party/node/check_version.py': '9a50867752c5ffcaf6c3b7a3fce6d0a704dd87b78fe3283da4185fe674902f3f',
     'build/toolchain/gtos/BUILD.gn': '167bac3e52fb475a55050346979c08b1619f06053942ec984653e4e57a05800b',
@@ -51,6 +52,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/perfetto/src/base/ctrl_c_handler_gtos.cc': 'perfetto/ctrl_c_handler_gtos.cc',
     'build/config/gtos/include/__external_threading': 'sdk/__external_threading',
     'build/config/gtos/include/inttypes.h': 'sdk/inttypes.h',
     'build/config/gtos/include/llvm-libc-macros/inttypes-macros.h': 'sdk/llvm-libc-macros/inttypes-macros.h',

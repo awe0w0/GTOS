@@ -1,0 +1,14 @@
+--- a/third_party/perfetto/src/base/BUILD.gn
++++ b/third_party/perfetto/src/base/BUILD.gn
+@@ -74,6 +74,11 @@ perfetto_component("base") {
+     "weak_runner.cc",
+   ]
+ 
++  if (is_gtos) {
++    sources -= [ "ctrl_c_handler.cc" ]
++    sources += [ "ctrl_c_handler_gtos.cc" ]
++  }
++
+   if (!is_nacl) {
+     sources += [
+       "lock_free_task_runner.cc",
