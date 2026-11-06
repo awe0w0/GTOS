@@ -1,5 +1,9 @@
 [
   {
+    "source": "include/process/info_abi.h",
+    "sha256": "ed9828c1c4bb923f7d3aaa892886bd3d681b18bd92ed4355149928aaad158f7d"
+  },
+  {
     "source": "include/process/cpu_clock_abi.h",
     "sha256": "842f44ca9e0ea8214591fd1e68fc93db3d65cb40cbdab29b724ec1f3c334250b"
   },

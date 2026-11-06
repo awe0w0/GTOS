@@ -420,6 +420,27 @@ broken context/query/accounting fields. This qualifies this coarse self-only
 CPU clock adapter, not full POSIX clocks, worker aggregation, SMP accounting or
 Content C1/C2/C3.
 
+The GTOS `SystemInfo` backend now uses native process-info `0x4713` for the
+current 4096-byte page size and one-CPU scheduler profile. Invalid/unavailable
+results log and leave both measurements unset. The build identity is GTOS/i686;
+kernel version/release, physical RAM and configured timezone remain unknown.
+Per-process page limits are never presented as physical memory capacity.
+`PERFETTO_MACHINE_NAME` retains upstream precedence, including an empty value.
+Only GTOS replaces `android_utils.cc`; host platform code remains unchanged.
+
+`codex-c-perfetto-system-info-build-i06` / `run-r03` run the real backend and
+pinned LLVM `string.cpp` at O0/O2, with syscall/environment/allocation/logging
+boundaries injected. They cover repeated valid queries, eight malformed/error
+replies, unknown fields, environment precedence, native short/heap strings and
+balanced release; both altered expectations return 1. Two production int80
+objects and the original host source compile separately; `unit-usi01` passes
+19 platform regressions. The first run exposed a test assumption: IA32 libc++
+has ten-character inline string capacity, so an eleven-character name also
+allocates. The corrected fixture requires eight allocations and eight releases.
+`ninja-n50` builds `system_info_gtos.o` in the real formal Content graph. These
+checks establish the adapter and build integration, not a new guest query or
+Content C1/C2/C3 acceptance.
+
 GTOS `PagedMemory` now owns a native VM handle instead of asking for a POSIX
 mmap interface. Reserve retains two uncommitted guard pages; ordinary allocation
 commits only the rounded interior. `kDontCommit` leaves the interior uncommitted
