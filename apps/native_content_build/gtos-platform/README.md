@@ -129,3 +129,20 @@ and tool resolution stays in that view. The host supply copies pinned Node,
 TypeScript, esbuild, Rust tools and clang-format into private ext4 paths, checks
 their SHA256, and grants execution to those exact files. Source checkouts remain
 read-only. These tools are build-host tools, not GTOS runtime dependencies.
+
+The view restores `.gn`'s pinned CPython 3.11.9 interpreter. The older candidate
+selected system Python 3.8, which fails while importing the actual upstream
+`modulemap_config.py` (`list[str]` annotations); formal Ninja reached 708 actions
+before this failure in `codex-c-ninja-n05`. Supply the pinned interpreter at
+`third_party/cpython3/host/bin/python3` in ext4 before generation, keeping its
+matching checked-out standard library read-only. Its SHA256 is
+`df4f8d0ae4bace71af48c8630b2cb48789395925c08b56fa8037be9b15f215a7`.
+
+Guarded `codex-c-python-test-y02` runs
+`tests/gtos_python_toolchain_test.py --view ... --gn ... --ninja ... --out ...`.
+It reproduces the real module's failure with Python 3.8, imports it with the
+pinned interpreter, and verifies a GN/Ninja action's own reported executable,
+version and output. Unchanged actions remain idle; deliberate Python failures
+propagate through Ninja. `codex-c-unit-u10` passed 15 regressions, including real
+root `.gn` patch application. The application's containment check accepts the
+private view itself as a parent while continuing to refuse shared roots.

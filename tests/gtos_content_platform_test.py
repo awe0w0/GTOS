@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from unittest import mock
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
@@ -204,6 +205,21 @@ class PrivatePatchTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('platform_apply', path)
         cls.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.module)
+
+    def test_root_dotfile_is_inside_the_private_view(self):
+        root = args.out / 'root-dotfile'
+        root.mkdir()
+        target = root / '.gn'
+        target.write_bytes((args.view / '.gn').read_bytes())
+        patch = self.module.HERE / 'patches/.gn.patch'
+        subprocess.run(['/usr/bin/patch', '--batch', '--fuzz=0', '--reverse',
+                        '--input', str(patch), str(target)], check=True)
+        expected = self.module.INPUTS['.gn']
+        self.assertEqual(self.module.candidate.digest(target), expected)
+        with mock.patch.dict(self.module.INPUTS, {'.gn': expected}, clear=True):
+            self.module.apply(root)
+        self.assertEqual(target.read_bytes(), (args.view / '.gn').read_bytes())
+        self.assertEqual(json.loads((root / 'gtos-platform.json').read_text())['files'][0]['path'], '.gn')
 
     def test_shared_source_refuses_before_writing(self):
         with self.assertRaisesRegex(SystemExit, 'existing private'):

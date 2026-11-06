@@ -28,6 +28,7 @@ INPUTS = {
     'third_party/nasm/nasm_assemble.gni': 'f19475e0317263e15b6c028732f2638d1e024046931fdb55434ec73f7e73992d',
     'tools/grit/grit_args.gni': 'e3e7b4cf51aea6caa044d59ddacf6b164c56eefe279e637e0712aa9fec318900',
     'tools/grit/grit/node/base.py': '7aa20d2fe8e428d1a29cf47db321a157771a173f2f92ff6c09d44c2968157f59',
+    '.gn': '4a0276377f72c90c6a77bad46e6badf7b4e1a123f87adccd8bc6e61d05f70ecd',
 }
 
 
@@ -44,7 +45,7 @@ def apply(view):
     applied = []
     for rel, expected in INPUTS.items():
         parent = candidate.materialize_parents(view, rel)
-        if view not in parent.resolve().parents:
+        if parent.resolve() != view and view not in parent.resolve().parents:
             raise SystemExit('platform parent escaped the private view: ' + str(parent))
         target = parent / Path(rel).name
         if target.is_symlink():
