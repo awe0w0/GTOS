@@ -278,3 +278,22 @@ ELF input's executable mode bit; the earlier f03/r01 supply failed without it,
 and f04's five images have identical bytes. Linux write/exit are used only for
 reporting these compiler-ABI results. This is neither a GTOS guest run nor FP
 context, kernel, libc or browser acceptance.
+
+The private incremental source workspace is versioned by `workspace.py`.
+`snapshot` archives materialized source overlays and records the pinned host
+tools outside the workspace. Builds verify that record before and after
+GN/Ninja while the workspace is read-only. To change sources, compose a fresh
+desired view, snapshot it with `--workspace` naming the active workspace, then
+use `apply --previous ... --following ...` between builds. Unchanged files keep
+their timestamps, while changed files get private copies. Old views, snapshots
+and version receipts remain intact; `.codex-workspace/current.json` is the
+explicit mutable pointer to the active source version. Source removal and
+host-tool changes require a fresh workspace. This avoids rebuilding unchanged
+frontend actions simply because their source-root path changed.
+
+`codex-c-workspace-test-wt03` passes eight tests against those real functions,
+including drift/reuse/escape rejection, linked-origin preservation, immutable
+old bytes, unchanged timestamps and stale-version refusal.
+`codex-c-source-snapshot-w01` records 44 materialized sources and nine pinned
+tools; `codex-c-gn-g28` verifies it and generates the formal 21,680-target graph.
+These are source/build checks and do not establish Content C1/C2/C3.
