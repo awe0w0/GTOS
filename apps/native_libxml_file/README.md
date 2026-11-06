@@ -44,3 +44,36 @@ No GTOS guest has executed either image: no ISO was built, no QEMU was started, 
 read/write cases in `probe/file_probe.cpp` (offset movement, dup offset sharing, write-then-read equality, `-1`+`errno` on a missing file,
 `S_ISREG`) are written and linked but not executed; executing them is the next unit's measurement. The link says the symbols resolve and the
 sections place, which is exactly what a link can say.
+
+## Native directory adapter (2026-11-07)
+
+The measurements and absence statements above describe the r21 link snapshot.
+Later r22 evidence covers selected real CPL3 FILE/libxml/printf/time consumers;
+the current time closure uses the validated realtime ABI, not uptime as epoch.
+Neither that evidence nor the old seven-call tests qualifies the new directory
+adapter described here.
+
+`directory.cpp` and `include/dirent.h` project the existing native DIR_OPEN,
+DIR_READ and DIR_REWIND operations into `opendir`, `readdir`, `rewinddir`,
+`closedir` and `dirfd`. The opaque stream owns one native handle and one entry
+buffer. EOF preserves errno and the prior entry; malformed replies fail with
+EIO before replacing it. Failed opens release allocation, and a close releases
+the buffer even when the native close reports an error, since that ABI already
+invalidates the handle. Names remain bytes with a 255-byte maximum; inode
+identity is unavailable and reported as zero. There is no seekdir/telldir.
+
+The existing calls and directory adapter share the same request/error/path
+helpers. `GTOS_POSIX_FILE_TEST` replaces only their kernel-call boundary for
+unit tests. Production builds retain the actual IA32 interrupt instruction.
+
+`codex-c-directory-build-d03` / `codex-c-directory-run-r03` compile and run the
+actual adapter at O0/O2: 124 checks per image, with a deliberately wrong
+expectation rejected by the third image. Cases include allocation failure,
+maximum paths/names, UTF-8 bytes, EOF/error preservation, malformed responses,
+close-error cleanup, independent simultaneous streams, resource reuse and
+existing file-call refusals. Four separate production ELF32 objects compile
+without the injected test endpoint. Source identities and the three frozen
+images are recorded in the build manifest; the run has its own writable root.
+These are adapter units with injected kernel/allocation outcomes and Linux
+reporting, not a GTOS guest test or complete POSIX qualification. The new
+adapter still needs runtime linking and a real CPL3/ATA consumer.

@@ -6,8 +6,8 @@
  * reads a file is talking to the same file service every other GTOS consumer uses — the same open/read/seek/dup/close the native FILE
  * layer calls through LLVM libc's platform_file.cpp — rather than to a second, parallel file layer.
  *
- * What this is not: a POSIX runtime. There is no permission model (the third argument of open() is accepted and ignored), no fstat (the
- * ABI stats a path, not a handle), no isatty, no O_NONBLOCK, no fd inheritance beyond the ABI's own owner-scoped handles. Each of those
+ * What this is not: a POSIX runtime. There is no permission model (the third argument of open() is accepted and ignored), no fstat
+ * projection here yet, no isatty, no O_NONBLOCK, no fd inheritance beyond the ABI's own owner-scoped handles. Each of those
  * absences is visible to the caller as a link error or a refused flag, not as a declaration that quietly resolves to nothing.
  *
  * Handle space: a returned fd is the ABI's own handle, so it composes with the native FILE layer (fileno() returns the same number) and
@@ -23,6 +23,11 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "file_internal.h"
+
+#if defined(GTOS_POSIX_FILE_TEST)
+extern "C" int GtosPosixFileTestCall(unsigned, const void *, unsigned);
+#endif
 
 static_assert(sizeof(void *) == 4 && sizeof(unsigned) == 4, "the GTOS file ABI is a 32-bit interface");
 
@@ -45,12 +50,16 @@ static_assert(sizeof(void *) == 4 && sizeof(unsigned) == 4, "the GTOS file ABI i
 #define ENOTSUP 95
 #endif
 
-namespace {
+namespace gtos_file {
 
 int call(unsigned operation, const void *request, unsigned bytes) {
+#if defined(GTOS_POSIX_FILE_TEST)
+  return GtosPosixFileTestCall(operation, request, bytes);
+#else
   unsigned result = operation;
   asm volatile("int $0x80" : "+a"(result) : "b"(reinterpret_cast<unsigned>(request)), "c"(bytes) : "memory", "cc");
   return static_cast<int>(result);
+#endif
 }
 
 int translate(int result) {
@@ -132,6 +141,8 @@ int path_bytes(const char *path, unsigned *bytes) {
 }
 
 } // namespace
+
+using namespace gtos_file;
 
 extern "C" int open(const char *path, int flags, ...) {
   unsigned bytes = 0;
