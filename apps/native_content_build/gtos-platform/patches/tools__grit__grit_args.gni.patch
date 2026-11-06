@@ -1,0 +1,16 @@
+--- a/tools/grit/grit_args.gni
++++ b/tools/grit/grit_args.gni
+@@ -17 +17,2 @@
+-       (is_chromeos || is_fuchsia || is_linux || is_mac || is_win))
++       (is_chromeos || is_fuchsia || is_linux || is_mac || is_win ||
++        (is_gtos && use_aura)))
+@@ -88,6 +89,9 @@
+ if (is_fuchsia) {
+   _target_platform = "fuchsia"
+ }
++if (is_gtos) {
++  _target_platform = "gtos"
++}
+ if (is_ios) {
+   _target_platform = "ios"
+ }

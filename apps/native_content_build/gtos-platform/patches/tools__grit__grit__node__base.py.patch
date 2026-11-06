@@ -1,0 +1,11 @@
+--- a/tools/grit/grit/node/base.py
++++ b/tools/grit/grit/node/base.py
+@@ -524,6 +524,8 @@
+         value = target_platform == 'ios'
+       elif name == 'is_fuchsia':
+         value = target_platform == 'fuchsia'
++      elif name == 'is_gtos':
++        value = target_platform == 'gtos'
+       elif name == 'is_bsd':
+         value = 'bsd' in target_platform
+       elif name == 'is_posix':

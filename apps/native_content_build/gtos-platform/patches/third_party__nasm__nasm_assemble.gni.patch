@@ -1,0 +1,13 @@
+--- a/third_party/nasm/nasm_assemble.gni
++++ b/third_party/nasm/nasm_assemble.gni
+@@ -85,6 +85,10 @@
+     "--pragma",
+     "macho build_version $_target_platform,$_min_os_version_comma",
+   ]
++} else if (is_gtos) {
++  # GTOS uses the ELF32 i386 ABI; it does not use the host OS object format.
++  assert(current_cpu == "x86", "The GTOS NASM target is i386")
++  _nasm_flags = [ "-felf32" ]
+ } else if (is_posix || is_fuchsia) {
+   if (current_cpu == "x86") {
+     _nasm_flags = [ "-felf32" ]

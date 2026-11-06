@@ -1,0 +1,22 @@
+# Target identity remains GTOS, including GRIT resource condition evaluation.
+target_os = "gtos"
+target_cpu = "x86"
+enable_rust = true
+use_custom_libcxx = false
+use_llvm_libatomic = false
+is_component_build = false
+gtos_v8_bringup = true
+concurrent_links = 3
+
+# Use the existing Aura window lifecycle and Views implementations. This does
+# not supply an Ozone backend: its existing GTOS refusal remains in force.
+use_aura = true
+toolkit_views = true
+
+# No dynamic CDM loader or Linux capture/printing backend is supplied by GTOS.
+# Host toolchains retain their platform D-Bus default; target GTOS does not use it.
+# Ordinary media decoders and the rest of Content remain in the dependency graph.
+enable_library_cdms = false
+use_glib = false
+rtc_use_pipewire = false
+use_cups = false

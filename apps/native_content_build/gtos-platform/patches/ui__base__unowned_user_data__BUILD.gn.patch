@@ -1,0 +1,5 @@
+--- a/ui/base/unowned_user_data/BUILD.gn
++++ b/ui/base/unowned_user_data/BUILD.gn
+@@ -9 +9 @@
+-    is_win || is_apple || is_linux || is_chromeos || is_android || is_fuchsia)
++    is_win || is_apple || is_linux || is_chromeos || is_android || is_fuchsia || is_gtos)

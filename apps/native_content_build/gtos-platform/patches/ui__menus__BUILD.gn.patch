@@ -1,0 +1,5 @@
+--- a/ui/menus/BUILD.gn
++++ b/ui/menus/BUILD.gn
+@@ -7 +7 @@
+-       is_fuchsia || is_ios)
++       is_fuchsia || is_ios || is_gtos)
