@@ -1,0 +1,7 @@
+--- a/third_party/devtools-frontend/src/scripts/build/esbuild.js
++++ b/third_party/devtools-frontend/src/scripts/build/esbuild.js
+@@ -113,0 +114,4 @@
++    // A private source view can link to read-only upstream files. Keep importers
++    // under rootDir so the plugin can map generated imports into rootGenDir.
++    // Canonicalizing them first incorrectly searches the upstream source tree.
++    preserveSymlinks: true,

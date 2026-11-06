@@ -112,3 +112,20 @@ compiler rejection, deterministic recovery, and missing-header rejection.
 `codex-c-unit-u08` passed the 14 existing regressions; `codex-c-gn-g16` retained
 the complete 21,680-target Content graph with Rust enabled. No Content object
 or runtime acceptance is implied by these component tests.
+
+DevTools' esbuild invocation preserves symlink paths. Without this, a source
+importer resolves back into the shared checkout and the plugin searches there
+for `locales.js` instead of the private GN generation directory. The real
+Ninja failure is retained as `codex-c-ninja-n04` (47th action).
+Guarded `codex-c-bundle-test-b01` runs the actual upstream script as a failing
+calibration and the patched script for six checks: generated import resolution,
+dependency paths, a conflicting canonical-source neighbour, ordinary files,
+missing input, and malformed input. Successful bundles are imported by Node and
+their actual exported value is checked; no replacement bundler model is used.
+
+For private symlink views, Node also needs
+`NODE_OPTIONS="--preserve-symlinks --preserve-symlinks-main"` so its own module
+and tool resolution stays in that view. The host supply copies pinned Node,
+TypeScript, esbuild, Rust tools and clang-format into private ext4 paths, checks
+their SHA256, and grants execution to those exact files. Source checkouts remain
+read-only. These tools are build-host tools, not GTOS runtime dependencies.
