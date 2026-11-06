@@ -418,3 +418,30 @@ cases log and terminate with SIGILL. Default int80 objects compile separately
 without the injected endpoint; the original host source and 19 platform units
 also pass. The endpoint models VM outcomes, so this does not prove hardware
 page protection, physical accounting, GTOS guest execution or Content C1/C2/C3.
+
+The subsequent `codex-c-perfetto-memory-guest-build-g02` / `run-r03` supplies
+that missing hardware evidence for this component. The actual backend, without
+its test endpoint, runs at CPL3 in a current-source diagnostic kernel. O0/32MiB
+and O2/64MiB each execute 114 consumer comparisons, then four separate modules
+trigger exact lower-guard, upper-guard, uncommitted-read and released-write
+page faults. Every exit/fault Reap restores the original physical-frame count
+(0x1d77 and 0x3d70 respectively). The normal case makes 147 int80 calls; fault
+cases make 3/3/2/4. A deliberately wrong consumer causes native kernel failure
+and QEMU 65; the successful guests return 33. Each positive transcript also
+passes 123 real-judge missing/duplicate/changed-field rejection controls.
+
+The first carrier used the default integer-only FP policy: O0 completed but
+O2 faulted with #UD before reservation. The carrier now explicitly activates
+the existing `NativeFpSse2` policy, matching Content's SSE2 user profile. All
+twelve user ELF byte identities are identical between those builds, so the
+successful O2 result is tied to that carrier-policy correction, not weakened
+checks or a changed user backend. Old failures remain. The observer kernel
+uses actual GDT/runtime/VM/FP/page-fault/Reap sources; it substitutes no memory
+policy. This qualifies the page component in that diagnostic profile, not the
+ordinary desktop, all libc services, a browser or Content C1/C2/C3.
+
+The formal `codex-c-ninja-n45` graph also compiles the real GTOS page backend,
+signal policy and thread checker into their native objects with SDK depfiles
+and split debug outputs. `n44` still stops on other platform services such as
+file permissions/path removal, pipes, ioctl and system metadata. These native
+dependency objects are not the formal shell delegate C1 object.
