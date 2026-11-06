@@ -1,0 +1,14 @@
+--- a/build/toolchain/gtos/BUILD.gn
++++ b/build/toolchain/gtos/BUILD.gn
+@@ -27 +27,3 @@
+-      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      # SDK headers are system includes, but their changes must invalidate objects.
++      # -MMD would omit them from both Ninja's dependency log and the evidence.
++      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+@@ -36 +38 @@
+-      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+@@ -100,0 +103 @@
++    if (toolchain_has_rust) {
+@@ -108 +111,0 @@
+-    if (toolchain_has_rust) {

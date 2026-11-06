@@ -98,3 +98,17 @@ ELF32/i386 objects and producing depfiles at both optimization levels.
 
 Full raw stage records remain in the existing packet's `evidence/codex-c-*`
 records, including failed attempts and the preceding GN-only generation.
+
+The actual GTOS C/C++ toolchain now uses `-MD`, so SDK headers passed through
+`-isystem` participate in Ninja invalidation. Run Ninja with `-d keepdepfile` to
+retain the textual dependency evidence. Rust-only tool variables are scoped to
+the Rust condition; the C/C++ toolchain also generates when Rust is disabled.
+
+`tests/gtos_toolchain_dependencies_test.py --view ... --gn ... --ninja ...
+--clang-bin ... --out ...` builds two real ELF32 objects through that toolchain.
+On 2026-11-07, guarded `codex-c-dependency-test-d02` passed all six checks:
+complete dependency records, no unnecessary rebuild, SDK change invalidation,
+compiler rejection, deterministic recovery, and missing-header rejection.
+`codex-c-unit-u08` passed the 14 existing regressions; `codex-c-gn-g16` retained
+the complete 21,680-target Content graph with Rust enabled. No Content object
+or runtime acceptance is implied by these component tests.
