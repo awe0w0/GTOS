@@ -1,0 +1,23 @@
+--- a/third_party/dawn/src/dawn/common/DynamicLib.cpp
++++ b/third_party/dawn/src/dawn/common/DynamicLib.cpp
+@@ -41,0 +42,2 @@
++#elif DAWN_PLATFORM_IS(GTOS)
++// GTOS loads statically linked native executables, not shared libraries.
+@@ -108,0 +111,4 @@ bool DynamicLib::Open(const std::string& filename, std::string* error) {
++#elif DAWN_PLATFORM_IS(GTOS)
++    if (error != nullptr) {
++        *error = "GTOS dynamic libraries are unavailable: " + filename;
++    }
+@@ -132,0 +139,4 @@ bool DynamicLib::OpenLoaded(const std::string& filename, std::string* error) {
++#elif DAWN_PLATFORM_IS(GTOS)
++    if (error != nullptr) {
++        *error = "GTOS dynamic libraries are unavailable: " + filename;
++    }
+@@ -169,0 +180,2 @@ void DynamicLib::Close() {
++#elif DAWN_PLATFORM_IS(GTOS)
++        DAWN_UNREACHABLE();  // Open/OpenLoaded never create an owned handle.
+@@ -193,0 +206,4 @@ void* DynamicLib::GetProc(const std::string& procName, std::string* error) const
++#elif DAWN_PLATFORM_IS(GTOS)
++    if (error != nullptr) {
++        *error = "GTOS dynamic symbols are unavailable: " + procName;
++    }

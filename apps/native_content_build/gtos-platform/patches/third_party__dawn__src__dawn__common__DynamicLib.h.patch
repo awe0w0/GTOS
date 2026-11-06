@@ -1,0 +1,11 @@
+--- a/third_party/dawn/src/dawn/common/DynamicLib.h
++++ b/third_party/dawn/src/dawn/common/DynamicLib.h
+@@ -30,0 +31 @@
++#include <cstddef>
+@@ -42 +43 @@
+-#else
++#elif !DAWN_PLATFORM_IS(GTOS)
+@@ -90,0 +92,3 @@ class DynamicLib {
++#elif DAWN_PLATFORM_IS(GTOS)
++    // Static executables have no dynamic-library handles to own.
++    std::nullptr_t mHandle = nullptr;

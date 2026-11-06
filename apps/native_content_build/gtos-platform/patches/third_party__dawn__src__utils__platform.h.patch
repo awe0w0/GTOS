@@ -1,0 +1,13 @@
+--- a/third_party/dawn/src/utils/platform.h
++++ b/third_party/dawn/src/utils/platform.h
+@@ -52 +52,4 @@
+-#if defined(_WIN32) || defined(_WIN64)
++#if defined(__GTOS__)
++#define DAWN_PLATFORM_IS_GTOS 1
++
++#elif defined(_WIN32) || defined(_WIN64)
+@@ -200,0 +204,4 @@ static_assert(sizeof(sizeof(char)) == 4, "Expect sizeof(size_t) == 4");
++#if !defined(DAWN_PLATFORM_IS_GTOS)
++#define DAWN_PLATFORM_IS_GTOS 0
++#endif
++

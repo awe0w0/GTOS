@@ -1,0 +1,5 @@
+--- a/third_party/dawn/src/dawn/common/SystemHandle.h
++++ b/third_party/dawn/src/dawn/common/SystemHandle.h
+@@ -47 +47 @@ class SystemHandle : public NonCopyable {
+-#elif DAWN_PLATFORM_IS(POSIX)
++#elif DAWN_PLATFORM_IS(POSIX) || DAWN_PLATFORM_IS(GTOS)

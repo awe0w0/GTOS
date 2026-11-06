@@ -1,0 +1,8 @@
+--- a/third_party/dawn/src/dawn/common/SystemHandle.cpp
++++ b/third_party/dawn/src/dawn/common/SystemHandle.cpp
+@@ -39 +39 @@
+-#elif DAWN_PLATFORM_IS(POSIX)
++#elif DAWN_PLATFORM_IS(POSIX) || DAWN_PLATFORM_IS(GTOS)
+@@ -89 +89 @@ inline void CloseHandle(zx_handle_t handle) {
+-#elif DAWN_PLATFORM_IS(POSIX)
++#elif DAWN_PLATFORM_IS(POSIX) || DAWN_PLATFORM_IS(GTOS)

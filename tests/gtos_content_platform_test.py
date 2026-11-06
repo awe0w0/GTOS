@@ -161,11 +161,13 @@ class PrivatePatchTest(unittest.TestCase):
         root = args.out / 'changed-input'
         root.mkdir()
         (root / '.gn').write_text('')
-        target = root / 'ui/menus/BUILD.gn'
+        rel = next(iter(self.module.INPUTS))
+        target = root / rel
         target.parent.mkdir(parents=True)
         target.write_text('changed input\n')
-        with self.assertRaisesRegex(SystemExit, 'platform input changed: ui/menus/BUILD.gn'):
+        with self.assertRaises(SystemExit) as refused:
             self.module.apply(root)
+        self.assertEqual(str(refused.exception), 'platform input changed: ' + rel)
         self.assertEqual(target.read_text(), 'changed input\n')
         self.assertFalse((root / 'gtos-platform.json').exists())
 

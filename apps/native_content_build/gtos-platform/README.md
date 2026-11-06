@@ -10,6 +10,13 @@ ELF32 for GTOS NASM, and give GRIT an explicit GTOS identity. GRIT must receive
 `-t gtos`; otherwise resource generation can inherit the build host's platform.
 GTOS is neither Linux nor POSIX in the resource condition evaluator.
 
+Dawn's common library now has an explicit GTOS platform identity. Its handle
+ownership uses the existing native POSIX file subset's `dup`/`close` contract;
+environment access uses the existing libc environment functions. Optional
+executable/module paths remain unavailable because GTOS has no such query ABI.
+Dynamic library open/symbol lookup explicitly fail with a diagnostic: this
+port does not claim a shared-library loader or a working Dawn GPU backend.
+
 `args.gn` selects existing Aura/Views code and disables unsupported dynamic CDMs,
 GLib, CUPS and Linux PipeWire capture. Host toolchains keep their platform D-Bus
 default; GTOS does not become Linux. It does not implement the missing GTOS Ozone
@@ -35,7 +42,8 @@ the source trees and SDK are read-only inputs.
    Material arguments: `gtos_clang_bin`, `gtos_clang_include`, `gtos_sdk_dir`,
    `gtos_libcxx_include`, `gtos_compiler_rt_source_dir`, `gtos_png_source_dir`,
    `gtos_png_skia_source_dir`, `gtos_png_gif_source_dir`,
-   `gtos_png_wuffs_include_dir`, and `gtos_libxml_config_dir`.
+   `gtos_png_wuffs_include_dir`, `gtos_libxml_config_dir`, and
+   `gtos_posix_file_include` (the native_libxml_file/include directory).
 
 Both target switches matter. `--root-target` selects the entry, but by itself
 still defines other targets in loaded BUILD files. `--root-pattern` retains the
@@ -58,10 +66,25 @@ also proves that root-pattern cannot hide a missing transitive dependency.
 The small GN test toolchain only supplies surrounding action infrastructure;
 this is configuration validation, not assembler execution or guest acceptance.
 
-2026-11-06: `codex-c-unit-u05` passed all 10 tests under the original guard.
-The formal Content run advanced from the `ui/menus` platform assertion through
-the existing Aura/Views dependency path. The broad graph reached an unrelated
-Chrome supervised-user assertion; the focused graph excluded that branch and
-reached Linux host code-generator configuration. No Content CXX object, link or
-GTOS Content entry has yet been produced. Full raw stage records remain in the
-existing packet's `evidence/codex-c-*` records, including failed attempts.
+The Dawn tests compile the actual patched DynamicLib, SystemHandle and
+SystemUtils implementations plus upstream logging. Build with
+`tests/gtos_dawn_platform_build.py --view ... --clang ... --gcc13-root ... --out ...`.
+Its manifest records the two binaries and matching loader. Run them only in a
+second guard stage after checking those identities, with the build directory
+read-only and a separate writable run root. The host tests exercise the real
+GTOS branches but use host libc calls, so they do not qualify GTOS syscalls.
+`tests/gtos_dawn_target_build.py --view ... --clang ... --out ...` separately
+compiles those four files with the actual GTOS SDK and `-nostdinc`, checking
+ELF32/i386 objects and producing depfiles at both optimization levels.
+
+2026-11-06, original-guard results:
+
+- `codex-c-unit-u06`: all 10 GN/GRIT/refusal tests passed.
+- `codex-c-dawn-build-b04` / `codex-c-dawn-run-r01`: O0/O2 each ran 190 checks,
+  zero failures, including repeated handle cleanup and unsupported operations.
+- `codex-c-dawn-target-t01`: eight real GTOS ELF32/i386 objects plus depfiles.
+- `codex-c-gn-g14`: the formal Content graph generated 21,680 targets from
+  2,571 files. This still does not provide a Content object, link or GTOS entry.
+
+Full raw stage records remain in the existing packet's `evidence/codex-c-*`
+records, including failed attempts and the preceding GN-only generation.

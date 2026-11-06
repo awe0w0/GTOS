@@ -1,0 +1,13 @@
+--- a/third_party/dawn/src/dawn/common/SystemUtils.cpp
++++ b/third_party/dawn/src/dawn/common/SystemUtils.cpp
+@@ -52,0 +53 @@
++#include <cstdlib>
+@@ -89 +90 @@ bool SetEnvironmentVar(const char* variableName, const char* value) {
+-#elif DAWN_PLATFORM_IS(POSIX)
++#elif DAWN_PLATFORM_IS(POSIX) || DAWN_PLATFORM_IS(GTOS)
+@@ -152 +153 @@ std::optional<std::string> GetExecutablePath() {
+-#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
++#elif DAWN_PLATFORM_IS(EMSCRIPTEN) || DAWN_PLATFORM_IS(GTOS)
+@@ -206 +207 @@ std::optional<std::string> GetModulePath() {
+-#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
++#elif DAWN_PLATFORM_IS(EMSCRIPTEN) || DAWN_PLATFORM_IS(GTOS)
