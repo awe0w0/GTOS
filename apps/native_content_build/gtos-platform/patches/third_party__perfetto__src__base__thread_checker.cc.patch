@@ -1,0 +1,11 @@
+--- a/third_party/perfetto/src/base/thread_checker.cc
++++ b/third_party/perfetto/src/base/thread_checker.cc
+@@ -32,6 +32,8 @@ constexpr ThreadID kDetached{};
+ ThreadID CurrentThreadId() {
+ #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+   return ::GetCurrentThreadId();
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  return GetThreadId();
+ #else
+   return pthread_self();
+ #endif

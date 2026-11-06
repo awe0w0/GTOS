@@ -1,0 +1,22 @@
+--- a/third_party/perfetto/include/perfetto/ext/base/thread_checker.h
++++ b/third_party/perfetto/include/perfetto/ext/base/thread_checker.h
+@@ -19,7 +19,9 @@
+ 
+ #include "perfetto/base/build_config.h"
+ 
+-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++#include "perfetto/base/thread_utils.h"
++#elif !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+ #include <pthread.h>
+ #endif
+ #include <atomic>
+@@ -35,6 +37,8 @@ namespace base {
+ 
+ #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+ using ThreadID = unsigned long;
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++using ThreadID = PlatformThreadId;
+ #else
+ using ThreadID = pthread_t;
+ #endif

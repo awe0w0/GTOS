@@ -358,3 +358,21 @@ the diagnostic and terminate with SIGILL. The logging sink and Linux reporting
 are test dependencies. The original host source compiles and accidental host
 selection of the native source is refused. This verifies the explicit failure
 policy, not a working GTOS signal service or a guest execution.
+
+Perfetto's thread identity and ThreadChecker now use the existing native
+libc++ `__libcpp_thread_get_current_id` provider on GTOS. Its ABI returns a
+positive, process-scoped native task ID; zero is rejected because it is the
+checker's detached sentinel. Other OS branches still use their original
+providers. This adds neither a pthread facade nor thread creation capability.
+
+`codex-c-perfetto-thread-build-t04` / `run-r04` test the real checker and
+inline identity adapter at O0/O2 with an injected provider: 145 checks per
+normal image cover identity changes, copy/assignment, repeated detach/rebind
+and the full unsigned ID width. Two wrong-expectation images return 1; two
+zero-ID requests log and terminate with SIGILL. The host branch also compiles.
+The first test supply lacked errno logging symbols; those fixture dependencies
+were corrected. An optimized rejection-only fixture then had a zero-file-size
+RW/BSS segment and faulted before reporting. The test linker layout now uses
+an explicit, file-backed RW segment; all six images meet their real verdicts.
+Old failures remain. These units use Linux reporting and an injected identity
+boundary, so they do not qualify the native kernel/thread backend or C1/C2/C3.

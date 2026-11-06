@@ -1,0 +1,29 @@
+--- a/third_party/perfetto/include/perfetto/base/thread_utils.h
++++ b/third_party/perfetto/include/perfetto/base/thread_utils.h
+@@ -27,6 +27,9 @@
+ // Prototype extracted from the Windows SDK to avoid including windows.h.
+ __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId();
+ }
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++#include <__external_threading>
++#include "perfetto/base/logging.h"
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA)
+ #include <zircon/types.h>
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_QNX)
+@@ -51,6 +54,15 @@ namespace perfetto {
+ namespace base {
+ 
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++using PlatformThreadId = std::__libcpp_thread_id;
++inline PlatformThreadId GetThreadId() {
++  // The existing native libc++ provider validates the process/thread ABI.
++  // Zero belongs to ThreadChecker's detached state, never to a live owner.
++  const auto id = std::__libcpp_thread_get_current_id();
++  PERFETTO_CHECK(id != 0);
++  return id;
++}
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+     PERFETTO_BUILDFLAG(PERFETTO_OS_QNX)
+ using PlatformThreadId = pid_t;
+ inline PlatformThreadId GetThreadId() {

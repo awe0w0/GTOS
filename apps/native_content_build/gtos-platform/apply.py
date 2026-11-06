@@ -13,6 +13,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/perfetto/include/perfetto/base/thread_utils.h': 'a2a30174d7abacbb8c2a8fc179982b6af2e66609ddbff7ebf550a587f72fced7',
+    'third_party/perfetto/include/perfetto/ext/base/thread_checker.h': 'c8664a4a3d9ca94a5e740ecb7c388049647edb66d181bbb1fa324c9423af3a77',
+    'third_party/perfetto/src/base/thread_checker.cc': '9a550bb7d2b5b89fc5e6e031f952222077c6ae4bb513ff75c278905464853e35',
     'build/config/gtos/BUILD.gn': 'aacb5f51f70ea5938d172639d7c360f9817ab4799c1d6a42b56cadc9bbf6d0a5',
     'third_party/perfetto/include/perfetto/base/build_config.h': '01c8b46ffc3aeb50287c3821249ba6c3ce662f0fe1a2f17958e28cac33bfc62c',
     'third_party/perfetto/src/base/BUILD.gn': '718b055ac9e786276fb6263b76f761b7dc2a6e133199040e97f2f6ea00fb06f1',
