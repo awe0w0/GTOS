@@ -77,3 +77,17 @@ images are recorded in the build manifest; the run has its own writable root.
 These are adapter units with injected kernel/allocation outcomes and Linux
 reporting, not a GTOS guest test or complete POSIX qualification. The new
 adapter still needs runtime linking and a real CPL3/ATA consumer.
+
+The handle subset now also implements `fstat`, `fsync` and `ftruncate` using
+HANDLE_INFO, SYNC and TRUNCATE in the existing native ABI. Both `stat` and
+`fstat` validate response status/version/type before touching caller storage.
+Only native file type and unsigned 32-bit size are projected; ownership,
+timestamps and permission enforcement remain unavailable. Truncate rejects
+negative sizes and values beyond the native 32-bit length field before I/O.
+
+`codex-c-directory-build-d04` / `run-r04` execute 245 checks at each O0/O2
+profile, retaining the directory/resource tests and adding exact wire requests,
+zero/maximum sizes, caller-error zero-call checks, native/unknown error mapping,
+malformed replies and unchanged failure outputs. The altered-expectation image
+fails with 246 checks. Default int80 production objects compile separately.
+This is still an injected-endpoint adapter unit, not new guest I/O evidence.

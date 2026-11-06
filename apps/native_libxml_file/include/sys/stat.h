@@ -34,6 +34,7 @@ struct stat {
 extern "C" {
 #endif
 int stat(const char *path, struct stat *buffer);
+int fstat(int fd, struct stat *buffer);
 #ifdef __cplusplus
 }
 #endif

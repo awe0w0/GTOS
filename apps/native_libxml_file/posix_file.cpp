@@ -6,8 +6,8 @@
  * reads a file is talking to the same file service every other GTOS consumer uses — the same open/read/seek/dup/close the native FILE
  * layer calls through LLVM libc's platform_file.cpp — rather than to a second, parallel file layer.
  *
- * What this is not: a POSIX runtime. There is no permission model (the third argument of open() is accepted and ignored), no fstat
- * projection here yet, no isatty, no O_NONBLOCK, no fd inheritance beyond the ABI's own owner-scoped handles. Each of those
+ * What this is not: a POSIX runtime. There is no permission model (the third argument of open() is accepted and ignored),
+ * no isatty, no O_NONBLOCK, no fd inheritance beyond the ABI's own owner-scoped handles. Each of those
  * absences is visible to the caller as a link error or a refused flag, not as a declaration that quietly resolves to nothing.
  *
  * Handle space: a returned fd is the ABI's own handle, so it composes with the native FILE layer (fileno() returns the same number) and
@@ -222,8 +222,44 @@ extern "C" int stat(const char *path, struct stat *buffer) {
                                     reinterpret_cast<unsigned>(&info), sizeof(info)};
   const int result = call(GTOS_SYS_FILE_STAT, &request, sizeof(request));
   if (result < 0) return translate(result);
+  if (result != 0 || info.version != GTOS_FILE_ABI_VERSION ||
+      (info.type != GTOS_FILE_TYPE_DIRECTORY && info.type != GTOS_FILE_TYPE_REGULAR)) return fail_with(EIO);
   memset(buffer, 0, sizeof(*buffer));
   buffer->st_mode = info.type == GTOS_FILE_TYPE_DIRECTORY ? S_IFDIR : S_IFREG;
   buffer->st_size = static_cast<long long>(info.bytes);
   return 0;
+}
+
+extern "C" int fstat(int fd, struct stat *buffer) {
+  if (fd <= 0) return fail_with(EBADF);
+  if (buffer == 0) return fail_with(EINVAL);
+  GtosFileInfo info{};
+  const GtosFileInfoRequest request{GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd),
+                                    reinterpret_cast<unsigned>(&info), sizeof(info)};
+  const int result = call(GTOS_SYS_FILE_HANDLE_INFO, &request, sizeof(request));
+  if (result < 0) return translate(result);
+  if (result != 0 || info.version != GTOS_FILE_ABI_VERSION ||
+      (info.type != GTOS_FILE_TYPE_DIRECTORY && info.type != GTOS_FILE_TYPE_REGULAR)) return fail_with(EIO);
+  memset(buffer, 0, sizeof(*buffer));
+  buffer->st_mode = info.type == GTOS_FILE_TYPE_DIRECTORY ? S_IFDIR : S_IFREG;
+  buffer->st_size = static_cast<long long>(info.bytes);
+  return 0;
+}
+
+extern "C" int fsync(int fd) {
+  if (fd <= 0) return fail_with(EBADF);
+  const GtosFileControlRequest request{GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd)};
+  const int result = call(GTOS_SYS_FILE_SYNC, &request, sizeof(request));
+  return result < 0 ? translate(result) : result == 0 ? 0 : fail_with(EIO);
+}
+
+extern "C" int ftruncate(int fd, off_t length) {
+  if (fd <= 0) return fail_with(EBADF);
+  if (length < 0) return fail_with(EINVAL);
+  // The native wire format carries an unsigned 32-bit file size.
+  if (static_cast<unsigned long long>(length) > 0xFFFFFFFFULL) return fail_with(EFBIG);
+  const GtosFileTruncateRequest request{GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd),
+                                       static_cast<unsigned>(length)};
+  const int result = call(GTOS_SYS_FILE_TRUNCATE, &request, sizeof(request));
+  return result < 0 ? translate(result) : result == 0 ? 0 : fail_with(EIO);
 }

@@ -1,5 +1,5 @@
 /*
- * The subset of <unistd.h> this project implements: read, write, lseek, close, dup. Anything else a libxml2 source names stays absent on
+ * The subset of <unistd.h> this project implements: read, write, lseek, close, dup, fsync and ftruncate. Other calls stay absent on
  * purpose — an #include that resolves to a declaration with no implementation behind it is exactly the kind of "present but not real"
  * this unit exists to avoid.
  */
@@ -24,6 +24,8 @@ ssize_t write(int fd, const void *buffer, size_t bytes);
 off_t lseek(int fd, off_t offset, int whence);
 int close(int fd);
 int dup(int fd);
+int fsync(int fd);
+int ftruncate(int fd, off_t length);
 #ifdef __cplusplus
 }
 #endif

@@ -10,6 +10,8 @@
 namespace {
 int error_slot, failures, checks, calls, allocations, releases;
 int open_result = 41, close_result, read_error, rewind_error, malformed, cursor, peer_cursor;
+int metadata_status, metadata_shape;
+unsigned info_type = GTOS_FILE_TYPE_REGULAR, info_bytes = 1234, truncate_bytes;
 bool allocation_failure;
 unsigned allocated, owned;
 const char *expected_path = "/fixtures";
@@ -53,6 +55,36 @@ extern "C" void free(void *value) noexcept {
 
 extern "C" int GtosPosixFileTestCall(unsigned operation, const void *data, unsigned bytes) {
   ++calls;
+  if (operation == GTOS_SYS_FILE_STAT || operation == GTOS_SYS_FILE_HANDLE_INFO) {
+    unsigned output;
+    if (operation == GTOS_SYS_FILE_STAT) {
+      const auto &request = *static_cast<const GtosFileStatRequest *>(data);
+      check(bytes == sizeof(request) && request.version == 1 && request.path_bytes == expected_path_bytes);
+      check(memcmp(reinterpret_cast<const void *>(request.path), expected_path, expected_path_bytes) == 0);
+      check(request.result_bytes == sizeof(GtosFileInfo));
+      output = request.result;
+    } else {
+      const auto &request = *static_cast<const GtosFileInfoRequest *>(data);
+      check(bytes == sizeof(request) && request.version == 1 && request.handle == 41);
+      check(request.result_bytes == sizeof(GtosFileInfo));
+      output = request.result;
+    }
+    if (metadata_status) return metadata_status;
+    auto &info = *reinterpret_cast<GtosFileInfo *>(output);
+    info.version = metadata_shape == 1 ? 0 : 1;
+    info.type = metadata_shape == 2 ? 77 : info_type;
+    info.bytes = info_bytes;
+    return 0;
+  }
+  if (operation == GTOS_SYS_FILE_SYNC || operation == GTOS_SYS_FILE_TRUNCATE) {
+    const auto &request = *static_cast<const GtosFileControlRequest *>(data);
+    check(request.version == 1 && request.handle == 41);
+    if (operation == GTOS_SYS_FILE_TRUNCATE) {
+      const auto &sized = *static_cast<const GtosFileTruncateRequest *>(data);
+      check(bytes == sizeof(sized) && sized.bytes == truncate_bytes);
+    } else check(bytes == sizeof(request));
+    return metadata_status;
+  }
   if (operation == GTOS_SYS_FILE_DIR_OPEN) {
     const GtosFilePathRequest &request = *static_cast<const GtosFilePathRequest *>(data);
     check(bytes == sizeof(request) && request.version == 1 && request.path_bytes == expected_path_bytes);
@@ -175,6 +207,58 @@ extern "C" int DirectoryTestMain() {
   check(write(-1, storage, 1) == -1 && errno == EBADF);
   check(lseek(41, 0, 999) == -1 && errno == EINVAL && calls == after);
   check(allocations == releases + 1); // The failed allocation owned no buffer.
+  struct stat info, sentinel;
+  memset(&sentinel, 0xA5, sizeof(sentinel));
+  info = sentinel;
+  const int metadata_before = calls;
+  check(fstat(-1, &info) == -1 && errno == EBADF);
+  check(fstat(41, 0) == -1 && errno == EINVAL);
+  check(fsync(0) == -1 && errno == EBADF);
+  check(ftruncate(-1, 0) == -1 && errno == EBADF);
+  check(ftruncate(41, -1) == -1 && errno == EINVAL);
+  if (sizeof(off_t) > 4)
+    check(ftruncate(41, static_cast<off_t>(0x100000000ULL)) == -1 && errno == EFBIG);
+  check(calls == metadata_before && memcmp(&info, &sentinel, sizeof(info)) == 0);
+  const unsigned types[] = {GTOS_FILE_TYPE_REGULAR, GTOS_FILE_TYPE_DIRECTORY};
+  for (unsigned type : types) {
+    info_type = type;
+    info_bytes = 0xFFFFFFFF;
+    errno = 88;
+    check(fstat(41, &info) == 0 && errno == 88);
+    check(info.st_size == 0xFFFFFFFFLL && (type == GTOS_FILE_TYPE_REGULAR ? S_ISREG(info.st_mode) : S_ISDIR(info.st_mode)));
+    check(info.st_uid == 0 && info.st_gid == 0 && info.st_ino == 0 && info.st_atime == 0);
+    check(stat(expected_path, &info) == 0 && info.st_size == 0xFFFFFFFFLL && errno == 88);
+  }
+  const int statuses[] = {-5, -9, -19, -12345, 1};
+  for (int status : statuses) {
+    metadata_status = status;
+    info = sentinel;
+    check(fstat(41, &info) == -1 && errno == (status == -9 ? EBADF : status == -19 ? ENODEV : EIO));
+    check(memcmp(&info, &sentinel, sizeof(info)) == 0);
+    check(stat(expected_path, &info) == -1 && memcmp(&info, &sentinel, sizeof(info)) == 0);
+    check(fsync(41) == -1 && errno == (status == -9 ? EBADF : status == -19 ? ENODEV : EIO));
+    truncate_bytes = 0;
+    check(ftruncate(41, 0) == -1 && errno == (status == -9 ? EBADF : status == -19 ? ENODEV : EIO));
+  }
+  metadata_status = 0;
+  const int shapes[] = {1, 2};
+  for (int shape : shapes) {
+    metadata_shape = shape;
+    info = sentinel;
+    check(fstat(41, &info) == -1 && errno == EIO && memcmp(&info, &sentinel, sizeof(info)) == 0);
+    check(stat(expected_path, &info) == -1 && errno == EIO && memcmp(&info, &sentinel, sizeof(info)) == 0);
+  }
+  metadata_shape = 0;
+  errno = 66;
+  check(fsync(41) == 0 && errno == 66);
+  truncate_bytes = 0;
+  check(ftruncate(41, 0) == 0 && errno == 66);
+  truncate_bytes = 4097;
+  check(ftruncate(41, 4097) == 0 && errno == 66);
+  if (sizeof(off_t) > 4) {
+    truncate_bytes = 0xFFFFFFFF;
+    check(ftruncate(41, static_cast<off_t>(0xFFFFFFFFULL)) == 0 && errno == 66);
+  }
 #if defined(GTOS_DIRECTORY_TEST_BAD_EXPECTATION)
   check(cursor == 99);
 #endif
