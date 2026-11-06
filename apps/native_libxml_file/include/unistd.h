@@ -15,6 +15,7 @@
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
+#define F_OK 0
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +27,9 @@ int close(int fd);
 int dup(int fd);
 int fsync(int fd);
 int ftruncate(int fd, off_t length);
+int access(const char *path, int mode);
+int rmdir(const char *path);
+int unlink(const char *path);
 #ifdef __cplusplus
 }
 #endif

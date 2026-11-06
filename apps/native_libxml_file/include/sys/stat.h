@@ -35,6 +35,8 @@ extern "C" {
 #endif
 int stat(const char *path, struct stat *buffer);
 int fstat(int fd, struct stat *buffer);
+// Creation permissions are accepted but unenforced, as with native open().
+int mkdir(const char *path, unsigned mode);
 #ifdef __cplusplus
 }
 #endif

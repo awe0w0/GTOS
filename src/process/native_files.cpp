@@ -94,6 +94,14 @@ int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t ope
         error=Path(space,request.new_path,request.new_bytes,1);if (error) return error;
         return store.Rename(paths[0],paths[1]);
     }
+    case GTOS_SYS_FILE_REMOVE_TYPED: {
+        GtosFileRemoveTypedRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
+        if (request.type!=GTOS_FILE_TYPE_REGULAR&&request.type!=GTOS_FILE_TYPE_DIRECTORY) return GTOS_FILE_ERR_INVALID;
+        error=Path(space,request.path,request.path_bytes);if (error) return error;
+        FileStore::Info value={};error=store.Stat(paths[0],value);if (error) return error;
+        if (value.type!=request.type) return request.type==GTOS_FILE_TYPE_REGULAR?LFS_ERR_ISDIR:LFS_ERR_NOTDIR;
+        return store.Remove(paths[0]);
+    }
     case GTOS_SYS_FILE_STAT: {
         GtosFileStatRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
         error=Path(space,request.path,request.path_bytes);if (error) return error;

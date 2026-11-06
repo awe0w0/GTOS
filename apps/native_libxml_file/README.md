@@ -91,3 +91,37 @@ zero/maximum sizes, caller-error zero-call checks, native/unknown error mapping,
 malformed replies and unchanged failure outputs. The altered-expectation image
 fails with 246 checks. Default int80 production objects compile separately.
 This is still an injected-endpoint adapter unit, not new guest I/O evidence.
+
+## Typed paths and owner-scoped handles (2026-11-07)
+
+The private subset now implements `mkdir`, existence-only `access`, `unlink`
+and `rmdir`. Deletion uses additive native operation `0x4760` with an exact
+16-byte typed request. The existing untyped REMOVE operation is unchanged.
+`NativeFiles` snapshots and validates the request, then checks type and removes
+under its one BSP interrupt guard. This avoids a userspace stat/remove race.
+There is no SMP filesystem concurrency claim. Wrong-kind requests preserve the
+entry and return EISDIR/ENOTDIR; the underlying store still rejects nonempty
+directories and propagates actual storage errors.
+
+Native handles already belong to one process and cannot be inherited by a
+new ELF process. `O_CLOEXEC` accepts that enforced property; `F_GETFD` validates
+the handle, and `F_SETFD` accepts only CLOEXEC. `F_DUPFD_CLOEXEC` supports the
+native `dup` operation with minimum zero; other minima and inheritable/nonblock
+requests are refused. This is a bounded native-handle projection, not a POSIX
+descriptor allocation or fork/exec implementation. Creation permissions remain
+accepted but unenforced, and access checks only existence.
+
+`codex-c-directory-build-d05` / `run-r05` run 399 checks at O0/O2 against the
+actual adapters with an injected syscall boundary, plus a 400-check wrong
+expectation that fails. Four default int80 objects compile separately.
+`codex-c-posix-path-guest-build-p02` / `run-r01` then build the current native
+runtime, NativeFiles, complete LittleFS and ATA driver with real CPL3 consumers.
+Each O0/32 MiB and O2/64 MiB run repeats 54 checks across two process lifetimes:
+create/write/sync/stat/truncate/dup-shared-offset/close, typed deletion, ten raw
+validation refusals and legacy REMOVE. Each process makes 53 file endpoint
+calls, leaves zero handles, and restores its frame baseline (`0x1d79`/`0x3d71`).
+Separate unavailable runs distinguish an attached unmounted endpoint (five
+service calls) from a detached endpoint (zero), although both return ENODEV.
+The wrong consumer is rejected with QEMU 65; four valid configurations return
+33. Scratch-disk prefix/suffix guards remain unchanged. This is new component
+guest evidence, not a new legacy qualification lock or Content acceptance.

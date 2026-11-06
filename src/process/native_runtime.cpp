@@ -611,6 +611,7 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     case GTOS_SYS_FILE_STAT:
     case GTOS_SYS_FILE_MKDIR:
     case GTOS_SYS_FILE_REMOVE:
+    case GTOS_SYS_FILE_REMOVE_TYPED:
     case GTOS_SYS_FILE_RENAME:
     case GTOS_SYS_FILE_DIR_OPEN:
     case GTOS_SYS_FILE_DIR_READ:

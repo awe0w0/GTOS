@@ -12,6 +12,8 @@ int error_slot, failures, checks, calls, allocations, releases;
 int open_result = 41, close_result, read_error, rewind_error, malformed, cursor, peer_cursor;
 int metadata_status, metadata_shape;
 unsigned info_type = GTOS_FILE_TYPE_REGULAR, info_bytes = 1234, truncate_bytes;
+unsigned removed_type;
+int duplicate_result = 42;
 bool allocation_failure;
 unsigned allocated, owned;
 const char *expected_path = "/fixtures";
@@ -55,6 +57,29 @@ extern "C" void free(void *value) noexcept {
 
 extern "C" int GtosPosixFileTestCall(unsigned operation, const void *data, unsigned bytes) {
   ++calls;
+  if (operation == GTOS_SYS_FILE_OPEN) {
+    const auto &request = *static_cast<const GtosFileOpenRequest *>(data);
+    check(bytes == sizeof(request) && request.version == 1 && request.path_bytes == expected_path_bytes);
+    check(memcmp(reinterpret_cast<const void *>(request.path), expected_path, expected_path_bytes) == 0);
+    check(request.flags == GTOS_FILE_READ);
+    return open_result;
+  }
+  if (operation == GTOS_SYS_FILE_DUP) {
+    const auto &request = *static_cast<const GtosFileControlRequest *>(data);
+    check(bytes == sizeof(request) && request.version == 1 && request.handle == 41);
+    return duplicate_result;
+  }
+  if (operation == GTOS_SYS_FILE_MKDIR || operation == GTOS_SYS_FILE_REMOVE_TYPED) {
+    const auto &request = *static_cast<const GtosFilePathRequest *>(data);
+    check(request.version == 1 && request.path_bytes == expected_path_bytes);
+    check(memcmp(reinterpret_cast<const void *>(request.path), expected_path, expected_path_bytes) == 0);
+    if (operation == GTOS_SYS_FILE_MKDIR) check(bytes == sizeof(request));
+    else {
+      const auto &typed = *static_cast<const GtosFileRemoveTypedRequest *>(data);
+      check(bytes == sizeof(typed) && typed.type == removed_type);
+    }
+    return metadata_status;
+  }
   if (operation == GTOS_SYS_FILE_STAT || operation == GTOS_SYS_FILE_HANDLE_INFO) {
     unsigned output;
     if (operation == GTOS_SYS_FILE_STAT) {
@@ -259,6 +284,44 @@ extern "C" int DirectoryTestMain() {
     truncate_bytes = 0xFFFFFFFF;
     check(ftruncate(41, static_cast<off_t>(0xFFFFFFFFULL)) == 0 && errno == 66);
   }
+  const int control_before = calls;
+  check(fcntl(0, F_GETFD) == -1 && errno == EBADF);
+  check(fcntl(41, F_DUPFD_CLOEXEC, -1) == -1 && errno == EINVAL);
+  check(fcntl(41, F_DUPFD_CLOEXEC, 1) == -1 && errno == 95);
+  check(fcntl(41, F_SETFD, 0) == -1 && errno == 95);
+  check(fcntl(41, F_SETFD, 2) == -1 && errno == EINVAL);
+  check(fcntl(41, 999) == -1 && errno == 95);
+  check(access(expected_path, 7) == -1 && errno == 95);
+  check(mkdir(0, 0700) == -1 && errno == EINVAL);
+  check(unlink("") == -1 && errno == ENOENT);
+  check(rmdir(0) == -1 && errno == EINVAL && calls == control_before);
+  errno = 77;
+  check(fcntl(41, F_GETFD) == FD_CLOEXEC && errno == 77);
+  check(fcntl(41, F_SETFD, FD_CLOEXEC) == 0 && errno == 77);
+  check(fcntl(41, F_DUPFD_CLOEXEC, 0) == 42 && errno == 77);
+  duplicate_result = -24;
+  check(fcntl(41, F_DUPFD_CLOEXEC, 0) == -1 && errno == EMFILE);
+  duplicate_result = 42;
+  check(open(expected_path, O_RDONLY | O_CLOEXEC) == 41);
+  check(access(expected_path, F_OK) == 0);
+  check(mkdir(expected_path, 0777) == 0);
+  removed_type = GTOS_FILE_TYPE_REGULAR;
+  check(unlink(expected_path) == 0);
+  removed_type = GTOS_FILE_TYPE_DIRECTORY;
+  check(rmdir(expected_path) == 0);
+  const int control_statuses[] = {-2, -19, -20, -21, -39, 1};
+  for (int status : control_statuses) {
+    metadata_status = status;
+    const int wanted = status == 1 ? EIO : -status;
+    check(mkdir(expected_path, 0) == -1 && errno == wanted);
+    removed_type = GTOS_FILE_TYPE_REGULAR;
+    check(unlink(expected_path) == -1 && errno == wanted);
+    removed_type = GTOS_FILE_TYPE_DIRECTORY;
+    check(rmdir(expected_path) == -1 && errno == wanted);
+    check(access(expected_path, F_OK) == -1 && errno == wanted);
+    check(fcntl(41, F_GETFD) == -1 && errno == wanted);
+  }
+  metadata_status = 0;
 #if defined(GTOS_DIRECTORY_TEST_BAD_EXPECTATION)
   check(cursor == 99);
 #endif

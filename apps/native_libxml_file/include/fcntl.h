@@ -16,11 +16,20 @@
 #define O_EXCL 0200
 #define O_TRUNC 01000
 #define O_APPEND 02000
+// Native handles are owner-scoped and never inherited by a new ELF process.
+#define O_CLOEXEC 02000000
+#define FD_CLOEXEC 1
+#define F_GETFD 1
+#define F_SETFD 2
+#define F_DUPFD_CLOEXEC 1030
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 int open(const char *path, int flags, ...);
+// Only the already-enforced CLOEXEC property and duplication with minimum=0
+// are supported. No descriptor flag can make a native handle inheritable.
+int fcntl(int fd, int command, ...);
 #ifdef __cplusplus
 }
 #endif

@@ -18,6 +18,7 @@
 #include <process/file_abi.h>
 
 #include <errno.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include <fcntl.h>
@@ -97,7 +98,7 @@ int fail_with(int error) {
 // Everything this layer understands. A bit outside it is refused: dropping an unknown open flag turns a caller's O_DIRECTORY or O_SYNC into
 // a silently ordinary open, and the caller then reports success for a contract nobody kept.
 const int kAccessMask = 3;
-const int kKnownFlags = O_CREAT | O_EXCL | O_TRUNC | O_APPEND;
+const int kKnownFlags = O_CREAT | O_EXCL | O_TRUNC | O_APPEND | O_CLOEXEC;
 
 int open_flags(int flags) {
   unsigned result;
@@ -263,3 +264,52 @@ extern "C" int ftruncate(int fd, off_t length) {
   const int result = call(GTOS_SYS_FILE_TRUNCATE, &request, sizeof(request));
   return result < 0 ? translate(result) : result == 0 ? 0 : fail_with(EIO);
 }
+
+extern "C" int fcntl(int fd, int command, ...) {
+  if (fd <= 0) return fail_with(EBADF);
+  if (command == F_DUPFD_CLOEXEC || command == F_SETFD) {
+    va_list arguments;
+    va_start(arguments, command);
+    const int argument = va_arg(arguments, int);
+    va_end(arguments);
+    if (command == F_DUPFD_CLOEXEC) {
+      if (argument < 0) return fail_with(EINVAL);
+      if (argument != 0) return fail_with(ENOTSUP);
+      return dup(fd);
+    }
+    if (argument & ~FD_CLOEXEC) return fail_with(EINVAL);
+    if (argument != FD_CLOEXEC) return fail_with(ENOTSUP);
+  } else if (command != F_GETFD) {
+    return fail_with(ENOTSUP);
+  }
+  struct stat value;
+  if (fstat(fd, &value) != 0) return -1;
+  return command == F_GETFD ? FD_CLOEXEC : 0;
+}
+
+extern "C" int access(const char *path, int mode) {
+  if (mode != F_OK) return fail_with(ENOTSUP);
+  struct stat value;
+  return stat(path, &value);
+}
+
+extern "C" int mkdir(const char *path, unsigned) {
+  unsigned bytes = 0;
+  if (path_bytes(path, &bytes) != 0) return -1;
+  const GtosFilePathRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes};
+  const int result = call(GTOS_SYS_FILE_MKDIR, &request, sizeof(request));
+  return result < 0 ? translate(result) : result == 0 ? 0 : fail_with(EIO);
+}
+
+namespace {
+int RemoveTyped(const char *path, unsigned type) {
+  unsigned bytes = 0;
+  if (path_bytes(path, &bytes) != 0) return -1;
+  const GtosFileRemoveTypedRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes, type};
+  const int result = call(GTOS_SYS_FILE_REMOVE_TYPED, &request, sizeof(request));
+  return result < 0 ? translate(result) : result == 0 ? 0 : fail_with(EIO);
+}
+}
+
+extern "C" int unlink(const char *path) { return RemoveTyped(path, GTOS_FILE_TYPE_REGULAR); }
+extern "C" int rmdir(const char *path) { return RemoveTyped(path, GTOS_FILE_TYPE_DIRECTORY); }

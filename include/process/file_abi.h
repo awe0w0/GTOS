@@ -20,6 +20,7 @@
 #define GTOS_SYS_FILE_SIZE 0x472eU
 #define GTOS_SYS_FILE_HANDLE_INFO 0x472fU
 #define GTOS_SYS_FILE_DUP 0x4740U
+#define GTOS_SYS_FILE_REMOVE_TYPED 0x4760U
 #define GTOS_FILE_PATH_LIMIT 512U
 #define GTOS_FILE_TRANSFER_LIMIT 4096U
 #define GTOS_FILE_READ 1U
@@ -45,6 +46,7 @@ typedef struct GtosFileSeekRequest { unsigned version,handle,offset_low,offset_h
 typedef struct GtosFileControlRequest { unsigned version,handle; } GtosFileControlRequest;
 typedef struct GtosFileTruncateRequest { unsigned version,handle,bytes; } GtosFileTruncateRequest;
 typedef struct GtosFilePathRequest { unsigned version,path,path_bytes; } GtosFilePathRequest;
+typedef struct GtosFileRemoveTypedRequest { unsigned version,path,path_bytes,type; } GtosFileRemoveTypedRequest;
 typedef struct GtosFileStatRequest { unsigned version,path,path_bytes,result,result_bytes; } GtosFileStatRequest;
 typedef struct GtosFileRenameRequest { unsigned version,old_path,old_bytes,new_path,new_bytes; } GtosFileRenameRequest;
 typedef struct GtosFileInfoRequest { unsigned version,handle,result,result_bytes; } GtosFileInfoRequest;
@@ -70,6 +72,11 @@ typedef struct GtosFileInfo { unsigned version,type,bytes;char name[256]; } Gtos
 // It shares the same open resource, offset, directory cursor and access mode.
 // Closing one duplicate invalidates only that handle; the final close releases
 // the real file/directory, even if that close reports an actual I/O error.
+// REMOVE_TYPED uses a separate exact-size request; the legacy REMOVE is unchanged.
+// After mount/owner, size, snapshot and version checks, validate type (REGULAR or
+// DIRECTORY) before copying the path. Stat and remove run under one BSP IF-clear
+// service transaction. Wrong type returns -21 (directory) or -20 (not directory)
+// without removal. This is not an SMP filesystem concurrency guarantee.
 #if defined(__cplusplus)
 static_assert(sizeof(unsigned)==4,"File ABI unsigned");
 static_assert(sizeof(GtosFileOpenRequest)==16,"File open ABI");
@@ -78,6 +85,8 @@ static_assert(sizeof(GtosFileSeekRequest)==20,"File seek ABI");
 static_assert(sizeof(GtosFileControlRequest)==8,"File control ABI");
 static_assert(sizeof(GtosFileTruncateRequest)==12,"File truncate ABI");
 static_assert(sizeof(GtosFilePathRequest)==12,"File path ABI");
+static_assert(sizeof(GtosFileRemoveTypedRequest)==16,"Typed file remove ABI");
+static_assert(__builtin_offsetof(GtosFileRemoveTypedRequest,type)==12,"Typed file remove kind");
 static_assert(sizeof(GtosFileStatRequest)==20,"File stat ABI");
 static_assert(sizeof(GtosFileRenameRequest)==20,"File rename ABI");
 static_assert(sizeof(GtosFileInfoRequest)==16,"File info request ABI");
