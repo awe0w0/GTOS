@@ -1,5 +1,13 @@
 [
   {
+    "source": "include/process/cpu_clock_abi.h",
+    "sha256": "842f44ca9e0ea8214591fd1e68fc93db3d65cb40cbdab29b724ec1f3c334250b"
+  },
+  {
+    "source": "include/process/clock_abi.h",
+    "sha256": "60bb3beee1560964919ffeaf2a83f55f134c1d8c1609b10d1420a5a37970bb25"
+  },
+  {
     "source": "apps/native_c_clock/sdk/inttypes.h",
     "sha256": "e30d44129d99747922811cd20eac4f34e13259da61ac5556ee88c189246e4ce7"
   },

@@ -380,8 +380,10 @@ boundary, so they do not qualify the native kernel/thread backend or C1/C2/C3.
 The native Perfetto clock adapter reuses the qualified C clock selectors
 (`CLOCK_MONOTONIC=1`, `CLOCK_REALTIME=2`), signed 64-bit seconds and 16-byte
 timespec. Monotonic/raw/boot measurements use the delivered-PIT monotonic
-provider; no suspend accounting exists. CPU-accounting measurements report
-unavailable as zero, like the existing WASM port, rather than using wall time.
+provider; no suspend accounting exists. CPU-accounting measurements use the
+separate native `0x4716` service for self thread/process delivered-PIT samples.
+They validate the wire metadata and checked microsecond-to-nanosecond conversion.
+Zero is valid before the first charged sample; service failures are rejected.
 Conversion rejects service failures, negative fields, invalid nanoseconds and
 signed nanosecond overflow. `TimeGm` calls the native LLVM calendar provider,
 whose current implementation is UTC without a timezone database. Host timegm
@@ -397,6 +399,26 @@ Host header compilation and the 19 platform regressions also pass. The clock
 boundary, logging/errno sinks and Linux reporting are unit dependencies; this
 does not establish new native clock guest behavior, full calendar correctness,
 runtime integration of all libc time functions or Content C1/C2/C3.
+
+The earlier CPU-zero implementation incorrectly inferred that the kernel lacked
+CPU accounting from the older C clock wrapper. The current kernel already has
+that separate service. `codex-c-perfetto-time-build-t02` / `run-r02` correct this
+with 36 real ELF32 unit images: O0/O2 normal thread/process values, repeat reads,
+zero, largest safe nanosecond conversion, the pinned LLVM calendar cases, two
+wrong expectations and 32 wall/CPU service/metadata/overflow refusals. Two
+uninjected int80 production objects and the host header also compile.
+
+`codex-c-perfetto-cpu-guest-build-g01` / `run-r01` link the actual uninjected CPU
+backend into eight native modules and a current-source observer kernel. At O0
+with 32 MiB and O2 with 64 MiB, three successive CPL3 processes compare adapter
+results with raw CPU ABI brackets, consume real charged PIT samples and finish
+with exact syscall totals and Reap restoration (baselines `0x1d7b` / `0x3d76`).
+Each consumer makes twelve comparisons. The wrong consumer exits with a failed
+record and QEMU 65; the two valid runs return QEMU 33. The observer programs the
+canonical divisor 11931 and the judge rejects incomplete/duplicate records and
+broken context/query/accounting fields. This qualifies this coarse self-only
+CPU clock adapter, not full POSIX clocks, worker aggregation, SMP accounting or
+Content C1/C2/C3.
 
 GTOS `PagedMemory` now owns a native VM handle instead of asking for a POSIX
 mmap interface. Reserve retains two uncommitted guard pages; ordinary allocation

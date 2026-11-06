@@ -1,6 +1,8 @@
 #include "perfetto/base/time.h"
 #include <errno.h>
 #include <limits.h>
+#include <process/clock_abi.h>
+#include <process/cpu_clock_abi.h>
 
 namespace {
 unsigned calls = 0;
@@ -9,6 +11,11 @@ unsigned checks = 0;
 time_t seconds = 12;
 long long nanos = 345000;
 int clock_status = 0;
+unsigned cpu_calls = 0;
+unsigned thread_calls = 0;
+unsigned process_calls = 0;
+unsigned long long thread_us = 0;
+unsigned long long process_us = 0;
 void Write(const char* text) {
   unsigned bytes = 0;
   while (text[bytes]) ++bytes;
@@ -22,6 +29,43 @@ void Check(bool value) {
 }
 
 extern "C" {
+int GtosPerfettoCpuTimeTestCall(unsigned operation, const void* pointer, unsigned bytes) {
+  ++cpu_calls;
+  const auto& request = *static_cast<const GtosCpuClockReadRequest*>(pointer);
+  Check(operation == GTOS_SYS_CPU_CLOCK_READ && bytes == sizeof(request));
+  Check(request.version == GTOS_CPU_CLOCK_ABI_VERSION && request.flags == 0 &&
+        request.result_bytes == sizeof(GtosCpuClockReadResult) && request.result_va != 0);
+  Check(request.scope == GTOS_CPU_CLOCK_THREAD || request.scope == GTOS_CPU_CLOCK_PROCESS);
+  if (request.scope == GTOS_CPU_CLOCK_THREAD) ++thread_calls; else ++process_calls;
+  GtosCpuClockReadResult result{GTOS_CPU_CLOCK_ABI_VERSION, request.scope,
+      GTOS_CPU_CLOCK_UNIT_MICROSECONDS, GTOS_CPU_CLOCK_SOURCE_PIT_RUNNING_SAMPLE,
+      GTOS_CPU_CLOCK_REQUIRED_CAPABILITIES, GTOS_CLOCK_RESOLUTION_US,
+      request.scope == GTOS_CPU_CLOCK_THREAD ? thread_us : process_us, 3,
+      GTOS_CLOCK_PIT_INPUT_HZ, GTOS_CLOCK_PIT_DIVISOR};
+#if GTOS_TIME_CASE == 7
+  return GTOS_CPU_CLOCK_ERR_UNSUPPORTED;
+#elif GTOS_TIME_CASE == 8
+  ++result.version;
+#elif GTOS_TIME_CASE == 9
+  result.scope = 3;
+#elif GTOS_TIME_CASE == 10
+  ++result.unit;
+#elif GTOS_TIME_CASE == 11
+  ++result.source;
+#elif GTOS_TIME_CASE == 12
+  result.capabilities &= ~GTOS_CPU_CLOCK_CAP_SELF_ONLY;
+#elif GTOS_TIME_CASE == 13
+  ++result.resolution_us;
+#elif GTOS_TIME_CASE == 14
+  ++result.pit_input_hz;
+#elif GTOS_TIME_CASE == 15
+  ++result.pit_divisor;
+#elif GTOS_TIME_CASE == 16
+  result.microseconds = 9223372036854776ULL;
+#endif
+  *reinterpret_cast<GtosCpuClockReadResult*>(request.result_va) = result;
+  return 0;
+}
 int* __llvm_libc_errno() noexcept { static int value; return &value; }
 char* strerror(int) noexcept { return const_cast<char*>("test errno"); }
 // This replaces only the C clock boundary, not Perfetto's checked conversion.
@@ -74,7 +118,13 @@ extern "C" int TimeTestMain() {
   seconds = 9223372036LL;
   nanos = 854775808;
 #endif
+#if GTOS_TIME_CASE < 7
   (void)GetWallTimeNs();
+#elif GTOS_TIME_CASE % 2
+  (void)GetThreadCPUTimeNs();
+#else
+  (void)GetProcessCPUTimeNs();
+#endif
   Write("RETURNED_UNEXPECTED\n");
   return 8;
 #else
@@ -84,7 +134,15 @@ extern "C" int TimeTestMain() {
   Check(calls == 3);
   Check(GetThreadCPUTimeNs().count() == 0);
   Check(GetProcessCPUTimeNs().count() == 0);
-  Check(calls == 3);
+  Check(calls == 3 && cpu_calls == 2 && thread_calls == 1 && process_calls == 1);
+  thread_us = 30000; process_us = 70000;
+  Check(GetThreadCPUTimeNs().count() == 30000000);
+  Check(GetProcessCPUTimeNs().count() == 70000000);
+  thread_us = 40000;
+  Check(GetThreadCPUTimeNs().count() == 40000000);
+  Check(calls == 3 && cpu_calls == 5 && thread_calls == 3 && process_calls == 2);
+  process_us = 9223372036854775ULL;
+  Check(GetProcessCPUTimeNs().count() == 9223372036854775000LL);
   seconds = 0; nanos = 0;
   Check(GetWallTimeNs().count() == 0);
   seconds = 9223372036LL; nanos = 854775807;

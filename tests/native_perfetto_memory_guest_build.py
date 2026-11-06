@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the real native page backend and current-source CPL3 observer kernel."""
+"""Build real native Perfetto backends and the current-source CPL3 observers."""
 import argparse
 import hashlib
 import json
@@ -12,12 +12,15 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
+parser.add_argument('--component', choices=['memory', 'cpu'], default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
 sdk = repo / 'apps/native_v8_runtime'
 full = Path('/mnt/f/GTOS-Chromium/sources/chromium-full/src')
 product = repo / 'apps/native_content_build/gtos-platform'
+cpu = args.component == 'cpu'
+record_name = 'native_cpu_record' if cpu else 'native_memory_record'
 inputs, commands = {}, []
 
 
@@ -62,7 +65,7 @@ flags = ['--target=i686-unknown-none-elf', '-D__GTOS__=1', '-ffreestanding', '-f
 layout_source = repo / 'apps/native_vm_probe/linker.ld'
 bind(layout_source)
 layout = args.out / 'module.ld'
-layout.write_text(layout_source.read_text().replace('native_vm_record', 'native_memory_record'))
+layout.write_text(layout_source.read_text().replace('native_vm_record', record_name))
 bind(layout)
 start = repo / 'apps/native_libxml_file/probe/exit-start.s'
 bind(start)
@@ -73,34 +76,41 @@ for optimization in (0, 2):
     directory = args.out / ('O' + str(optimization))
     directory.mkdir()
     objects = []
-    for name, source in [('pages', args.view / 'third_party/perfetto/src/base/paged_memory_gtos.cc'),
+    for name, source in [('backend', args.view / ('third_party/perfetto/src/base/cpu_time_gtos.cc' if cpu else 'third_party/perfetto/src/base/paged_memory_gtos.cc')),
                          ('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]:
         bind(source)
         output = directory / (name + '.o')
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
-        assert 'GtosPerfettoVmTestCall' not in run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-u', output])
+        symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-u', output])
+        assert 'GtosPerfettoVmTestCall' not in symbols and 'GtosPerfettoCpuTimeTestCall' not in symbols
         objects.append(output)
-    source = product / 'probe/memory.cpp'
+    source = product / ('probe/cpu_time.cpp' if cpu else 'probe/memory.cpp')
     bind(source)
-    for mode, negative in [(value, False) for value in range(5)] + [(0, True)]:
+    for mode, negative in [(value, False) for value in range(3 if cpu else 5)] + [(0, True)]:
         name = 'mode' + str(mode) + ('-bad' if negative else '')
         output = directory / (name + '.o')
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
-            '-DGTOS_MEMORY_GUEST_MODE=' + str(mode),
-            *(['-DGTOS_MEMORY_GUEST_WRONG_EXPECTATION'] if negative else []),
+            '-DGTOS_' + ('CPU' if cpu else 'MEMORY') + '_GUEST_MODE=' + str(mode),
+            *(['-DGTOS_' + ('CPU' if cpu else 'MEMORY') + '_GUEST_WRONG_EXPECTATION'] if negative else []),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
+        extra = []
+        if cpu:
+            builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
+            assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
+            bind(builtins)
+            extra.append(builtins)
         run(directory.name + '-' + name + '-link', [args.clang_bin / 'ld.lld', '-m', 'elf_i386',
             '-static', '-e', '_start', '-T', layout, '--gc-sections', '-o', image,
-            args.out / 'start.o', *objects, output])
+            args.out / 'start.o', *objects, output, *extra])
         assert not run(directory.name + '-' + name + '-undefined', ['/usr/bin/nm', '-u', image]).strip()
         data = image.read_bytes()
         assert data[:5] == b'\x7fELF\x01' and struct.unpack_from('<H', data, 18)[0] == 3 and len(data) <= 65536
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-n', image])
-        assert '40020000 D native_memory_record' in symbols
+        assert '40020000 D ' + record_name in symbols
         image.chmod(0o444)
         modules.append({'optimization': optimization, 'mode': mode, 'negative': negative, **identity(image)})
 
@@ -112,7 +122,8 @@ sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
            'src/process/native_surface.cpp', 'src/process/native_windows.cpp', 'src/process/native_fp.cpp',
            'src/process/elf32.cpp', 'src/memory/process_address_space.cpp', 'src/memory/paging.cpp',
            'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
-           'tests/i386_pure_virtual_runtime.cpp', 'tests/native_perfetto_memory_kernel.cpp']
+           'tests/i386_pure_virtual_runtime.cpp',
+           'tests/native_perfetto_cpu_time_kernel.cpp' if cpu else 'tests/native_perfetto_memory_kernel.cpp']
 assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']
 bind(repo / 'tools/kernel-cxxflags')
@@ -144,14 +155,14 @@ bind(linker)
 run('kernel-link', ['/usr/bin/ld', '-melf_i386', '--gc-sections', '-T', linker,
                    '-Map', mapfile, '-o', kernel, *objects])
 symbols = run('kernel-symbols', ['/usr/bin/nm', kernel])
-assert 'PerfettoMemoryUnusedBaseline' not in symbols
+assert ('PerfettoCpuUnusedBaseline' if cpu else 'PerfettoMemoryUnusedBaseline') not in symbols
 audit = repo / 'tools/audit-kernel-instructions.py'
 bind(audit)
 run('kernel-instruction-audit', ['/usr/bin/python3.8', '-B', audit, '--map', mapfile, kernel])
 kernel.chmod(0o444)
 assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path, value in inputs.items())
 (args.out / 'manifest.json').write_text(json.dumps({'kernel': identity(kernel), 'modules': modules,
-    'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2',
+    'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
-    'scope': 'actual native page backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-print('PERFETTO_MEMORY_GUEST_BUILD_PASS kernel=1 modules=12 undefined=0 scalar_kernel=true')
+    'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
+print('PERFETTO_' + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' + str(len(modules)) + ' undefined=0 scalar_kernel=true')

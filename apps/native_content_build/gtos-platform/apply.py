@@ -58,6 +58,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/perfetto/src/base/cpu_time_gtos.cc': 'perfetto/cpu_time_gtos.cc',
+    'build/config/gtos/include/process/cpu_clock_abi.h': 'sdk/process/cpu_clock_abi.h',
+    'build/config/gtos/include/process/clock_abi.h': 'sdk/process/clock_abi.h',
     'third_party/perfetto/src/base/paged_memory_gtos.cc': 'perfetto/paged_memory_gtos.cc',
     'build/config/gtos/include/process/vm_abi.h': 'sdk/process/vm_abi.h',
     'build/config/gtos/include/time.h': 'sdk/time.h',

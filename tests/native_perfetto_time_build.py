@@ -18,6 +18,7 @@ args.out.mkdir(parents=True, exist_ok=False)
 sdk = repo / 'apps/native_v8_runtime'
 full = Path('/mnt/f/GTOS-Chromium/sources/chromium-full/src')
 source = args.view / 'third_party/perfetto/include/perfetto/base/time.h'
+cpu_source = args.view / 'third_party/perfetto/src/base/cpu_time_gtos.cc'
 fixture = repo / 'tests/native_perfetto_time_test.cpp'
 inputs = {}
 
@@ -83,6 +84,7 @@ libc = full / 'third_party/llvm-libc/src'
 builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
 assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
 bind(source)
+bind(cpu_source)
 bind(builtins)
 calendar = {'mktime.cpp': 'c09a98d989139c428ec1f74ceb9e68d95d46bc30da2908b1ddb9b704e30ad100',
             'time_utils.cpp': '677e4d5750a36ea85e58d6540a3517e7e88c3fd28edd6fcd3c4422eb03245b15'}
@@ -93,6 +95,16 @@ def dependencies(path):
 
 for optimization in (0, 2):
     objects = []
+    production = args.out / ('cpu-native-O' + str(optimization) + '.o')
+    run(production.stem, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
+        '-MD', '-MF', str(production) + '.d', '-c', cpu_source, '-o', production])
+    dependencies(production)
+    assert 'GtosPerfettoCpuTimeTestCall' not in run(production.stem + '-symbols', ['/usr/bin/nm', '-u', production])
+    cpu_object = args.out / ('cpu-test-O' + str(optimization) + '.o')
+    run(cpu_object.stem, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
+        '-DGTOS_PERFETTO_CPU_TIME_TEST', '-MD', '-MF', str(cpu_object) + '.d', '-c', cpu_source, '-o', cpu_object])
+    dependencies(cpu_object)
+    objects.append(cpu_object)
     for name, expected in calendar.items():
         native_source = libc / 'src/time' / name
         assert hashlib.sha256(native_source.read_bytes()).hexdigest() == expected
@@ -105,7 +117,7 @@ for optimization in (0, 2):
         dependencies(output)
         objects.append(output)
     cases = [('control', 0, False, 0), ('wrong', 0, True, 1)] + [
-        ('invalid' + str(index), index, False, -4) for index in range(1, 7)]
+        ('invalid' + str(index), index, False, -4) for index in range(1, 17)]
     for mode, value, wrong, expected in cases:
         name = 'O' + str(optimization) + '-' + mode
         output = args.out / (name + '.o')
@@ -131,5 +143,5 @@ run('host-time-header', [args.clang_bin / 'clang', '--target=x86_64-unknown-linu
 assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path, value in inputs.items())
 (args.out / 'manifest.json').write_text(json.dumps({'images': images, 'inputs': inputs,
     'source_before_after_identical': True,
-    'scope': 'actual checked Perfetto clock conversion plus pinned LLVM UTC calendar; injected clock/logging boundaries and Linux reporting; no guest claim'}, indent=2) + '\n')
-print('PERFETTO_TIME_BUILD_PASS images=16 host_time_header_compiles=true')
+    'scope': 'actual checked Perfetto wall/CPU conversion plus pinned LLVM UTC calendar; injected C clock/native CPU syscall/logging boundaries and Linux reporting; no guest claim'}, indent=2) + '\n')
+print('PERFETTO_TIME_BUILD_PASS images=36 production_cpu_objects=2 host_time_header_compiles=true')
