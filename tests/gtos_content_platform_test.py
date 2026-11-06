@@ -216,7 +216,8 @@ class PrivatePatchTest(unittest.TestCase):
                         '--input', str(patch), str(target)], check=True)
         expected = self.module.INPUTS['.gn']
         self.assertEqual(self.module.candidate.digest(target), expected)
-        with mock.patch.dict(self.module.INPUTS, {'.gn': expected}, clear=True):
+        with mock.patch.dict(self.module.INPUTS, {'.gn': expected}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, {}, clear=True):
             self.module.apply(root)
         self.assertEqual(target.read_bytes(), (args.view / '.gn').read_bytes())
         self.assertEqual(json.loads((root / 'gtos-platform.json').read_text())['files'][0]['path'], '.gn')
@@ -244,6 +245,47 @@ class PrivatePatchTest(unittest.TestCase):
         self.assertEqual(str(refused.exception), 'platform input changed: ' + rel)
         self.assertEqual(target.read_text(), 'changed input\n')
         self.assertFalse((root / 'gtos-platform.json').exists())
+
+    def test_addition_materializes_linked_parents_without_writing_the_origin(self):
+        root = args.out / 'new-module'
+        root.mkdir()
+        (root / '.gn').write_text('private view\n')
+        origin = args.out / 'new-module-origin'
+        origin.mkdir()
+        (origin / 'unchanged.rs').write_text('original\n')
+        (root / 'sys').symlink_to(origin, target_is_directory=True)
+        source = self.module.HERE / 'rust/alloc.rs'
+        with mock.patch.dict(self.module.INPUTS, {}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, {'sys/gtos.rs': 'rust/alloc.rs'}, clear=True):
+            self.module.apply(root)
+        self.assertEqual((root / 'sys/gtos.rs').read_bytes(), source.read_bytes())
+        self.assertFalse((root / 'sys').is_symlink())
+        self.assertFalse((origin / 'gtos.rs').exists())
+        self.assertEqual((origin / 'unchanged.rs').read_text(), 'original\n')
+        receipt = json.loads((root / 'gtos-platform.json').read_text())
+        self.assertEqual(receipt['additions'][0]['sha256'], self.module.candidate.digest(source))
+
+    def test_existing_addition_refuses_before_patching_any_input(self):
+        for kind in ['file', 'dangling-link']:
+            root = args.out / ('existing-addition-' + kind)
+            root.mkdir()
+            target = root / '.gn'
+            target.write_text('unchanged input\n')
+            addition = root / 'existing.rs'
+            if kind == 'file':
+                addition.write_text('keep these bytes\n')
+            else:
+                addition.symlink_to(root / 'missing')
+            with mock.patch.dict(self.module.INPUTS, {'.gn': self.module.candidate.digest(target)}, clear=True), \
+                    mock.patch.dict(self.module.ADDITIONS, {'existing.rs': 'rust/alloc.rs'}, clear=True):
+                with self.assertRaisesRegex(SystemExit, 'overwrite platform addition'):
+                    self.module.apply(root)
+            self.assertEqual(target.read_text(), 'unchanged input\n')
+            self.assertFalse((root / 'gtos-platform.json').exists())
+            if kind == 'file':
+                self.assertEqual(addition.read_text(), 'keep these bytes\n')
+            else:
+                self.assertTrue(addition.is_symlink())
 
 
 unittest.main(argv=[sys.argv[0]], verbosity=2)

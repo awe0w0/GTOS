@@ -166,3 +166,27 @@ Its metadata, response file, flags and dependency file are retained alongside it
 `codex-c-dependency-test-d03` retained all six C/C++ SDK dependency regressions
 with Rust disabled. This core build does not qualify full Rust std, OS services,
 Content object/link generation, or browser execution.
+
+The GTOS Rust `System` allocator calls the native C heap ABI directly. The
+ordinary alignment fast path uses malloc/calloc/realloc; over-aligned layouts
+use posix_memalign and the pinned standard library's own realloc fallback.
+Failed allocations return null, and failed reallocations preserve the old
+allocation. This adapter does not increase the heap quota or supply a new heap.
+The platform application adds this module only after materializing private
+parents; a pre-existing file or dangling link is refused before patching.
+
+Guarded `codex-c-allocator-build-a01` builds
+`tests/gtos_rust_allocator_build.py` with pinned Rust/Clang, using the actual
+upstream MIN_ALIGN and realloc_fallback. `codex-c-allocator-run-r01` then runs
+both frozen host images from a separate writable root: seven cases at each of
+O0/O2 pass, including alignment, zeroing, allocation failure/recovery, realloc
+failure ownership, and over-aligned grow/shrink. Only foreign C imports are
+redirected for host fault injection; the allocator body is the product module.
+The same build separately compiles two actual GTOS ELF32/i386 target objects.
+Host libc tests and target compilation do not qualify the GTOS heap runtime.
+`codex-c-unit-u24` passes 17 platform regressions, including private new-file
+materialization and pre-existing-file/dangling-link refusal.
+`codex-c-gn-g24` generates the unchanged full Content graph, and its actual
+`codex-c-ninja-n25` std compilation accepts the allocator branch. It then stops
+at eleven remaining error/TLS/synchronization/random backend errors; no complete
+std library or Content object is claimed.

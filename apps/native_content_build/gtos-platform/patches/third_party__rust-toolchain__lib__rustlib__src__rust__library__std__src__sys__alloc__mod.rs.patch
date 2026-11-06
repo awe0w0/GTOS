@@ -1,0 +1,13 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/mod.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/mod.rs
+@@ -70,6 +70,10 @@
+ }
+ 
+ cfg_select! {
++    target_os = "gtos" => {
++        mod gtos;
++        use gtos as imp;
++    }
+     any(target_family = "unix", target_os = "wasi", target_os = "teeos", target_os = "trusty") => {
+         mod unix;
+         use unix as imp;

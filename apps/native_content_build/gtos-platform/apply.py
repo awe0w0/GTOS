@@ -33,7 +33,19 @@ INPUTS = {
     'build/config/compiler/BUILD.gn': '5fd8410dce79947067a656feb24d150bb838269f3f934f3028b00a62fc56b859',
     'build/rust/gni_impl/BUILD.gn': '1106bd62a03288e3220820b1f79bbeee19eee062d5e1c34bb5fa604df1a3c6a9',
     'build/rust/gni_impl/rustc_print_cfg.py': '1a08afbd6405fa3a5a01abf7f52472f1cfc481b4908eeee872ed11f9ee1df102',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/mod.rs': '605fba85756be94fdc13f40823daa82ec29b493c102564fbe36a34a3414314e1',
 }
+
+ADDITIONS = {
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/gtos.rs': 'rust/alloc.rs',
+}
+
+
+def private_target(view, rel):
+    parent = candidate.materialize_parents(view, rel)
+    if parent.resolve() != view and view not in parent.resolve().parents:
+        raise SystemExit('platform parent escaped the private view: ' + str(parent))
+    return parent / Path(rel).name
 
 
 def apply(view):
@@ -46,12 +58,15 @@ def apply(view):
     for rel, expected in INPUTS.items():
         if candidate.digest(view / rel) != expected:
             raise SystemExit('platform input changed: ' + rel)
+    for rel, source in ADDITIONS.items():
+        target = view / rel
+        if target.exists() or target.is_symlink():
+            raise SystemExit('refusing to overwrite platform addition: ' + rel)
+        if not (HERE / source).is_file():
+            raise SystemExit('platform addition is missing: ' + source)
     applied = []
     for rel, expected in INPUTS.items():
-        parent = candidate.materialize_parents(view, rel)
-        if parent.resolve() != view and view not in parent.resolve().parents:
-            raise SystemExit('platform parent escaped the private view: ' + str(parent))
-        target = parent / Path(rel).name
+        target = private_target(view, rel)
         if target.is_symlink():
             origin = target.resolve()
             target.unlink()
@@ -60,10 +75,15 @@ def apply(view):
         subprocess.run(['/usr/bin/patch', '--batch', '--fuzz=0', '--input', str(patch), str(target)], check=True)
         applied.append({'path': rel, 'origin_sha256': expected,
                         'patch_sha256': candidate.digest(patch), 'sha256': candidate.digest(target)})
+    added = []
+    for rel, source in ADDITIONS.items():
+        target = private_target(view, rel)
+        shutil.copyfile(HERE / source, target)
+        added.append({'path': rel, 'source': source, 'sha256': candidate.digest(target)})
     with receipt.open('x') as handle:
-        json.dump({'files': applied}, handle, indent=2)
+        json.dump({'files': applied, 'additions': added}, handle, indent=2)
         handle.write('\n')
-    print(json.dumps({'view': str(view), 'applied': applied}, indent=2))
+    print(json.dumps({'view': str(view), 'applied': applied, 'additions': added}, indent=2))
 
 
 if __name__ == '__main__':
