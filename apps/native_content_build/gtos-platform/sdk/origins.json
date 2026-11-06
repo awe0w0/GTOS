@@ -1,0 +1,19 @@
+[
+  {
+    "source": "apps/native_c_clock/sdk/inttypes.h",
+    "sha256": "e30d44129d99747922811cd20eac4f34e13259da61ac5556ee88c189246e4ce7"
+  },
+  {
+    "source": "apps/native_c_clock/sdk/llvm-libc-macros/inttypes-macros.h",
+    "sha256": "dd2194bb2255dce7f94cfc0cb0e416fd051d24d723927cfdb01539a7323925d4"
+  },
+  {
+    "source": "apps/native_c_clock/sdk/llvm-libc-types/imaxdiv_t.h",
+    "sha256": "814253880fcdc58fd4b00dc5e1b20aa85078087b44991f04f5db767742002dc6"
+  },
+  {
+    "source": "apps/native_v8_runtime/sdk/__external_threading",
+    "sha256": "ad3581974c60408854ab7cba9f6c5b7cc29789eb4e2249fc9136de9b44c990b2",
+    "change": "native Content guard; declarations and namespace unchanged"
+  }
+]

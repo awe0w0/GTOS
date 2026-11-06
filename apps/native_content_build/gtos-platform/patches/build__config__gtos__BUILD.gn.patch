@@ -1,0 +1,22 @@
+--- a/build/config/gtos/BUILD.gn
++++ b/build/config/gtos/BUILD.gn
+@@ -12,6 +12,8 @@
+ declare_args() {
+   # Holds `sdk/` (libc++ config for GTOS) and `c-sdk/` (LLVM libc headers, types and macros).
+   gtos_sdk_dir = ""
++  # Native Content ABI extensions and the implemented file subset.
++  gtos_posix_file_include = ""
+   # libc++ headers from the pinned checkout.
+   gtos_libcxx_include = ""
+   # The clang resource directory: stddef.h, stdint.h, stdarg.h and the compiler's own builtins.
+@@ -25,7 +27,10 @@ assert(gtos_clang_include != "", "Set gtos_clang_include to the clang resource i
+ config("sdk") {
+   assert(is_gtos)
+   # The qualification build's order: GTOS SDK C++ config, libc++, GTOS SDK C headers, then the compiler's own headers.
++  assert(gtos_posix_file_include != "", "Set the implemented native file header directory")
+   cflags = [
++    "-isystem" + rebase_path("//build/config/gtos/include", root_build_dir),
++    "-isystem" + gtos_posix_file_include,
+     "-isystem" + gtos_sdk_dir + "/sdk",
+     "-isystem" + gtos_libcxx_include,
+     "-isystem" + gtos_sdk_dir + "/c-sdk",

@@ -313,3 +313,26 @@ production translation unit and dependency graph.
 system-header changes and compiler rejection, both C/C++ object/debug pairs,
 unchanged builds, and recompilation after a `.dwo` is removed. It extracts the
 actual `split_dwarf` config, rather than substituting a test-only output rule.
+
+`codex-c-ninja-n34` passes the corrected compiler command and reaches actual
+Perfetto source diagnostics. Its next blockers include an unknown GTOS OS,
+missing file/integer-format headers, and the legacy diagnostic-only guard on
+the libc++ external thread declarations. The native Content header layer now
+preserves the existing provider's declaration layout and ABI namespace under
+an explicit GTOS/IA32 guard, while the old qualification headers stay intact.
+It copies three LLVM integer-format headers from `native_c_clock/sdk` with
+their provenance, and supplies scalar `uid_t`/`mode_t` aliases. Those aliases
+do not implement Unix users or permission enforcement.
+
+The existing `gtos_posix_file_include` argument moves from Dawn's local config
+to the common GTOS SDK config, so consumers share the implemented native file
+subset. Perfetto gets an independent GTOS identity with all other OS flags
+false; its remaining platform services still need implementation. No Linux
+identity or signal/filesystem functionality is inferred from that flag.
+
+`codex-c-sdk-test-cs02` passes nine actual compiler/header contracts: native
+C/C++ and layout checks, wrong architecture, conflicting OS, a deliberately
+wrong ABI layout, and Perfetto native/host/unknown-platform controls.
+`codex-c-unit-ucs02` passes the 19 platform/application regressions. These
+validate declarations, compiler behavior and private patch application, not
+new threading runtime behavior, linking, a Perfetto runtime or a guest run.

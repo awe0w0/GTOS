@@ -1,16 +1,5 @@
 --- a/third_party/dawn/src/dawn/common/BUILD.gn
 +++ b/third_party/dawn/src/dawn/common/BUILD.gn
-@@ -156 +156,8 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
+@@ -156 +156 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
 -    is_ios || is_wasm) {
 +    is_ios || is_wasm || is_gtos) {
-+  if (is_gtos) {
-+    declare_args() {
-+      gtos_posix_file_include = ""
-+    }
-+    assert(gtos_posix_file_include != "",
-+           "GTOS Dawn handles require the native POSIX file subset headers")
-+  }
-@@ -157,0 +165,3 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
-+    if (is_gtos) {
-+      include_dirs = [ gtos_posix_file_include ]
-+    }
