@@ -19,5 +19,9 @@
   {
     "source": "apps/native_c_clock/sdk/time.h",
     "sha256": "ff4deee1ab52f753f085a6ae497afc12cbcd4201f49b8fdad6a520fd1ba74b03"
+  },
+  {
+    "source": "include/process/vm_abi.h",
+    "sha256": "35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11"
   }
 ]

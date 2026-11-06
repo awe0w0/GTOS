@@ -397,3 +397,24 @@ Host header compilation and the 19 platform regressions also pass. The clock
 boundary, logging/errno sinks and Linux reporting are unit dependencies; this
 does not establish new native clock guest behavior, full calendar correctness,
 runtime integration of all libc time functions or Content C1/C2/C3.
+
+GTOS `PagedMemory` now owns a native VM handle instead of asking for a POSIX
+mmap interface. Reserve retains two uncommitted guard pages; ordinary allocation
+commits only the rounded interior. `kDontCommit` leaves the interior uncommitted
+until `EnsureCommitted`, which extends it by whole pages without touching prior
+contents. Failed initial commits release the reservation, including `kMayFail`.
+Move construction/assignment transfer ownership, with self-move preserved.
+Page-aligned resident discard uses native DISCARD, preserving access while
+zeroing bytes; it makes no resident-charge reduction claim. Unsupported or
+uncommitted discard ranges return false. Host backends remain unchanged.
+
+`codex-c-perfetto-memory-build-m01` / `run-r01` execute the actual backend in
+sixteen O0/O2 images with a simulated VM syscall endpoint. They check exact
+wire layouts and guard exclusion, reserve/commit failure cleanup, zero filling,
+rounding, lazy growth, prior-byte preservation, two owners, repeated allocation,
+move/self-move, discard/error/range behavior and final release. Two deliberately
+wrong expectations return 1; twelve malformed/failed-service/invalid-request
+cases log and terminate with SIGILL. Default int80 objects compile separately
+without the injected endpoint; the original host source and 19 platform units
+also pass. The endpoint models VM outcomes, so this does not prove hardware
+page protection, physical accounting, GTOS guest execution or Content C1/C2/C3.

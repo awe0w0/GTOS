@@ -1,0 +1,25 @@
+--- a/third_party/perfetto/include/perfetto/ext/base/paged_memory.h
++++ b/third_party/perfetto/include/perfetto/ext/base/paged_memory.h
+@@ -24,8 +24,9 @@
+ #include "perfetto/base/build_config.h"
+ #include "perfetto/ext/base/container_annotations.h"
+ 
+-// We need to track the committed size on windows and when ASAN is enabled.
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || defined(ADDRESS_SANITIZER)
++// Windows and GTOS explicitly commit reservations; ASAN also needs tracking.
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || \
++    PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS) || defined(ADDRESS_SANITIZER)
+ #define TRACK_COMMITTED_SIZE() 1
+ #else
+ #define TRACK_COMMITTED_SIZE() 0
+@@ -94,6 +95,10 @@ class PagedMemory {
+   // Defaulted for implementation of move constructor + assignment.
+   PagedMemory& operator=(const PagedMemory&) = default;
+ 
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  unsigned gtos_handle_ = 0;
++#endif
++
+   char* p_ = nullptr;
+ 
+   // The size originally passed to Allocate(). The actual virtual memory
