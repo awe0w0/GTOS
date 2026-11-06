@@ -445,3 +445,18 @@ signal policy and thread checker into their native objects with SDK depfiles
 and split debug outputs. `n44` still stops on other platform services such as
 file permissions/path removal, pipes, ioctl and system metadata. These native
 dependency objects are not the formal shell delegate C1 object.
+
+The GTOS diagnostic sink has no interactive-terminal protocol. The progress
+reporter therefore avoids ioctl/termios and reports no interactive progress;
+the existing explicit FORCE_COLOR/NO_COLOR precedence stays intact. This does
+not implement a terminal service or claim a measured terminal width.
+
+`codex-c-perfetto-console-build-c01` / `run-r01` execute the actual exported
+terminal/color decision functions at O0/O2 in both Chromium and standalone
+configurations. The standalone fixture changes only the real generated
+Chromium-build switch. Each normal image passes 25 checks over missing/empty
+environment values, TERM variants, override precedence and repeated calls;
+the wrong-expectation image returns 1. Host source compilation and 19 platform
+regressions pass. Environment lookup is an injected unit dependency, and Linux
+syscalls only report results. Full progress rendering, native FILE streams and
+guest console behavior are outside this unit's claim.
