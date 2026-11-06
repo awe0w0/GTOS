@@ -264,3 +264,17 @@ itself remains unchanged. `codex-c-node-version-test-nv01` executes six real
 action checks: upstream canonical-import failure, patched leaf-link entry,
 ordinary entry, true version mismatch, missing private tool, and recovery.
 All pass with the pinned Python/Node; this does not constitute Content C1.
+
+`tests/gtos_c_rust_float_build.py` uses the actual private GN C toolchain plus
+the canonical SSE2 Rust target and GN-built core. The current C profile already
+enables SSE2; the older shared toolchain's no-SSE flags are not its current
+arguments. `codex-c-float-build-f04` / `codex-c-float-run-r02` run 22 checks
+at O0/O2 in the current SSE2 profile and an explicit x87 compatibility control:
+float/double arguments and returns in both directions, repr(C) structures,
+function pointers, signed zero, subnormal identities and infinities. A fifth
+image changes one expected result and returns one failure through the same
+entry, proving the comparison can reject. The emulator requires the read-only
+ELF input's executable mode bit; the earlier f03/r01 supply failed without it,
+and f04's five images have identical bytes. Linux write/exit are used only for
+reporting these compiler-ABI results. This is neither a GTOS guest run nor FP
+context, kernel, libc or browser acceptance.
