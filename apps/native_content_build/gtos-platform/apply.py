@@ -34,10 +34,25 @@ INPUTS = {
     'build/rust/gni_impl/BUILD.gn': '1106bd62a03288e3220820b1f79bbeee19eee062d5e1c34bb5fa604df1a3c6a9',
     'build/rust/gni_impl/rustc_print_cfg.py': '1a08afbd6405fa3a5a01abf7f52472f1cfc481b4908eeee872ed11f9ee1df102',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/mod.rs': '605fba85756be94fdc13f40823daa82ec29b493c102564fbe36a34a3414314e1',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/io/error/mod.rs': '51d30b4298f3bdba90b02936a7b4bc9891266fe8248675fe300222e24ae915e6',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/mod.rs': 'b8e407313093a89008fd0fbdd4805f2da8c7bb7711f0d36c03d858d6f0de5e4a',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/mod.rs': 'fcd278c7ca27edd3846098bb362423da1f013da49933159e66d0f77fd68cc540',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/mod.rs': '8edeb158d1fa1e7e9a786309684f323275e2c13b22fe974345378809012fe0cc',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/mutex/mod.rs': 'a58c3f5605de2ec78f6b621fa1138042cc40088cf43e21694ab08129b47b1470',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/condvar/mod.rs': '4738e89e6ae37d1843dbf66e3ebbf51f74b375e8199af8965288aff3255f41ca',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/once/mod.rs': '03fa76d79a5c65651bd627ffb2ec41f00afaccd9e0f81a48fa76201e192ce670',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/rwlock/mod.rs': '800959dcab669de71206b5492b81deb2765a183d323e2807daefee35fa00ae19',
+    'build/rust/std/rules/BUILD.gn': 'aec704ffc0528f5c10b237fc531bf6bf6bbdc848b91beb84de2a03273ee6f795',
+    'build/rust/std/BUILD.gn.hbs': 'ab89582c8238efdfc0d974e6bfbd61e384e3a3e3e7a5b4ca3376aeba0aeade05',
+    'build/rust/std/gnrt_config.toml': 'caf9a486faf41fe422c774d155b31707ac2300a78fc823b0ae30e942fe73b0e3',
 }
 
 ADDITIONS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/gtos.rs': 'rust/alloc.rs',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/io/error/gtos.rs': 'rust/error.rs',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/key/gtos.rs': 'rust/tls.rs',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/gtos.rs': 'rust/random.rs',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs': 'rust/futex.rs',
 }
 
 
@@ -64,6 +79,10 @@ def apply(view):
             raise SystemExit('refusing to overwrite platform addition: ' + rel)
         if not (HERE / source).is_file():
             raise SystemExit('platform addition is missing: ' + source)
+    for rel in INPUTS:
+        patch = HERE / 'patches' / candidate.patch_name(rel)
+        subprocess.run(['/usr/bin/patch', '--dry-run', '--batch', '--fuzz=0',
+                        '--input', str(patch), str((view / rel).resolve())], check=True)
     applied = []
     for rel, expected in INPUTS.items():
         target = private_target(view, rel)

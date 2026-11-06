@@ -1,0 +1,13 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/mod.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/mod.rs
+@@ -158,6 +158,10 @@
+ /// with a pointer which we can get and set to store our data.
+ pub(crate) mod key {
+     cfg_select! {
++        target_os = "gtos" => {
++            mod gtos;
++            pub(super) use gtos::{Key, LazyKey, get, set};
++        }
+         any(
+             all(not(target_vendor = "apple"), not(target_family = "wasm"), target_family = "unix"),
+             all(not(target_thread_local), target_vendor = "apple"),

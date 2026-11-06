@@ -1,0 +1,20 @@
+--- a/build/rust/std/BUILD.gn.hbs
++++ b/build/rust/std/BUILD.gn.hbs
+@@ -31,6 +31,17 @@
+     "{{this}}",
+     {{/each}}
+   ]
++  {{#if extra_kv.gtos_native_std_sources}}
++  if (is_gtos) {
++    sources += [
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/io/error/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/key/gtos.rs",
++    ]
++  }
++  {{/if}}
+   inputs = [
+     {{#each inputs}}
+     "{{this}}",

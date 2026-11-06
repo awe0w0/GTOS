@@ -190,3 +190,68 @@ materialization and pre-existing-file/dangling-link refusal.
 `codex-c-ninja-n25` std compilation accepts the allocator branch. It then stops
 at eleven remaining error/TLS/synchronization/random backend errors; no complete
 std library or Content object is claimed.
+
+The following Rust backends now select GTOS explicitly, without Unix identity:
+
+- Error handling reads the native `__llvm_libc_errno()` slot and maps the
+  committed SDK/file-service errors; unknown values retain their code.
+- TLS keys use the native compiler-rt emutls control ABI and C++ thread-exit
+  callbacks. Key allocation/registration failure aborts, concurrent lazy-key
+  losers are freed, and callbacks can reinitialize a key. Link the native
+  thread-aware C heap/emutls/exit provider; the adapter does not supply that
+  provider or expand its four-context BSP profile.
+- Random bytes require CPUID-advertised RDRAND with at most ten attempts per
+  word, including short tails. Unavailable/exhausted hardware fails; a partial
+  prefix is unusable. There is no timestamp or deterministic fallback.
+- The upstream Mutex/Condvar/Once/RwLock algorithms use a GTOS cooperative
+  waiting backend. It polls atomics and calls native Yield rather than claiming
+  a kernel futex queue. A shared notification generation permits spurious
+  wakes, including notifications without a value change. Timeouts validate the
+  native coarse monotonic-clock tuple and include its 10 ms resolution to
+  prevent early timeout. This costs runnable CPU and is not an SMP scalability
+  claim; invalid clocks/yields fail instead of claiming completion.
+
+`tests/gtos_rust_module_build.py --module error|tls|random|futex --view ...
+--clang-bin ... --gcc13-root ... --core-root ... --out ...` builds the actual
+modules' O0/O2 host tests. TLS uses real host emutls/C++ exit providers; allocator
+and registration failure injection redirects only the C imports. Random tests
+inject instruction outcomes, and waiting tests inject the platform clock/yield.
+The Mutex and Condvar tests include the pinned upstream implementations, not
+replacement lock algorithms. All images are published read-only and executed
+in a second original-guard stage with a separate writable root.
+
+Guarded results on 2026-11-07:
+
+- `codex-c-error-build-e03` / `codex-c-error-run-r10`: three cases at O0/O2.
+- `codex-c-tls-build-t03` / `codex-c-tls-run-r06`: six cases at O0/O2.
+- `codex-c-random-build-q03` / `codex-c-random-run-r09`: five cases at O0/O2.
+- `codex-c-futex-build-f03` / `codex-c-futex-run-r11`: seven cases at O0/O2,
+  including contended upstream mutex updates, condvar relocking, clock refusal,
+  no-notification value changes, same-value notifications, and timeout bounds.
+
+The last three builds also compile two real GTOS ELF32/i386 objects each.
+Earlier `codex-c-futex-run-r07` caught an early timeout caused by timestamp
+rounding; its failure remains recorded. These host/interface tests and target
+objects do not establish execution of these Rust backends in a GTOS guest,
+complete Rust std services, Content C1/C2/C3, or browser functionality.
+
+The five added modules are registered in the generated std target's GN sources
+as well as its gnrt template/configuration. The compiler wrapper's source-input
+check stays enabled: `codex-c-ninja-n27` compiled the crate but rejected those
+missing declarations. No successful GN build is claimed for that stage.
+Platform application now dry-runs every patch before modifying any input,
+resolving leaf links only for that read-only check and materializing private
+copies for the real writes. `codex-c-unit-u27` passed 19 tests, including bad
+patch refusal without side effects and linked-original byte preservation.
+
+`codex-c-gn-g27` retains 21,680 formal Content targets from 2,571 files.
+`codex-c-ninja-n29` successfully builds the actual GN std target, including the
+wrapper's source-input checks. Its `libstd_std.rlib` is 12,154,424 B, SHA256
+`2fb6c619a712b43f5723266ac3a17364e7154d381aab8cf95fa7e21d4fdcd469`:
+one Rust metadata member and 18 ELF32/i386 relocatable objects. The actual
+depfile includes all five GTOS modules. This is a restricted experimental std
+build: filesystem, general time, network and Rust thread-spawn services still
+retain upstream unsupported behavior. It does not assert full std runtime
+support, Content C1/C2/C3, or guest execution of these Rust adapters. gnrt
+regeneration itself has not been run; the existing generated GN rule and its
+template/configuration are updated together.

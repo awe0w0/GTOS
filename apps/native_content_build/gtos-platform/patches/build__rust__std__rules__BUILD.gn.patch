@@ -1,0 +1,18 @@
+--- a/build/rust/std/rules/BUILD.gn
++++ b/build/rust/std/rules/BUILD.gn
+@@ -3209,6 +3209,15 @@
+     "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/time.rs",
+     "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/view.rs",
+   ]
++  if (is_gtos) {
++    sources += [
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/alloc/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/io/error/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs",
++      "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/key/gtos.rs",
++    ]
++  }
+   inputs = [
+     "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/../../backtrace/src/backtrace/libunwind.rs",
+     "//third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/../../backtrace/src/backtrace/miri.rs",

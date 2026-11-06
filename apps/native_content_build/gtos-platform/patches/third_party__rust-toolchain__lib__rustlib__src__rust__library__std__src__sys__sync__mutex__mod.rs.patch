@@ -1,0 +1,7 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/mutex/mod.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/mutex/mod.rs
+@@ -2,3 +2,4 @@
+     any(
++        target_os = "gtos",
+         all(target_os = "windows", not(target_vendor = "win7")),
+         target_os = "linux",

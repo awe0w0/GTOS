@@ -1,0 +1,11 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/mod.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/mod.rs
+@@ -1,4 +1,8 @@
+ cfg_select! {
++    target_os = "gtos" => {
++        mod gtos;
++        pub use gtos::fill_bytes;
++    }
+     // Tier 1
+     any(target_os = "linux", target_os = "android") => {
+         mod linux;

@@ -1,0 +1,11 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/mod.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/mod.rs
+@@ -1,4 +1,8 @@
+ cfg_select! {
++    target_os = "gtos" => {
++        mod gtos;
++        pub use gtos::*;
++    }
+     any(
+         target_os = "linux",
+         target_os = "android",

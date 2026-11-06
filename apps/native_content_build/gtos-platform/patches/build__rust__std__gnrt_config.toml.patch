@@ -1,0 +1,10 @@
+--- a/build/rust/std/gnrt_config.toml
++++ b/build/rust/std/gnrt_config.toml
+@@ -122,6 +122,7 @@
+ 
+ [crate.std.extra_kv]
+ immediate_abort = true
++gtos_native_std_sources = true
+ cpp_api_from_rust = { deps = [ "alloc", "core" ] }
+ 
+ [crate.test]

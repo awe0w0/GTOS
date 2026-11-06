@@ -287,5 +287,41 @@ class PrivatePatchTest(unittest.TestCase):
             else:
                 self.assertTrue(addition.is_symlink())
 
+    def test_bad_patch_refuses_before_modifying_any_input(self):
+        root = args.out / 'bad-patch'
+        root.mkdir()
+        target = root / '.gn'
+        target.write_text('unchanged input\n')
+        payload = args.out / 'bad-patch-payload'
+        (payload / 'patches').mkdir(parents=True)
+        (payload / 'patches/.gn.patch').write_text(
+            '--- a/.gn\n+++ b/.gn\n@@ -1 +1 @@\n-not the input\n+wrong output\n')
+        with mock.patch.dict(self.module.INPUTS, {'.gn': self.module.candidate.digest(target)}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, {}, clear=True), \
+                mock.patch.object(self.module, 'HERE', payload):
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.module.apply(root)
+        self.assertEqual(target.read_text(), 'unchanged input\n')
+        self.assertFalse((root / 'gtos-platform.json').exists())
+        self.assertFalse((root / '.gn.rej').exists())
+
+    def test_patch_preflight_reads_a_leaf_link_and_only_changes_the_private_copy(self):
+        root = args.out / 'leaf-link-patch'
+        root.mkdir()
+        origin = args.out / 'leaf-link-original.gn'
+        origin.write_text('before\n')
+        (root / '.gn').symlink_to(origin)
+        payload = args.out / 'leaf-link-payload'
+        (payload / 'patches').mkdir(parents=True)
+        (payload / 'patches/.gn.patch').write_text(
+            '--- a/.gn\n+++ b/.gn\n@@ -1 +1 @@\n-before\n+after\n')
+        with mock.patch.dict(self.module.INPUTS, {'.gn': self.module.candidate.digest(origin)}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, {}, clear=True), \
+                mock.patch.object(self.module, 'HERE', payload):
+            self.module.apply(root)
+        self.assertEqual(origin.read_text(), 'before\n')
+        self.assertEqual((root / '.gn').read_text(), 'after\n')
+        self.assertFalse((root / '.gn').is_symlink())
+
 
 unittest.main(argv=[sys.argv[0]], verbosity=2)
