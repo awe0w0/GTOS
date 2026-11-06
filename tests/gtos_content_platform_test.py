@@ -139,6 +139,64 @@ group("default") { deps = [ ":sample" ] }
         self.assertIn('missing/BUILD.gn', result.stdout)
 
 
+class CompilerRuntimeConfigurationTest(unittest.TestCase):
+    def configure(self, name, cpu='x86', archive='/qualified/libscalar_integer.a', coverage=False):
+        root = args.out / name
+        (root / 'build/config/clang').mkdir(parents=True)
+        (root / '.gn').write_text('buildconfig = "//config.gn"\n')
+        values = {key: False for key in ['is_ios', 'is_mac', 'is_win', 'is_wasm',
+                  'clang_use_raw_ptr_plugin', 'clang_use_chrome_plugins', 'clang_use_unsafe_buffers_plugin']}
+        values.update(is_gtos=True, toolchain_has_rust=True, use_clang_coverage=coverage)
+        (root / 'config.gn').write_text(
+            '\n'.join('%s = %s' % (k, str(v).lower()) for k, v in values.items()) +
+            '\nchrome_pgo_phase = 0\ncurrent_cpu = "' + cpu +
+            '"\nclang_base_path = "//clang"\nset_default_toolchain("//:tools")\n')
+        for rel in ['build/config/pch.gni', 'build/config/rust.gni', 'build/config/clang/clang.gni']:
+            (root / rel).write_text('')
+        shutil.copyfile(args.view / 'build/config/clang/BUILD.gn', root / 'build/config/clang/BUILD.gn')
+        (root / 'BUILD.gn').write_text('''toolchain("tools") {
+  tool("cxx") {
+    command = "unused {{source}} {{output}}"
+    outputs = [ "{{source_out_dir}}/{{source_name_part}}.o" ]
+  }
+  tool("stamp") { command = "unused {{output}}" }
+}
+source_set("sample") {
+  sources = [ "sample.cc" ]
+  configs = [ "//build/config/clang:compiler_builtins", "//build/config/clang:compiler_profile" ]
+}
+group("default") { deps = [ ":sample" ] }
+''')
+        (root / 'sample.cc').write_text('int value;\n')
+        result = subprocess.run([args.gn, 'gen', str(root / 'out'), '--root=' + str(root),
+                                 '--args=gtos_compiler_builtins="' + archive + '"'],
+                                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        (root / 'gen.log').write_text(result.stdout)
+        return root, result
+
+    def test_explicit_archive_is_the_only_runtime_library(self):
+        root, result = self.configure('runtime-archive')
+        self.assertEqual(result.returncode, 0, result.stdout)
+        output = subprocess.check_output(
+            [args.gn, 'desc', str(root / 'out'), '//:sample', 'libs', '--format=json', '--root=' + str(root)], text=True)
+        self.assertEqual(json.loads(output)['//:sample']['libs'], ['/qualified/libscalar_integer.a'])
+
+    def test_missing_archive_refuses(self):
+        _, result = self.configure('runtime-missing', archive='')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Set the qualified GTOS builtins archive', result.stdout)
+
+    def test_wrong_architecture_refuses(self):
+        _, result = self.configure('runtime-x64', cpu='x64')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('only provides native IA32 integer builtins', result.stdout)
+
+    def test_unimplemented_profiling_refuses(self):
+        _, result = self.configure('runtime-coverage', coverage=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('GTOS profiling runtime is not implemented', result.stdout)
+
+
 class PrivatePatchTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

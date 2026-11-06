@@ -39,11 +39,18 @@ the source trees and SDK are read-only inputs.
      --args=<profile plus explicit material paths>
    ```
 
-   Material arguments: `gtos_clang_bin`, `gtos_clang_include`, `gtos_sdk_dir`,
-   `gtos_libcxx_include`, `gtos_compiler_rt_source_dir`, `gtos_png_source_dir`,
+   Material arguments: `gtos_clang_bin`, `clang_base_path`, `gtos_clang_include`,
+   `gtos_sdk_dir`, `gtos_libcxx_include`, `gtos_compiler_builtins`, `gtos_png_source_dir`,
    `gtos_png_skia_source_dir`, `gtos_png_gif_source_dir`,
    `gtos_png_wuffs_include_dir`, `gtos_libxml_config_dir`, and
    `gtos_posix_file_include` (the native_libxml_file/include directory).
+
+   `gtos_compiler_builtins` must name the already qualified native IA32 integer
+   archive, not a Linux runtime or a Rust metadata archive. The caller verifies
+   SHA256 `f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528`
+   before dispatch. This restores the explicit archive contract previously
+   qualified in `native_rust_target/gn`, replacing a nonexistent guessed Clang
+   runtime path. Other architectures and requested GTOS profiling are refused.
 
 Both target switches matter. `--root-target` selects the entry, but by itself
 still defines other targets in loaded BUILD files. `--root-pattern` retains the
@@ -85,6 +92,9 @@ ELF32/i386 objects and producing depfiles at both optimization levels.
 - `codex-c-dawn-target-t01`: eight real GTOS ELF32/i386 objects plus depfiles.
 - `codex-c-gn-g14`: the formal Content graph generated 21,680 targets from
   2,571 files. This still does not provide a Content object, link or GTOS entry.
+- `codex-c-gn-g15`: the same formal graph now names the qualified integer archive
+  and ext4 compiler supply; `codex-c-unit-u07` passed 14 tests, including the actual
+  runtime config's positive, missing-archive, wrong-architecture and profiling cases.
 
 Full raw stage records remain in the existing packet's `evidence/codex-c-*`
 records, including failed attempts and the preceding GN-only generation.

@@ -1,0 +1,24 @@
+--- a/build/config/clang/BUILD.gn
++++ b/build/config/clang/BUILD.gn
+@@ -8,0 +9,7 @@ import("clang.gni")
++if (is_gtos) {
++  declare_args() {
++    # The caller verifies this native LLVM integer archive against its lock.
++    gtos_compiler_builtins = ""
++  }
++}
++
+@@ -182,0 +190,7 @@ template("clang_lib") {
++  } else if (is_gtos) {
++    assert(current_cpu == "x86" && invoker.libname == "builtins",
++           "This GTOS profile only provides native IA32 integer builtins")
++    assert(gtos_compiler_builtins != "", "Set the qualified GTOS builtins archive")
++    config(target_name) {
++      libs = [ gtos_compiler_builtins ]
++    }
+@@ -302 +316,4 @@ clang_lib("compiler_profile") {
+-  if (!toolchain_has_rust) {
++  if (is_gtos) {
++    assert(!use_clang_coverage && chrome_pgo_phase == 0,
++           "The GTOS profiling runtime is not implemented")
++  } else if (!toolchain_has_rust) {
