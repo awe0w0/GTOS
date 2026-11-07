@@ -1,0 +1,11 @@
+--- a/third_party/rust/chromium_crates_io/vendor/serde-v1/src/core/crate_root.rs
++++ b/third_party/rust/chromium_crates_io/vendor/serde-v1/src/core/crate_root.rs
+@@ -81,7 +81,7 @@
+ 
+             #[cfg(feature = "std")]
+             pub use std::collections::{HashMap, HashSet};
+-            #[cfg(feature = "std")]
++            #[cfg(all(feature = "std", any(unix, windows)))]
+             pub use std::ffi::{OsStr, OsString};
+             #[cfg(feature = "std")]
+             pub use std::hash::{BuildHasher, Hash};

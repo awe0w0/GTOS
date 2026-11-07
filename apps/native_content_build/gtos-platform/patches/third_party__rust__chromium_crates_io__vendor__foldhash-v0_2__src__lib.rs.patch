@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/foldhash-v0_2/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/foldhash-v0_2/src/lib.rs
+@@ -112,6 +112,7 @@
+ //! containers, but can be turned off for `#![no_std]` crates.
+ 
+ #![cfg_attr(all(not(test), not(feature = "std")), no_std)]
++#![cfg_attr(all(target_os = "gtos", feature = "std"), feature(restricted_std))]
+ #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
+ #![warn(missing_docs)]
+ 

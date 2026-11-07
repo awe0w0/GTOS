@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/serde-v1/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/serde-v1/src/lib.rs
+@@ -98,6 +98,7 @@
+ #![doc(html_root_url = "https://docs.rs/serde/1.0.229")]
+ // Support using Serde without the standard library!
+ #![cfg_attr(not(feature = "std"), no_std)]
++#![cfg_attr(all(target_os = "gtos", feature = "std"), feature(restricted_std))]
+ // Show which crate feature enables conditionally compiled APIs in documentation.
+ #![cfg_attr(docsrs, feature(doc_cfg, rustdoc_internals))]
+ #![cfg_attr(docsrs, allow(internal_features))]

@@ -1,0 +1,15 @@
+--- a/base/logging/BUILD.gn
++++ b/base/logging/BUILD.gn
+@@ -12,6 +12,12 @@
+ 
+ rust_bindgen("log_severity_bindgen") {
+   header = "log_severity.h"
++  if (is_gtos) {
++    bindgen_flags = [
++      "use-core",
++      "raw-line=#![no_std]",
++    ]
++  }
+   cpp = true
+   visibility = [ "rust_logger:*" ]
+   deps = [ ":log_severity" ]

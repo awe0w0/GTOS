@@ -13,6 +13,20 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/rust/chromium_crates_io/vendor/serde_core-v1/src/crate_root.rs': '0fa71194671383f30941480cd7de9b1d008ace0d05c3d1cf3c317ed5c9639f40',
+    'third_party/rust/chromium_crates_io/vendor/serde-v1/src/core/crate_root.rs': '0fa71194671383f30941480cd7de9b1d008ace0d05c3d1cf3c317ed5c9639f40',
+    'third_party/rust/serde_core/v1/BUILD.gn': '132bdf871494a41231173f20e582b35e5533e2a0f70c7e06c1c0e18bda2cd5b3',
+    'third_party/rust/serde/v1/BUILD.gn': '2ab9bdc976b4b26a285462846bfd047037fe89ef4be519ce343dfe57186eb0b8',
+    'third_party/rust/foldhash/v0_2/BUILD.gn': 'b21b557e7df96fb668a9327c53db2a45178792143cedac5d827cad7e1452ec24',
+    'third_party/rust/memchr/v2/BUILD.gn': 'be74b1b18659b8fed358eea3939b58d08bfa606c8cfac43d15f7c94f9303cfb2',
+    'third_party/rust/chromium_crates_io/vendor/foldhash-v0_2/src/lib.rs': '777319e7f2919bede856e13594169cfc4bdbaf2e541463da58c86e7e832dc45f',
+    'third_party/rust/chromium_crates_io/vendor/memchr-v2/src/lib.rs': '614f778a41e88a29ea0ceb8e92c839dbb6b5a61c967f8bfd962975e18f932c71',
+    'build/rust/chromium_prelude/chromium_prelude.rs': '602f75cfa69277bfa5fb24fd55ce18e17f6912a6b03af615d1b0dff73a8bab86',
+    'base/logging/BUILD.gn': '46404ae6aaf11d348966b0f35473c4c72d77a9c20b2a23eeb2cb04ea0810258a',
+    'base/logging.h': '85360d4e33f2645ed9c3b4e0a3302aec06f538631c42514e3ccd704fcfc1461f',
+    'third_party/rust/chromium_crates_io/vendor/serde_core-v1/src/lib.rs': '67cb60b55dbb2b4ecdb813c871d7f89e675ff255641445f60d33d354a054f704',
+    'third_party/rust/chromium_crates_io/vendor/serde-v1/src/lib.rs': '3ebe097aa377f547eb336e44a7a999718726b32804c98c81c9f124cfc796cf7c',
+    'tools/protoc_wrapper/protoc-gen-ts_proto.py': '5c47d11dd1d162e0e4b2f1c2e9ffee92d01692467379c763f6bb340c01d557c1',
     'base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc': 'e046a5e98d65df593b829ab4b1541f9732c6aa55e6934f70041f9227207526a4',
     'build_overrides/partition_alloc.gni': 'eda28a6578ab3ac16cc9806198ef935e69c50cd8fca27f29a19217549b181709',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time.h': '98d6bf634c5fdaf6505c48df393dbe432939660f92e359286288f2d6cf450449',
@@ -22,7 +36,6 @@ INPUTS = {
     'base/allocator/partition_allocator/src/partition_alloc/partition_tls.h': '9630c42d6deb4fe26269c37d0799e412ebad33ca5be3247e1e309d008ecc63ff',
     'base/allocator/partition_allocator/src/partition_alloc/thread_cache.cc': '93b59c06ec9e04e638720ef7a622f97253fa63417f15fa1d6f737a61720804b9',
     'base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc': '2f670566b168d90dfb273ee0dfac94ef7c27a8670d1d38cf877f784df917f362',
-    'tools/protoc_wrapper/protoc-gen-ts_proto.py': '5c47d11dd1d162e0e4b2f1c2e9ffee92d01692467379c763f6bb340c01d557c1',
     'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc': '498b80b48fe53f8812803873cdfddb5d3dee98a42c8b345fc47ca401de1b2bfd',
     'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc': 'cc5e597f569b1f028e50daf143f936042600be7cfe32774953ef157cd21a4c6b',
     'third_party/protobuf/src/google/protobuf/io/zero_copy_stream_impl.cc': 'aca7667bf07c59daeac823edbc7464550400cdcc95eeb2cc41a91319deb533b9',

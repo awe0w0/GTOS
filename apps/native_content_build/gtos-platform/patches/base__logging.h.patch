@@ -1,0 +1,11 @@
+--- a/base/logging.h
++++ b/base/logging.h
+@@ -589,7 +589,7 @@
+ 
+ #if BUILDFLAG(IS_WIN)
+ typedef unsigned long SystemErrorCode;
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ typedef int SystemErrorCode;
+ #endif
+ 
