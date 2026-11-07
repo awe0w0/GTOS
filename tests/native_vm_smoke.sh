@@ -34,10 +34,10 @@ source_manifest() {
         printf '%s\n' src/gdt.cpp src/multitasking.cpp src/syscalls.cpp \
             src/hardwarecommunication/interrupts.cpp src/hardwarecommunication/port.cpp \
             src/hardwarecommunication/interruptstubs.s src/process/native_runtime.cpp src/process/native_realtime.cpp \
-            src/process/resources.cpp src/process/resources_png.inc src/process/native_surface.cpp \
+            src/process/resources.cpp src/process/resources_png.inc src/process/native_surface.cpp src/process/native_windows.cpp \
             src/process/native_fp.cpp src/process/native_fp.s src/process/elf32.cpp \
             src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp src/memory/bootstrap.cpp \
-            tests/native_vm_smoke.cpp tests/native_vm_smoke.sh tests/native_process_smoke.cpp \
+            tests/native_vm_smoke.cpp tests/native_vm_smoke.sh tests/native_process_smoke.cpp tests/i386_pure_virtual_runtime.cpp \
             tests/native_process_probe_expectations.h tests/native_process_loader.s tests/native_process_smoke.ld \
             tools/kernel-cxxflags tools/audit-kernel-instructions.py
         find apps/native_vm_probe -type f -print
@@ -51,9 +51,9 @@ for optimization in 0 2; do
     mkdir -p "$level/kernel" "$level/probes" "$level/iso/boot/grub"
     sources=(src/gdt.cpp src/multitasking.cpp src/syscalls.cpp src/hardwarecommunication/interrupts.cpp
         src/hardwarecommunication/port.cpp src/process/native_runtime.cpp src/process/native_realtime.cpp src/process/resources.cpp
-        src/process/native_surface.cpp src/process/native_fp.cpp src/process/elf32.cpp
+        src/process/native_surface.cpp src/process/native_windows.cpp src/process/native_fp.cpp src/process/elf32.cpp
         src/memory/process_address_space.cpp src/memory/paging.cpp src/memory/physical.cpp
-        src/memory/bootstrap.cpp tests/native_vm_smoke.cpp)
+        src/memory/bootstrap.cpp tests/i386_pure_virtual_runtime.cpp tests/native_vm_smoke.cpp)
     for source in "${sources[@]}"; do
         "$compiler" -m32 -std=c++11 -O"$optimization" -ffreestanding -nostdlib -fno-builtin \
             -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie -fno-threadsafe-statics \
