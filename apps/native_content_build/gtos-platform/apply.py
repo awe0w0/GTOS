@@ -13,6 +13,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'tools/protoc_wrapper/protoc-gen-ts_proto.py': '5c47d11dd1d162e0e4b2f1c2e9ffee92d01692467379c763f6bb340c01d557c1',
     'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc': '498b80b48fe53f8812803873cdfddb5d3dee98a42c8b345fc47ca401de1b2bfd',
     'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc': 'cc5e597f569b1f028e50daf143f936042600be7cfe32774953ef157cd21a4c6b',
     'third_party/protobuf/src/google/protobuf/io/zero_copy_stream_impl.cc': 'aca7667bf07c59daeac823edbc7464550400cdcc95eeb2cc41a91319deb533b9',

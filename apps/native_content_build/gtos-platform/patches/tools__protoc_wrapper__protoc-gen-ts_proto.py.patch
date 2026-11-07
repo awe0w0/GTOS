@@ -1,0 +1,13 @@
+--- a/tools/protoc_wrapper/protoc-gen-ts_proto.py
++++ b/tools/protoc_wrapper/protoc-gen-ts_proto.py
+@@ -19,8 +19,8 @@
+ 
+ def main(argv):
+   cmd = [node.GetBinaryPath(), node_modules.PathToTsProto()] + argv
+-  process = subprocess.run(cmd)
++  return subprocess.call(cmd)
+ 
+ 
+ if __name__ == '__main__':
+-  main(sys.argv[1:])
++  sys.exit(main(sys.argv[1:]))
