@@ -90,6 +90,30 @@ class WorkspaceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'source removal'):
             w.apply_snapshot(view,before,following)
 
+    def test_a_new_tool_must_be_supplied_separately_with_exact_identity(self):
+        view = self.view('additional-tool-view')
+        before,_ = self.capture(view,'additional-tool-old')
+        desired = self.view('additional-tool-desired','after\n',tool='reviewed')
+        following,record = self.capture(desired,'additional-tool-new',view,['tool'])
+        tool = view/'tool'
+        with self.assertRaisesRegex(ValueError,'materialized private source'):
+            w.apply_snapshot(view,before,following)
+        tool.write_text('different')
+        tool.chmod(0o555)
+        with self.assertRaisesRegex(ValueError,'identity drift'):
+            w.apply_snapshot(view,before,following)
+        tool.chmod(0o644)
+        tool.write_text('reviewed')
+        with self.assertRaisesRegex(ValueError,'identity drift'):
+            w.apply_snapshot(view,before,following)
+        self.assertEqual((view/'sub/source.rs').read_text(),'before\n')
+        tool.chmod(0o555)
+        original = tool.stat()
+        self.assertEqual(w.apply_snapshot(view,before,following),['sub/source.rs'])
+        self.assertEqual(tool.stat().st_ino,original.st_ino)
+        self.assertEqual(tool.stat().st_mtime_ns,original.st_mtime_ns)
+        w.verify(view,record)
+
     def test_new_overlay_materializes_a_linked_parent_without_touching_its_origin(self):
         view = self.view('linked-view',include=False)
         original = args.out/'shared-fixture'

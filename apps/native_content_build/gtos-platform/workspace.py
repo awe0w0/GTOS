@@ -98,6 +98,14 @@ def version(record):
     return hashlib.sha256(json.dumps(record,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
+def verify_file(view,entry):
+    rel = entry['path']
+    path = private_file(view,rel)
+    if (path.stat().st_size!=entry['bytes'] or candidate.digest(path)!=entry['sha256'] or
+            stat.S_IMODE(path.stat().st_mode)!=entry['mode']):
+        raise ValueError('workspace source identity drift: '+rel)
+
+
 def _verify_files(view,record):
     view = view.resolve()
     if candidate.under_shared(view) or str(view)!=record['workspace']:
@@ -109,10 +117,7 @@ def _verify_files(view,record):
         if rel in seen:
             raise ValueError('duplicate source record: '+rel)
         seen.add(rel)
-        path = private_file(view,rel)
-        if (path.stat().st_size!=entry['bytes'] or candidate.digest(path)!=entry['sha256'] or
-                stat.S_IMODE(path.stat().st_mode)!=entry['mode']):
-            raise ValueError('workspace source identity drift: '+rel)
+        verify_file(view,entry)
 
 
 def verify(view,record):
@@ -138,8 +143,17 @@ def apply_snapshot(view,previous,following):
     new_files = {entry['path']:entry for entry in new['files']}
     if len(new_files)!=len(new['files']) or not old_files.keys()<=new_files.keys():
         raise ValueError('source removal/duplicate requires a fresh workspace')
-    if {key:item for key,item in old_files.items() if item['tool']} != {key:item for key,item in new_files.items() if item['tool']}:
+    if any((entry['tool'] or new_files[rel]['tool']) and entry!=new_files[rel]
+           for rel,entry in old_files.items()):
         raise ValueError('host tool changes require a fresh workspace')
+    # A separately supplied tool may join the record without being copied by
+    # a source update. Verify its actual private file before any source write.
+    for rel in new_files.keys() - old_files.keys():
+        entry = new_files[rel]
+        if entry['tool']:
+            if entry['mode']!=0o555:
+                raise ValueError('new host tool is not read-only executable: '+rel)
+            verify_file(view,entry)
     old_dirs = set(old.get('real_directories', []))
     new_dirs = set(new.get('real_directories', []))
     if len(new_dirs) != len(new.get('real_directories', [])) or not old_dirs <= new_dirs:
