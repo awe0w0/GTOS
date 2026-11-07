@@ -1,0 +1,11 @@
+--- a/build/rust/allocator/lib.rs
++++ b/build/rust/allocator/lib.rs
+@@ -19,6 +19,8 @@
+ // TODO(https://crbug.com/410596442): Stop using unstable features here.
+ // https://github.com/rust-lang/rust/issues/29603 tracks stabilization of the `linkage` feature.
+ #![feature(linkage)]
++// GTOS supplies the native allocation backend for std::alloc.
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ // Required to apply `#[rustc_std_internal_symbol]` to our alloc error handler
+ // so the name is correctly mangled as rustc expects.
+ //

@@ -666,3 +666,13 @@ PLOG, chunk boundaries, filtering, newline handling, four failed write
 returns, and an actual fatal PCHECK with the diagnostic and SIGTRAP. The
 native diagnostic syscall itself was compiled by the formal graph; these
 unit runs are host executions with the injected syscall boundary.
+
+GTOS generates both Chromium allocator FFI crates with core-only bindings.
+Only the actual allocator crate opts into restricted std for its System
+allocator configuration. The normal host bindgen arguments are unchanged.
+`ninja-n71` regenerates the formal graph and builds both generated rlibs and
+the allocator rlib. `rust-ffi-test-rt01` compiles a no_std consumer against
+the actual bindings, rejects a changed pointer signature, and confirms that
+the GTOS standard library still rejects a consumer without opt-in. This
+checks compiler and binding contracts. Allocator linkage and runtime are
+separate Content milestones.

@@ -13,6 +13,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'build/rust/allocator/BUILD.gn': 'ba4af4728989a16c5080476537ee4da67e92d1ab301d53b0e811fa1c5a21e094',
+    'build/rust/allocator/lib.rs': '03241a012540b8856a5de5eef365aa13cf28e0630730df3b3323ef88184e715a',
     'base/allocator/partition_allocator/src/partition_alloc/build_config.h': 'a0bc70bbb196d756c14b24d9da928301273a09dddcd84f2879cec475c5675811',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/scoped_clear_last_error.h': '6659b2ff66f9b814e6a5c3ee1f85cec4ebdc84ff313637b799210f5503ab96e4',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h': '1152b52ddf3a7b5389794fd9ed0dfdbe627750309df5ed6e6a020f8681f85633',

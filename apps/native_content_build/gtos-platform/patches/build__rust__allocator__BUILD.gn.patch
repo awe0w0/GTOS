@@ -1,0 +1,37 @@
+--- a/build/rust/allocator/BUILD.gn
++++ b/build/rust/allocator/BUILD.gn
+@@ -46,6 +46,14 @@
+ }
+ 
+ if (toolchain_has_rust) {
++  if (is_gtos) {
++    # These bindings contain only C ABI types and do not need std.
++    gtos_allocator_bindgen_flags = [
++      "use-core",
++      "raw-line=#![no_std]",
++    ]
++  }
++
+   # All targets which depend on Rust code but are not linked by rustc must
+   # depend on this. Usually, this dependency will come from a `rust_target` or
+   # `cargo_crate` GN template, but note that this may be overridden by setting
+@@ -87,6 +95,9 @@
+       # Giving an explicit `crate_name`, because `allocator` target needs to
+       # set `no_chromium_prelude` and cannot import mangled crate names.
+       crate_name = "allocator_impls_ffi"
++      if (is_gtos) {
++        bindgen_flags = gtos_allocator_bindgen_flags
++      }
+     }
+ 
+     source_set("allocator_impls_headers") {
+@@ -118,6 +129,9 @@
+     # Giving an explicit `crate_name`, because `allocator` target needs to
+     # set `no_chromium_prelude` and cannot import mangled crate names.
+     crate_name = "alloc_error_handler_impl_ffi"
++    if (is_gtos) {
++      bindgen_flags = gtos_allocator_bindgen_flags
++    }
+   }
+ 
+   source_set("alloc_error_handler_impl_headers") {
