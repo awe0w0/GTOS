@@ -1,0 +1,12 @@
+--- a/base/task/current_thread.cc
++++ b/base/task/current_thread.cc
+@@ -154,7 +154,8 @@ MessagePumpForUI* CurrentUIThread::GetMessagePumpForUI() const {
+   return static_cast<MessagePumpForUI*>(current_->GetMessagePump());
+ }
+ 
+-#if BUILDFLAG(IS_OZONE) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_OZONE) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_WIN) && \
++    !BUILDFLAG(IS_GTOS)
+ bool CurrentUIThread::WatchFileDescriptor(
+     int fd,
+     bool persistent,

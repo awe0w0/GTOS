@@ -13,7 +13,7 @@ parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
-                                            'base_identity', 'base_event', 'base_shared'],
+                                            'base_identity', 'base_event', 'base_shared', 'base_tls'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -38,6 +38,8 @@ component = {
                    'native_content_base_event_kernel.cpp', 'ContentBaseEventUnusedBaseline', 1),
     'base_shared': ('native_memory_record', None, 'base_shared_memory.cpp',
                     'native_content_shared_memory_kernel.cpp', 'ContentSharedMemoryUnusedBaseline', 2),
+    'base_tls': ('native_memory_record', None, 'base_tls.cpp',
+                 'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -101,7 +103,7 @@ if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
-if args.component in ('base_identity', 'base_event', 'base_shared'):
+if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -121,6 +123,9 @@ if args.component == 'base_event':
                         '#define TRACE_EVENT_INSTANT(...) ((void)0)\n')
     bind(disabled)
     flags += ['-I' + str(args.generated / 'third_party/perfetto')]
+if args.component == 'base_tls':
+    strings = repo / 'apps/native_c_string/llvm-libc'
+    flags.append('-I' + str(strings))
 if args.component == 'partition':
     partition = Path('base/allocator/partition_allocator/src')
     pa = args.view / partition / 'partition_alloc'
@@ -180,6 +185,12 @@ for optimization in (0, 2):
                            ('metrics-common', args.view / 'base/process/process_metrics.cc'),
                            ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc'),
                            ('abort', runtime / 'abort.cc')]
+    if args.component == 'base_tls':
+        native_sources = [('base-tls', args.view / 'base/threading/thread_local_storage_gtos.cc')]
+        native_sources += [(name, strings / ('src/string/' + name + '.cpp')) for name in
+                           ('memcpy', 'memset', 'memmove')]
+        native_sources += [(name, runtime / (name + '.cc')) for name in
+                           ('thread-context', 'thread-exit', 'emutls', 'heap', 'operators', 'abort')]
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -213,7 +224,8 @@ for optimization in (0, 2):
     for name, source in native_sources:
         bind(source)
         output = directory / (name + '.o')
-        packaging = ['-DLIBC_NAMESPACE=__llvm_libc_cr', '-DLIBC_COPT_PUBLIC_PACKAGING=1'] if name == 'strchr' else []
+        packaging = (['-DLIBC_NAMESPACE=__llvm_libc_cr', '-DLIBC_COPT_PUBLIC_PACKAGING=1']
+                     if name in ('strchr', 'memcpy', 'memset', 'memmove') else [])
         if name == 'base-event':
             packaging += ['-include', str(disabled)]
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, *packaging, '-O' + str(optimization),
@@ -233,7 +245,7 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
-        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl', 'base_event', 'base_shared') else image
+        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl', 'base_event', 'base_shared', 'base_tls') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if cpu or args.component in ('wait', 'partition'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
@@ -272,6 +284,8 @@ assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']
 bind(repo / 'tools/kernel-cxxflags')
 kernel_flags = (repo / 'tools/kernel-cxxflags').read_text().split()
+if args.component == 'base_tls':
+    kernel_flags.append('-DGTOS_CONTENT_TLS_PROBE')
 directory = args.out / 'kernel'
 directory.mkdir()
 objects = []
@@ -309,6 +323,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared') else 'PERFETTO_'
+prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared', 'base_tls') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

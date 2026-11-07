@@ -1,6 +1,6 @@
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1055,6 +1055,17 @@ component("base") {
+@@ -1055,6 +1055,18 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
@@ -11,6 +11,7 @@
 +      "synchronization/lock_impl_gtos.cc",
 +      "synchronization/waitable_event_gtos.cc",
 +      "threading/platform_thread_gtos.cc",
++      "threading/thread_local_storage_gtos.cc",
 +      "time/time_now_gtos.cc",
 +    ]
 +  }

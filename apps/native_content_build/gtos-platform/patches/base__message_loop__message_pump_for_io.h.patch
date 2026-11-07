@@ -1,0 +1,22 @@
+--- a/base/message_loop/message_pump_for_io.h
++++ b/base/message_loop/message_pump_for_io.h
+@@ -19,6 +19,8 @@
+ #include "base/message_loop/message_pump_kqueue.h"
+ #elif BUILDFLAG(IS_FUCHSIA)
+ #include "base/message_loop/message_pump_fuchsia.h"
++#elif BUILDFLAG(IS_GTOS)
++#include "base/message_loop/message_pump_default.h"
+ #elif BUILDFLAG(IS_POSIX)
+ #include "base/message_loop/message_pump_epoll.h"
+ #endif
+@@ -34,6 +36,10 @@ using MessagePumpForIO = MessagePumpIOSForIO;
+ using MessagePumpForIO = MessagePumpKqueue;
+ #elif BUILDFLAG(IS_FUCHSIA)
+ using MessagePumpForIO = MessagePumpFuchsia;
++#elif BUILDFLAG(IS_GTOS)
++// GTOS IO threads run tasks. Asynchronous descriptor readiness requires a
++// separate platform service.
++using MessagePumpForIO = MessagePumpDefault;
+ #elif BUILDFLAG(IS_POSIX)
+ using MessagePumpForIO = MessagePumpEpoll;
+ #else

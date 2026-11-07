@@ -1,0 +1,21 @@
+--- a/base/threading/thread_local_storage.cc
++++ b/base/threading/thread_local_storage.cc
+@@ -417,7 +417,7 @@ namespace base {
+ 
+ namespace internal {
+ 
+-#if BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_GTOS)
+ void PlatformThreadLocalStorage::OnThreadExit() {
+   PlatformThreadLocalStorage::TLSKey key =
+       g_native_tls_key.load(std::memory_order_relaxed);
+@@ -427,8 +427,7 @@ void PlatformThreadLocalStorage::OnThreadExit() {
+   TlsVectorEntry* tls_vector = nullptr;
+   const TlsVectorState state = GetTlsVectorStateAndValue(key, &tls_vector);
+ 
+-  // On Windows, thread destruction callbacks are only invoked once per module,
+-  // so there should be no way that this could be invoked twice.
++  // The platform invokes this cleanup once per thread.
+   DCHECK_NE(state, TlsVectorState::kDestroyed);
+ 
+   // Maybe we have never initialized TLS for this thread.

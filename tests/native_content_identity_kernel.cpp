@@ -3,17 +3,27 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 
+#if defined(GTOS_CONTENT_TLS_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT BASE TLS"
+static const unsigned ExpectedChecks = 28;
+static const char* const CheckDescription = "isolated values and exit callbacks";
+#else
+#define CONTENT_BASE_PROBE "CONTENT BASE IDENTITY"
+static const unsigned ExpectedChecks = 23;
+static const char* const CheckDescription = "exact process and worker identity";
+#endif
+
 namespace {
     uint8_t image[65536];
     void FinishIdentity(bool pass) __attribute__((noreturn));
     void FinishIdentity(bool pass) {
-        printf(pass ? (char*)"CONTENT BASE IDENTITY PASS\n" : (char*)"CONTENT BASE IDENTITY FAIL\n");
+        printf(pass ? (char*)CONTENT_BASE_PROBE " PASS\n" : (char*)CONTENT_BASE_PROBE " FAIL\n");
         asm volatile("outl %0,%1" : : "a"(pass ? 0x10U : 0x20U), "Nd"((uint16_t)0xf4));
         for (;;) asm volatile("cli; hlt");
     }
     void Need(bool value, const char* reason) {
         if (!value) {
-            printf((char*)"CONTENT BASE IDENTITY REJECT ");
+            printf((char*)CONTENT_BASE_PROBE " REJECT ");
             printf((char*)reason);
             printf((char*)"\n");
             FinishIdentity(false);
@@ -56,15 +66,15 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     Need(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
         status.directory != paging.getStatistics().directoryAddress && !status.faultVector,
         "CPL3 isolation");
-    printf((char*)"CONTENT BASE IDENTITY RECORD process="); printfHex32(record.base);
+    printf((char*)CONTENT_BASE_PROBE " RECORD process="); printfHex32(record.base);
     printf((char*)" worker="); printfHex32(record.fault_address);
     printf((char*)" checks="); printfHex32(record.checks);
     printf((char*)" failures="); printfHex32(record.failures);
     printf((char*)" exit="); printfHex32(status.exitCode); printf((char*)"\n");
-    Need(record.base == id && record.fault_address > id && record.checks == 23 &&
-        !record.failures && status.exitCode == 0, "exact process and worker identity");
+    Need(record.base == id && record.fault_address > id && record.checks == ExpectedChecks &&
+        !record.failures && status.exitCode == 0, CheckDescription);
     Need(runtime.Reap() == 1 && frames.getStatistics().freeFrames == baseline, "exact Reap frames");
-    printf((char*)"CONTENT BASE IDENTITY REAP free="); printfHex32(frames.getStatistics().freeFrames);
+    printf((char*)CONTENT_BASE_PROBE " REAP free="); printfHex32(frames.getStatistics().freeFrames);
     printf((char*)" expected="); printfHex32(baseline); printf((char*)"\n");
     FinishIdentity(true);
 }

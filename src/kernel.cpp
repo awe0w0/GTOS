@@ -25,6 +25,8 @@
 #include <multitasking.h>
 #include <syscalls.h>
 #include <process/native_runtime.h>
+#include <process/native_events.h>
+#include <process/native_shared_memory.h>
 #include <process/native_surface.h>
 #include <process/native_windows.h>
 #include <process/native_reclaim_abi.h>
@@ -337,6 +339,8 @@ static memory::PagingConfig BuildPagingConfig(const memory::MultibootInfo *mbi,
     return config;
 }
 static memory::PhysicalMemoryManager frames;
+static process::NativeEvents nativeEvents;
+static process::NativeSharedMemory nativeSharedMemory(frames);
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
 static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
@@ -823,7 +827,9 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
         LogValue("NATIVE FP INHERITED CR0 ", cr0); // Read-only firmware/cache diagnostic.
     }
     const process::NativeFpPolicy fpPolicy = nativeFpDemo ? process::NativeFpSse2 : process::NativeFpDisabled;
-    if (!paging.sealForSharedProcessors() || !nativeRuntime.Activate(tasks, gdt, paging, frames, fpPolicy))
+    if (!paging.sealForSharedProcessors() || !nativeRuntime.AttachEvents(nativeEvents)
+        || !nativeRuntime.AttachSharedMemory(nativeSharedMemory)
+        || !nativeRuntime.Activate(tasks, gdt, paging, frames, fpPolicy))
         return false;
 #if defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
     if (nativeFpDiagnostic) {

@@ -1,0 +1,50 @@
+--- a/base/threading/thread_local_storage.h
++++ b/base/threading/thread_local_storage.h
+@@ -5,6 +5,7 @@
+ #ifndef BASE_THREADING_THREAD_LOCAL_STORAGE_H_
+ #define BASE_THREADING_THREAD_LOCAL_STORAGE_H_
+ 
++#include <stddef.h>
+ #include <stdint.h>
+ 
+ #include "base/base_export.h"
+@@ -49,6 +50,9 @@ class BASE_EXPORT PlatformThreadLocalStorage {
+   // such a key, but if it is returned (i.e., the OS tries to allocate it) we
+   // will just request another key.
+   enum { TLS_KEY_OUT_OF_INDEXES = 0x7FFFFFFF };
++#elif BUILDFLAG(IS_GTOS)
++  using TLSKey = uint32_t;
++  enum { TLS_KEY_OUT_OF_INDEXES = 0 };
+ #endif
+ 
+   // The following methods need to be supported on each OS platform, so that
+@@ -64,6 +68,9 @@ class BASE_EXPORT PlatformThreadLocalStorage {
+   // SetTLSValue().
+   static void FreeTLS(TLSKey key);
+   static void SetTLSValue(TLSKey key, void* value);
++#if BUILDFLAG(IS_GTOS)
++  static void* GetTLSValue(TLSKey key);
++#else
+   static void* GetTLSValue(TLSKey key) {
+ #if BUILDFLAG(IS_WIN)
+     return TlsGetValue(key);
+@@ -71,6 +78,7 @@ class BASE_EXPORT PlatformThreadLocalStorage {
+     return pthread_getspecific(key);
+ #endif
+   }
++#endif
+ 
+   // Each platform (OS implementation) is required to call this method on each
+   // terminating thread when the thread is about to terminate.  This method
+@@ -80,9 +88,8 @@ class BASE_EXPORT PlatformThreadLocalStorage {
+   // Destructors may end up being called multiple times on a terminating
+   // thread, as other destructors may re-set slots that were previously
+   // destroyed.
+-#if BUILDFLAG(IS_WIN)
+-  // Since Windows which doesn't support TLS destructor, the implementation
+-  // should use GetTLSValue() to retrieve the value of TLS slot.
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_GTOS)
++  // The callback retrieves the value of the TLS slot before it is cleared.
+   static void OnThreadExit();
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   // |Value| is the data stored in TLS slot, The implementation can't use

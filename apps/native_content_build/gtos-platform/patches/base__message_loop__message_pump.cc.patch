@@ -1,0 +1,29 @@
+--- a/base/message_loop/message_pump.cc
++++ b/base/message_loop/message_pump.cc
+@@ -178,6 +178,8 @@ std::unique_ptr<MessagePump> MessagePump::Create(MessagePumpType type) {
+         message_pump->set_is_type_ui(true);
+         return message_pump;
+       }
++#elif BUILDFLAG(IS_GTOS)
++      return std::make_unique<MessagePumpDefault>();
+ #else
+       return std::make_unique<MessagePumpForUI>();
+ #endif
+@@ -279,6 +281,9 @@ TimeTicks MessagePump::AdjustDelayedRunTime(TimeTicks earliest_time,
+ }
+ 
+ IOWatcher* MessagePump::GetIOWatcher() {
++#if BUILDFLAG(IS_GTOS)
++  return nullptr;
++#else
+   // By default only "IO thread" message pumps support async IO.
+   //
+   // TODO(crbug.com/379190028): This is done for convenience given the
+@@ -288,6 +293,7 @@ IOWatcher* MessagePump::GetIOWatcher() {
+     io_watcher_ = std::make_unique<IOWatcherForCurrentIOThread>();
+   }
+   return io_watcher_.get();
++#endif
+ }
+ 
+ bool MessagePump::IsAsyncIOSupported() {

@@ -1,4 +1,5 @@
 #include <process/native_runtime.h>
+#include <process/thread_slot_abi.h>
 #include <process/resources.h>
 #include <process/native_surface.h>
 #include <process/native_windows.h>
@@ -636,6 +637,24 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             stats.usableFrames, stats.freeFrames};
         cpu->eax = slot->space.CopyToUser(request.result, &result, sizeof(result))
             ? 0 : (uint32_t)GTOS_SYSTEM_MEMORY_ERR_ADDRESS;
+        break;
+    }
+    case GTOS_SYS_THREAD_SLOT_INFO: {
+        static_assert(MaximumProcesses == GTOS_THREAD_SLOT_LIMIT, "Native thread slot ABI");
+        if (cpu->ecx != sizeof(GtosThreadSlotRequest)) {
+            cpu->eax = (uint32_t)GTOS_THREAD_SLOT_ERR_SIZE; break;
+        }
+        GtosThreadSlotRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_THREAD_SLOT_ERR_ADDRESS; break;
+        }
+        if (request.version != GTOS_THREAD_SLOT_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_THREAD_SLOT_ERR_VERSION; break;
+        }
+        const GtosThreadSlotInfo result{GTOS_THREAD_SLOT_ABI_VERSION,
+            (uint32_t)(thread - slots), thread->status.id};
+        cpu->eax = slot->space.CopyToUser(request.result, &result, sizeof(result))
+            ? 0 : (uint32_t)GTOS_THREAD_SLOT_ERR_ADDRESS;
         break;
     }
     case GTOS_SYS_FILE_OPEN:

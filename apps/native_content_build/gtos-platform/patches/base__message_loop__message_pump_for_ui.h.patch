@@ -1,0 +1,21 @@
+--- a/base/message_loop/message_pump_for_ui.h
++++ b/base/message_loop/message_pump_for_ui.h
+@@ -14,7 +14,7 @@
+ #include "base/message_loop/message_pump_win.h"
+ #elif BUILDFLAG(IS_ANDROID)
+ #include "base/message_loop/message_pump_android.h"
+-#elif BUILDFLAG(IS_APPLE)
++#elif BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_GTOS)
+ #include "base/message_loop/message_pump.h"
+ #elif BUILDFLAG(IS_AIX)
+ // No MessagePumpForUI, see below.
+@@ -38,6 +38,9 @@ using MessagePumpForUI = MessagePumpAndroid;
+ // be represented by a plain MessagePump: message_pump_apple::Create() must be
+ // used to instantiate the right impl.
+ using MessagePumpForUI = MessagePump;
++#elif BUILDFLAG(IS_GTOS)
++// The registered platform factory can provide the native window pump.
++using MessagePumpForUI = MessagePump;
+ #elif BUILDFLAG(IS_AIX)
+ // Currently AIX doesn't have a MessagePumpForUI.
+ // TODO(abarth): Figure out if we need this.

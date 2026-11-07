@@ -14,6 +14,13 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/threading/thread_local_storage.h': '1cc76c701f11524702983a8e75dc13b3d612d61c44484ec767e4d7eff562161a',
+    'base/threading/thread_local_storage.cc': 'fe46907d1039701200449bef53eff25c69a268f9973d99e4b8e866440da31c5f',
+    'base/message_loop/message_pump_for_ui.h': '5d7ed92b6ed0e6ccc983036abd015bbbd6810bdfaf216b0a62d6cfbf4c5269a0',
+    'base/message_loop/message_pump_for_io.h': 'cab2ea5e73e0c88d5202d70359edff7983a7af86d94ad1780d34928abda0ef66',
+    'base/message_loop/message_pump.cc': 'fce438071a0cd162eda5074ea76211c8c6d44994fdca9269fb8e7589dcc3ef15',
+    'base/task/current_thread.h': '341f323a2c728c9e082d815b40c2f9d7e84edde74dda7ddaa432fa670be1b399',
+    'base/task/current_thread.cc': '44d617d7421c8585b66c462ea09687005ba0e7692ef9aebdb7019267c9149e92',
     'base/process/process_metrics.h': 'bfd9dcd28d394d0969d970182c666cdc4b68eaeb7a143a91ef36e23fbb93f354',
     'base/memory/platform_shared_memory_handle.h': '0b1d68d9ddb4fb5f45e2dcf65f2d8dfd6719f2f7d59560a72d1965df438acd66',
     'base/memory/platform_shared_memory_region.h': '393d93629641f88d42ad0d6b444bbdbf33379ae9c3a469357e7b5cd41427feeb',
@@ -171,6 +178,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/threading/thread_local_storage_gtos.cc': 'base/thread_local_storage_gtos.cc',
+    'build/config/gtos/include/process/thread_slot_abi.h': '../../../include/process/thread_slot_abi.h',
     'base/process/process_metrics_gtos.cc': 'base/process_metrics_gtos.cc',
     'build/config/gtos/include/process/system_memory_abi.h': '../../../include/process/system_memory_abi.h',
     'base/memory/platform_shared_memory_gtos.cc': 'base/platform_shared_memory_gtos.cc',
