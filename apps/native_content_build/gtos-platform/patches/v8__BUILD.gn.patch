@@ -1,0 +1,35 @@
+--- a/v8/BUILD.gn
++++ b/v8/BUILD.gn
+@@ -2652,6 +2652,17 @@ if (v8_use_metagen_instance_types) {
+       rebase_path(_metagen_clang_resource_dir, root_build_dir),
+     ]
+ 
++    if (is_gtos) {
++      # The formal graph has a private root. Query its generated C++ edge
++      # to retain the toolchain flags that GN desc cannot report.
++      _out = get_label_info(_metagen_flags_target, "target_out_dir")
++      args += [
++        "--flags-from-ninja-object",
++        rebase_path("$_out/$_metagen_flags_target_name/api-arguments.o",
++                    root_build_dir),
++      ]
++    }
++
+     if (is_win) {
+       args += [ "--driver-mode=cl" ]
+     } else {
+@@ -7728,6 +7739,14 @@ v8_component("v8_libbase") {
+     defines = [ "BUILDING_V8_BASE_SHARED" ]
+   }
+ 
++  if (is_gtos) {
++    sources += [
++      "src/base/platform/gtos-clock-bridge.cc",
++      "tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc",
++      "tools/gtos_isolate_diagnostic/runtime/thread-context.cc",
++    ]
++  }
++
+   if (is_posix || is_fuchsia) {
+     sources += [
+       "src/base/platform/platform-posix.cc",

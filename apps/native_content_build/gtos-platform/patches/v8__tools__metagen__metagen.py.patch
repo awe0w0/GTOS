@@ -1,0 +1,38 @@
+--- a/v8/tools/metagen/metagen.py
++++ b/v8/tools/metagen/metagen.py
+@@ -187,6 +187,9 @@ def main() -> int:
+       "(e.g. //build/toolchain/linux:clang_x64). Defaults to the build's "
+       "default toolchain, which is only right when the action and the "
+       "target it queries share it.")
++  p.add_argument(
++      "--flags-from-ninja-object",
++      help="Read flags from this exact Ninja C++ object instead of GN desc.")
+   p.add_argument(
+       "--flags-dependency",
+       default=None,
+@@ -270,6 +273,10 @@ def main() -> int:
+         "required.",
+         file=sys.stderr)
+     return 1
++  if args.flags_from_ninja_object and not args.build_dir:
++    print("error: --flags-from-ninja-object requires --build-dir.",
++          file=sys.stderr)
++    return 1
+   if bool(args.build_dir) != bool(args.source_root):
+     print(
+         "error: --build-dir and --source-root must be given together.",
+@@ -289,8 +296,12 @@ def main() -> int:
+     if args.flags_toolchain:
+       flags_target = f"{flags_target}({args.flags_toolchain})"
+     try:
+-      raw_flags, parse_cwd = compile_flags.get_compile_args_from_gn_desc(
+-          build_dir, flags_target, os.path.abspath(args.source_root))
++      if args.flags_from_ninja_object:
++        raw_flags, parse_cwd = compile_flags.get_compile_args_from_ninja(
++            build_dir, args.flags_from_ninja_object)
++      else:
++        raw_flags, parse_cwd = compile_flags.get_compile_args_from_gn_desc(
++            build_dir, flags_target, os.path.abspath(args.source_root))
+     except RuntimeError as e:
+       print(e, file=sys.stderr)
+       return 1

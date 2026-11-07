@@ -14,6 +14,11 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'v8/src/base/platform/semaphore.h': '6aaab37e3ba74c5ecaa867b3403e2ad676457f5731bf0de4c2e41bd9d9ad49ba',
+    'v8/src/base/platform/memory.h': '056e2e56ee4c1a93322f71031cd172e274ceb1456f21ef8bd1319a06ce3afbe4',
+    'v8/BUILD.gn': '7d5f28ecf364619c6ae191c575ee8d4f07015be64c370aca8f091ee036167aed',
+    'v8/tools/metagen/compile_flags.py': 'ee9851b7c526197be49c912bea9b42f7af27e107ad868087ee4af76b5a7de3a1',
+    'v8/tools/metagen/metagen.py': '6eb54d03b2d438ec7c1c87475bcee603357064ee8d3a9b11a1bbde5c030c4578',
     'components/safe_browsing/content/common/proto/download_file_types.proto': 'ace4dacd90bb291ba4c22f23e6461275579ccedc0891f0aa82d4390d3ae61d6b',
     'components/safe_browsing/content/resources/gen_file_type_proto.py': '5c2687d818f10d1161feb273311dd053ee439ea6824e394c1a7169dbe5d35438',
     'components/safe_browsing/content/resources/BUILD.gn': 'e99503fa6d78fc547d5b1e8f0b7be1437c2d84979da6ed4d84be581dff3a70d8',
@@ -189,6 +194,16 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'v8/src/base/platform/gtos-native-api/abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/abi.h',
+    'v8/src/base/platform/gtos-native-api/clock_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/clock_abi.h',
+    'v8/src/base/platform/gtos-native-api/info_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/info_abi.h',
+    'v8/src/base/platform/gtos-native-api/realtime_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/realtime_abi.h',
+    'v8/src/base/platform/gtos-native-services.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-services.h',
+    'v8/src/base/platform/gtos-clock-bridge.h': '../../native_v8_integration/overlay/src/base/platform/gtos-clock-bridge.h',
+    'v8/src/base/platform/gtos-clock-bridge.cc': '../../native_v8_integration/overlay/src/base/platform/gtos-clock-bridge.cc',
+    'v8/tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc',
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.cc',
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-context.h': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-context.h',
     'base/threading/thread_local_storage_gtos.cc': 'base/thread_local_storage_gtos.cc',
     'build/config/gtos/include/process/thread_slot_abi.h': '../../../include/process/thread_slot_abi.h',
     'base/process/process_metrics_gtos.cc': 'base/process_metrics_gtos.cc',

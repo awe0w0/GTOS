@@ -1,0 +1,50 @@
+--- a/v8/tools/metagen/compile_flags.py
++++ b/v8/tools/metagen/compile_flags.py
+@@ -34,6 +34,7 @@ from __future__ import annotations
+ 
+ import json
+ import os
++import shlex
+ import shutil
+ import subprocess
+ import sys
+@@ -201,7 +202,7 @@ def get_compile_args_from_gn_desc(build_dir: str, target_label: str,
+     except subprocess.CalledProcessError as e:
+       raise RuntimeError(f"[metagen] `gn desc {tmp_dir} {target_label}` failed "
+                          f"(exit {e.returncode}). Is the target part of that "
+-                         f"toolchain's build?\n{(e.stderr or '').strip()}")
++                         f"toolchain's build?\n{(e.stderr or e.stdout or '').strip()}")
+     try:
+       desc = json.loads(proc.stdout)
+     except json.JSONDecodeError as e:
+@@ -256,6 +257,30 @@ def get_compile_args_from_gn_desc(build_dir: str, target_label: str,
+   return filtered, os.path.abspath(build_dir)
+ 
+ 
++def get_compile_args_from_ninja(build_dir: str,
++                                obj: str) -> tuple[list[str], str]:
++  """Read the exact command of one C++ edge without building its inputs."""
++  ninja = os.environ.get("GTOS_METAGEN_NINJA", "ninja")
++  try:
++    proc = subprocess.run(
++        [ninja, "-t", "commands", "-s", obj], cwd=build_dir,
++        capture_output=True, text=True, check=True)
++  except OSError as e:
++    raise RuntimeError(f"[metagen] could not start {ninja}: {e}") from e
++  except subprocess.CalledProcessError as e:
++    raise RuntimeError(
++        f"[metagen] could not query Ninja object {obj}: {e.stderr.strip()}") from e
++  lines = proc.stdout.splitlines()
++  if len(lines) != 1:
++    raise RuntimeError(f"[metagen] expected one compile command for {obj}")
++  args = shlex.split(lines[0])
++  if (not args or os.path.basename(args[0]) not in ("clang", "clang++") or
++      args.count("-c") != 1 or args[-2:] != ["-o", obj]):
++    raise RuntimeError(f"[metagen] unexpected C++ command for {obj}")
++  source = args[args.index("-c") + 1]
++  return _filter(args[1:], source), build_dir
++
++
+ def get_compile_args_from_file(path: str) -> tuple[list[str], str]:
+   """Bazel path: read the single-entry compile_commands.json the rule
+   synthesizes (bazel/defs.bzl).
