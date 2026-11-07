@@ -1,0 +1,38 @@
+--- a/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc
++++ b/third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc
+@@ -14,6 +14,29 @@
+ // limitations under the License.
+ //
+ 
++#if defined(__GTOS__)
++#include "absl/debugging/failure_signal_handler.h"
++#include "tools/gtos_native_sdk/native-services.h"
++
++namespace absl {
++ABSL_NAMESPACE_BEGIN
++void InstallFailureSignalHandler(const FailureSignalHandlerOptions&) {
++  constexpr char message[] = "GTOS signal-handler API unavailable\n";
++  unsigned operation = GTOS_SYS_WRITE;
++  asm volatile("int $0x80"
++               : "+a"(operation)
++               : "b"(message), "c"(sizeof(message) - 1)
++               : "memory", "cc");
++  gtos::native::UnsupportedService();
++}
++namespace debugging_internal {
++const char* FailureSignalToString(int) {
++  gtos::native::UnsupportedService();
++}
++}  // namespace debugging_internal
++ABSL_NAMESPACE_END
++}  // namespace absl
++#else
+ #include "absl/debugging/failure_signal_handler.h"
+ 
+ #include <algorithm>
+@@ -437,3 +460,5 @@
+ 
+ ABSL_NAMESPACE_END
+ }  // namespace absl
++
++#endif  // defined(__GTOS__)

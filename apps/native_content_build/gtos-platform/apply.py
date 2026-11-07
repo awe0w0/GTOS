@@ -13,6 +13,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h': '2b383d756add31277f5420db96474ea7944f0290fd33d6ba8482edc82be91fb2',
+    'third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc': '8b03e80cf92e2b66f54790f150ae2ef4ff791c18bd2129ad79191f03f9500040',
+    'third_party/abseil-cpp/absl/synchronization/internal/pthread_waiter.h': 'b3ec00074fd91bcedfe3933f2e0de81f6e42f63b313bc5aee914b9cdf2f61a72',
+    'third_party/abseil-cpp/absl/synchronization/mutex.cc': '4d8dbee70615d5761d5a6641436060ed3e7b1fbd8424f1565eef7009f9c0057b',
     'third_party/abseil-cpp/absl/log/internal/config.h': 'e5e06a681876c7d42d134f3d3e525313d32309bcce1f831a4705652b4ad98a52',
     'third_party/abseil-cpp/absl/base/config.h': 'd2cdcd88b00c6a64dd7a5a4bd1e0560bede511991b3126865f6bb863e7249391',
     'third_party/abseil-cpp/absl/base/internal/thread_identity.h': 'd200359ea92f63f53e7210de08d9cc53dd69769fbe8323abaff8c1a8f24e2d84',

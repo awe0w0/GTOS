@@ -25,7 +25,7 @@ component = {
     'cpu': ('native_cpu_record', 'cpu_time_gtos.cc', 'cpu_time.cpp', 'native_perfetto_cpu_time_kernel.cpp', 'PerfettoCpuUnusedBaseline', 3),
     'event': ('native_event_record', 'event_fd_gtos.cc', 'event.cpp', 'native_perfetto_event_kernel.cpp', 'PerfettoEventUnusedBaseline', 3),
     'wait': ('native_wait_record', 'native_wait_gtos.cc', 'wait.cpp', 'native_perfetto_wait_kernel.cpp', 'PerfettoWaitUnusedBaseline', 3),
-    'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 1),
+    'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 2),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -73,6 +73,8 @@ flags = ['--target=i686-unknown-none-elf', '-D__GTOS__=1', '-ffreestanding', '-f
          '-isystem' + str(args.clang_bin.parent / 'lib/clang/24/include')]
 if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
+if args.component == 'exit':
+    flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
 layout_source = repo / 'apps/native_vm_probe/linker.ld'
 bind(layout_source)
 layout = args.out / 'module.ld'
@@ -90,6 +92,9 @@ for optimization in (0, 2):
     native_sources = [('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]
     if backend is not None:
         native_sources.insert(0, ('backend', args.view / ('third_party/perfetto/src/base/' + backend)))
+    if args.component == 'exit':
+        native_sources.append(('failure-signal', args.view /
+                               'third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc'))
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]

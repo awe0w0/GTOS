@@ -721,3 +721,19 @@ dependency paths from the repository, including when invoked from its
 separate build root. The b01 dependency-path failure and r01 read-only
 header-supply refusal occurred before guest execution and are preserved.
 The original wait guest profile passes again in wg02/wr02.
+
+The Abseil native path selects StdcppWaiter and retains the upstream
+mutex implementation. GTOS disables the POSIX ELF-image and VDSO interfaces.
+The unavailable signal-handler installation writes a native diagnostic
+before trapping. The scoped source changes reuse the pinned V8 overlay's
+platform guards and the Content view's native ABI.
+
+`ninja-n78` completes the formal diagnostics and synchronization targets.
+`sdk-test-ssg01` passes thirteen compiler contracts, including the StdcppWaiter
+selection and refusal of a forced pthread waiter. `content-exit-build-b03`
+and `run-r03` execute the actual signal-handler refusal alongside the SDK
+exit probe. At O0/32 MiB and O2/64 MiB the kernel observes vector 6 and code
+0x80000006 after the diagnostic. The two lifetimes in each boot recover the
+same frame baseline. The wrong immediate exit still produces QEMU status
+65 before the second module starts. Synchronization runtime integration
+remains separate from the successful compiler-level waiter selection.

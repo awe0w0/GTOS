@@ -40,28 +40,34 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     Task ring0(&gdt, Ring0Task);
     ExitRequire(tasks.AddTask(&ring0), "kernel peer");
     const auto* boot = static_cast<const MultibootInfo*>(multiboot);
-    ExitRequire((boot->flags & 8) && boot->moduleCount == 1, "one supplied ELF");
-    const auto* module = reinterpret_cast<const MultibootModule*>(boot->modules);
-    ExitRequire(module->end > module->start && module->end - module->start <= sizeof(exitElf), "bounded ELF");
-    const uint32_t bytes = module->end - module->start;
-    for (uint32_t i = 0; i < bytes; ++i) exitElf[i] = ((const uint8_t*)module->start)[i];
+    ExitRequire((boot->flags & 8) && boot->moduleCount == 2, "two supplied ELFs");
+    const auto* modules = reinterpret_cast<const MultibootModule*>(boot->modules);
 
     interrupts.Activate();
-    uint32_t id;
-    ExitRequire(runtime.CreateElf(exitElf, bytes, id), "ELF admission");
-    const NativeStatus status = WaitStopped(runtime, tasks, id);
-    unsigned stage = 0;
-    ExitRequire(runtime.ReadMemory(id, 0x40020000U, &stage, sizeof(stage)) && stage == 2, "consumer stage");
-    ExitRequire(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
-        status.directory != paging.getStatistics().directoryAddress, "CPL3 isolation");
-    printf((char*)"CONTENT EXIT STATUS code="); printfHex32(status.exitCode);
-    printf((char*)" vector="); printfHex32(status.faultVector);
-    printf((char*)" calls="); printfHex32(status.systemCalls); printf((char*)"\n");
-    ExitRequire(status.exitCode == 0x12345678U && status.faultVector == 0 &&
-        status.systemCalls == 2, "exact exit status");
-    ExitRequire(runtime.Reap() == 1 && frames.getStatistics().freeFrames == baseline, "exact Reap frames");
-    printf((char*)"CONTENT EXIT REAP free="); printfHex32(frames.getStatistics().freeFrames);
-    printf((char*)" expected="); printfHex32(baseline); printf((char*)"\n");
+    for (uint32_t mode = 0; mode < 2; ++mode) {
+        const auto& module = modules[mode];
+        ExitRequire(module.end > module.start && module.end - module.start <= sizeof(exitElf), "bounded ELF");
+        const uint32_t bytes = module.end - module.start;
+        for (uint32_t i = 0; i < bytes; ++i) exitElf[i] = ((const uint8_t*)module.start)[i];
+        uint32_t id;
+        ExitRequire(runtime.CreateElf(exitElf, bytes, id), "ELF admission");
+        const NativeStatus status = WaitStopped(runtime, tasks, id);
+        unsigned stage = 0;
+        ExitRequire(runtime.ReadMemory(id, 0x40020000U, &stage, sizeof(stage)) && stage == 2, "consumer stage");
+        ExitRequire(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
+            status.directory != paging.getStatistics().directoryAddress, "CPL3 isolation");
+        printf((char*)"CONTENT EXIT STATUS mode="); printfHex32(mode);
+        printf((char*)" code="); printfHex32(status.exitCode);
+        printf((char*)" vector="); printfHex32(status.faultVector);
+        printf((char*)" calls="); printfHex32(status.systemCalls); printf((char*)"\n");
+        ExitRequire(status.exitCode == (mode == 0 ? 0x12345678U : 0x80000006U) &&
+            status.faultVector == (mode == 0 ? 0U : 6U) &&
+            status.systemCalls == 2, "exact exit status");
+        ExitRequire(runtime.Reap() == 1 && frames.getStatistics().freeFrames == baseline, "exact Reap frames");
+        printf((char*)"CONTENT EXIT REAP mode="); printfHex32(mode);
+        printf((char*)" free="); printfHex32(frames.getStatistics().freeFrames);
+        printf((char*)" expected="); printfHex32(baseline); printf((char*)"\n");
+    }
     ExitRequire(ring0Progress && tasks.BootTicks(), "kernel peer progress");
     ExitFinish(true);
 }

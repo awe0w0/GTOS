@@ -1,0 +1,11 @@
+--- a/third_party/abseil-cpp/absl/synchronization/mutex.cc
++++ b/third_party/abseil-cpp/absl/synchronization/mutex.cc
+@@ -61,7 +61,7 @@
+ #ifdef ERROR
+ #undef ERROR
+ #endif
+-#else
++#elif !defined(__GTOS__)
+ #include <fcntl.h>
+ #include <pthread.h>
+ #include <sched.h>

@@ -109,6 +109,19 @@ compile_case('perfetto-linux-regression', linux,
 compile_case('perfetto-unknown-still-refuses', identity,
              ['--target=i686-unknown-none-elf', '-ffreestanding', '-nostdinc', *includes],
              False, 'OS not supported', suffix='.c')
+abseil = [*cxx, '-I' + str(args.view / 'third_party/abseil-cpp')]
+waiter = """#include <type_traits>
+#include "absl/debugging/internal/elf_mem_image.h"
+#include "absl/synchronization/internal/waiter.h"
+#ifdef ABSL_HAVE_ELF_MEM_IMAGE
+#error The native loader has no POSIX ELF image interface
+#endif
+static_assert(std::is_same_v<absl::synchronization_internal::Waiter,
+                             absl::synchronization_internal::StdcppWaiter>);
+"""
+compile_case('abseil-native-waiter', waiter, abseil)
+compile_case('abseil-pthread-waiter-refusal', waiter, [*abseil, '-DABSL_FORCE_WAITER_MODE=2'],
+             False, 'PthreadWaiter')
 assert before == {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in headers}
 (args.out / 'results.json').write_text(json.dumps({'cases': results, 'source_before_after_identical': True,
     'scope': 'actual header/compiler contracts; no linking, threading runtime or guest claim'}, indent=2) + '\n')
