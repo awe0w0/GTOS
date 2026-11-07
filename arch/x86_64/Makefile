@@ -15,7 +15,7 @@ OBJECTS := $(BUILD)/boot.o $(BUILD)/traps.o $(BUILD)/kernel.o $(BUILD)/handoff.o
 ifeq ($(VM_TEST),1)
 OBJECTS += $(BUILD)/sparse_vm.o $(BUILD)/vm_tests.o
 endif
-.PHONY: all iso test test-host test-vm clean FORCE
+.PHONY: all iso test test-host test-host-build test-vm clean FORCE
 all: iso
 $(BUILD):
 	mkdir -p $@
@@ -33,18 +33,38 @@ $(BUILD)/GTOS-x64.iso: $(BUILD)/kernel.elf
 	cp $< $(BUILD)/iso/boot/kernel.elf
 	printf 'set timeout=0\nset default=0\nmenuentry "GTOS x64 BSP foundation" {\n multiboot2 /boot/kernel.elf\n boot\n}\n' > $(BUILD)/iso/boot/grub/grub.cfg
 	$(GRUB_MKRESCUE) -o $@ $(BUILD)/iso
-test-host: | $(BUILD)
+HOST_TESTS := handoff boot_memory frame_pool vm_core
+HOST_IMAGES := $(foreach opt,0 2,$(addsuffix -test-O$(opt),$(HOST_TESTS)))
+
+test-host-build: | $(BUILD)
 	@set -eu; for opt in 0 2; do \
-	  for suite in handoff boot_memory frame_pool vm_core; do \
+	  for suite in $(HOST_TESTS); do \
 	    case $$suite in \
 	      handoff) sources='arch/x86_64/handoff.c' ;; \
 	      boot_memory) sources='arch/x86_64/handoff.c arch/x86_64/boot_memory.c' ;; \
 	      frame_pool) sources='arch/x86_64/handoff.c arch/x86_64/boot_memory.c arch/x86_64/frame_pool.c' ;; \
 	      vm_core) sources='arch/x86_64/handoff.c arch/x86_64/boot_memory.c arch/x86_64/frame_pool.c arch/x86_64/sparse_vm.c' ;; \
 	    esac; \
-	    $(CC) -std=c11 -O$$opt -Wall -Wextra -Werror -fsanitize=address,undefined -Iarch/x86_64 $$sources arch/x86_64/tests/$${suite}_test.c -o $(BUILD)/$$suite-test-O$$opt; \
-	    ASAN_OPTIONS=detect_leaks=0 $(BUILD)/$$suite-test-O$$opt; \
+	    $(CC) -std=c11 -O$$opt -Wall -Wextra -Werror -fno-pie -no-pie -fsanitize=address,undefined -Iarch/x86_64 $$sources arch/x86_64/tests/$${suite}_test.c -o "$(BUILD)/$$suite-test-O$$opt"; \
 	  done; \
+	done; \
+	cd "$(BUILD)"; sha256sum $(HOST_IMAGES) > host-tests.sha256
+
+# The guarded CI build publishes the host suite in a separate, read-only directory.
+# An ordinary invocation still compiles and runs all eight programs.
+ifeq ($(GTOS_X64_HOST_BUILD),)
+host_test_dir := $(BUILD)
+test-host: test-host-build
+else
+host_test_dir := $(GTOS_X64_HOST_BUILD)
+endif
+test-host:
+	@set -eu; \
+	actual=$$(cd "$(host_test_dir)" && sha256sum $(HOST_IMAGES)); \
+	expected=$$(cat "$(host_test_dir)/host-tests.sha256"); \
+	if [ "$$actual" != "$$expected" ]; then echo 'x64 host test publication changed' >&2; exit 2; fi; \
+	for image in $(HOST_IMAGES); do \
+	  ASAN_OPTIONS=detect_leaks=0 "$(host_test_dir)/$$image"; \
 	done
 	$(PYTHON) arch/x86_64/tests/frame_source_test.py
 	$(PYTHON) arch/x86_64/tests/vm_source_test.py
