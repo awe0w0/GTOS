@@ -20,4 +20,5 @@ for optimization in 0 2; do
     fi
 done
 
-./tests/memory_bootstrap_test.sh
+# The bootstrap unit is shell source and shares this run's declared interpreter.
+sh ./tests/memory_bootstrap_test.sh
