@@ -13,6 +13,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/perfetto/src/base/atomic_file.cc': 'd9016fb57418694f5c717e4aab93deabb8388bdb19de57ed75f685a3e0dff9ae',
     'third_party/perfetto/src/base/progress_reporter.cc': '4d46c39fd43736f95200c86ac8f707d9f16e718c34e57f081d33eff00ea668eb',
     'third_party/perfetto/include/perfetto/ext/base/paged_memory.h': '7aa47838b604cd6f8fdd1417d8412718535d9226a07183c95097dd23c2d9b77c',
     'third_party/perfetto/include/perfetto/base/time.h': 'c0c1498a52e97f557b5bc27b0d60c2c4d51aee621fdac16a41ff940a295cf8ee',

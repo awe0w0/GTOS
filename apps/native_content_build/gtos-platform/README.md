@@ -503,3 +503,22 @@ the wrong-expectation image returns 1. Host source compilation and 19 platform
 regressions pass. Environment lookup is an injected unit dependency, and Linux
 syscalls only report results. Full progress rendering, native FILE streams and
 guest console behavior are outside this unit's claim.
+
+Native AtomicFile now inspects the actual store with `stat` (there are no
+symlinks) and refuses inspection failures other than ENOENT before creating a
+temporary. It retains regular-file checks, exclusive creation, duplicate/flush/
+close ordering, rename publication and destructor cleanup. Unix permission
+preservation is excluded only for GTOS, whose file ABI has no permission bits.
+
+`codex-c-perfetto-atomic-file-build-a01` / `run-r01` execute the real AtomicFile,
+file helpers, POSIX adapter and pinned libc++ string/UUID formatting at O0/O2.
+Nine scenarios repeat twice: absent/regular/directory destination, inspection
+I/O/unavailable errors, create collision, sync failure, rename failure and
+uncommitted destruction. Exact native request/close/cleanup ordering and final
+allocation balance are checked. The syscall, allocation, UUID-generation and
+error-formatting boundaries are injected; this is not a guest/durability or
+entropy qualification. Both wrong-expectation images fail. Two default native
+objects and the original host source compile; `unit-uaf01` passes 19 platform
+regressions. Formal `ninja-n52` builds actual GTOS `atomic_file.o` and
+`file_utils.o` with the real SDK, depfiles and split debug outputs. C1 remains
+the shell delegate translation unit.
