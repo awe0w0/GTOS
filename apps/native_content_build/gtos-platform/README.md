@@ -650,3 +650,19 @@ Under the same guard, `libtest-test-lt01` compiles a real consumer with the
 opt-in, rejects the same GTOS consumer without it with E0658 and no metadata,
 and compiles the default host consumer. These are compile-policy checks.
 `unit-ul01` passes the 21 platform regression tests with the new source pin.
+
+PartitionAlloc recognizes GTOS as a separate platform for diagnostics.
+The error guards retain the caller's errno, and PLOG and PCHECK format the
+numeric errno without a POSIX strerror_r dependency. Raw logging sends
+complete chunks of at most 256 bytes to the native diagnostic service and
+stops on a failed or unexpected return. The logging formatter uses the
+SDK's ssize_t without importing a terminal API.
+
+The formal `ninja-n69` build produces all eight GTOS diagnostic and formatter
+objects. Two original-guard stages `partition-log-build-b01` and
+`partition-log-run-r01` test the actual sources at O0/O2 with the write
+syscall boundary injected. They check errno nesting and restoration, a real
+PLOG, chunk boundaries, filtering, newline handling, four failed write
+returns, and an actual fatal PCHECK with the diagnostic and SIGTRAP. The
+native diagnostic syscall itself was compiled by the formal graph; these
+unit runs are host executions with the injected syscall boundary.

@@ -1,0 +1,58 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc
+@@ -5,6 +5,7 @@
+ #include "partition_alloc/partition_alloc_base/log_message.h"
+ 
+ #include <array>
++#include <cstring>
+ 
+ #include "partition_alloc/partition_alloc_base/compiler_specific.h"
+ 
+@@ -36,7 +37,6 @@
+ #include <cerrno>
+ #include <cstdio>
+ #include <cstdlib>
+-#include <cstring>
+ #endif
+ 
+ #if PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
+@@ -162,15 +162,16 @@
+ SystemErrorCode GetLastSystemErrorCode() {
+ #if PA_BUILDFLAG(IS_WIN)
+   return ::GetLastError();
+-#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA) || \
++    PA_BUILDFLAG(IS_GTOS)
+   return errno;
+ #endif
+ }
+ 
+ void SystemErrorCodeToStream(base::strings::CStringBuilder& os,
+                              SystemErrorCode error_code) {
++#if PA_BUILDFLAG(IS_WIN)
+   char buffer[256];
+-#if PA_BUILDFLAG(IS_WIN)
+   const int kErrorMessageBufferSize = 256;
+   char msgbuf[kErrorMessageBufferSize];
+   DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+@@ -191,7 +192,10 @@
+                              "Error (0x%x) while retrieving error. (0x%x)",
+                              GetLastError(), error_code);
+   os << buffer;
++#elif PA_BUILDFLAG(IS_GTOS)
++  os << "errno " << error_code;
+ #elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++  char buffer[256];
+   base::safe_strerror_r(error_code, buffer);
+   os << buffer << " (" << error_code << ")";
+ #endif  // PA_BUILDFLAG(IS_WIN)
+@@ -212,7 +216,8 @@
+   DWORD last_error = err_;
+   base::debug::Alias(&last_error);
+ }
+-#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA) || \
++    PA_BUILDFLAG(IS_GTOS)
+ ErrnoLogMessage::ErrnoLogMessage(const char* file,
+                                  int line,
+                                  LogSeverity severity,

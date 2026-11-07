@@ -13,6 +13,15 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/allocator/partition_allocator/src/partition_alloc/build_config.h': 'a0bc70bbb196d756c14b24d9da928301273a09dddcd84f2879cec475c5675811',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/scoped_clear_last_error.h': '6659b2ff66f9b814e6a5c3ee1f85cec4ebdc84ff313637b799210f5503ab96e4',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h': '1152b52ddf3a7b5389794fd9ed0dfdbe627750309df5ed6e6a020f8681f85633',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.h': 'cc20bbf50afc0242d0ec5ed40de06b5406f4e89dd4d5153060817876a3dfc9f6',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/check.cc': 'ae2037acbc14537fd893ebc7d8ea912c05aa2edf835844fb115c12c73a561b4c',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.cc': 'a2f26258b13278e238c8b2169fddf172fdd3655851f09f927f325b25531d6295',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc': '21b5cd6712598a793198701d3d3cb475d98165fd88be4e12a5c6afefac820952',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h': '3b0bf924cfc2fcf2b30c928af0369a5f58f8919b8a33cced87276bdbd4c06c8e',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/cstring_builder.cc': '4be8043d3702f4dfaa82b2c94ffb94fe93fa485afbf5898bea91a95e24ce2e66',
     'third_party/perfetto/src/base/utils.cc': 'f9d4a8b518bb0c5b78f8b0426791c7767a1bf856f17dedd0d57401327ec4e34a',
     'third_party/perfetto/src/base/time.cc': 'e0f427cb33997802685f58b813c2648cbd70ac009c7fcd21f81d8841ed37d0c6',
     'third_party/perfetto/src/base/lock_free_task_runner.cc': 'ee41b877884001efc183f9d821f6daa67bdde52bd1f178520be38d3cea6e8686',

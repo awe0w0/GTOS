@@ -1,0 +1,34 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/build_config.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/build_config.h
+@@ -17,7 +17,7 @@
+ // This files contains the following definition:
+ //
+ // Operating system:
+-//   IS_IOS / IS_AIX / IS_ASMJS / IS_FREEBSD / IS_FUCHSIA / IS_LINUX / IS_MAC /
++//   IS_IOS / IS_AIX / IS_ASMJS / IS_FREEBSD / IS_FUCHSIA / IS_GTOS / IS_LINUX / IS_MAC /
+ //   IS_NETBSD / IS_OPENBSD / IS_QNX / IS_SOLARIS / IS_WIN
+ //
+ // Operating system family:
+@@ -64,6 +64,8 @@
+ //
+ // To avoid relying on these external definitions, PartitionAlloc uses its own
+ // dedicated build flag.
++#elif defined(__GTOS__)
++#define PA_IS_GTOS
+ #elif defined(__APPLE__)
+ // Only include TargetConditionals after testing ANDROID as some Android builds
+ // on the Mac have this header available and it's not needed unless the target
+@@ -426,6 +428,13 @@
+ #endif
+ #undef PA_IS_FUCHSIA
+ 
++#if defined(PA_IS_GTOS)
++#define PA_BUILDFLAG_INTERNAL_IS_GTOS() (1)
++#else
++#define PA_BUILDFLAG_INTERNAL_IS_GTOS() (0)
++#endif
++#undef PA_IS_GTOS
++
+ #if defined(PA_IS_IOS)
+ #define PA_BUILDFLAG_INTERNAL_IS_IOS() (1)
+ #else

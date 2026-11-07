@@ -1,0 +1,61 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.cc
+@@ -3,6 +3,8 @@
+ // found in the LICENSE file.
+ 
+ #include "partition_alloc/partition_alloc_base/logging.h"
++
++#include <cstring>
+ 
+ #include "partition_alloc/partition_alloc_base/compiler_specific.h"
+ 
+@@ -29,10 +31,19 @@
+ #include <cerrno>
+ #include <cstdio>
+ #include <cstdlib>
+-#include <cstring>
+ #endif
+ 
++#if PA_BUILDFLAG(IS_GTOS)
++#include <process/abi.h>
++
++#if defined(PA_GTOS_LOG_TEST)
++extern "C" int GtosPartitionAllocLogTestWrite(const char*, unsigned);
++#elif !defined(__i386__)
++#error GTOS PartitionAlloc diagnostics require the IA32 ABI
++#endif
++#else
+ #include "partition_alloc/partition_alloc_base/posix/eintr_wrapper.h"
++#endif
+ 
+ namespace partition_alloc::internal::logging {
+ 
+@@ -40,7 +51,27 @@
+ 
+ int g_min_log_level = 0;
+ 
+-#if !PA_BUILDFLAG(IS_WIN)
++#if PA_BUILDFLAG(IS_GTOS)
++void WriteToStderr(const char* data, size_t length) {
++  // The native diagnostic service validates and writes a complete chunk.
++  while (length > 0) {
++    const unsigned chunk = std::min(length, size_t{GTOS_NATIVE_WRITE_LIMIT});
++#if defined(PA_GTOS_LOG_TEST)
++    const int result = GtosPartitionAllocLogTestWrite(data, chunk);
++#else
++    unsigned operation = GTOS_SYS_WRITE;
++    asm volatile("int $0x80" : "+a"(operation)
++                 : "b"(data), "c"(chunk) : "memory", "cc");
++    const int result = static_cast<int>(operation);
++#endif
++    if (result != static_cast<int>(chunk)) {
++      return;
++    }
++    PA_UNSAFE_TODO(data += chunk);
++    length -= chunk;
++  }
++}
++#elif !PA_BUILDFLAG(IS_WIN)
+ void WriteToStderr(const char* data, size_t length) {
+   size_t bytes_written = 0;
+   int rv;

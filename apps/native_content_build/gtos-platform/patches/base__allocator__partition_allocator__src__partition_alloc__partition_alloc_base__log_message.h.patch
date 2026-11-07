@@ -1,0 +1,22 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/log_message.h
+@@ -104,7 +104,8 @@
+ 
+ #if PA_BUILDFLAG(IS_WIN)
+ typedef unsigned long SystemErrorCode;
+-#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA) || \
++    PA_BUILDFLAG(IS_GTOS)
+ typedef int SystemErrorCode;
+ #endif
+ 
+@@ -130,7 +131,8 @@
+  private:
+   SystemErrorCode err_;
+ };
+-#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA) || \
++    PA_BUILDFLAG(IS_GTOS)
+ // Appends a formatted system message of the errno type
+ class PA_COMPONENT_EXPORT(PARTITION_ALLOC_BASE) ErrnoLogMessage
+     : public LogMessage {

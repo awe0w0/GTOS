@@ -1,0 +1,13 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/strings/safe_sprintf.h
+@@ -12,7 +12,9 @@
+ #include "partition_alloc/build_config.h"
+ #include "partition_alloc/buildflags.h"
+ 
+-#if PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#if PA_BUILDFLAG(IS_GTOS)
++#include <sys/types.h>
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
+ // For ssize_t
+ #include <unistd.h>
+ #endif

@@ -1,0 +1,22 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/logging.h
+@@ -276,7 +276,8 @@
+       __FILE__, __LINE__, -(verbose_level),                           \
+       ::partition_alloc::internal::logging::GetLastSystemErrorCode()) \
+       .stream()
+-#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA) || \
++    PA_BUILDFLAG(IS_GTOS)
+ #define PA_VPLOG_STREAM(verbose_level)                                \
+   ::partition_alloc::internal::logging::ErrnoLogMessage(              \
+       __FILE__, __LINE__, -(verbose_level),                           \
+@@ -303,7 +304,8 @@
+       Win32ErrorLogMessage,                                           \
+       ::partition_alloc::internal::logging::GetLastSystemErrorCode()) \
+       .stream()
+-#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
++#elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA) || \
++    PA_BUILDFLAG(IS_GTOS)
+ #define PA_PLOG_STREAM(severity)                                      \
+   PA_COMPACT_GOOGLE_PLOG_EX_##severity(                               \
+       ErrnoLogMessage,                                                \
