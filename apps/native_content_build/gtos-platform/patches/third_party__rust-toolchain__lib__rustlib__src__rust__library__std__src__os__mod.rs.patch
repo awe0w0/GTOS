@@ -1,0 +1,12 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/mod.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/mod.rs
+@@ -101,6 +101,9 @@ pub mod fortanix_sgx;
+ pub mod freebsd;
+ #[cfg(target_os = "fuchsia")]
+ pub mod fuchsia;
++#[cfg(target_os = "gtos")]
++#[unstable(feature = "gtos_ext", issue = "none")]
++pub mod gtos;
+ #[cfg(target_os = "haiku")]
+ pub mod haiku;
+ #[cfg(target_os = "hermit")]

@@ -19,3 +19,14 @@
    if (is_apple || current_os == "freebsd" || current_os == "openbsd") {
      sources += [
        "posix/sysctl.cc",
+@@ -2675,6 +2687,10 @@ rust_static_library("file_path") {
+   crate_root = "files/file_path.rs"
+   sources = [ "files/file_path.rs" ]
+   allow_unsafe = true
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=gtos_ext,restricted_std" ]
++  }
+   deps = [
+     ":file_path_shim",
+     "//base",

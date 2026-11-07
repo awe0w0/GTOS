@@ -1,0 +1,90 @@
+--- a/base/files/file_path.rs
++++ b/base/files/file_path.rs
+@@ -2,7 +2,13 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(gtos_ext, restricted_std))]
++
+ use cxx::UniquePtr;
++#[cfg(target_os = "gtos")]
++use std::os::gtos::{OsStrExt, OsStringExt};
++#[cfg(unix)]
++use std::os::unix::ffi::{OsStrExt, OsStringExt};
+ use std::path::{Path, PathBuf};
+ 
+ #[cxx::bridge]
+@@ -15,14 +21,14 @@ pub mod ffi {
+         #[namespace = "base"]
+         pub type FilePath;
+ 
+-        #[cfg(target_family = "unix")]
++        #[cfg(not(target_os = "windows"))]
+         fn CreateFilePathFromBytes(bytes: &[u8]) -> UniquePtr<FilePath>;
+-        #[cfg(target_family = "unix")]
++        #[cfg(not(target_os = "windows"))]
+         fn FilePathToBytes(path: &FilePath) -> &[u8];
+ 
+-        #[cfg(target_family = "windows")]
++        #[cfg(target_os = "windows")]
+         fn CreateFilePathFromWide(wide: &[u16]) -> UniquePtr<FilePath>;
+-        #[cfg(target_family = "windows")]
++        #[cfg(target_os = "windows")]
+         fn FilePathToWide(path: &FilePath) -> &[u16];
+     }
+ }
+@@ -38,9 +44,8 @@ unsafe impl Sync for ffi::FilePath {}
+ 
+ impl ffi::FilePath {
+     pub fn from_path(path: &Path) -> UniquePtr<Self> {
+-        #[cfg(unix)]
++        #[cfg(any(unix, target_os = "gtos"))]
+         {
+-            use std::os::unix::ffi::OsStrExt;
+             ffi::CreateFilePathFromBytes(path.as_os_str().as_bytes())
+         }
+         #[cfg(windows)]
+@@ -49,14 +54,13 @@ impl ffi::FilePath {
+             let wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+             ffi::CreateFilePathFromWide(&wide)
+         }
+-        #[cfg(not(any(unix, windows)))]
++        #[cfg(not(any(unix, windows, target_os = "gtos")))]
+         compile_error!("Unsupported platform for base::FilePath FFI");
+     }
+ 
+     pub fn to_path_buf(&self) -> PathBuf {
+-        #[cfg(unix)]
++        #[cfg(any(unix, target_os = "gtos"))]
+         {
+-            use std::os::unix::ffi::OsStringExt;
+             let bytes = ffi::FilePathToBytes(self);
+             PathBuf::from(std::ffi::OsString::from_vec(bytes.to_vec()))
+         }
+@@ -66,21 +70,20 @@ impl ffi::FilePath {
+             let wide = ffi::FilePathToWide(self);
+             PathBuf::from(std::ffi::OsString::from_wide(wide))
+         }
+-        #[cfg(not(any(unix, windows)))]
++        #[cfg(not(any(unix, windows, target_os = "gtos")))]
+         compile_error!("Unsupported platform for base::FilePath FFI");
+     }
+ 
+-    /// Note: `as_os_str` and `as_path` are Unix-only because Unix platforms
+-    /// store paths as bytes, allowing zero-copy references. Windows uses
++    /// Note: `as_os_str` and `as_path` are available where native
++    /// paths are stored as bytes, allowing zero-copy references. Windows uses
+     /// UTF-16 internally, while Rust's `OsStr` uses WTF-8, so any
+     /// conversion on Windows requires allocation and is not zero-copy.
+-    #[cfg(unix)]
++    #[cfg(any(unix, target_os = "gtos"))]
+     pub fn as_os_str(&self) -> &std::ffi::OsStr {
+-        use std::os::unix::ffi::OsStrExt;
+         std::ffi::OsStr::from_bytes(ffi::FilePathToBytes(self))
+     }
+ 
+-    #[cfg(unix)]
++    #[cfg(any(unix, target_os = "gtos"))]
+     pub fn as_path(&self) -> &Path {
+         Path::new(self.as_os_str())
+     }

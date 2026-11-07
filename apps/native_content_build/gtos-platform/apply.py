@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/mod.rs': 'cb29e8073290ba65979e7c7722d1eec3b96889e34f93a15c97b852f749576ee8',
+    'base/files/file_path.rs': 'eee1e0a0b1ad69341a8c8cb5b4e9f8f497d733c137aa3f7dbde68fcac09a109b',
     'v8/src/base/platform/semaphore.h': '6aaab37e3ba74c5ecaa867b3403e2ad676457f5731bf0de4c2e41bd9d9ad49ba',
     'v8/src/base/platform/memory.h': '056e2e56ee4c1a93322f71031cd172e274ceb1456f21ef8bd1319a06ce3afbe4',
     'v8/BUILD.gn': '7d5f28ecf364619c6ae191c575ee8d4f07015be64c370aca8f091ee036167aed',
@@ -194,6 +196,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/gtos.rs': 'rust/gtos_os_ffi.rs',
     'v8/src/base/platform/gtos-native-api/abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/abi.h',
     'v8/src/base/platform/gtos-native-api/clock_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/clock_abi.h',
     'v8/src/base/platform/gtos-native-api/info_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/info_abi.h',
