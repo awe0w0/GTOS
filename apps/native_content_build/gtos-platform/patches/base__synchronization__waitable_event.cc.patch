@@ -1,0 +1,25 @@
+--- a/base/synchronization/waitable_event.cc
++++ b/base/synchronization/waitable_event.cc
+@@ -12,6 +12,11 @@
+ #include "base/threading/thread_restrictions.h"
+ #include "base/trace_event/trace_event.h"
+ #include "base/tracing_buildflags.h"
++#include "build/build_config.h"
++
++#if BUILDFLAG(IS_GTOS)
++#include <process/event_abi.h>
++#endif
+ 
+ namespace base {
+ 
+@@ -80,6 +85,10 @@ bool WaitableEvent::TimedWait(TimeDelta wait_delta, const Location& location) {
+ }
+ 
+ size_t WaitableEvent::WaitMany(base::span<WaitableEvent*> events) {
++#if BUILDFLAG(IS_GTOS)
++  CHECK(!events.empty() && events.size() <= GTOS_EVENT_WAIT_LIMIT);
++#endif
++
+   DCHECK(!events.empty()) << "Cannot wait on no events";
+ 
+   for (size_t i = 0; i < events.size(); ++i) {

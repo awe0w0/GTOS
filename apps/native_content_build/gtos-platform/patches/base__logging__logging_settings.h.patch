@@ -1,0 +1,12 @@
+--- a/base/logging/logging_settings.h
++++ b/base/logging/logging_settings.h
+@@ -43,6 +43,9 @@ enum : uint32_t {
+   LOG_DEFAULT = LOG_TO_SYSTEM_DEBUG_LOG,
+ #elif BUILDFLAG(IS_WIN)
+   LOG_DEFAULT = LOG_TO_FILE,
++#elif BUILDFLAG(IS_GTOS)
++  // The native diagnostic service is the stderr sink.
++  LOG_DEFAULT = LOG_TO_STDERR,
+ #elif BUILDFLAG(IS_POSIX)
+   LOG_DEFAULT = LOG_TO_SYSTEM_DEBUG_LOG | LOG_TO_STDERR,
+ #endif

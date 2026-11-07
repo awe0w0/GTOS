@@ -12,7 +12,8 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl', 'base_identity'],
+parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
+                                            'base_identity', 'base_event'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -33,6 +34,8 @@ component = {
                   'native_content_boringssl_kernel.cpp', 'ContentBoringSslUnusedBaseline', 3),
     'base_identity': ('native_memory_record', None, 'base_identity.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'base_event': ('native_memory_record', None, 'base_event.cpp',
+                   'native_content_base_event_kernel.cpp', 'ContentBaseEventUnusedBaseline', 1),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -96,7 +99,7 @@ if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
-if args.component == 'base_identity':
+if args.component in ('base_identity', 'base_event'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -105,6 +108,17 @@ if args.component == 'base_identity':
               '-I' + str(args.view / 'third_party/abseil-cpp'),
               '-I' + str(args.view / 'third_party/boringssl/src/include'),
               '-I' + str(v8), '-I' + str(runtime / 'sdk')]
+if args.component == 'base_event':
+    # Isolate the event and diagnostic paths from the trace-session runtime.
+    # The real trace-enabled object is compiled separately by Content Ninja.
+    disabled = args.out / 'disable_event_tracing.h'
+    disabled.write_text('#include "base/trace_event/trace_event.h"\n'
+                        '#undef TRACE_EVENT_CATEGORY_ENABLED\n'
+                        '#define TRACE_EVENT_CATEGORY_ENABLED(...) false\n'
+                        '#undef TRACE_EVENT_INSTANT\n'
+                        '#define TRACE_EVENT_INSTANT(...) ((void)0)\n')
+    bind(disabled)
+    flags += ['-I' + str(args.generated / 'third_party/perfetto')]
 if args.component == 'partition':
     partition = Path('base/allocator/partition_allocator/src')
     pa = args.view / partition / 'partition_alloc'
@@ -153,6 +167,11 @@ for optimization in (0, 2):
                            ('base-thread', args.view / 'base/threading/platform_thread_gtos.cc'),
                            ('base-lock', args.view / 'base/synchronization/lock_impl_gtos.cc'),
                            ('thread-core', runtime / 'thread-core.cc')]
+    if args.component == 'base_event':
+        native_sources += [('base-event', args.view / 'base/synchronization/waitable_event.cc'),
+                           ('base-event-gtos', args.view / 'base/synchronization/waitable_event_gtos.cc'),
+                           ('base-raw-log', args.view / 'base/logging.cc'),
+                           ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc')]
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -187,6 +206,8 @@ for optimization in (0, 2):
         bind(source)
         output = directory / (name + '.o')
         packaging = ['-DLIBC_NAMESPACE=__llvm_libc_cr', '-DLIBC_COPT_PUBLIC_PACKAGING=1'] if name == 'strchr' else []
+        if name == 'base-event':
+            packaging += ['-include', str(disabled)]
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, *packaging, '-O' + str(optimization),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
@@ -204,7 +225,7 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
-        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl') else image
+        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl', 'base_event') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if cpu or args.component in ('wait', 'partition'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
@@ -235,7 +256,7 @@ sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
            'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
            'tests/i386_pure_virtual_runtime.cpp',
            'tests/' + observer]
-if args.component in ('event', 'wait'):
+if args.component in ('event', 'wait', 'base_event'):
     sources.append('src/process/native_events.cpp')
 assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']
@@ -278,6 +299,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity') else 'PERFETTO_'
+prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity', 'base_event') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

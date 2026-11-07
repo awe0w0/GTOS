@@ -14,6 +14,12 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/logging/logging_settings.h': '3aad1a35a2afbd5eb008575dcbb705582d21a85fc17b2f8bef7a6a96e03ce760',
+    'base/check.cc': 'cead9bd6bad693693d767b42c9f144f369ee2af7ab064f9e5c9a010f76f627eb',
+    'base/scoped_clear_last_error.h': '82b51b1001fe585c64a558c285307a071830f376bb89a633e73f64879f6d557d',
+    'base/logging.cc': 'f8af905b1e6e07532f5ab45f037bec61a323dc77bbc8e5e1d222514371ee3013',
+    'base/synchronization/waitable_event.h': '3cd281fe0a9a7d9d7865c974d8e6d2ca0e9c7ec27aa319d6ec7f2644b1011786',
+    'base/synchronization/waitable_event.cc': '519fe044e87ed743f523f600bb82e5f1c2eef0d62ab6059a049520604579b880',
     'base/time/time.h': '3d856f595a15876885d1309e6831fd60e49e66cd2fbd583f1c6ddaac8bce72bf',
     'base/files/file_path.cc': '3543354e60c0618b5ceca6316b9d180e0c0342f940d8e9664f9d44f852f87e12',
     'base/environment.h': '24138d1be0637b3764d6ca36b0f5f03a1efddd55cd03fac66c90670ea8803f9d',
@@ -162,6 +168,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/synchronization/waitable_event_gtos.cc': 'base/waitable_event_gtos.cc',
     'base/time/time_now_gtos.cc': 'base/time_now_gtos.cc',
     'base/synchronization/lock_impl_gtos.cc': 'base/lock_impl_gtos.cc',
     'base/threading/platform_thread_gtos.cc': 'base/platform_thread_gtos.cc',

@@ -1,0 +1,250 @@
+--- a/base/logging.cc
++++ b/base/logging.cc
+@@ -51,6 +51,7 @@
+ #include "base/task/common/task_annotator.h"
+ #include "base/test/scoped_logging_settings.h"
+ #include "base/threading/platform_thread.h"
++#include "base/time/time_override.h"
+ #include "base/trace_event/interned_args_helper.h"
+ #include "base/trace_event/typed_macros.h"
+ #include "base/vlog.h"
+@@ -85,20 +86,27 @@ typedef HANDLE FileHandle;
+ #include <os/log.h>
+ #endif  // BUILDFLAG(IS_APPLE)
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ #include <errno.h>
++#if !BUILDFLAG(IS_GTOS)
+ #include <paths.h>
++#endif
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <sys/stat.h>
+ #include <time.h>
+ 
++#if BUILDFLAG(IS_GTOS)
++#include <process/abi.h>
++#include <unistd.h>
++#else
+ #include "base/posix/safe_strerror.h"
++#endif
+ 
+ #define MAX_PATH PATH_MAX
+ typedef FILE* FileHandle;
+-#endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ #if BUILDFLAG(IS_ANDROID)
+ #include <android/log.h>
+@@ -260,6 +268,9 @@ uint64_t TickCount() {
+       static_cast<zx_time_t>(base::Time::kNanosecondsPerMicrosecond));
+ #elif BUILDFLAG(IS_APPLE)
+   return mach_absolute_time();
++#elif BUILDFLAG(IS_GTOS)
++  return static_cast<uint64_t>(
++      base::subtle::TimeTicksNowIgnoringOverride().since_origin().InMicroseconds());
+ #elif BUILDFLAG(IS_POSIX)
+   struct timespec ts;
+   clock_gettime(CLOCK_MONOTONIC, &ts);
+@@ -274,7 +285,7 @@ uint64_t TickCount() {
+ void DeleteFilePath(const PathString& log_name) {
+ #if BUILDFLAG(IS_WIN)
+   DeleteFile(log_name.c_str());
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   unlink(log_name.c_str());
+ #else
+ #error Unsupported platform
+@@ -294,6 +305,8 @@ PathString GetDefaultLogFile() {
+   }
+   log_name += FILE_PATH_LITERAL("debug.log");
+   return log_name;
++#elif BUILDFLAG(IS_GTOS)
++  return PathString("/debug.log");
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   // On other platforms we just use the current directory.
+   return PathString("debug.log");
+@@ -302,7 +315,7 @@ PathString GetDefaultLogFile() {
+ 
+ // We don't need locks on Windows for atomically appending to files. The OS
+ // provides this functionality.
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ // Provides a lock to synchronize appending to the log file across
+ // threads. This can be required to support NFS file systems even on OSes that
+@@ -320,7 +333,7 @@ base::Lock& GetLoggingLock() {
+   return *lock;
+ }
+ 
+-#endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ // Called by logging functions to ensure that |g_log_file| is initialized
+ // and can be used for writing. Returns false if the file could not be
+@@ -377,7 +390,7 @@ bool InitializeLogFileHandle() {
+       return false;
+     }
+   }
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   g_log_file = fopen(g_log_file_name->c_str(), "a");
+   if (g_log_file == nullptr) {
+     return false;
+@@ -392,7 +405,7 @@ bool InitializeLogFileHandle() {
+ void CloseFile(FileHandle log) {
+ #if BUILDFLAG(IS_WIN)
+   CloseHandle(log);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   fclose(log);
+ #else
+ #error Unsupported platform
+@@ -414,18 +427,34 @@ void CloseLogFileUnlocked() {
+   }
+ }
+ 
+-void WriteToFd(int fd, const char* data, size_t length) {
++void WriteToStderr(const char* data, size_t length) {
+   size_t bytes_written = 0;
++#if BUILDFLAG(IS_GTOS)
++  // The native diagnostic service accepts at most one bounded chunk per call.
++  while (bytes_written < length) {
++    const unsigned chunk =
++        std::min(length - bytes_written, size_t{GTOS_NATIVE_WRITE_LIMIT});
++    unsigned operation = GTOS_SYS_WRITE;
++    asm volatile("int $0x80" : "+a"(operation)
++                 : "b"(UNSAFE_TODO(data + bytes_written)), "c"(chunk)
++                 : "memory", "cc");
++    if (operation != chunk) {
++      break;
++    }
++    bytes_written += chunk;
++  }
++#else
+   long rv;
+   while (bytes_written < length) {
+     rv = HANDLE_EINTR(
+-        write(fd, UNSAFE_TODO(data + bytes_written), length - bytes_written));
++        write(STDERR_FILENO, UNSAFE_TODO(data + bytes_written), length - bytes_written));
+     if (rv < 0) {
+       // Give up, nothing we can do now.
+       break;
+     }
+     bytes_written += static_cast<size_t>(rv);
+   }
++#endif
+ }
+ 
+ void SetLogFatalCrashKey(LogMessage* log_message) {
+@@ -516,7 +545,7 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
+     return true;
+   }
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   base::AutoLock guard(GetLoggingLock());
+ #endif
+ 
+@@ -861,11 +890,11 @@ void LogMessage::Flush() {
+     //   LOG(ERROR) << "Something went wrong";
+     //   free_something();
+     // }
+-    WriteToFd(STDERR_FILENO, str_newline.data(), str_newline.size());
++    WriteToStderr(str_newline.data(), str_newline.size());
+   }
+ 
+   if ((g_logging_destination & LOG_TO_FILE) != 0) {
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+     // If the client app did not call InitLogging() and the lock has not
+     // been created it will be done now on calling GetLoggingLock(). We do this
+     // on demand, but if two threads try to do this at the same time, there will
+@@ -879,7 +908,7 @@ void LogMessage::Flush() {
+       WriteFile(g_log_file, static_cast<const void*>(str_newline.c_str()),
+                 static_cast<DWORD>(str_newline.length()), &num_written,
+                 nullptr);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+       std::ignore = UNSAFE_TODO(
+           fwrite(str_newline.data(), str_newline.size(), 1, g_log_file));
+       fflush(g_log_file);
+@@ -943,6 +972,17 @@ void LogMessage::Init(const char* file, int line) {
+               << local_time.wHour << std::setw(2) << local_time.wMinute
+               << std::setw(2) << local_time.wSecond << '.' << std::setw(3)
+               << local_time.wMilliseconds << ':';
++#elif BUILDFLAG(IS_GTOS)
++      timespec now{};
++      struct tm utc{};
++      if (clock_gettime(CLOCK_REALTIME, &now) == 0 &&
++          gmtime_r(&now.tv_sec, &utc)) {
++        stream_ << std::setfill('0') << std::setw(2) << 1 + utc.tm_mon
++                << std::setw(2) << utc.tm_mday << '/' << std::setw(2)
++                << utc.tm_hour << std::setw(2) << utc.tm_min
++                << std::setw(2) << utc.tm_sec << '.' << std::setw(6)
++                << now.tv_nsec / 1000 << ':';
++      }
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+       timeval tv;
+       gettimeofday(&tv, nullptr);
+@@ -1028,7 +1068,7 @@ typedef DWORD SystemErrorCode;
+ SystemErrorCode GetLastSystemErrorCode() {
+ #if BUILDFLAG(IS_WIN)
+   return ::GetLastError();
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   return errno;
+ #endif
+ }
+@@ -1050,6 +1090,9 @@ BASE_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
+   }
+   return base::StringPrintf("Error (0x%lX) while retrieving error. (0x%lX)",
+                             GetLastError(), error_code);
++#elif BUILDFLAG(IS_GTOS)
++  base::ScopedClearLastError preserve_error;
++  return std::string(strerror(error_code)) + base::StringPrintf(" (%d)", error_code);
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   return base::safe_strerror(error_code) +
+          base::StringPrintf(" (%d)", error_code);
+@@ -1084,7 +1127,7 @@ Win32ErrorLogMessageFatal::~Win32ErrorLogMessageFatal() {
+   base::ImmediateCrash();
+ }
+ 
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ ErrnoLogMessage::ErrnoLogMessage(const char* file,
+                                  int line,
+                                  LogSeverity severity,
+@@ -1115,7 +1158,7 @@ ErrnoLogMessageFatal::~ErrnoLogMessageFatal() {
+ #endif  // BUILDFLAG(IS_WIN)
+ 
+ void CloseLogFile() {
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   base::AutoLock guard(GetLoggingLock());
+ #endif
+   CloseLogFileUnlocked();
+@@ -1216,9 +1259,12 @@ void ScopedLoggingSettings::SetLogFormat(LogFormat log_format) const {
+ void RawLog(int level, const char* message) {
+   if (level >= g_min_log_level && message) {
+     const size_t message_len = strlen(message);
+-    WriteToFd(STDERR_FILENO, message, message_len);
++    WriteToStderr(message, message_len);
+ 
+     if (message_len > 0 && UNSAFE_TODO(message[message_len - 1]) != '\n') {
++#if BUILDFLAG(IS_GTOS)
++      WriteToStderr("\n", 1);
++#else
+       long rv;
+       do {
+         rv = HANDLE_EINTR(write(STDERR_FILENO, "\n", 1));
+@@ -1227,6 +1273,7 @@ void RawLog(int level, const char* message) {
+           break;
+         }
+       } while (rv != 1);
++#endif
+     }
+   }
+ 
