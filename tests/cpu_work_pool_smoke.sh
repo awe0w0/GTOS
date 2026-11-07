@@ -33,11 +33,11 @@ for optimization in ${GTOS_CPU_WORK_POOL_OPTIMIZATIONS:-0 2}; do
         if [ -n "${GTOS_QEMU_DATA_DIR:-}" ]; then
             timeout 20 "$qemu" -L "$GTOS_QEMU_DATA_DIR" -machine pc -accel tcg \
                 -cpu "$model" -m "$memory" -smp "$cpus" -kernel "$work/work-smoke.bin" -append "$arguments" \
-                -display none -monitor none -serial none -debugcon "file:$work/$name.log" \
+                -nic none -display none -monitor none -serial none -debugcon "file:$work/$name.log" \
                 -device isa-debug-exit,iobase=0xf4,iosize=4 -no-reboot
         else
             timeout 20 "$qemu" -machine pc -accel tcg -cpu "$model" -m "$memory" -smp "$cpus" \
-                -kernel "$work/work-smoke.bin" -append "$arguments" -display none -monitor none -serial none \
+                -kernel "$work/work-smoke.bin" -append "$arguments" -nic none -display none -monitor none -serial none \
                 -debugcon "file:$work/$name.log" -device isa-debug-exit,iobase=0xf4,iosize=4 -no-reboot
         fi
         status=$?

@@ -205,7 +205,7 @@ extern "C" void gtos_work_ap_fault(uint32_t frameAddress) {
 }
 CpuWorkTicket::CpuWorkTicket():workerIndex(0xFFFFFFFFU),session(0),queueTag(0),ticket(){}
 CpuWorkPool::CpuWorkPool():shared(0),startup(0),error(CpuWorkPoolOk),prepared(false),started(false),closed(false),sessionStamp(0){}
-CpuWorkHolder::CpuWorkHolder():pool(0),workerIndex(0xFFFFFFFFU),apicId(0xFFFFFFFFU),session(0),ticket(){}
+CpuWorkHolder::CpuWorkHolder():pool(0),workerIndex(0xFFFFFFFFU),apicId(0xFFFFFFFFU),ticket(),session(0){}
 bool CpuWorkHolder::IsBound()const{
     return pool!=0&&workerIndex!=0xFFFFFFFFU&&apicId!=0xFFFFFFFFU&&session!=0&&ticket.IsValid();
 }
@@ -560,7 +560,8 @@ const char* CpuWorkPool::ErrorName(CpuWorkPoolError error){switch(error){
     case CpuWorkPoolStartupFailed:return "AP handoff failed";case CpuWorkPoolReadyTimeout:return "AP worker readiness timed out";
     case CpuWorkPoolBadMemoryTypes:return "BSP memory-type snapshot unavailable";
     case CpuWorkPoolWorkerSetupFailed:return "AP worker compatibility/setup failed";
-    case CpuWorkPoolWakeFailed:return "job queued but wake IPI failed";}return "unknown worker error";}
+    case CpuWorkPoolWakeFailed:return "job queued but wake IPI failed";
+    case CpuWorkPoolClosed:return "worker pool closed";}return "unknown worker error";}
 
 #ifdef GTOS_CPU_WORK_POOL_TEST
 extern "C" bool GtosWorkHoldForTest(uint32_t apicId) {
