@@ -1,0 +1,11 @@
+--- a/third_party/webrtc/modules/rtp_rtcp/corruption_detection_extension.rs
++++ b/third_party/webrtc/modules/rtp_rtcp/corruption_detection_extension.rs
+@@ -8,6 +8,8 @@
+  *  be found in the AUTHORS file in the root of the source tree.
+  */
+ 
++#![cfg_attr(all(target_os = "gtos", not(test)), no_std)]
++
+ const MAX_VALUE_SIZE_BYTES: usize = 16;
+ const MANDATORY_PAYLOAD_BYTES: usize = 1;
+ const CONFIGURATION_BYTES: usize = 3;

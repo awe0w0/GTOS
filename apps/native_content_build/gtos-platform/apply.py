@@ -14,6 +14,11 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/rust/either/v1/BUILD.gn': '9bb5d32f618d5c3f32911f541acba53473cb82fda728339718456fbd08fad2cc',
+    'third_party/rust/chromium_crates_io/vendor/either-v1/src/lib.rs': 'df570c5dc36f9539611c7702d58d1490133a3c86daa6a347f17582285250c059',
+    'third_party/rust/icu_provider/v2/BUILD.gn': '01b97bc1e4e6b28c1c541d544c0a06cecde791aae45e0069764f7e9995b73862',
+    'third_party/rust/chromium_crates_io/vendor/icu_provider-v2/src/lib.rs': '5254196453edf9c553b6586dff295c74d09fda391556b686def470455a4dbe40',
+    'third_party/webrtc/modules/rtp_rtcp/corruption_detection_extension.rs': 'db1c738e5e7a10da9c46db3eaead9989841f8a62783de92f72e5bc9ba458678a',
     'third_party/webrtc/rtc_base/deprecated/recursive_critical_section.cc': 'e183bc54d08b36dc004b6e13999871b59a1c7a242a033bc9344a988e3639f687',
     'third_party/webrtc/rtc_base/deprecated/recursive_critical_section.h': '5775f11e951985a290780974a38fc4a1afe9558184b18580adafc96c1315da08',
     'third_party/webrtc/rtc_base/BUILD.gn': 'be6bda98f1ffb36893fb741114525a692291e230f65830bf354ba7b4f5092cc4',
