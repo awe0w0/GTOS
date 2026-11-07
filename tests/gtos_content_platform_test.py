@@ -206,6 +206,50 @@ class PrivatePatchTest(unittest.TestCase):
         cls.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.module)
 
+    def setUp(self):
+        materialized = mock.patch.dict(self.module.MATERIALIZED, {}, clear=True)
+        materialized.start()
+        self.addCleanup(materialized.stop)
+
+    def test_unchanged_script_is_materialized_without_writing_origin(self):
+        root = args.out / 'unchanged-script'
+        root.mkdir()
+        (root / '.gn').write_text('')
+        origin = args.out / 'unchanged-script-origin'
+        origin.mkdir()
+        (origin / 'entry.py').write_text('print("pinned script")\n')
+        (origin / 'sibling.py').write_text('sibling input\n')
+        (root / 'tools').symlink_to(origin, target_is_directory=True)
+        expected = self.module.candidate.digest(origin / 'entry.py')
+        with mock.patch.dict(self.module.INPUTS, {}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, {}, clear=True), \
+                mock.patch.dict(self.module.MATERIALIZED, {'tools/entry.py': expected}, clear=True):
+            self.module.apply(root)
+        target = root / 'tools/entry.py'
+        self.assertFalse(target.is_symlink())
+        self.assertFalse((root / 'tools').is_symlink())
+        self.assertEqual(target.read_bytes(), (origin / 'entry.py').read_bytes())
+        self.assertEqual((origin / 'sibling.py').read_text(), 'sibling input\n')
+        item = json.loads((root / 'gtos-platform.json').read_text())['files'][0]
+        self.assertEqual(item, {'path': 'tools/entry.py', 'origin_sha256': expected,
+                                'sha256': expected, 'materialized': True})
+
+    def test_materialized_identity_drift_refuses_before_writing(self):
+        root = args.out / 'materialized-drift'
+        root.mkdir()
+        (root / '.gn').write_text('')
+        origin = args.out / 'materialized-drift.py'
+        origin.write_text('changed bytes\n')
+        (root / 'entry.py').symlink_to(origin)
+        with mock.patch.dict(self.module.INPUTS, {}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, {}, clear=True), \
+                mock.patch.dict(self.module.MATERIALIZED, {'entry.py': '0' * 64}, clear=True):
+            with self.assertRaisesRegex(SystemExit, 'materialized input changed: entry.py'):
+                self.module.apply(root)
+        self.assertTrue((root / 'entry.py').is_symlink())
+        self.assertEqual(origin.read_text(), 'changed bytes\n')
+        self.assertFalse((root / 'gtos-platform.json').exists())
+
     def test_root_dotfile_is_inside_the_private_view(self):
         root = args.out / 'root-dotfile'
         root.mkdir()

@@ -621,3 +621,24 @@ builder's default memory profile is also rebuilt and rerun (`g05`/`r06`), retain
 its real page-fault, zeroing, exact Reap and wrong-consumer checks. These are
 component and dependency results; shell delegate C1 and Content C2/C3 remain
 unmet.
+
+Python resolves a symlinked entry before constructing `sys.path[0]`. Formal
+`ninja-n62` reached the TypeScript actions but their imported validators derived
+the shared checkout as their source root, while GN supplied the private root.
+This rejected both a valid source root and the real compiler's standard-library
+definition files. The composer now materializes the unchanged `ts_library.py`
+entry, pinned at `65386df09493d3a9cf7201321df9930b66c368459d54378afc917b2c24ac788b`.
+The import directory, arguments and compiler therefore describe one checkout;
+root validation and undeclared-definition checks remain unchanged.
+
+`unit-ut01` passes 21 actual platform tests, including source-root/sibling
+preservation and refusal of materialized-input drift before any write. The
+original upstream TypeScript compiler tests pass five cases in context `t03`
+(real compilation, declarations, sourcemaps, type errors and inherited-config
+refusals); its original path-mapping tests pass four cases in context `t04`.
+Each context records its actual test count, assertions and status independently.
+The mapping tests require their original relative working-directory layout, so
+they run from a byte-verified test copy; compiler tests keep the real private
+compiler/library root. Earlier mixed-context `t01`/`t02` failures remain, including
+an incorrectly selected nonexistent test module. `ninja-n63` then runs the actual
+formerly failing definitions action successfully through the formal graph.

@@ -94,6 +94,13 @@ ADDITIONS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs': 'rust/futex.rs',
 }
 
+# Python resolves a symlinked entry script before populating sys.path[0]. Keep
+# the unchanged TypeScript entry inside the private checkout so its validators
+# and GN arguments agree on the source root. No dependency check is relaxed.
+MATERIALIZED = {
+    'tools/typescript/ts_library.py': '65386df09493d3a9cf7201321df9930b66c368459d54378afc917b2c24ac788b',
+}
+
 
 def private_target(view, rel):
     parent = candidate.materialize_parents(view, rel)
@@ -112,6 +119,9 @@ def apply(view):
     for rel, expected in INPUTS.items():
         if candidate.digest(view / rel) != expected:
             raise SystemExit('platform input changed: ' + rel)
+    for rel, expected in MATERIALIZED.items():
+        if candidate.digest(view / rel) != expected:
+            raise SystemExit('materialized input changed: ' + rel)
     for rel, source in ADDITIONS.items():
         target = view / rel
         if target.exists() or target.is_symlink():
@@ -123,6 +133,16 @@ def apply(view):
         subprocess.run(['/usr/bin/patch', '--dry-run', '--batch', '--fuzz=0',
                         '--input', str(patch), str((view / rel).resolve())], check=True)
     applied = []
+    for rel, expected in MATERIALIZED.items():
+        target = private_target(view, rel)
+        if target.is_symlink():
+            origin = target.resolve()
+            target.unlink()
+            shutil.copyfile(origin, target)
+        if candidate.digest(target) != expected:
+            raise SystemExit('materialized input changed during copy: ' + rel)
+        applied.append({'path': rel, 'origin_sha256': expected,
+                        'sha256': expected, 'materialized': True})
     for rel, expected in INPUTS.items():
         target = private_target(view, rel)
         if target.is_symlink():
