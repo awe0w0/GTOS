@@ -1,0 +1,75 @@
+--- a/third_party/libvpx/BUILD.gn
++++ b/third_party/libvpx/BUILD.gn
+@@ -9,8 +9,14 @@ import("//third_party/libvpx/libvpx_srcs.gni")
+ import("//third_party/libvpx/libvpx_test_srcs.gni")
+ import("//third_party/nasm/nasm_assemble.gni")
+ 
++# GTOS uses the upstream generic C path, with its own cross configuration.
++use_x86_optimizations = !is_gtos &&
++                        (current_cpu == "x86" || (current_cpu == "x64" && !is_msan))
++
+ # Sets the architecture name for building libvpx.
+-if (current_cpu == "x86") {
++if (is_gtos) {
++  cpu_arch_full = "generic"
++} else if (current_cpu == "x86") {
+   cpu_arch_full = "ia32"
+ } else if (current_cpu == "x64") {
+   if (is_msan) {
+@@ -137,7 +143,7 @@ executable("decode_encode_profile_test") {
+   ]
+ }
+ 
+-if (current_cpu == "x86" || (current_cpu == "x64" && !is_msan)) {
++if (use_x86_optimizations) {
+   nasm_assemble("libvpx_asm") {
+     if (current_cpu == "x86") {
+       sources = libvpx_srcs_x86_assembly
+@@ -160,7 +166,7 @@ if (current_cpu == "x86" || (current_cpu == "x64" && !is_msan)) {
+   }
+ }
+ 
+-if (current_cpu == "x86" || (current_cpu == "x64" && !is_msan)) {
++if (use_x86_optimizations) {
+   # The following targets are deliberately source_set rather than
+   # static_library. The :libvpx target exposes these intrinsic implementations
+   # via global function pointer symbols, which hides the object dependency at
+@@ -441,7 +447,9 @@ if (current_cpu == "arm" && arm_assembly_sources != []) {
+ 
+ source_set("libvpx_headers") {
+   visibility = [ ":*" ]
+-  if (current_cpu == "x86") {
++  if (is_gtos) {
++    sources = libvpx_srcs_generic_headers
++  } else if (current_cpu == "x86") {
+     sources = libvpx_srcs_x86_headers
+   } else if (current_cpu == "x64") {
+     if (is_msan) {
+@@ -481,7 +489,14 @@ static_library("libvpx") {
+ 
+   public_deps = [ ":libvpx_headers" ]
+ 
+-  if (current_cpu == "x86") {
++  if (is_gtos) {
++    sources = libvpx_srcs_generic
++    sources -= [
++      "//third_party/libvpx/source/libvpx/vp8/decoder/threading.c",
++      "//third_party/libvpx/source/libvpx/vp8/encoder/ethreading.c",
++    ]
++    sources += [ "$platform_include_dir/vpx_config.c" ]
++  } else if (current_cpu == "x86") {
+     sources = libvpx_srcs_x86
+   } else if (current_cpu == "x64") {
+     if (is_msan) {
+@@ -516,7 +531,10 @@ static_library("libvpx") {
+   configs += [ "//build/config/compiler:no_chromium_code" ]
+   configs += [ ":libvpx_config" ]
+   deps = []
+-  if (current_cpu == "x86" || (current_cpu == "x64" && !is_msan)) {
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:codec_support" ]
++  }
++  if (use_x86_optimizations) {
+     deps += [
+       ":libvpx_asm",
+       ":libvpx_intrinsics_avx",

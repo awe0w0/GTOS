@@ -1,0 +1,16 @@
+--- a/third_party/libaom/source/libaom/aom_ports/aom_once.h
++++ b/third_party/libaom/source/libaom/aom_ports/aom_once.h
+@@ -67,6 +67,13 @@ static void aom_once(void (*func)(void)) {
+   pthread_once(&lock, func);
+ }
+ 
++#elif defined(__GTOS__)
++#include <gtos/once.h>
++static void aom_once(void (*func)(void)) {
++  static uint32_t flag;
++  gtos_call_once(&flag, func);
++}
++
+ #else
+ /* Default version that performs no synchronization. */
+ 

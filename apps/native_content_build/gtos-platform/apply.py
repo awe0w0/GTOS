@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/libaom/BUILD.gn': '93f98c8f8e9fa67a89afb3d057882850396fb8b3f39528ecce9b833dc2796475',
+    'third_party/libaom/source/libaom/aom_ports/aom_once.h': '085b60d0cb6c1e9058ba7dce15099f51c69ec2ea1deb8c70237890242ae6f601',
+    'third_party/libvpx/BUILD.gn': '3f0f12f30428d469aaf0bc0a3df02b9c713058867ce1b0e97ba8cbae640d25b5',
+    'third_party/libvpx/source/libvpx/vpx_ports/vpx_once.h': '483f46db1243752050eea0fd7868a6ce577276f3ed0df626848c03d7b3fc3de4',
     'content/shell/BUILD.gn': '8b952574b939aa81d0dba0113206efa708b3f1c3718ef874aadc2a7b2a4eb13e',
     'content/shell/app/shell_main.cc': 'b14da473f368a9a7bdd64e698573f67ef43fa791ee3e58e70eef98e71a4b66af',
     'net/socket/socket_descriptor.h': '586aa449a4980f398878279392c32d7cc80c1768e55a7faa19682578b3de4686',
@@ -210,6 +214,25 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/math.h': 'sdk/math.h',
+    'build/config/gtos/runtime/tanh.cc': 'sdk/tanh.cc',
+    'build/config/gtos/include/memory.h': 'sdk/memory.h',
+    'third_party/libaom/source/config/gtos/generic/config/aom_config.c': 'libaom/aom_config.c',
+    'third_party/libaom/source/config/gtos/generic/config/aom_config.h': 'libaom/aom_config.h',
+    'third_party/libaom/source/config/gtos/generic/config/aom_dsp_rtcd.h': '//third_party/libaom/source/config/linux/generic/config/aom_dsp_rtcd.h',
+    'third_party/libaom/source/config/gtos/generic/config/aom_scale_rtcd.h': '//third_party/libaom/source/config/linux/generic/config/aom_scale_rtcd.h',
+    'third_party/libaom/source/config/gtos/generic/config/av1_rtcd.h': '//third_party/libaom/source/config/linux/generic/config/av1_rtcd.h',
+    'build/config/gtos/include/setjmp.h': 'sdk/setjmp.h',
+    'build/config/gtos/include/gtos/once.h': 'sdk/once.h',
+    'build/config/gtos/runtime/BUILD.gn': 'sdk/codec-runtime.gn',
+    'build/config/gtos/runtime/codec_once.cc': 'sdk/codec_once.cc',
+    'build/config/gtos/runtime/setjmp_i386.S': 'sdk/setjmp_i386.S',
+    'third_party/libvpx/source/config/gtos/generic/vpx_config.h': 'libvpx/vpx_config.h',
+    'third_party/libvpx/source/config/gtos/generic/vpx_config.c': 'libvpx/vpx_config.c',
+    'third_party/libvpx/source/config/gtos/generic/vp8_rtcd.h': '//third_party/libvpx/source/config/linux/generic/vp8_rtcd.h',
+    'third_party/libvpx/source/config/gtos/generic/vp9_rtcd.h': '//third_party/libvpx/source/config/linux/generic/vp9_rtcd.h',
+    'third_party/libvpx/source/config/gtos/generic/vpx_dsp_rtcd.h': '//third_party/libvpx/source/config/linux/generic/vpx_dsp_rtcd.h',
+    'third_party/libvpx/source/config/gtos/generic/vpx_scale_rtcd.h': '//third_party/libvpx/source/config/linux/generic/vpx_scale_rtcd.h',
     'content/shell/app/entry_gtos.cc': 'content/entry_gtos.cc',
     'content/shell/app/native-start.s': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native-start.s',
     'content/shell/app/native.ld': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native.ld',
@@ -287,6 +310,17 @@ ADDITIONS = {
 
 # These provider bytes are pinned by the BoringSSL and PartitionAlloc source locks.
 ADDITION_SHA256 = {
+    'third_party/libaom/source/config/gtos/generic/config/aom_config.c': '4652780bd3ba3c0c76f37c57ccb7c4be1a4c044e048a568774920bba47349473',
+    'third_party/libaom/source/config/gtos/generic/config/aom_config.h': '32fdc8b766b308e99b914f7fae3761bfd12950c7a529b25758dc1bc64080d8da',
+    'third_party/libaom/source/config/gtos/generic/config/aom_dsp_rtcd.h': 'efc25489dc85b1aca8122d9a980e85b45a1b68dcdb8a1e00c6893c96ecd73a1e',
+    'third_party/libaom/source/config/gtos/generic/config/aom_scale_rtcd.h': '16c294bebc7c8e685323f7c8ad06ab20ad079e003cb0a6b18c34d1bd907e4f64',
+    'third_party/libaom/source/config/gtos/generic/config/av1_rtcd.h': 'adaba557502c501f52c7efc030cec6ee1e34e0a00690ffe34e85e75e86b0a32f',
+    'third_party/libvpx/source/config/gtos/generic/vpx_config.h': '13a4c6c78c53def6ba2892e098d8854b9e20afefe916bad503a3e1cae33d9ec4',
+    'third_party/libvpx/source/config/gtos/generic/vpx_config.c': 'a36950eaf7075cd62a7fe015dcb66b005bd422fd9f7dbeca0b0c245f39f4d1a5',
+    'third_party/libvpx/source/config/gtos/generic/vp8_rtcd.h': '6b883c287ccef9dea38ec4e6965ab0c60068fbbaac0ad5c853ed7d1c92ac1092',
+    'third_party/libvpx/source/config/gtos/generic/vp9_rtcd.h': '0c63b0563777861be50eaf0ae9e2a30e64dadba5fe6cfb2b23792467b4643e73',
+    'third_party/libvpx/source/config/gtos/generic/vpx_dsp_rtcd.h': '022ac54cbd13c2bf3db86bffb80ce6611f36500da3942a4bffaafcdc6a4a58d7',
+    'third_party/libvpx/source/config/gtos/generic/vpx_scale_rtcd.h': '5bd74357a41aea413e4b7f84b695eb3af094d794c112bcfbd614e505148d2a5f',
     'content/shell/app/native-start.s': '7f56a50ec84155e45d8e5a3ef4531b7c3de426b308a89eed599d5d1e8fd5e98f',
     'content/shell/app/native.ld': '6364feb8b9a5182a61014d73196d4be28b62a5e17dfaac5f494a935ce2da5eca',
     'build/config/gtos/include/llvm-libc-macros/stdint-macros.h': '2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77',
@@ -337,6 +371,15 @@ def private_target(view, rel):
     return parent / Path(rel).name
 
 
+def addition_source(view, target, source):
+    if source.startswith('//'):
+        relative = Path(source[2:])
+        if relative.is_absolute() or '..' in relative.parts or target not in ADDITION_SHA256:
+            raise SystemExit('expected a pinned addition from the composed source view: ' + source)
+        return view / relative
+    return HERE / source
+
+
 def apply(view):
     view = view.resolve()
     if candidate.under_shared(view) or not (view / '.gn').is_file():
@@ -354,7 +397,7 @@ def apply(view):
         target = view / rel
         if target.exists() or target.is_symlink():
             raise SystemExit('refusing to overwrite platform addition: ' + rel)
-        path = HERE / source
+        path = addition_source(view, rel, source)
         if not path.is_file():
             raise SystemExit('platform addition is missing: ' + source)
         expected = ADDITION_SHA256.get(rel)
@@ -403,7 +446,7 @@ def apply(view):
     added = []
     for rel, source in ADDITIONS.items():
         target = private_target(view, rel)
-        shutil.copyfile(HERE / source, target)
+        shutil.copyfile(addition_source(view, rel, source), target)
         digest = candidate.digest(target)
         expected = ADDITION_SHA256.get(rel)
         if expected is not None and digest != expected:
