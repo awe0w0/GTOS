@@ -1,0 +1,16 @@
+--- a/third_party/perfetto/gn/perfetto.gni
++++ b/third_party/perfetto/gn/perfetto.gni
+@@ -170,9 +170,11 @@
+   # limitations on the supported operating systems.
+   # For now the IPC layer is conservatively not enabled on Chromium+Windows
+   # builds.
++  # GTOS uses in-process tracing; it does not have POSIX sockets.
+   enable_perfetto_ipc =
+-      !is_nacl && (perfetto_build_standalone || perfetto_build_with_android ||
+-                   (build_with_chromium && !is_win) || is_fuchsia)
++      !is_nacl && !is_gtos && (perfetto_build_standalone ||
++                             perfetto_build_with_android ||
++                             (build_with_chromium && !is_win) || is_fuchsia)
+ 
+   # Makes the heap profiling daemon target reachable. It works only on Android,
+   # but is built on Linux as well for test/compiler coverage.

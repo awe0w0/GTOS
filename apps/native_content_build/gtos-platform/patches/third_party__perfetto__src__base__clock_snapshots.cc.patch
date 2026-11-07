@@ -1,0 +1,24 @@
+--- a/third_party/perfetto/src/base/clock_snapshots.cc
++++ b/third_party/perfetto/src/base/clock_snapshots.cc
+@@ -24,7 +24,20 @@
+ 
+ ClockSnapshotVector CaptureClockSnapshots() {
+   ClockSnapshotVector snapshot_data;
+-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) &&   \
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  // Both domains use the native PIT since boot. GTOS has no suspend accounting.
++  const auto uptime = static_cast<uint64_t>(GetBootTimeNs().count());
++  snapshot_data.emplace_back(protos::pbzero::BUILTIN_CLOCK_BOOTTIME, uptime);
++  snapshot_data.emplace_back(protos::pbzero::BUILTIN_CLOCK_MONOTONIC, uptime);
++  struct timespec utc = {};
++  uint64_t epoch_ns;
++  if (clock_gettime(CLOCK_REALTIME, &utc) == 0 && utc.tv_sec >= 0 &&
++      !__builtin_mul_overflow(static_cast<uint64_t>(utc.tv_sec), 1000000000ULL,
++                              &epoch_ns) &&
++      !__builtin_add_overflow(epoch_ns, static_cast<uint64_t>(utc.tv_nsec),
++                              &epoch_ns))
++    snapshot_data.emplace_back(protos::pbzero::BUILTIN_CLOCK_REALTIME, epoch_ns);
++#elif !PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) &&   \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) &&     \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) && \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_NACL) &&    \

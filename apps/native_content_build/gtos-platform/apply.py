@@ -14,6 +14,16 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/zlib/BUILD.gn': 'ca39854b5338812359318fae7524ed6efd7da9537cae0e66f8d407f5d3c92815',
+    'third_party/perfetto/include/perfetto/base/proc_utils.h': 'a6bf8a3abfe2ef502c5cdd091ba67755d0adbae7e38c955150bf024ccc186626',
+    'third_party/perfetto/src/base/clock_snapshots.cc': 'd83f631879ddf0671197963a09cfb9f068d48a310da842c62b72fc2777db758f',
+    'third_party/perfetto/gn/perfetto.gni': 'fdf2c3a422206ae2dc20d8d08c20c6344cf719a96642d6a24f7ca441560321c9',
+    'third_party/rust/log/v0_4/BUILD.gn': '5a8d0d9c09965fdc12d83af7bb4a45cb6ce72c24fd45651d208568bf4a04e1cd',
+    'third_party/rust/chromium_crates_io/vendor/log-v0_4/src/lib.rs': 'f6633a72e77e5039ef767189116986ba12a57e43304b40eebb466959e03b9a92',
+    'third_party/rust/cxx/v1/BUILD.gn': 'f8ad2dffb860b94111026a04d255cbbe3e0f86a4f12f8e1b5816923cba18985d',
+    'third_party/rust/chromium_crates_io/vendor/cxx-v1/src/lib.rs': '689ed1c3482c683680ec644fc760601efaa944b78b703c26eafac30f646f63f1',
+    'third_party/rust/serde_json_lenient/v0_2/BUILD.gn': 'b620aafb25480fc69405ceeb40668333f8c3611d98146b686200a1fe4aaa20ea',
+    'third_party/rust/chromium_crates_io/vendor/serde_json_lenient-v0_2/src/lib.rs': '59323bf9fa9046e654104b6080f1e3622f8c7f2ead27813e1ac2bed4202aea9d',
     'third_party/boringssl/BUILD.gn': '63efa6ff4bc649e7b4cf161a72ac747719ff697a6ae933742efb82cbc06bc3f5',
     'third_party/boringssl/src/crypto/internal.h': '54cd27bea4b886a6844d5df6964eece3cd0c965201df965fd9850b89940ae1bf',
     'third_party/boringssl/src/crypto/rand/internal.h': '4bd3f23a37f25a5c6db6314f62b84fe61070ac614c66acb3efd77ca4b2322cda',

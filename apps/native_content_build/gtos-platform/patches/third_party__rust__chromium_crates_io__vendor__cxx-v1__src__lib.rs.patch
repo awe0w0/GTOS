@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/cxx-v1/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/cxx-v1/src/lib.rs
+@@ -363,6 +363,7 @@
+ //! </table>
+ 
+ #![no_std]
++#![cfg_attr(all(target_os = "gtos", feature = "std"), feature(restricted_std))]
+ #![doc(html_root_url = "https://docs.rs/cxx/1.0.202")]
+ #![cfg_attr(docsrs, feature(doc_cfg))]
+ #![deny(

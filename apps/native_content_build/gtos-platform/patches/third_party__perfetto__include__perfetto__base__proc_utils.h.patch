@@ -1,0 +1,23 @@
+--- a/third_party/perfetto/include/perfetto/base/proc_utils.h
++++ b/third_party/perfetto/include/perfetto/base/proc_utils.h
+@@ -29,6 +29,8 @@
+ #elif PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA)
+ #include <zircon/process.h>
+ #include <zircon/types.h>
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++#include "tools/gtos_native_sdk/native-services.h"
+ #else
+ #include <unistd.h>
+ #endif
+@@ -46,6 +48,11 @@
+ inline PlatformProcessId GetProcessId() {
+   return static_cast<uint64_t>(GetCurrentProcessId());
+ }
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++using PlatformProcessId = int32_t;
++inline PlatformProcessId GetProcessId() {
++  return static_cast<PlatformProcessId>(gtos::native::CurrentProcessInfo().process_id);
++}
+ #else
+ using PlatformProcessId = pid_t;
+ inline PlatformProcessId GetProcessId() {

@@ -12,7 +12,8 @@ args = parser.parse_args()
 args.out.mkdir(exist_ok=False)
 
 crates = {'serde': 'serde/v1', 'serde_core': 'serde_core/v1',
-          'foldhash': 'foldhash/v0_2', 'memchr': 'memchr/v2'}
+          'foldhash': 'foldhash/v0_2', 'memchr': 'memchr/v2',
+          'log': 'log/v0_4', 'cxx': 'cxx/v1', 'serde_json_lenient': 'serde_json_lenient/v0_2'}
 root = args.build / 'obj/third_party/rust'
 libs = {name: root / rel / ('lib/lib%s_lib.rlib' % name) for name, rel in crates.items()}
 response = [(root / rel / 'lib.rsp.rust').read_text().splitlines() for rel in crates.values()]
@@ -56,6 +57,10 @@ pub fn use_content_libraries(bytes: &[u8], severity: LogSeverity) -> Option<usiz
     serializable::<(u32, bool)>();
     let _hash = foldhash::fast::RandomState::default().hash_one(severity);
     memchr::memchr(severity as u8, bytes)
+}
+pub fn parse_cxx_value(input: &cxx::CxxString) -> Result<u32, serde_json_lenient::Error> {
+    log::debug!("Parsing a native C++ string of {} bytes", input.len());
+    serde_json_lenient::from_slice(input.as_bytes())
 }
 """
 compile_consumer('native_content_libraries', code)

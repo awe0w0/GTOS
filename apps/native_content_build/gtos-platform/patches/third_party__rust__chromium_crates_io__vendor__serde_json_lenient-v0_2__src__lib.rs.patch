@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/serde_json_lenient-v0_2/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/serde_json_lenient-v0_2/src/lib.rs
+@@ -372,6 +372,7 @@
+ #![allow(non_upper_case_globals)]
+ #![deny(missing_docs)]
+ #![no_std]
++#![cfg_attr(all(target_os = "gtos", feature = "std"), feature(restricted_std))]
+ #![cfg_attr(docsrs, feature(doc_cfg))]
+ 
+ #[cfg(not(any(feature = "std", feature = "alloc")))]
