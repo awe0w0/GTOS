@@ -1,54 +1,71 @@
 --- a/build/toolchain/gtos/BUILD.gn
 +++ b/build/toolchain/gtos/BUILD.gn
-@@ -22,26 +22,30 @@
+@@ -8,6 +8,9 @@ declare_args() {
+   # Absolute directory of the reviewed official Clang/LLD/llvm-ar binaries.
+   # There is no host compiler fallback for GTOS target objects.
+   gtos_clang_bin = ""
++  # Content's common configs express ELF linker options through Clang.
++  # Standalone GTOS targets retain the raw LLD command by default.
++  gtos_content_link_via_clang = false
+ }
+ 
+ assert(gtos_clang_bin != "", "Set gtos_clang_bin to the pinned official Clang")
+@@ -22,26 +25,30 @@ template("gtos_freestanding_toolchain") {
      _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -msse2 -mfpmath=sse -mno-sse3 -mno-ssse3 -mno-sse4 -mno-avx -nostdinc"
  
      tool("cc") {
+-      depfile = "{{output}}.d"
 +      output = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 +      depfile = "$output.d"
-+      depsformat = "gcc"
+       depsformat = "gcc"
+-      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
 +      # SDK headers are system includes, but their changes must invalidate objects.
 +      # -MMD would omit them from both Ninja's dependency log and the evidence.
 +      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MD -MF $depfile -c {{source}} -o $output"
-+      description = "GTOS CC {{source}}"
+       description = "GTOS CC {{source}}"
+-      outputs =
+-          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
 +      outputs = [ output ]
-+    }
-+
-+    tool("cxx") {
+     }
+ 
+     tool("cxx") {
+-      depfile = "{{output}}.d"
 +      output = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 +      depfile = "$output.d"
-+      depsformat = "gcc"
-+      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF $depfile -c {{source}} -o $output"
-+      description = "GTOS CXX {{source}}"
-+      outputs = [ output ]
-+    }
-+
-+    tool("asm") {
-       depfile = "{{output}}.d"
        depsformat = "gcc"
--      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
--      description = "GTOS CC {{source}}"
--      outputs =
--          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
--    }
--
--    tool("cxx") {
--      depfile = "{{output}}.d"
--      depsformat = "gcc"
 -      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
--      description = "GTOS CXX {{source}}"
++      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF $depfile -c {{source}} -o $output"
+       description = "GTOS CXX {{source}}"
 -      outputs =
 -          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
--    }
--
--    tool("asm") {
++      outputs = [ output ]
+     }
+ 
+     tool("asm") {
++      depfile = "{{output}}.d"
++      depsformat = "gcc"
        command =
 -          "$_clang --target=$_triple {{asmflags}} -c {{source}} -o {{output}}"
 +          "$_clang --target=$_triple -nostdinc {{defines}} {{include_dirs}} {{asmflags}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
        description = "GTOS ASM {{source}}"
        outputs =
            [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
-@@ -98,14 +102,15 @@
+@@ -56,7 +63,13 @@ template("gtos_freestanding_toolchain") {
+     }
+ 
+     tool("link") {
+-      command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}}"
++      if (gtos_content_link_via_clang) {
++        rspfile = "{{output}}.rsp"
++        rspfile_content = "{{inputs}} {{solibs}} {{libs}}"
++        command = "$gtos_clang_bin/clang++ --target=$_triple -nostdlib -static --ld-path=$gtos_clang_bin/ld.lld -Wl,-m,$_elf {{ldflags}} -o {{output}} @{{output}}.rsp"
++      } else {
++        command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}}"
++      }
+       description = "GTOS LINK {{output}}"
+       outputs =
+           [ "{{root_out_dir}}/{{target_output_name}}{{output_extension}}" ]
+@@ -98,14 +111,15 @@ template("gtos_freestanding_toolchain") {
        command = "cp -af {{source}} {{output}}"
        description = "GTOS COPY {{source}}"
      }

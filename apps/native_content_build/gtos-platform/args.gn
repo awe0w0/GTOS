@@ -6,6 +6,7 @@ use_custom_libcxx = false
 use_llvm_libatomic = false
 is_component_build = false
 gtos_v8_bringup = true
+gtos_content_link_via_clang = true
 concurrent_links = 3
 
 # Use the existing Aura window lifecycle and Views implementations. This does
