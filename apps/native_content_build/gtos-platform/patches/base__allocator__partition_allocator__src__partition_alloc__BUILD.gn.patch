@@ -1,13 +1,26 @@
 --- a/base/allocator/partition_allocator/src/partition_alloc/BUILD.gn
 +++ b/base/allocator/partition_allocator/src/partition_alloc/BUILD.gn
-@@ -771,6 +771,13 @@
+@@ -551,7 +551,9 @@
+     ]
+ 
+     defines = []
+-    if (is_win) {
++    if (defined(is_gtos) && is_gtos) {
++      sources += [ "page_allocator_internals_gtos.h" ]
++    } else if (is_win) {
+       sources += [
+         "page_allocator_internals_win.h",
+         "partition_tls_win.cc",
+@@ -771,6 +773,15 @@
        ]
      }
  
 +    if (defined(is_gtos) && is_gtos && current_cpu == "x86") {
 +      sources += [
 +        "partition_alloc_base/process/process_handle_gtos.cc",
++        "partition_alloc_base/rand_util_gtos.cc",
 +        "partition_alloc_base/threading/platform_thread_gtos.cc",
++        "partition_alloc_base/time/time_now_gtos.cc",
 +      ]
 +    }
 +

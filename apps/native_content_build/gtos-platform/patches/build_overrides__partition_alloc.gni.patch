@@ -1,0 +1,13 @@
+--- a/build_overrides/partition_alloc.gni
++++ b/build_overrides/partition_alloc.gni
+@@ -70,7 +70,9 @@
+ _disable_partition_alloc_everywhere =
+     (!is_linux && is_component_build) || (is_win && is_debug)
+ 
+-use_allocator_shim_default = true  # Updated below:
++# GTOS uses its existing native libc allocator and still builds the
++# PartitionAlloc component for explicit allocation.
++use_allocator_shim_default = !(defined(is_gtos) && is_gtos)  # Updated below:
+ 
+ # Sanitizers replace the allocator, don't use our own.
+ if (is_asan || is_hwasan || is_lsan || is_tsan || is_msan) {

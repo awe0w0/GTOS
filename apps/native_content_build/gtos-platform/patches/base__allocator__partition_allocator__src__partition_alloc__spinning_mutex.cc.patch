@@ -1,0 +1,20 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
+@@ -36,6 +36,17 @@
+ #if PA_BUILDFLAG(IS_POSIX)
+ #include <sched.h>
+ #define PA_YIELD_THREAD sched_yield()
++#elif PA_BUILDFLAG(IS_GTOS)
++#include <process/abi.h>
++
++namespace {
++void YieldThread() {
++  unsigned call = GTOS_SYS_YIELD;
++  asm volatile("int $0x80" : "+a"(call) : "b"(0u), "c"(0u) : "memory", "cc");
++  PA_CHECK(call == 0);
++}
++}  // namespace
++#define PA_YIELD_THREAD YieldThread()
+ #else  // Other OS
+ #error "Thread yield not supported on this OS."
+ #define PA_YIELD_THREAD ((void)0)

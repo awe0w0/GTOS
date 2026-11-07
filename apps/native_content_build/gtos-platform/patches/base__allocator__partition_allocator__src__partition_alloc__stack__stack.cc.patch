@@ -1,0 +1,24 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc
+@@ -15,6 +15,8 @@
+ 
+ #if PA_BUILDFLAG(IS_WIN)
+ #include <windows.h>
++#elif PA_BUILDFLAG(IS_GTOS)
++#include "tools/gtos_native_sdk/native-services.h"
+ #else
+ #include <pthread.h>
+ #endif
+@@ -43,6 +45,12 @@
+ #else
+ #error "Unsupported GetStackStart"
+ #endif
++}
++
++#elif PA_BUILDFLAG(IS_GTOS)
++
++uintptr_t GetStackTop() {
++  return gtos::native::CurrentProcessInfo().stack_end;
+ }
+ 
+ #elif PA_BUILDFLAG(IS_APPLE)

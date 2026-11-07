@@ -1,0 +1,12 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time.h
+@@ -821,7 +821,8 @@
+     IOS_CF_ABSOLUTE_TIME_MINUS_KERN_BOOTTIME,
+     MAC_MACH_ABSOLUTE_TIME,
+     WIN_QPC,
+-    WIN_ROLLOVER_PROTECTED_TIME_GET_TIME
++    WIN_ROLLOVER_PROTECTED_TIME_GET_TIME,
++    GTOS_CLOCK_MONOTONIC
+   };
+ 
+   constexpr TimeTicks() : TimeBase(0) {}

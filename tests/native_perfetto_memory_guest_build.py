@@ -12,7 +12,8 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit'], default='memory')
+parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition'],
+                    default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
@@ -26,6 +27,8 @@ component = {
     'event': ('native_event_record', 'event_fd_gtos.cc', 'event.cpp', 'native_perfetto_event_kernel.cpp', 'PerfettoEventUnusedBaseline', 3),
     'wait': ('native_wait_record', 'native_wait_gtos.cc', 'wait.cpp', 'native_perfetto_wait_kernel.cpp', 'PerfettoWaitUnusedBaseline', 3),
     'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 2),
+    'partition': ('native_memory_record', None, 'partition_pages.cpp',
+                  'native_partition_pages_kernel.cpp', 'PartitionPagesUnusedBaseline', 2),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -59,6 +62,20 @@ def identity(path):
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+def loaded_image(data):
+    assert data[:6] == b'\x7fELF\x01\x01'
+    entry, offset = struct.unpack_from('<II', data, 24)
+    size, count = struct.unpack_from('<HH', data, 42)
+    segments = []
+    for index in range(count):
+        kind, start, va, pa, filesz, memsz, flags, align = struct.unpack_from(
+            '<8I', data, offset + size * index)
+        if kind == 1:
+            segments.append((va, pa, filesz, memsz, flags, align, data[start:start + filesz]))
+    assert segments
+    return entry, segments
+
+
 flags = ['--target=i686-unknown-none-elf', '-D__GTOS__=1', '-ffreestanding', '-fno-builtin',
          '-mno-mmx', '-msse2', '-mfpmath=sse', '-mno-sse3', '-mno-ssse3', '-mno-sse4', '-mno-avx',
          '-nostdinc', '-fno-stack-protector', '-fno-pic', '-fno-pie', '-fno-unwind-tables',
@@ -75,6 +92,15 @@ if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
+if args.component == 'partition':
+    partition = Path('base/allocator/partition_allocator/src')
+    pa = args.view / partition / 'partition_alloc'
+    v8 = repo / 'apps/native_v8_integration/overlay'
+    clock = repo / 'apps/native_c_clock/runtime'
+    strings = repo / 'apps/native_c_string/llvm-libc'
+    flags += ['-std=c++23', '-I' + str(args.view),
+              '-I' + str(args.view / partition), '-I' + str(args.generated / partition),
+              '-I' + str(v8), '-I' + str(clock), '-I' + str(strings)]
 layout_source = repo / 'apps/native_vm_probe/linker.ld'
 bind(layout_source)
 layout = args.out / 'module.ld'
@@ -98,10 +124,29 @@ for optimization in (0, 2):
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
+    if args.component == 'partition':
+        names = ['page_allocator.cc', 'spinning_mutex.cc', 'stack/stack.cc', 'address_space_randomization.cc',
+                 'random.cc', 'partition_alloc_base/rand_util.cc',
+                 'partition_alloc_base/rand_util_gtos.cc',
+                 'partition_alloc_base/time/time.cc', 'partition_alloc_base/time/time_now_gtos.cc',
+                 'partition_alloc_base/threading/platform_thread_gtos.cc',
+                 'partition_alloc_base/check.cc', 'partition_alloc_base/debug/alias.cc',
+                 'partition_alloc_base/log_message.cc', 'partition_alloc_base/logging.cc',
+                 'partition_alloc_base/strings/cstring_builder.cc',
+                 'partition_alloc_base/strings/safe_sprintf.cc',
+                 'partition_alloc_base/strings/string_util.cc']
+        native_sources += [(Path(name).stem, pa / name) for name in names]
+        runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
+        native_sources += [('clock', clock / 'clock-gettime.cc'),
+                           ('sleep', runtime / 'nanosleep.cc'),
+                           ('heap', runtime / 'heap.cc'),
+                           ('operators', runtime / 'operators.cc'),
+                           ('strchr', strings / 'src/string/strchr.cpp')]
     for name, source in native_sources:
         bind(source)
         output = directory / (name + '.o')
-        run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
+        packaging = ['-DLIBC_NAMESPACE=__llvm_libc_cr', '-DLIBC_COPT_PUBLIC_PACKAGING=1'] if name == 'strchr' else []
+        run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, *packaging, '-O' + str(optimization),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-u', output])
@@ -118,20 +163,24 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
+        linked = image.with_suffix('.unstripped.elf') if args.component == 'partition' else image
         extra = []
-        if cpu or args.component == 'wait':
+        if cpu or args.component in ('wait', 'partition'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
             extra.append(builtins)
         run(directory.name + '-' + name + '-link', [args.clang_bin / 'ld.lld', '-m', 'elf_i386',
-            '-static', '-e', '_start', '-T', layout, '--gc-sections', '-o', image,
+            '-static', '-e', '_start', '-T', layout, '--gc-sections', '-o', linked,
             args.out / 'start.o', *objects, output, *extra])
-        assert not run(directory.name + '-' + name + '-undefined', ['/usr/bin/nm', '-u', image]).strip()
+        assert not run(directory.name + '-' + name + '-undefined', ['/usr/bin/nm', '-u', linked]).strip()
+        symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-n', linked])
+        assert '40020000 D ' + record_name in symbols
+        if linked != image:
+            run(directory.name + '-' + name + '-strip', ['/usr/bin/objcopy', '--strip-all', linked, image])
+            assert loaded_image(linked.read_bytes()) == loaded_image(image.read_bytes())
         data = image.read_bytes()
         assert data[:5] == b'\x7fELF\x01' and struct.unpack_from('<H', data, 18)[0] == 3 and len(data) <= 65536
-        symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-n', image])
-        assert '40020000 D ' + record_name in symbols
         image.chmod(0o444)
         modules.append({'optimization': optimization, 'mode': mode, 'negative': negative, **identity(image)})
 
@@ -188,4 +237,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-print(('CONTENT_' if args.component == 'exit' else 'PERFETTO_') + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' + str(len(modules)) + ' undefined=0 scalar_kernel=true')
+prefix = 'CONTENT_' if args.component in ('exit', 'partition') else 'PERFETTO_'
+print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
+      str(len(modules)) + ' undefined=0 scalar_kernel=true')

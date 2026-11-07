@@ -1,0 +1,11 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/page_allocator.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/page_allocator.cc
+@@ -29,6 +29,8 @@
+ #include "partition_alloc/page_allocator_internals_posix.h"
+ #elif PA_BUILDFLAG(IS_FUCHSIA)
+ #include "partition_alloc/page_allocator_internals_fuchsia.h"
++#elif PA_BUILDFLAG(IS_GTOS)
++#include "partition_alloc/page_allocator_internals_gtos.h"
+ #else
+ #error Platform not supported.
+ #endif

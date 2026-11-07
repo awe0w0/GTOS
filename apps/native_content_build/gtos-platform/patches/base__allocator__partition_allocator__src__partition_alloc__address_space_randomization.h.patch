@@ -1,0 +1,19 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/address_space_randomization.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/address_space_randomization.h
+@@ -298,6 +298,16 @@
+ 
+   #endif  // PA_BUILDFLAG(IS_POSIX)
+ 
++#elif PA_BUILDFLAG(IS_GTOS)
++
++  // Keep randomized hints inside the native 0x80000000-0xbfffc000 arena.
++  PA_ALWAYS_INLINE constexpr uintptr_t ASLRMask() {
++    return AslrMask(29);
++  }
++  PA_ALWAYS_INLINE constexpr uintptr_t ASLROffset() {
++    return AslrAddress(0x80000000ULL);
++  }
++
+ #elif PA_BUILDFLAG(PA_ARCH_CPU_32_BITS)
+ 
+   // This is a good range on 32-bit Windows and Android (the only platforms on

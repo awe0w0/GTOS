@@ -1,0 +1,11 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h
+@@ -122,7 +122,7 @@
+ // so don't bother with thread_local anywhere.
+ #if !(PA_BUILDFLAG(IS_WIN) && PA_BUILDFLAG(IS_COMPONENT_BUILD)) && \
+     !PA_BUILDFLAG(IS_APPLE) && !PA_BUILDFLAG(IS_LINUX) &&          \
+-    !PA_BUILDFLAG(IS_CHROMEOS)
++    !PA_BUILDFLAG(IS_CHROMEOS) && !PA_BUILDFLAG(IS_GTOS)
+ #define PA_CONFIG_THREAD_LOCAL_TLS() 1
+ #else
+ #define PA_CONFIG_THREAD_LOCAL_TLS() 0

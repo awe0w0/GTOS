@@ -13,6 +13,15 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/allocator/partition_allocator/src/partition_alloc/stack/stack.cc': 'e046a5e98d65df593b829ab4b1541f9732c6aa55e6934f70041f9227207526a4',
+    'build_overrides/partition_alloc.gni': 'eda28a6578ab3ac16cc9806198ef935e69c50cd8fca27f29a19217549b181709',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time.h': '98d6bf634c5fdaf6505c48df393dbe432939660f92e359286288f2d6cf450449',
+    'base/allocator/partition_allocator/src/partition_alloc/address_space_randomization.h': 'e188fdb4cdb50f4e79d035d4e6312f52fe756a4c8b3b1a1ed02abb30a2beafff',
+    'base/allocator/partition_allocator/src/partition_alloc/page_allocator.cc': '696169437e262abe80a6fec317fb3a95c7fbff95497d0fccb200fcfd695b9d27',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_config.h': 'a92c159fa2d3917ff2709215a2b74088da2b0a738fde626a62cf100f8345b31f',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_tls.h': '9630c42d6deb4fe26269c37d0799e412ebad33ca5be3247e1e309d008ecc63ff',
+    'base/allocator/partition_allocator/src/partition_alloc/thread_cache.cc': '93b59c06ec9e04e638720ef7a622f97253fa63417f15fa1d6f737a61720804b9',
+    'base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc': '2f670566b168d90dfb273ee0dfac94ef7c27a8670d1d38cf877f784df917f362',
     'tools/protoc_wrapper/protoc-gen-ts_proto.py': '5c47d11dd1d162e0e4b2f1c2e9ffee92d01692467379c763f6bb340c01d557c1',
     'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc': '498b80b48fe53f8812803873cdfddb5d3dee98a42c8b345fc47ca401de1b2bfd',
     'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc': 'cc5e597f569b1f028e50daf143f936042600be7cfe32774953ef157cd21a4c6b',
@@ -100,6 +109,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/rand_util_gtos.cc': 'partition_alloc/rand_util_gtos.cc',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time_now_gtos.cc': 'partition_alloc/time_now_gtos.cc',
+    'base/allocator/partition_allocator/src/partition_alloc/page_allocator_internals_gtos.h': 'partition_alloc/page_allocator_internals_gtos.h',
     'third_party/abseil-cpp/absl/base/internal/spinlock_gtos.inc': 'abseil/spinlock_gtos.inc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc',

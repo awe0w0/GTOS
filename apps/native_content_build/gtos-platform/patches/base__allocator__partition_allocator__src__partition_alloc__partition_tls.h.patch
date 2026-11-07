@@ -1,0 +1,29 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_tls.h
+@@ -206,6 +206,18 @@
+ 
+ PA_COMPONENT_EXPORT(PARTITION_ALLOC) PartitionTls* GetTlsSlowPath();
+ 
++#if PA_BUILDFLAG(IS_GTOS)
++// The native allocator uses the uncached path until a destructor-capable
++// allocator TLS provider is available.
++static_assert(!PA_CONFIG(THREAD_CACHE_SUPPORTED));
++PA_ALWAYS_INLINE bool IsTombstoneSlow() {
++  return false;
++}
++
++PA_ALWAYS_INLINE PartitionTls* GetTls() {
++  return nullptr;
++}
++#else
+ PA_ALWAYS_INLINE bool IsTombstoneSlow() {
+   PartitionTlsKey key = GetTlsKey();
+   if (key == kInvalidTlsKey) [[unlikely]] {
+@@ -229,6 +241,7 @@
+   }
+   return tls;
+ }
++#endif  // PA_BUILDFLAG(IS_GTOS)
+ 
+ PA_COMPONENT_EXPORT(PARTITION_ALLOC) void EnsureThreadSpecificDataInitialized();
+ 
