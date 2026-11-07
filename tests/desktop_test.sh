@@ -69,6 +69,10 @@ if [ "$stage" = run ]; then
     # match what was published; without this check that refusal would surface as the program's own 2 and be read as a real status.
     verify_publish_record "$desktop32" || exit "$GTOS_EXIT_SUPPLY"
     verify_publish_record "$desktop64" || exit "$GTOS_EXIT_SUPPLY"
+    if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
+        sanitized=$(staged_binary desktop-sanitized) || exit "$GTOS_EXIT_SUPPLY"
+        verify_publish_record "$sanitized" || exit "$GTOS_EXIT_SUPPLY"
+    fi
 
     executor=
     if [ "${GTOS_DESKTOP_STRICT:-0}" = 1 ]; then
@@ -129,10 +133,8 @@ if [ "$stage" = run ]; then
     if [ "$width32" -eq 126 ] && [ "${GTOS_DESKTOP_STRICT:-0}" = 1 ]; then
         exit "$GTOS_EXIT_SUPPLY"
     fi
-if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
-        # Resolved in its own statement: an assignment's status is the substitution's, but inside a command's arguments it is not.
-        sanitized=$(staged_binary desktop-sanitized) || exit "$GTOS_EXIT_SUPPLY"
-        ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 run_host_binary "$sanitized"
+    if [ "${GTOS_DESKTOP_SANITIZERS:-0}" = 1 ]; then
+        ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 run_published_binary "$sanitized"
     fi
     exit 0
 fi
