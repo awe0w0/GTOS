@@ -13,6 +13,12 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/perfetto/src/base/utils.cc': 'f9d4a8b518bb0c5b78f8b0426791c7767a1bf856f17dedd0d57401327ec4e34a',
+    'third_party/perfetto/src/base/time.cc': 'e0f427cb33997802685f58b813c2648cbd70ac009c7fcd21f81d8841ed37d0c6',
+    'third_party/perfetto/src/base/lock_free_task_runner.cc': 'ee41b877884001efc183f9d821f6daa67bdde52bd1f178520be38d3cea6e8686',
+    'third_party/perfetto/include/perfetto/ext/base/lock_free_task_runner.h': '0a4af2aaadcaeb2b4fee8a296f7657e528e77e96da6b6360b7484c8fd5f63574',
+    'third_party/perfetto/src/base/unix_task_runner.cc': 'ad0b123c4ce28bc8d8ddf078247359158bad89e903f298a2a1fd9e23f54ab066',
+    'third_party/perfetto/include/perfetto/ext/base/unix_task_runner.h': '2d6cd9c3a58702245af50403f431bb4450eeb5303c8679b154ab009f4ae89cab',
     'third_party/perfetto/src/base/file_utils.cc': 'ed52e1b02be69f57b0ed098fe8a294fb4b4798ab79f6962c267ac83a3ecdedc7',
     'third_party/perfetto/src/base/pipe.cc': '483438cf41402586b90f6940a696a84724276c4e8846a271d85eb8457332ca13',
     'third_party/perfetto/include/perfetto/ext/base/event_fd.h': '8f54d6aaf7af97af9a2cd738e543bfa34b956d6dda6fad619fef5dcd4d17e614',
@@ -62,6 +68,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/process/abi.h': 'sdk/process/abi.h',
+    'third_party/perfetto/include/perfetto/ext/base/native_wait.h': 'perfetto/native_wait.h',
+    'third_party/perfetto/src/base/native_wait_gtos.cc': 'perfetto/native_wait_gtos.cc',
     'third_party/perfetto/src/base/event_fd_gtos.cc': 'perfetto/event_fd_gtos.cc',
     'build/config/gtos/include/process/event_abi.h': 'sdk/process/event_abi.h',
     'third_party/perfetto/src/base/system_info_gtos.cc': 'perfetto/system_info_gtos.cc',

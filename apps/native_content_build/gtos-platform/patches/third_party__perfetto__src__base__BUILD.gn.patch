@@ -1,6 +1,6 @@
 --- a/third_party/perfetto/src/base/BUILD.gn
 +++ b/third_party/perfetto/src/base/BUILD.gn
-@@ -74,6 +74,22 @@ perfetto_component("base") {
+@@ -74,6 +74,23 @@ perfetto_component("base") {
      "weak_runner.cc",
    ]
  
@@ -15,6 +15,7 @@
 +      "cpu_time_gtos.cc",
 +      "ctrl_c_handler_gtos.cc",
 +      "event_fd_gtos.cc",
++      "native_wait_gtos.cc",
 +      "paged_memory_gtos.cc",
 +      "system_info_gtos.cc",
 +    ]

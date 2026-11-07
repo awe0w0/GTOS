@@ -12,7 +12,7 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu', 'event'], default='memory')
+parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait'], default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
@@ -24,6 +24,7 @@ component = {
     'memory': ('native_memory_record', 'paged_memory_gtos.cc', 'memory.cpp', 'native_perfetto_memory_kernel.cpp', 'PerfettoMemoryUnusedBaseline', 5),
     'cpu': ('native_cpu_record', 'cpu_time_gtos.cc', 'cpu_time.cpp', 'native_perfetto_cpu_time_kernel.cpp', 'PerfettoCpuUnusedBaseline', 3),
     'event': ('native_event_record', 'event_fd_gtos.cc', 'event.cpp', 'native_perfetto_event_kernel.cpp', 'PerfettoEventUnusedBaseline', 3),
+    'wait': ('native_wait_record', 'native_wait_gtos.cc', 'wait.cpp', 'native_perfetto_wait_kernel.cpp', 'PerfettoWaitUnusedBaseline', 3),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -69,6 +70,8 @@ flags = ['--target=i686-unknown-none-elf', '-D__GTOS__=1', '-ffreestanding', '-f
          '-isystem' + str(sdk / 'sdk'), '-isystem' + str(full / 'third_party/libc++/src/include'),
          '-isystem' + str(sdk / 'c-sdk'),
          '-isystem' + str(args.clang_bin.parent / 'lib/clang/24/include')]
+if args.component == 'wait':
+    flags += ['-I' + str(sdk / 'include')]
 layout_source = repo / 'apps/native_vm_probe/linker.ld'
 bind(layout_source)
 layout = args.out / 'module.ld'
@@ -83,15 +86,19 @@ for optimization in (0, 2):
     directory = args.out / ('O' + str(optimization))
     directory.mkdir()
     objects = []
-    for name, source in [('backend', args.view / ('third_party/perfetto/src/base/' + backend)),
-                         ('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]:
+    native_sources = [('backend', args.view / ('third_party/perfetto/src/base/' + backend)),
+                      ('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]
+    if args.component == 'wait':
+        native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
+                           ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
+    for name, source in native_sources:
         bind(source)
         output = directory / (name + '.o')
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-u', output])
-        assert all(value not in symbols for value in ['GtosPerfettoVmTestCall', 'GtosPerfettoCpuTimeTestCall', 'GtosPerfettoEventTestCall'])
+        assert all(value not in symbols for value in ['GtosPerfettoVmTestCall', 'GtosPerfettoCpuTimeTestCall', 'GtosPerfettoEventTestCall', 'GtosPerfettoWaitTestCall'])
         objects.append(output)
     source = product / ('probe/' + consumer)
     bind(source)
@@ -105,7 +112,7 @@ for optimization in (0, 2):
         dependencies(output)
         image = directory / (name + '.elf')
         extra = []
-        if cpu:
+        if cpu or args.component == 'wait':
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
@@ -131,7 +138,7 @@ sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
            'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
            'tests/i386_pure_virtual_runtime.cpp',
            'tests/' + observer]
-if args.component == 'event':
+if args.component in ('event', 'wait'):
     sources.append('src/process/native_events.cpp')
 assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']

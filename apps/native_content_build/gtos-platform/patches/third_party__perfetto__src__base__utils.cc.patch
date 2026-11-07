@@ -1,0 +1,15 @@
+--- a/third_party/perfetto/src/base/utils.cc
++++ b/third_party/perfetto/src/base/utils.cc
+@@ -179,7 +179,11 @@
+ }
+ 
+ bool IsTty(int fd) {
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  // Native files have no terminal device, ioctl state or termios discipline.
++  ignore_result(fd);
++  return false;
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+   return ::_isatty(fd) != 0;
+ #else
+   return ::isatty(fd) != 0;

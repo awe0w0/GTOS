@@ -559,3 +559,65 @@ rerun (`memory g04/r05`, `cpu g02/r02`), retaining all normal/fault/Reap and
 negative-consumer results. `codex-a-core-c03` passes the four current-source
 paging/process-memory/native-process/FP components. Formal Content C1/C2/C3
 remain separate milestones.
+
+The native task-runner profile now watches only EVENT_WAIT handles. Both real
+Perfetto task queues retain their upstream immediate/delayed queue algorithms
+and use the native manual-event wakeup. There is no Unix poll, socket or file
+descriptor multiplexing claim. The sixteen-handle limit includes the internal
+wakeup event; a registered event must remain live until removal is processed
+on the runner thread. Remote ready-watch removal is revalidated under the
+UnixTaskRunner lock before marking and queueing the callback. Notifications
+which coalesce are still covered by checking the immediate queue every loop.
+
+The shared wait backend validates every handle and status. Finite deadlines
+round up using the actual PIT divisor, then recheck the checked monotonic clock
+after a timeout, including a partially elapsed first tick. An unsigned delayed
+task beyond INT_MAX milliseconds is waited in bounded slices, preserving its
+full deadline instead of casting it to the infinite-wait value. Microsecond
+sleep follows the existing native libc++ yield/uptime contract: it requires no
+event endpoint and promises neither precise hardware timing nor suspension.
+Perfetto's native IsTty returns false because this profile has no terminal
+device or line discipline. Host branches remain unchanged.
+
+`codex-c-perfetto-runner-build-b06` / `run-r04` pass 26 ELF32 images at O0/O2:
+both actual task runners run bursts of 1200 ordered tasks, repeat three full
+lifetimes, interleave delayed work and two ready watches, remove watches during
+an injected remote API interleaving, restart after Quit, and reach the maximum
+watch count. Allocation checks distinguish the upstream Watchdog's one retained
+process-lifetime singleton from queue allocations, which must all be returned.
+The same unit executes zero/finite/infinite-ready waits, UINT_MAX microsecond
+sleep and UINT_MAX millisecond delayed tasks. Two wrong-expectation images fail;
+22 invalid handle/count/deadline/service/clock/capacity cases trap as required.
+The C++ mutex/hash containers and LLVM ceilf are actual pinned library code;
+syscalls, clock, serialized thread/mutex state, allocator and diagnostics are
+injected boundaries. This does not qualify real multi-producer races. The
+default native wait objects and four original host source branches compile.
+
+Preserved failures matter here: `run-r01` timed out because an upstream cast
+turned UINT_MAX milliseconds into infinite wait; `run-r02` exposed the retained
+Watchdog singleton in the unit's incorrect allocation expectation; `run-r03`
+reproduced the removed-ready-watch assertion. The fixes above are tested by the
+same consumer. Earlier build failures identified missing test runtime symbols
+and the pinned libc++ explicit-ABI annotation requirement; they remain recorded.
+
+`codex-c-perfetto-wait-guest-build-g01` / `run-r01` execute the uninjected wait
+backend, real C clock provider and EventFd in current-source CPL3. Each positive
+capture has fourteen consumer comparisons and eight public waits, three actual
+scheduler sleeps, three yields, and exact native event ownership/reclamation.
+O0/32 MiB and O2/64 MiB pass with Reap baselines `0x1d7a` and `0x3d73`; two
+fault modes retain exactly one event until Reap, then restore handles and frames.
+The wrong consumer exits 65 and is rejected. The judge rejects 123 missing,
+duplicate or contract-breaking field mutations per valid capture. Runtime call
+and scheduling totals have explicit ranges because a PIT boundary can add a
+clock read or retry; they are not silently treated as fixed integers. This is
+blocking-timeout qualification, not a cross-thread signal/wakeup race test.
+
+`unit-ur02` passes nineteen actual GN/GRIT/platform regression tests. Formal
+`ninja-n59` compiled the native queue/time/terminal objects and exposed a missing
+canonical core-ABI header in the private SDK; `ninja-n61` then compiles the actual
+native wait and corrected UnixTaskRunner objects with the complete SDK. The
+copied core ABI is byte-identical to `include/process/abi.h`. The shared guest
+builder's default memory profile is also rebuilt and rerun (`g05`/`r06`), retaining
+its real page-fault, zeroing, exact Reap and wrong-consumer checks. These are
+component and dependency results; shell delegate C1 and Content C2/C3 remain
+unmet.

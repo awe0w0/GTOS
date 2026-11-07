@@ -1,0 +1,136 @@
+--- a/third_party/perfetto/src/base/unix_task_runner.cc
++++ b/third_party/perfetto/src/base/unix_task_runner.cc
+@@ -26,6 +26,9 @@
+ #include <windows.h>
+ 
+ #include <synchapi.h>
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++#include "perfetto/ext/base/native_wait.h"
++#include <process/event_abi.h>
+ #else
+ #include <unistd.h>
+ #endif
+@@ -81,6 +84,9 @@
+     // WaitForSingleObject() for the one handle that WaitForMultipleObject()
+     // returned.
+     PostFileDescriptorWatches(ret);
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++    PostFileDescriptorWatches(
++        WaitForNativeEvents(poll_fds_.data(), poll_fds_.size(), poll_timeout_ms));
+ #else
+     platform::BeforeMaybeBlockingSyscall();
+     int ret = PERFETTO_EINTR(poll(
+@@ -119,7 +125,7 @@
+ 
+ void UnixTaskRunner::UpdateWatchTasksLocked() {
+   PERFETTO_DCHECK_THREAD(thread_checker_);
++#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) && !PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+   if (!watch_tasks_changed_)
+     return;
+   watch_tasks_changed_ = false;
+@@ -128,7 +134,7 @@
+   for (auto& it : watch_tasks_) {
+     PlatformHandle handle = it.first;
+     WatchTask& watch_task = it.second;
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+     if (!watch_task.pending)
+       poll_fds_.push_back(handle);
+ #else
+@@ -169,15 +175,20 @@
+ void UnixTaskRunner::PostFileDescriptorWatches(uint64_t windows_wait_result) {
+   PERFETTO_DCHECK_THREAD(thread_checker_);
+   for (size_t i = 0; i < poll_fds_.size(); i++) {
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+     const PlatformHandle handle = poll_fds_[i];
+     // |windows_wait_result| is the result of WaitForMultipleObjects() call. If
+     // one of the objects was signalled, it will have a value between
+     // [0, poll_fds_.size()].
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++    if (i != windows_wait_result && WaitForNativeEvents(&handle, 1, 0) != 0)
++      continue;
++#else
+     if (i != windows_wait_result &&
+         WaitForSingleObject(handle, 0) != WAIT_OBJECT_0) {
+       continue;
+     }
++#endif
+ #else
+     base::ignore_result(windows_wait_result);
+     const PlatformHandle handle = poll_fds_[i].fd;
+@@ -193,12 +204,26 @@
+       continue;
+     }
+ 
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++    // A remote RemoveFileDescriptorWatch may have run while EVENT_WAIT was
++    // blocked. Revalidate under the same lock before marking and queueing;
++    // a ready snapshot must never resurrect a removed watch.
++    {
++      std::lock_guard<base::MaybeRtMutex> lock(lock_);
++      auto it = watch_tasks_.find(handle);
++      if (it == watch_tasks_.end() || it->second.pending)
++        continue;
++      it->second.pending = true;
++      immediate_tasks_.push_back(
++          std::bind(&UnixTaskRunner::RunFileDescriptorWatch, this, handle));
++    }
++#else
+     // Binding to |this| is safe since we are the only object executing the
+     // task.
+     PostTask(std::bind(&UnixTaskRunner::RunFileDescriptorWatch, this, handle));
+ 
+     // Flag the task as pending.
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+     // On Windows this is done by marking the WatchTask entry as pending. This
+     // is more expensive than Linux as requires rebuilding the |poll_fds_|
+     // vector on each call. There doesn't seem to be a good alternative though.
+@@ -212,6 +237,7 @@
+     PERFETTO_DCHECK(poll_fds_[i].fd >= 0);
+     poll_fds_[i].fd = -poll_fds_[i].fd;
+ #endif
++#endif
+   }
+ }
+ 
+@@ -228,7 +254,7 @@
+     // updated this watch we need to refresh the set first.
+     UpdateWatchTasksLocked();
+ 
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+     // On Windows we manually track the presence of outstanding tasks for the
+     // watch. The UpdateWatchTasksLocked() in the Run() loop will re-add the
+     // task to the |poll_fds_| vector.
+@@ -253,7 +279,13 @@
+   if (!delayed_tasks_.empty()) {
+     TimeMillis diff = delayed_tasks_.begin()->first - GetWallTimeMs() -
+                       advanced_time_for_testing_;
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++    // Keep the full deadline; a uint32_t delay must not wrap to infinite wait.
++    return static_cast<int>(std::max<int64_t>(
++        0, std::min<int64_t>(diff.count(), std::numeric_limits<int>::max())));
++#else
+     return std::max(0, static_cast<int>(diff.count()));
++#endif
+   }
+   return -1;
+ }
+@@ -286,9 +318,13 @@
+   {
+     std::lock_guard<base::MaybeRtMutex> lock(lock_);
+     PERFETTO_DCHECK(!watch_tasks_.count(fd));
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++    PERFETTO_CHECK(fd > 0 && watch_tasks_.count(fd) == 0 &&
++                   watch_tasks_.size() < GTOS_EVENT_WAIT_LIMIT);
++#endif
+     WatchTask& watch_task = watch_tasks_[fd];
+     watch_task.callback = std::move(task);
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+     watch_task.pending = false;
+ #else
+     watch_task.poll_fd_index = SIZE_MAX;

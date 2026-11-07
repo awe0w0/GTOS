@@ -1,0 +1,14 @@
+--- a/third_party/perfetto/src/base/time.cc
++++ b/third_party/perfetto/src/base/time.cc
+@@ -177,9 +177,11 @@
+ 
+ #else  // PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+ 
++#if !PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+ void SleepMicroseconds(unsigned interval_us) {
+   ::usleep(static_cast<useconds_t>(interval_us));
+ }
++#endif
+ 
+ void InitializeTime() {}
+ 
