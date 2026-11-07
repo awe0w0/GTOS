@@ -1,0 +1,12 @@
+--- a/third_party/protobuf/src/google/protobuf/io/zero_copy_stream_impl.cc
++++ b/third_party/protobuf/src/google/protobuf/io/zero_copy_stream_impl.cc
+@@ -91,7 +91,8 @@
+       is_closed_(false),
+       errno_(0),
+       previous_seek_failed_(false) {
+-#ifndef _WIN32
++  // GTOS file descriptors expose synchronous regular-file I/O only.
++#if !defined(_WIN32) && !defined(__GTOS__)
+   int flags = fcntl(file_, F_GETFL);
+   flags &= ~O_NONBLOCK;
+   fcntl(file_, F_SETFL, flags);

@@ -1,0 +1,51 @@
+--- a/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc
++++ b/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc
+@@ -34,7 +34,7 @@
+ 
+ #include "absl/base/config.h"
+ 
+-#if !defined(_MSC_VER)
++#if !defined(_MSC_VER) && !defined(__GTOS__)
+ #include <fcntl.h>
+ #if !defined(__APPLE__)
+ #include <sys/stat.h>
+@@ -403,7 +403,12 @@
+ 
+ // fopen(3) adaptor for reading zoneinfo files (read-only binary mode).
+ inline FilePtr FOpen(const char* path) {
+-#if defined(_MSC_VER)
++#if defined(__GTOS__)
++  // GTOS alteration: the native FILE provider only opens regular LittleFS
++  // files. There are no FIFO/device opens or Unix descriptor/exec flags.
++  // Preserve actual read errors and the unchanged TZIF parser below.
++  return FilePtr(fopen(path, "rb"), fclose);
++#elif defined(_MSC_VER)
+   FILE* fp;
+   if (fopen_s(&fp, path, "rb") != 0) fp = nullptr;
+   return FilePtr(fp, fclose);
+@@ -655,12 +660,25 @@
+     std::string version;
+     if (!prefix.empty()) {
+       // Fuchsia builds place the version in "<prefix>revision.txt".
++#if defined(__GTOS__)
++      // GTOS alteration: reuse the native regular-file FILE provider without
++      // enabling the unavailable C++ filesystem/stream runtime. Like getline,
++      // retain bytes before the first newline, including NUL and high bytes.
++      auto version_file = FOpen((prefix + "revision.txt").c_str());
++      if (version_file != nullptr) {
++        for (int c = fgetc(version_file.get()); c != EOF && c != '\n';
++             c = fgetc(version_file.get())) {
++          version.push_back(static_cast<char>(c));
++        }
++      }
++#else
+       std::ifstream version_stream(prefix + "revision.txt");
+       if (version_stream.is_open()) {
+         // revision.txt should contain no newlines, but to be
+         // defensive we read just the first line.
+         std::getline(version_stream, version);
+       }
++#endif
+     }
+ 
+     return std::unique_ptr<ZoneInfoSource>(

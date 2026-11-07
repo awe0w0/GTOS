@@ -1,0 +1,32 @@
+--- a/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc
++++ b/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc
+@@ -17,6 +17,23 @@
+ #endif
+ 
+ #include "absl/time/internal/cctz/src/time_zone_libc.h"
++
++#if defined(__GTOS__)
++// GTOS alteration: libc:* is an internal, test-only C-library backend.
++// No native gmtime/localtime/mktime contract exists. Decline that backend;
++// UTC and named TZIF zones continue through the real TimeZoneInfo engine.
++namespace absl {
++ABSL_NAMESPACE_BEGIN
++namespace time_internal {
++namespace cctz {
++std::unique_ptr<TimeZoneLibC> TimeZoneLibC::Make(const std::string&) {
++  return nullptr;
++}
++}  // namespace cctz
++}  // namespace time_internal
++ABSL_NAMESPACE_END
++}  // namespace absl
++#else
+ 
+ #include <chrono>
+ #include <ctime>
+@@ -331,3 +348,5 @@
+ }  // namespace time_internal
+ ABSL_NAMESPACE_END
+ }  // namespace absl
++
++#endif  // defined(__GTOS__)

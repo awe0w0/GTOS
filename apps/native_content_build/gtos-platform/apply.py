@@ -13,6 +13,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_libc.cc': '498b80b48fe53f8812803873cdfddb5d3dee98a42c8b345fc47ca401de1b2bfd',
+    'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_info.cc': 'cc5e597f569b1f028e50daf143f936042600be7cfe32774953ef157cd21a4c6b',
+    'third_party/protobuf/src/google/protobuf/io/zero_copy_stream_impl.cc': 'aca7667bf07c59daeac823edbc7464550400cdcc95eeb2cc41a91319deb533b9',
     'third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h': '2b383d756add31277f5420db96474ea7944f0290fd33d6ba8482edc82be91fb2',
     'third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc': '8b03e80cf92e2b66f54790f150ae2ef4ff791c18bd2129ad79191f03f9500040',
     'third_party/abseil-cpp/absl/synchronization/internal/pthread_waiter.h': 'b3ec00074fd91bcedfe3933f2e0de81f6e42f63b313bc5aee914b9cdf2f61a72',
