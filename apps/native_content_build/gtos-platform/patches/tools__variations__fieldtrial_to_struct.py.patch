@@ -1,0 +1,10 @@
+--- a/tools/variations/fieldtrial_to_struct.py
++++ b/tools/variations/fieldtrial_to_struct.py
+@@ -27,6 +27,7 @@ _platforms = [
+   'android_webview',
+   'chromeos',
+   'fuchsia',
++  'gtos',
+   'ios',
+   'linux',
+   'mac',

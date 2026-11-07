@@ -14,6 +14,14 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/safe_browsing/content/common/proto/download_file_types.proto': 'ace4dacd90bb291ba4c22f23e6461275579ccedc0891f0aa82d4390d3ae61d6b',
+    'components/safe_browsing/content/resources/gen_file_type_proto.py': '5c2687d818f10d1161feb273311dd053ee439ea6824e394c1a7169dbe5d35438',
+    'components/safe_browsing/content/resources/BUILD.gn': 'e99503fa6d78fc547d5b1e8f0b7be1437c2d84979da6ed4d84be581dff3a70d8',
+    'components/variations/proto/study.proto': 'bafeff8e3ba1a19752c39e50f15bae2b982e00a2780232c4d02c35758a4f6429',
+    'tools/variations/fieldtrial_to_struct.py': 'c1ef0b90547489767453a76512ea8f959f1d93c3afbd895604a0f86a3463290d',
+    'testing/variations/PRESUBMIT.py': '56efb93e5199111cdff6fbdc8cc42c3570aad63ef82ab98aecd888447fb25326',
+    'components/variations/client_filterable_state.cc': 'ab33f0956fdbc3a2292e80fe031c1e67db96c9224cb8c57c7f97943c8f5368cc',
+    'components/policy/tools/generate_policy_source.py': '5c98abe8c3109e0f87f3857b138f3b0b40b07e472e9e8c2aa0582a1773eed1c4',
     'build/rust/gni_impl/libclang_args.gni': '6afd3aae3f9873fff0e0944514739151b4856fc19624f06b9f693cb5500b982c',
     'third_party/rust/serde_json_lenient/v0_2/wrapper/BUILD.gn': '70823f6f3518b5d2c7505a59f09be7230bbe95c7c37a9949a00288fdac0eb075',
     'third_party/rust/serde_json_lenient/v0_2/wrapper/lib.rs': '0e00086fa7eed44990d09978fd481167db6044ac1c5d2c10da65c15e214c2e26',

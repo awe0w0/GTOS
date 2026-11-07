@@ -1,0 +1,19 @@
+--- a/components/safe_browsing/content/resources/BUILD.gn
++++ b/components/safe_browsing/content/resources/BUILD.gn
+@@ -29,6 +29,8 @@ action("make_file_types_protobuf") {
+     target_arch = "win"
+   } else if (is_mac) {
+     target_arch = "mac"
++  } else if (is_gtos) {
++    target_arch = "gtos"
+   } else if (is_linux) {
+     target_arch = "linux"
+   } else {
+@@ -76,6 +78,7 @@ action("make_all_file_types_protobuf") {
+     # LINT.IfChange(PlatformTypes)
+     "$output_dir/android/download_file_types.pb",
+     "$output_dir/chromeos/download_file_types.pb",
++    "$output_dir/gtos/download_file_types.pb",
+     "$output_dir/linux/download_file_types.pb",
+     "$output_dir/mac/download_file_types.pb",
+     "$output_dir/win/download_file_types.pb",

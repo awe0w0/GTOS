@@ -1,0 +1,10 @@
+--- a/components/variations/proto/study.proto
++++ b/components/variations/proto/study.proto
+@@ -252,6 +252,7 @@ message Study {
+     // Tracking bug: b/435674999
+     reserved 9;
+     reserved PLATFORM_CHROMEOS_LACROS;
++    PLATFORM_GTOS = 10;
+   }
+ 
+   // Possible form factors Chrome is running on.

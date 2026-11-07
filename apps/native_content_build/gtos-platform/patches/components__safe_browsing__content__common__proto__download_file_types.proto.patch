@@ -1,0 +1,10 @@
+--- a/components/safe_browsing/content/common/proto/download_file_types.proto
++++ b/components/safe_browsing/content/common/proto/download_file_types.proto
+@@ -43,6 +43,7 @@ message DownloadFileType {
+     PLATFORM_TYPE_MAC = 4;
+     PLATFORM_TYPE_WINDOWS = 5;
+     // Deprecated: PLATFORM_TYPE_FUCHSIA = 6;
++    PLATFORM_TYPE_GTOS = 7;
+   }
+ 
+   // Next id: 6

@@ -1,0 +1,10 @@
+--- a/testing/variations/PRESUBMIT.py
++++ b/testing/variations/PRESUBMIT.py
+@@ -234,6 +234,7 @@ def _ValidateStudyConfig(study_config, create_message_fn):
+     'android_webview',
+     'chromeos',
+     'fuchsia',
++    'gtos',
+     'ios',
+     'linux',
+     'mac',
