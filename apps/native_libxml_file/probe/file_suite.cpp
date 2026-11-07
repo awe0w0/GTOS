@@ -19,6 +19,10 @@
 
 #include "record.h"
 
+#ifndef EOVERFLOW
+#define EOVERFLOW 75
+#endif
+
 __attribute__((section(".data.file_record"))) volatile FileRecord native_file_record = {
     1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -104,11 +108,28 @@ extern "C" void NativeEntry(void) {
   need(duplicate > 0 && duplicate != reopened);
   char next = 0;
   need(read(duplicate, &next, 1) == 1 && next == kPattern[1]);
+  need(gtos_read_at(duplicate, &next, 1, pattern - 1) == 1 && next == kPattern[pattern - 1]);
+  need(lseek(reopened, 0, SEEK_CUR) == 2);
+  need(gtos_read_at(duplicate, &next, 1, pattern) == 0);
+  need(gtos_read_at(duplicate, &next, 1, -1) == -1 && errno == EINVAL);
+  need(gtos_read_at(duplicate, &next, 1, (off_t)1 << 31) == -1 && errno == EOVERFLOW);
+  need(gtos_write_at(duplicate, "?", 1, 0) == -1 && errno == EBADF);
+  need(gtos_read_at(duplicate, reinterpret_cast<void *>(0x10), 1, 0) == -1 && errno == EFAULT);
+  need(gtos_read_at(duplicate, nullptr, 0, 0) == 0);
   need(close(duplicate) == 0);
   need(read(reopened, &next, 1) == 1 && next == kPattern[2]);
   need(close(reopened) == 0);
   need(close(duplicate) == -1 && errno == EBADF);
   family(5);
+
+  const int positioned = open(kScratch, O_RDWR);
+  need(positioned > 0);
+  need(lseek(positioned, 1, SEEK_SET) == 1);
+  need(gtos_write_at(positioned, "p", 1, 3) == 1);
+  need(lseek(positioned, 0, SEEK_CUR) == 1);
+  need(gtos_read_at(positioned, &next, 1, 3) == 1 && next == 'p');
+  need(close(positioned) == 0);
+  family(9);
 
   // 7. append: O_APPEND stores at the end, and the size the store reports grows by exactly the appended byte. The size is read after the
   // close, because the store flushes a handle's buffered write on close — reading it before would report the pre-append size and look like
@@ -116,7 +137,8 @@ extern "C" void NativeEntry(void) {
   const int appended = open(kScratch, O_WRONLY | O_APPEND);
   need(appended > 0);
   need(lseek(appended, 0, 7) == -1 && errno == EINVAL);
-  need(write(appended, "!", 1) == 1);
+  need(gtos_write_at(appended, "!", 1, -1) == 1);
+  need(lseek(appended, 0, SEEK_CUR) == (off_t)(pattern + 1));
   need(close(appended) == 0);
   struct stat after;
   need(stat(kScratch, &after) == 0 && after.st_size == (off_t)(pattern + 1));

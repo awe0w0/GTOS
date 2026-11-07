@@ -17,6 +17,9 @@ namespace {
         if (!space.CopyFromUser(&request,address,sizeof(request))) return GTOS_FILE_ERR_BAD_ADDRESS;
         return request.version==GTOS_FILE_ABI_VERSION?0:GTOS_FILE_ERR_VERSION;
     }
+    int64_t Offset(uint32_t low,uint32_t high) {
+        return (int64_t)(int32_t)high*4294967296LL+low;
+    }
     GtosFileInfo Info(const FileStore::Info& value) {
         GtosFileInfo result={};result.version=GTOS_FILE_ABI_VERSION;result.type=value.type;result.bytes=value.size;
         for (uint32_t i=0;i<sizeof(result.name);i++) result.name[i]=value.name[i];
@@ -42,25 +45,45 @@ int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t ope
         return store.Open(owner,paths[0],request.flags);
     }
     case GTOS_SYS_FILE_READ:
+    case GTOS_SYS_FILE_READ_AT:
+    case GTOS_SYS_FILE_WRITE_AT:
     case GTOS_SYS_FILE_WRITE: {
-        GtosFileTransferRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
+        const bool positioned=operation==GTOS_SYS_FILE_READ_AT||operation==GTOS_SYS_FILE_WRITE_AT;
+        const bool reading=operation==GTOS_SYS_FILE_READ||operation==GTOS_SYS_FILE_READ_AT;
+        GtosFileTransferRequest request;
+        int64_t offset=0;
+        if (positioned) {
+            GtosFilePositionedTransferRequest position;
+            int32_t error=Snapshot(space,address,bytes,position);if (error) return error;
+            request={position.version,position.handle,position.buffer,position.bytes};
+            offset=Offset(position.offset_low,position.offset_high);
+        } else {
+            int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
+        }
         if (request.bytes>GTOS_FILE_TRANSFER_LIMIT) return GTOS_FILE_ERR_TOO_LARGE;
-        const bool reading=operation==GTOS_SYS_FILE_READ;
-        error=reading?store.ReadFile(owner,request.handle,0,0):store.WriteFile(owner,request.handle,0,0);
+        auto read=[&](void* buffer,uint32_t length) {
+            return positioned?store.ReadFileAt(owner,request.handle,offset,buffer,length)
+                :store.ReadFile(owner,request.handle,buffer,length);
+        };
+        auto write=[&](const void* buffer,uint32_t length) {
+            return positioned?store.WriteFileAt(owner,request.handle,offset,buffer,length)
+                :store.WriteFile(owner,request.handle,buffer,length);
+        };
+        int32_t error=reading?read(0,0):write(0,0);
         if (error) return error;
         if (!space.ValidateUserRange(request.buffer,request.bytes,reading)) return GTOS_FILE_ERR_BAD_ADDRESS;
         if (!request.bytes) return 0;
         if (!reading) {
             if (!space.CopyFromUser(bounce,request.buffer,request.bytes)) return GTOS_FILE_ERR_BAD_ADDRESS;
-            return store.WriteFile(owner,request.handle,bounce,request.bytes);
+            return write(bounce,request.bytes);
         }
-        int32_t count=store.ReadFile(owner,request.handle,bounce,request.bytes);
+        int32_t count=read(bounce,request.bytes);
         if (count<=0) return count;
         return space.CopyToUser(request.buffer,bounce,count)?count:GTOS_FILE_ERR_BAD_ADDRESS;
     }
     case GTOS_SYS_FILE_SEEK: {
         GtosFileSeekRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
-        const int64_t offset=(int64_t)(int32_t)request.offset_high*4294967296LL+request.offset_low;
+        const int64_t offset=Offset(request.offset_low,request.offset_high);
         return store.Seek(owner,request.handle,offset,request.whence);
     }
     case GTOS_SYS_FILE_CLOSE:

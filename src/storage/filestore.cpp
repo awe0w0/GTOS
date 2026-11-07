@@ -205,6 +205,39 @@ int32_t FileStore::WriteFile(uint32_t owner,uint32_t handle,const void* buffer,u
     if (!size) return 0;
     return lfs_file_write(&filesystem,&slot->file,buffer,size);
 }
+namespace {
+    template<class Transfer>
+    int32_t TransferAt(lfs_t& filesystem,lfs_file_t& file,int64_t offset,uint32_t size,Transfer transfer) {
+        if (offset<0) return LFS_ERR_INVAL;
+        if (offset>0x7FFFFFFF) return FileStore::Overflow;
+        if (!size) return 0;
+        int32_t saved=lfs_file_tell(&filesystem,&file);
+        if (saved<0) return saved;
+        int32_t position=lfs_file_seek(&filesystem,&file,(int32_t)offset,LFS_SEEK_SET);
+        if (position<0) return position;
+        int32_t result=transfer();
+        int32_t restored=lfs_file_seek(&filesystem,&file,saved,LFS_SEEK_SET);
+        return result<0?result:restored<0?restored:result;
+    }
+}
+int32_t FileStore::ReadFileAt(uint32_t owner,uint32_t handle,int64_t offset,void* buffer,uint32_t size) {
+    InterruptGuard guard;Resource* slot=Find(owner,handle,LFS_TYPE_REG);
+    if (!slot||slot->mode==Write) return LFS_ERR_BADF;
+    if ((!buffer&&size)||size>0x7FFFFFFFU) return LFS_ERR_INVAL;
+    return TransferAt(filesystem,slot->file,offset,size,[&] {
+        return lfs_file_read(&filesystem,&slot->file,buffer,size);
+    });
+}
+int32_t FileStore::WriteFileAt(uint32_t owner,uint32_t handle,int64_t offset,const void* buffer,uint32_t size) {
+    InterruptGuard guard;Resource* slot=Find(owner,handle,LFS_TYPE_REG);
+    if (!slot||slot->mode==Read) return LFS_ERR_BADF;
+    if (readOnly) return ReadOnly;
+    if ((!buffer&&size)||size>0x7FFFFFFFU) return LFS_ERR_INVAL;
+    if (slot->file.flags&LFS_O_APPEND) return size?lfs_file_write(&filesystem,&slot->file,buffer,size):0;
+    return TransferAt(filesystem,slot->file,offset,size,[&] {
+        return lfs_file_write(&filesystem,&slot->file,buffer,size);
+    });
+}
 int32_t FileStore::Seek(uint32_t owner,uint32_t handle,int64_t offset,uint32_t whence) {
     InterruptGuard guard;Resource* slot=Find(owner,handle,LFS_TYPE_REG);if (!slot) return LFS_ERR_BADF;
     if (whence>2) return LFS_ERR_INVAL;

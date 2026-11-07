@@ -67,7 +67,7 @@ def verify(text,phase,plans):
         initial=baseline+plans[4]['static_cost']
         c=fields(lines[index],'FILE CASE',CASE);index+=1
         assert c['baseline']==initial and c['free']+c['cost']==initial
-        assert c['mode']==7 and c['id']==7 and c['error']==0 and c['stage']==2 and c['checks']==32 and c['mask']==0x1ff
+        assert c['mode']==7 and c['id']==7 and c['error']==0 and c['stage']==2 and c['checks']==47 and c['mask']==0x3ff
         assert all(c[key]==0 for key in ['calls','bad','png','base','vm','file','dir','exit','vector','pf','address','open'])
         assert c['cs']==0x23 and c['kernel']==cases[0]['kernel']
         assert c['cr3']>=4096 and c['cr3']%4096==0 and c['cr3']!=c['kernel']
@@ -81,9 +81,9 @@ def verify(text,phase,plans):
     f=fields(lines[index],'FILE FINAL',FINAL);index+=1
     assert index==len(lines)-1 and f['free']==f['expected']>0 and f['open']==f['fp_fail']==0
     assert f['free']==baseline+(0 if reader else plans[4]['static_cost'])
-    # The business consumer adds the calls its translation layer made on its own behalf (26: opens, reads, writes, seeks, dup, stat, close);
+    # The business consumer makes 41 file calls, including positioned I/O.
     # its record only counts the raw ABI operations the module issued itself, which is none.
-    assert f['calls']==sum(c['calls'] for c in cases)+(0 if reader else peer['calls']+26)
+    assert f['calls']==sum(c['calls'] for c in cases)+(0 if reader else peer['calls']+41)
     assert f['reclaims']==f['fp_init']==f['fp_invalid']==(1 if reader else 7)
     assert f['released']==(0 if reader else 12) and f['failures']==(0 if reader else 1) and f['io_errors']==(0 if reader else 15)
     assert 0<f['trap_stack_observed']<16384-512 and f['checks']>(100 if reader else 45000)

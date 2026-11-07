@@ -142,9 +142,32 @@ int path_bytes(const char *path, unsigned *bytes) {
   return 0;
 }
 
+ssize_t transfer_at(unsigned operation, int fd, const void *buffer, size_t bytes, off_t offset) {
+  if (fd <= 0) return fail_with(EBADF);
+  if (!buffer && bytes) return fail_with(EFAULT);
+  char empty;
+  if (!buffer) buffer = &empty;
+  const size_t counted = bytes > GTOS_FILE_TRANSFER_LIMIT ? GTOS_FILE_TRANSFER_LIMIT : bytes;
+  const unsigned long long bits = static_cast<unsigned long long>(offset);
+  const GtosFilePositionedTransferRequest request{
+      GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd), reinterpret_cast<unsigned>(buffer),
+      static_cast<unsigned>(counted),
+      static_cast<unsigned>(bits), static_cast<unsigned>(bits >> 32)};
+  const int result = call(operation, &request, sizeof(request));
+  return result < 0 ? translate(result) : static_cast<ssize_t>(result);
+}
+
 } // namespace
 
 using namespace gtos_file;
+
+extern "C" ssize_t gtos_read_at(int fd, void *buffer, size_t bytes, off_t offset) {
+  return transfer_at(GTOS_SYS_FILE_READ_AT, fd, buffer, bytes, offset);
+}
+
+extern "C" ssize_t gtos_write_at(int fd, const void *buffer, size_t bytes, off_t offset) {
+  return transfer_at(GTOS_SYS_FILE_WRITE_AT, fd, buffer, bytes, offset);
+}
 
 extern "C" int open(const char *path, int flags, ...) {
   unsigned bytes = 0;

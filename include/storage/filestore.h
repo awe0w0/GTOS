@@ -68,6 +68,8 @@ public:
     ReclaimResult Reclaim(uint32_t owner);
     int32_t ReadFile(uint32_t owner,uint32_t handle,void* buffer,uint32_t size);
     int32_t WriteFile(uint32_t owner,uint32_t handle,const void* buffer,uint32_t size);
+    int32_t ReadFileAt(uint32_t owner,uint32_t handle,int64_t offset,void* buffer,uint32_t size);
+    int32_t WriteFileAt(uint32_t owner,uint32_t handle,int64_t offset,const void* buffer,uint32_t size);
     int32_t Seek(uint32_t owner,uint32_t handle,int64_t offset,uint32_t whence);
     int32_t Size(uint32_t owner,uint32_t handle);
     int32_t TruncateFile(uint32_t owner,uint32_t handle,uint32_t size);

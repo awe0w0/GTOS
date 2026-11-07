@@ -27,6 +27,10 @@ int close(int fd);
 int dup(int fd);
 int fsync(int fd);
 int ftruncate(int fd, off_t length);
+// Native positioned transfers, up to one 4096-byte request. The write variant
+// keeps native append semantics for handles opened with O_APPEND.
+ssize_t gtos_read_at(int fd, void *buffer, size_t bytes, off_t offset);
+ssize_t gtos_write_at(int fd, const void *buffer, size_t bytes, off_t offset);
 int access(const char *path, int mode);
 int rmdir(const char *path);
 int unlink(const char *path);

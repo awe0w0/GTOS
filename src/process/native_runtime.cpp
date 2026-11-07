@@ -660,6 +660,8 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
     case GTOS_SYS_FILE_OPEN:
     case GTOS_SYS_FILE_READ:
     case GTOS_SYS_FILE_WRITE:
+    case GTOS_SYS_FILE_READ_AT:
+    case GTOS_SYS_FILE_WRITE_AT:
     case GTOS_SYS_FILE_SEEK:
     case GTOS_SYS_FILE_CLOSE:
     case GTOS_SYS_FILE_SYNC:
