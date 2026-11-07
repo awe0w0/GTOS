@@ -1,0 +1,22 @@
+--- a/third_party/perfetto/src/base/pipe.cc
++++ b/third_party/perfetto/src/base/pipe.cc
+@@ -38,6 +38,11 @@ Pipe::Pipe(Pipe&&) noexcept = default;
+ Pipe& Pipe::operator=(Pipe&&) = default;
+ 
+ Pipe Pipe::Create(Flags flags) {
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  static_cast<void>(flags);
++  // Native event wakeups use EVENT_WAIT. No byte-pipe service is exposed.
++  PERFETTO_FATAL("Native POSIX byte pipes are unavailable");
++#else
+   PlatformHandle fds[2];
+ #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+   PERFETTO_CHECK(::CreatePipe(&fds[0], &fds[1], /*lpPipeAttributes=*/nullptr,
+@@ -70,6 +75,7 @@ Pipe Pipe::Create(Flags flags) {
+   PERFETTO_CHECK(flags == kBothBlock);
+ #endif
+   return p;
++#endif
+ }
+ 
+ }  // namespace base

@@ -1,0 +1,42 @@
+--- a/third_party/perfetto/include/perfetto/ext/base/event_fd.h
++++ b/third_party/perfetto/include/perfetto/ext/base/event_fd.h
+@@ -25,6 +25,10 @@
+ namespace perfetto {
+ namespace base {
+ 
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++int CloseNativeEvent(PlatformHandle handle);
++#endif
++
+ // A waitable event that can be used with poll/select.
+ // This is really a wrapper around eventfd_create with a pipe-based fallback
+ // for other platforms where eventfd is not supported.
+@@ -36,6 +40,8 @@ class EventFd {
+   EventFd& operator=(EventFd&&) = default;
+ 
+   // The non-blocking file descriptor that can be polled to wait for the event.
++  // GTOS instead returns a native EVENT_WAIT handle, never a file descriptor.
++  // Its manual-reset signal coalesces notifications, as on Windows.
+   PlatformHandle fd() const { return event_handle_.get(); }
+ 
+   // Can be called from any thread.
+@@ -47,13 +53,18 @@ class EventFd {
+   // The eventfd, when eventfd is supported, otherwise this is the read end of
+   // the pipe for fallback mode.
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  ScopedResource<PlatformHandle, CloseNativeEvent, -1> event_handle_;
++#else
+   ScopedPlatformHandle event_handle_;
++#endif
+ 
+ // QNX is specified because it is a non-Linux UNIX platform but it
+ // still sets the PERFETTO_OS_LINUX flag to be as compatible as possible
+ // with the Linux build.
+ #if !PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) && \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) &&           \
+-    !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) &&               \
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+   // On Mac and other non-Linux UNIX platforms a pipe-based fallback is used.
+   // The write end of the wakeup pipe.
+   ScopedFile write_fd_;

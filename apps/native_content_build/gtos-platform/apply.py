@@ -13,6 +13,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/perfetto/src/base/file_utils.cc': 'ed52e1b02be69f57b0ed098fe8a294fb4b4798ab79f6962c267ac83a3ecdedc7',
+    'third_party/perfetto/src/base/pipe.cc': '483438cf41402586b90f6940a696a84724276c4e8846a271d85eb8457332ca13',
+    'third_party/perfetto/include/perfetto/ext/base/event_fd.h': '8f54d6aaf7af97af9a2cd738e543bfa34b956d6dda6fad619fef5dcd4d17e614',
     'third_party/perfetto/src/base/atomic_file.cc': 'd9016fb57418694f5c717e4aab93deabb8388bdb19de57ed75f685a3e0dff9ae',
     'third_party/perfetto/src/base/progress_reporter.cc': '4d46c39fd43736f95200c86ac8f707d9f16e718c34e57f081d33eff00ea668eb',
     'third_party/perfetto/include/perfetto/ext/base/paged_memory.h': '7aa47838b604cd6f8fdd1417d8412718535d9226a07183c95097dd23c2d9b77c',
@@ -59,6 +62,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/perfetto/src/base/event_fd_gtos.cc': 'perfetto/event_fd_gtos.cc',
+    'build/config/gtos/include/process/event_abi.h': 'sdk/process/event_abi.h',
     'third_party/perfetto/src/base/system_info_gtos.cc': 'perfetto/system_info_gtos.cc',
     'build/config/gtos/include/process/info_abi.h': 'sdk/process/info_abi.h',
     'third_party/perfetto/src/base/cpu_time_gtos.cc': 'perfetto/cpu_time_gtos.cc',

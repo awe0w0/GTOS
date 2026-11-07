@@ -1,5 +1,9 @@
 [
   {
+    "source": "include/process/event_abi.h",
+    "sha256": "585ca0df36de2c4715be67d2c3abb41ef160e5b332e82e98477d7ec5f9bc102f"
+  },
+  {
     "source": "include/process/info_abi.h",
     "sha256": "ed9828c1c4bb923f7d3aaa892886bd3d681b18bd92ed4355149928aaad158f7d"
   },

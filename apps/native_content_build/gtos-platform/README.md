@@ -522,3 +522,40 @@ objects and the original host source compile; `unit-uaf01` passes 19 platform
 regressions. Formal `ninja-n52` builds actual GTOS `atomic_file.o` and
 `file_utils.o` with the real SDK, depfiles and split debug outputs. C1 remains
 the shell delegate translation unit.
+
+GTOS `EventFd` now owns a native manual-reset event, using CREATE/SET/RESET
+and a dedicated CLOSE function. Its `fd()` is an EVENT_WAIT handle, never a
+file descriptor. Notifications coalesce and clearing resets the signal, as
+with the existing Windows profile. The runtime must attach NativeEvents before
+activation; absence or invalid service responses fail. Move assignment closes
+the replaced event, and moved-from objects cannot notify. This does not add a
+POSIX poll or byte-pipe service.
+
+`codex-c-perfetto-event-build-e01` / `run-r01` run thirty ELF32 images: O0/O2
+normal lifecycle/moves, wrong expectations, unavailable/invalid CREATE replies,
+SET/RESET/CLOSE errors and moved-from misuse. Separate cases require explicit
+refusal of native byte pipes and stable file-identity comparison. The latter
+cannot compare zeroed stat inode fields: its current caller is the traceconv
+bundle tool. Both facilities remain unavailable; the refusal is not an
+implementation or a runtime acceptance claim. Event wakeups use the actual
+native event service instead of a pipe fallback. Host source and nineteen
+platform regressions compile/pass, and `ninja-n55` builds the real native event,
+pipe-policy and file-helper objects.
+
+`codex-c-perfetto-event-guest-build-g03` / `run-r01` qualify the actual int80
+backend against current-source NativeEvents in CPL3. Normal mode makes 72
+comparisons and 131 syscalls, including 56 zero-timeout waits, 16 creations and
+16 closes. Manual signal persistence, coalescing, reset and replacement moves
+are checked. Two #UD cases retain one event each (explicit fault and moved-from
+refusal); Reap releases exactly one and restores the frame baseline. O0/32 MiB
+and O2/64 MiB pass (baselines `0x1d7e`/`0x3d76`), and a real wrong consumer is
+rejected. The judge rejects 111 missing/duplicate/changed-field mutations per
+valid capture. This does not qualify blocking waits or cross-thread races.
+The carrier exposed a real GCC Werror indentation ambiguity in NativeEvents;
+the return is now a separate line, preserving its semantics.
+
+The shared guest builder's memory and CPU selections are also rebuilt and
+rerun (`memory g04/r05`, `cpu g02/r02`), retaining all normal/fault/Reap and
+negative-consumer results. `codex-a-core-c03` passes the four current-source
+paging/process-memory/native-process/FP components. Formal Content C1/C2/C3
+remain separate milestones.

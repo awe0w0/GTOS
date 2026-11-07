@@ -1,0 +1,16 @@
+--- a/third_party/perfetto/src/base/file_utils.cc
++++ b/third_party/perfetto/src/base/file_utils.cc
+@@ -288,7 +288,12 @@ bool IsRegularFile(const std::string& path) {
+ }
+ 
+ bool IsSameFile(const std::string& first, const std::string& second) {
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
++  base::ignore_result(first);
++  base::ignore_result(second);
++  // Native stat has no stable inode identity. Zero fields are not identities.
++  PERFETTO_FATAL("Native stable file-identity comparison is unavailable");
++#elif PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+   auto identity = [](const std::string& path,
+                      BY_HANDLE_FILE_INFORMATION* info) {
+     ScopedPlatformHandle file(CreateFileA(

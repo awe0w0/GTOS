@@ -12,7 +12,7 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu'], default='memory')
+parser.add_argument('--component', choices=['memory', 'cpu', 'event'], default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
@@ -20,7 +20,13 @@ sdk = repo / 'apps/native_v8_runtime'
 full = Path('/mnt/f/GTOS-Chromium/sources/chromium-full/src')
 product = repo / 'apps/native_content_build/gtos-platform'
 cpu = args.component == 'cpu'
-record_name = 'native_cpu_record' if cpu else 'native_memory_record'
+component = {
+    'memory': ('native_memory_record', 'paged_memory_gtos.cc', 'memory.cpp', 'native_perfetto_memory_kernel.cpp', 'PerfettoMemoryUnusedBaseline', 5),
+    'cpu': ('native_cpu_record', 'cpu_time_gtos.cc', 'cpu_time.cpp', 'native_perfetto_cpu_time_kernel.cpp', 'PerfettoCpuUnusedBaseline', 3),
+    'event': ('native_event_record', 'event_fd_gtos.cc', 'event.cpp', 'native_perfetto_event_kernel.cpp', 'PerfettoEventUnusedBaseline', 3),
+}[args.component]
+record_name, backend, consumer, observer, unused_entry, mode_count = component
+family = args.component.upper()
 inputs, commands = {}, []
 
 
@@ -59,6 +65,7 @@ flags = ['--target=i686-unknown-none-elf', '-D__GTOS__=1', '-ffreestanding', '-f
          '-I' + str(args.view / 'third_party/perfetto/include'),
          '-I' + str(args.generated / 'third_party/perfetto/build_config'),
          '-isystem' + str(args.view / 'build/config/gtos/include'),
+         '-isystem' + str(repo / 'apps/native_libxml_file/include'),
          '-isystem' + str(sdk / 'sdk'), '-isystem' + str(full / 'third_party/libc++/src/include'),
          '-isystem' + str(sdk / 'c-sdk'),
          '-isystem' + str(args.clang_bin.parent / 'lib/clang/24/include')]
@@ -76,7 +83,7 @@ for optimization in (0, 2):
     directory = args.out / ('O' + str(optimization))
     directory.mkdir()
     objects = []
-    for name, source in [('backend', args.view / ('third_party/perfetto/src/base/cpu_time_gtos.cc' if cpu else 'third_party/perfetto/src/base/paged_memory_gtos.cc')),
+    for name, source in [('backend', args.view / ('third_party/perfetto/src/base/' + backend)),
                          ('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]:
         bind(source)
         output = directory / (name + '.o')
@@ -84,16 +91,16 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-u', output])
-        assert 'GtosPerfettoVmTestCall' not in symbols and 'GtosPerfettoCpuTimeTestCall' not in symbols
+        assert all(value not in symbols for value in ['GtosPerfettoVmTestCall', 'GtosPerfettoCpuTimeTestCall', 'GtosPerfettoEventTestCall'])
         objects.append(output)
-    source = product / ('probe/cpu_time.cpp' if cpu else 'probe/memory.cpp')
+    source = product / ('probe/' + consumer)
     bind(source)
-    for mode, negative in [(value, False) for value in range(3 if cpu else 5)] + [(0, True)]:
+    for mode, negative in [(value, False) for value in range(mode_count)] + [(0, True)]:
         name = 'mode' + str(mode) + ('-bad' if negative else '')
         output = directory / (name + '.o')
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, '-O' + str(optimization),
-            '-DGTOS_' + ('CPU' if cpu else 'MEMORY') + '_GUEST_MODE=' + str(mode),
-            *(['-DGTOS_' + ('CPU' if cpu else 'MEMORY') + '_GUEST_WRONG_EXPECTATION'] if negative else []),
+            '-DGTOS_' + family + '_GUEST_MODE=' + str(mode),
+            *(['-DGTOS_' + family + '_GUEST_WRONG_EXPECTATION'] if negative else []),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
@@ -123,7 +130,9 @@ sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
            'src/process/elf32.cpp', 'src/memory/process_address_space.cpp', 'src/memory/paging.cpp',
            'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
            'tests/i386_pure_virtual_runtime.cpp',
-           'tests/native_perfetto_cpu_time_kernel.cpp' if cpu else 'tests/native_perfetto_memory_kernel.cpp']
+           'tests/' + observer]
+if args.component == 'event':
+    sources.append('src/process/native_events.cpp')
 assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']
 bind(repo / 'tools/kernel-cxxflags')
@@ -155,7 +164,7 @@ bind(linker)
 run('kernel-link', ['/usr/bin/ld', '-melf_i386', '--gc-sections', '-T', linker,
                    '-Map', mapfile, '-o', kernel, *objects])
 symbols = run('kernel-symbols', ['/usr/bin/nm', kernel])
-assert ('PerfettoCpuUnusedBaseline' if cpu else 'PerfettoMemoryUnusedBaseline') not in symbols
+assert unused_entry not in symbols
 audit = repo / 'tools/audit-kernel-instructions.py'
 bind(audit)
 run('kernel-instruction-audit', ['/usr/bin/python3.8', '-B', audit, '--map', mapfile, kernel])

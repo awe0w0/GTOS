@@ -1,6 +1,6 @@
 --- a/third_party/perfetto/src/base/BUILD.gn
 +++ b/third_party/perfetto/src/base/BUILD.gn
-@@ -74,6 +74,20 @@ perfetto_component("base") {
+@@ -74,6 +74,22 @@ perfetto_component("base") {
      "weak_runner.cc",
    ]
  
@@ -8,11 +8,13 @@
 +    sources -= [
 +      "android_utils.cc",
 +      "ctrl_c_handler.cc",
++      "event_fd.cc",
 +      "paged_memory.cc",
 +    ]
 +    sources += [
 +      "cpu_time_gtos.cc",
 +      "ctrl_c_handler_gtos.cc",
++      "event_fd_gtos.cc",
 +      "paged_memory_gtos.cc",
 +      "system_info_gtos.cc",
 +    ]

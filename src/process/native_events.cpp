@@ -82,7 +82,8 @@ int32_t NativeEvents::Select(uint32_t owner,const uint32_t* values,uint32_t coun
     for (uint32_t i=0;i<count;++i) {
         Object& value=objects[handles[indices[i]].object];
         if (!value.signalled) continue;
-        if (!value.manual) value.signalled=false;return (int32_t)i;
+        if (!value.manual) value.signalled=false;
+        return (int32_t)i;
     }
     return GTOS_EVENT_ERR_PENDING;
 }
