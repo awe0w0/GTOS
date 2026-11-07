@@ -88,8 +88,9 @@ class Guest:
         path=(self.out/(name+'.ppm')).resolve();self.call('screendump',{'filename':str(path)})
         try:
             from PIL import Image
-            im=Image.open(path);im.resize((960,600),Image.Resampling.NEAREST).save(self.out/(name+'.png'))
-            return im.resize((320,200),Image.Resampling.NEAREST)
+            nearest=getattr(Image,'Resampling',Image).NEAREST
+            im=Image.open(path);im.resize((960,600),nearest).save(self.out/(name+'.png'))
+            return im.resize((320,200),nearest)
         except ImportError:return None
     def close(self):
         if self.p.poll() is None:
