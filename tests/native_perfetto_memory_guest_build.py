@@ -14,7 +14,7 @@ parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
-                                            'native_thread'],
+                                            'native_thread', 'vp9'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -43,6 +43,8 @@ component = {
                  'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'native_thread': ('native_memory_record', None, 'native_thread.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'vp9': ('native_memory_record', None, 'vp9.cpp',
+            'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -106,7 +108,8 @@ if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
-if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread'):
+if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread',
+                      'vp9'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -129,6 +132,29 @@ if args.component == 'base_event':
 if args.component in ('base_tls', 'native_thread'):
     strings = repo / 'apps/native_c_string/llvm-libc'
     flags.append('-I' + str(strings))
+if args.component == 'vp9':
+    llvm_libc = full / 'third_party/llvm-libc/src'
+    flags += ['-I' + str(args.view / 'third_party/libvpx/source/libvpx'),
+              '-I' + str(llvm_libc)]
+    fixture = full / 'media/test/data/bear-vp9.ivf'
+    bind(fixture)
+    data = fixture.read_bytes()
+    assert hashlib.sha256(data).hexdigest() == '02e3eb33651a3e54a07a4f8644e59b065f7dc48257787710b193b82728594f59'
+    assert data[:4] == b'DKIF' and data[8:12] == b'VP90'
+    assert struct.unpack_from('<HH', data, 12) == (320, 240)
+    assert struct.unpack_from('<IQ', data, 32) == (3792, 0)
+    assert struct.unpack_from('<IQ', data, 3836) == (64, 33)
+    fixture_source = args.out / 'fixture.S'
+    fixture_source.write_text('.section .rodata.vp9,"a"\n.globl gtos_vp9_fixture\n'
+                              'gtos_vp9_fixture:\n.incbin "' + str(fixture) + '", 0, 3912\n')
+    fixture_object = args.out / 'fixture.o'
+    run('assemble-vp9-fixture', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf',
+                                '-c', fixture_source, '-o', fixture_object])
+    jump_source = args.view / 'build/config/gtos/runtime/setjmp_i386.S'
+    bind(jump_source)
+    jump_object = args.out / 'setjmp.o'
+    run('assemble-setjmp', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf',
+                            '-c', jump_source, '-o', jump_object])
 if args.component == 'partition':
     partition = Path('base/allocator/partition_allocator/src')
     pa = args.view / partition / 'partition_alloc'
@@ -155,7 +181,15 @@ if args.component == 'boringssl':
 layout_source = repo / 'apps/native_vm_probe/linker.ld'
 bind(layout_source)
 layout = args.out / 'module.ld'
-layout.write_text(layout_source.read_text().replace('native_vm_record', record_name))
+layout_text = layout_source.read_text().replace('native_vm_record', record_name)
+record_address = '40020000'
+image_limit = 65536
+if args.component == 'vp9':
+    record_address = '40200000'
+    image_limit = 2 * 1024 * 1024
+    layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
+                   .replace('0x20000', '0x200000').replace('<= 4096,', '<= 65536,'))
+layout.write_text(layout_text)
 bind(layout)
 start = repo / 'apps/native_libxml_file/probe/exit-start.s'
 bind(start)
@@ -167,6 +201,11 @@ for optimization in (0, 2):
     directory.mkdir()
     objects = []
     native_sources = [('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]
+    if args.component == 'vp9':
+        native_sources = [('assert', product / 'runtime/assert.cc'),
+                          ('codec-once', args.view / 'build/config/gtos/runtime/codec_once.cc'),
+                          ('thread-core', runtime / 'thread-core.cc'),
+                          ('qsort', llvm_libc / 'src/stdlib/qsort.cpp')]
     if backend is not None:
         native_sources.insert(0, ('backend', args.view / ('third_party/perfetto/src/base/' + backend)))
     if args.component == 'exit':
@@ -232,7 +271,7 @@ for optimization in (0, 2):
         bind(source)
         output = directory / (name + '.o')
         packaging = (['-DLIBC_NAMESPACE=__llvm_libc_cr', '-DLIBC_COPT_PUBLIC_PACKAGING=1']
-                     if name in ('strchr', 'memcpy', 'memset', 'memmove') else [])
+                     if name in ('strchr', 'memcpy', 'memset', 'memmove', 'qsort') else [])
         if name == 'base-event':
             packaging += ['-include', str(disabled)]
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, *packaging, '-O' + str(optimization),
@@ -252,9 +291,24 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
-        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl', 'base_event', 'base_shared', 'base_tls', 'native_thread') else image
+        linked = image.with_suffix('.unstripped.elf') if args.component in (
+            'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
+            'native_thread', 'vp9') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
-        if cpu or args.component in ('wait', 'partition'):
+        if args.component == 'vp9':
+            build = args.generated.parent
+            archive = args.view.parent / 'runtime-archive-ra02/libgtos_content_runtime.a'
+            codec = build / 'obj/third_party/libvpx/libvpx.a'
+            assert hashlib.sha256(codec.read_bytes()).hexdigest() == (
+                '785805632bcc1b09a0a3eaa15b20b9f710fcf66405bbc4c8582202b8b4c301ae')
+            assert hashlib.sha256(archive.read_bytes()).hexdigest() == (
+                'd775c338d68de3da28c69cc8768684738b1a428d1f0048612cb9e8f92771c7c6')
+            providers = [build / 'obj/v8/v8_libbase' / (name + '.o')
+                         for name in ('gtos-clock-bridge', 'thread-context', 'gtos-semaphore')]
+            for path in [codec, archive, *providers]:
+                bind(path)
+            extra += [fixture_object, jump_object, codec, *providers, archive]
+        if cpu or args.component in ('wait', 'partition', 'vp9'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
@@ -264,12 +318,12 @@ for optimization in (0, 2):
             args.out / 'start.o', *objects, output, *extra])
         assert not run(directory.name + '-' + name + '-undefined', ['/usr/bin/nm', '-u', linked]).strip()
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-n', linked])
-        assert '40020000 D ' + record_name in symbols
+        assert record_address + ' D ' + record_name in symbols
         if linked != image:
             run(directory.name + '-' + name + '-strip', ['/usr/bin/objcopy', '--strip-all', linked, image])
             assert loaded_image(linked.read_bytes()) == loaded_image(image.read_bytes())
         data = image.read_bytes()
-        assert data[:5] == b'\x7fELF\x01' and struct.unpack_from('<H', data, 18)[0] == 3 and len(data) <= 65536
+        assert data[:5] == b'\x7fELF\x01' and struct.unpack_from('<H', data, 18)[0] == 3 and len(data) <= image_limit
         image.chmod(0o444)
         modules.append({'optimization': optimization, 'mode': mode, 'negative': negative, **identity(image)})
 
@@ -295,6 +349,8 @@ if args.component == 'base_tls':
     kernel_flags.append('-DGTOS_CONTENT_TLS_PROBE')
 if args.component == 'native_thread':
     kernel_flags.append('-DGTOS_CONTENT_THREAD_PROBE')
+if args.component == 'vp9':
+    kernel_flags.append('-DGTOS_CONTENT_VP9_PROBE')
 directory = args.out / 'kernel'
 directory.mkdir()
 objects = []
@@ -332,6 +388,8 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread') else 'PERFETTO_'
+prefix = 'CONTENT_' if args.component in (
+    'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
+    'base_tls', 'native_thread', 'vp9') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

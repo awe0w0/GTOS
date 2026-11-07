@@ -3,7 +3,13 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 
-#if defined(GTOS_CONTENT_THREAD_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT VP9"
+static const unsigned ExpectedChecks = 20;
+static const char* const CheckDescription = "VP9 frame decode and truncated packet";
+static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
+static const unsigned RecordAddress = 0x40200000U;
+#elif defined(GTOS_CONTENT_THREAD_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT NATIVE THREAD"
 static const unsigned ExpectedChecks = 25;
 static const char* const CheckDescription = "guarded thread start, join and detach";
@@ -18,7 +24,11 @@ static const char* const CheckDescription = "exact process and worker identity";
 #endif
 
 namespace {
-    uint8_t image[65536];
+#if !defined(GTOS_CONTENT_VP9_PROBE)
+    static const unsigned MaximumImageBytes = 65536;
+    static const unsigned RecordAddress = gtos_perfetto_probe::RecordAddress;
+#endif
+    uint8_t image[MaximumImageBytes];
     void FinishIdentity(bool pass) __attribute__((noreturn));
     void FinishIdentity(bool pass) {
         printf(pass ? (char*)CONTENT_BASE_PROBE " PASS\n" : (char*)CONTENT_BASE_PROBE " FAIL\n");
@@ -62,21 +72,33 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     for (uint32_t i = 0; i < bytes; ++i) image[i] = ((const uint8_t*)module.start)[i];
     interrupts.Activate();
     uint32_t id = 0;
+#if defined(GTOS_CONTENT_VP9_PROBE)
+    const NativeElfLaunchProfile profile{1024, 32, 1024};
+    Need(runtime.CreateElf(image, bytes, id, profile), "ELF admission");
+#else
     Need(runtime.CreateElf(image, bytes, id), "ELF admission");
+#endif
     const NativeStatus status = WaitStopped(runtime, tasks, id);
     gtos_perfetto_probe::Record record = {};
-    Need(runtime.ReadMemory(id, gtos_perfetto_probe::RecordAddress, &record, sizeof(record)) &&
+    Need(runtime.ReadMemory(id, RecordAddress, &record, sizeof(record)) &&
         record.version == 1 && record.mode == 0 && record.stage == 2, "completed consumer record");
     Need(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
         status.directory != paging.getStatistics().directoryAddress && !status.faultVector,
         "CPL3 isolation");
+#if defined(GTOS_CONTENT_VP9_PROBE)
+    printf((char*)CONTENT_BASE_PROBE " RECORD frame0="); printfHex32(record.base);
+    printf((char*)" frame1="); printfHex32(record.fault_address);
+    const bool values = record.base && record.fault_address && record.base != record.fault_address;
+#else
     printf((char*)CONTENT_BASE_PROBE " RECORD process="); printfHex32(record.base);
     printf((char*)" worker="); printfHex32(record.fault_address);
+    const bool values = record.base == id && record.fault_address > id;
+#endif
     printf((char*)" checks="); printfHex32(record.checks);
     printf((char*)" failures="); printfHex32(record.failures);
     printf((char*)" exit="); printfHex32(status.exitCode); printf((char*)"\n");
-    Need(record.base == id && record.fault_address > id && record.checks == ExpectedChecks &&
-        !record.failures && status.exitCode == 0, CheckDescription);
+    Need(values && record.checks == ExpectedChecks && !record.failures && status.exitCode == 0,
+        CheckDescription);
     Need(runtime.Reap() == 1 && frames.getStatistics().freeFrames == baseline, "exact Reap frames");
     printf((char*)CONTENT_BASE_PROBE " REAP free="); printfHex32(frames.getStatistics().freeFrames);
     printf((char*)" expected="); printfHex32(baseline); printf((char*)"\n");
