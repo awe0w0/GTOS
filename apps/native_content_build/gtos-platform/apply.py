@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/webrtc/rtc_base/deprecated/recursive_critical_section.cc': 'e183bc54d08b36dc004b6e13999871b59a1c7a242a033bc9344a988e3639f687',
+    'third_party/webrtc/rtc_base/deprecated/recursive_critical_section.h': '5775f11e951985a290780974a38fc4a1afe9558184b18580adafc96c1315da08',
     'third_party/webrtc/rtc_base/BUILD.gn': 'be6bda98f1ffb36893fb741114525a692291e230f65830bf354ba7b4f5092cc4',
     'third_party/webrtc/rtc_base/checks.cc': '047a90b51b374d0f79c2066d5bdb387afde3df277c917a6217ccd9141e66cf90',
     'third_party/webrtc/rtc_base/platform_thread.cc': '37b5899dd0368145242ce251242ecd140bb37208a6bf00a6fcb9daea5d740e83',
@@ -221,6 +223,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/process/thread_abi.h': '../../../include/process/thread_abi.h',
     'v8/tools/gtos_isolate_diagnostic/runtime/thread-core.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-core.cc',
     'build/config/gtos/include/process/environment_abi.h': '../../../include/process/environment_abi.h',
     'tools/gtos_native_sdk/environment/environment.cc': '../../native_environment/sdk/environment.cc',

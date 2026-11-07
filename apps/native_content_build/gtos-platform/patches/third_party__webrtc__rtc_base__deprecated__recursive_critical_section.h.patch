@@ -1,0 +1,22 @@
+--- a/third_party/webrtc/rtc_base/deprecated/recursive_critical_section.h
++++ b/third_party/webrtc/rtc_base/deprecated/recursive_critical_section.h
+@@ -28,7 +28,9 @@
+ // clang-format on
+ #endif  // defined(WEBRTC_WIN)
+ 
+-#if defined(WEBRTC_POSIX)
++#if defined(__GTOS__)
++#include <__external_threading>
++#elif defined(WEBRTC_POSIX)
+ #include <pthread.h>
+ #endif
+ 
+@@ -65,6 +67,8 @@ class RTC_LOCKABLE RecursiveCriticalSection {
+ 
+ #if defined(WEBRTC_WIN)
+   mutable CRITICAL_SECTION crit_;
++#elif defined(__GTOS__)
++  mutable std::__libcpp_recursive_mutex_t mutex_;
+ #elif defined(WEBRTC_POSIX)
+ #if defined(WEBRTC_MAC) && !RTC_USE_NATIVE_MUTEX_ON_MAC
+   // Number of times the lock has been locked + number of threads waiting.

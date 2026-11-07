@@ -315,6 +315,7 @@ for optimization in (0, 2):
             assert hashlib.sha256(archive.read_bytes()).hexdigest() == (
                 'd775c338d68de3da28c69cc8768684738b1a428d1f0048612cb9e8f92771c7c6')
             providers = [rtc_objects / name for name in (
+                'criticalsection/recursive_critical_section.o',
                 'platform_thread/platform_thread.o',
                 'platform_thread_types/platform_thread_types.o')]
             providers += [build / 'obj/v8/v8_libbase' / (name + '.o')

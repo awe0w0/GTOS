@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <utility>
 
+#include "rtc_base/deprecated/recursive_critical_section.h"
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/time_utils.h"
 #include "tools/gtos_native_sdk/native-services.h"
@@ -43,24 +44,59 @@ extern "C" int NativeEntry() {
   Check(main == info.process_id);
   Check(webrtc::IsThreadRefEqual(main, main_ref));
 
+  webrtc::RecursiveCriticalSection critical_section;
+  critical_section.Enter();
+  const bool recursive = critical_section.TryEnter();
+  Check(recursive);
+  if (recursive) {
+    critical_section.Leave();
+  }
   unsigned worker_id = 0;
+  unsigned lock_attempt = 0;
+  bool released = false;
+  bool worker_acquired = false;
   bool worker_has_own_ref = false;
   auto joinable = webrtc::PlatformThread::SpawnJoinable([&] {
     const auto id = webrtc::CurrentThreadId();
     const auto ref = webrtc::CurrentThreadRef();
     worker_has_own_ref = webrtc::IsThreadRefEqual(id, ref) &&
                          !webrtc::IsThreadRefEqual(main_ref, ref);
+    const bool contended = !critical_section.TryEnter();
+    if (!contended) {
+      critical_section.Leave();
+    }
+    __atomic_store_n(&lock_attempt, contended ? 1 : 2, __ATOMIC_RELEASE);
+    while (!__atomic_load_n(&released, __ATOMIC_ACQUIRE)) {
+      std::__libcpp_thread_yield();
+    }
+    worker_acquired = critical_section.TryEnter();
+    if (worker_acquired) {
+      critical_section.Leave();
+    }
     __atomic_store_n(&worker_id, id, __ATOMIC_RELEASE);
   }, "gtos-join");
   const auto handle = joinable.GetHandle();
   Check(handle.has_value() && *handle > main);
   webrtc::PlatformThread moved(std::move(joinable));
   Check(joinable.empty() && moved.GetHandle() == handle);
+  unsigned attempt;
+  while ((attempt = __atomic_load_n(&lock_attempt, __ATOMIC_ACQUIRE)) == 0) {
+    std::__libcpp_thread_yield();
+  }
+  Check(attempt == 1);
+  critical_section.Leave();
+  __atomic_store_n(&released, true, __ATOMIC_RELEASE);
   moved.Finalize();
   Check(moved.empty());
   native_memory_record.fault_address = __atomic_load_n(&worker_id, __ATOMIC_ACQUIRE);
   Check(native_memory_record.fault_address == handle.value_or(0));
   Check(worker_has_own_ref);
+  Check(worker_acquired);
+  const bool reacquired = critical_section.TryEnter();
+  Check(reacquired);
+  if (reacquired) {
+    critical_section.Leave();
+  }
 
   bool release = false;
   unsigned detached_id = 0;

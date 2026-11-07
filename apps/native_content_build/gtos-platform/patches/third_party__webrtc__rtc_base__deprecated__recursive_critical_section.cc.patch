@@ -1,0 +1,56 @@
+--- a/third_party/webrtc/rtc_base/deprecated/recursive_critical_section.cc
++++ b/third_party/webrtc/rtc_base/deprecated/recursive_critical_section.cc
+@@ -26,6 +26,8 @@ namespace webrtc {
+ RecursiveCriticalSection::RecursiveCriticalSection() {
+ #if defined(WEBRTC_WIN)
+   InitializeCriticalSection(&crit_);
++#elif defined(__GTOS__)
++  RTC_CHECK_EQ(std::__libcpp_recursive_mutex_init(&mutex_), 0);
+ #elif defined(WEBRTC_POSIX)
+ #if defined(WEBRTC_MAC) && !RTC_USE_NATIVE_MUTEX_ON_MAC
+   lock_queue_ = 0;
+@@ -55,6 +57,8 @@ RecursiveCriticalSection::RecursiveCriticalSection() {
+ RecursiveCriticalSection::~RecursiveCriticalSection() {
+ #if defined(WEBRTC_WIN)
+   DeleteCriticalSection(&crit_);
++#elif defined(__GTOS__)
++  RTC_CHECK_EQ(std::__libcpp_recursive_mutex_destroy(&mutex_), 0);
+ #elif defined(WEBRTC_POSIX)
+ #if defined(WEBRTC_MAC) && !RTC_USE_NATIVE_MUTEX_ON_MAC
+   dispatch_release(semaphore_);
+@@ -69,6 +73,8 @@ RecursiveCriticalSection::~RecursiveCriticalSection() {
+ void RecursiveCriticalSection::Enter() const RTC_EXCLUSIVE_LOCK_FUNCTION() {
+ #if defined(WEBRTC_WIN)
+   EnterCriticalSection(&crit_);
++#elif defined(__GTOS__)
++  RTC_CHECK_EQ(std::__libcpp_recursive_mutex_lock(&mutex_), 0);
+ #elif defined(WEBRTC_POSIX)
+ #if defined(WEBRTC_MAC) && !RTC_USE_NATIVE_MUTEX_ON_MAC
+   int spin = 3000;
+@@ -129,6 +135,8 @@ bool RecursiveCriticalSection::TryEnter() const
+     RTC_EXCLUSIVE_TRYLOCK_FUNCTION(true) {
+ #if defined(WEBRTC_WIN)
+   return TryEnterCriticalSection(&crit_) != FALSE;
++#elif defined(__GTOS__)
++  return std::__libcpp_recursive_mutex_trylock(&mutex_);
+ #elif defined(WEBRTC_POSIX)
+ #if defined(WEBRTC_MAC) && !RTC_USE_NATIVE_MUTEX_ON_MAC
+   if (!IsThreadRefEqual(owning_thread_, CurrentThreadRef())) {
+@@ -163,6 +171,8 @@ void RecursiveCriticalSection::Leave() const RTC_UNLOCK_FUNCTION() {
+   RTC_DCHECK(CurrentThreadIsOwner());
+ #if defined(WEBRTC_WIN)
+   LeaveCriticalSection(&crit_);
++#elif defined(__GTOS__)
++  RTC_CHECK_EQ(std::__libcpp_recursive_mutex_unlock(&mutex_), 0);
+ #elif defined(WEBRTC_POSIX)
+ #if RTC_DCHECK_IS_ON
+   --recursion_count_;
+@@ -195,6 +205,8 @@ bool RecursiveCriticalSection::CurrentThreadIsOwner() const {
+   // 'type1' to 'type2' of greater size
+   return crit_.OwningThread ==
+          reinterpret_cast<HANDLE>(static_cast<size_t>(GetCurrentThreadId()));
++#elif defined(__GTOS__)
++  return __atomic_load_n(&mutex_.owner, __ATOMIC_ACQUIRE) == CurrentThreadId();
+ #elif defined(WEBRTC_POSIX)
+ #if RTC_DCHECK_IS_ON
+   return IsThreadRefEqual(thread_, CurrentThreadRef());

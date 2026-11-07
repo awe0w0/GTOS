@@ -9,8 +9,8 @@ static const unsigned ExpectedChecks = 20;
 static const char* const CheckDescription = "VP9 frame decode and truncated packet";
 #elif defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT WEBRTC THREAD"
-static const unsigned ExpectedChecks = 14;
-static const char* const CheckDescription = "WebRTC worker lifecycle and realtime";
+static const unsigned ExpectedChecks = 18;
+static const char* const CheckDescription = "WebRTC worker, recursive mutex and realtime";
 #elif defined(GTOS_CONTENT_THREAD_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT NATIVE THREAD"
 static const unsigned ExpectedChecks = 25;
