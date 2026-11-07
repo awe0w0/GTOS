@@ -12,7 +12,7 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait'], default='memory')
+parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit'], default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
@@ -25,6 +25,7 @@ component = {
     'cpu': ('native_cpu_record', 'cpu_time_gtos.cc', 'cpu_time.cpp', 'native_perfetto_cpu_time_kernel.cpp', 'PerfettoCpuUnusedBaseline', 3),
     'event': ('native_event_record', 'event_fd_gtos.cc', 'event.cpp', 'native_perfetto_event_kernel.cpp', 'PerfettoEventUnusedBaseline', 3),
     'wait': ('native_wait_record', 'native_wait_gtos.cc', 'wait.cpp', 'native_perfetto_wait_kernel.cpp', 'PerfettoWaitUnusedBaseline', 3),
+    'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 1),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -50,7 +51,7 @@ def run(name, command):
 
 def dependencies(path):
     for value in Path(str(path) + '.d').read_text().replace('\\\n', ' ').split(':', 1)[1].split():
-        bind(Path(value))
+        bind(repo / value)
 
 
 def identity(path):
@@ -86,8 +87,9 @@ for optimization in (0, 2):
     directory = args.out / ('O' + str(optimization))
     directory.mkdir()
     objects = []
-    native_sources = [('backend', args.view / ('third_party/perfetto/src/base/' + backend)),
-                      ('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]
+    native_sources = [('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]
+    if backend is not None:
+        native_sources.insert(0, ('backend', args.view / ('third_party/perfetto/src/base/' + backend)))
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -181,4 +183,4 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-print('PERFETTO_' + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' + str(len(modules)) + ' undefined=0 scalar_kernel=true')
+print(('CONTENT_' if args.component == 'exit' else 'PERFETTO_') + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' + str(len(modules)) + ' undefined=0 scalar_kernel=true')

@@ -88,6 +88,9 @@ _Static_assert(sizeof(PRId64) == 4 && sizeof(PRIuPTR) == 2, "native formats");
 const char* format = "%" PRId64 " %" PRIuPTR;
 ''', flags, suffix='.c')
 
+compile_case('native-c-immediate-exit', '''#include <unistd.h>
+int exit_without_return(int status) { _exit(status); }
+''', [*flags, '-std=c17', '-Werror=return-type'], suffix='.c')
 includes = ['-I' + str(args.view / 'third_party/perfetto/include'),
             '-I' + str(args.generated / 'third_party/perfetto/build_config')]
 identity = '''#include "perfetto/base/build_config.h"

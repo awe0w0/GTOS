@@ -704,3 +704,20 @@ Two host threads overlap in each of three rounds and each thread's identity
 is reclaimed exactly once. A duplicate registration triggers SIGABRT in
 both builds. The native service calls were compiled for IA32. Their guest
 execution and Abseil low-level allocation remain separate work.
+
+The private unistd extension gives C and C++ a noreturn immediate process
+exit through GTOS_SYS_EXIT. It passes the whole status in EBX. A syscall
+that unexpectedly returns traps. Abseil log thread IDs use the unsigned
+native identity type. `ninja-n77` compiles all four formerly failing IA32
+log objects. `sdk-test-sxe01` passes eleven contracts including a strict C17
+consumer whose only control path calls _exit.
+
+The current kernel and actual SDK caller pass guarded `content-exit-build-b02`
+and `content-exit-run-r02`. O0/32 MiB and O2/64 MiB return 0x12345678 from
+CPL3 with two calls, no fault, surviving kernel peer and exact Reap baselines
+0x1d85 and 0x3d7d. The observer rejects the separate 0x12345679 consumer
+with QEMU status 65. The shared guest builder resolves compiler-relative
+dependency paths from the repository, including when invoked from its
+separate build root. The b01 dependency-path failure and r01 read-only
+header-supply refusal occurred before guest execution and are preserved.
+The original wait guest profile passes again in wg02/wr02.

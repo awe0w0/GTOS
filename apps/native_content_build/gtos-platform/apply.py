@@ -13,6 +13,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/abseil-cpp/absl/log/internal/config.h': 'e5e06a681876c7d42d134f3d3e525313d32309bcce1f831a4705652b4ad98a52',
     'third_party/abseil-cpp/absl/base/config.h': 'd2cdcd88b00c6a64dd7a5a4bd1e0560bede511991b3126865f6bb863e7249391',
     'third_party/abseil-cpp/absl/base/internal/thread_identity.h': 'd200359ea92f63f53e7210de08d9cc53dd69769fbe8323abaff8c1a8f24e2d84',
     'third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc': 'f8bb5948992bf0043e8b0a33aaf9b7e12231c28ad7790f33e7854927b5cd0188',
@@ -109,6 +110,7 @@ ADDITIONS = {
     'build/config/gtos/include/process/vm_abi.h': 'sdk/process/vm_abi.h',
     'build/config/gtos/include/time.h': 'sdk/time.h',
     'build/config/gtos/include/sys/time.h': 'sdk/sys/time.h',
+    'build/config/gtos/include/unistd.h': 'sdk/unistd.h',
     'third_party/perfetto/src/base/ctrl_c_handler_gtos.cc': 'perfetto/ctrl_c_handler_gtos.cc',
     'build/config/gtos/include/__external_threading': 'sdk/__external_threading',
     'build/config/gtos/include/inttypes.h': 'sdk/inttypes.h',
