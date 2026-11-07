@@ -24,6 +24,7 @@ parser.add_argument('--clang', required=True, type=pathlib.Path)
 parser.add_argument('--gn', required=True, type=pathlib.Path)
 parser.add_argument('--ninja', required=True, type=pathlib.Path)
 parser.add_argument('--host-i386-runtime', required=True, type=pathlib.Path)
+parser.add_argument('--host-python', type=pathlib.Path)
 parser.add_argument('--integer-builtins', required=True, type=pathlib.Path)
 parser.add_argument('--enable-diagnostic', action='store_true')
 parser.add_argument('--prepare-only', action='store_true')
@@ -41,7 +42,8 @@ assert not out.exists(), 'Choose a fresh output; existing caches are never remov
 assert out != upstream and upstream not in out.parents
 assert out not in upstream.parents, 'The output must not contain the source checkout'
 for path in (out, upstream, args.clang.resolve(), args.gn.resolve(), args.ninja.resolve(),
-             args.host_i386_runtime.resolve(), args.integer_builtins.resolve()):
+             args.host_i386_runtime.resolve(), args.integer_builtins.resolve(),
+             args.host_python.resolve() if args.host_python is not None else out):
     assert re.fullmatch(r'[A-Za-z0-9_./+:-]+', str(path)), 'GN shell tool paths require no spaces or shell metacharacters'
 out.mkdir(parents=True)
 root = out / 'source'
@@ -186,8 +188,12 @@ try:
         dirty = subprocess.check_output(['git', '-C', str(checkout), 'status', '--porcelain',
                                          '--untracked-files=no'], text=True, env=environment)
         assert not dirty, 'Tracked upstream changes must be isolated: ' + relative
-    for relative, expected in lock['prepared_source_files'].items():
-        bind(upstream / relative, expected)
+    prepared_sources = lock['prepared_source_files']
+    overrides = lock.get('prepared_overlay_overrides', {})
+    for relative, expected in overrides.items():
+        assert relative in prepared_sources and prepared_sources[relative] != expected, relative
+        payload_record = payload['files'].get('overlay/' + relative)
+        assert payload_record and payload_record['sha256'] == expected, 'Unbound prepared overlay: ' + relative
     clang = args.clang.resolve()
     bind(clang.parent / 'clang++', lock['tool_sha256']['clang'])
     gn = args.gn.resolve()
@@ -220,6 +226,38 @@ try:
     target_c_sdk = private_parent('tools/gtos_isolate_diagnostic/c-sdk')
     assert not target_c_sdk.exists()
     shutil.copytree(module / 'c-sdk', target_c_sdk)
+    if args.host_python is not None:
+        # A guard can only grant an already published executable inode.
+        relative = 'third_party/cpython3/host/bin/python3'
+        tool = args.host_python.resolve(strict=True)
+        expected = prepared_sources[relative]
+        bind(root / relative, expected)
+        bind(tool, expected)
+        assert os.access(tool, os.X_OK), 'Pinned host Python is not executable'
+        target = private_parent(relative)
+        assert target.is_symlink(), 'Pinned host Python must replace an origin link'
+        target.unlink()
+        target.symlink_to(tool)
+        state['host_python'] = {'path': str(tool), 'sha256': expected}
+    # Older locks record either the origin or the final prepared file.
+    # Check both identities when an owned overlay replaced a locked origin.
+    replaced_origins = {}
+    for relative, expected in prepared_sources.items():
+        pure = pathlib.PurePosixPath(relative)
+        assert not pure.is_absolute() and '..' not in pure.parts
+        overlay = payload['files'].get('overlay/' + relative)
+        prepared = overrides.get(relative, expected)
+        if overlay and overlay['sha256'] != prepared:
+            bind(upstream / relative, expected)
+            prepared = overlay['sha256']
+            replaced_origins[relative] = {'origin_sha256': expected, 'sha256': prepared}
+        bind(root / relative, prepared)
+    state['prepared_source_count'] = len(prepared_sources)
+    state['prepared_replaced_origins'] = replaced_origins
+    state['prepared_overlay_overrides'] = {
+        relative: {'previous_sha256': prepared_sources[relative], 'sha256': expected}
+        for relative, expected in overrides.items()
+    }
     state['prepared'] = True
     if args.cache_from is not None:
         cache = args.cache_from.resolve()
