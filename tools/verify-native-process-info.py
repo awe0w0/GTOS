@@ -195,7 +195,12 @@ try:
     if gitref.is_file():
         git = gitref.read_text().strip()
         assert git.startswith('gitdir: ')
-        gitdir = (repo / git[8:]).resolve()
+        pointer = git[8:]
+        windows = pathlib.PureWindowsPath(pointer)
+        if os.name == 'posix' and windows.is_absolute() and re.fullmatch(r'[a-zA-Z]:', windows.drive):
+            # A worktree created by Windows Git retains its drive-qualified path in WSL.
+            pointer = pathlib.Path('/mnt', windows.drive[0].lower(), *windows.parts[1:])
+        gitdir = (repo / pointer).resolve()
     else:
         gitdir = gitref
     head = (gitdir / 'HEAD').read_text().strip()
@@ -214,9 +219,10 @@ try:
     sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
                'src/hardwarecommunication/interrupts.cpp', 'src/hardwarecommunication/port.cpp',
                'src/process/native_runtime.cpp','src/process/native_realtime.cpp', 'src/process/resources.cpp', 'src/process/native_surface.cpp',
+               'src/process/native_windows.cpp',
                'src/process/native_fp.cpp', 'src/process/elf32.cpp', 'src/memory/process_address_space.cpp',
                'src/memory/paging.cpp', 'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
-               'tests/native_process_info_smoke.cpp']
+               'tests/i386_pure_virtual_runtime.cpp', 'tests/native_process_info_smoke.cpp']
     assembly = ['tests/native_process_loader.s', 'src/process/native_fp.s',
                 'src/hardwarecommunication/interruptstubs.s']
     inputs = {path for path in (repo / 'include').rglob('*') if path.is_file()}
