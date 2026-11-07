@@ -214,6 +214,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'tools/gtos_native_sdk/native-thread.h': 'sdk/native-thread.h',
+    'tools/gtos_native_sdk/native-thread.cc': 'sdk/native-thread.cc',
     'build/config/gtos/include/math.h': 'sdk/math.h',
     'build/config/gtos/runtime/tanh.cc': 'sdk/tanh.cc',
     'build/config/gtos/include/memory.h': 'sdk/memory.h',

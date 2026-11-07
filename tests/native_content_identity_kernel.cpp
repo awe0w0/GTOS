@@ -3,7 +3,11 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 
-#if defined(GTOS_CONTENT_TLS_PROBE)
+#if defined(GTOS_CONTENT_THREAD_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT NATIVE THREAD"
+static const unsigned ExpectedChecks = 25;
+static const char* const CheckDescription = "guarded thread start, join and detach";
+#elif defined(GTOS_CONTENT_TLS_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT BASE TLS"
 static const unsigned ExpectedChecks = 28;
 static const char* const CheckDescription = "isolated values and exit callbacks";
