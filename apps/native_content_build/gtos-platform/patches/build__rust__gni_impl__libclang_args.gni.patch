@@ -1,0 +1,20 @@
+--- a/build/rust/gni_impl/libclang_args.gni
++++ b/build/rust/gni_impl/libclang_args.gni
+@@ -72,6 +72,17 @@ if (is_win) {
+   ]
+ }
+ 
++if (is_gtos) {
++  # Match the native C toolchain. libclang otherwise uses its Linux host's
++  # target and searches host libc headers after the private SDK.
++  _libclang_extra_args += [
++    "--target=i686-unknown-none-elf",
++    "-ffreestanding",
++    "-nostdinc",
++    "-D__GTOS__=1",
++  ]
++}
++
+ # Passes C comments through as rustdoc attributes.
+ if (is_win) {
+   _libclang_extra_args += [ "/clang:-fparse-all-comments" ]

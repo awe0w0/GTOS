@@ -1,0 +1,13 @@
+--- a/third_party/rust/serde_json_lenient/v0_2/wrapper/BUILD.gn
++++ b/third_party/rust/serde_json_lenient/v0_2/wrapper/BUILD.gn
+@@ -6,6 +6,10 @@ import("//build/rust/rust_static_library.gni")
+ 
+ rust_static_library("wrapper") {
+   crate_root = "lib.rs"
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   allow_unsafe = true
+   sources = [
+     "lib.rs",

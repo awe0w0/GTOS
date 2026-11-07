@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'build/rust/gni_impl/libclang_args.gni': '6afd3aae3f9873fff0e0944514739151b4856fc19624f06b9f693cb5500b982c',
+    'third_party/rust/serde_json_lenient/v0_2/wrapper/BUILD.gn': '70823f6f3518b5d2c7505a59f09be7230bbe95c7c37a9949a00288fdac0eb075',
+    'third_party/rust/serde_json_lenient/v0_2/wrapper/lib.rs': '0e00086fa7eed44990d09978fd481167db6044ac1c5d2c10da65c15e214c2e26',
     'base/threading/thread_local_storage.h': '1cc76c701f11524702983a8e75dc13b3d612d61c44484ec767e4d7eff562161a',
     'base/threading/thread_local_storage.cc': 'fe46907d1039701200449bef53eff25c69a268f9973d99e4b8e866440da31c5f',
     'base/message_loop/message_pump_for_ui.h': '5d7ed92b6ed0e6ccc983036abd015bbbd6810bdfaf216b0a62d6cfbf4c5269a0',
@@ -239,6 +242,15 @@ ADDITION_SHA256 = {
 MATERIALIZED = {
     'base/threading/platform_thread.cc': 'a55c93de98faebc8fa1faa27ea56c1b576bbe9cb4bb5e6a62ee6d877248e8f1c',
     'tools/typescript/ts_library.py': '65386df09493d3a9cf7201321df9930b66c368459d54378afc917b2c24ac788b',
+    # Keep Python's generator and imported modules under the same GN root.
+    # Dawn's upstream exact expected-input validation stays enabled.
+    'third_party/dawn/generator/dawn_gpu_info_generator.py': '60eac0bab246877e325e4472fb7fe363ad87b11ee9f9a4c05e9488e0f13b1e4b',
+    'third_party/dawn/generator/dawn_json_generator.py': '74323b3a433c3daee42ffff5e7d0819514c9ecf9849d36c19786bb8386bc43f0',
+    'third_party/dawn/generator/dawn_version_generator.py': '060ddf0f89ac1a18174f9465afb9accc89b5141a7606cb43daad590382a4f7ba',
+    'third_party/dawn/generator/extract_json.py': '7e3dbd386dc08b94bc38e2d8be058484543699512d60a76b502731d1626405fb',
+    'third_party/dawn/generator/generator_lib.py': '045f8b91eaa9793ddd004d610c605ff8dec60abc073de5acb378120870e8421c',
+    'third_party/dawn/generator/opengl_loader_generator.py': '244cfb9b4716dee0e56211f5f0c083ff98b6f38b7fc808eb91e54a8236d96ebb',
+    'third_party/dawn/generator/webgpu_docs_utility.py': 'c35eecff650c6b43f6fa188eed62390384506109c76a4bdc0d7bf09fabe5ecb1',
 }
 
 # BoringSSL traverses sibling directories with quoted relative includes.
