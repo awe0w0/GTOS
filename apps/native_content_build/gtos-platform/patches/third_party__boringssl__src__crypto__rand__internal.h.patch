@@ -1,0 +1,11 @@
+--- a/third_party/boringssl/src/crypto/rand/internal.h
++++ b/third_party/boringssl/src/crypto/rand/internal.h
+@@ -20,6 +20,8 @@
+ 
+ #if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+ #define OPENSSL_RAND_DETERMINISTIC
++#elif defined(__GTOS__)
++#define OPENSSL_RAND_GTOS
+ #elif defined(OPENSSL_TRUSTY)
+ #define OPENSSL_RAND_TRUSTY
+ #elif defined(OPENSSL_WINDOWS)

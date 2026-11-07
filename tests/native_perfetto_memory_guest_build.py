@@ -163,6 +163,7 @@ for optimization in (0, 2):
         native_sources += [('md5-adapter', md5_probe / 'adapter.cc'),
                            ('md5', bssl / 'crypto/md5/md5.cc'),
                            ('thread-gtos', bssl / 'crypto/thread_gtos.cc'),
+                           ('entropy-gtos', bssl / 'crypto/rand/gtos.cc'),
                            ('assert', product / 'runtime/assert.cc'),
                            ('abort', runtime / 'abort.cc'),
                            ('heap', runtime / 'heap.cc')]

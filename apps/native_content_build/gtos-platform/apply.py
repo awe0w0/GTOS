@@ -16,6 +16,8 @@ spec.loader.exec_module(candidate)
 INPUTS = {
     'third_party/boringssl/BUILD.gn': '63efa6ff4bc649e7b4cf161a72ac747719ff697a6ae933742efb82cbc06bc3f5',
     'third_party/boringssl/src/crypto/internal.h': '54cd27bea4b886a6844d5df6964eece3cd0c965201df965fd9850b89940ae1bf',
+    'third_party/boringssl/src/crypto/rand/internal.h': '4bd3f23a37f25a5c6db6314f62b84fe61070ac614c66acb3efd77ca4b2322cda',
+    'third_party/boringssl/src/ssl/ssl_lib.cc': '03aecd510a995c8e1f7557a9dc44b05f4a48f21f3cf210da19f140800cbb856c',
     'third_party/rust/chromium_crates_io/vendor/serde_core-v1/src/crate_root.rs': '0fa71194671383f30941480cd7de9b1d008ace0d05c3d1cf3c317ed5c9639f40',
     'third_party/rust/chromium_crates_io/vendor/serde-v1/src/core/crate_root.rs': '0fa71194671383f30941480cd7de9b1d008ace0d05c3d1cf3c317ed5c9639f40',
     'third_party/rust/serde_core/v1/BUILD.gn': '132bdf871494a41231173f20e582b35e5533e2a0f70c7e06c1c0e18bda2cd5b3',
@@ -126,6 +128,7 @@ INPUTS = {
 
 ADDITIONS = {
     'third_party/boringssl/src/crypto/thread_gtos.cc': '../../native_boringssl/overlay/third_party/boringssl/src/crypto/thread_gtos.cc',
+    'third_party/boringssl/src/crypto/rand/gtos.cc': 'runtime/boringssl_entropy.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/rand_util_gtos.cc': 'partition_alloc/rand_util_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time_now_gtos.cc': 'partition_alloc/time_now_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/page_allocator_internals_gtos.h': 'partition_alloc/page_allocator_internals_gtos.h',

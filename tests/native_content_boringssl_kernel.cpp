@@ -70,9 +70,9 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         printf((char*)" failures="); printfHex32(record.failures);
         printf((char*)" fault="); printfHex32(status.faultAddress); printf((char*)"\n");
         if (mode == 0) {
-            ContentBoringSslRequire(record.stage == 2 && record.checks == 24 && !record.failures &&
+            ContentBoringSslRequire(record.stage == 2 && record.checks == 28 && !record.failures &&
                     status.exitCode == 0 && status.faultVector == 0 && status.systemCalls >= 9,
-                    "MD5 and native synchronization");
+                    "MD5, native synchronization and hardware entropy");
         } else {
             ContentBoringSslRequire(record.stage == 1 && !record.checks && !record.failures &&
                     status.exitCode == 0x48000021 && status.faultVector == 0,

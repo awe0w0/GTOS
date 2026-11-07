@@ -5,6 +5,7 @@
 #include <process/abi.h>
 #include <string.h>
 
+#include "third_party/boringssl/src/crypto/bcm_support.h"
 #include "third_party/boringssl/src/crypto/internal.h"
 
 #if !defined(OPENSSL_GTOS_THREADS) || !defined(OPENSSL_THREADS) || defined(OPENSSL_NO_ASM)
@@ -81,6 +82,25 @@ extern "C" int NativeEntry() {
     input[i] = (i * 37 + 11) & 255;
   for (const auto& vector : nativeCryptoMd5BinaryVectors)
     Check(CheckDigest(input, vector.length, vector.digest));
+
+  bssl::CRYPTO_init_sysrand();
+  bssl::CRYPTO_sysrand(nullptr, 0);
+  unsigned char first[259], second[259];
+  memset(first, 0x5a, sizeof(first));
+  memset(second, 0xa5, sizeof(second));
+  bssl::CRYPTO_sysrand(first + 1, sizeof(first) - 2);
+  bssl::CRYPTO_sysrand(second + 1, sizeof(second) - 2);
+  Check(first[0] == 0x5a && first[258] == 0x5a &&
+        second[0] == 0xa5 && second[258] == 0xa5);
+  Check(memcmp(first + 1, second + 1, sizeof(first) - 2) != 0);
+  bool wrote_first = false;
+  bool wrote_second = false;
+  for (unsigned i = 1; i != 258; ++i) {
+    wrote_first |= first[i] != 0x5a;
+    wrote_second |= second[i] != 0xa5;
+  }
+  Check(wrote_first);
+  Check(wrote_second);
 #if defined(GTOS_BORINGSSL_GUEST_WRONG_EXPECTATION)
   unsigned char wrong_digest[16] = {};
   Check(CheckDigest(input, 0, wrong_digest));
