@@ -14,9 +14,15 @@ parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
-                                            'native_thread', 'webrtc_thread', 'vp9'],
+                                            'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments'],
                     default='memory')
+parser.add_argument('--payload', type=Path)
+parser.add_argument('--payload-record', type=Path)
 args = parser.parse_args()
+if args.component == 'crt_arguments':
+    assert args.payload is not None and args.payload_record is not None
+else:
+    assert args.payload is None and args.payload_record is None
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
 sdk = repo / 'apps/native_v8_runtime'
@@ -47,6 +53,8 @@ component = {
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'vp9': ('native_memory_record', None, 'vp9.cpp',
             'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'crt_arguments': (None, None, None,
+                      'gtos_content_arguments_kernel.cpp', 'ContentArgumentsUnusedBaseline', 0),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -182,25 +190,39 @@ if args.component == 'boringssl':
                          '-MD', '-MF', str(asm_obj) + '.d', '-c', asm, '-o', asm_obj])
     dependencies(asm_obj)
     assert ' T md5_block_asm_data_order' in run('md5-asm-symbols', ['/usr/bin/nm', asm_obj])
-layout_source = repo / 'apps/native_vm_probe/linker.ld'
-bind(layout_source)
-layout = args.out / 'module.ld'
-layout_text = layout_source.read_text().replace('native_vm_record', record_name)
-record_address = '40020000'
-image_limit = 65536
-if args.component in ('vp9', 'webrtc_thread'):
-    record_address = '40200000'
-    image_limit = 2 * 1024 * 1024
-    layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
-                   .replace('0x20000', '0x200000').replace('<= 4096,', '<= 65536,'))
-layout.write_text(layout_text)
-bind(layout)
-start = repo / 'apps/native_libxml_file/probe/exit-start.s'
-bind(start)
-run('start', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf', '-c', start,
-              '-o', args.out / 'start.o'])
 modules = []
-for optimization in (0, 2):
+if args.component == 'crt_arguments':
+    bind(args.payload)
+    bind(args.payload_record)
+    record = json.loads(args.payload_record.read_bytes())
+    assert record['consumer'] == 'arguments' and record['undefined'] == 0
+    data = args.payload.read_bytes()
+    assert 0 < len(data) <= 65536 and data[:5] == b'\x7fELF\x01'
+    assert len(data) == record['bytes'] and hashlib.sha256(data).hexdigest() == record['sha256']
+    image = args.out / 'crt_arguments.elf'
+    with image.open('xb') as output:
+        output.write(data)
+    image.chmod(0o444)
+    modules.append({'optimization': 2, 'mode': 0, 'negative': False, **identity(image)})
+else:
+    layout_source = repo / 'apps/native_vm_probe/linker.ld'
+    bind(layout_source)
+    layout = args.out / 'module.ld'
+    layout_text = layout_source.read_text().replace('native_vm_record', record_name)
+    record_address = '40020000'
+    image_limit = 65536
+    if args.component in ('vp9', 'webrtc_thread'):
+        record_address = '40200000'
+        image_limit = 2 * 1024 * 1024
+        layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
+                       .replace('0x20000', '0x200000').replace('<= 4096,', '<= 65536,'))
+    layout.write_text(layout_text)
+    bind(layout)
+    start = repo / 'apps/native_libxml_file/probe/exit-start.s'
+    bind(start)
+    run('start', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf', '-c', start,
+                  '-o', args.out / 'start.o'])
+for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
     directory = args.out / ('O' + str(optimization))
     directory.mkdir()
     objects = []
@@ -420,6 +442,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
-    'base_tls', 'native_thread', 'webrtc_thread', 'vp9') else 'PERFETTO_'
+    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

@@ -4,6 +4,9 @@
 
 #include <stdlib.h>
 
+#include <array>
+#include <string_view>
+
 #include "base/compiler_specific.h"
 
 extern "C" int GtosContentShellMain(int argc, const char** argv);
@@ -12,6 +15,47 @@ extern "C" int gtos_native_heap_enable_large_allocations() noexcept;
 
 using Initializer = void (*)();
 extern "C" Initializer __init_array_start[], __init_array_end[];
+
+namespace {
+
+constexpr unsigned kMaximumExtraArguments = 16;
+using Arguments = std::array<const char*, kMaximumExtraArguments + 2>;
+
+int ReadLaunchArguments(Arguments& argv) {
+  argv[0] = "content_shell";
+  const char* count = getenv("GTOS_CONTENT_ARG_COUNT");
+  if (!count) {
+    return 1;
+  }
+  if (!*count) {
+    return 0;
+  }
+
+  unsigned extra = 0;
+  for (const char digit : std::string_view(count)) {
+    if (digit < '0' || digit > '9') {
+      return 0;
+    }
+    extra = extra * 10 + (digit - '0');
+    if (extra > kMaximumExtraArguments) {
+      return 0;
+    }
+  }
+
+  // The kernel's immutable launch environment carries each argument verbatim.
+  char key[] = "GTOS_CONTENT_ARG_00";
+  for (unsigned i = 1; i <= extra; ++i) {
+    key[sizeof(key) - 3] = static_cast<char>('0' + i / 10);
+    key[sizeof(key) - 2] = static_cast<char>('0' + i % 10);
+    argv[i] = getenv(key);
+    if (!argv[i]) {
+      return 0;
+    }
+  }
+  return static_cast<int>(extra + 1);
+}
+
+}  // namespace
 
 extern "C" {
 
@@ -25,6 +69,11 @@ volatile unsigned native_v8_integration_result = 0xffffffffU;
       gtos_native_heap_enable_large_allocations() != 0) {
     __builtin_trap();
   }
+  Arguments argv{};
+  const int argc = ReadLaunchArguments(argv);
+  if (argc == 0) {
+    exit(64);
+  }
 
   // SAFETY: The GTOS linker script bounds one contiguous initializer array.
   UNSAFE_BUFFERS({
@@ -35,9 +84,7 @@ volatile unsigned native_v8_integration_result = 0xffffffffU;
   });
   native_v8_integration_stage = 2;
 
-  // The native loader enters on a fresh stack and supplies no argument vector.
-  const char* argv[] = {"content_shell", nullptr};
-  exit(GtosContentShellMain(1, argv));
+  exit(GtosContentShellMain(argc, argv.data()));
 }
 
 }  // extern "C"
