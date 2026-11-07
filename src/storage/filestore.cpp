@@ -203,6 +203,12 @@ int32_t FileStore::WriteFile(uint32_t owner,uint32_t handle,const void* buffer,u
     if (readOnly) return ReadOnly;
     if ((!buffer&&size)||size>0x7FFFFFFFU) return LFS_ERR_INVAL;
     if (!size) return 0;
+    if (slot->file.flags&LFS_O_APPEND) {
+        // LittleFS only advances an append cursor below EOF. A caller can
+        // seek past EOF; native append must still write at the actual end.
+        int32_t end=lfs_file_seek(&filesystem,&slot->file,0,LFS_SEEK_END);
+        if (end<0) return end;
+    }
     return lfs_file_write(&filesystem,&slot->file,buffer,size);
 }
 namespace {
@@ -233,7 +239,7 @@ int32_t FileStore::WriteFileAt(uint32_t owner,uint32_t handle,int64_t offset,con
     if (!slot||slot->mode==Read) return LFS_ERR_BADF;
     if (readOnly) return ReadOnly;
     if ((!buffer&&size)||size>0x7FFFFFFFU) return LFS_ERR_INVAL;
-    if (slot->file.flags&LFS_O_APPEND) return size?lfs_file_write(&filesystem,&slot->file,buffer,size):0;
+    if (slot->file.flags&LFS_O_APPEND) return WriteFile(owner,handle,buffer,size);
     return TransferAt(filesystem,slot->file,offset,size,[&] {
         return lfs_file_write(&filesystem,&slot->file,buffer,size);
     });

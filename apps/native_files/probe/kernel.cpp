@@ -138,8 +138,8 @@ extern "C" void NativeProcessSmoke(void* multiboot,uint32_t magic) {
         // measured and not explained, instead of hiding it by folding a "+3" into this stage as well.
         { InterruptGuard guard;LogCase(record,status,plan,suiteCost,initial,store->OpenCount()); }
         FileNeed(initial-frames.getStatistics().freeFrames==suiteCost,"eighth module retains exactly its own VM cost");
-        FileNeed(record.version==1&&record.mode==7&&!record.error&&record.stage==2&&record.checks>=25&&(record.mask&0x1ff)==0x1ff,
-            "posix translation suite covers its nine families");
+        FileNeed(record.version==1&&record.mode==7&&!record.error&&record.stage==2&&record.checks==48&&record.mask==0x3ff,
+            "posix translation suite covers all ten families");
         FileNeed(status.observedCs==0x23&&!status.faultVector&&!status.exitCode,"posix translation suite exited normally at CPL3");
         FileNeed(runtime.Reap()==1&&!store->OpenCount(),"posix suite handles reclaimed and none left open");
         FileNeed(frames.getStatistics().freeFrames==initial,"eighth module restores the initial frame count");

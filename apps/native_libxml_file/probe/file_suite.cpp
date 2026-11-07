@@ -137,6 +137,7 @@ extern "C" void NativeEntry(void) {
   const int appended = open(kScratch, O_WRONLY | O_APPEND);
   need(appended > 0);
   need(lseek(appended, 0, 7) == -1 && errno == EINVAL);
+  need(lseek(appended, pattern + 100, SEEK_SET) == (off_t)(pattern + 100));
   need(gtos_write_at(appended, "!", 1, -1) == 1);
   need(lseek(appended, 0, SEEK_CUR) == (off_t)(pattern + 1));
   need(close(appended) == 0);
