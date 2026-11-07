@@ -71,7 +71,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         NativePathRecord record = {};
         PathRequire(runtime.ReadMemory(id, 0x40020000, &record, sizeof(record)), "consumer record");
         PathRequire(record.version == 1 && record.mode == (phase ? 1U : 0U) && record.stage == 2 &&
-            record.checks == (phase ? 5U : 54U) && !record.failures && !status.exitCode && !status.faultVector,
+            record.checks == (phase ? 5U : 57U) && !record.failures && !status.exitCode && !status.faultVector,
             "consumer result");
         const uint32_t calls = files.Statistics().calls - before;
         PathRequire(status.observedCs == 0x23 && status.observedCr3 == status.directory &&

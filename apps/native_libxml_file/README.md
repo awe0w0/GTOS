@@ -125,3 +125,13 @@ service calls) from a detached endpoint (zero), although both return ENODEV.
 The wrong consumer is rejected with QEMU 65; four valid configurations return
 33. Scratch-disk prefix/suffix guards remain unchanged. This is new component
 guest evidence, not a new legacy qualification lock or Content acceptance.
+
+`rename` now snapshots two bounded paths into the existing native RENAME
+request and propagates its real result; no replacement filesystem is added.
+`directory-build-d06` / `run-r06` run 426 actual adapter checks per O0/O2,
+plus a rejected 427-check calibration. `posix-path-guest-build-p03` / `run-r02`
+add a real ATA rename, prove the old path is absent and the new path retains
+the truncated bytes/size, then remove it. The two mounted profiles each repeat
+57 checks with 56 endpoint calls, zero handles and exact Reap restoration.
+The attached-unmounted, detached and wrong-consumer configurations also retain
+their separate expected outcomes.

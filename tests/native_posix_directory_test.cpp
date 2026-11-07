@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -57,6 +58,13 @@ extern "C" void free(void *value) noexcept {
 
 extern "C" int GtosPosixFileTestCall(unsigned operation, const void *data, unsigned bytes) {
   ++calls;
+  if (operation == GTOS_SYS_FILE_RENAME) {
+    const auto &request = *static_cast<const GtosFileRenameRequest *>(data);
+    check(bytes == sizeof(request) && request.version == 1 && request.old_bytes == expected_path_bytes && request.new_bytes == 7);
+    check(memcmp(reinterpret_cast<const void *>(request.old_path), expected_path, expected_path_bytes) == 0);
+    check(memcmp(reinterpret_cast<const void *>(request.new_path), "/other", 7) == 0);
+    return metadata_status;
+  }
   if (operation == GTOS_SYS_FILE_OPEN) {
     const auto &request = *static_cast<const GtosFileOpenRequest *>(data);
     check(bytes == sizeof(request) && request.version == 1 && request.path_bytes == expected_path_bytes);
@@ -264,6 +272,18 @@ extern "C" int DirectoryTestMain() {
     check(fsync(41) == -1 && errno == (status == -9 ? EBADF : status == -19 ? ENODEV : EIO));
     truncate_bytes = 0;
     check(ftruncate(41, 0) == -1 && errno == (status == -9 ? EBADF : status == -19 ? ENODEV : EIO));
+  }
+  metadata_status = 0;
+  const int rename_before = calls;
+  check(rename(0, "/other") == -1 && errno == EINVAL);
+  check(rename(expected_path, 0) == -1 && errno == EINVAL);
+  check(rename(expected_path, "") == -1 && errno == ENOENT && calls == rename_before);
+  errno = 77;
+  check(rename(expected_path, "/other") == 0 && errno == 77);
+  const int rename_statuses[] = {-2, -5, -17, -30, 1};
+  for (int status : rename_statuses) {
+    metadata_status = status;
+    check(rename(expected_path, "/other") == -1 && errno == (status == 1 ? EIO : -status));
   }
   metadata_status = 0;
   const int shapes[] = {1, 2};

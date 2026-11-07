@@ -2,6 +2,7 @@
 #include <process/file_abi.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -61,7 +62,10 @@ extern "C" int NativeEntry() {
   Check(rmdir("/paths/first") == -1 && errno == ENOTDIR);
   Check(stat("/paths/first", &value) == 0 && S_ISREG(value.st_mode) && value.st_size == 3);
   Check(rmdir("/paths") == -1 && errno == 39);
-  Check(unlink("/paths/first") == 0);
+  Check(rename("/paths/first", "/paths/renamed") == 0);
+  Check(access("/paths/first", F_OK) == -1 && errno == ENOENT);
+  Check(stat("/paths/renamed", &value) == 0 && value.st_size == 3);
+  Check(unlink("/paths/renamed") == 0);
   Check(access("/paths/first", F_OK) == -1 && errno == ENOENT);
   Check(rmdir("/paths") == 0);
   Check(access("/paths", F_OK) == -1 && errno == ENOENT);

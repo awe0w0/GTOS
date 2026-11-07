@@ -19,6 +19,7 @@
 
 #include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <fcntl.h>
@@ -313,3 +314,12 @@ int RemoveTyped(const char *path, unsigned type) {
 
 extern "C" int unlink(const char *path) { return RemoveTyped(path, GTOS_FILE_TYPE_REGULAR); }
 extern "C" int rmdir(const char *path) { return RemoveTyped(path, GTOS_FILE_TYPE_DIRECTORY); }
+
+extern "C" int rename(const char *from, const char *to) noexcept {
+  unsigned from_bytes = 0, to_bytes = 0;
+  if (path_bytes(from, &from_bytes) != 0 || path_bytes(to, &to_bytes) != 0) return -1;
+  const GtosFileRenameRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(from), from_bytes,
+                                     reinterpret_cast<unsigned>(to), to_bytes};
+  const int result = call(GTOS_SYS_FILE_RENAME, &request, sizeof(request));
+  return result < 0 ? translate(result) : result == 0 ? 0 : fail_with(EIO);
+}
