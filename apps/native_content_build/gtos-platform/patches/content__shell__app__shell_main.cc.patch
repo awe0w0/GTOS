@@ -1,0 +1,14 @@
+--- a/content/shell/app/shell_main.cc
++++ b/content/shell/app/shell_main.cc
+@@ -96,7 +96,11 @@ extern "C" IOS_INIT_EXPORT int ContentAppMain(int argc, const char** argv) {
+ 
+ #else
+ 
++#if BUILDFLAG(IS_GTOS)
++extern "C" int GtosContentShellMain(int argc, const char** argv) {
++#else
+ int main(int argc, const char** argv) {
++#endif
+   content::ShellMainDelegate delegate;
+   content::ContentMainParams params(&delegate);
+   params.argc = argc;

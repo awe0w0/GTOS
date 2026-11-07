@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'content/shell/BUILD.gn': '8b952574b939aa81d0dba0113206efa708b3f1c3718ef874aadc2a7b2a4eb13e',
+    'content/shell/app/shell_main.cc': 'b14da473f368a9a7bdd64e698573f67ef43fa791ee3e58e70eef98e71a4b66af',
     'net/socket/socket_descriptor.h': '586aa449a4980f398878279392c32d7cc80c1768e55a7faa19682578b3de4686',
     'ui/events/keycodes/keyboard_codes.h': '1a358e282acc6fd8bbb14bd68c159d8b4149b80cef8f18117c84e4b19419e508',
     'ui/gfx/gpu_fence_handle.h': '2a497f9a27c760499947d65fe1dd026b91b70efda58223652e79b8b1f4cc4231',
@@ -208,6 +210,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'content/shell/app/entry_gtos.cc': 'content/entry_gtos.cc',
+    'content/shell/app/native-start.s': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native-start.s',
+    'content/shell/app/native.ld': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native.ld',
     'build/config/gtos/include/llvm-libc-macros/stdint-macros.h': '../../native_v8_integration/sdk/llvm-libc-macros/stdint-macros.h',
     'build/config/gtos/include/llvm-libc-types/socklen_t.h': '../../native_v8_integration/sdk/llvm-libc-types/socklen_t.h',
     'build/config/gtos/include/llvm-libc-types/sa_family_t.h': '../../native_v8_integration/sdk/llvm-libc-types/sa_family_t.h',
@@ -282,6 +287,8 @@ ADDITIONS = {
 
 # These provider bytes are pinned by the BoringSSL and PartitionAlloc source locks.
 ADDITION_SHA256 = {
+    'content/shell/app/native-start.s': '7f56a50ec84155e45d8e5a3ef4531b7c3de426b308a89eed599d5d1e8fd5e98f',
+    'content/shell/app/native.ld': '6364feb8b9a5182a61014d73196d4be28b62a5e17dfaac5f494a935ce2da5eca',
     'build/config/gtos/include/llvm-libc-macros/stdint-macros.h': '2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77',
     'build/config/gtos/include/llvm-libc-types/socklen_t.h': 'b690e8848e4ef3bcd8e1428adee44014b33eac47992f07d22d62f7dd3eb5c162',
     'build/config/gtos/include/llvm-libc-types/sa_family_t.h': 'e4af7bd87fd16b03bb98c80da78efe99660ff937867594e54b883797d5911ecf',

@@ -1,0 +1,35 @@
+--- a/content/shell/BUILD.gn
++++ b/content/shell/BUILD.gn
+@@ -49,6 +49,9 @@ declare_args() {
+   content_shell_product_name = "Content Shell"
+   content_shell_version = "999.77.34.5"
+   content_shell_major_version = "999"
++
++  # The runtime archive is a separately verified GTOS build input.
++  gtos_content_runtime_archive = ""
+ }
+ 
+ config("content_shell_lib_warnings") {
+@@ -759,6 +762,22 @@ if (is_android) {
+ 
+     sources = [ "app/shell_main.cc" ]
+ 
++    if (is_gtos && gtos_content_runtime_archive != "") {
++      sources += [
++        "app/entry_gtos.cc",
++        "app/native-start.s",
++      ]
++      inputs = [
++        "app/native.ld",
++        gtos_content_runtime_archive,
++      ]
++      ldflags = [
++        "-Wl,-T," + rebase_path("app/native.ld", root_build_dir),
++        "-Wl,--gc-sections",
++      ]
++      libs = [ gtos_content_runtime_archive ]
++    }
++
+     if (is_win) {
+       sources += [ "app/shell.rc" ]
+     }
