@@ -62,7 +62,9 @@ def main():
              'run: verify the published artifacts and qualify, rebuilding nothing')
     parser.add_argument('--diagnose-cut',type=int,default=0,help='diagnose one interrupted sector boundary instead of qualifying')
     parser.add_argument('--artifacts',type=pathlib.Path,help='manifest written by --phase build and verified by --phase run')
+    parser.add_argument('--source-deltas',type=pathlib.Path,help='named current sources derived from the qualified FileStore lock')
     args=parser.parse_args()
+    assert not (args.build_only and args.source_deltas),'Historical reproduction requires the qualified lock'
     repo=pathlib.Path(__file__).resolve().parents[1];out=args.output.resolve()
     assert not out.exists(),'Use a fresh output directory; prior runs are retained.'
     out.mkdir(parents=True)
@@ -117,11 +119,19 @@ def main():
             files[str(path.relative_to(out))]={'bytes':path.stat().st_size,'sha256':sha(path)}
         assert files,'the build phase produced no artifacts to publish'
         manifest=out/'artifacts.json'
-        manifest.write_text(json.dumps({'root':str(out),'generated_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            'files':files},indent=2)+'\n')
+        data={'root':str(out),'generated_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':files}
+        if 'source_candidate' in state:
+            data.update(source_candidate=state['source_candidate'],source_inputs=state['inputs'])
+        manifest.write_text(json.dumps(data,indent=2)+'\n')
         return manifest
     def verify_artifacts(manifest):
         data=json.loads(pathlib.Path(manifest).read_text())
+        assert data.get('source_candidate')==state.get('source_candidate'),'Publication and current FileStore candidate differ'
+        if 'source_candidate' in state:
+            inputs=data['source_inputs']
+            assert inputs and all(inputs.get(path)==value for path,value in state['inputs'].items()),'Incomplete candidate inputs'
+            assert all(sha(path)==value for path,value in inputs.items()),'Published FileStore source changed'
+            state['inputs'].update(inputs)
         root=pathlib.Path(data['root']).resolve()
         # The manifest location and the root it names must be the same tree. Checking the named root while executing the manifest's
         # directory would let a verified artifact stand in for a different one that is actually run.
@@ -148,7 +158,19 @@ def main():
         profile_path=repo/'docs/littlefs/source-lock.json';profile=None
         if profile_path.exists():
             profile=json.loads(profile_path.read_text());bind(profile_path)
-            for name,value in profile['files'].items():assert sha(repo/name)==value,'Locked filesystem input changed '+name;bind(name)
+            deltas={}
+            if args.source_deltas:
+                packet=json.loads(args.source_deltas.read_text());bind(args.source_deltas)
+                assert packet['lock_sha256']==sha(profile_path),'Candidate derived from a different FileStore lock'
+                deltas=packet['files']
+                assert deltas and set(deltas)<=set(profile['files']),'Unexpected FileStore candidate source identities'
+                assert all(value!=profile['files'][name] for name,value in deltas.items()),'Candidate lists an unchanged FileStore input'
+                state['source_candidate']={'lock_sha256':packet['lock_sha256'],'manifest_sha256':sha(args.source_deltas),'files':deltas}
+            for name,value in profile['files'].items():
+                assert sha(repo/name)==deltas.get(name,value),'Locked filesystem input changed '+name
+                bind(name)
+        else:
+            assert not args.source_deltas,'Candidate requires the qualified FileStore lock'
         cxx=pathlib.Path(shutil.which(args.cxx)).resolve();cc=pathlib.Path(shutil.which(args.cc)).resolve()
         bins={name:pathlib.Path(shutil.which(name)).resolve() for name in ['as','ld','ar','nm','objdump','readelf','grub-mkrescue','qemu-system-i386']}
         state['tools']={name:{'path':str(path),'sha256':sha(path)} for name,path in dict(bins,cxx=cxx,cc=cc).items()}

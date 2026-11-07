@@ -91,7 +91,9 @@ jobs:
         env:
           CXX: /usr/bin/g++
           CC: /usr/bin/gcc
-        run: /usr/bin/python3 tools/build-filestore-probe.py "$RUNNER_TEMP/gtos-filesystem"
+        run: >-
+          /usr/bin/python3 tools/build-filestore-probe.py "$RUNNER_TEMP/gtos-filesystem"
+          --source-deltas docs/littlefs/current-source-deltas.json
 
   verify_native_file_abi:
     # Actual CPL3 file service with scalar compiler helpers; LLVM stdio remains unqualified.
