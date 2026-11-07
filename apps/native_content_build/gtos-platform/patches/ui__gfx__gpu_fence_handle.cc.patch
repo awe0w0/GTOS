@@ -1,0 +1,17 @@
+--- a/ui/gfx/gpu_fence_handle.cc
++++ b/ui/gfx/gpu_fence_handle.cc
+@@ -3,6 +3,8 @@
+ // found in the LICENSE file.
+ 
+ #include "ui/gfx/gpu_fence_handle.h"
++
++#if !BUILDFLAG(IS_GTOS)
+ #include <atomic>
+ #include <cstddef>
+ 
+@@ -173,3 +175,5 @@ GpuFenceHandle GpuFenceHandle::Clone() const {
+ }
+ 
+ }  // namespace gfx
++
++#endif  // !BUILDFLAG(IS_GTOS)

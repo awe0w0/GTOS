@@ -1,0 +1,123 @@
+--- a/mojo/public/cpp/platform/platform_handle.cc
++++ b/mojo/public/cpp/platform/platform_handle.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "mojo/public/cpp/platform/platform_handle.h"
+ 
++#include <limits>
+ #include <tuple>
+ 
+ #include "base/logging.h"
+@@ -26,7 +27,7 @@
+ #include "base/apple/scoped_mach_port.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_GTOS)
+ #include <unistd.h>
+ 
+ #include "base/files/scoped_file.h"
+@@ -62,7 +63,7 @@ base::apple::ScopedMachSendRight CloneMachPort(
+ }
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ base::ScopedFD CloneFD(const base::ScopedFD& fd) {
+   DCHECK(fd.is_valid());
+   return base::ScopedFD(dup(fd.get()));
+@@ -90,10 +91,15 @@ PlatformHandle::PlatformHandle(base::apple::ScopedMachReceiveRight mach_port)
+     : type_(Type::kMachReceive), mach_receive_(std::move(mach_port)) {}
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ PlatformHandle::PlatformHandle(base::ScopedFD fd)
+     : type_(Type::kFd), fd_(std::move(fd)) {
+-#if BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_GTOS)
++  if (fd_.get() <= 0) {
++    std::ignore = fd_.release();
++    type_ = Type::kNone;
++  }
++#elif BUILDFLAG(IS_FUCHSIA)
+   DCHECK_LT(fd_.get(), FDIO_MAX_FD);
+ #endif
+ }
+@@ -114,7 +120,7 @@ PlatformHandle& PlatformHandle::operator=(PlatformHandle&& other) {
+   mach_receive_ = std::move(other.mach_receive_);
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   fd_ = std::move(other.fd_);
+ #endif
+ 
+@@ -157,9 +163,19 @@ void PlatformHandle::ToMojoPlatformHandle(PlatformHandle handle,
+     }
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+     DCHECK(handle.is_fd());
++#if BUILDFLAG(IS_GTOS)
++    // The token identifies a file in the current process only.
++    if (!handle.is_valid_fd()) {
++      out_handle->type = MOJO_PLATFORM_HANDLE_TYPE_INVALID;
++      out_handle->value = 0;
++      break;
++    }
++    out_handle->type = MOJO_PLATFORM_HANDLE_TYPE_GTOS_FILE;
++#else
+     out_handle->type = MOJO_PLATFORM_HANDLE_TYPE_FILE_DESCRIPTOR;
++#endif
+     out_handle->value = static_cast<uint64_t>(handle.TakeFD().release());
+ #endif
+   } while (false);
+@@ -196,10 +212,18 @@ PlatformHandle PlatformHandle::FromMojoPlatformHandle(
+   }
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
++#if BUILDFLAG(IS_GTOS)
++  if (handle->type != MOJO_PLATFORM_HANDLE_TYPE_GTOS_FILE ||
++      handle->value == 0 ||
++      handle->value > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
++    return PlatformHandle();
++  }
++#else
+   if (handle->type != MOJO_PLATFORM_HANDLE_TYPE_FILE_DESCRIPTOR) {
+     return PlatformHandle();
+   }
++#endif
+   return PlatformHandle(base::ScopedFD(static_cast<int>(handle->value)));
+ #endif
+ }
+@@ -216,7 +240,7 @@ void PlatformHandle::reset() {
+   mach_receive_.reset();
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   fd_.reset();
+ #endif
+ }
+@@ -233,7 +257,7 @@ void PlatformHandle::release() {
+   std::ignore = mach_receive_.release();
+ #endif
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   std::ignore = fd_.release();
+ #endif
+ }
+@@ -252,6 +276,8 @@ PlatformHandle PlatformHandle::Clone() const {
+   }
+   CHECK(!is_valid_mach_receive()) << "Cannot clone Mach receive rights";
+   return PlatformHandle(CloneFD(fd_));
++#elif BUILDFLAG(IS_GTOS)
++  return is_valid_fd() ? PlatformHandle(CloneFD(fd_)) : PlatformHandle();
+ #elif BUILDFLAG(IS_POSIX)
+   return PlatformHandle(CloneFD(fd_));
+ #endif

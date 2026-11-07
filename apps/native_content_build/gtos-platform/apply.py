@@ -14,6 +14,16 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'net/socket/socket_descriptor.h': '586aa449a4980f398878279392c32d7cc80c1768e55a7faa19682578b3de4686',
+    'ui/events/keycodes/keyboard_codes.h': '1a358e282acc6fd8bbb14bd68c159d8b4149b80cef8f18117c84e4b19419e508',
+    'ui/gfx/gpu_fence_handle.h': '2a497f9a27c760499947d65fe1dd026b91b70efda58223652e79b8b1f4cc4231',
+    'ui/gfx/gpu_fence_handle.cc': 'c35171057ec4b94e1cf57bd3bbf378f4e6efba7a8b76c48c48bc36846fa12133',
+    'net/base/ip_address.h': '7f9aaa37992dc7efb49d1769bb00c111904458a928e45c3c0e8bd433b3eea704',
+    'net/base/sockaddr_storage.h': 'f11db8dd752961a5f65d21e6477d9e3b1f29f526a5097bbc09528a87ab7ff192',
+    'mojo/public/cpp/platform/platform_handle.h': '2f7d3a39ed4211ef714aa3ab99e320bc2631743ad78d293d52ba72d1f8dd7a70',
+    'mojo/public/cpp/platform/platform_handle.cc': '739384bedeff27167d0ded8c0cda533ad5debd4da4ccc136af979b3634bf63eb',
+    'mojo/public/c/system/platform_handle.h': '1a1fbb42eed7bb6119ff0a132acdd8beb133535e8189b57c78f69419ef764f1f',
+    'ui/gfx/native_ui_types.h': '24a0b53bf57294c1703d09d5c56a8d4487098edcee496425b21387372747375d',
     'v8/tools/run.py': '76c9bd9c3bdae23ab13572056b9d320f3b2298e015bd3f5f1c7bf6265c0be67a',
     'third_party/dawn/tools/generate-sources-gn.py': '14f602dc2067f3fa987e69d6f3a11c2cd9c57292caa5086560e9865dae5972e5',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/mod.rs': 'cb29e8073290ba65979e7c7722d1eec3b96889e34f93a15c97b852f749576ee8',
@@ -198,6 +208,20 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/llvm-libc-macros/stdint-macros.h': '../../native_v8_integration/sdk/llvm-libc-macros/stdint-macros.h',
+    'build/config/gtos/include/llvm-libc-types/socklen_t.h': '../../native_v8_integration/sdk/llvm-libc-types/socklen_t.h',
+    'build/config/gtos/include/llvm-libc-types/sa_family_t.h': '../../native_v8_integration/sdk/llvm-libc-types/sa_family_t.h',
+    'build/config/gtos/include/llvm-libc-types/in_addr_t.h': '../../native_v8_integration/sdk/llvm-libc-types/in_addr_t.h',
+    'build/config/gtos/include/llvm-libc-types/in_port_t.h': '../../native_v8_integration/sdk/llvm-libc-types/in_port_t.h',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr.h': '../../native_v8_integration/sdk/llvm-libc-types/struct_sockaddr.h',
+    'build/config/gtos/include/llvm-libc-types/struct_in_addr.h': '../../native_v8_integration/sdk/llvm-libc-types/struct_in_addr.h',
+    'build/config/gtos/include/llvm-libc-types/struct_in6_addr.h': '../../native_v8_integration/sdk/llvm-libc-types/struct_in6_addr.h',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr_in.h': '../../native_v8_integration/sdk/llvm-libc-types/struct_sockaddr_in.h',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr_in6.h': '../../native_v8_integration/sdk/llvm-libc-types/struct_sockaddr_in6.h',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr_storage.h': '../../native_v8_integration/sdk/llvm-libc-types/struct_sockaddr_storage.h',
+    'build/config/gtos/include/net/address_types.h': '../../../include/net/address_types.h',
+    'build/config/gtos/include/sys/socket.h': '../../../include/sys/socket.h',
+    'build/config/gtos/include/netinet/in.h': '../../../include/netinet/in.h',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/gtos.rs': 'rust/gtos_os_ffi.rs',
     'v8/src/base/platform/gtos-native-api/abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/abi.h',
     'v8/src/base/platform/gtos-native-api/clock_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/clock_abi.h',
@@ -258,6 +282,17 @@ ADDITIONS = {
 
 # These provider bytes are pinned by the BoringSSL and PartitionAlloc source locks.
 ADDITION_SHA256 = {
+    'build/config/gtos/include/llvm-libc-macros/stdint-macros.h': '2de52e163a2bf0251a5ebde3777dfa7b4cc39a3baa94b9830f4bef81b7a53f77',
+    'build/config/gtos/include/llvm-libc-types/socklen_t.h': 'b690e8848e4ef3bcd8e1428adee44014b33eac47992f07d22d62f7dd3eb5c162',
+    'build/config/gtos/include/llvm-libc-types/sa_family_t.h': 'e4af7bd87fd16b03bb98c80da78efe99660ff937867594e54b883797d5911ecf',
+    'build/config/gtos/include/llvm-libc-types/in_addr_t.h': '7e80c984d352ef90ffb49564b9a2a77393ee13591f96273ecd3f7c7e6fffc77a',
+    'build/config/gtos/include/llvm-libc-types/in_port_t.h': 'fce4063553570a77c0f99dae2baada9128e975a2284248ed7bdaf655a6b3e5ee',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr.h': '0c4099661ac5943b18eef5b75f12264c5c7cd04d37262aa3e4a5d5484d5a779e',
+    'build/config/gtos/include/llvm-libc-types/struct_in_addr.h': 'ceffd28e45fef6d3ae5eeb5eb49eb0a56a9980f27d5702d214d04d1aaa442a22',
+    'build/config/gtos/include/llvm-libc-types/struct_in6_addr.h': '0ebc3ed093ee5bb490f92d4df694f7e12e7807d57aa3cd58893618178bb04a53',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr_in.h': '965edf357542ea39f0885692038c2da4a308c99a7bd5cf977c385a0d62bf8cda',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr_in6.h': '5377a9cbe49b2ad82b38b816ead821d5f68a3208acdf39bd650db70f59fddfea',
+    'build/config/gtos/include/llvm-libc-types/struct_sockaddr_storage.h': '053f8bd884efecfbc555e21e9d1fb75b0a7bf8b6ea384c446da04ece5e6f3558',
     'third_party/boringssl/src/crypto/thread_gtos.cc': '38b3827787f1c29d32b072c1e64fb59c8f16e19397367231276a7ceddcb14099',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '4b3a71a0ea7dd3f1c3215b889a0e727633a72db70bb553febe61a05c34dd7743',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '24e11c6c201c1e81362da557ca2184f0ec3ae4f81479ba7ad497e351460c1cda',

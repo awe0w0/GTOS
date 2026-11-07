@@ -1,0 +1,35 @@
+--- a/ui/gfx/gpu_fence_handle.h
++++ b/ui/gfx/gpu_fence_handle.h
+@@ -23,6 +23,23 @@
+ 
+ namespace gfx {
+ 
++#if BUILDFLAG(IS_GTOS)
++
++// GTOS software rendering can carry an empty fence. There is no native
++// synchronization handle to adopt, release, or serialize.
++struct COMPONENT_EXPORT(GFX) GpuFenceHandle {
++  GpuFenceHandle() = default;
++  GpuFenceHandle(GpuFenceHandle&&) = default;
++  GpuFenceHandle& operator=(GpuFenceHandle&&) = default;
++
++  bool is_null() const { return true; }
++  GpuFenceHandle Clone() const { return {}; }
++  void Reset() {}
++  static uint32_t GetAndClearNumberOfClones() { return 0; }
++};
++
++#else
++
+ // TODO(crbug.com/40728014): Make this a class instead of struct.
+ struct COMPONENT_EXPORT(GFX) GpuFenceHandle {
+ #if BUILDFLAG(IS_POSIX)
+@@ -89,6 +106,8 @@ struct COMPONENT_EXPORT(GFX) GpuFenceHandle {
+   scoped_refptr<RefCountedScopedFence> smart_fence_;
+ };
+ 
++#endif  // BUILDFLAG(IS_GTOS)
++
+ }  // namespace gfx
+ 
+ #endif  // UI_GFX_GPU_FENCE_HANDLE_H_

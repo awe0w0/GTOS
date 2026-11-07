@@ -1,0 +1,19 @@
+--- a/net/base/ip_address.h
++++ b/net/base/ip_address.h
+@@ -71,8 +71,14 @@ class NET_EXPORT IPAddressBytes {
+   constexpr iterator begin() { return bytes_.begin(); }
+ 
+   // Returns an iterator past the last element.
+-  constexpr const_iterator end() const { return bytes_.begin() + size_; }
+-  constexpr iterator end() { return bytes_.begin() + size_; }
++  constexpr const_iterator end() const {
++    // SAFETY: span() checks that the logical size fits in the backing array.
++    return UNSAFE_BUFFERS(bytes_.begin() + span().size());
++  }
++  constexpr iterator end() {
++    // SAFETY: span() checks that the logical size fits in the backing array.
++    return UNSAFE_BUFFERS(bytes_.begin() + span().size());
++  }
+ 
+   // Returns the address as a span.
+   constexpr base::span<const uint8_t> span() const {

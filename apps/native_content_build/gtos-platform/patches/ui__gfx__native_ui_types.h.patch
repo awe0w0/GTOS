@@ -1,0 +1,12 @@
+--- a/ui/gfx/native_ui_types.h
++++ b/ui/gfx/native_ui_types.h
+@@ -232,7 +232,8 @@ inline constexpr AcceleratedWidget kNullAcceleratedWidget = 0;
+ #elif BUILDFLAG(IS_ANDROID)
+ using AcceleratedWidget = ANativeWindow*;
+ constexpr AcceleratedWidget kNullAcceleratedWidget = nullptr;
+-#elif BUILDFLAG(IS_OZONE)
++#elif BUILDFLAG(IS_OZONE) || BUILDFLAG(IS_GTOS)
++// GTOS native window IDs are positive 32-bit handles.
+ using AcceleratedWidget = uint32_t;
+ inline constexpr AcceleratedWidget kNullAcceleratedWidget = 0;
+ #else
