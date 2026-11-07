@@ -1,0 +1,13 @@
+diff --git a/third_party/boringssl/BUILD.gn b/third_party/boringssl/BUILD.gn
+--- a/third_party/boringssl/BUILD.gn
++++ b/third_party/boringssl/BUILD.gn
+@@ -160,6 +160,9 @@ if (is_msan) {
+ 
+ component("boringssl") {
+   sources = rebase_path(all_sources, ".", "src")
++  if (is_gtos) {
++    sources += [ "src/crypto/thread_gtos.cc" ]
++  }
+   public = rebase_path(all_headers, ".", "src")
+   friend = [ ":*" ]
+   deps = [ "//third_party/boringssl/src/third_party/fiat:fiat_license" ]

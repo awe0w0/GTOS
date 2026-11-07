@@ -29,6 +29,13 @@ def private_file(view,rel):
     return path
 
 
+def verify_layout(view, directories):
+    for rel in directories:
+        path = view / relative(rel)
+        if not path.is_dir() or path.resolve() != path:
+            raise ValueError('workspace directory identity drift: ' + rel)
+
+
 def snapshot(view,destination,workspace=None,tools=()):
     view = view.resolve()
     workspace = (workspace or view).resolve()
@@ -42,6 +49,8 @@ def snapshot(view,destination,workspace=None,tools=()):
     if destination.exists() or destination.is_symlink():
         raise FileExistsError('snapshot already exists: '+str(destination))
     platform = json.loads((view/'gtos-platform.json').read_text())
+    directories = platform.get('real_directories', [])
+    verify_layout(view, directories)
     composed_path = view.parent/('composed-'+view.name+'.json')
     composed = json.loads(composed_path.read_text())
     entries = {item['path']:dict(item) for item in composed['applied']}
@@ -76,6 +85,8 @@ def snapshot(view,destination,workspace=None,tools=()):
         (destination/name).chmod(0o444)
     record = {'workspace':str(workspace),'source_view':str(view),'files':files,
               'scope':'materialized GTOS overlays and pinned host tools; shared origins stay read-only'}
+    if directories:
+        record['real_directories'] = directories
     with (destination/'source-record.json').open('x') as handle:
         json.dump(record,handle,indent=2)
         handle.write('\n')
@@ -91,6 +102,7 @@ def _verify_files(view,record):
     view = view.resolve()
     if candidate.under_shared(view) or str(view)!=record['workspace']:
         raise ValueError('source record names another workspace')
+    verify_layout(view, record.get('real_directories', []))
     seen = set()
     for entry in record['files']:
         rel = entry['path']
@@ -128,6 +140,13 @@ def apply_snapshot(view,previous,following):
         raise ValueError('source removal/duplicate requires a fresh workspace')
     if {key:item for key,item in old_files.items() if item['tool']} != {key:item for key,item in new_files.items() if item['tool']}:
         raise ValueError('host tool changes require a fresh workspace')
+    old_dirs = set(old.get('real_directories', []))
+    new_dirs = set(new.get('real_directories', []))
+    if len(new_dirs) != len(new.get('real_directories', [])) or not old_dirs <= new_dirs:
+        raise ValueError('source directory removal/duplicate requires a fresh workspace')
+    for rel in new_dirs - old_dirs:
+        if not (view / relative(rel)).is_dir():
+            raise ValueError('new source directory is missing: ' + rel)
     for rel,entry in new_files.items():
         relative(rel)
         if entry['tool']:
@@ -148,6 +167,8 @@ def apply_snapshot(view,previous,following):
     if receipt.exists() or receipt.is_symlink():
         raise FileExistsError('source version receipt already exists')
     versions.mkdir(parents=True,exist_ok=True)
+    for rel in sorted(new_dirs - old_dirs, key=lambda path: (path.count('/'), path)):
+        candidate.materialize_parents(view, rel + '/.gtos-layout')
     changed = []
     for rel,entry in new_files.items():
         if entry['tool']:

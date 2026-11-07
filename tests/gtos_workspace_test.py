@@ -110,6 +110,32 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual((original/'source.rs').read_text(),'origin\n')
         w.verify(view,record)
 
+    def test_relative_include_directories_survive_snapshot_activation(self):
+        view = self.view('layout-view')
+        origin = args.out/'layout-origin'
+        (origin/'nested').mkdir(parents=True)
+        (origin/'source.rs').write_text('shared\n')
+        (view/'sub/nested').symlink_to(origin/'nested', target_is_directory=True)
+        through_parent = view/'sub/nested/../source.rs'
+        self.assertEqual(through_parent.read_text(), 'shared\n')
+        before,_ = self.capture(view,'layout-old')
+        desired = self.view('layout-desired','private\n')
+        (desired/'sub/nested').mkdir()
+        receipt = desired/'gtos-platform.json'
+        data = json.loads(receipt.read_text())
+        data['real_directories'] = ['sub','sub/nested']
+        receipt.write_text(json.dumps(data))
+        following,record = self.capture(desired,'layout-new',view)
+        self.assertEqual(w.apply_snapshot(view,before,following), ['sub/source.rs'])
+        self.assertFalse((view/'sub/nested').is_symlink())
+        self.assertEqual(through_parent.read_text(), 'private\n')
+        self.assertEqual((origin/'source.rs').read_text(), 'shared\n')
+        w.verify(view,record)
+        (view/'sub/nested').rmdir()
+        (view/'sub/nested').symlink_to(origin/'nested', target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'directory identity drift'):
+            w.verify(view,record)
+
     def test_archive_inside_source_and_parent_traversal_are_refused(self):
         view = self.view('escape-view')
         with self.assertRaisesRegex(ValueError,'outside'):

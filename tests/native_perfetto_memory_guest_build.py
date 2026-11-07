@@ -12,7 +12,7 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition'],
+parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -29,6 +29,8 @@ component = {
     'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 2),
     'partition': ('native_memory_record', None, 'partition_pages.cpp',
                   'native_partition_pages_kernel.cpp', 'PartitionPagesUnusedBaseline', 2),
+    'boringssl': ('native_memory_record', None, 'boringssl.cpp',
+                  'native_content_boringssl_kernel.cpp', 'ContentBoringSslUnusedBaseline', 3),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -101,6 +103,20 @@ if args.component == 'partition':
     flags += ['-std=c++23', '-I' + str(args.view),
               '-I' + str(args.view / partition), '-I' + str(args.generated / partition),
               '-I' + str(v8), '-I' + str(clock), '-I' + str(strings)]
+if args.component == 'boringssl':
+    bssl = args.view / 'third_party/boringssl/src'
+    md5_probe = repo / 'apps/native_boringssl/probe-md5'
+    bssl_include = '-I' + str(bssl / 'include')
+    flags += ['-std=c++23', '-DBORINGSSL_IMPLEMENTATION', '-DOPENSSL_SMALL',
+              bssl_include, '-I' + str(args.view), '-I' + str(md5_probe)]
+    asm = bssl / 'gen/crypto/md5-586-linux.S'
+    asm_obj = args.out / 'md5-586-linux.o'
+    bind(asm)
+    run('assemble-md5', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf',
+                         '-nostdinc', '-D__GTOS__=1', bssl_include,
+                         '-MD', '-MF', str(asm_obj) + '.d', '-c', asm, '-o', asm_obj])
+    dependencies(asm_obj)
+    assert ' T md5_block_asm_data_order' in run('md5-asm-symbols', ['/usr/bin/nm', asm_obj])
 layout_source = repo / 'apps/native_vm_probe/linker.ld'
 bind(layout_source)
 layout = args.out / 'module.ld'
@@ -142,6 +158,14 @@ for optimization in (0, 2):
                            ('heap', runtime / 'heap.cc'),
                            ('operators', runtime / 'operators.cc'),
                            ('strchr', strings / 'src/string/strchr.cpp')]
+    if args.component == 'boringssl':
+        runtime = repo / 'apps/native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime'
+        native_sources += [('md5-adapter', md5_probe / 'adapter.cc'),
+                           ('md5', bssl / 'crypto/md5/md5.cc'),
+                           ('thread-gtos', bssl / 'crypto/thread_gtos.cc'),
+                           ('assert', product / 'runtime/assert.cc'),
+                           ('abort', runtime / 'abort.cc'),
+                           ('heap', runtime / 'heap.cc')]
     for name, source in native_sources:
         bind(source)
         output = directory / (name + '.o')
@@ -163,8 +187,8 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
-        linked = image.with_suffix('.unstripped.elf') if args.component == 'partition' else image
-        extra = []
+        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl') else image
+        extra = [asm_obj] if args.component == 'boringssl' else []
         if cpu or args.component in ('wait', 'partition'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
@@ -237,6 +261,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-prefix = 'CONTENT_' if args.component in ('exit', 'partition') else 'PERFETTO_'
+prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

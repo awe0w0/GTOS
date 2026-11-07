@@ -3,6 +3,7 @@
 import argparse
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/boringssl/BUILD.gn': '63efa6ff4bc649e7b4cf161a72ac747719ff697a6ae933742efb82cbc06bc3f5',
+    'third_party/boringssl/src/crypto/internal.h': '54cd27bea4b886a6844d5df6964eece3cd0c965201df965fd9850b89940ae1bf',
     'third_party/rust/chromium_crates_io/vendor/serde_core-v1/src/crate_root.rs': '0fa71194671383f30941480cd7de9b1d008ace0d05c3d1cf3c317ed5c9639f40',
     'third_party/rust/chromium_crates_io/vendor/serde-v1/src/core/crate_root.rs': '0fa71194671383f30941480cd7de9b1d008ace0d05c3d1cf3c317ed5c9639f40',
     'third_party/rust/serde_core/v1/BUILD.gn': '132bdf871494a41231173f20e582b35e5533e2a0f70c7e06c1c0e18bda2cd5b3',
@@ -122,6 +125,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/boringssl/src/crypto/thread_gtos.cc': '../../native_boringssl/overlay/third_party/boringssl/src/crypto/thread_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/rand_util_gtos.cc': 'partition_alloc/rand_util_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/time/time_now_gtos.cc': 'partition_alloc/time_now_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/page_allocator_internals_gtos.h': 'partition_alloc/page_allocator_internals_gtos.h',
@@ -157,8 +161,9 @@ ADDITIONS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs': 'rust/futex.rs',
 }
 
-# These provider bytes are pinned by native_partition_platform/source-lock.json.
+# These provider bytes are pinned by the BoringSSL and PartitionAlloc source locks.
 ADDITION_SHA256 = {
+    'third_party/boringssl/src/crypto/thread_gtos.cc': '38b3827787f1c29d32b072c1e64fb59c8f16e19397367231276a7ceddcb14099',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '4b3a71a0ea7dd3f1c3215b889a0e727633a72db70bb553febe61a05c34dd7743',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '24e11c6c201c1e81362da557ca2184f0ec3ae4f81479ba7ad497e351460c1cda',
     'tools/gtos_native_sdk/native-services.h': '2f3c8b2b534cedc98287141b98c74567917b4d57814c49f6672e914689ded6b8',
@@ -169,6 +174,12 @@ ADDITION_SHA256 = {
 # and GN arguments agree on the source root. No dependency check is relaxed.
 MATERIALIZED = {
     'tools/typescript/ts_library.py': '65386df09493d3a9cf7201321df9930b66c368459d54378afc917b2c24ac788b',
+}
+
+# BoringSSL traverses sibling directories with quoted relative includes.
+# A linked directory can carry a subsequent ".." back into the shared tree.
+RELATIVE_INCLUDE_TREES = {
+    'third_party/boringssl/src/crypto/internal.h': 'third_party/boringssl/src',
 }
 
 
@@ -206,6 +217,21 @@ def apply(view):
         patch = HERE / 'patches' / candidate.patch_name(rel)
         subprocess.run(['/usr/bin/patch', '--dry-run', '--batch', '--fuzz=0',
                         '--input', str(patch), str((view / rel).resolve())], check=True)
+    real_directories = []
+    for header, root in RELATIVE_INCLUDE_TREES.items():
+        if header not in INPUTS:
+            continue
+        origin = (view / root).resolve()
+        for current, children, _ in os.walk(origin):
+            current = Path(current)
+            children[:] = sorted(name for name in children if not name.startswith('.'))
+            if any((current / name).is_symlink() for name in children):
+                raise SystemExit('relative include tree contains a directory link: ' + str(current))
+            rel = (Path(root) / current.relative_to(origin)).as_posix()
+            parent = private_target(view, rel + '/.gtos-layout').parent
+            if parent.resolve() != parent:
+                raise SystemExit('relative include tree escaped the view: ' + rel)
+            real_directories.append(rel)
     applied = []
     for rel, expected in MATERIALIZED.items():
         target = private_target(view, rel)
@@ -237,7 +263,8 @@ def apply(view):
             raise SystemExit('qualified addition changed during copy: ' + rel)
         added.append({'path': rel, 'source': source, 'sha256': digest})
     with receipt.open('x') as handle:
-        json.dump({'files': applied, 'additions': added}, handle, indent=2)
+        json.dump({'files': applied, 'additions': added,
+                   'real_directories': real_directories}, handle, indent=2)
         handle.write('\n')
     print(json.dumps({'view': str(view), 'applied': applied, 'additions': added}, indent=2))
 

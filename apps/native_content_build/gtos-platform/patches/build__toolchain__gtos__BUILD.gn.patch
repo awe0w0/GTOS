@@ -1,38 +1,54 @@
 --- a/build/toolchain/gtos/BUILD.gn
 +++ b/build/toolchain/gtos/BUILD.gn
-@@ -22,21 +22,23 @@ template("gtos_freestanding_toolchain") {
+@@ -22,26 +22,30 @@
      _common = "--target=$_triple -ffreestanding -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-mmx -msse2 -mfpmath=sse -mno-sse3 -mno-ssse3 -mno-sse4 -mno-avx -nostdinc"
  
      tool("cc") {
--      depfile = "{{output}}.d"
 +      output = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 +      depfile = "$output.d"
-       depsformat = "gcc"
--      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      depsformat = "gcc"
 +      # SDK headers are system includes, but their changes must invalidate objects.
 +      # -MMD would omit them from both Ninja's dependency log and the evidence.
 +      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MD -MF $depfile -c {{source}} -o $output"
-       description = "GTOS CC {{source}}"
--      outputs =
--          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
++      description = "GTOS CC {{source}}"
 +      outputs = [ output ]
-     }
- 
-     tool("cxx") {
--      depfile = "{{output}}.d"
++    }
++
++    tool("cxx") {
 +      output = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 +      depfile = "$output.d"
-       depsformat = "gcc"
--      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
++      depsformat = "gcc"
 +      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MD -MF $depfile -c {{source}} -o $output"
-       description = "GTOS CXX {{source}}"
++      description = "GTOS CXX {{source}}"
++      outputs = [ output ]
++    }
++
++    tool("asm") {
+       depfile = "{{output}}.d"
+       depsformat = "gcc"
+-      command = "$_clang $_common {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
+-      description = "GTOS CC {{source}}"
 -      outputs =
 -          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
-+      outputs = [ output ]
-     }
- 
-     tool("asm") {
-@@ -98,14 +100,15 @@ template("gtos_freestanding_toolchain") {
+-    }
+-
+-    tool("cxx") {
+-      depfile = "{{output}}.d"
+-      depsformat = "gcc"
+-      command = "$_clang -x c++ $_common -nostdinc++ -fno-exceptions -fno-rtti {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -MMD -MF {{output}}.d -c {{source}} -o {{output}}"
+-      description = "GTOS CXX {{source}}"
+-      outputs =
+-          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+-    }
+-
+-    tool("asm") {
+       command =
+-          "$_clang --target=$_triple {{asmflags}} -c {{source}} -o {{output}}"
++          "$_clang --target=$_triple -nostdinc {{defines}} {{include_dirs}} {{asmflags}} -MD -MF {{output}}.d -c {{source}} -o {{output}}"
+       description = "GTOS ASM {{source}}"
+       outputs =
+           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+@@ -98,14 +102,15 @@
        command = "cp -af {{source}} {{output}}"
        description = "GTOS COPY {{source}}"
      }
