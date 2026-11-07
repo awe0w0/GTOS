@@ -54,6 +54,7 @@ source = '''#include <mutex>
 #include <condition_variable>
 #include <inttypes.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
 static_assert(sizeof(std::__libcpp_mutex_t) == 8);
@@ -62,6 +63,7 @@ static_assert(sizeof(std::__libcpp_thread_t) == 4);
 static_assert(sizeof(std::__libcpp_tls_key) == 4);
 static_assert(sizeof(uid_t) == 4 && sizeof(mode_t) == 4);
 static_assert(sizeof(void*) == 4);
+static_assert(sizeof(timeval) == 16 && __builtin_offsetof(timeval, tv_usec) == 8);
 void UseNativeMutex(std::mutex& mutex) { mutex.lock(); mutex.unlock(); }
 const char* NativeFormat() { return "%" PRId64 " %" PRIuPTR; }
 '''
@@ -69,6 +71,8 @@ cxx = [*flags, '-x', 'c++', '-std=c++23', '-fno-exceptions', '-fno-rtti']
 compile_case('native-cxx', source, cxx)
 compile_case('wrong-pointer-width', '#include <__external_threading>\n', [*cxx, '--target=x86_64-unknown-none-elf'],
              False, 'native GTOS IA32 ABI')
+compile_case('timeval-host-refusal', '#include <sys/time.h>\n',
+             [*cxx, '-D__linux__=1'], False, 'native GTOS IA32 ABI')
 compile_case('conflicting-host-os', '#include <__external_threading>\n', [*cxx, '-D__linux__=1'],
              False, 'native GTOS IA32 ABI')
 compile_case('real-layout-error', source.replace('sizeof(std::__libcpp_mutex_t) == 8',
@@ -76,8 +80,10 @@ compile_case('real-layout-error', source.replace('sizeof(std::__libcpp_mutex_t) 
              cxx, False, 'static assertion failed')
 compile_case('native-c', '''#include <inttypes.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <fcntl.h>
 _Static_assert(sizeof(uid_t) == 4 && sizeof(mode_t) == 4, "scalar layout");
+_Static_assert(sizeof(struct timeval) == 16 && (suseconds_t)-1 < 0, "timeval layout");
 _Static_assert(sizeof(PRId64) == 4 && sizeof(PRIuPTR) == 2, "native formats");
 const char* format = "%" PRId64 " %" PRIuPTR;
 ''', flags, suffix='.c')

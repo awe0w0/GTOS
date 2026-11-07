@@ -686,3 +686,21 @@ and byte-identical copy controls. `ninja-n72` regenerates the actual GN graph
 and builds both identity providers, platform_thread and stack_trace for IA32.
 The historical native provider qualification and this integration compile are
 separate records.
+
+The formal Abseil base graph uses the native process-info service for CPU and
+thread identity, the upstream C++ TLS identity mode, and a native scheduler
+yield for spinlock polling. It selects the steady-clock implementation of
+CycleClock. The demangler follows Abseil's existing fallback to the mangled
+name on this SDK. The private sys/time.h exposes the pinned LLVM timeval
+representation used by Abseil's time conversions.
+
+`ninja-n74` builds seven native base objects and identifies the downstream
+sampler's missing timeval. `ninja-n75` completes the eight-object formal
+target with the new SDK header. `sdk-test-stime01` passes ten C and C++
+compiler contracts, including the native timeval layout and host refusal.
+Two guarded host stages `abseil-identity-build-b01` and
+`abseil-identity-run-r01` run the actual CPP11 identity code at O0 and O2.
+Two host threads overlap in each of three rounds and each thread's identity
+is reclaimed exactly once. A duplicate registration triggers SIGABRT in
+both builds. The native service calls were compiled for IA32. Their guest
+execution and Abseil low-level allocation remain separate work.

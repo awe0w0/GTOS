@@ -1,0 +1,12 @@
+--- a/third_party/abseil-cpp/absl/base/config.h
++++ b/third_party/abseil-cpp/absl/base/config.h
+@@ -689,6 +689,9 @@
+ #error ABSL_INTERNAL_HAS_CXA_DEMANGLE cannot be directly set
+ #elif defined(OS_ANDROID) && (defined(__i386__) || defined(__x86_64__))
+ #undef ABSL_INTERNAL_HAS_CXA_DEMANGLE
++#elif defined(__GTOS__) && defined(__i386__)
++// The native SDK does not yet provide an Itanium ABI demangler.
++#undef ABSL_INTERNAL_HAS_CXA_DEMANGLE
+ #elif defined(__GNUC__)
+ #define ABSL_INTERNAL_HAS_CXA_DEMANGLE 1
+ #elif defined(__clang__) && !defined(_MSC_VER)

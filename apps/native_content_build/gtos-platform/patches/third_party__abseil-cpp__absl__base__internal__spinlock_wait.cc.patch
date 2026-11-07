@@ -1,0 +1,13 @@
+--- a/third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc
++++ b/third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc
+@@ -23,7 +23,9 @@
+ 
+ #include "absl/base/config.h"
+ 
+-#if defined(_WIN32)
++#if defined(__GTOS__) && defined(__i386__)
++#include "absl/base/internal/spinlock_gtos.inc"
++#elif defined(_WIN32)
+ #include "absl/base/internal/spinlock_win32.inc"
+ #elif defined(__linux__)
+ #include "absl/base/internal/spinlock_linux.inc"

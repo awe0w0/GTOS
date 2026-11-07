@@ -13,6 +13,13 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/abseil-cpp/absl/base/config.h': 'd2cdcd88b00c6a64dd7a5a4bd1e0560bede511991b3126865f6bb863e7249391',
+    'third_party/abseil-cpp/absl/base/internal/thread_identity.h': 'd200359ea92f63f53e7210de08d9cc53dd69769fbe8323abaff8c1a8f24e2d84',
+    'third_party/abseil-cpp/absl/base/internal/spinlock_wait.cc': 'f8bb5948992bf0043e8b0a33aaf9b7e12231c28ad7790f33e7854927b5cd0188',
+    'third_party/abseil-cpp/absl/base/internal/sysinfo.h': '004b91b692009ba4740f31ff5568c367d479b84637be92724a8baa72d95dec44',
+    'third_party/abseil-cpp/absl/base/internal/sysinfo.cc': 'a6c067268aea7a5cf166c9ac0a6500674701f107d8a2293d7a86011ea4dee36d',
+    'third_party/abseil-cpp/absl/base/internal/unscaledcycleclock_config.h': '8f779e52b7b4839ea707d447866a87f67a3aa840c91aab1499cbf88679a10814',
+    'third_party/abseil-cpp/absl/base/BUILD.gn': 'f6c580632d447ed1a46ce3026e0182604381d5fe1c47d3b3a49ec8e55b04f114',
     'base/allocator/partition_allocator/src/partition_alloc/BUILD.gn': '72691b962697b3e958162707408a59bf426031159123a7c9421a7a63263446be',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h': '64ac91919d6a049f11b5ef5bb5063b0cd4a9a4fbf70794d45eb83b3a3787e49f',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h': '45e4fbeec450b72ea0633e63e7f17b8feaab6d73f574583d7f451915ce71b97e',
@@ -84,6 +91,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/abseil-cpp/absl/base/internal/spinlock_gtos.inc': 'abseil/spinlock_gtos.inc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc',
     'tools/gtos_native_sdk/native-services.h': '../../native_partition_platform/overlay/tools/gtos_native_sdk/native-services.h',
@@ -100,6 +108,7 @@ ADDITIONS = {
     'third_party/perfetto/src/base/paged_memory_gtos.cc': 'perfetto/paged_memory_gtos.cc',
     'build/config/gtos/include/process/vm_abi.h': 'sdk/process/vm_abi.h',
     'build/config/gtos/include/time.h': 'sdk/time.h',
+    'build/config/gtos/include/sys/time.h': 'sdk/sys/time.h',
     'third_party/perfetto/src/base/ctrl_c_handler_gtos.cc': 'perfetto/ctrl_c_handler_gtos.cc',
     'build/config/gtos/include/__external_threading': 'sdk/__external_threading',
     'build/config/gtos/include/inttypes.h': 'sdk/inttypes.h',

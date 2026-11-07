@@ -1,0 +1,12 @@
+--- a/third_party/abseil-cpp/absl/base/BUILD.gn
++++ b/third_party/abseil-cpp/absl/base/BUILD.gn
+@@ -92,6 +92,9 @@
+     "internal/spinlock_wait.cc",
+     "internal/spinlock_win32.inc",
+   ]
++  if (defined(is_gtos) && is_gtos && current_cpu == "x86") {
++    sources += [ "internal/spinlock_gtos.inc" ]
++  }
+   public = [ "internal/spinlock_wait.h" ]
+   visibility = [ ":*" ]
+   deps = [
