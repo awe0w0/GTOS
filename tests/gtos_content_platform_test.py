@@ -309,6 +309,24 @@ class PrivatePatchTest(unittest.TestCase):
         receipt = json.loads((root / 'gtos-platform.json').read_text())
         self.assertEqual(receipt['additions'][0]['sha256'], self.module.candidate.digest(source))
 
+    def test_qualified_additions_match_the_provider_lock(self):
+        root = args.out / 'qualified-additions'
+        root.mkdir()
+        (root / '.gn').write_text('private view\n')
+        pins = self.module.ADDITION_SHA256
+        self.assertTrue(pins)
+        additions = {rel: self.module.ADDITIONS[rel] for rel in pins}
+        with mock.patch.dict(self.module.INPUTS, {}, clear=True), \
+                mock.patch.dict(self.module.ADDITIONS, additions, clear=True):
+            first = next(iter(pins))
+            with mock.patch.dict(pins, {first: '0' * 64}):
+                with self.assertRaisesRegex(SystemExit, 'qualified addition changed: ' + first):
+                    self.module.apply(root)
+            self.assertFalse(any((root / rel).exists() for rel in additions))
+            self.assertFalse((root / 'gtos-platform.json').exists())
+            self.module.apply(root)
+        for rel, expected in pins.items():
+            self.assertEqual(self.module.candidate.digest(root / rel), expected)
     def test_existing_addition_refuses_before_patching_any_input(self):
         for kind in ['file', 'dangling-link']:
             root = args.out / ('existing-addition-' + kind)

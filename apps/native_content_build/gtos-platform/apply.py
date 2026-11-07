@@ -13,6 +13,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/allocator/partition_allocator/src/partition_alloc/BUILD.gn': '72691b962697b3e958162707408a59bf426031159123a7c9421a7a63263446be',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h': '64ac91919d6a049f11b5ef5bb5063b0cd4a9a4fbf70794d45eb83b3a3787e49f',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h': '45e4fbeec450b72ea0633e63e7f17b8feaab6d73f574583d7f451915ce71b97e',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h': 'a8a30eda1ad6fcf995ede35d5355d9b111aacd1b138814dc099fd1d53c89ea95',
     'build/rust/allocator/BUILD.gn': 'ba4af4728989a16c5080476537ee4da67e92d1ab301d53b0e811fa1c5a21e094',
     'build/rust/allocator/lib.rs': '03241a012540b8856a5de5eef365aa13cf28e0630730df3b3323ef88184e715a',
     'base/allocator/partition_allocator/src/partition_alloc/build_config.h': 'a0bc70bbb196d756c14b24d9da928301273a09dddcd84f2879cec475c5675811',
@@ -80,6 +84,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc',
+    'tools/gtos_native_sdk/native-services.h': '../../native_partition_platform/overlay/tools/gtos_native_sdk/native-services.h',
     'build/config/gtos/include/process/abi.h': 'sdk/process/abi.h',
     'third_party/perfetto/include/perfetto/ext/base/native_wait.h': 'perfetto/native_wait.h',
     'third_party/perfetto/src/base/native_wait_gtos.cc': 'perfetto/native_wait_gtos.cc',
@@ -104,6 +111,13 @@ ADDITIONS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/thread_local/key/gtos.rs': 'rust/tls.rs',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/random/gtos.rs': 'rust/random.rs',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs': 'rust/futex.rs',
+}
+
+# These provider bytes are pinned by native_partition_platform/source-lock.json.
+ADDITION_SHA256 = {
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '4b3a71a0ea7dd3f1c3215b889a0e727633a72db70bb553febe61a05c34dd7743',
+    'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '24e11c6c201c1e81362da557ca2184f0ec3ae4f81479ba7ad497e351460c1cda',
+    'tools/gtos_native_sdk/native-services.h': '2f3c8b2b534cedc98287141b98c74567917b4d57814c49f6672e914689ded6b8',
 }
 
 # Python resolves a symlinked entry script before populating sys.path[0]. Keep
@@ -138,8 +152,12 @@ def apply(view):
         target = view / rel
         if target.exists() or target.is_symlink():
             raise SystemExit('refusing to overwrite platform addition: ' + rel)
-        if not (HERE / source).is_file():
+        path = HERE / source
+        if not path.is_file():
             raise SystemExit('platform addition is missing: ' + source)
+        expected = ADDITION_SHA256.get(rel)
+        if expected is not None and candidate.digest(path) != expected:
+            raise SystemExit('qualified addition changed: ' + rel)
     for rel in INPUTS:
         patch = HERE / 'patches' / candidate.patch_name(rel)
         subprocess.run(['/usr/bin/patch', '--dry-run', '--batch', '--fuzz=0',
@@ -169,7 +187,11 @@ def apply(view):
     for rel, source in ADDITIONS.items():
         target = private_target(view, rel)
         shutil.copyfile(HERE / source, target)
-        added.append({'path': rel, 'source': source, 'sha256': candidate.digest(target)})
+        digest = candidate.digest(target)
+        expected = ADDITION_SHA256.get(rel)
+        if expected is not None and digest != expected:
+            raise SystemExit('qualified addition changed during copy: ' + rel)
+        added.append({'path': rel, 'source': source, 'sha256': digest})
     with receipt.open('x') as handle:
         json.dump({'files': applied, 'additions': added}, handle, indent=2)
         handle.write('\n')

@@ -676,3 +676,13 @@ the actual bindings, rejects a changed pointer signature, and confirms that
 the GTOS standard library still rejects a consumer without opt-in. This
 checks compiler and binding contracts. Allocator linkage and runtime are
 separate Content milestones.
+
+The formal graph now includes the previously qualified PartitionAlloc process
+and thread identity providers from `apps/native_partition_platform`. Their two
+translation units and shared native service header retain their original
+source-lock hashes. The private composer rejects provider drift before copying
+any additions. `unit-ui01` passes 22 platform tests, including the wrong hash
+and byte-identical copy controls. `ninja-n72` regenerates the actual GN graph
+and builds both identity providers, platform_thread and stack_trace for IA32.
+The historical native provider qualification and this integration compile are
+separate records.

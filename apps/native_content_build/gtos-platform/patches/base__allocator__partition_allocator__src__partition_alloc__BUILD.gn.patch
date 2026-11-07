@@ -1,0 +1,16 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/BUILD.gn
++++ b/base/allocator/partition_allocator/src/partition_alloc/BUILD.gn
+@@ -771,6 +771,13 @@
+       ]
+     }
+ 
++    if (defined(is_gtos) && is_gtos && current_cpu == "x86") {
++      sources += [
++        "partition_alloc_base/process/process_handle_gtos.cc",
++        "partition_alloc_base/threading/platform_thread_gtos.cc",
++      ]
++    }
++
+     if (is_posix) {
+       sources += [
+         "partition_alloc_base/debug/stack_trace_posix.cc",

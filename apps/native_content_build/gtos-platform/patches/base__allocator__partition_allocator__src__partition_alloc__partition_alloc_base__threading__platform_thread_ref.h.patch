@@ -1,0 +1,20 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_ref.h
+@@ -17,6 +17,8 @@
+ 
+ #if PA_BUILDFLAG(IS_WIN)
+ #include "partition_alloc/partition_alloc_base/win/windows_types.h"
++#elif PA_BUILDFLAG(IS_GTOS)
++#include <cstdint>
+ #elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
+ #include <pthread.h>
+ #endif
+@@ -35,6 +37,8 @@
+  public:
+ #if PA_BUILDFLAG(IS_WIN)
+   using RefType = DWORD;
++#elif PA_BUILDFLAG(IS_GTOS)
++  using RefType = uint32_t;
+ #elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
+   using RefType = pthread_t;
+ #endif

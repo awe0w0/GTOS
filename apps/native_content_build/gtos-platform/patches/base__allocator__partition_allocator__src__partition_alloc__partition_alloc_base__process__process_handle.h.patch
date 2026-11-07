@@ -1,0 +1,12 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle.h
+@@ -29,6 +29,9 @@
+ #if PA_BUILDFLAG(IS_WIN)
+ typedef DWORD ProcessId;
+ const ProcessId kNullProcessId = 0;
++#elif PA_BUILDFLAG(IS_GTOS)
++typedef uint32_t ProcessId;
++const ProcessId kNullProcessId = 0;
+ #elif PA_BUILDFLAG(IS_FUCHSIA)
+ typedef zx_koid_t ProcessId;
+ const ProcessId kNullProcessId = ZX_KOID_INVALID;

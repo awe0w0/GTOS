@@ -1,0 +1,20 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread.h
+@@ -35,6 +35,8 @@
+ // Used for logging. Always an integer value.
+ #if PA_BUILDFLAG(IS_WIN)
+ typedef DWORD PlatformThreadId;
++#elif PA_BUILDFLAG(IS_GTOS)
++typedef uint32_t PlatformThreadId;
+ #elif PA_BUILDFLAG(IS_FUCHSIA)
+ typedef zx_handle_t PlatformThreadId;
+ #elif PA_BUILDFLAG(IS_APPLE)
+@@ -48,6 +50,8 @@
+  public:
+ #if PA_BUILDFLAG(IS_WIN)
+   typedef void* Handle;
++#elif PA_BUILDFLAG(IS_GTOS)
++  typedef uint32_t Handle;
+ #elif PA_BUILDFLAG(IS_POSIX) || PA_BUILDFLAG(IS_FUCHSIA)
+   typedef pthread_t Handle;
+ #endif
