@@ -58,13 +58,17 @@ run() {
     run_dir=$1
     mkdir -p "$run_dir"
     run_dir=$(realpath "$run_dir")
+    # Verify the whole pair before starting either optimization level.
+    image_o0=$(staged_binary ata-wait-O0) || exit 2
+    image_o2=$(staged_binary ata-wait-O2) || exit 2
+    verify_publish_record "$image_o0" || exit 2
+    verify_publish_record "$image_o2" || exit 2
+    set -- "$image_o0" "$image_o2"
     status=0
     for optimization in 0 2; do
-        # The image is resolved in its own statement: a substitution inside a command's arguments does not propagate its exit
-        # status, so a missing record would otherwise look like a program that failed.
-        image=$(staged_binary "ata-wait-O$optimization") || exit 2
         this_status=0
-        "$image" > "$run_dir/run-O$optimization.log" 2>&1 || this_status=$?
+        GTOS_HOST_LAUNCHER= run_published_binary "$1" > "$run_dir/run-O$optimization.log" 2>&1 || this_status=$?
+        shift
         printf 'O%s exit %s\n' "$optimization" "$this_status"
         if [ "$this_status" -ne 0 ]; then
             status=$this_status
