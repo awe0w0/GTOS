@@ -1,0 +1,12 @@
+--- a/base/time/time.h
++++ b/base/time/time.h
+@@ -1184,7 +1184,8 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
+     IOS_CF_ABSOLUTE_TIME_MINUS_KERN_BOOTTIME,
+     MAC_MACH_ABSOLUTE_TIME,
+     WIN_QPC,
+-    WIN_ROLLOVER_PROTECTED_TIME_GET_TIME
++    WIN_ROLLOVER_PROTECTED_TIME_GET_TIME,
++    GTOS_CLOCK_MONOTONIC,
+   };
+ 
+   constexpr TimeTicks() : TimeBase(0) {}

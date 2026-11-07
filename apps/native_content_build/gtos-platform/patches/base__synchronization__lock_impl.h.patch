@@ -1,0 +1,37 @@
+--- a/base/synchronization/lock_impl.h
++++ b/base/synchronization/lock_impl.h
+@@ -20,6 +20,8 @@
+ 
+ #if BUILDFLAG(IS_WIN)
+ #include "base/win/windows_types.h"
++#elif BUILDFLAG(IS_GTOS)
++#include <__external_threading>
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ #include <errno.h>
+ #include <pthread.h>
+@@ -60,6 +62,8 @@ class BASE_EXPORT LockImpl {
+ 
+ #if BUILDFLAG(IS_WIN)
+   using NativeHandle = CHROME_SRWLOCK;
++#elif BUILDFLAG(IS_GTOS)
++  using NativeHandle = std::__libcpp_mutex_t;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   using NativeHandle = pthread_mutex_t;
+ #endif
+@@ -128,6 +132,16 @@ void LockImpl::Unlock() {
+   ::ReleaseSRWLockExclusive(reinterpret_cast<PSRWLOCK>(&native_handle_));
+ }
+ 
++#elif BUILDFLAG(IS_GTOS)
++
++bool LockImpl::Try() {
++  return std::__libcpp_mutex_trylock(&native_handle_);
++}
++
++void LockImpl::Unlock() {
++  CHECK(std::__libcpp_mutex_unlock(&native_handle_) == 0);
++}
++
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ 
+ #if DCHECK_IS_ON()

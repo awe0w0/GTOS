@@ -1,0 +1,37 @@
+--- a/base/files/scoped_file.cc
++++ b/base/files/scoped_file.cc
+@@ -7,7 +7,7 @@
+ #include "base/check.h"
+ #include "build/build_config.h"
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ #include <errno.h>
+ #include <unistd.h>
+ 
+@@ -16,7 +16,7 @@
+ 
+ namespace base::internal {
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ // static
+ void ScopedFDCloseTraits::Free(int fd) {
+@@ -42,9 +42,15 @@ void ScopedFDCloseTraits::Free(int fd) {
+   }
+ #endif
+ 
++#if BUILDFLAG(IS_GTOS)
++  // FileStore retires the handle before flushing. A sync error does not
++  // keep the capability live. Other failures still indicate a bad close.
++  CHECK(ret == 0 || errno == EIO || errno == ENOSPC || errno == EROFS);
++#else
+   PCHECK(0 == ret);
++#endif
+ }
+ 
+-#endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ }  // namespace base::internal

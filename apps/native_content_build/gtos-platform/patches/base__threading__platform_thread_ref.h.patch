@@ -1,0 +1,19 @@
+--- a/base/threading/platform_thread_ref.h
++++ b/base/threading/platform_thread_ref.h
+@@ -10,6 +10,7 @@
+ #ifndef BASE_THREADING_PLATFORM_THREAD_REF_H_
+ #define BASE_THREADING_PLATFORM_THREAD_REF_H_
+ 
++#include <cstdint>
+ #include <iosfwd>
+ 
+ #include "base/base_export.h"
+@@ -35,6 +36,8 @@ class PlatformThreadRef {
+  public:
+ #if BUILDFLAG(IS_WIN)
+   using RefType = DWORD;
++#elif BUILDFLAG(IS_GTOS)
++  using RefType = uint32_t;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   using RefType = pthread_t;
+ #endif

@@ -1,0 +1,110 @@
+--- a/base/command_line.cc
++++ b/base/command_line.cc
+@@ -57,7 +57,7 @@ constexpr auto kSwitchPrefixes = std::to_array<CommandLine::StringViewType>({
+     L"-",
+     L"/",
+ });
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ // Unixes don't use slash as a switch.
+ constexpr auto kSwitchPrefixes = std::to_array<CommandLine::StringViewType>({
+     "--",
+@@ -274,7 +274,7 @@ bool CommandLine::Init(int argc, const char* const* argv) {
+   current_process_commandline_ = new CommandLine(NO_PROGRAM);
+ #if BUILDFLAG(IS_WIN)
+   current_process_commandline_->ParseFromString(::GetCommandLineW());
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   // SAFETY: required from caller.
+   UNSAFE_BUFFERS(current_process_commandline_->InitFromArgv(argc, argv));
+ #else
+@@ -361,7 +361,7 @@ void CommandLine::SetProgram(const FilePath& program) {
+ #endif
+ #if BUILDFLAG(IS_WIN)
+   argv_[0] = StringType(TrimWhitespace(program.value(), TRIM_ALL));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   TrimWhitespaceASCII(program.value(), TRIM_ALL, &argv_[0]);
+ #else
+ #error Unsupported platform
+@@ -382,7 +382,7 @@ std::string CommandLine::GetSwitchValueASCII(
+   StringType value = GetSwitchValueNative(switch_string);
+ #if BUILDFLAG(IS_WIN)
+   if (!IsStringASCII(base::AsStringPiece16(value))) {
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   if (!IsStringASCII(value)) {
+ #endif
+     DLOG(WARNING) << "Value of switch (" << switch_string << ") must be ASCII.";
+@@ -390,7 +390,7 @@ std::string CommandLine::GetSwitchValueASCII(
+   }
+ #if BUILDFLAG(IS_WIN)
+   return WideToUTF8(value);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   return value;
+ #endif
+ }
+@@ -401,7 +401,7 @@ std::string CommandLine::GetSwitchValueUTF8(
+ 
+ #if BUILDFLAG(IS_WIN)
+   const std::string maybe_utf8_value = WideToUTF8(value);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   const std::string maybe_utf8_value = value;
+ #endif
+ 
+@@ -441,7 +441,7 @@ void CommandLine::AppendSwitchNative(std::string_view switch_string,
+ #if BUILDFLAG(IS_WIN)
+   const std::string switch_key = ToLowerASCII(switch_string);
+   StringType combined_switch_string(UTF8ToWide(switch_key));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   std::string_view switch_key = switch_string;
+   StringType combined_switch_string(switch_key);
+ #endif
+@@ -479,7 +479,7 @@ void CommandLine::AppendSwitchUTF8(std::string_view switch_string,
+       << ") is not UTF8.";
+ #if BUILDFLAG(IS_WIN)
+   AppendSwitchNative(switch_string, UTF8ToWide(value_string));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   AppendSwitchNative(switch_string, value_string);
+ #else
+ #error Unsupported platform
+@@ -494,7 +494,7 @@ void CommandLine::RemoveSwitch(std::string_view switch_key_without_prefix) {
+ 
+ #if BUILDFLAG(IS_WIN)
+   StringType switch_key_native = UTF8ToWide(switch_key_without_prefix);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   StringType switch_key_native(switch_key_without_prefix);
+ #endif
+ 
+@@ -546,7 +546,7 @@ void CommandLine::AppendArg(std::string_view value) {
+ #if BUILDFLAG(IS_WIN)
+   DCHECK(IsStringUTF8(value));
+   AppendArgNative(UTF8ToWide(value));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   AppendArgNative(value);
+ #else
+ #error Unsupported platform
+@@ -648,7 +648,7 @@ void CommandLine::AppendSwitchesAndArguments(span<const StringType> argv) {
+   for (StringType arg : argv) {
+ #if BUILDFLAG(IS_WIN)
+     arg = CommandLine::StringType(TrimWhitespace(arg, TRIM_ALL));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+     TrimWhitespaceASCII(arg, TRIM_ALL, &arg);
+ #endif
+ 
+@@ -664,7 +664,7 @@ void CommandLine::AppendSwitchesAndArguments(span<const StringType> argv) {
+       }
+       AppendSwitchNative(WideToUTF8(switch_string),
+                          switch_value.value_or(CommandLine::StringType()));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+       AppendSwitchNative(switch_string,
+                          switch_value.value_or(CommandLine::StringType()));
+ #else

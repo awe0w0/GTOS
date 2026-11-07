@@ -1,0 +1,39 @@
+--- a/base/process/process_handle.cc
++++ b/base/process/process_handle.cc
+@@ -11,6 +11,10 @@
+ #include "base/check.h"
+ #include "build/build_config.h"
+ 
++#if BUILDFLAG(IS_GTOS)
++#include "tools/gtos_native_sdk/native-services.h"
++#endif
++
+ namespace base {
+ 
+ namespace {
+@@ -30,6 +34,25 @@ UniqueProcId GetUniqueIdForProcess() {
+              : UniqueProcId(GetCurrentProcId());
+ }
+ 
++#if BUILDFLAG(IS_GTOS)
++ProcessId GetCurrentProcId() {
++  return static_cast<ProcessId>(gtos::native::CurrentProcessInfo().process_id);
++}
++
++ProcessHandle GetCurrentProcessHandle() {
++  return GetCurrentProcId();
++}
++
++ProcessId GetProcId(ProcessHandle process) {
++  return process;
++}
++
++ProcessId GetParentProcessId(ProcessHandle /*process*/) {
++  // The native process-info ABI exposes only the current process and task.
++  return -1;
++}
++#endif
++
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_AIX)
+ 
+ void InitUniqueIdForProcessInPidNamespace(ProcessId pid_outside_of_namespace) {

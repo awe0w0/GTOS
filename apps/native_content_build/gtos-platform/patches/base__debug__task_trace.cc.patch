@@ -1,0 +1,19 @@
+--- a/base/debug/task_trace.cc
++++ b/base/debug/task_trace.cc
+@@ -8,6 +8,7 @@
+ #include <iostream>
+ #include <sstream>
+ 
++#include "base/containers/span.h"
+ #include "base/pending_task.h"
+ #include "base/task/common/task_annotator.h"
+ #include "build/build_config.h"
+@@ -52,7 +53,7 @@ TaskTrace::TaskTrace() {
+   }
+   std::array<uintptr_t, PendingTask::kTaskBacktraceLength + 1> task_trace;
+   task_trace[0] = current_task->posted_from.program_counter();
+-  std::ranges::copy(current_task->task_backtrace, task_trace.begin() + 1);
++  span(task_trace).subspan<1>().copy_from(current_task->task_backtrace);
+   size_t length = 0;
+   while (length < task_trace.size() && task_trace[length]) {
+     ++length;

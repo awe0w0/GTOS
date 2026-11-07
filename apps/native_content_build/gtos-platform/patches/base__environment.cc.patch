@@ -1,0 +1,39 @@
+--- a/base/environment.cc
++++ b/base/environment.cc
+@@ -19,7 +19,7 @@
+ #include <windows.h>
+ 
+ #include "base/strings/utf_string_conversions.h"
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ #include <stdlib.h>
+ #endif
+ 
+@@ -39,7 +39,7 @@ std::optional<std::string> GetVarImpl(cstring_view variable_name) {
+     return std::nullopt;  // Ignore errors and excessively large values.
+   }
+   return WideToUTF8(std::wstring_view(value.data(), value_length));
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   const char* env_value = getenv(variable_name.c_str());
+   if (!env_value) {
+     return std::nullopt;
+@@ -90,6 +90,9 @@ bool Environment::SetVar(cstring_view variable_name,
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   // On success, zero is returned.
+   return !setenv(variable_name.c_str(), new_value.c_str(), 1);
++#elif BUILDFLAG(IS_GTOS)
++  // The native startup environment is immutable.
++  return false;
+ #endif
+ }
+ 
+@@ -100,6 +103,8 @@ bool Environment::UnSetVar(cstring_view variable_name) {
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   // On success, zero is returned.
+   return !unsetenv(variable_name.c_str());
++#elif BUILDFLAG(IS_GTOS)
++  return false;
+ #endif
+ }
+ 

@@ -12,7 +12,7 @@ parser.add_argument('--view', required=True, type=Path)
 parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
-parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl'],
+parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl', 'base_identity'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -31,6 +31,8 @@ component = {
                   'native_partition_pages_kernel.cpp', 'PartitionPagesUnusedBaseline', 2),
     'boringssl': ('native_memory_record', None, 'boringssl.cpp',
                   'native_content_boringssl_kernel.cpp', 'ContentBoringSslUnusedBaseline', 3),
+    'base_identity': ('native_memory_record', None, 'base_identity.cpp',
+                      'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -94,6 +96,15 @@ if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
+if args.component == 'base_identity':
+    v8 = repo / 'apps/native_v8_integration/overlay'
+    runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
+    partition = Path('base/allocator/partition_allocator/src')
+    flags += ['-std=c++23', '-DOFFICIAL_BUILD', '-DNDEBUG', '-I' + str(args.view), '-I' + str(args.generated),
+              '-I' + str(args.view / partition), '-I' + str(args.generated / partition),
+              '-I' + str(args.view / 'third_party/abseil-cpp'),
+              '-I' + str(args.view / 'third_party/boringssl/src/include'),
+              '-I' + str(v8), '-I' + str(runtime / 'sdk')]
 if args.component == 'partition':
     partition = Path('base/allocator/partition_allocator/src')
     pa = args.view / partition / 'partition_alloc'
@@ -137,6 +148,11 @@ for optimization in (0, 2):
     if args.component == 'exit':
         native_sources.append(('failure-signal', args.view /
                                'third_party/abseil-cpp/absl/debugging/failure_signal_handler.cc'))
+    if args.component == 'base_identity':
+        native_sources += [('base-process', args.view / 'base/process/process_handle.cc'),
+                           ('base-thread', args.view / 'base/threading/platform_thread_gtos.cc'),
+                           ('base-lock', args.view / 'base/synchronization/lock_impl_gtos.cc'),
+                           ('thread-core', runtime / 'thread-core.cc')]
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -262,6 +278,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl') else 'PERFETTO_'
+prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

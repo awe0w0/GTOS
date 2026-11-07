@@ -1,0 +1,14 @@
+--- a/base/process/process_handle.h
++++ b/base/process/process_handle.h
+@@ -40,6 +40,11 @@ typedef zx_handle_t ProcessHandle;
+ typedef zx_koid_t ProcessId;
+ const ProcessHandle kNullProcessHandle = ZX_HANDLE_INVALID;
+ const ProcessId kNullProcessId = ZX_KOID_INVALID;
++#elif BUILDFLAG(IS_GTOS)
++using ProcessHandle = int32_t;
++using ProcessId = int32_t;
++inline constexpr ProcessHandle kNullProcessHandle = 0;
++inline constexpr ProcessId kNullProcessId = 0;
+ #elif BUILDFLAG(IS_POSIX)
+ // On POSIX, our ProcessHandle will just be the PID.
+ typedef pid_t ProcessHandle;

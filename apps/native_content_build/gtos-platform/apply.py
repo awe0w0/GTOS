@@ -14,6 +14,27 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/time/time.h': '3d856f595a15876885d1309e6831fd60e49e66cd2fbd583f1c6ddaac8bce72bf',
+    'base/files/file_path.cc': '3543354e60c0618b5ceca6316b9d180e0c0342f940d8e9664f9d44f852f87e12',
+    'base/environment.h': '24138d1be0637b3764d6ca36b0f5f03a1efddd55cd03fac66c90670ea8803f9d',
+    'base/environment.cc': '4e2a46b4882a7eabbc791f6dda0130d6b5e6c068524e78e85d5b08662165a4d5',
+    'base/files/platform_file.h': 'f3a069e7e394ff2cd6888e031c886823749456dcb81ee74035f72ddbc8b2d64f',
+    'base/files/scoped_file.h': '4df827293317e03713e7350adf0dcefa19d38de24e21654a7f8ad22cf4528a9b',
+    'base/files/scoped_file.cc': '40a8ce3f07aa4a8b1b2cf4f54b925766a0bbe13ec2ea0066368550ef7b06775b',
+    'base/files/file.cc': 'c8f0f4a41efcd427c62d60c7a525d12d82582eb3c30e602bcc35d074b0de0283',
+    'base/debug/task_trace.cc': '64b9cfcd66286c149d6c8be0cea1e0d61324311e1eb642d06948383078b98be0',
+    'base/BUILD.gn': '0b2bf323531fe088b21c5f30d808d4637e2e9bb20787216d2b7d3176c8773994',
+    'base/process/process_handle.h': '1f1b60073b3e6bbb8ae61adb11cdb2c06fd596f017878c0db062131efd43cb04',
+    'base/process/process_handle.cc': '3906c5157d4fb97f7580ab1f1516a003a68bd820d1b4ac58c5e41ff6d77d8fb4',
+    'base/threading/platform_thread_ref.h': '192874921e6a8bae9eaf8f3366df78edbf6f6f118ca6fd11553a7d4dd6fa6856',
+    'base/threading/platform_thread.h': '971058048523875f592ea44c26beafbf91a1eec0a716f60be40fee3325833092',
+    'base/synchronization/lock.h': '6e31288f216b837400847b1ce217dcd8088e97033234ca590bb5615f84b08ac2',
+    'base/synchronization/lock_impl.h': 'e139551d67a0e02ba6bd739849b7b3141de01700f3ab9d3b428e739456711758',
+    'base/strings/string_util.h': '99c7863b952f941cf98f60d6e93d9ea671000ff70b1b4f63fe86c9eb7e156122',
+    'base/strings/string_util_posix.h': 'efb87b972f035030aab5d42b9dea120d88b7649c24726df80ce0bb60a5f4c9ac',
+    'base/command_line.h': '973770ed8317caccc46dd194a5f705c0721a8b6a5fbc31149cc44ab7dc94645d',
+    'base/command_line.cc': '05eb1d1afc5f24dfb1d3c2ee0f709a39f37643f86dd7a9cac3ff2a8d7699bb53',
+    'base/files/file_path.h': 'c8e135db3b184e838d5e7413796d8f5f32aef492ca16e347da0e100783526b0c',
     'third_party/perfetto/src/tracing/core/shared_memory_abi.cc': '3a8ae2e14f8c7c9822b86cdd0b0a570d90187be2dacbcd457e3ce1e703fec258',
     'third_party/perfetto/src/tracing/console_interceptor.cc': 'c2b498443ee4517b8920204418ff0c5e96ec65dccc467b0e68b35b92523fc933',
     'base/logging/rust_logger/lib.rs': '031a4fa7b581969225e57815d577563eec8405fac48759444134c4f214525473',
@@ -141,6 +162,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/time/time_now_gtos.cc': 'base/time_now_gtos.cc',
+    'base/synchronization/lock_impl_gtos.cc': 'base/lock_impl_gtos.cc',
+    'base/threading/platform_thread_gtos.cc': 'base/platform_thread_gtos.cc',
     'third_party/boringssl/src/crypto/thread_gtos.cc': '../../native_boringssl/overlay/third_party/boringssl/src/crypto/thread_gtos.cc',
     'third_party/boringssl/src/crypto/rand/gtos.cc': 'runtime/boringssl_entropy.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/rand_util_gtos.cc': 'partition_alloc/rand_util_gtos.cc',
@@ -190,6 +214,7 @@ ADDITION_SHA256 = {
 # the unchanged TypeScript entry inside the private checkout so its validators
 # and GN arguments agree on the source root. No dependency check is relaxed.
 MATERIALIZED = {
+    'base/threading/platform_thread.cc': 'a55c93de98faebc8fa1faa27ea56c1b576bbe9cb4bb5e6a62ee6d877248e8f1c',
     'tools/typescript/ts_library.py': '65386df09493d3a9cf7201321df9930b66c368459d54378afc917b2c24ac788b',
 }
 
