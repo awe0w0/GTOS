@@ -105,6 +105,8 @@ jobs:
         env:
           CXX: /usr/bin/g++
           CC: /usr/bin/gcc
-        run: /usr/bin/python3 tools/build-native-file-probe.py "$RUNNER_TEMP/gtos-native-files"
+        run: |
+          /usr/bin/python3 tools/build-native-file-probe.py "$RUNNER_TEMP/gtos-native-files-build" --phase build --source-deltas apps/native_files/current-source-deltas.json
+          /usr/bin/python3 tools/build-native-file-probe.py "$RUNNER_TEMP/gtos-native-files" --phase run --artifacts "$RUNNER_TEMP/gtos-native-files-build/artifacts.json"
       - name: Self-review observer rejection and actual service instruction policy
         run: /usr/bin/python3 tools/self-review-native-files.py "$RUNNER_TEMP/gtos-native-files-review" "$RUNNER_TEMP/gtos-native-files"

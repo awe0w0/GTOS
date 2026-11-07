@@ -5,8 +5,15 @@ p=argparse.ArgumentParser();p.add_argument('output',type=pathlib.Path);p.add_arg
 repo=pathlib.Path(__file__).resolve().parents[1];out=a.output.resolve();assert not out.exists();out.mkdir(parents=True)
 spec=importlib.util.spec_from_file_location('native_file_observer',repo/'apps/native_files/probe/observer.py');observer=importlib.util.module_from_spec(spec);spec.loader.exec_module(observer)
 spec=importlib.util.spec_from_file_location('kernel_isa_audit',repo/'tools/audit-kernel-instructions.py');audit=importlib.util.module_from_spec(spec);spec.loader.exec_module(audit)
+spec=importlib.util.spec_from_file_location('native_file_builder',repo/'tools/build-native-file-probe.py');builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
 state={'all_required_checks_pass':False,'observer_positive_cases':0,'observer_negative_controls':0,'prohibited_isa_controls':0,'builds':[],'commands':[]}
 def sha(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+def artifacts(build,status):
+ if 'artifact_root' not in status:return build
+ manifest=pathlib.Path(status['artifact_root'])/'artifacts.json'
+ assert sha(manifest)==status['artifact_manifest_sha256'],'Qualification publication changed'
+ root,_=builder.verify_artifacts(manifest,build)
+ return root
 def run(cmd,log,expected=0):
  cmd=list(map(str,cmd))
  with log.open('wb') as f:code=subprocess.run(cmd,cwd=repo,stdout=f,stderr=subprocess.STDOUT,timeout=180).returncode
@@ -17,10 +24,13 @@ try:
  for build in a.builds:
   build=build.resolve();status=json.loads((build/'status.json').read_text());assert status['all_required_checks_pass'] and status['native_file_abi_guest_pass'] and not status['build_only']
   assert all(sha(path)==h for path,h in status['inputs'].items()),'Qualification input changed'
+  products=artifacts(build,status)
   for guest in status['guests']:
    level='O'+str(guest['opt']);phase=guest['phase'];path=build/level/phase/'guest.log';text=path.read_text();assert sha(path)==guest['guest_log_sha256']
-   plans={mode:observer.geometry(build/level/('mode'+str(mode))/'user.stripped.elf') for mode in range(7)}
-   result=observer.verify(text,phase,plans);assert result==guest['evidence'];state['observer_positive_cases']+=1
+   plans={mode:observer.geometry(products/level/('mode'+str(mode))/'user.stripped.elf') for mode in range(8)}
+   result=observer.verify(text,phase,plans)
+   assert json.loads(json.dumps(result))==guest['evidence'],'Recomputed observer evidence differs'
+   state['observer_positive_cases']+=1
    controls=[];lines=text.splitlines()
    for i in range(len(lines)):
     controls.append(('delete-'+str(i),'\n'.join(lines[:i]+lines[i+1:])+'\n'));controls.append(('duplicate-'+str(i),'\n'.join(lines[:i]+[lines[i]]+lines[i:])+'\n'))
@@ -37,18 +47,18 @@ try:
     else:raise AssertionError('Observer accepted '+status['profile']+' '+level+' '+phase+' '+name)
   state['builds'].append({'profile':status['profile'],'status_sha256':sha(build/'status.json'),'guest_count':len(status['guests'])})
  # Mutate the actual new service, link into the real kernel, never execute.
- build=a.builds[0].resolve();status=json.loads((build/'status.json').read_text())
+ build=a.builds[0].resolve();status=json.loads((build/'status.json').read_text());products=artifacts(build,status)
  source=(repo/'src/process/native_files.cpp').read_text();anchor='    InterruptGuard guard;statistics.calls++;';assert source.count(anchor)==1
  for opt in [0,2]:
   level='O'+str(opt)
   original=next(c['argv'] for c in status['commands'] if '-c' in c['argv'] and c['argv'][c['argv'].index('-c')+1].endswith('/src/process/native_files.cpp') and '-O'+str(opt) in c['argv'])
-  objects=list(sorted((build/level/'kernel').glob('*.o')));assert any(x.name=='native_files.o' for x in objects)
+  objects=list(sorted((products/level/'kernel').glob('*.o')));assert any(x.name=='native_files.o' for x in objects)
   for name,instruction in [('x87','fldz'),('sse','pxor %xmm0,%xmm0'),('mmx','pxor %mm0,%mm0'),('avx','vpxor %xmm0,%xmm0,%xmm0'),('mxcsr','stmxcsr -4(%esp)')]:
    d=out/(level+'-'+name);d.mkdir();src=d/'native_files.cpp';src.write_text(source.replace(anchor,anchor+'\n    asm volatile("'+instruction+'");'))
    command=original[:];command[command.index('-c')+1]=str(src);command[command.index('-o')+1]=str(d/'native_files.o');command[command.index('-MF')+1]=str(d/'native_files.d')
    run(command,d/'compile.log')
    control_objects=[d/'native_files.o' if x.name=='native_files.o' else x for x in objects]
-   run(['ld','-melf_i386','--gc-sections','-T','tests/native_process_smoke.ld','-Map',d/'kernel.map','-o',d/'kernel.bin',*control_objects,build/level/'kernel.o'],d/'link.log')
+   run(['ld','-melf_i386','--gc-sections','-T','tests/native_process_smoke.ld','-Map',d/'kernel.map','-o',d/'kernel.bin',*control_objects,products/level/'kernel.o'],d/'link.log')
    result=run([sys.executable,'tools/audit-kernel-instructions.py','--map',d/'kernel.map','--source-root',repo,d/'kernel.bin'],d/'audit.log',1)
    rejected=re.findall(r'(0x[0-9a-f]+): prohibited FP/SIMD: ([^\n]+)',result)
    assert len(rejected)==1 and rejected[0][1].split()[0]==instruction.split()[0],'ISA control did not reject injected instruction'

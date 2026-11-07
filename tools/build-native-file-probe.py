@@ -15,6 +15,38 @@ def guards(path):
     data=path.read_bytes();assert len(data)==2064*512
     for s in range(8):assert data[s*512:(s+1)*512]==bytes([0xa5+s])*512,'prefix modified'
     for s in range(2056,2064):assert data[s*512:(s+1)*512]==bytes([0x5a+s-2056])*512,'suffix modified'
+
+PHASES=('writer','reader','detached','unmounted')
+
+def artifact_paths(root):
+    for level in ('O0','O2'):
+        directory=root/level
+        yield directory/'stock-verifier'
+        for fixture in ('kernel','unavailable_kernel'):
+            yield directory/(fixture+'.bin')
+            yield directory/(fixture+'.o')
+        yield from sorted((directory/'kernel').glob('*.o'))
+        for mode in range(8):yield directory/('mode'+str(mode))/'user.stripped.elf'
+        for phase in PHASES:yield directory/phase/'native.iso'
+
+def verify_artifacts(manifest,out):
+    raw=manifest.read_bytes();publication=json.loads(raw);root=manifest.parent.resolve()
+    assert manifest.resolve()==root/'artifacts.json' and publication['root']==str(root),'Unexpected publication location'
+    assert out!=root and out not in root.parents and root not in out.parents,'Run and publication must be separate'
+    receipt=root/'status.json'
+    assert sha(receipt)==publication['status_sha256'],'Published build receipt drifted'
+    state=json.loads(receipt.read_bytes())
+    assert state['all_required_checks_pass'] and state['phase']=='build' and not state['guests'],'Require a successful build-only receipt'
+    assert all(sha(path)==digest for path,digest in state['inputs'].items()),'Qualification input changed'
+    wanted={str(path.relative_to(root)) for path in artifact_paths(root)}
+    assert set(publication['files'])==wanted,'Publication file set changed'
+    for name,entry in publication['files'].items():
+        path=root/name
+        assert path.resolve()==path and path.is_file() and not path.stat().st_mode&0o222,'Unsealed published file '+name
+        assert path.stat().st_size==entry['bytes'] and sha(path)==entry['sha256'],'Published file drifted '+name
+    assert manifest.read_bytes()==raw,'Publication changed during verification'
+    return root,state
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('output',type=pathlib.Path)
@@ -23,14 +55,21 @@ def main():
     parser.add_argument('--clang',type=pathlib.Path)
     parser.add_argument('--libcxx-source',type=pathlib.Path)
     parser.add_argument('--build-only',action='store_true')
+    parser.add_argument('--phase',choices=('full','build','run'),default='full')
+    parser.add_argument('--artifacts',type=pathlib.Path)
+    parser.add_argument('--source-deltas',type=pathlib.Path)
     args=parser.parse_args();assert bool(args.clang)==bool(args.libcxx_source),'Pass clang and libcxx-source together'
+    assert (args.phase=='run')==bool(args.artifacts),'Only the run phase takes published artifacts'
+    assert not args.build_only or (args.phase=='full' and not args.source_deltas),'Exact historical reproduction uses the qualified lock'
+    assert args.phase!='run' or not (args.source_deltas or args.clang),'Run obtains all build inputs from its publication'
     repo=pathlib.Path(__file__).resolve().parents[1];base=repo/'apps/native_files';probe=base/'probe';out=args.output.resolve()
     assert not out.exists(),'Use a fresh directory; preserve earlier builds.';out.mkdir(parents=True)
     actual=bool(args.clang);kind='qualified-llvm' if actual else 'scalar-fixture'
     state={'scope':'Native file ABI in actual CPL3 with full FileStore and isolated ATA; not stdio/POSIX/browser',
         'profile':kind,'all_required_checks_pass':False,'native_file_abi_guest_pass':False,
         'native_isolate_pass':False,'browser_guest_pass':False,'production_image_changed':False,'capacity_changed':False,
-        'build_only':args.build_only,'commands':[],'inputs':{},'objects':{},'elfs':{},'kernels':{},'loaded_kernels':{},'guests':[]}
+        'build_only':args.build_only or args.phase=='build','phase':args.phase,
+        'commands':[],'inputs':{},'objects':{},'elfs':{},'kernels':{},'loaded_kernels':{},'guests':[]}
     def save():(out/'status.json').write_text(json.dumps(state,indent=2)+'\n')
     def bind(path):
         path=pathlib.Path(path);path=(repo/path).resolve() if not path.is_absolute() else path.resolve();h=sha(path)
@@ -52,30 +91,95 @@ def main():
         return log.read_text()
     def deps(path):
         for token in path.read_text().replace('\\\n',' ').split(':',1)[1].split():bind(token)
-    def boot(kernel,directory,phase,elfs,image,opt):
+    def prepare_iso(kernel,directory,phase,elfs):
         (directory/'iso/boot/grub').mkdir(parents=True);shutil.copyfile(kernel,directory/'iso/boot/native.bin')
         for mode,elf in enumerate(elfs):shutil.copyfile(elf,directory/'iso/boot'/('file'+str(mode)+'.elf'))
         (directory/'iso/boot/grub/grub.cfg').write_text('set timeout=0\nset default=0\nmenuentry "Native file ABI" {\n multiboot /boot/native.bin '+phase+'\n'+''.join(' module /boot/file'+str(mode)+'.elf\n' for mode in range(len(elfs)))+' boot\n}\n')
-        run([bins['grub-mkrescue'],'--output='+str(directory/'native.iso'),directory/'iso'],directory/'grub.log')
+        iso=directory/'native.iso'
+        run([bins['grub-mkrescue'],'--output='+str(iso),directory/'iso'],directory/'grub.log')
+        with iso.open('rb') as handle:
+            handle.seek(16*2048)
+            for descriptor in iter(lambda:handle.read(2048),b''):
+                if descriptor.startswith(b'\x00CD001\x01EL TORITO SPECIFICATION'):
+                    catalog=struct.unpack_from('<I',descriptor,71)[0]
+                    assert catalog and catalog*2048<iso.stat().st_size,'El Torito catalog is outside the ISO'
+                    break
+                assert descriptor[1:6]==b'CD001' and descriptor[0]!=255,'ISO has no El Torito boot record'
+            else:raise AssertionError('ISO has no El Torito boot record')
+    def boot(iso,directory,image,opt):
+        directory.mkdir(exist_ok=True)
         drive=['-drive','file='+str(image)+',format=raw,if=ide,index=0'] if image else []
         # Instruction-counted I/O boundaries let QEMU service asynchronous ATA completion before bounded guest polls expire.
         run([bins['qemu-system-i386'],'-L',os.environ.get('GTOS_QEMU_DATA_DIR','/usr/share/qemu'),'-machine','pc','-accel','tcg,thread=single',
             '-icount','shift=0,align=off,sleep=off','-cpu','max',
             '-rtc','base=2000-01-01T00:00:00,clock=vm','-m','32' if opt==0 else '64','-smp','1' if opt==0 else '4',
-            '-cdrom',directory/'native.iso','-boot','d',*drive,'-nic','none','-display','none','-monitor','none','-serial','none',
+            '-cdrom',iso,'-boot','d',*drive,'-nic','none','-display','none','-monitor','none','-serial','none',
             '-debugcon','file:'+str(directory/'guest.log'),'-device','isa-debug-exit,iobase=0xf4,iosize=4','-no-reboot'],directory/'host.log',33,200)
         return (directory/'guest.log').read_text()
+    def qualify(opt,d,published,plans):
+        image=d/'filesystem.img'
+        image.write_bytes(b''.join(bytes([0xa5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5a+s])*512 for s in range(8)))
+        guards(image)
+        for phase in PHASES:
+            guest=d/phase;media=image if phase in ('writer','reader') else None;before=sha(image)
+            text=boot(published/phase/'native.iso',guest,media,opt)
+            evidence=observer.verify(text,phase,plans);(guest/'observations.json').write_text(json.dumps(evidence,indent=2)+'\n')
+            guards(image);after=sha(image)
+            if phase=='reader':assert before==after,'Cold reader altered ATA image'
+            if media:
+                shutil.copyfile(image,guest/'post-guest.img')
+                independent=run([published/'stock-verifier',image],guest/'stock.log')
+                assert independent=='STOCK NATIVE FILE INTEROPERABILITY PASS\n' and sha(image)==after,'Independent upstream reader changed disk'
+            state['guests'].append({'opt':opt,'phase':phase,'evidence':evidence,'disk_before':before,'disk_after':after,'guest_log_sha256':sha(guest/'guest.log')});save()
+            print('PASS NATIVE FILE '+str((state['profile'],opt,phase)),flush=True)
+    def verify_guest_builds(published):
+        for opt in (0,2):
+            level='O'+str(opt);d=out/level;d.mkdir()
+            plans={mode:observer.geometry(published/level/('mode'+str(mode))/'user.stripped.elf') for mode in range(8)}
+            qualify(opt,d,published/level,plans)
+
     try:
         bind(__file__);lock_path=base/'source-lock.json';lock=None
+        spec=importlib.util.spec_from_file_location('native_file_observer',probe/'observer.py');observer=importlib.util.module_from_spec(spec);spec.loader.exec_module(observer)
+        if args.phase=='run':
+            published,built=verify_artifacts(args.artifacts,out)
+            state.update(built,phase='run',build_only=False,all_required_checks_pass=False,
+                         artifact_root=str(published),artifact_manifest_sha256=sha(args.artifacts))
+            qemu=pathlib.Path(shutil.which('qemu-system-i386')).resolve()
+            bins={'qemu-system-i386':qemu}
+            state['tools']['qemu-system-i386']={'path':str(qemu),'sha256':sha(qemu)}
+            state['qemu_version']=subprocess.check_output([qemu,'--version'],text=True).splitlines()[0]
+            verify_guest_builds(published)
+            verify_artifacts(args.artifacts,out)
+            assert sha(args.artifacts)==state['artifact_manifest_sha256'],'Publication changed during guest qualification'
+            state.update(all_required_checks_pass=True,native_file_abi_guest_pass=True,source_before_after_identical=True)
+            state['timestamp_utc']=datetime.datetime.now(datetime.timezone.utc).isoformat();save()
+            return 0
         if lock_path.exists():
             lock=json.loads(lock_path.read_text());bind(lock_path)
-            for name,h in lock['files'].items():assert sha(repo/name)==h,'Locked native-file source changed '+name;bind(name)
+            deltas={}
+            if args.source_deltas:
+                packet=json.loads(args.source_deltas.read_text());bind(args.source_deltas)
+                assert packet['lock_sha256']==sha(lock_path),'Candidate derived from a different qualified lock'
+                deltas=packet['files']
+                assert deltas and set(deltas)<=set(lock['files']),'Unexpected candidate source identities'
+                assert all(digest!=lock['files'][name] for name,digest in deltas.items()),'Candidate lists an unchanged input'
+                state['named_source_deltas']=dict(deltas)
+            for name,h in lock['files'].items():
+                assert sha(repo/name)==deltas.get(name,h),'Locked native-file source changed '+name
+                bind(name)
+        else:assert not args.source_deltas,'Candidate requires the qualified lock'
         cxx=pathlib.Path(shutil.which(args.cxx)).resolve();cc=pathlib.Path(shutil.which(args.cc)).resolve()
-        bins={n:pathlib.Path(shutil.which(n)).resolve() for n in ['as','ld','nm','objcopy','grub-mkrescue','qemu-system-i386']}
+        names=['as','ld','nm','objcopy','grub-mkrescue']
+        if args.phase=='full' and not args.build_only:names.append('qemu-system-i386')
+        bins={n:pathlib.Path(shutil.which(n)).resolve() for n in names}
         state['tools']={n:{'path':str(p),'sha256':sha(p)} for n,p in dict(bins,cxx=cxx,cc=cc).items()}
-        state['qemu_version']=subprocess.check_output([bins['qemu-system-i386'],'--version'],text=True).splitlines()[0]
+        if 'qemu-system-i386' in bins:
+            state['qemu_version']=subprocess.check_output([bins['qemu-system-i386'],'--version'],text=True).splitlines()[0]
         state['emulation']={'accelerator':'tcg,thread=single','icount':'shift=0,align=off,sleep=off','cycle_accurate':False,'host_timing_qualification':False}
         state['compiler_version']=subprocess.check_output([cxx,'--version'],text=True).splitlines()[0]
+        builtin_headers=pathlib.Path(subprocess.check_output([cxx,'-print-file-name=include'],text=True).strip())
+        assert builtin_headers.is_absolute() and (builtin_headers/'stdarg.h').is_file(),'Missing compiler builtin headers'
         policy=(repo/'tools/kernel-cxxflags').read_text().split();bind('tools/kernel-cxxflags')
         assert policy==['-mgeneral-regs-only','-mno-sse','-mno-mmx','-msoft-float','-fno-tree-vectorize']
         common=['-m32','-ffreestanding','-nostdlib','-nostdinc','-fno-builtin','-fno-stack-protector','-fno-pie',
@@ -88,7 +192,6 @@ def main():
             'src/process/elf32.cpp','src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp',
             'src/storage/filestore.cpp','src/storage/littlefs_port.cpp','src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','src/drivers/ata.cpp','tests/i386_pure_virtual_runtime.cpp']
         assembly=['tests/native_process_loader.s','src/process/native_fp.s','src/hardwarecommunication/interruptstubs.s']
-        spec=importlib.util.spec_from_file_location('native_file_observer',probe/'observer.py');observer=importlib.util.module_from_spec(spec);spec.loader.exec_module(observer)
         bind(probe/'observer.py');bind(probe/'linker.ld');bind(probe/'stock.c');bind('tests/native_process_smoke.ld');bind('tools/audit-kernel-instructions.py')
         if actual:
             clang=args.clang.resolve();libcxx=args.libcxx_source.resolve();string=repo/'apps/native_c_string';clock=repo/'apps/native_c_clock';legacy=repo/'apps/native_v8_runtime'
@@ -119,7 +222,7 @@ def main():
                     state['objects'][level+'-actual-'+obj.name]=sha(obj);providers.append(obj)
             posix_object=d/'kernel'/'posix_file.o'
             posix_source=repo/'apps/native_libxml_file/posix_file.cpp';bind(posix_source)
-            run([cxx,*common,*cpp,'-U__linux__','-U__APPLE__','-D__GTOS__=1','-isystem'+str(repo/'apps/native_v8_integration/c-sdk'),'-isystem'+str(repo/'apps/native_v8_integration/sdk'),'-O'+str(opt),'-MD','-MF',posix_object.with_suffix('.d'),'-c',posix_source,'-o',posix_object],posix_object.with_suffix('.log'));deps(posix_object.with_suffix('.d'))
+            run([cxx,*common,*cpp,'-U__linux__','-U__APPLE__','-D__GTOS__=1','-isystem'+str(repo/'apps/native_v8_integration/c-sdk'),'-isystem'+str(repo/'apps/native_v8_integration/sdk'),'-isystem'+str(builtin_headers),'-O'+str(opt),'-MD','-MF',posix_object.with_suffix('.d'),'-c',posix_source,'-o',posix_object],posix_object.with_suffix('.log'));deps(posix_object.with_suffix('.d'))
             state['objects'][level+'-posix_file.o']=sha(posix_object)
             elfs=[];plans={}
             for mode in range(8):
@@ -161,23 +264,27 @@ def main():
                 continue
             run([cc,'-std=c99','-O2','-Wall','-Wextra','-Werror','-Iinclude/storage/littlefs','-Isrc/process',probe/'stock.c',
                 'src/storage/littlefs/lfs.c','src/storage/littlefs/lfs_util.c','-o',d/'stock-verifier'],d/'stock-build.log')
-            image=d/'filesystem.img';image.write_bytes(b''.join(bytes([0xa5+s])*512 for s in range(8))+b'\xff'*(2048*512)+b''.join(bytes([0x5a+s])*512 for s in range(8)));guards(image)
-            for phase in ['writer','reader','detached','unmounted']:
-                guest=d/phase;media=image if phase in ['writer','reader'] else None;before=sha(image)
-                text=boot(kernels['kernel' if media else 'unavailable_kernel'],guest,phase,elfs[:6]+[elfs[7]] if media else [elfs[6]],media,opt)
-                evidence=observer.verify(text,phase,plans);(guest/'observations.json').write_text(json.dumps(evidence,indent=2)+'\n')
-                guards(image);after=sha(image)
-                if phase=='reader':assert before==after,'Cold reader altered ATA image'
-                if media:
-                    shutil.copyfile(image,guest/'post-guest.img');independent=run([d/'stock-verifier',image],guest/'stock.log')
-                    assert independent=='STOCK NATIVE FILE INTEROPERABILITY PASS\n' and sha(image)==after,'Independent upstream reader changed disk'
-                state['guests'].append({'opt':opt,'phase':phase,'evidence':evidence,'disk_before':before,'disk_after':after,'guest_log_sha256':sha(guest/'guest.log')});save()
-                print('PASS NATIVE FILE '+str((kind,opt,phase)),flush=True)
+            for phase in PHASES:
+                media=phase in ('writer','reader')
+                prepare_iso(kernels['kernel' if media else 'unavailable_kernel'],d/phase,phase,
+                            elfs[:6]+[elfs[7]] if media else [elfs[6]])
+            if args.phase=='full':qualify(opt,d,d,plans)
         assert all(sha(p)==h for p,h in state['inputs'].items()),'Source changed during qualification'
-        state.update(all_required_checks_pass=True,native_file_abi_guest_pass=not args.build_only,
+        state.update(all_required_checks_pass=True,native_file_abi_guest_pass=args.phase=='full' and not args.build_only,
             source_before_after_identical=True,qualification_reused=args.build_only,actual_default_llvm_objects_equal=actual)
+        if args.phase=='build':
+            files={}
+            for path in artifact_paths(out):
+                path.chmod(0o555 if path.name=='stock-verifier' else 0o444)
+                files[str(path.relative_to(out))]={'bytes':path.stat().st_size,'sha256':sha(path)}
+            state['timestamp_utc']=datetime.datetime.now(datetime.timezone.utc).isoformat();save()
+            with (out/'artifacts.json').open('x') as handle:
+                json.dump({'root':str(out),'status_sha256':sha(out/'status.json'),'files':files},handle,indent=2)
+            print('PUBLISHED NATIVE FILE ARTIFACTS',len(files),flush=True)
+            return 0
     except BaseException as e:
-        state['failure']=str(e);(out/'exception.log').write_text(traceback.format_exc())
+        state.update(failure=str(e),all_required_checks_pass=False,native_file_abi_guest_pass=False)
+        (out/'exception.log').write_text(traceback.format_exc())
     state['timestamp_utc']=datetime.datetime.now(datetime.timezone.utc).isoformat();save()
     print(json.dumps({k:v for k,v in state.items() if k not in ['commands','inputs','objects','elfs','kernels','loaded_kernels','guests']},indent=2),flush=True)
     return 0 if state['all_required_checks_pass'] else 1

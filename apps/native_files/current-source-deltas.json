@@ -1,0 +1,12 @@
+{
+  "lock_sha256": "7efa49c9b987efdf6ac8819f6173b3b8465b65a3233e617ce978184cd20982e8",
+  "files": {
+    "apps/native_libxml_file/link_closure/libc_closure.cpp": "dd52b13fc93d16859d1516a5674eaf6177ea4b89ead8449db7bd073206f15aa1",
+    "include/process/file_abi.h": "8edbefae02c194eb8f0a6002d102670402f81540382dfb7f0d10b43d5bd317f4",
+    "src/process/native_files.cpp": "aadb73f03eb29c0d04a8e6e85f79569b7399e9a870ef274303060d9c0383275d",
+    "src/process/native_runtime.cpp": "e6973e939333e366b63671799080e3788cccc31d63d47b2a395db39829730735",
+    "tools/build-native-file-probe.py": "fa45d3fe0a3e1084abc0b6e8a5a4bcd306a5536f5c97d9d3407f91d729f1e171",
+    "tools/self-review-native-files.py": "72e3afb4da0b8e17ff105cdce6d2a3b87e339bc5737382a38fdbb8162f58b7ea",
+    "apps/native_files/probe/observer.py": "6cc99b5fba68dbf0b3a090dabb9b58ed9535e282dd726192673f51262054c068"
+  }
+}

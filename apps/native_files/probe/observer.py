@@ -68,11 +68,14 @@ def verify(text,phase,plans):
         c=fields(lines[index],'FILE CASE',CASE);index+=1
         assert c['baseline']==initial and c['free']+c['cost']==initial
         assert c['mode']==7 and c['id']==7 and c['error']==0 and c['stage']==2 and c['checks']==32 and c['mask']==0x1ff
-        assert c['calls']==0 and c['bad']==0 and c['png']==0 and c['file']==c['dir']==0 and c['cs']==0x23
-        assert c['exit']==0 and c['vector']==0 and c['pf']==0 and c['open']==0
+        assert all(c[key]==0 for key in ['calls','bad','png','base','vm','file','dir','exit','vector','pf','address','open'])
+        assert c['cs']==0x23 and c['kernel']==cases[0]['kernel']
+        assert c['cr3']>=4096 and c['cr3']%4096==0 and c['cr3']!=c['kernel']
+        assert c['pages']==plans[7]['pages'] and c['cost']==plans[7]['static_cost']
         r=fields(lines[index],'FILE REAP',REAP);index+=1
         assert r['free']==r['expected']==initial
         assert r['id']==7 and r['open']==0 and r['reclaims']==7 and r['fp_init']==7 and r['fp_invalid']==7 and r['fp_fail']==0 and r['last']==0
+        assert r['released']==reaps[-1]['released']+2 and r['failures']==reaps[-1]['failures']
         suite=(c,r)
         assert peer=={'id':1,'error':0,'checks':112,'commands':10,'bad':100,'observed_bad':100,'calls':124,'observed_calls':124}
     f=fields(lines[index],'FILE FINAL',FINAL);index+=1
