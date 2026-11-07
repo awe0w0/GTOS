@@ -1,11 +1,13 @@
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1055,6 +1055,15 @@ component("base") {
+@@ -1055,6 +1055,17 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
 +  if (is_gtos) {
 +    sources += [
++      "memory/platform_shared_memory_gtos.cc",
++      "process/process_metrics_gtos.cc",
 +      "synchronization/lock_impl_gtos.cc",
 +      "synchronization/waitable_event_gtos.cc",
 +      "threading/platform_thread_gtos.cc",

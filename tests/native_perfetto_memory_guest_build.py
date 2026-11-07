@@ -13,7 +13,7 @@ parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
-                                            'base_identity', 'base_event'],
+                                            'base_identity', 'base_event', 'base_shared'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -36,6 +36,8 @@ component = {
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'base_event': ('native_memory_record', None, 'base_event.cpp',
                    'native_content_base_event_kernel.cpp', 'ContentBaseEventUnusedBaseline', 1),
+    'base_shared': ('native_memory_record', None, 'base_shared_memory.cpp',
+                    'native_content_shared_memory_kernel.cpp', 'ContentSharedMemoryUnusedBaseline', 2),
 }[args.component]
 record_name, backend, consumer, observer, unused_entry, mode_count = component
 family = args.component.upper()
@@ -99,7 +101,7 @@ if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
-if args.component in ('base_identity', 'base_event'):
+if args.component in ('base_identity', 'base_event', 'base_shared'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -172,6 +174,12 @@ for optimization in (0, 2):
                            ('base-event-gtos', args.view / 'base/synchronization/waitable_event_gtos.cc'),
                            ('base-raw-log', args.view / 'base/logging.cc'),
                            ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc')]
+    if args.component == 'base_shared':
+        native_sources += [('base-shared', args.view / 'base/memory/platform_shared_memory_gtos.cc'),
+                           ('base-metrics', args.view / 'base/process/process_metrics_gtos.cc'),
+                           ('metrics-common', args.view / 'base/process/process_metrics.cc'),
+                           ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc'),
+                           ('abort', runtime / 'abort.cc')]
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -225,7 +233,7 @@ for optimization in (0, 2):
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         image = directory / (name + '.elf')
-        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl', 'base_event') else image
+        linked = image.with_suffix('.unstripped.elf') if args.component in ('partition', 'boringssl', 'base_event', 'base_shared') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if cpu or args.component in ('wait', 'partition'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
@@ -258,6 +266,8 @@ sources = ['src/gdt.cpp', 'src/multitasking.cpp', 'src/syscalls.cpp',
            'tests/' + observer]
 if args.component in ('event', 'wait', 'base_event'):
     sources.append('src/process/native_events.cpp')
+if args.component == 'base_shared':
+    sources.append('src/process/native_shared_memory.cpp')
 assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']
 bind(repo / 'tools/kernel-cxxflags')
@@ -299,6 +309,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'user_profile': 'GTOS IA32 SSE2, matching native Content', 'kernel_fp_policy': 'NativeFpSse2', 'component': args.component,
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
-prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity', 'base_event') else 'PERFETTO_'
+prefix = 'CONTENT_' if args.component in ('exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

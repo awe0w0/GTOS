@@ -1,0 +1,28 @@
+--- a/base/memory/platform_shared_memory_handle.h
++++ b/base/memory/platform_shared_memory_handle.h
+@@ -16,6 +16,10 @@
+ #elif BUILDFLAG(IS_WIN)
+ #include "base/win/scoped_handle.h"
+ #include "base/win/windows_types.h"
++#elif BUILDFLAG(IS_GTOS)
++#include <stdint.h>
++
++#include "base/scoped_generic.h"
+ #elif BUILDFLAG(IS_POSIX)
+ #include <sys/types.h>
+ 
+@@ -62,6 +66,14 @@ using ScopedPlatformSharedMemoryHandle = zx::vmo;
+ #elif BUILDFLAG(IS_WIN)
+ using PlatformSharedMemoryHandle = HANDLE;
+ using ScopedPlatformSharedMemoryHandle = win::ScopedHandle;
++#elif BUILDFLAG(IS_GTOS)
++using PlatformSharedMemoryHandle = uint32_t;
++struct BASE_EXPORT GtosSharedMemoryHandleTraits {
++  static constexpr PlatformSharedMemoryHandle InvalidValue() { return 0; }
++  static void Free(PlatformSharedMemoryHandle handle);
++};
++using ScopedPlatformSharedMemoryHandle =
++    ScopedGeneric<PlatformSharedMemoryHandle, GtosSharedMemoryHandleTraits>;
+ #elif BUILDFLAG(IS_ANDROID)
+ using PlatformSharedMemoryHandle = int;
+ using ScopedPlatformSharedMemoryHandle = ScopedFD;

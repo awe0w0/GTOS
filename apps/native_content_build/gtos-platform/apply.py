@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/process/process_metrics.h': 'bfd9dcd28d394d0969d970182c666cdc4b68eaeb7a143a91ef36e23fbb93f354',
+    'base/memory/platform_shared_memory_handle.h': '0b1d68d9ddb4fb5f45e2dcf65f2d8dfd6719f2f7d59560a72d1965df438acd66',
+    'base/memory/platform_shared_memory_region.h': '393d93629641f88d42ad0d6b444bbdbf33379ae9c3a469357e7b5cd41427feeb',
     'base/logging/logging_settings.h': '3aad1a35a2afbd5eb008575dcbb705582d21a85fc17b2f8bef7a6a96e03ce760',
     'base/check.cc': 'cead9bd6bad693693d767b42c9f144f369ee2af7ab064f9e5c9a010f76f627eb',
     'base/scoped_clear_last_error.h': '82b51b1001fe585c64a558c285307a071830f376bb89a633e73f64879f6d557d',
@@ -168,6 +171,10 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/process/process_metrics_gtos.cc': 'base/process_metrics_gtos.cc',
+    'build/config/gtos/include/process/system_memory_abi.h': '../../../include/process/system_memory_abi.h',
+    'base/memory/platform_shared_memory_gtos.cc': 'base/platform_shared_memory_gtos.cc',
+    'build/config/gtos/include/process/shared_memory_abi.h': '../../../include/process/shared_memory_abi.h',
     'base/synchronization/waitable_event_gtos.cc': 'base/waitable_event_gtos.cc',
     'base/time/time_now_gtos.cc': 'base/time_now_gtos.cc',
     'base/synchronization/lock_impl_gtos.cc': 'base/lock_impl_gtos.cc',

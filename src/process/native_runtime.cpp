@@ -8,6 +8,8 @@
 #include <process/clock_abi.h>
 #include <process/info_abi.h>
 #include <process/file_abi.h>
+#include <process/shared_memory_abi.h>
+#include <process/system_memory_abi.h>
 #include <process/elf32.h>
 #include <process/fault_policy.h>
 #include <memory/criticalsection.h>
@@ -107,7 +109,7 @@ namespace {
 }
 NativeRuntime* NativeRuntime::active = 0;
 NativeRuntime::NativeRuntime() : paging(0), frames(0), scheduler(0), gdt(0),
-    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), events(0) {
+    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), events(0), sharedMemory(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
@@ -125,6 +127,12 @@ bool NativeRuntime::AttachEvents(NativeEventEndpoint& endpoint) {
     InterruptGuard guard;
     if (enabled || events || !endpoint.SetNotifier(EventNotification, this)) return false;
     events = &endpoint;
+    return true;
+}
+bool NativeRuntime::AttachSharedMemory(NativeSharedMemoryEndpoint& endpoint) {
+    InterruptGuard guard;
+    if (enabled || sharedMemory) return false;
+    sharedMemory = &endpoint;
     return true;
 }
 bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& allocator) {
@@ -601,6 +609,35 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             : (uint32_t)GTOS_EVENT_ERR_UNAVAILABLE;
         break;
     case GTOS_SYS_EVENT_WAIT: return WaitForEvents(*thread, cpu);
+    case GTOS_SYS_SHARED_MEMORY_CREATE:
+    case GTOS_SYS_SHARED_MEMORY_DUP:
+    case GTOS_SYS_SHARED_MEMORY_CLOSE:
+    case GTOS_SYS_SHARED_MEMORY_CONVERT:
+    case GTOS_SYS_SHARED_MEMORY_INFO:
+    case GTOS_SYS_SHARED_MEMORY_MAP:
+    case GTOS_SYS_SHARED_MEMORY_UNMAP:
+        cpu->eax = sharedMemory ? (uint32_t)sharedMemory->Call(
+            slot->status.id, slot->space, cpu->eax, cpu->ebx, cpu->ecx)
+            : (uint32_t)GTOS_SHARED_MEMORY_ERR_UNAVAILABLE;
+        break;
+    case GTOS_SYS_SYSTEM_MEMORY_INFO: {
+        if (cpu->ecx != sizeof(GtosSystemMemoryRequest)) {
+            cpu->eax = (uint32_t)GTOS_SYSTEM_MEMORY_ERR_SIZE; break;
+        }
+        GtosSystemMemoryRequest request;
+        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+            cpu->eax = (uint32_t)GTOS_SYSTEM_MEMORY_ERR_ADDRESS; break;
+        }
+        if (request.version != GTOS_SYSTEM_MEMORY_ABI_VERSION) {
+            cpu->eax = (uint32_t)GTOS_SYSTEM_MEMORY_ERR_VERSION; break;
+        }
+        const auto stats = frames->getStatistics();
+        const GtosSystemMemoryInfo result{GTOS_SYSTEM_MEMORY_ABI_VERSION, GTOS_VM_PAGE_BYTES,
+            stats.usableFrames, stats.freeFrames};
+        cpu->eax = slot->space.CopyToUser(request.result, &result, sizeof(result))
+            ? 0 : (uint32_t)GTOS_SYSTEM_MEMORY_ERR_ADDRESS;
+        break;
+    }
     case GTOS_SYS_FILE_OPEN:
     case GTOS_SYS_FILE_READ:
     case GTOS_SYS_FILE_WRITE:
@@ -1050,6 +1087,7 @@ uint32_t NativeRuntime::Reap() {
         if (files) files->ReclaimOwner(process.status.id);
         if (events) events->ReclaimOwner(process.status.id);
         if (!process.space.Destroy()) continue;
+        if (sharedMemory) sharedMemory->ReclaimOwner(process.status.id);
         for (uint32_t j = 0; j < MaximumProcesses; ++j) {
             Slot& member = slots[j];
             if (!member.occupied || member.process != &process) continue;

@@ -1,6 +1,7 @@
 #ifndef __GTOS__MEMORY__PROCESS_ADDRESS_SPACE_H
 #define __GTOS__MEMORY__PROCESS_ADDRESS_SPACE_H
 #include <memory/paging.h>
+namespace gtos { namespace process { class NativeSharedMemory; } }
 namespace gtos { namespace memory {
     enum ProcessMemoryError : uint32_t {
         ProcessMemoryOk, ProcessMemoryBadState, ProcessMemoryBadRange,
@@ -17,7 +18,7 @@ namespace gtos { namespace memory {
     struct ProcessMemoryStatistics {
         uint32_t residentPages, dynamicPages, capacityPages, metadataFrames, tableFrames;
     };
-    // BSP-only, non-PAE private user mappings. KernelPaging must be enabled and
+    // BSP-only, non-PAE user mappings. KernelPaging must be enabled and
     // permanently sealed; it and its allocator must outlive every process.
     // No destructor tears mappings down. Before Destroy(), remove ALL runnable
     // references and deferred interrupt/return frames, then switch to kernel CR3.
@@ -33,9 +34,10 @@ namespace gtos { namespace memory {
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
     private:
+        friend class gtos::process::NativeSharedMemory;
         struct Page { uint32_t address, frame, region; bool writable, present; };
         static_assert(sizeof(Page) == 16, "ownership record wire-independent size");
-        struct Region { uint32_t base, bytes, handle; };
+        struct Region { uint32_t base, bytes, handle, sharedFrames; };
         struct PendingPage { uint32_t address, frame; };
         struct PendingTable { uint32_t index, frame; };
         KernelPaging* kernel;
@@ -64,6 +66,7 @@ namespace gtos { namespace memory {
         int FindPage(uint32_t address) const;
         int IndexedLayoutPage(uint32_t address) const;
         int FindRegion(uint32_t handle) const;
+        bool SharesFrame(const Page& page) const;
         bool RegionRange(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t& base) const;
         uint32_t ConflictEnd(uint32_t base, uint32_t bytes) const;
         bool AllocateFrame(uint32_t& address);
@@ -72,7 +75,11 @@ namespace gtos { namespace memory {
         void RemovePage(uint32_t index);
         void RollbackPending();
         void InvalidatePage(uint32_t address) const;
-        void RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes);
+        void RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes, bool releaseFrames = true);
+        // The endpoint owns the supplied frames until unmap or Destroy().
+        bool MapSharedFrames(uint32_t firstFrame, uint32_t bytes, bool writable,
+                             uint32_t& outBase, uint32_t& outHandle);
+        bool UnmapSharedFrames(uint32_t handle);
         ProcessAddressSpace(const ProcessAddressSpace&);
         ProcessAddressSpace& operator=(const ProcessAddressSpace&);
     public:

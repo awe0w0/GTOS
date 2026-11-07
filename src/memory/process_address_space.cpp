@@ -80,7 +80,7 @@ ProcessAddressSpace::ProcessAddressSpace() : kernel(0), frames(0), directory(0),
         pendingPages[i].address = pendingPages[i].frame = 0;
     }
     for (uint32_t i = 0; i < MaximumRegions; ++i)
-        regions[i].base = regions[i].bytes = regions[i].handle = 0;
+        regions[i] = {};
     for (uint32_t i = 0; i < 2; ++i) pendingTables[i].index = pendingTables[i].frame = 0;
 }
 bool ProcessAddressSpace::Fail(ProcessMemoryError value) const { error = value; return false; }
@@ -220,6 +220,10 @@ int ProcessAddressSpace::FindRegion(uint32_t handle) const {
         if (regions[i].handle == handle) return (int)i;
     return -1;
 }
+bool ProcessAddressSpace::SharesFrame(const Page& page) const {
+    const int index = FindRegion(page.region);
+    return index >= 0 && regions[index].sharedFrames;
+}
 bool ProcessAddressSpace::MetadataLayout() const {
     if (pageLimit < MaximumPages || pageLimit > MaximumCapacityPages) return false;
     if (!metadataBase)
@@ -244,12 +248,13 @@ bool ProcessAddressSpace::Layout(bool complete) const {
     for (uint32_t i = 0; i < MaximumRegions; ++i) {
         const Region& region = regions[i];
         if (!region.handle) {
-            if (region.base || region.bytes) return Fail(ProcessMemoryBadMapping);
+            if (region.base || region.bytes || region.sharedFrames) return Fail(ProcessMemoryBadMapping);
             continue;
         }
         if (!sealed || region.handle > 0x7FFFFFFFu || (region.base & 4095)
             || !region.bytes || (region.bytes & 4095) || region.base < DynamicBase
-            || region.base >= dynamicLimit || region.bytes > dynamicLimit - region.base)
+            || region.base >= dynamicLimit || region.bytes > dynamicLimit - region.base
+            || (region.sharedFrames & 4095))
             return Fail(ProcessMemoryBadMapping);
         for (uint32_t previous = 0; previous < i; ++previous) {
             const Region& other = regions[previous];
@@ -276,7 +281,12 @@ bool ProcessAddressSpace::Layout(bool complete) const {
         layoutAddresses[slot] = i + 1;
         slot = LayoutHash(page.frame); count = 0;
         while (layoutFrames[slot]) {
-            if (pages[layoutFrames[slot] - 1].frame == page.frame || ++count == LayoutIndexSlots)
+            const Page& other = pages[layoutFrames[slot] - 1];
+            if (other.frame == page.frame) {
+                if (!SharesFrame(page) || !SharesFrame(other)) return Fail(ProcessMemoryBadMapping);
+                break;
+            }
+            if (++count == LayoutIndexSlots)
                 return Fail(ProcessMemoryBadMapping);
             slot = (slot + 1) & (LayoutIndexSlots - 1);
         }
@@ -306,6 +316,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
             }
         }
     }
+    uint16_t sharedCounts[MaximumRegions] = {};
     for (uint32_t i = 0; i < pageCount; ++i) {
         const Page& page = pages[i];
         if (page.region) {
@@ -313,6 +324,12 @@ bool ProcessAddressSpace::Layout(bool complete) const {
             if (index < 0 || page.address < regions[index].base
                 || page.address >= regions[index].base + regions[index].bytes)
                 return Fail(ProcessMemoryBadMapping);
+            const Region& region = regions[index];
+            if (region.sharedFrames) {
+                if (!page.present || page.frame != region.sharedFrames + (page.address - region.base))
+                    return Fail(ProcessMemoryBadMapping);
+                ++sharedCounts[index];
+            }
         } else {
             if (!page.present) return Fail(ProcessMemoryBadMapping);
             for (uint32_t ri = 0; ri < MaximumRegions; ++ri)
@@ -329,6 +346,9 @@ bool ProcessAddressSpace::Layout(bool complete) const {
                 != (page.present ? PageEntry(page.frame, page.writable) : 0))
             return Fail(ProcessMemoryBadMapping);
     }
+    for (uint32_t i = 0; i < MaximumRegions; ++i)
+        if (regions[i].sharedFrames && sharedCounts[i] != regions[i].bytes / 4096)
+            return Fail(ProcessMemoryBadMapping);
     return true;
 }
 bool ProcessAddressSpace::Mutable() const {
@@ -474,6 +494,7 @@ bool ProcessAddressSpace::RegionRange(uint32_t handle, uint32_t offset, uint32_t
     const int index = FindRegion(handle);
     if (index < 0) return Fail(ProcessMemoryBadState);
     const Region& region = regions[index];
+    if (region.sharedFrames) return Fail(ProcessMemoryPermission);
     if ((offset & 4095) || !bytes || (bytes & 4095) || offset > region.bytes
         || bytes > region.bytes - offset) return Fail(ProcessMemoryBadRange);
     base = region.base + offset;
@@ -519,6 +540,75 @@ bool ProcessAddressSpace::Reserve(uint32_t bytes, uint32_t alignment, uint32_t h
     region.base = (uint32_t)candidate; region.bytes = bytes;
     region.handle = nextRegionHandle++;
     outBase = region.base; outHandle = region.handle;
+    error = ProcessMemoryOk;
+    return true;
+}
+bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, bool writable,
+                                          uint32_t& outBase, uint32_t& outHandle) {
+    InterruptGuard guard;
+    if (!RuntimeMutable()) return false;
+    // A four MiB mapping spans at most two PDEs, even with an unaligned base.
+    if (!firstFrame || !bytes || ((firstFrame | bytes) & 4095) || bytes > (1U << 22))
+        return Fail(ProcessMemoryBadRange);
+    if (bytes / 4096 > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
+    if (!KernelAlias(firstFrame, bytes, true)) return Fail(ProcessMemoryBadAlias);
+    const auto contains = [firstFrame, bytes](uint32_t frame) {
+        return frame >= firstFrame && frame - firstFrame < bytes;
+    };
+    if (contains(directory) || contains(kernelDirectory)
+        || (metadataBase && (uint64_t)metadataBase < (uint64_t)firstFrame + bytes
+            && (uint64_t)firstFrame < (uint64_t)metadataBase + metadataPages * 4096))
+        return Fail(ProcessMemoryBadAlias);
+    const uint32_t* shared = (const uint32_t*)kernelDirectory;
+    for (uint32_t di = 0; di < 1024; ++di)
+        if (contains(tables[di]) || contains(shared[di] & AddressMask))
+            return Fail(ProcessMemoryBadAlias);
+    for (uint32_t i = 0; i < pageCount; ++i)
+        if (contains(pages[i].frame) && !SharesFrame(pages[i]))
+            return Fail(ProcessMemoryBadAlias);
+    for (uint32_t offset = 0; offset < bytes; offset += 4096)
+        if (!frames->isAllocated(firstFrame + offset)) return Fail(ProcessMemoryBadAlias);
+
+    uint32_t base, handle;
+    if (!Reserve(bytes, 4096, 0, base, handle)) return false;
+    Region& region = regions[FindRegion(handle)];
+    for (uint32_t di = base >> 22; di <= (base + bytes - 1) >> 22; ++di) {
+        if (tables[di]) continue;
+        uint32_t table;
+        if (!AllocateFrame(table)) {
+            RollbackPending();
+            region = {};
+            --nextRegionHandle;
+            return false;
+        }
+        pendingTables[pendingTableCount++] = {di, table};
+    }
+    for (uint32_t i = 0; i < pendingTableCount; ++i) {
+        const PendingTable& pending = pendingTables[i];
+        tables[pending.index] = pending.frame;
+        ((uint32_t*)directory)[pending.index] = pending.frame | Present | Writable | User;
+    }
+    for (uint32_t offset = 0; offset < bytes; offset += 4096) {
+        const uint32_t address = base + offset, frame = firstFrame + offset;
+        pages[pageCount++] = {address, frame, handle, writable, true};
+        ((uint32_t*)tables[address >> 22])[(address >> 12) & 1023] = PageEntry(frame, writable);
+        InvalidatePage(address);
+    }
+    for (uint32_t i = 0; i < pendingTableCount; ++i) pendingTables[i] = {};
+    pendingTableCount = 0;
+    region.sharedFrames = firstFrame;
+    outBase = base; outHandle = handle;
+    error = ProcessMemoryOk;
+    return true;
+}
+bool ProcessAddressSpace::UnmapSharedFrames(uint32_t handle) {
+    InterruptGuard guard;
+    if (!RuntimeMutable()) return false;
+    const int index = FindRegion(handle);
+    if (index < 0 || !regions[index].sharedFrames) return Fail(ProcessMemoryBadState);
+    Region& region = regions[index];
+    RemoveRegionPages(handle, region.base, region.bytes, false);
+    region = {};
     error = ProcessMemoryOk;
     return true;
 }
@@ -633,7 +723,8 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
     error = ProcessMemoryOk;
     return true;
 }
-void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes) {
+void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes,
+                                            bool releaseFrames) {
     const uint32_t end = base + bytes;
     uint32_t index = 0;
     while (index < pageCount) {
@@ -652,7 +743,7 @@ void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint
         // Flush both leaf and paging-structure caches before either data or
         // the last owned table can be freed and reused by another reservation.
         InvalidatePage(address);
-        ClearPage(frame); frames->free(frame);
+        if (releaseFrames) { ClearPage(frame); frames->free(frame); }
         if (!occupied) {
             ClearPage(table); frames->free(table); tables[di] = 0;
         }
@@ -690,8 +781,9 @@ bool ProcessAddressSpace::Release(uint32_t handle) {
     const int index = FindRegion(handle);
     if (index < 0) return Fail(ProcessMemoryBadState);
     Region& region = regions[index];
+    if (region.sharedFrames) return Fail(ProcessMemoryPermission);
     RemoveRegionPages(handle, region.base, region.bytes);
-    region.base = region.bytes = region.handle = 0;
+    region = {};
     error = ProcessMemoryOk;
     return true;
 }
@@ -701,6 +793,7 @@ bool ProcessAddressSpace::Trim(uint32_t handle, uint32_t newBytes) {
     const int index = FindRegion(handle);
     if (index < 0) return Fail(ProcessMemoryBadState);
     Region& region = regions[index];
+    if (region.sharedFrames) return Fail(ProcessMemoryPermission);
     if (!newBytes || (newBytes & 4095) || newBytes > region.bytes) return Fail(ProcessMemoryBadRange);
     RemoveRegionPages(handle, region.base + newBytes, region.bytes - newBytes);
     region.bytes = newBytes;
@@ -794,7 +887,7 @@ bool ProcessAddressSpace::Destroy() {
     // A sealed process is reclaimable ONLY after the runtime has removed all
     // references and switched CR3. This module cannot inspect scheduler queues.
     for (uint32_t i = 0; i < pageCount; ++i) {
-        ClearPage(pages[i].frame); frames->free(pages[i].frame);
+        if (!SharesFrame(pages[i])) { ClearPage(pages[i].frame); frames->free(pages[i].frame); }
         pages[i].address = pages[i].frame = pages[i].region = 0;
         pages[i].writable = pages[i].present = false;
     }
@@ -808,7 +901,7 @@ bool ProcessAddressSpace::Destroy() {
         metadataBase = metadataPages = 0; pages = inlinePages; pageLimit = MaximumPages;
     }
     for (uint32_t i = 0; i < MaximumRegions; ++i)
-        regions[i].base = regions[i].bytes = regions[i].handle = 0;
+        regions[i] = {};
     directory = kernelDirectory = pageCount = 0; dynamicLimit = DynamicLimit;
     kernel = 0; frames = 0; prepared = sealed = false;
     error = ProcessMemoryOk;

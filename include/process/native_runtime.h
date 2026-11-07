@@ -7,6 +7,7 @@
 #include <process/native_realtime.h>
 #include <process/native_file_endpoint.h>
 #include <process/native_event_endpoint.h>
+#include <process/native_shared_memory_endpoint.h>
 #include <process/native_environment.h>
 #include <process/thread_abi.h>
 #include <process/elf32.h>
@@ -92,6 +93,7 @@ namespace gtos { namespace process {
         NativeRealtimeClock realtime;
         NativeFileEndpoint* files;
         NativeEventEndpoint* events;
+        NativeSharedMemoryEndpoint* sharedMemory;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
         static NativeRuntime* active;
         Slot* Current();
@@ -121,6 +123,7 @@ namespace gtos { namespace process {
         // Non-owning endpoint must outlive activation; attach only once, before Activate.
         bool AttachFiles(NativeFileEndpoint& endpoint);
         bool AttachEvents(NativeEventEndpoint& endpoint);
+        bool AttachSharedMemory(NativeSharedMemoryEndpoint& endpoint);
         // Call after prepareIdentity, before enable/AP sharing. Guard aliases
         // are retained permanently; no alias changes after sealing.
         bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&);

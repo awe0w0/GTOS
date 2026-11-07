@@ -1,0 +1,14 @@
+--- a/base/memory/platform_shared_memory_region.h
++++ b/base/memory/platform_shared_memory_region.h
+@@ -95,6 +95,11 @@ class BASE_EXPORT PlatformSharedMemoryRegion {
+   enum class TakeError {
+     kExpectedReadOnlyButNot,
+     kExpectedWritableButNot,
++#if BUILDFLAG(IS_GTOS)
++    kInvalidGtosHandle,
++    kGtosSizeMismatch,
++    kGtosModeMismatch,
++#endif
+ #if BUILDFLAG(IS_ANDROID)
+     kFailedToGetAshmemRegionProtectionMask,
+ #endif
