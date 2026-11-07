@@ -1,10 +1,23 @@
 #include <process/abi.h>
+#include <stdlib.h>
+
+#include "config/app.h"
+
+#if defined(GTOS_CRT_BYPASS_ENVIRONMENT)
+extern "C" int __wrap_gtos_native_environment_initialize() noexcept {
+    return 0;
+}
+#endif
 
 namespace {
 volatile unsigned initialized;
 
 struct Initializer {
-    Initializer() { initialized = 0x47544f53U; }
+    Initializer() {
+        const auto* environment = LIBC_NAMESPACE::app.env_ptr;
+        if (environment && !environment[0] && !getenv("PATH"))
+            initialized = 0x47544f53U;
+    }
     ~Initializer() {
         static const char text[] = "GTOS CRT DESTRUCTOR\n";
         unsigned call = GTOS_SYS_WRITE;

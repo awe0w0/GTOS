@@ -9,6 +9,17 @@ source_set("codec_support") {
     "setjmp_i386.S",
     "tanh.cc",
   ]
+  deps = [ ":codec_qsort" ]
+}
+
+source_set("codec_qsort") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [ "//third_party/llvm-libc/src/src/stdlib/qsort.cpp" ]
+  include_dirs = [ "//third_party/llvm-libc/src" ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+  ]
 }
 
 source_set("native_threads") {
@@ -16,5 +27,22 @@ source_set("native_threads") {
   sources = [
     "//tools/gtos_native_sdk/native-thread.cc",
     "//tools/gtos_native_sdk/native-thread.h",
+  ]
+}
+
+source_set("native_environment") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//third_party/llvm-libc/src/src/stdlib/environ_internal.cpp",
+    "//third_party/llvm-libc/src/src/stdlib/getenv.cpp",
+    "//tools/gtos_native_sdk/environment/environment.cc",
+  ]
+  include_dirs = [
+    "//tools/gtos_native_sdk/environment",
+    "//third_party/llvm-libc/src",
+  ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
   ]
 }

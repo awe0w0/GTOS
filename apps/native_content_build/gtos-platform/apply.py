@@ -221,6 +221,12 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-core.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-core.cc',
+    'build/config/gtos/include/process/environment_abi.h': '../../../include/process/environment_abi.h',
+    'tools/gtos_native_sdk/environment/environment.cc': '../../native_environment/sdk/environment.cc',
+    'tools/gtos_native_sdk/environment/environment.h': '../../native_environment/sdk/environment.h',
+    'tools/gtos_native_sdk/environment/config/app.h': '../../native_environment/sdk/config/app.h',
+    'tools/gtos_native_sdk/environment/config/gtos/app.h': '../../native_environment/sdk/config/gtos/app.h',
     'tools/gtos_native_sdk/native-thread.h': 'sdk/native-thread.h',
     'tools/gtos_native_sdk/native-thread.cc': 'sdk/native-thread.cc',
     'build/config/gtos/include/math.h': 'sdk/math.h',

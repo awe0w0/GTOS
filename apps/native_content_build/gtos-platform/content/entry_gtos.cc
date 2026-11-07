@@ -7,6 +7,7 @@
 #include "base/compiler_specific.h"
 
 extern "C" int GtosContentShellMain(int argc, const char** argv);
+extern "C" int gtos_native_environment_initialize() noexcept;
 extern "C" int gtos_native_heap_enable_large_allocations() noexcept;
 
 using Initializer = void (*)();
@@ -20,7 +21,8 @@ volatile unsigned native_v8_integration_result = 0xffffffffU;
 
 [[noreturn]] void NativeEntry() {
   native_v8_integration_stage = 1;
-  if (gtos_native_heap_enable_large_allocations() != 0) {
+  if (gtos_native_environment_initialize() != 0 ||
+      gtos_native_heap_enable_large_allocations() != 0) {
     __builtin_trap();
   }
 
