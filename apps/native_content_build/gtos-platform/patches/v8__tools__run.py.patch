@@ -1,0 +1,32 @@
+--- a/v8/tools/run.py
++++ b/v8/tools/run.py
+@@ -6,6 +6,7 @@
+ """This program wraps an arbitrary command since gn currently can only execute
+ scripts."""
+ 
++import os
+ import subprocess
+ import sys
+ 
+@@ -21,6 +22,21 @@ if cmd and cmd[0] == '--redirect-stdout':
+   kwargs = dict(stdout=subprocess.PIPE)
+   cmd = cmd[2:]
+ 
++# The GTOS IA32 cross build uses Linux IA32 build generators. Supply an
++# interpreter explicitly on hosts without a system IA32 runtime.
++runtime = os.environ.get("GTOS_V8_IA32_RUNTIME")
++if runtime and cmd and Path(cmd[0]).parts[-2:] in (
++    ("clang_x86", "torque"), ("clang_x86", "bytecode_builtins_list_generator"),
++    ("clang_x86", "mksnapshot")):
++  root = Path(runtime)
++  if not root.is_absolute():
++    sys.exit("GTOS_V8_IA32_RUNTIME must be an absolute path")
++  lib = root / "lib/i386-linux-gnu"
++  libraries = os.pathsep.join(map(str, (
++      lib, root / "usr/lib/i386-linux-gnu", root / "usr/lib")))
++  cmd = [str(lib / "ld-2.31.so"), "--inhibit-cache", "--library-path",
++         libraries, *cmd]
++
+ process = subprocess.Popen(cmd, **kwargs)
+ stdout, _ = process.communicate()
+ if stdout_file:

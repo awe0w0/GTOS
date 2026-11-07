@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'v8/tools/run.py': '76c9bd9c3bdae23ab13572056b9d320f3b2298e015bd3f5f1c7bf6265c0be67a',
+    'third_party/dawn/tools/generate-sources-gn.py': '14f602dc2067f3fa987e69d6f3a11c2cd9c57292caa5086560e9865dae5972e5',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/os/mod.rs': 'cb29e8073290ba65979e7c7722d1eec3b96889e34f93a15c97b852f749576ee8',
     'base/files/file_path.rs': 'eee1e0a0b1ad69341a8c8cb5b4e9f8f497d733c137aa3f7dbde68fcac09a109b',
     'v8/src/base/platform/semaphore.h': '6aaab37e3ba74c5ecaa867b3403e2ad676457f5731bf0de4c2e41bd9d9ad49ba',

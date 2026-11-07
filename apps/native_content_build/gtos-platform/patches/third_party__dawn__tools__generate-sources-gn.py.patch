@@ -1,0 +1,17 @@
+--- a/third_party/dawn/tools/generate-sources-gn.py
++++ b/third_party/dawn/tools/generate-sources-gn.py
+@@ -40,6 +40,14 @@ from tools.python import cipd_deps
+ 
+ 
+ def main() -> int:
++    prebuilt = os.environ.get('GTOS_TINT_SOURCE_GENERATOR')
++    if prebuilt:
++        if not os.path.isabs(prebuilt):
++            sys.exit('GTOS_TINT_SOURCE_GENERATOR must be an absolute path')
++        output = os.path.abspath(sys.argv[1])
++        return subprocess.run([prebuilt, output], check=False,
++                              cwd=DAWN_ROOT).returncode
++
+     go_binary = os.path.join(DAWN_ROOT, 'tools', 'golang',
+                              cipd_deps.get_cipd_platform(), 'bin', 'go')
+     if sys.platform == 'win32':
