@@ -1,0 +1,39 @@
+--- a/third_party/webrtc/rtc_base/platform_thread_types.cc
++++ b/third_party/webrtc/rtc_base/platform_thread_types.cc
+@@ -10,6 +10,10 @@
+ 
+ #include "rtc_base/platform_thread_types.h"
+ 
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/native-services.h"
++#endif
++
+ // IWYU pragma: begin_keep
+ #if defined(WEBRTC_LINUX)
+ #include <linux/prctl.h>
+@@ -43,6 +47,8 @@ namespace webrtc {
+ PlatformThreadId CurrentThreadId() {
+ #if defined(WEBRTC_WIN)
+   return GetCurrentThreadId();
++#elif defined(__GTOS__)
++  return gtos::native::CurrentProcessInfo().thread_id;
+ #elif defined(WEBRTC_POSIX)
+ #if defined(WEBRTC_MAC) || defined(WEBRTC_IOS)
+   return pthread_mach_thread_np(pthread_self());
+@@ -66,13 +72,15 @@ PlatformThreadRef CurrentThreadRef() {
+   return GetCurrentThreadId();
+ #elif defined(WEBRTC_FUCHSIA)
+   return zx_thread_self();
++#elif defined(__GTOS__)
++  return CurrentThreadId();
+ #elif defined(WEBRTC_POSIX)
+   return pthread_self();
+ #endif
+ }
+ 
+ bool IsThreadRefEqual(const PlatformThreadRef& a, const PlatformThreadRef& b) {
+-#if defined(WEBRTC_WIN) || defined(WEBRTC_FUCHSIA)
++#if defined(WEBRTC_WIN) || defined(WEBRTC_FUCHSIA) || defined(__GTOS__)
+   return a == b;
+ #elif defined(WEBRTC_POSIX)
+   return pthread_equal(a, b);

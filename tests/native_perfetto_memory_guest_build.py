@@ -14,7 +14,7 @@ parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
-                                            'native_thread', 'vp9'],
+                                            'native_thread', 'webrtc_thread', 'vp9'],
                     default='memory')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -42,6 +42,8 @@ component = {
     'base_tls': ('native_memory_record', None, 'base_tls.cpp',
                  'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'native_thread': ('native_memory_record', None, 'native_thread.cpp',
+                      'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'webrtc_thread': ('native_memory_record', None, 'webrtc_thread.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'vp9': ('native_memory_record', None, 'vp9.cpp',
             'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
@@ -109,7 +111,7 @@ if args.component == 'wait':
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
 if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread',
-                      'vp9'):
+                      'webrtc_thread', 'vp9'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -132,6 +134,8 @@ if args.component == 'base_event':
 if args.component in ('base_tls', 'native_thread'):
     strings = repo / 'apps/native_c_string/llvm-libc'
     flags.append('-I' + str(strings))
+if args.component == 'webrtc_thread':
+    flags.append('-I' + str(args.view / 'third_party/webrtc'))
 if args.component == 'vp9':
     llvm_libc = full / 'third_party/llvm-libc/src'
     flags += ['-I' + str(args.view / 'third_party/libvpx/source/libvpx'),
@@ -184,7 +188,7 @@ layout = args.out / 'module.ld'
 layout_text = layout_source.read_text().replace('native_vm_record', record_name)
 record_address = '40020000'
 image_limit = 65536
-if args.component == 'vp9':
+if args.component in ('vp9', 'webrtc_thread'):
     record_address = '40200000'
     image_limit = 2 * 1024 * 1024
     layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
@@ -206,6 +210,15 @@ for optimization in (0, 2):
                           ('codec-once', args.view / 'build/config/gtos/runtime/codec_once.cc'),
                           ('thread-core', runtime / 'thread-core.cc'),
                           ('qsort', llvm_libc / 'src/stdlib/qsort.cpp')]
+    elif args.component == 'webrtc_thread':
+        rtc_sources = args.view / 'third_party/webrtc/rtc_base'
+        native_sources = [('native-thread', args.view / 'tools/gtos_native_sdk/native-thread.cc'),
+                          ('thread-core', runtime / 'thread-core.cc'),
+                          ('assert', product / 'runtime/assert.cc'),
+                          # Standalone WebRTC diagnostics use its actual stderr
+                          # implementation without pulling in Chromium logging.
+                          ('rtc-checks', rtc_sources / 'checks.cc'),
+                          ('rtc-utc', rtc_sources / 'time_utils.cc')]
     if backend is not None:
         native_sources.insert(0, ('backend', args.view / ('third_party/perfetto/src/base/' + backend)))
     if args.component == 'exit':
@@ -293,8 +306,22 @@ for optimization in (0, 2):
         image = directory / (name + '.elf')
         linked = image.with_suffix('.unstripped.elf') if args.component in (
             'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
-            'native_thread', 'vp9') else image
+            'native_thread', 'webrtc_thread', 'vp9') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
+        if args.component == 'webrtc_thread':
+            build = args.generated.parent
+            rtc_objects = build / 'obj/third_party/webrtc/rtc_base'
+            archive = args.view.parent / 'runtime-archive-ra02/libgtos_content_runtime.a'
+            assert hashlib.sha256(archive.read_bytes()).hexdigest() == (
+                'd775c338d68de3da28c69cc8768684738b1a428d1f0048612cb9e8f92771c7c6')
+            providers = [rtc_objects / name for name in (
+                'platform_thread/platform_thread.o',
+                'platform_thread_types/platform_thread_types.o')]
+            providers += [build / 'obj/v8/v8_libbase' / (name + '.o')
+                          for name in ('gtos-clock-bridge', 'thread-context', 'gtos-semaphore')]
+            for path in [*providers, archive]:
+                bind(path)
+            extra += [*providers, archive]
         if args.component == 'vp9':
             build = args.generated.parent
             archive = args.view.parent / 'runtime-archive-ra02/libgtos_content_runtime.a'
@@ -308,7 +335,7 @@ for optimization in (0, 2):
             for path in [codec, archive, *providers]:
                 bind(path)
             extra += [fixture_object, jump_object, codec, *providers, archive]
-        if cpu or args.component in ('wait', 'partition', 'vp9'):
+        if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
@@ -349,6 +376,8 @@ if args.component == 'base_tls':
     kernel_flags.append('-DGTOS_CONTENT_TLS_PROBE')
 if args.component == 'native_thread':
     kernel_flags.append('-DGTOS_CONTENT_THREAD_PROBE')
+if args.component == 'webrtc_thread':
+    kernel_flags.append('-DGTOS_CONTENT_WEBRTC_THREAD_PROBE')
 if args.component == 'vp9':
     kernel_flags.append('-DGTOS_CONTENT_VP9_PROBE')
 directory = args.out / 'kernel'
@@ -390,6 +419,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
-    'base_tls', 'native_thread', 'vp9') else 'PERFETTO_'
+    'base_tls', 'native_thread', 'webrtc_thread', 'vp9') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

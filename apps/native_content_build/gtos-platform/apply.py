@@ -14,6 +14,13 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/webrtc/rtc_base/BUILD.gn': 'be6bda98f1ffb36893fb741114525a692291e230f65830bf354ba7b4f5092cc4',
+    'third_party/webrtc/rtc_base/checks.cc': '047a90b51b374d0f79c2066d5bdb387afde3df277c917a6217ccd9141e66cf90',
+    'third_party/webrtc/rtc_base/platform_thread.cc': '37b5899dd0368145242ce251242ecd140bb37208a6bf00a6fcb9daea5d740e83',
+    'third_party/webrtc/rtc_base/platform_thread.h': 'dfcdd03149d9481d924c0b47907b768c4878975d8ec430c7a3fcd3c4c82570e3',
+    'third_party/webrtc/rtc_base/platform_thread_types.cc': 'c3f57298b272df5a1e130f0f7e29efe1df8109c50eab642f4066b2639f77b784',
+    'third_party/webrtc/rtc_base/platform_thread_types.h': 'e4c32b5308c63e9866221d1a39e15fae4430c6431ca97c1327b9c48391959086',
+    'third_party/webrtc/rtc_base/time_utils.cc': '1d1583c421ace18794a935d6e9eba61b55a346dc4be9c4aa91d28dba77be7f71',
     'third_party/libaom/BUILD.gn': '93f98c8f8e9fa67a89afb3d057882850396fb8b3f39528ecce9b833dc2796475',
     'third_party/libaom/source/libaom/aom_ports/aom_once.h': '085b60d0cb6c1e9058ba7dce15099f51c69ec2ea1deb8c70237890242ae6f601',
     'third_party/libvpx/BUILD.gn': '3f0f12f30428d469aaf0bc0a3df02b9c713058867ce1b0e97ba8cbae640d25b5',

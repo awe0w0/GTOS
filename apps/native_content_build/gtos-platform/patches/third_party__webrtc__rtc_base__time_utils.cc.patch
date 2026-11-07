@@ -1,0 +1,16 @@
+--- a/third_party/webrtc/rtc_base/time_utils.cc
++++ b/third_party/webrtc/rtc_base/time_utils.cc
+@@ -232,7 +232,12 @@ int64_t TimeUTCMicros() {
+   if (g_clock) {
+     return g_clock->TimeNanos() / kNumNanosecsPerMicrosec;
+   }
+-#if defined(WEBRTC_POSIX)
++#if defined(__GTOS__)
++  timespec time{};
++  RTC_CHECK_EQ(clock_gettime(CLOCK_REALTIME, &time), 0);
++  return static_cast<int64_t>(time.tv_sec) * kNumMicrosecsPerSec +
++         time.tv_nsec / kNumNanosecsPerMicrosec;
++#elif defined(WEBRTC_POSIX)
+   struct timeval time;
+   gettimeofday(&time, nullptr);
+   // Convert from second (1.0) and microsecond (1e-6).

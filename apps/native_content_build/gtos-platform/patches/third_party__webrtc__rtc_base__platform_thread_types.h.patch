@@ -1,0 +1,35 @@
+--- a/third_party/webrtc/rtc_base/platform_thread_types.h
++++ b/third_party/webrtc/rtc_base/platform_thread_types.h
+@@ -34,7 +34,9 @@
+ // clang-format on
+ // IWYU pragma: end_exports
+ 
+-#if !defined(WEBRTC_WIN)
++#if defined(__GTOS__)
++#include <stdint.h>
++#elif !defined(WEBRTC_WIN)
+ #include <sched.h>
+ #endif
+ 
+@@ -45,6 +47,9 @@ typedef DWORD PlatformThreadRef;
+ #elif defined(WEBRTC_FUCHSIA)
+ typedef zx_handle_t PlatformThreadId;
+ typedef zx_handle_t PlatformThreadRef;
++#elif defined(__GTOS__)
++using PlatformThreadId = uint32_t;
++using PlatformThreadRef = uint32_t;
+ #elif defined(WEBRTC_POSIX)
+ typedef pid_t PlatformThreadId;
+ typedef pthread_t PlatformThreadRef;
+@@ -53,9 +58,8 @@ typedef pthread_t PlatformThreadRef;
+ // Retrieve the ID of the current thread.
+ PlatformThreadId CurrentThreadId();
+ 
+-// Retrieves a reference to the current thread. On Windows, this is the same
+-// as CurrentThreadId. On other platforms it's the pthread_t returned by
+-// pthread_self().
++// Retrieves a reference to the current thread. On Windows and GTOS this
++// is the same as CurrentThreadId. POSIX uses the pthread_t from pthread_self().
+ PlatformThreadRef CurrentThreadRef();
+ 
+ // Compares two thread identifiers for equality.

@@ -10,3 +10,11 @@ source_set("codec_support") {
     "tanh.cc",
   ]
 }
+
+source_set("native_threads") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//tools/gtos_native_sdk/native-thread.cc",
+    "//tools/gtos_native_sdk/native-thread.h",
+  ]
+}

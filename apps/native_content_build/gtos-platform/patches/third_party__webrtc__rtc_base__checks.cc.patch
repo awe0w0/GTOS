@@ -1,0 +1,11 @@
+--- a/third_party/webrtc/rtc_base/checks.cc
++++ b/third_party/webrtc/rtc_base/checks.cc
+@@ -30,7 +30,7 @@
+ 
+ #if defined(WEBRTC_WIN)
+ #define LAST_SYSTEM_ERROR (::GetLastError())
+-#elif defined(WEBRTC_POSIX)
++#elif defined(WEBRTC_POSIX) || defined(__GTOS__)
+ #include <cerrno>
+ #define LAST_SYSTEM_ERROR (errno)
+ #endif  // WEBRTC_WIN

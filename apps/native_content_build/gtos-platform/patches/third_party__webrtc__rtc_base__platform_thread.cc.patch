@@ -1,0 +1,51 @@
+--- a/third_party/webrtc/rtc_base/platform_thread.cc
++++ b/third_party/webrtc/rtc_base/platform_thread.cc
+@@ -19,7 +19,9 @@
+ #include "absl/strings/string_view.h"
+ #include "rtc_base/platform_thread_types.h"
+ 
+-#if !defined(WEBRTC_WIN)
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/native-thread.h"
++#elif !defined(WEBRTC_WIN)
+ #include <sched.h>
+ #endif
+ 
+@@ -55,6 +57,8 @@ bool SetPriority(ThreadPriority priority) {
+   // Setting thread priorities is not supported in NaCl, Fuchsia or Emscripten
+   // without pthreads.
+   return true;
++#elif defined(__GTOS__)
++  return priority == ThreadPriority::kNormal;
+ #elif defined(WEBRTC_CHROMIUM_BUILD) && defined(WEBRTC_LINUX)
+   // TODO(tommi): Switch to the same mechanism as Chromium uses for changing
+   // thread priorities.
+@@ -176,6 +180,10 @@ void PlatformThread::Finalize() {
+   if (joinable_)
+     WaitForSingleObject(*handle_, INFINITE);
+   CloseHandle(*handle_);
++#elif defined(__GTOS__)
++  if (joinable_) {
++    RTC_CHECK_EQ(gtos::native::JoinThread(*handle_), 0);
++  }
+ #else
+   if (joinable_)
+     RTC_CHECK_EQ(0, pthread_join(*handle_, nullptr));
+@@ -208,6 +216,17 @@ PlatformThread PlatformThread::SpawnThread(
+       nullptr, 1024 * 1024, &RunPlatformThread, start_thread_function_ptr,
+       STACK_SIZE_PARAM_IS_A_RESERVATION, &thread_id);
+   RTC_CHECK(handle) << "CreateThread failed";
++#elif defined(__GTOS__)
++  PlatformThread::Handle handle = 0;
++  const int error = gtos::native::StartThread(
++      0, &RunPlatformThread, start_thread_function_ptr, &handle);
++  if (error != 0) {
++    delete start_thread_function_ptr;
++  }
++  RTC_CHECK_EQ(error, 0) << "GTOS thread creation failed";
++  if (!joinable) {
++    RTC_CHECK_EQ(gtos::native::DetachThread(handle), 0);
++  }
+ #else
+   pthread_attr_t attr;
+   pthread_attr_init(&attr);

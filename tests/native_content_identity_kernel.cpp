@@ -7,8 +7,10 @@
 #define CONTENT_BASE_PROBE "CONTENT VP9"
 static const unsigned ExpectedChecks = 20;
 static const char* const CheckDescription = "VP9 frame decode and truncated packet";
-static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
-static const unsigned RecordAddress = 0x40200000U;
+#elif defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT WEBRTC THREAD"
+static const unsigned ExpectedChecks = 14;
+static const char* const CheckDescription = "WebRTC worker lifecycle and realtime";
 #elif defined(GTOS_CONTENT_THREAD_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT NATIVE THREAD"
 static const unsigned ExpectedChecks = 25;
@@ -24,7 +26,10 @@ static const char* const CheckDescription = "exact process and worker identity";
 #endif
 
 namespace {
-#if !defined(GTOS_CONTENT_VP9_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE)
+    static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
+    static const unsigned RecordAddress = 0x40200000U;
+#else
     static const unsigned MaximumImageBytes = 65536;
     static const unsigned RecordAddress = gtos_perfetto_probe::RecordAddress;
 #endif
@@ -72,7 +77,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     for (uint32_t i = 0; i < bytes; ++i) image[i] = ((const uint8_t*)module.start)[i];
     interrupts.Activate();
     uint32_t id = 0;
-#if defined(GTOS_CONTENT_VP9_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE)
     const NativeElfLaunchProfile profile{1024, 32, 1024};
     Need(runtime.CreateElf(image, bytes, id, profile), "ELF admission");
 #else

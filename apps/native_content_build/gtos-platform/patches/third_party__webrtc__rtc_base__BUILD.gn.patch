@@ -1,0 +1,12 @@
+--- a/third_party/webrtc/rtc_base/BUILD.gn
++++ b/third_party/webrtc/rtc_base/BUILD.gn
+@@ -474,6 +474,9 @@ rtc_library("platform_thread") {
+     "//third_party/abseil-cpp/absl/functional:any_invocable",
+     "//third_party/abseil-cpp/absl/strings:string_view",
+   ]
++  if (build_with_chromium && is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_threads" ]
++  }
+ }
+ 
+ rtc_library("rtc_event") {

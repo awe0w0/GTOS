@@ -1,0 +1,20 @@
+--- a/third_party/webrtc/rtc_base/platform_thread.h
++++ b/third_party/webrtc/rtc_base/platform_thread.h
+@@ -17,7 +17,7 @@
+ #include "absl/strings/string_view.h"
+ #include "rtc_base/platform_thread_types.h"  // IWYU pragma: keep
+ 
+-#if !defined(WEBRTC_WIN)
++#if !defined(WEBRTC_WIN) && !defined(__GTOS__)
+ #include <pthread.h>  // IWYU pragma: keep
+ #endif
+ 
+@@ -46,6 +46,8 @@ class PlatformThread final {
+   // Handle is the base platform thread handle.
+ #if defined(WEBRTC_WIN)
+   using Handle = HANDLE;
++#elif defined(__GTOS__)
++  using Handle = PlatformThreadId;
+ #else
+   using Handle = pthread_t;
+ #endif  // defined(WEBRTC_WIN)
