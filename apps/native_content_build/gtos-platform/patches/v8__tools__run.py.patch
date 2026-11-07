@@ -17,7 +17,7 @@
 +runtime = os.environ.get("GTOS_V8_IA32_RUNTIME")
 +if runtime and cmd and Path(cmd[0]).parts[-2:] in (
 +    ("clang_x86", "torque"), ("clang_x86", "bytecode_builtins_list_generator"),
-+    ("clang_x86", "mksnapshot")):
++    ("clang_x86", "mksnapshot"), ("clang_x86", "gen-regexp-special-case")):
 +  root = Path(runtime)
 +  if not root.is_absolute():
 +    sys.exit("GTOS_V8_IA32_RUNTIME must be an absolute path")

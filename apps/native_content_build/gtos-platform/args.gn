@@ -9,6 +9,10 @@ gtos_v8_bringup = true
 gtos_content_link_via_clang = true
 concurrent_links = 3
 
+# Initialize Blink contexts at runtime. The optional precomputed context
+# requires a separate host Chromium build for the target CPU.
+use_v8_context_snapshot = false
+
 # Use the existing Aura window lifecycle and Views implementations. This does
 # not supply an Ozone backend: its existing GTOS refusal remains in force.
 use_aura = true

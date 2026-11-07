@@ -4,7 +4,7 @@
        rebase_path(_metagen_clang_resource_dir, root_build_dir),
      ]
  
-+    if (is_gtos) {
++    if (target_os == "gtos") {
 +      # The formal graph has a private root. Query its generated C++ edge
 +      # to retain the toolchain flags that GN desc cannot report.
 +      _out = get_label_info(_metagen_flags_target, "target_out_dir")
