@@ -100,9 +100,10 @@ try:
     for p in (cxx,qemu,grub,assembler,linker,objcopy,nm,objdump,pathlib.Path(__file__)):bind(p)
     sources=['src/gdt.cpp','src/multitasking.cpp','src/syscalls.cpp','src/hardwarecommunication/interrupts.cpp',
         'src/hardwarecommunication/port.cpp','src/process/native_runtime.cpp','src/process/native_realtime.cpp',
-        'src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_fp.cpp','src/process/elf32.cpp',
+        'src/process/resources.cpp','src/process/native_surface.cpp','src/process/native_windows.cpp',
+        'src/process/native_fp.cpp','src/process/elf32.cpp',
         'src/memory/process_address_space.cpp','src/memory/paging.cpp','src/memory/physical.cpp','src/memory/bootstrap.cpp',
-        'tests/native_realtime_smoke.cpp','apps/native_clock_probe/memory.cc']
+        'tests/i386_pure_virtual_runtime.cpp','tests/native_realtime_smoke.cpp','apps/native_clock_probe/memory.cc']
     assembly=['tests/native_process_loader.s','tests/native_process_user.s','src/process/native_fp.s','src/hardwarecommunication/interruptstubs.s']
     for p in (repo/'include').rglob('*'):
         if p.is_file():bind(p)
