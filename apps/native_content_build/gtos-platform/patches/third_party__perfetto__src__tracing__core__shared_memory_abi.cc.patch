@@ -1,0 +1,13 @@
+--- a/third_party/perfetto/src/tracing/core/shared_memory_abi.cc
++++ b/third_party/perfetto/src/tracing/core/shared_memory_abi.cc
+@@ -18,10 +18,6 @@
+ #include "perfetto/base/build_config.h"
+ #include "perfetto/base/time.h"
+ 
+-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+-#include <sys/mman.h>
+-#endif
+-
+ #include "perfetto/ext/base/utils.h"
+ #include "perfetto/ext/tracing/core/basic_types.h"
+ 

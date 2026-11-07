@@ -1,0 +1,12 @@
+--- a/third_party/perfetto/src/tracing/console_interceptor.cc
++++ b/third_party/perfetto/src/tracing/console_interceptor.cc
+@@ -269,7 +269,8 @@ void ConsoleInterceptor::OnSetup(const SetupArgs& args) {
+   if (g_output_fd_for_testing)
+     fd = g_output_fd_for_testing;
+ #if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) && \
+-    !PERFETTO_BUILDFLAG(PERFETTO_OS_WASM)
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_WASM) && \
++    !PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+   bool use_colors = isatty(fd);
+ #else
+   bool use_colors = false;

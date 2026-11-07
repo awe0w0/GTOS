@@ -1,0 +1,11 @@
+--- a/base/logging/rust_logger/lib.rs
++++ b/base/logging/rust_logger/lib.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ mod custom_panic_hook;
+ mod log_crate_integration;
+ mod print_rust_log;

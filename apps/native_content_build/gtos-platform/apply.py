@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/perfetto/src/tracing/core/shared_memory_abi.cc': '3a8ae2e14f8c7c9822b86cdd0b0a570d90187be2dacbcd457e3ce1e703fec258',
+    'third_party/perfetto/src/tracing/console_interceptor.cc': 'c2b498443ee4517b8920204418ff0c5e96ec65dccc467b0e68b35b92523fc933',
+    'base/logging/rust_logger/lib.rs': '031a4fa7b581969225e57815d577563eec8405fac48759444134c4f214525473',
+    'base/logging/rust_logger/BUILD.gn': '5eabbef9a199f97ddada03efbf80eaba0565fe793c426a2aa5c10311e5b3be1f',
     'third_party/zlib/BUILD.gn': 'ca39854b5338812359318fae7524ed6efd7da9537cae0e66f8d407f5d3c92815',
     'third_party/perfetto/include/perfetto/base/proc_utils.h': 'a6bf8a3abfe2ef502c5cdd091ba67755d0adbae7e38c955150bf024ccc186626',
     'third_party/perfetto/src/base/clock_snapshots.cc': 'd83f631879ddf0671197963a09cfb9f068d48a310da842c62b72fc2777db758f',
