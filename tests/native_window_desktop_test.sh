@@ -123,9 +123,9 @@ compile_all() {
 # Starting is its own step. The image is static i386, so on a host with a 32-bit capable kernel it runs directly.
 start_image() {
   local out=$1
-  local image=$2
+  shift
   local status=0
-  if "$image" > "$out/run-i386.log" 2>&1; then
+  if "$@" > "$out/run-i386.log" 2>&1; then
     printf '0\n' > "$out/native-exit.txt"
   else
     local native_status=$?
@@ -139,8 +139,11 @@ case "$stage" in
   all)
     out="$(prepare "$out" "$group")"
     status=0
-    compile_all "$out" "$group" || status=$?
-    start_image "$out" "$out/native-window-desktop-i386" || status=$?
+    if compile_all "$out" "$group"; then
+      start_image "$out" "$out/native-window-desktop-i386" || status=$?
+    else
+      status=$?
+    fi
     python3 "$repo/tests/native_window_desktop_status.py" "$repo" "$out" "$status"
     ;;
   build)
@@ -155,15 +158,17 @@ case "$stage" in
       echo "run needs WINDOW_DESKTOP_BUILD_DIR to hold the static evidence the build step produced" >&2
       exit 2
     fi
+    image=$(staged_binary window-desktop-i386) || exit 2
+    verify_publish_record "$image" || exit 2
     mkdir -p "$run_dir"
     run_dir="$(realpath "$run_dir")"
     # The build step's evidence is read-only here; this step keeps a copy next to its own log so the status report and the image it
     # describes stay in one directory the run owns.
     cp -a "$build_dir"/. "$run_dir"/
     rm -f "$run_dir"/run-i386.log "$run_dir"/native-exit.txt
-    image=$(staged_binary window-desktop-i386) || exit 2
+    cp "$image" "$run_dir/native-window-desktop-i386"
     status=0
-    start_image "$run_dir" "$image" || status=$?
+    start_image "$run_dir" run_published_binary "$image" || status=$?
     python3 "$repo/tests/native_window_desktop_status.py" "$repo" "$run_dir" "$status"
     ;;
 esac
