@@ -1,0 +1,11 @@
+--- a/third_party/rust-toolchain/lib/rustlib/src/rust/library/test/src/lib.rs
++++ b/third_party/rust-toolchain/lib/rustlib/src/rust/library/test/src/lib.rs
+@@ -23,6 +23,8 @@
+ #![feature(process_exitcode_internals)]
+ #![feature(panic_can_unwind)]
+ #![cfg_attr(test, feature(test))]
++// The GTOS sysroot deliberately retains std's restricted API gate.
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ #![feature(thread_spawn_hook)]
+ #![allow(internal_features)]
+ #![warn(rustdoc::unescaped_backticks)]

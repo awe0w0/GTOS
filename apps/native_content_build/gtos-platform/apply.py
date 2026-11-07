@@ -62,6 +62,7 @@ INPUTS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/condvar/mod.rs': '4738e89e6ae37d1843dbf66e3ebbf51f74b375e8199af8965288aff3255f41ca',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/once/mod.rs': '03fa76d79a5c65651bd627ffb2ec41f00afaccd9e0f81a48fa76201e192ce670',
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/rwlock/mod.rs': '800959dcab669de71206b5492b81deb2765a183d323e2807daefee35fa00ae19',
+    'third_party/rust-toolchain/lib/rustlib/src/rust/library/test/src/lib.rs': '3e2037f170b3e23813b9a24de1f2826d8cf01aa3c9c65c41d67cfadee4adb8f6',
     'build/rust/std/rules/BUILD.gn': 'aec704ffc0528f5c10b237fc531bf6bf6bbdc848b91beb84de2a03273ee6f795',
     'build/rust/std/BUILD.gn.hbs': 'ab89582c8238efdfc0d974e6bfbd61e384e3a3e3e7a5b4ca3376aeba0aeade05',
     'build/rust/std/gnrt_config.toml': 'caf9a486faf41fe422c774d155b31707ac2300a78fc823b0ae30e942fe73b0e3',

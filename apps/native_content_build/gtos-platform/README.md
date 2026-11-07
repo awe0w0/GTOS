@@ -642,3 +642,11 @@ they run from a byte-verified test copy; compiler tests keep the real private
 compiler/library root. Earlier mixed-context `t01`/`t02` failures remain, including
 an incorrectly selected nonexistent test module. `ninja-n63` then runs the actual
 formerly failing definitions action successfully through the formal graph.
+
+The pinned Rust test library explicitly opts into `restricted_std` for GTOS.
+The platform's standard library still requires the opt-in from its consumers.
+The formal `ninja-n67` rule produces the 32-bit GTOS test rlib and metadata.
+Under the same guard, `libtest-test-lt01` compiles a real consumer with the
+opt-in, rejects the same GTOS consumer without it with E0658 and no metadata,
+and compiles the default host consumer. These are compile-policy checks.
+`unit-ul01` passes the 21 platform regression tests with the new source pin.
