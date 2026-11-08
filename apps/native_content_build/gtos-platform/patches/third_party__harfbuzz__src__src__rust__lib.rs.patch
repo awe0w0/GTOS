@@ -1,0 +1,8 @@
+--- a/third_party/harfbuzz/src/src/rust/lib.rs
++++ b/third_party/harfbuzz/src/src/rust/lib.rs
+@@ -1,3 +1,5 @@
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ mod hb;
+ #[allow(unused_imports)]
+ use hb::*;

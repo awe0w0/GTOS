@@ -1,0 +1,14 @@
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -43,6 +43,11 @@ rust_static_library("bridge_rust_side") {
+   crate_root = skia_fontations_bridge_root
+   sources = skia_ports_fontations_bridge_rust_side_sources
+   cxx_bindings = [ skia_fontations_bridge_root ]
++  if (is_gtos) {
++    # Fontations uses std::sync::OnceLock for its hinting cache.
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   deps = [
+     ":path_bridge",
+     "//third_party/rust/font_types/v0_12:lib",

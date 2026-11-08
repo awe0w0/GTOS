@@ -1,0 +1,26 @@
+--- a/third_party/harfbuzz/BUILD.gn
++++ b/third_party/harfbuzz/BUILD.gn
+@@ -58,6 +58,11 @@ if (use_system_harfbuzz) {
+       "font",
+       "shape",
+     ]
++    if (is_gtos) {
++      # The font cache uses std::collections and std::sync.
++      library_configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++      rustflags = [ "-Zallow-features=restricted_std" ]
++    }
+     bindgen_deps = [ ":hb_rs_generator" ]
+     deps = [
+       "//third_party/rust/font_types/v0_12:lib",
+@@ -528,7 +533,10 @@ if (use_system_harfbuzz) {
+       "HB_NO_PRAGMA_GCC_DIAGNOSTIC_WARNING",
+     ]
+ 
+-    if (!is_win && !is_mac) {
++    if (is_gtos) {
++      # Use the upstream std::mutex implementation with the GTOS libc++ backend.
++      defines += [ "HB_MUTEX_IMPL_STD_MUTEX" ]
++    } else if (!is_win && !is_mac) {
+       # Needed for HarfBuzz mutex implementation, see hb-mutex.hh
+       defines += [ "HAVE_PTHREAD" ]
+     }
