@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import re
 import struct
 import subprocess
 from pathlib import Path
@@ -14,7 +15,8 @@ parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
-                                            'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments'],
+                                            'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
+                                            'skia_semaphore'],
                     default='memory')
 parser.add_argument('--payload', type=Path)
 parser.add_argument('--payload-record', type=Path)
@@ -49,6 +51,8 @@ component = {
                  'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'native_thread': ('native_memory_record', None, 'native_thread.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'skia_semaphore': ('native_memory_record', None, 'skia_semaphore.cpp',
+                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'webrtc_thread': ('native_memory_record', None, 'webrtc_thread.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'vp9': ('native_memory_record', None, 'vp9.cpp',
@@ -119,7 +123,7 @@ if args.component == 'wait':
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
 if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread',
-                      'webrtc_thread', 'vp9'):
+                      'webrtc_thread', 'vp9', 'skia_semaphore'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -139,11 +143,17 @@ if args.component == 'base_event':
                         '#define TRACE_EVENT_INSTANT(...) ((void)0)\n')
     bind(disabled)
     flags += ['-I' + str(args.generated / 'third_party/perfetto')]
-if args.component in ('base_tls', 'native_thread'):
+if args.component in ('base_tls', 'native_thread', 'skia_semaphore'):
     strings = repo / 'apps/native_c_string/llvm-libc'
     flags.append('-I' + str(strings))
 if args.component == 'webrtc_thread':
     flags.append('-I' + str(args.view / 'third_party/webrtc'))
+if args.component == 'skia_semaphore':
+    formal_rule = args.generated.parent / 'obj/skia/skia_core_and_effects.ninja'
+    bind(formal_rule)
+    hardening = re.findall(r'-D_LIBCPP_HARDENING_MODE=\w+', formal_rule.read_text())
+    assert len(hardening) == 1, 'missing exact formal libc++ hardening mode'
+    flags += [hardening[0], '-I' + str(args.view / 'third_party/skia')]
 if args.component == 'vp9':
     llvm_libc = full / 'third_party/llvm-libc/src'
     flags += ['-I' + str(args.view / 'third_party/libvpx/source/libvpx'),
@@ -211,7 +221,7 @@ else:
     layout_text = layout_source.read_text().replace('native_vm_record', record_name)
     record_address = '40020000'
     image_limit = 65536
-    if args.component in ('vp9', 'webrtc_thread'):
+    if args.component in ('vp9', 'webrtc_thread', 'skia_semaphore'):
         record_address = '40200000'
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
@@ -266,7 +276,7 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                            ('metrics-common', args.view / 'base/process/process_metrics.cc'),
                            ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc'),
                            ('abort', runtime / 'abort.cc')]
-    if args.component in ('base_tls', 'native_thread'):
+    if args.component in ('base_tls', 'native_thread', 'skia_semaphore'):
         native_sources = (
             [('base-tls', args.view / 'base/threading/thread_local_storage_gtos.cc')]
             if args.component == 'base_tls' else
@@ -276,6 +286,9 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                            ('memcpy', 'memset', 'memmove')]
         native_sources += [(name, runtime / (name + '.cc')) for name in
                            ('thread-context', 'thread-exit', 'emutls', 'heap', 'operators', 'abort')]
+    if args.component == 'skia_semaphore':
+        for name in ('SkSemaphore', 'SkThreadID'):
+            native_sources.append((name, args.view / ('third_party/skia/src/core/' + name + '.cpp')))
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -332,8 +345,12 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         image = directory / (name + '.elf')
         linked = image.with_suffix('.unstripped.elf') if args.component in (
             'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
-            'native_thread', 'webrtc_thread', 'vp9') else image
+            'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
+        if args.component == 'skia_semaphore':
+            archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
+            bind(archive)
+            extra.append(archive)
         if args.component == 'webrtc_thread':
             build = args.generated.parent
             rtc_objects = build / 'obj/third_party/webrtc/rtc_base'
@@ -403,6 +420,8 @@ if args.component == 'base_tls':
     kernel_flags.append('-DGTOS_CONTENT_TLS_PROBE')
 if args.component == 'native_thread':
     kernel_flags.append('-DGTOS_CONTENT_THREAD_PROBE')
+if args.component == 'skia_semaphore':
+    kernel_flags.append('-DGTOS_CONTENT_SKIA_SEMAPHORE_PROBE')
 if args.component == 'webrtc_thread':
     kernel_flags.append('-DGTOS_CONTENT_WEBRTC_THREAD_PROBE')
 if args.component == 'vp9':
@@ -446,6 +465,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
-    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments') else 'PERFETTO_'
+    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments', 'skia_semaphore') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

@@ -11,6 +11,10 @@ static const char* const CheckDescription = "VP9 frame decode and truncated pack
 #define CONTENT_BASE_PROBE "CONTENT WEBRTC THREAD"
 static const unsigned ExpectedChecks = 18;
 static const char* const CheckDescription = "WebRTC worker, recursive mutex and realtime";
+#elif defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT SKIA SEMAPHORE"
+static const unsigned ExpectedChecks = 19;
+static const char* const CheckDescription = "Skia wait, signal and native thread identity";
 #elif defined(GTOS_CONTENT_THREAD_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT NATIVE THREAD"
 static const unsigned ExpectedChecks = 25;
@@ -26,7 +30,7 @@ static const char* const CheckDescription = "exact process and worker identity";
 #endif
 
 namespace {
-#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
     static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
     static const unsigned RecordAddress = 0x40200000U;
 #else
@@ -77,7 +81,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     for (uint32_t i = 0; i < bytes; ++i) image[i] = ((const uint8_t*)module.start)[i];
     interrupts.Activate();
     uint32_t id = 0;
-#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
     const NativeElfLaunchProfile profile{1024, 32, 1024};
     Need(runtime.CreateElf(image, bytes, id, profile), "ELF admission");
 #else

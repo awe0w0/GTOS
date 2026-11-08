@@ -1,0 +1,12 @@
+--- a/third_party/skia/src/core/SkThreadID.cpp
++++ b/third_party/skia/src/core/SkThreadID.cpp
+@@ -10,6 +10,9 @@
+ #ifdef SK_BUILD_FOR_WIN
+     #include "src/core/SkLeanWindows.h"
+     SkThreadID SkGetThreadID() { return GetCurrentThreadId(); }
++#elif defined(SK_BUILD_FOR_GTOS)
++    #include "tools/gtos_native_sdk/native-services.h"
++    SkThreadID SkGetThreadID() { return gtos::native::CurrentProcessInfo().thread_id; }
+ #else
+     #include <pthread.h>
+     SkThreadID SkGetThreadID() { return (int64_t)pthread_self(); }

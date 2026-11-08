@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/skia/include/private/SkFeatures.h': 'd20d246f13400fe5a0e9f335611d825f936fa469e043e967849db673476196d1',
+    'third_party/skia/src/core/SkExecutor.cpp': 'a3d948ee4e1f790703ec9d5e84d7158f402aa1ef218766b0b6b698a0e3c0d951',
+    'third_party/skia/src/core/SkSemaphore.cpp': 'ea81fa92ee09c1f8074c30611ccdd981379e1eb94456e6b69b3b9a25fe5039d3',
+    'third_party/skia/src/core/SkThreadID.cpp': '7d179b4342f62049608b6f737a83a43c806f98e0506ec0916260b14f9ab66d38',
     'mojo/core/platform_handle_utils.cc': 'eaff2420829d9f7bcea03f8ac1222ad39897925163d643bdf959bcdc413611a3',
     'mojo/core/ipcz_driver/shared_buffer.cc': '3804209d888c6efd904bb9ac3abfadfb0becb842d3f434049894976420bbb366',
     'mojo/public/cpp/system/platform_handle.cc': '9fa479a2b5ee7ec3e17359c212a38dcd4d73d65eff2fcce5c08565190124889a',

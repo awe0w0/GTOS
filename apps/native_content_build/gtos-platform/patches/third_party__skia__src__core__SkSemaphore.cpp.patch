@@ -1,0 +1,38 @@
+--- a/third_party/skia/src/core/SkSemaphore.cpp
++++ b/third_party/skia/src/core/SkSemaphore.cpp
+@@ -9,7 +9,34 @@
+ 
+ #include "include/private/SkFeatures.h" // IWYU pragma: keep
+ 
+-#if defined(SK_BUILD_FOR_MAC) || defined(SK_BUILD_FOR_IOS)
++#if defined(SK_BUILD_FOR_GTOS)
++    #include <condition_variable>
++    #include <mutex>
++
++    struct SkSemaphore::OSSemaphore {
++        std::mutex fMutex;
++        std::condition_variable fReady;
++        int fAvailable = 0;
++
++        void signal(int n) {
++            {
++                std::lock_guard lock(fMutex);
++                fAvailable += n;
++            }
++            if (n == 1) {
++                fReady.notify_one();
++            } else {
++                fReady.notify_all();
++            }
++        }
++
++        void wait() {
++            std::unique_lock lock(fMutex);
++            fReady.wait(lock, [this] { return fAvailable > 0; });
++            --fAvailable;
++        }
++    };
++#elif defined(SK_BUILD_FOR_MAC) || defined(SK_BUILD_FOR_IOS)
+     #include <dispatch/dispatch.h>
+ 
+     struct SkSemaphore::OSSemaphore {
