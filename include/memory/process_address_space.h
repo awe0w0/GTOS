@@ -30,6 +30,8 @@ namespace gtos { namespace memory {
         static const uint32_t MaximumPages = 256;
         // Large ELF pages + root stack + the existing runtime-page budget.
         static const uint32_t MaximumCapacityPages = 4096 + 2 + MaximumPages;
+        // The kernel selects this budget only for a trusted Content launch.
+        static const uint32_t MaximumContentCapacityPages = 128 * 1024;
         static const uint32_t DynamicBase = 0x80000000u;
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
@@ -63,6 +65,11 @@ namespace gtos { namespace memory {
         bool Buffer(uint32_t address, uint32_t length, bool writable) const;
         bool Mutable() const;
         bool RuntimeMutable() const;
+        bool PrepareWithLimit(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                              uint32_t capacityPages, uint32_t dynamicEnd, uint32_t maximumPages);
+        static uint32_t MetadataFrameCount(uint32_t capacityPages);
+        bool IsMetadataFrame(uint32_t address) const;
+        uint32_t* LayoutIndex(bool byFrame) const;
         // Valid only after Layout succeeds, before ownership records change.
         int IndexedLayoutPage(uint32_t key, bool byFrame = false) const;
         int FindRegion(uint32_t handle) const;
@@ -96,6 +103,8 @@ namespace gtos { namespace memory {
         // Frozen mappings may lie above it; runtime reservations cannot.
         bool Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
                      uint32_t capacityPages, uint32_t dynamicEnd);
+        bool PrepareContent(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                            uint32_t capacityPages, uint32_t dynamicEnd);
         // New zeroed data frames, never caller-supplied physical aliases.
         // Mapping/protection changes require unsealed state and kernel CR3.
         bool MapNewPage(uint32_t virtualAddress, bool writable);

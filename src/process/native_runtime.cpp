@@ -308,21 +308,36 @@ bool NativeRuntime::CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id
     return CreateElfWithBudget(image, bytes, id, profile.imagePageLimit,
         profile.stackPages, profile.runtimePages, &environment);
 }
+bool NativeRuntime::CreateContentElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                                     const NativeElfLaunchProfile& profile, const NativeEnvironment& environment) {
+    id = 0;
+    if (profile.stackPages < 2 || profile.stackPages > 128 || !profile.runtimePages
+        || profile.runtimePages > ProcessAddressSpace::MaximumContentCapacityPages) return false;
+    return CreateElfWithBudget(image, bytes, id, profile.imagePageLimit,
+        profile.stackPages, profile.runtimePages, &environment, ContentElf);
+}
 bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, uint32_t& id,
                                         uint32_t imagePageLimit, uint32_t stackPages,
-                                        uint32_t runtimePages, const NativeEnvironment* environment) {
+                                        uint32_t runtimePages, const NativeEnvironment* environment,
+                                        ElfLaunchKind kind) {
     InterruptGuard guard;
     id = 0;
-    if (!imagePageLimit || imagePageLimit > Elf32MaximumLargePages) return false;
+    const bool content = kind == ContentElf;
+    const uint32_t maximumImagePages = content ? Elf32MaximumContentPages : Elf32MaximumLargePages;
+    if (!imagePageLimit || imagePageLimit > maximumImagePages) return false;
     const bool large = imagePageLimit > Elf32MaximumPages;
-    const uint32_t fileLimit = large ? Elf32MaximumLargePages * 4096 : 2 * 1024 * 1024;
+    const uint32_t fileLimit = content || large ? maximumImagePages * 4096 : 2 * 1024 * 1024;
     if (!SafeKernelContext() || !nextId || !TrustedImage(image, bytes, fileLimit)) return false;
     Elf32LoadPlan plan;
     Elf32Error validation;
-    if (!ValidateElf32(image, bytes, plan, validation, imagePageLimit)) return false;
+    const bool valid = content ? ValidateContentElf32(image, bytes, plan, validation, imagePageLimit)
+                               : ValidateElf32(image, bytes, plan, validation, imagePageLimit);
+    if (!valid) return false;
     const uint32_t capacity = runtimePages ? plan.pageCount + stackPages + runtimePages
                                           : ProcessAddressSpace::MaximumPages;
-    if (capacity < ProcessAddressSpace::MaximumPages || capacity > ProcessAddressSpace::MaximumCapacityPages
+    const uint32_t maximumCapacity = content ? ProcessAddressSpace::MaximumContentCapacityPages
+                                             : ProcessAddressSpace::MaximumCapacityPages;
+    if (capacity < ProcessAddressSpace::MaximumPages || capacity > maximumCapacity
         || plan.pageCount > capacity - stackPages)
         return false;
     const uint32_t stackBottom = UserStackTop - stackPages * 4096;
@@ -334,7 +349,10 @@ bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, ui
         if (begin < reservedEnd && reservedBegin < end) return false;
     }
     uint32_t index; Slot* target = FreeSlot(index);
-    if (!target || !target->space.Prepare(*paging, *frames, capacity, reservedBegin)) return false;
+    if (!target) return false;
+    const bool prepared = content ? target->space.PrepareContent(*paging, *frames, capacity, reservedBegin)
+                                  : target->space.Prepare(*paging, *frames, capacity, reservedBegin);
+    if (!prepared) return false;
     Slot& slot = *target;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
         const Elf32LoadSegment& segment = plan.segments[i];

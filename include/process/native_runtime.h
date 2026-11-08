@@ -113,9 +113,11 @@ namespace gtos { namespace process {
         Slot* FreeSlot(uint32_t& index);
         bool Admit(Slot&, uint32_t index, uint32_t entry, uint32_t& id, uint32_t stackPages = 2,
                    const NativeEnvironment* environment = 0);
+        enum ElfLaunchKind { OrdinaryElf, ContentElf };
         bool CreateElfWithBudget(const uint8_t*, uint32_t bytes, uint32_t& id,
                                  uint32_t imagePageLimit, uint32_t stackPages, uint32_t runtimePages,
-                                 const NativeEnvironment* environment = 0);
+                                 const NativeEnvironment* environment = 0,
+                                 ElfLaunchKind kind = OrdinaryElf);
         NativeRuntime(const NativeRuntime&);
         NativeRuntime& operator=(const NativeRuntime&);
     public:
@@ -148,6 +150,9 @@ namespace gtos { namespace process {
                        const NativeElfLaunchProfile& profile);
         bool CreateElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
                        const NativeElfLaunchProfile& profile, const NativeEnvironment& environment);
+        // Trusted Content boot path with an independently bounded resident budget.
+        bool CreateContentElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
+                              const NativeElfLaunchProfile& profile, const NativeEnvironment& environment);
         // Boot/desktop context only, never from a trap or on a victim stack.
         uint32_t Reap();
         bool RequestExit(uint32_t id, uint32_t code);

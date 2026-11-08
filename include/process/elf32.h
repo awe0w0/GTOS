@@ -9,8 +9,9 @@ namespace gtos { namespace process {
     static const uint32_t Elf32PageSize = 4096;
     static const uint32_t Elf32MaximumSegments = 16;
     static const uint32_t Elf32MaximumPages = 256;
-    // Kernel-selected large-image profile; the ordinary entry stays at256.
+    // Kernel-selected large-image profile; the ordinary entry stays at 256.
     static const uint32_t Elf32MaximumLargePages = 4096;
+    static const uint32_t Elf32MaximumContentPages = 128 * 1024;
     static const uint32_t Elf32MaximumProgramHeaders = 64;
     static const uint32_t Elf32MaximumSectionHeaders = 256;
     enum Elf32SegmentFlags { Elf32Execute = 1, Elf32Write = 2, Elf32Read = 4 };
@@ -44,6 +45,8 @@ namespace gtos { namespace process {
                        Elf32LoadPlan& output, Elf32Error& error);
     bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
                        Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit);
+    bool ValidateContentElf32(const uint8_t* image, uint32_t imageSize,
+                              Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit);
     const char* Elf32ErrorName(Elf32Error error);
 } }
 #endif

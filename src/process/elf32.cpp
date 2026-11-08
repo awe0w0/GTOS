@@ -66,11 +66,12 @@ namespace {
     }
 }
 
-bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
-                   Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
+static bool ValidateElf32WithLimit(const uint8_t* image, uint32_t imageSize,
+                                  Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit,
+                                  uint32_t maximumPages) {
     Clear(output);
     error = Elf32Ok;
-    if (!pageLimit || pageLimit > Elf32MaximumLargePages) return Fail(Elf32PageLimit, error);
+    if (!pageLimit || pageLimit > maximumPages) return Fail(Elf32PageLimit, error);
     if (!image) return Fail(Elf32NullImage, error);
     if (imageSize < HeaderSize) return Fail(Elf32TruncatedHeader, error);
     if (image[0] != 0x7F || image[1] != 'E' || image[2] != 'L' || image[3] != 'F')
@@ -152,6 +153,16 @@ bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
     if (!executableEntry) return Fail(Elf32BadEntry, error);
     output = plan;
     return true;
+}
+
+bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
+                   Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
+    return ValidateElf32WithLimit(image, imageSize, output, error, pageLimit, Elf32MaximumLargePages);
+}
+
+bool ValidateContentElf32(const uint8_t* image, uint32_t imageSize,
+                          Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
+    return ValidateElf32WithLimit(image, imageSize, output, error, pageLimit, Elf32MaximumContentPages);
 }
 
 bool ValidateElf32(const uint8_t* image, uint32_t imageSize, Elf32LoadPlan& output) {

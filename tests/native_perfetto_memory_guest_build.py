@@ -16,7 +16,7 @@ parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
                                             'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
-                                            'skia_semaphore', 'expat'],
+                                            'skia_semaphore', 'expat', 'content_capacity'],
                     default='memory')
 parser.add_argument('--payload', type=Path)
 parser.add_argument('--payload-record', type=Path)
@@ -57,6 +57,8 @@ component = {
                        'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'expat': ('native_memory_record', None, 'expat.cpp',
               'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'content_capacity': ('native_memory_record', None, 'content_capacity.cpp',
+                         'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'webrtc_thread': ('native_memory_record', None, 'webrtc_thread.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'vp9': ('native_memory_record', None, 'vp9.cpp',
@@ -235,6 +237,10 @@ else:
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
                        .replace('0x20000', '0x200000').replace('<= 4096,', '<= 65536,'))
+    if args.component == 'content_capacity':
+        layout_text = layout_text.replace('*(.bss*)', '*(.bss)').replace(
+            '    /DISCARD/',
+            '    .content_bss (NOLOAD) : { *(.bss.content_capacity) } :data\n    /DISCARD/')
     layout.write_text(layout_text)
     bind(layout)
     start = repo / 'apps/native_libxml_file/probe/exit-start.s'
@@ -455,6 +461,8 @@ if args.component == 'skia_semaphore':
     kernel_flags.append('-DGTOS_CONTENT_SKIA_SEMAPHORE_PROBE')
 if args.component == 'expat':
     kernel_flags.append('-DGTOS_CONTENT_EXPAT_PROBE')
+if args.component == 'content_capacity':
+    kernel_flags.append('-DGTOS_CONTENT_CAPACITY_PROBE')
 if args.component == 'webrtc_thread':
     kernel_flags.append('-DGTOS_CONTENT_WEBRTC_THREAD_PROBE')
 if args.component == 'vp9':
@@ -498,6 +506,7 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
-    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments', 'skia_semaphore', 'expat') else 'PERFETTO_'
+    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
+    'skia_semaphore', 'expat', 'content_capacity') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

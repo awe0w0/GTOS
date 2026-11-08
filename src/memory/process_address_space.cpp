@@ -12,10 +12,18 @@ namespace {
     uint32_t nextRegionHandle = 1;
     // Ephemeral full-check workspace, not authoritative ownership. Every caller
     // holds the BSP interrupt guard; kernel mapping queries do not reenter Layout.
-    const uint32_t LayoutIndexSlots = 8192;
-    uint32_t layoutAddresses[LayoutIndexSlots], layoutFrames[LayoutIndexSlots];
-    static_assert(ProcessAddressSpace::MaximumCapacityPages < LayoutIndexSlots, "bounded layout index load");
-    uint32_t LayoutHash(uint32_t address) { return ((address >> 12) * 2654435761U) & (LayoutIndexSlots - 1); }
+    const uint32_t DefaultIndexSlots = 8192;
+    uint32_t defaultLayoutAddresses[DefaultIndexSlots], defaultLayoutFrames[DefaultIndexSlots];
+    static_assert(ProcessAddressSpace::MaximumCapacityPages < DefaultIndexSlots, "bounded layout index load");
+    uint32_t IndexSlots(uint32_t capacity) {
+        if (capacity <= ProcessAddressSpace::MaximumCapacityPages) return DefaultIndexSlots;
+        uint32_t slots = DefaultIndexSlots;
+        while (slots < 2 * capacity) slots *= 2;
+        return slots;
+    }
+    uint32_t LayoutHash(uint32_t address, uint32_t slots) {
+        return ((address >> 12) * 2654435761U) & (slots - 1);
+    }
 #ifdef GTOS_PROCESS_MEMORY_TEST
     // The host harness substitutes hardware registers only, never mapping policy.
     extern "C" uint32_t gtos_process_memory_test_cr0, gtos_process_memory_test_cr3;
@@ -122,9 +130,30 @@ bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryMana
 }
 bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
                                   uint32_t capacityPages, uint32_t dynamicEnd) {
+    return PrepareWithLimit(sharedKernel, allocator, capacityPages, dynamicEnd, MaximumCapacityPages);
+}
+bool ProcessAddressSpace::PrepareContent(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                                         uint32_t capacityPages, uint32_t dynamicEnd) {
+    return PrepareWithLimit(sharedKernel, allocator, capacityPages, dynamicEnd, MaximumContentCapacityPages);
+}
+uint32_t ProcessAddressSpace::MetadataFrameCount(uint32_t capacityPages) {
+    uint32_t bytes = capacityPages * sizeof(Page);
+    if (capacityPages > MaximumCapacityPages) bytes += 2 * IndexSlots(capacityPages) * sizeof(uint32_t);
+    return (bytes + 4095) / 4096;
+}
+bool ProcessAddressSpace::IsMetadataFrame(uint32_t address) const {
+    return metadataBase && address >= metadataBase && address - metadataBase < metadataPages * 4096;
+}
+uint32_t* ProcessAddressSpace::LayoutIndex(bool byFrame) const {
+    if (pageLimit <= MaximumCapacityPages) return byFrame ? defaultLayoutFrames : defaultLayoutAddresses;
+    uint32_t* addresses = (uint32_t*)(metadataBase + pageLimit * sizeof(Page));
+    return byFrame ? addresses + IndexSlots(pageLimit) : addresses;
+}
+bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                                           uint32_t capacityPages, uint32_t dynamicEnd, uint32_t maximumPages) {
     InterruptGuard guard;
     if (prepared || directory || frames) return Fail(ProcessMemoryBadState);
-    if (capacityPages < MaximumPages || capacityPages > MaximumCapacityPages)
+    if (capacityPages < MaximumPages || capacityPages > maximumPages)
         return Fail(ProcessMemoryLimit);
     if ((dynamicEnd & 4095) || dynamicEnd <= DynamicBase || dynamicEnd > DynamicLimit)
         return Fail(ProcessMemoryBadRange);
@@ -167,7 +196,7 @@ bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryMana
     }
     frames = &allocator;
     if (capacityPages > MaximumPages) {
-        const uint32_t count = (capacityPages * sizeof(Page) + 4095) / 4096;
+        const uint32_t count = MetadataFrameCount(capacityPages);
         uint32_t base = 0;
         if (!frames->allocateContiguous(count, base)) {
             frames = 0; kernel = 0; kernelDirectory = 0;
@@ -201,14 +230,15 @@ bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryMana
     return true;
 }
 int ProcessAddressSpace::IndexedLayoutPage(uint32_t key, bool byFrame) const {
-    const uint32_t* entries = byFrame ? layoutFrames : layoutAddresses;
-    uint32_t slot = LayoutHash(key);
-    for (uint32_t count = 0; count < LayoutIndexSlots; ++count) {
+    const uint32_t* entries = LayoutIndex(byFrame);
+    const uint32_t slots = IndexSlots(pageLimit);
+    uint32_t slot = LayoutHash(key, slots);
+    for (uint32_t count = 0; count < slots; ++count) {
         const uint32_t record = entries[slot];
         if (!record || record > pageCount) return -1;
         const Page& page = pages[record - 1];
         if ((byFrame ? page.frame : page.address) == key) return (int)(record - 1);
-        slot = (slot + 1) & (LayoutIndexSlots - 1);
+        slot = (slot + 1) & (slots - 1);
     }
     return -1;
 }
@@ -223,19 +253,19 @@ bool ProcessAddressSpace::SharesFrame(const Page& page) const {
     return index >= 0 && regions[index].sharedFrames;
 }
 bool ProcessAddressSpace::MetadataLayout() const {
-    if (pageLimit < MaximumPages || pageLimit > MaximumCapacityPages) return false;
+    if (pageLimit < MaximumPages || pageLimit > MaximumContentCapacityPages) return false;
     if (!metadataBase)
         return pages == inlinePages && !metadataPages && pageLimit == MaximumPages;
     if (pages != (Page*)metadataBase || (metadataBase & 4095) || pageLimit == MaximumPages
-        || metadataPages != (pageLimit * sizeof(Page) + 4095) / 4096
+        || metadataPages != MetadataFrameCount(pageLimit)
         || metadataPages * 4096 > AddressLimit - metadataBase
         || !KernelAlias(metadataBase, metadataPages * 4096, true)) return false;
-    for (uint32_t i = 0; i < metadataPages; ++i) {
-        const uint32_t frame = metadataBase + i * 4096;
-        if (!frames->isAllocated(frame) || frame == directory || frame == kernelDirectory) return false;
-        for (uint32_t di = 0; di < 1024; ++di)
-            if (frame == tables[di] || frame == (((uint32_t*)kernelDirectory)[di] & AddressMask)) return false;
-    }
+    if (IsMetadataFrame(directory) || IsMetadataFrame(kernelDirectory)) return false;
+    for (uint32_t i = 0; i < metadataPages; ++i)
+        if (!frames->isAllocated(metadataBase + i * 4096)) return false;
+    for (uint32_t di = 0; di < 1024; ++di)
+        if (IsMetadataFrame(tables[di]) || IsMetadataFrame(((uint32_t*)kernelDirectory)[di] & AddressMask))
+            return false;
     return true;
 }
 bool ProcessAddressSpace::Layout(bool complete) const {
@@ -267,26 +297,29 @@ bool ProcessAddressSpace::Layout(bool complete) const {
     if (!frames->isAllocated(directory) || !KernelAlias(directory, 4096, true)
         || !KernelAlias(kernelDirectory, 4096, true)) return Fail(ProcessMemoryBadAlias);
     if (!MetadataLayout()) return Fail(ProcessMemoryBadAlias);
-    for (uint32_t i = 0; i < LayoutIndexSlots; ++i) layoutAddresses[i] = layoutFrames[i] = 0;
+    const uint32_t slots = IndexSlots(pageLimit);
+    uint32_t* layoutAddresses = LayoutIndex(false);
+    uint32_t* layoutFrames = LayoutIndex(true);
+    for (uint32_t i = 0; i < slots; ++i) layoutAddresses[i] = layoutFrames[i] = 0;
     for (uint32_t i = 0; i < pageCount; ++i) {
         const Page& page = pages[i];
-        uint32_t slot = LayoutHash(page.address), count = 0;
+        uint32_t slot = LayoutHash(page.address, slots), count = 0;
         while (layoutAddresses[slot]) {
-            if (pages[layoutAddresses[slot] - 1].address == page.address || ++count == LayoutIndexSlots)
+            if (pages[layoutAddresses[slot] - 1].address == page.address || ++count == slots)
                 return Fail(ProcessMemoryBadMapping);
-            slot = (slot + 1) & (LayoutIndexSlots - 1);
+            slot = (slot + 1) & (slots - 1);
         }
         layoutAddresses[slot] = i + 1;
-        slot = LayoutHash(page.frame); count = 0;
+        slot = LayoutHash(page.frame, slots); count = 0;
         while (layoutFrames[slot]) {
             const Page& other = pages[layoutFrames[slot] - 1];
             if (other.frame == page.frame) {
                 if (!SharesFrame(page) || !SharesFrame(other)) return Fail(ProcessMemoryBadMapping);
                 break;
             }
-            if (++count == LayoutIndexSlots)
+            if (++count == slots)
                 return Fail(ProcessMemoryBadMapping);
-            slot = (slot + 1) & (LayoutIndexSlots - 1);
+            slot = (slot + 1) & (slots - 1);
         }
         layoutFrames[slot] = i + 1;
     }
@@ -338,7 +371,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
         if (!page.present && page.writable) return Fail(ProcessMemoryBadMapping);
         const uint32_t table = tables[page.address >> 22];
         if (!UserPage(page.address) || !table || !frames->isAllocated(page.frame)
-            || (metadataBase && page.frame >= metadataBase && page.frame - metadataBase < metadataPages * 4096)
+            || IsMetadataFrame(page.frame)
             || !KernelAlias(page.frame, 4096, true)
             || (((uint32_t*)table)[(page.address >> 12) & 1023] & ~(Accessed | Dirty))
                 != (page.present ? PageEntry(page.frame, page.writable) : 0))
@@ -832,8 +865,7 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
         if (!kernel->query((uint32_t)current, mapping) || mapping.userAccessible
             || mapping.cacheDisabled || (writable && !mapping.writable)) return Fail(ProcessMemoryBadAlias);
         const uint32_t physical = mapping.physicalAddress;
-        if (metadataBase && physical >= metadataBase && physical - metadataBase < metadataPages * 4096)
-            return Fail(ProcessMemoryBadAlias);
+        if (IsMetadataFrame(physical)) return Fail(ProcessMemoryBadAlias);
         if (physical == directory || physical == kernelDirectory) return Fail(ProcessMemoryBadAlias);
         for (uint32_t di = 0; di < 1024; ++di)
             if (physical == tables[di]
