@@ -1,14 +1,17 @@
 --- a/v8/tools/run.py
 +++ b/v8/tools/run.py
-@@ -6,6 +6,7 @@
+@@ -6,6 +6,10 @@
  """This program wraps an arbitrary command since gn currently can only execute
  scripts."""
  
++import hashlib
++import json
 +import os
++import stat
  import subprocess
  import sys
  
-@@ -21,6 +22,21 @@ if cmd and cmd[0] == '--redirect-stdout':
+@@ -21,6 +25,41 @@ if cmd and cmd[0] == '--redirect-stdout':
    kwargs = dict(stdout=subprocess.PIPE)
    cmd = cmd[2:]
  
@@ -21,11 +24,31 @@
 +  root = Path(runtime)
 +  if not root.is_absolute():
 +    sys.exit("GTOS_V8_IA32_RUNTIME must be an absolute path")
++  source = Path(cmd[0]).absolute()
++  tool = "/".join(source.parts[-2:])
++  bindings = json.loads(os.environ.get("GTOS_V8_IA32_BINDINGS", "{}"))
++  identity = bindings.get(tool)
++  if identity is None or source != Path(identity["source"]):
++    sys.exit("GTOS IA32 generator has no binding: " + str(source))
++  published = Path(identity["published"])
++  if not source.is_symlink() or source.resolve() != published:
++    sys.exit("GTOS IA32 generator binding changed: " + str(source))
++  if published.is_symlink() or not published.is_file():
++    sys.exit("GTOS IA32 generator publication missing: " + str(published))
++  info = published.stat()
++  if info.st_size != identity["bytes"] or info.st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
++    sys.exit("GTOS IA32 generator publication metadata changed: " + str(published))
++  with published.open("rb") as image:
++    digest = hashlib.sha256()
++    for block in iter(lambda: image.read(1024 * 1024), b""):
++      digest.update(block)
++  if digest.hexdigest() != identity["sha256"]:
++    sys.exit("GTOS IA32 generator publication bytes changed: " + str(published))
 +  lib = root / "lib/i386-linux-gnu"
 +  libraries = os.pathsep.join(map(str, (
 +      lib, root / "usr/lib/i386-linux-gnu", root / "usr/lib")))
 +  cmd = [str(lib / "ld-2.31.so"), "--inhibit-cache", "--library-path",
-+         libraries, *cmd]
++         libraries, str(published), *cmd[1:]]
 +
  process = subprocess.Popen(cmd, **kwargs)
  stdout, _ = process.communicate()
