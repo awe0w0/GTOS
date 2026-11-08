@@ -19,6 +19,10 @@ static const char* const CheckDescription = "Expat parsing and hardware entropy 
 #define CONTENT_BASE_PROBE "CONTENT ADDRESS TEXT"
 static const unsigned ExpectedChecks = 23;
 static const char* const CheckDescription = "address bytes and bounded text";
+#elif defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT NET PROTOCOL"
+static const unsigned ExpectedChecks = 16;
+static const char* const CheckDescription = "cookie and DNS wire parsing";
 #elif defined(GTOS_CONTENT_CAPACITY_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT CAPACITY"
 static const unsigned ExpectedChecks = 8;
@@ -44,7 +48,7 @@ static const char* const CheckDescription = "exact process and worker identity";
 namespace {
 #if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
-    defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE)
+    defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
     static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
     static const unsigned RecordAddress = 0x40200000U;
 #else
@@ -106,7 +110,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     Need(runtime.CreateContentElf(image, bytes, id, profile, environment), "Content ELF admission");
 #elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
-    defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE)
+    defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
     const NativeElfLaunchProfile profile{1024, 32, 1024};
     Need(runtime.CreateElf(image, bytes, id, profile), "ELF admission");
 #else
@@ -131,6 +135,10 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     printf((char*)CONTENT_BASE_PROBE " RECORD ipv4="); printfHex32(record.base);
     printf((char*)" mapped="); printfHex32(record.fault_address);
     const bool values = record.base == 0x7f000001U && record.fault_address == 0xc0000201U;
+#elif defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
+    printf((char*)CONTENT_BASE_PROBE " RECORD cookies="); printfHex32(record.base);
+    printf((char*)" dns="); printfHex32(record.fault_address);
+    const bool values = record.base == 3 && record.fault_address == 10;
 #elif defined(GTOS_CONTENT_CAPACITY_PROBE)
     ProcessMemoryStatistics memory = {};
     Need(runtime.MemoryStatistics(id, memory), "Content resident memory statistics");

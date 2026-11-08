@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'net/cookies/cookie_util.cc': '659f1db784a243eae768d2af6d8705d2f99073b5cbfb73ef02ddc7e57b72f4f3',
+    'net/cookies/parsed_cookie.cc': 'b1efd075b3356d30c7a79812b6756aac2c303284fe4a46116471adb2194e91b3',
+    'net/dns/dns_names_util.cc': 'cc13fdeaa87730a3ab3c879715a7667ee02165c0b1c7aea208a9d96d6fa5fd94',
     'third_party/rust/sfv/v0_15/BUILD.gn': 'bde568bf19d22a26c9e2687614865f615a505f3cdab859e61dcd45c3fc1b6167',
     'third_party/rust/chromium_crates_io/vendor/sfv-v0_15/src/lib.rs': 'fbb756f069c53c3835b2d40468cf976a6669e7396eb2404f15f632c4c20e5e5e',
     'third_party/skia/rust/common/io_traits_ffi.rs': 'b77d393826cb012a44a339d04b755022a675e4104eddd3f2682cdc263577a760',

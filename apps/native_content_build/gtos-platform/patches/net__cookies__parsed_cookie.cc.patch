@@ -1,0 +1,101 @@
+--- a/net/cookies/parsed_cookie.cc
++++ b/net/cookies/parsed_cookie.cc
+@@ -44,6 +44,8 @@
+ 
+ #include "net/cookies/parsed_cookie.h"
+ 
++#include "base/compiler_specific.h"
++
+ #include <algorithm>
+ #include <string>
+ #include <string_view>
+@@ -87,7 +89,7 @@ inline bool CharIsA(const char c, std::string_view chars) {
+ inline bool SeekToCharacter(std::string_view::iterator* it,
+                             const std::string_view::iterator& end,
+                             const char character) {
+-  for (; *it != end && **it != character; ++(*it)) {
++  for (; *it != end && **it != character; UNSAFE_BUFFERS(++(*it))) {
+   }
+   return *it == end;
+ }
+@@ -97,7 +99,7 @@ inline bool SeekToCharacter(std::string_view::iterator* it,
+ inline bool SeekTo(std::string_view::iterator* it,
+                    const std::string_view::iterator& end,
+                    std::string_view chars) {
+-  for (; *it != end && !CharIsA(**it, chars); ++(*it)) {
++  for (; *it != end && !CharIsA(**it, chars); UNSAFE_BUFFERS(++(*it))) {
+   }
+   return *it == end;
+ }
+@@ -106,14 +108,14 @@ inline bool SeekTo(std::string_view::iterator* it,
+ inline bool SeekPast(std::string_view::iterator* it,
+                      const std::string_view::iterator& end,
+                      std::string_view chars) {
+-  for (; *it != end && CharIsA(**it, chars); ++(*it)) {
++  for (; *it != end && CharIsA(**it, chars); UNSAFE_BUFFERS(++(*it))) {
+   }
+   return *it == end;
+ }
+ inline bool SeekBackPast(std::string_view::iterator* it,
+                          const std::string_view::iterator& end,
+                          std::string_view chars) {
+-  for (; *it != end && CharIsA(**it, chars); --(*it)) {
++  for (; *it != end && CharIsA(**it, chars); UNSAFE_BUFFERS(--(*it))) {
+   }
+   return *it == end;
+ }
+@@ -342,7 +344,7 @@ std::string_view::iterator ParsedCookie::FindFirstTerminator(
+   size_t term_pos = s.find_first_of(kTerminator);
+   if (term_pos != std::string_view::npos) {
+     // We found a character we should treat as an end of string.
+-    end = s.begin() + term_pos;
++    end = UNSAFE_BUFFERS(s.begin() + term_pos);
+   }
+   return end;
+ }
+@@ -371,11 +373,11 @@ bool ParsedCookie::ParseToken(std::string_view::iterator* it,
+   // token_end should point after the last interesting token character,
+   // pointing at either whitespace, or at '=' (and equal to token_real_end).
+   if (*it != *token_start) {  // We could have an empty token name.
+-    --(*it);                  // Go back before the token separator.
++    UNSAFE_BUFFERS(--(*it));  // Go back before the token separator.
+     // Skip over any whitespace to the first non-whitespace character.
+     SeekBackPast(it, *token_start, kWhitespace);
+     // Point after it.
+-    ++(*it);
++    UNSAFE_BUFFERS(++(*it));
+   }
+   *token_end = *it;
+ 
+@@ -405,11 +407,11 @@ void ParsedCookie::ParseValue(std::string_view::iterator* it,
+ 
+   // Ignore any unwanted whitespace after the value.
+   if (*value_end != *value_start) {  // Could have an empty value
+-    --(*value_end);
++    UNSAFE_BUFFERS(--(*value_end));
+     // Skip over any whitespace to the first non-whitespace character.
+     SeekBackPast(value_end, *value_start, kWhitespace);
+     // Point after it.
+-    ++(*value_end);
++    UNSAFE_BUFFERS(++(*value_end));
+   }
+ }
+ 
+@@ -617,7 +619,7 @@ void ParsedCookie::ParseTokenValuePairs(std::string_view cookie_line,
+     } else {
+       // We have a TOKEN=VALUE.
+       pair.first = std::string(token_start, token_end);
+-      ++it;  // Skip past the '='.
++      UNSAFE_BUFFERS(++it);  // Skip past the '='.
+       had_token_value_separator = true;
+     }
+ 
+@@ -688,7 +690,7 @@ void ParsedCookie::ParseTokenValuePairs(std::string_view cookie_line,
+     // We've processed a token/value pair, we're either at the end of
+     // the string or a ValueSeparator like ';', which we want to skip.
+     if (it != end)
+-      ++it;
++      UNSAFE_BUFFERS(++it);
+   }
+ }
+ 

@@ -1,0 +1,20 @@
+--- a/net/dns/dns_names_util.cc
++++ b/net/dns/dns_names_util.cc
+@@ -13,6 +13,7 @@
+ #include <vector>
+ 
+ #include "base/check.h"
++#include "base/compiler_specific.h"
+ #include "base/containers/span.h"
+ #include "base/containers/span_reader.h"
+ #include "base/strings/string_view_util.h"
+@@ -75,7 +76,8 @@ std::optional<std::vector<uint8_t>> DottedNameToNetwork(
+     if (pos == dotted_form_name.end()) {
+       break;
+     }
+-    iter = pos + 1;
++    // SAFETY: pos denotes a dot inside dotted_form_name.
++    iter = UNSAFE_BUFFERS(pos + 1);
+   }
+ 
+   if (name.empty()) {  // Empty names e.g. "", "." are not valid.
