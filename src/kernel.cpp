@@ -891,6 +891,65 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
     printf("NATIVE ELF PROCESSES READY\n");
     return true;
 }
+
+static uint32_t contentShellId;
+static bool contentShellEntered;
+
+static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
+                              const memory::MultibootInfo *boot) {
+    if (!(boot->flags & (1u << 3)) || boot->moduleCount != 1)
+        return false;
+    const auto &module = *(const memory::MultibootModule *)boot->modules;
+    if (module.end <= module.start)
+        return false;
+    static const char launch[] =
+        "GTOS_CONTENT_ASSET_DIR=" GTOS_CONTENT_ASSET_DIRECTORY "\0"
+        "GTOS_CONTENT_ARG_COUNT=6\0"
+        "GTOS_CONTENT_ARG_01=--single-process\0"
+        "GTOS_CONTENT_ARG_02=--ozone-platform=gtos\0"
+        "GTOS_CONTENT_ARG_03=--disable-gpu\0"
+        "GTOS_CONTENT_ARG_04=--disable-background-networking\0"
+        "GTOS_CONTENT_ARG_05=--user-data-dir=" GTOS_CONTENT_ASSET_DIRECTORY "\0"
+        "GTOS_CONTENT_ARG_06=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
+    const uint32_t runtimePages = 64 * 1024;
+    const uint32_t stackPages = 128;
+    const process::NativeElfLaunchProfile profile{
+        memory::ProcessAddressSpace::MaximumContentCapacityPages - runtimePages - stackPages,
+        stackPages, runtimePages};
+    process::NativeEnvironment environment;
+    if (!environment.Assign(launch, sizeof(launch) - 1) ||
+        !paging.sealForSharedProcessors() || !nativeRuntime.AttachEvents(nativeEvents) ||
+        !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
+        !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))
+        return false;
+    if (!nativeRuntime.CreateContentElf((const uint8_t *)module.start, module.end - module.start,
+                                        contentShellId, profile, environment))
+        return false;
+    LogValue("CONTENT SHELL ADMITTED ", contentShellId);
+    return true;
+}
+
+static void ServiceContentShell() {
+    if (!contentShellId)
+        return;
+    process::NativeStatus status;
+    if (!nativeRuntime.Status(contentShellId, status))
+        return;
+    if (!contentShellEntered && status.observedCs == 0x23 && status.observedCr3 == status.directory) {
+        contentShellEntered = true;
+        LogValue("CONTENT SHELL CPL3 ", contentShellId);
+    }
+    if (!status.live) {
+        LogValue("CONTENT SHELL EXIT ", status.exitCode);
+        if (status.faultVector) {
+            LogValue("CONTENT SHELL FAULT VECTOR ", status.faultVector);
+            LogValue("CONTENT SHELL FAULT ADDRESS ", status.faultAddress);
+        }
+        LogValue("CONTENT SHELL REAP ", nativeRuntime.Reap());
+        contentShellId = 0;
+    }
+}
+
 static void ServiceNativeDemo(TaskManager &tasks) {
     if (!nativeDemoReady || nativeDemoReported)
         return;
@@ -2790,9 +2849,12 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     LogValue("APP STORE COUNT ", store.Count());
     LogValue("APP STORE GENERATION ", store.Generation());
     AdvancedTechnologyAttachment contentDisk(0x1F0, false);
+    const bool contentBoot = BootOption(mbi, "content-shell");
+    bool contentAssetsReady = false;
     if (BootOption(mbi, "content-assets")) {
         // Live boot must not probe any internal ATA device.
-        if (!liveBoot && AttachContentAssets(contentDisk))
+        contentAssetsReady = !liveBoot && AttachContentAssets(contentDisk);
+        if (contentAssetsReady)
             printf("CONTENT ASSET VOLUME READY\n");
         else
             printf("CONTENT ASSET VOLUME REFUSED\n");
@@ -2837,7 +2899,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     process::NativeWindows::Instance().SetAvailable(modern != 0);
     if (uefiBoot && !modern) Panic("UEFI GOP FRAMEBUFFER UNAVAILABLE", "E09");
     printf(modern ? "DESKTOP MODE FRAMEBUFFER\n" : "DESKTOP MODE LEGACY\n");
-    if ((mbi->flags & (1 << 3)) && mbi->moduleCount) {
+    if (!contentBoot && (mbi->flags & (1 << 3)) && mbi->moduleCount) {
         const memory::MultibootModule *m = (const memory::MultibootModule *)mbi->modules;
         if (m[0].end > m[0].start && m[0].end - m[0].start <= apps::PackageLimit) {
             desktop.SetInstaller((const uint8_t *)m[0].start, m[0].end - m[0].start);
@@ -2912,9 +2974,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     Task sleeper(&gdt, Sleeper), yielder(&gdt, Yielder);
     tasks.AddTask(&sleeper);
     tasks.AddTask(&yielder);
-    nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);
-    if (!nativeDemoReady)
-        printf("NATIVE RUNTIME LIMITED\n");
+    if (contentBoot) {
+        if (!nativeStacksPrepared || !contentAssetsReady || !modern || !StartContentShell(tasks, gdt, mbi))
+            printf("CONTENT SHELL LIMITED\n");
+    } else {
+        nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);
+        if (!nativeDemoReady)
+            printf("NATIVE RUNTIME LIMITED\n");
+    }
     BootStage("B07", "PS2 PIT IRQ");
     keyboard.Activate();
     mouse.Activate();
@@ -2938,6 +3005,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     for (;;) {
         ServiceWorkerDemo(workers, tasks.Ticks());
         ServiceNativeDemo(tasks);
+        ServiceContentShell();
         if (!runtimeChecked && sleeper.State() == TaskTerminated &&
             yielder.State() == TaskTerminated) {
             runtimeChecked = true;
