@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "lfs.h"
+#include <storage/content_volume_layout.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -13,7 +14,7 @@
 enum {
     SectorSize = 512,
     BlockSize = 4096,
-    VolumeOffset = 8 * SectorSize,
+    VolumeOffset = GTOS_CONTENT_VOLUME_FIRST_SECTOR * SectorSize,
     MaximumAssets = 32
 };
 
@@ -61,12 +62,13 @@ static int block_sync(const struct lfs_config* cfg) {
 }
 
 static void asset_path(char* path, const struct Asset* asset) {
-    snprintf(path, sizeof("/content/") + LFS_NAME_MAX, "/content/%.*s",
+    snprintf(path, sizeof(GTOS_CONTENT_ASSET_DIRECTORY "/") + LFS_NAME_MAX,
+             GTOS_CONTENT_ASSET_DIRECTORY "/%.*s",
              LFS_NAME_MAX, asset->name);
 }
 
 static void copy_asset(lfs_t* store, const struct Asset* asset) {
-    char path[sizeof("/content/") + LFS_NAME_MAX];
+    char path[sizeof(GTOS_CONTENT_ASSET_DIRECTORY "/") + LFS_NAME_MAX];
     asset_path(path, asset);
     lfs_file_t file;
     require(lfs_file_open(store, &file, path,
@@ -83,7 +85,7 @@ static void copy_asset(lfs_t* store, const struct Asset* asset) {
 }
 
 static void verify_asset(lfs_t* store, const struct Asset* asset) {
-    char path[sizeof("/content/") + LFS_NAME_MAX];
+    char path[sizeof(GTOS_CONTENT_ASSET_DIRECTORY "/") + LFS_NAME_MAX];
     asset_path(path, asset);
     lfs_file_t file;
     require(lfs_file_open(store, &file, path, LFS_O_RDONLY) == 0,
@@ -149,7 +151,8 @@ int main(int argc, char** argv) {
     lfs_t store;
     require(lfs_format(&store, &config) == 0, "cannot format", argv[1]);
     require(lfs_mount(&store, &config) == 0, "cannot mount", argv[1]);
-    require(lfs_mkdir(&store, "/content") == 0, "cannot create /content", argv[1]);
+    require(lfs_mkdir(&store, GTOS_CONTENT_ASSET_DIRECTORY) == 0,
+            "cannot create " GTOS_CONTENT_ASSET_DIRECTORY, argv[1]);
     for (int i = 0; i < count; ++i) copy_asset(&store, &assets[i]);
     require(lfs_unmount(&store) == 0 && fflush(image) == 0 && fsync(descriptor) == 0,
             "cannot flush image", argv[1]);
@@ -157,7 +160,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < count; ++i) verify_asset(&store, &assets[i]);
     require(lfs_unmount(&store) == 0 && fclose(image) == 0,
             "cannot close image", argv[1]);
-    printf("CONTENT VOLUME VERIFIED assets=%d first_sector=8 sectors=%ld\n",
-           count, (long)(volume_size / SectorSize));
+    printf("CONTENT VOLUME VERIFIED assets=%d first_sector=%u sectors=%ld\n",
+           count, GTOS_CONTENT_VOLUME_FIRST_SECTOR, (long)(volume_size / SectorSize));
     return 0;
 }

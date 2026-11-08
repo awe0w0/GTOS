@@ -18,6 +18,8 @@
 #include <drivers/ata.h>
 #include <storage/settings.h>
 #include <storage/liveblockdevice.h>
+#include <storage/content_volume_layout.h>
+#include <storage/filestore.h>
 #include <drivers/vga.h>
 #include <drivers/framebuffer.h>
 #include <gui/shell.h>
@@ -26,6 +28,7 @@
 #include <syscalls.h>
 #include <process/native_runtime.h>
 #include <process/native_events.h>
+#include <process/native_files.h>
 #include <process/native_shared_memory.h>
 #include <process/native_surface.h>
 #include <process/native_windows.h>
@@ -344,6 +347,26 @@ static process::NativeSharedMemory nativeSharedMemory(frames);
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
 static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
+static bool AttachContentAssets(AdvancedTechnologyAttachment &disk) {
+    if (!disk.ConfigureWaitClock(DiskWaitTicks, 500U) || !disk.Identify() ||
+        disk.SectorCount() <= GTOS_CONTENT_VOLUME_FIRST_SECTOR) return false;
+
+    // Both the mounted store and its endpoint must live through every Reap.
+    struct Volume {
+        storage::FileStore store;
+        process::NativeFiles files{store};
+    };
+    Volume *volume = new Volume;
+    if (!volume) return false;
+    storage::FileStore::Info info;
+    if (volume->store.Mount(&disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
+                            disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, true) == 0 &&
+        volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
+        info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) return true;
+    if (volume->store.Mounted()) volume->store.Unmount();
+    delete volume;
+    return false;
+}
 // An exact digest of the physical allocator's ownership set, not a summary of its totals.
 //
 // Totals cannot answer the question the frame-pressure scene asks. A refusal that leaked one frame moves a frame from
@@ -2766,6 +2789,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     }
     LogValue("APP STORE COUNT ", store.Count());
     LogValue("APP STORE GENERATION ", store.Generation());
+    AdvancedTechnologyAttachment contentDisk(0x1F0, false);
+    if (BootOption(mbi, "content-assets")) {
+        // Live boot must not probe any internal ATA device.
+        if (!liveBoot && AttachContentAssets(contentDisk))
+            printf("CONTENT ASSET VOLUME READY\n");
+        else
+            printf("CONTENT ASSET VOLUME REFUSED\n");
+    }
     storage::SettingsStore settings(dataDisk);
     bool settingsWritable = settings.Load();
     printf(liveBoot ? "SETTINGS RAM SESSION ONLY\n"
