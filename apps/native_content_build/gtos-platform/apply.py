@@ -257,6 +257,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/arpa/inet.h': 'sdk/arpa/inet.h',
+    'build/config/gtos/runtime/address_text.cc': 'runtime/address_text.cc',
     'build/config/gtos/include/process/thread_abi.h': '../../../include/process/thread_abi.h',
     'v8/tools/gtos_isolate_diagnostic/runtime/thread-core.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-core.cc',
     'build/config/gtos/include/process/environment_abi.h': '../../../include/process/environment_abi.h',

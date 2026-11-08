@@ -16,7 +16,7 @@ parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
                                             'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
-                                            'skia_semaphore', 'expat', 'content_capacity'],
+                                            'skia_semaphore', 'expat', 'address_text', 'content_capacity'],
                     default='memory')
 parser.add_argument('--payload', type=Path)
 parser.add_argument('--payload-record', type=Path)
@@ -57,6 +57,8 @@ component = {
                        'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'expat': ('native_memory_record', None, 'expat.cpp',
               'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'address_text': ('native_memory_record', None, 'address_text.cpp',
+                     'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'content_capacity': ('native_memory_record', None, 'content_capacity.cpp',
                          'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'webrtc_thread': ('native_memory_record', None, 'webrtc_thread.cpp',
@@ -129,7 +131,7 @@ if args.component == 'wait':
 if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
 if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread',
-                      'webrtc_thread', 'vp9', 'skia_semaphore'):
+                      'webrtc_thread', 'vp9', 'skia_semaphore', 'address_text'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -160,6 +162,9 @@ if args.component == 'skia_semaphore':
     hardening = re.findall(r'-D_LIBCPP_HARDENING_MODE=\w+', formal_rule.read_text())
     assert len(hardening) == 1, 'missing exact formal libc++ hardening mode'
     flags += [hardening[0], '-I' + str(args.view / 'third_party/skia')]
+if args.component == 'address_text':
+    runtime = args.view / 'v8/tools/gtos_isolate_diagnostic/runtime'
+    flags += ['-I' + str(args.view / 'v8')]
 if args.component == 'expat':
     llvm_libc = args.view / 'third_party/llvm-libc/src'
     environment = args.view / 'tools/gtos_native_sdk/environment'
@@ -232,7 +237,7 @@ else:
     layout_text = layout_source.read_text().replace('native_vm_record', record_name)
     record_address = '40020000'
     image_limit = 65536
-    if args.component in ('vp9', 'webrtc_thread', 'skia_semaphore', 'expat'):
+    if args.component in ('vp9', 'webrtc_thread', 'skia_semaphore', 'expat', 'address_text'):
         record_address = '40200000'
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
@@ -252,6 +257,12 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
     directory.mkdir()
     objects = []
     native_sources = [('bytes', repo / 'apps/native_libxml_file/link_closure/min_closure.cpp')]
+    if args.component == 'address_text':
+        native_sources = [('address', product / 'runtime/address_text.cc'),
+                          ('url-address', args.view / 'url/url_canon_ip.cc'),
+                          ('url-output', args.view / 'url/url_canon.cc'),
+                          ('url-parse', args.view / 'url/third_party/mozilla/url_parse.cc'),
+                          ('thread-context', runtime / 'thread-context.cc')]
     if args.component == 'vp9':
         native_sources = [('assert', product / 'runtime/assert.cc'),
                           ('codec-once', args.view / 'build/config/gtos/runtime/codec_once.cc'),
@@ -366,9 +377,13 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         image = directory / (name + '.elf')
         linked = image.with_suffix('.unstripped.elf') if args.component in (
             'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
-            'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore', 'expat') else image
+            'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore', 'expat', 'address_text') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if args.component == 'skia_semaphore':
+            archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
+            bind(archive)
+            extra.append(archive)
+        if args.component == 'address_text':
             archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
             bind(archive)
             extra.append(archive)
@@ -416,7 +431,7 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
             for path in [codec, archive, *providers]:
                 bind(path)
             extra += [fixture_object, jump_object, codec, *providers, archive]
-        if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9', 'expat'):
+        if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9', 'expat', 'address_text'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
@@ -461,6 +476,8 @@ if args.component == 'skia_semaphore':
     kernel_flags.append('-DGTOS_CONTENT_SKIA_SEMAPHORE_PROBE')
 if args.component == 'expat':
     kernel_flags.append('-DGTOS_CONTENT_EXPAT_PROBE')
+if args.component == 'address_text':
+    kernel_flags.append('-DGTOS_CONTENT_ADDRESS_TEXT_PROBE')
 if args.component == 'content_capacity':
     kernel_flags.append('-DGTOS_CONTENT_CAPACITY_PROBE')
 if args.component == 'webrtc_thread':
@@ -507,6 +524,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
     'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
-    'skia_semaphore', 'expat', 'content_capacity') else 'PERFETTO_'
+    'skia_semaphore', 'expat', 'address_text', 'content_capacity') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

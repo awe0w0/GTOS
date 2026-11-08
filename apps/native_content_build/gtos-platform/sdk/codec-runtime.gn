@@ -46,3 +46,9 @@ source_set("native_environment") {
     "LIBC_COPT_PUBLIC_PACKAGING=1",
   ]
 }
+
+source_set("native_address_text") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [ "address_text.cc" ]
+  deps = [ "//url" ]
+}

@@ -34,12 +34,15 @@
      if (is_win) {
        sources += [ "app/shell.rc" ]
      }
-@@ -775,6 +795,10 @@ if (is_android) {
+@@ -775,6 +795,13 @@ if (is_android) {
        "//sandbox",
      ]
  
 +    if (is_gtos && gtos_content_runtime_archive != "") {
-+      deps += [ "//build/config/gtos/runtime:native_environment" ]
++      deps += [
++        "//build/config/gtos/runtime:native_address_text",
++        "//build/config/gtos/runtime:native_environment",
++      ]
 +    }
 +
      data_deps = [
