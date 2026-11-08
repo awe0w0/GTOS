@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/rust/sfv/v0_15/BUILD.gn': 'bde568bf19d22a26c9e2687614865f615a505f3cdab859e61dcd45c3fc1b6167',
+    'third_party/rust/chromium_crates_io/vendor/sfv-v0_15/src/lib.rs': 'fbb756f069c53c3835b2d40468cf976a6669e7396eb2404f15f632c4c20e5e5e',
     'third_party/skia/rust/common/io_traits_ffi.rs': 'b77d393826cb012a44a339d04b755022a675e4104eddd3f2682cdc263577a760',
     'third_party/skia/rust/png/FFI.rs': 'f83028ac8e8e9f8d8bb0c408dcbec4330b397ad567fe7466234a7bb9204dfc3a',
     'third_party/skia/rust/bmp/FFI.rs': '6ba016770e9f33c40d4cb27c1a0f19a65d8159b6698e5b9d5a0ebb16933d9dc1',
