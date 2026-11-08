@@ -1,14 +1,20 @@
 --- a/mojo/public/cpp/platform/platform_handle.cc
 +++ b/mojo/public/cpp/platform/platform_handle.cc
-@@ -4,6 +4,7 @@
+@@ -4,8 +4,13 @@
  
  #include "mojo/public/cpp/platform/platform_handle.h"
  
 +#include <limits>
  #include <tuple>
  
++#if defined(__GTOS__)
++#include <process/shared_memory_abi.h>
++#endif
++
  #include "base/logging.h"
-@@ -26,7 +27,7 @@
+ #include "build/build_config.h"
+ 
+@@ -26,7 +31,7 @@
  #include "base/apple/scoped_mach_port.h"
  #endif
  
@@ -17,7 +23,7 @@
  #include <unistd.h>
  
  #include "base/files/scoped_file.h"
-@@ -62,7 +63,7 @@ base::apple::ScopedMachSendRight CloneMachPort(
+@@ -62,7 +67,7 @@ base::apple::ScopedMachSendRight CloneMachPort(
  }
  #endif
  
@@ -26,7 +32,7 @@
  base::ScopedFD CloneFD(const base::ScopedFD& fd) {
    DCHECK(fd.is_valid());
    return base::ScopedFD(dup(fd.get()));
-@@ -90,10 +91,15 @@ PlatformHandle::PlatformHandle(base::apple::ScopedMachReceiveRight mach_port)
+@@ -90,15 +95,26 @@ PlatformHandle::PlatformHandle(base::apple::ScopedMachReceiveRight mach_port)
      : type_(Type::kMachReceive), mach_receive_(std::move(mach_port)) {}
  #endif
  
@@ -44,7 +50,18 @@
    DCHECK_LT(fd_.get(), FDIO_MAX_FD);
  #endif
  }
-@@ -114,7 +120,7 @@ PlatformHandle& PlatformHandle::operator=(PlatformHandle&& other) {
+ #endif
+ 
++#if BUILDFLAG(IS_GTOS)
++PlatformHandle::PlatformHandle(base::subtle::ScopedPlatformSharedMemoryHandle memory)
++    : type_(memory.is_valid() ? Type::kGtosSharedMemory : Type::kNone),
++      gtos_memory_(std::move(memory)) {}
++#endif
++
+ PlatformHandle::~PlatformHandle() = default;
+ 
+ PlatformHandle& PlatformHandle::operator=(PlatformHandle&& other) {
+@@ -114,9 +130,12 @@ PlatformHandle& PlatformHandle::operator=(PlatformHandle&& other) {
    mach_receive_ = std::move(other.mach_receive_);
  #endif
  
@@ -52,13 +69,25 @@
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
    fd_ = std::move(other.fd_);
  #endif
++#if BUILDFLAG(IS_GTOS)
++  gtos_memory_ = std::move(other.gtos_memory_);
++#endif
  
-@@ -157,9 +163,19 @@ void PlatformHandle::ToMojoPlatformHandle(PlatformHandle handle,
+   return *this;
+ }
+@@ -157,9 +176,26 @@ void PlatformHandle::ToMojoPlatformHandle(PlatformHandle handle,
      }
  #endif
  
 -#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
++#if BUILDFLAG(IS_GTOS)
++    if (handle.is_gtos_shared_memory()) {
++      out_handle->type = MOJO_PLATFORM_HANDLE_TYPE_GTOS_SHARED_MEMORY;
++      out_handle->value = handle.TakeGtosSharedMemory().release();
++      break;
++    }
++#endif
      DCHECK(handle.is_fd());
 +#if BUILDFLAG(IS_GTOS)
 +    // The token identifies a file in the current process only.
@@ -74,16 +103,22 @@
      out_handle->value = static_cast<uint64_t>(handle.TakeFD().release());
  #endif
    } while (false);
-@@ -196,10 +212,18 @@ PlatformHandle PlatformHandle::FromMojoPlatformHandle(
+@@ -196,10 +232,24 @@ PlatformHandle PlatformHandle::FromMojoPlatformHandle(
    }
  #endif
  
 -#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
 +#if BUILDFLAG(IS_GTOS)
-+  if (handle->type != MOJO_PLATFORM_HANDLE_TYPE_GTOS_FILE ||
-+      handle->value == 0 ||
++  if (handle->value == 0 ||
 +      handle->value > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
++    return PlatformHandle();
++  }
++  if (handle->type == MOJO_PLATFORM_HANDLE_TYPE_GTOS_SHARED_MEMORY) {
++    return PlatformHandle(base::subtle::ScopedPlatformSharedMemoryHandle(
++        static_cast<unsigned>(handle->value)));
++  }
++  if (handle->type != MOJO_PLATFORM_HANDLE_TYPE_GTOS_FILE) {
 +    return PlatformHandle();
 +  }
 +#else
@@ -94,7 +129,7 @@
    return PlatformHandle(base::ScopedFD(static_cast<int>(handle->value)));
  #endif
  }
-@@ -216,7 +240,7 @@ void PlatformHandle::reset() {
+@@ -216,9 +266,12 @@ void PlatformHandle::reset() {
    mach_receive_.reset();
  #endif
  
@@ -102,8 +137,13 @@
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
    fd_.reset();
  #endif
++#if BUILDFLAG(IS_GTOS)
++  gtos_memory_.reset();
++#endif
  }
-@@ -233,7 +257,7 @@ void PlatformHandle::release() {
+ 
+ void PlatformHandle::release() {
+@@ -233,9 +286,12 @@ void PlatformHandle::release() {
    std::ignore = mach_receive_.release();
  #endif
  
@@ -111,12 +151,28 @@
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
    std::ignore = fd_.release();
  #endif
++#if BUILDFLAG(IS_GTOS)
++  std::ignore = gtos_memory_.release();
++#endif
  }
-@@ -252,6 +276,8 @@ PlatformHandle PlatformHandle::Clone() const {
+ 
+ PlatformHandle PlatformHandle::Clone() const {
+@@ -252,6 +308,19 @@ PlatformHandle PlatformHandle::Clone() const {
    }
    CHECK(!is_valid_mach_receive()) << "Cannot clone Mach receive rights";
    return PlatformHandle(CloneFD(fd_));
 +#elif BUILDFLAG(IS_GTOS)
++  if (is_gtos_shared_memory()) {
++    const GtosSharedMemoryControlRequest request{
++        GTOS_SHARED_MEMORY_ABI_VERSION, gtos_memory_.get()};
++    unsigned operation = GTOS_SYS_SHARED_MEMORY_DUP;
++    asm volatile("int $0x80" : "+a"(operation)
++                 : "b"(&request), "c"(sizeof(request)) : "cc", "memory");
++    if (static_cast<int>(operation) > 0) {
++      return PlatformHandle(base::subtle::ScopedPlatformSharedMemoryHandle(operation));
++    }
++    return PlatformHandle();
++  }
 +  return is_valid_fd() ? PlatformHandle(CloneFD(fd_)) : PlatformHandle();
  #elif BUILDFLAG(IS_POSIX)
    return PlatformHandle(CloneFD(fd_));

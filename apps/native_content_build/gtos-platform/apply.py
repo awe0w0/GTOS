@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'mojo/core/platform_handle_utils.cc': 'eaff2420829d9f7bcea03f8ac1222ad39897925163d643bdf959bcdc413611a3',
+    'mojo/core/ipcz_driver/shared_buffer.cc': '3804209d888c6efd904bb9ac3abfadfb0becb842d3f434049894976420bbb366',
+    'mojo/public/cpp/system/platform_handle.cc': '9fa479a2b5ee7ec3e17359c212a38dcd4d73d65eff2fcce5c08565190124889a',
     'third_party/rust/either/v1/BUILD.gn': '9bb5d32f618d5c3f32911f541acba53473cb82fda728339718456fbd08fad2cc',
     'third_party/rust/chromium_crates_io/vendor/either-v1/src/lib.rs': 'df570c5dc36f9539611c7702d58d1490133a3c86daa6a347f17582285250c059',
     'third_party/rust/icu_provider/v2/BUILD.gn': '01b97bc1e4e6b28c1c541d544c0a06cecde791aae45e0069764f7e9995b73862',

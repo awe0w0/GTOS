@@ -1,12 +1,14 @@
 #include "memory_record.h"
 
 #include <stdlib.h>
+#include <utility>
 #include <process/shared_memory_abi.h>
 #include <process/system_memory_abi.h>
 
 #include "base/memory/platform_shared_memory_handle.h"
 #include "base/memory/platform_shared_memory_mapper.h"
 #include "base/process/process_metrics.h"
+#include "mojo/core/platform_handle_utils.h"
 
 extern "C" {
 __attribute__((section(".data.vm_record"), used))
@@ -79,6 +81,24 @@ extern "C" int NativeEntry() {
   base::SystemMemoryInfo allocated;
   Check(base::GetSystemMemoryInfo(&allocated) && allocated.total == before.total &&
         allocated.free.InBytes() + 2 * kPage == before.free.InBytes());
+  mojo::PlatformHandle platform, extra;
+  mojo::core::ExtractPlatformHandlesFromSharedMemoryRegionHandle(
+      std::move(writable), &platform, &extra);
+  Check(!writable.is_valid() && platform.is_gtos_shared_memory() && !extra.is_valid());
+  Check(!platform.TakePlatformFile().is_valid() && platform.is_valid());
+  Check(!platform.Clone().is_valid());
+  MojoPlatformHandle wire{sizeof(wire), MOJO_PLATFORM_HANDLE_TYPE_INVALID, 0};
+  mojo::PlatformHandle::ToMojoPlatformHandle(std::move(platform), &wire);
+  Check(!platform.is_valid() && wire.type == MOJO_PLATFORM_HANDLE_TYPE_GTOS_SHARED_MEMORY &&
+        wire.value == static_cast<unsigned>(created));
+  MojoPlatformHandle wrong_type = wire;
+  wrong_type.type = MOJO_PLATFORM_HANDLE_TYPE_FILE_DESCRIPTOR;
+  Check(!mojo::PlatformHandle::FromMojoPlatformHandle(&wrong_type).is_valid());
+  writable = mojo::core::CreateSharedMemoryRegionHandleFromPlatformHandles(
+      mojo::PlatformHandle::FromMojoPlatformHandle(&wire), {});
+  if (!Check(writable.is_valid() && writable.get() == static_cast<unsigned>(created))) {
+    return 2;
+  }
   const GtosSharedMemoryControlRequest control{kVersion, writable.get()};
   Check(Call(GTOS_SYS_SHARED_MEMORY_DUP, control) == GTOS_SHARED_MEMORY_ERR_PERMISSION);
   Check(!mapper.Map(writable.get(), true, 1, 1));
@@ -101,17 +121,23 @@ extern "C" int NativeEntry() {
              writable.get(), reinterpret_cast<unsigned>(&info)}) == 0 &&
         info.version == kVersion && info.bytes == kPage + 37 &&
         info.mode == GTOS_SHARED_MEMORY_READ_ONLY);
-  const int duplicated = Call(GTOS_SYS_SHARED_MEMORY_DUP, control);
-  if (!Check(duplicated > 0 && duplicated != created)) {
+  platform = mojo::PlatformHandle(std::move(writable));
+  auto duplicate = platform.Clone();
+  auto rejected_primary = platform.Clone();
+  auto rejected_extra = platform.Clone();
+  Check(rejected_primary.is_valid() && rejected_extra.is_valid());
+  Check(!mojo::core::CreateSharedMemoryRegionHandleFromPlatformHandles(
+             std::move(rejected_primary), std::move(rejected_extra)).is_valid());
+  auto readonly = duplicate.TakeGtosSharedMemory();
+  if (!Check(readonly.is_valid() && readonly.get() != static_cast<unsigned>(created))) {
     return 2;
   }
-  base::subtle::ScopedPlatformSharedMemoryHandle readonly(static_cast<unsigned>(duplicated));
   auto alias = mapper.Map(readonly.get(), false, kPage, 37);
   if (!Check(alias.has_value())) {
     return 2;
   }
   Check(alias->data() != original->data() && (*alias)[3] == 0x73);
-  writable.reset();
+  platform.reset();
   readonly.reset();
   Check(Call(GTOS_SYS_SHARED_MEMORY_CLOSE, control) == GTOS_SHARED_MEMORY_ERR_BAD_HANDLE);
   (*original)[kPage + 3] = 0x5a;

@@ -70,7 +70,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         printf((char*)" expected="); printfHex32(baseline);
         printf((char*)"\n");
         if (mode == 0) {
-            RequireShared(record.stage == 2 && record.checks == 24 && !record.failures &&
+            RequireShared(record.stage == 2 && record.checks == 32 && !record.failures &&
                 !status.exitCode && !status.faultVector, "alias semantics");
         } else {
             RequireShared(record.stage == 1 && record.checks == 2 && !record.failures &&

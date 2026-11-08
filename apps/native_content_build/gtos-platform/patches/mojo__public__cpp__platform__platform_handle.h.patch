@@ -1,6 +1,6 @@
 --- a/mojo/public/cpp/platform/platform_handle.h
 +++ b/mojo/public/cpp/platform/platform_handle.h
-@@ -20,7 +20,7 @@
+@@ -20,10 +20,14 @@
  #include "base/apple/scoped_mach_port.h"
  #endif
  
@@ -9,16 +9,27 @@
  #include "base/files/scoped_file.h"
  #endif
  
-@@ -50,7 +50,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
++#if BUILDFLAG(IS_GTOS)
++#include "base/memory/platform_shared_memory_handle.h"
++#endif
++
+ namespace mojo {
+ 
+ // A PlatformHandle is a generic wrapper around a platform-specific system
+@@ -50,8 +54,11 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
      kMachSend,
      kMachReceive,
  #endif
 -#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
      kFd,
++#endif
++#if BUILDFLAG(IS_GTOS)
++    kGtosSharedMemory,
  #endif
    };
-@@ -67,7 +67,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
+ 
+@@ -67,9 +74,12 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
    explicit PlatformHandle(base::apple::ScopedMachReceiveRight mach_port);
  #endif
  
@@ -26,13 +37,27 @@
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
    explicit PlatformHandle(base::ScopedFD fd);
  #endif
++#if BUILDFLAG(IS_GTOS)
++  explicit PlatformHandle(base::subtle::ScopedPlatformSharedMemoryHandle memory);
++#endif
  
-@@ -173,13 +173,13 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
+   PlatformHandle(const PlatformHandle&) = delete;
+   PlatformHandle& operator=(const PlatformHandle&) = delete;
+@@ -173,13 +183,23 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
    [[nodiscard]] mach_port_t ReleaseMachReceiveRight() {
      return TakeMachReceiveRight().release();
    }
--#elif BUILDFLAG(IS_POSIX)
-+#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_GTOS)
++#elif BUILDFLAG(IS_GTOS)
++  bool is_valid() const { return is_valid_fd() || gtos_memory_.is_valid(); }
++  bool is_gtos_shared_memory() const { return type_ == Type::kGtosSharedMemory; }
++  base::subtle::ScopedPlatformSharedMemoryHandle TakeGtosSharedMemory() {
++    if (!is_gtos_shared_memory()) {
++      return {};
++    }
++    type_ = Type::kNone;
++    return std::move(gtos_memory_);
++  }
+ #elif BUILDFLAG(IS_POSIX)
    bool is_valid() const { return is_valid_fd(); }
  #else
  #error "Unsupported platform."
@@ -43,7 +68,7 @@
    bool is_valid_fd() const { return fd_.is_valid(); }
    bool is_fd() const { return type_ == Type::kFd; }
    const base::ScopedFD& GetFD() const { return fd_; }
-@@ -198,7 +198,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
+@@ -198,7 +218,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
  #endif
  
    bool is_valid_platform_file() const {
@@ -52,7 +77,7 @@
      return is_valid_fd();
  #elif BUILDFLAG(IS_WIN)
      return is_valid_handle();
-@@ -207,7 +207,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
+@@ -207,7 +227,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
  #endif
    }
    base::ScopedPlatformFile TakePlatformFile() {
@@ -61,7 +86,7 @@
      return TakeFD();
  #elif BUILDFLAG(IS_WIN)
      return TakeHandle();
-@@ -216,7 +216,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
+@@ -216,7 +236,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
  #endif
    }
    [[nodiscard]] base::PlatformFile ReleasePlatformFile() {
@@ -70,7 +95,7 @@
      return ReleaseFD();
  #elif BUILDFLAG(IS_WIN)
      return ReleaseHandle();
-@@ -237,7 +237,7 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
+@@ -237,9 +257,12 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformHandle {
    base::apple::ScopedMachReceiveRight mach_receive_;
  #endif
  
@@ -78,4 +103,9 @@
 +#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
    base::ScopedFD fd_;
  #endif
++#if BUILDFLAG(IS_GTOS)
++  base::subtle::ScopedPlatformSharedMemoryHandle gtos_memory_;
++#endif
  };
+ 
+ }  // namespace mojo

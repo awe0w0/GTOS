@@ -1,12 +1,15 @@
 --- a/mojo/public/c/system/platform_handle.h
 +++ b/mojo/public/c/system/platform_handle.h
-@@ -53,6 +53,10 @@ typedef uint32_t MojoPlatformHandleType;
+@@ -53,6 +53,13 @@ typedef uint32_t MojoPlatformHandleType;
  // An Android IBinder reference.
  #define MOJO_PLATFORM_HANDLE_TYPE_BINDER ((MojoPlatformHandleType)6)
  
 +// GTOS: a positive file handle owned by the calling process. It is not a
 +// transferable token. A transport must establish ownership separately.
 +#define MOJO_PLATFORM_HANDLE_TYPE_GTOS_FILE ((MojoPlatformHandleType)7)
++
++// GTOS: a process-owned shared-memory capability, separate from file handles.
++#define MOJO_PLATFORM_HANDLE_TYPE_GTOS_SHARED_MEMORY ((MojoPlatformHandleType)8)
 +
  // |MojoPlatformHandle|: A handle to a native platform object.
  //

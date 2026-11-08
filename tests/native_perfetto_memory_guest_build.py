@@ -258,6 +258,10 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                            ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc')]
     if args.component == 'base_shared':
         native_sources += [('base-shared', args.view / 'base/memory/platform_shared_memory_gtos.cc'),
+                           ('mojo-platform-handle', args.view / 'mojo/public/cpp/platform/platform_handle.cc'),
+                           ('mojo-handle-utils', args.view / 'mojo/core/platform_handle_utils.cc'),
+                           ('scoped-file', args.view / 'base/files/scoped_file.cc'),
+                           ('posix-file', repo / 'apps/native_libxml_file/posix_file.cpp'),
                            ('base-metrics', args.view / 'base/process/process_metrics_gtos.cc'),
                            ('metrics-common', args.view / 'base/process/process_metrics.cc'),
                            ('heap', runtime / 'heap.cc'), ('operators', runtime / 'operators.cc'),
