@@ -1,0 +1,7 @@
+--- a/third_party/rust/chromium_crates_io/vendor/zune-jpeg-v0_5/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/zune-jpeg-v0_5/src/lib.rs
+@@ -1,3 +1,4 @@
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ /*
+  * Copyright (c) 2023.
+  *

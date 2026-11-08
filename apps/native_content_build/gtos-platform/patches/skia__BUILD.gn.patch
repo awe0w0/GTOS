@@ -12,3 +12,80 @@
    deps = [
      ":path_bridge",
      "//third_party/rust/font_types/v0_12:lib",
+@@ -648,6 +653,10 @@ component("skia_switches") {
+ }
+ 
+ rust_static_library("rust_common_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   crate_name = "skia_rust_common"
+   allow_unsafe = true  # For FFI
+@@ -681,6 +690,10 @@ source_set("rust_common_ffi_cpp") {
+ }
+ 
+ rust_static_library("rust_png_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   edition = "2021"
+   allow_unsafe = true  # For FFI
+@@ -712,6 +725,10 @@ source_set("rust_png_ffi_cpp") {
+ }
+ 
+ rust_static_library("rust_bmp_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   allow_unsafe = true  # For FFI
+   crate_root = skia_codec_rust_bmp_ffi_crate_root
+@@ -754,6 +771,10 @@ source_set("rust_bmp_ffi_cpp") {
+ }
+ 
+ rust_static_library("rust_ico_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   allow_unsafe = true  # For FFI
+   crate_root = skia_codec_rust_ico_ffi_crate_root
+@@ -804,6 +825,10 @@ source_set("rust_ico_ffi_cpp") {
+ }
+ 
+ rust_static_library("rust_jpeg_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   allow_unsafe = true  # For FFI
+   crate_root = skia_codec_rust_jpeg_ffi_crate_root
+@@ -851,6 +876,10 @@ source_set("rust_jpeg_ffi_cpp") {
+ }
+ 
+ rust_static_library("rust_icc_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   allow_unsafe = true  # For FFI
+   crate_root = skia_rust_icc_ffi_crate_root
+@@ -893,6 +922,10 @@ source_set("rust_icc_ffi_cpp") {
+ }
+ 
+ rust_static_library("rust_exif_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   visibility = [ ":*" ]
+   allow_unsafe = true  # For FFI
+   crate_root = skia_rust_exif_ffi_crate_root

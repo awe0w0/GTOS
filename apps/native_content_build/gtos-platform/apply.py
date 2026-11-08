@@ -14,6 +14,19 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/skia/rust/common/io_traits_ffi.rs': 'b77d393826cb012a44a339d04b755022a675e4104eddd3f2682cdc263577a760',
+    'third_party/skia/rust/png/FFI.rs': 'f83028ac8e8e9f8d8bb0c408dcbec4330b397ad567fe7466234a7bb9204dfc3a',
+    'third_party/skia/rust/bmp/FFI.rs': '6ba016770e9f33c40d4cb27c1a0f19a65d8159b6698e5b9d5a0ebb16933d9dc1',
+    'third_party/skia/experimental/rust_ico/ffi/FFI.rs': 'c74dce5edabd614a11f077f5f38204cc9598e487f16ac331ee18070f4d956b6e',
+    'third_party/skia/experimental/rust_jpeg/ffi/FFI.rs': '6770ddd2c15ec3d1e61407070bde376269fc52023bd7757c469fca5460694b69',
+    'third_party/skia/rust/exif/FFI.rs': 'b76752b47f76cbcb28e54c7e8acb1f8eb61501d35ecd6199aded0da9955c3643',
+    'third_party/skia/rust/icc/FFI.rs': 'f573b1d03a7ef042c2dde6d43396f17f6612c75a6e3480b423bbc237abd35cb6',
+    'third_party/rust/jpeg_encoder/v0_7/BUILD.gn': '9ef475479088f5eaf11c696b438ec7d125879a02aecf36cc8c626a3fd13c9048',
+    'third_party/rust/zune_jpeg/v0_5/BUILD.gn': 'aca802a1505593d94a0e0caa041a5c890c7c30234cfa6aa14c2beddfe5170a4d',
+    'third_party/rust/base64/v0_22/BUILD.gn': 'df9f97fcc074324533868a50b22703938916d79f02b80bfbb0353baa787e6f52',
+    'third_party/rust/chromium_crates_io/vendor/jpeg-encoder-v0_7/src/lib.rs': 'a5804c3af11b0d30c35f26a25fc2cda5d5f7b5f03f26d956893bf96307fa2085',
+    'third_party/rust/chromium_crates_io/vendor/zune-jpeg-v0_5/src/lib.rs': '7f8205dc363875596adbf850ca59de70be5acfd3da0cc2aa540f9ffdc092e98f',
+    'third_party/rust/chromium_crates_io/vendor/base64-v0_22/src/lib.rs': 'c4db7bd31ace78aec2ecd151cef3ad90dfdc76097ba12027bde79d3c82612f7c',
     'third_party/harfbuzz/BUILD.gn': 'c8957b6cdef06839cdce2fcfa4d7de323cc721e70bed2958f7f60496b301c801',
     'third_party/harfbuzz/src/src/rust/lib.rs': '033c3f378e29af2108763baf5f7af2bff2adc45ede38bee175a778cf4b6d43ec',
     'third_party/rust/image/v0_25/BUILD.gn': '7e4c22cf475df0f764019d2914796b1203f607529759852ef09346d102b13d11',
