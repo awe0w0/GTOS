@@ -200,16 +200,14 @@ bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryMana
     error = ProcessMemoryOk;
     return true;
 }
-int ProcessAddressSpace::FindPage(uint32_t address) const {
-    for (uint32_t i = 0; i < pageCount; ++i) if (pages[i].address == address) return (int)i;
-    return -1;
-}
-int ProcessAddressSpace::IndexedLayoutPage(uint32_t address) const {
-    uint32_t slot = LayoutHash(address);
+int ProcessAddressSpace::IndexedLayoutPage(uint32_t key, bool byFrame) const {
+    const uint32_t* entries = byFrame ? layoutFrames : layoutAddresses;
+    uint32_t slot = LayoutHash(key);
     for (uint32_t count = 0; count < LayoutIndexSlots; ++count) {
-        const uint32_t record = layoutAddresses[slot];
+        const uint32_t record = entries[slot];
         if (!record || record > pageCount) return -1;
-        if (pages[record - 1].address == address) return (int)(record - 1);
+        const Page& page = pages[record - 1];
+        if ((byFrame ? page.frame : page.address) == key) return (int)(record - 1);
         slot = (slot + 1) & (LayoutIndexSlots - 1);
     }
     return -1;
@@ -398,7 +396,7 @@ bool ProcessAddressSpace::MapNewRange(uint32_t address, uint32_t bytes, bool wri
     if (bytes / 4096 > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
     const uint32_t end = address + bytes, before = pageCount;
     for (uint32_t page = address; page < end; page += 4096)
-        if (FindPage(page) >= 0) return Fail(ProcessMemoryConflict);
+        if (IndexedLayoutPage(page) >= 0) return Fail(ProcessMemoryConflict);
     for (uint32_t page = address; page < end; page += 4096) {
         if (!MapOwnedPage(page, writable)) {
             while (pageCount > before) RemovePage(pageCount - 1);
@@ -444,9 +442,9 @@ bool ProcessAddressSpace::ProtectRange(uint32_t address, uint32_t bytes, bool wr
     if (bytes / 4096 > pageLimit) return Fail(ProcessMemoryNotMapped);
     const uint32_t end = address + bytes;
     for (uint32_t page = address; page < end; page += 4096)
-        if (FindPage(page) < 0) return Fail(ProcessMemoryNotMapped);
+        if (IndexedLayoutPage(page) < 0) return Fail(ProcessMemoryNotMapped);
     for (uint32_t page = address; page < end; page += 4096) {
-        Page& owned = pages[FindPage(page)];
+        Page& owned = pages[IndexedLayoutPage(page)];
         uint32_t& entry = ((uint32_t*)tables[page >> 22])[(page >> 12) & 1023];
         entry = writable ? entry | Writable : entry & ~Writable;
         owned.writable = writable;
@@ -458,7 +456,7 @@ bool ProcessAddressSpace::UnmapPage(uint32_t address) {
     InterruptGuard guard;
     if (!Mutable()) return false;
     if (!UserPage(address)) return Fail(ProcessMemoryBadRange);
-    const int index = FindPage(address);
+    const int index = IndexedLayoutPage(address);
     if (index < 0) return Fail(ProcessMemoryNotMapped);
     RemovePage((uint32_t)index);
     error = ProcessMemoryOk;
@@ -646,10 +644,10 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
         if (bytes / 4096 > MaximumPages) return Fail(ProcessMemoryLimit);
         uint32_t missing = 0;
         for (uint32_t address = base; address < end; address += 4096)
-            if (FindPage(address) < 0) ++missing;
+            if (IndexedLayoutPage(address) < 0) ++missing;
         if (missing > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
         for (uint32_t address = base; address < end; address += 4096) {
-            if (FindPage(address) >= 0) continue;
+            if (IndexedLayoutPage(address) >= 0) continue;
             const uint32_t di = address >> 22;
             bool newTable = !tables[di];
             for (uint32_t i = 0; i < pendingTableCount; ++i)
@@ -707,7 +705,7 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
     if (bytes / 4096 > pageLimit) return Fail(ProcessMemoryNotMapped);
     const uint32_t end = address + bytes;
     for (uint32_t page = address; page < end; page += 4096) {
-        const int index = FindPage(page);
+        const int index = IndexedLayoutPage(page);
         if (index < 0 || !pages[index].present) return Fail(ProcessMemoryNotMapped);
         if (pages[index].region) return Fail(ProcessMemoryPermission);
     }
@@ -766,7 +764,7 @@ bool ProcessAddressSpace::Discard(uint32_t handle, uint32_t offset, uint32_t byt
     if (bytes / 4096 > MaximumPages) return Fail(ProcessMemoryNotMapped);
     const uint32_t end = base + bytes;
     for (uint32_t address = base; address < end; address += 4096) {
-        const int index = FindPage(address);
+        const int index = IndexedLayoutPage(address);
         if (index < 0 || pages[index].region != handle) return Fail(ProcessMemoryNotMapped);
     }
     for (uint32_t i = 0; i < pageCount; ++i)
@@ -818,7 +816,7 @@ bool ProcessAddressSpace::Range(uint32_t address, uint32_t length, bool writable
     const uint64_t end = (uint64_t)address + length;
     if (!length) return true;
     for (uint64_t current = address & AddressMask; current < end; current += 4096) {
-        const int index = FindPage((uint32_t)current);
+        const int index = IndexedLayoutPage((uint32_t)current);
         if (index < 0) return Fail(ProcessMemoryNotMapped);
         if (!pages[index].present) return Fail(ProcessMemoryPermission);
         if (writable && !pages[index].writable) return Fail(ProcessMemoryPermission);
@@ -840,8 +838,8 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
         for (uint32_t di = 0; di < 1024; ++di)
             if (physical == tables[di]
                 || physical == (((uint32_t*)kernelDirectory)[di] & AddressMask)) return Fail(ProcessMemoryBadAlias);
-        for (uint32_t i = 0; i < pageCount; ++i)
-            if (physical == pages[i].frame) return Fail(ProcessMemoryBadAlias);
+        if (IndexedLayoutPage(physical, /*byFrame=*/true) >= 0)
+            return Fail(ProcessMemoryBadAlias);
     }
     return true;
 }
@@ -859,7 +857,7 @@ bool ProcessAddressSpace::CopyToUser(uint32_t destination, const void* source, u
     while (length) {
         const uint32_t offset = destination & 4095;
         const uint32_t chunk = length < 4096 - offset ? length : 4096 - offset;
-        uint8_t* output = (uint8_t*)(pages[FindPage(destination & AddressMask)].frame + offset);
+        uint8_t* output = (uint8_t*)(pages[IndexedLayoutPage(destination & AddressMask)].frame + offset);
         for (uint32_t i = 0; i < chunk; ++i) output[i] = input[i];
         destination += chunk; input += chunk; length -= chunk;
     }
@@ -873,7 +871,7 @@ bool ProcessAddressSpace::CopyFromUser(void* destination, uint32_t source, uint3
     while (length) {
         const uint32_t offset = source & 4095;
         const uint32_t chunk = length < 4096 - offset ? length : 4096 - offset;
-        const uint8_t* input = (const uint8_t*)(pages[FindPage(source & AddressMask)].frame + offset);
+        const uint8_t* input = (const uint8_t*)(pages[IndexedLayoutPage(source & AddressMask)].frame + offset);
         for (uint32_t i = 0; i < chunk; ++i) output[i] = input[i];
         source += chunk; output += chunk; length -= chunk;
     }

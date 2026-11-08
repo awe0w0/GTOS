@@ -63,8 +63,8 @@ namespace gtos { namespace memory {
         bool Buffer(uint32_t address, uint32_t length, bool writable) const;
         bool Mutable() const;
         bool RuntimeMutable() const;
-        int FindPage(uint32_t address) const;
-        int IndexedLayoutPage(uint32_t address) const;
+        // Valid only after Layout succeeds, before ownership records change.
+        int IndexedLayoutPage(uint32_t key, bool byFrame = false) const;
         int FindRegion(uint32_t handle) const;
         bool SharesFrame(const Page& page) const;
         bool RegionRange(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t& base) const;

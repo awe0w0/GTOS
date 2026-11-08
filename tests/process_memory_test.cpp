@@ -799,10 +799,35 @@ namespace {
         CHECK(gtos_process_memory_test_protect_calls == 0 && gtos_process_memory_test_protect_refusals == 0
               && gtos_process_memory_test_protect_pages_at_refusal == 0);
     }
+    void indexedOwnership() {
+        const uint32_t alias = UserBase + 32 * 1024 * 1024;
+        CHECK(first.Prepare(kernel, frames));
+        CHECK(second.Prepare(kernel, frames));
+        CHECK(first.MapNewPage(UserBase, true));
+        CHECK(first.MapNewPage(alias, true));
+        CHECK(second.MapNewPage(alias, true));
+        fill(input, 4096, 0x35);
+        CHECK(first.CopyToUser(UserBase, input, 4096));
+        fill(input, 4096, 0x63);
+        CHECK(first.CopyToUser(alias, input, 4096));
+        fill(input, 4096, 0x9A);
+        CHECK(second.CopyToUser(alias, input, 4096));
+        CHECK(first.CopyFromUser(output, UserBase, 4096) && all(output, 4096, 0x35));
+        CHECK(first.ProtectPage(alias, false));
+        CHECK(!first.CopyToUser(alias, input, 4096));
+        CHECK(first.GetLastError() == ProcessMemoryPermission);
+        CHECK(first.UnmapPage(UserBase));
+        CHECK(first.CopyFromUser(output, alias, 4096) && all(output, 4096, 0x63));
+        CHECK(!first.MapNewPage(alias, true));
+        CHECK(first.GetLastError() == ProcessMemoryConflict);
+        CHECK(second.CopyFromUser(output, alias, 4096) && all(output, 4096, 0x9A));
+        CHECK(first.Destroy()); CHECK(second.Destroy()); CHECK(used() == baseline);
+    }
     void dynamicVirtualMemory() {
         dynamicRegionsAndPermissions(); dynamicQuotaAndOwnership(); dynamicInvalidationsAndContext();
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
         protectRangeSeam();
+        indexedOwnership();
     }
 }
 extern "C" int processMemoryTests() {
