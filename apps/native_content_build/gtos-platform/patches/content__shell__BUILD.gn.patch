@@ -10,12 +10,13 @@
  }
  
  config("content_shell_lib_warnings") {
-@@ -759,6 +762,22 @@ if (is_android) {
+@@ -759,6 +762,23 @@ if (is_android) {
  
      sources = [ "app/shell_main.cc" ]
  
 +    if (is_gtos && gtos_content_runtime_archive != "") {
 +      sources += [
++        "//build/config/gtos/runtime/assert.cc",
 +        "app/entry_gtos.cc",
 +        "app/native-start.s",
 +      ]
@@ -33,7 +34,7 @@
      if (is_win) {
        sources += [ "app/shell.rc" ]
      }
-@@ -775,6 +794,10 @@ if (is_android) {
+@@ -775,6 +795,10 @@ if (is_android) {
        "//sandbox",
      ]
  

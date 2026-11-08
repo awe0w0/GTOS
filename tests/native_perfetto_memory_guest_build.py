@@ -16,15 +16,17 @@ parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
                                             'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
-                                            'skia_semaphore'],
+                                            'skia_semaphore', 'expat'],
                     default='memory')
 parser.add_argument('--payload', type=Path)
 parser.add_argument('--payload-record', type=Path)
+parser.add_argument('--provider-root', type=Path)
 args = parser.parse_args()
 if args.component == 'crt_arguments':
     assert args.payload is not None and args.payload_record is not None
 else:
     assert args.payload is None and args.payload_record is None
+assert (args.provider_root is not None) == (args.component == 'expat')
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
 sdk = repo / 'apps/native_v8_runtime'
@@ -53,6 +55,8 @@ component = {
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'skia_semaphore': ('native_memory_record', None, 'skia_semaphore.cpp',
                        'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'expat': ('native_memory_record', None, 'expat.cpp',
+              'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'webrtc_thread': ('native_memory_record', None, 'webrtc_thread.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'vp9': ('native_memory_record', None, 'vp9.cpp',
@@ -154,6 +158,11 @@ if args.component == 'skia_semaphore':
     hardening = re.findall(r'-D_LIBCPP_HARDENING_MODE=\w+', formal_rule.read_text())
     assert len(hardening) == 1, 'missing exact formal libc++ hardening mode'
     flags += [hardening[0], '-I' + str(args.view / 'third_party/skia')]
+if args.component == 'expat':
+    llvm_libc = args.view / 'third_party/llvm-libc/src'
+    environment = args.view / 'tools/gtos_native_sdk/environment'
+    flags += ['-std=c++23', '-I' + str(args.view), '-I' + str(environment),
+              '-I' + str(llvm_libc), '-DXML_STATIC']
 if args.component == 'vp9':
     llvm_libc = full / 'third_party/llvm-libc/src'
     flags += ['-I' + str(args.view / 'third_party/libvpx/source/libvpx'),
@@ -221,7 +230,7 @@ else:
     layout_text = layout_source.read_text().replace('native_vm_record', record_name)
     record_address = '40020000'
     image_limit = 65536
-    if args.component in ('vp9', 'webrtc_thread', 'skia_semaphore'):
+    if args.component in ('vp9', 'webrtc_thread', 'skia_semaphore', 'expat'):
         record_address = '40200000'
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
@@ -289,6 +298,11 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
     if args.component == 'skia_semaphore':
         for name in ('SkSemaphore', 'SkThreadID'):
             native_sources.append((name, args.view / ('third_party/skia/src/core/' + name + '.cpp')))
+    if args.component == 'expat':
+        native_sources += [('assert', product / 'runtime/assert.cc'),
+                           ('environment', environment / 'environment.cc'),
+                           ('environ_internal', llvm_libc / 'src/stdlib/environ_internal.cpp'),
+                           ('getenv', llvm_libc / 'src/stdlib/getenv.cpp')]
     if args.component == 'wait':
         native_sources += [('events', args.view / 'third_party/perfetto/src/base/event_fd_gtos.cc'),
                            ('clock', repo / 'apps/native_c_clock/runtime/clock-gettime.cc')]
@@ -323,7 +337,8 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         bind(source)
         output = directory / (name + '.o')
         packaging = (['-DLIBC_NAMESPACE=__llvm_libc_cr', '-DLIBC_COPT_PUBLIC_PACKAGING=1']
-                     if name in ('strchr', 'memcpy', 'memset', 'memmove', 'qsort') else [])
+                     if name in ('strchr', 'memcpy', 'memset', 'memmove', 'qsort',
+                                 'environment', 'environ_internal', 'getenv') else [])
         if name == 'base-event':
             packaging += ['-include', str(disabled)]
         run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, *packaging, '-O' + str(optimization),
@@ -345,12 +360,28 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         image = directory / (name + '.elf')
         linked = image.with_suffix('.unstripped.elf') if args.component in (
             'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
-            'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore') else image
+            'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore', 'expat') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if args.component == 'skia_semaphore':
             archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
             bind(archive)
             extra.append(archive)
+        if args.component == 'expat':
+            archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
+            manifest = args.provider_root / 'identity.json'
+            bind(manifest)
+            published = json.loads(manifest.read_text())['compiled']
+            providers = []
+            for provider_name in ('xmlparse', 'xmlrole', 'xmltok'):
+                path = args.provider_root / (provider_name + '.o')
+                record = published[provider_name]['object']
+                assert not path.is_symlink() and not path.stat().st_mode & 0o222
+                assert path.stat().st_size == record['bytes']
+                assert hashlib.sha256(path.read_bytes()).hexdigest() == record['sha256']
+                providers.append(path)
+            for path in [*providers, archive]:
+                bind(path)
+            extra += [*providers, archive]
         if args.component == 'webrtc_thread':
             build = args.generated.parent
             rtc_objects = build / 'obj/third_party/webrtc/rtc_base'
@@ -379,7 +410,7 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
             for path in [codec, archive, *providers]:
                 bind(path)
             extra += [fixture_object, jump_object, codec, *providers, archive]
-        if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9'):
+        if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9', 'expat'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
@@ -422,6 +453,8 @@ if args.component == 'native_thread':
     kernel_flags.append('-DGTOS_CONTENT_THREAD_PROBE')
 if args.component == 'skia_semaphore':
     kernel_flags.append('-DGTOS_CONTENT_SKIA_SEMAPHORE_PROBE')
+if args.component == 'expat':
+    kernel_flags.append('-DGTOS_CONTENT_EXPAT_PROBE')
 if args.component == 'webrtc_thread':
     kernel_flags.append('-DGTOS_CONTENT_WEBRTC_THREAD_PROBE')
 if args.component == 'vp9':
@@ -465,6 +498,6 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
-    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments', 'skia_semaphore') else 'PERFETTO_'
+    'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments', 'skia_semaphore', 'expat') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')

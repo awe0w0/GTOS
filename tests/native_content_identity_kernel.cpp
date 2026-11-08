@@ -11,6 +11,10 @@ static const char* const CheckDescription = "VP9 frame decode and truncated pack
 #define CONTENT_BASE_PROBE "CONTENT WEBRTC THREAD"
 static const unsigned ExpectedChecks = 18;
 static const char* const CheckDescription = "WebRTC worker, recursive mutex and realtime";
+#elif defined(GTOS_CONTENT_EXPAT_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT EXPAT"
+static const unsigned ExpectedChecks = 9;
+static const char* const CheckDescription = "Expat parsing and hardware entropy requirement";
 #elif defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT SKIA SEMAPHORE"
 static const unsigned ExpectedChecks = 19;
@@ -30,7 +34,8 @@ static const char* const CheckDescription = "exact process and worker identity";
 #endif
 
 namespace {
-#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
+    defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE)
     static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
     static const unsigned RecordAddress = 0x40200000U;
 #else
@@ -81,7 +86,8 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     for (uint32_t i = 0; i < bytes; ++i) image[i] = ((const uint8_t*)module.start)[i];
     interrupts.Activate();
     uint32_t id = 0;
-#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
+    defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE)
     const NativeElfLaunchProfile profile{1024, 32, 1024};
     Need(runtime.CreateElf(image, bytes, id, profile), "ELF admission");
 #else
@@ -98,6 +104,10 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     printf((char*)CONTENT_BASE_PROBE " RECORD frame0="); printfHex32(record.base);
     printf((char*)" frame1="); printfHex32(record.fault_address);
     const bool values = record.base && record.fault_address && record.base != record.fault_address;
+#elif defined(GTOS_CONTENT_EXPAT_PROBE)
+    printf((char*)CONTENT_BASE_PROBE " RECORD entropy="); printfHex32(record.base);
+    printf((char*)" callbacks="); printfHex32(record.fault_address);
+    const bool values = record.base <= 1 && record.fault_address == (record.base ? 0x1243U : 0U);
 #else
     printf((char*)CONTENT_BASE_PROBE " RECORD process="); printfHex32(record.base);
     printf((char*)" worker="); printfHex32(record.fault_address);

@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/expat/BUILD.gn': 'efe6d8963001dac722c293cfeb70a023bd4f4f6909f2ae62f6bb3606b853f86f',
+    'third_party/expat/include/expat_config/expat_config.h': 'd2dc338829c92cfd73fcad53eaaeab004260edc1b3331ea29be42a081684d285',
+    'third_party/expat/src/expat/lib/xmlparse.c': 'b403e490b6b9d7e1d6567759244f7c3129f068ccbb5af56c11f9549b5fe4b820',
     'third_party/skia/include/private/SkFeatures.h': 'd20d246f13400fe5a0e9f335611d825f936fa469e043e967849db673476196d1',
     'third_party/skia/src/core/SkExecutor.cpp': 'a3d948ee4e1f790703ec9d5e84d7158f402aa1ef218766b0b6b698a0e3c0d951',
     'third_party/skia/src/core/SkSemaphore.cpp': 'ea81fa92ee09c1f8074c30611ccdd981379e1eb94456e6b69b3b9a25fe5039d3',
@@ -255,6 +258,7 @@ ADDITIONS = {
     'build/config/gtos/include/setjmp.h': 'sdk/setjmp.h',
     'build/config/gtos/include/gtos/once.h': 'sdk/once.h',
     'build/config/gtos/runtime/BUILD.gn': 'sdk/codec-runtime.gn',
+    'build/config/gtos/runtime/assert.cc': 'runtime/assert.cc',
     'build/config/gtos/runtime/codec_once.cc': 'sdk/codec_once.cc',
     'build/config/gtos/runtime/setjmp_i386.S': 'sdk/setjmp_i386.S',
     'third_party/libvpx/source/config/gtos/generic/vpx_config.h': 'libvpx/vpx_config.h',
