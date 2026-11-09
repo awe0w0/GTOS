@@ -22,6 +22,12 @@ int TestContentPolicy() {
         if (network::ParseScheme(bad, &source) || source.scheme != "http+1.-")
             return 25;
     }
+    if (!network::IsBase64("A") || !network::IsBase64("aZ0+_-/9==") ||
+        !network::IsBase64("ab="))
+        return 33;
+    for (std::string_view bad : {"", "=", "==", "a===", "ab=c", "ab\n", "é"}) {
+        if (network::IsBase64(bad)) return 34;
+    }
 
     network::PermissionsPolicyFeaturesBitset features;
     const auto contains = [&features](unsigned index) {
@@ -49,5 +55,7 @@ int TestContentPolicy() {
     values.resize(1);
     if (std::distance(values.begin(), values.end()) != 1 || *values.begin() != 2)
         return 32;
+    const angle::FixedVector<int, 3> filled(3, 7);
+    if (!std::ranges::equal(filled, std::array<int, 3>{7, 7, 7})) return 35;
     return 0;
 }

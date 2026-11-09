@@ -8,6 +8,15 @@
  
  namespace angle
  {
+@@ -112,7 +113,7 @@ template <class T, size_t N, class Storage>
+ FixedVector<T, N, Storage>::FixedVector(size_type count, const value_type &value) : mSize(count)
+ {
+     ASSERT(count <= N);
+-    std::fill(mStorage.begin(), mStorage.begin() + count, value);
++    std::fill_n(mStorage.begin(), count, value);
+ }
+ 
+ template <class T, size_t N, class Storage>
 @@ -219,13 +220,15 @@ typename FixedVector<T, N, Storage>::const_iterator FixedVector<T, N, Storage>::
  template <class T, size_t N, class Storage>
  typename FixedVector<T, N, Storage>::iterator FixedVector<T, N, Storage>::end()

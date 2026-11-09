@@ -9,3 +9,43 @@
      return false;
  
    csp_source->scheme = base::ToLowerASCII(scheme);
+@@ -524,33 +524,17 @@ bool IsBase64Char(char c) {
+          c == '-' || c == '_' || c == '/';
+ }
+ 
+-int EatChar(std::string_view::const_iterator* it,
+-            std::string_view::const_iterator end,
+-            bool (*predicate)(char)) {
+-  int count = 0;
+-  while (*it != end) {
+-    if (!predicate(**it))
+-      break;
+-    ++count;
+-    ++(*it);
+-  }
+-  return count;
+-}
+-
+ // Checks whether |expression| is a valid base64-encoded string.
+ // Cf. https://w3c.github.io/webappsec-csp/#framework-directive-source-list.
+ bool IsBase64(std::string_view expression) {
+-  if (expression.empty())
++  const size_t padding = expression.find('=');
++  const std::string_view encoded = expression.substr(0, padding);
++  if (encoded.empty() || !std::ranges::all_of(encoded, IsBase64Char))
+     return false;
+ 
+-  std::string_view::const_iterator it = expression.begin();
+-  std::string_view::const_iterator end = expression.end();
+-
+-  int count_1 = EatChar(&it, end, IsBase64Char);
+-  int count_2 = EatChar(&it, end, [](char c) -> bool { return c == '='; });
+-
+-  // At least one non '=' char at the beginning, at most two '=' at the end.
+-  return count_1 >= 1 && count_2 <= 2 && it == end;
++  return padding == std::string_view::npos ||
++         (expression.size() - padding <= 2 &&
++          expression.find_first_not_of('=', padding) == std::string_view::npos);
+ }
+ 
+ // Parse a nonce-source, return false on error.
