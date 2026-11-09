@@ -904,13 +904,15 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         return false;
     static const char launch[] =
         "GTOS_CONTENT_ASSET_DIR=" GTOS_CONTENT_ASSET_DIRECTORY "\0"
-        "GTOS_CONTENT_ARG_COUNT=6\0"
+        "GTOS_CONTENT_ARG_COUNT=7\0"
         "GTOS_CONTENT_ARG_01=--single-process\0"
         "GTOS_CONTENT_ARG_02=--ozone-platform=gtos\0"
         "GTOS_CONTENT_ARG_03=--disable-gpu\0"
         "GTOS_CONTENT_ARG_04=--disable-background-networking\0"
         "GTOS_CONTENT_ARG_05=--user-data-dir=" GTOS_CONTENT_ASSET_DIRECTORY "\0"
-        "GTOS_CONTENT_ARG_06=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
+        // The native VM currently grants data-page permissions only.
+        "GTOS_CONTENT_ARG_06=--js-flags=--jitless\0"
+        "GTOS_CONTENT_ARG_07=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
     const uint32_t runtimePages = 64 * 1024;
     const uint32_t stackPages = 128;
     const process::NativeElfLaunchProfile profile{

@@ -1,6 +1,7 @@
 #include <process/abi.h>
 #include <process/file_abi.h>
 #include <storage/content_volume_layout.h>
+#include <string.h>
 
 namespace {
 
@@ -49,7 +50,11 @@ ExitMarker exit_marker;
 
 } // namespace
 
-extern "C" int GtosContentShellMain(int, const char**) {
+extern "C" int GtosContentShellMain(int argc, const char** argv) {
+    if (argc != 8 || argv[8] || strcmp(argv[6], "--js-flags=--jitless") != 0 ||
+        strcmp(argv[7], "file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html") != 0)
+        return 5;
+    Say("GTOS CONTENT INTERPRETER ARG PASS\n");
     constexpr char icu[] = GTOS_CONTENT_ASSET_DIRECTORY "/icudtl.dat";
     const int handle = Open(icu, GTOS_FILE_READ);
     if (handle == GTOS_FILE_ERR_UNAVAILABLE) {

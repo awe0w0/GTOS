@@ -25,3 +25,7 @@ enable_library_cdms = false
 use_glib = false
 rtc_use_pipewire = false
 use_cups = false
+
+# The GTOS software compositor does not use Dawn's Vulkan fallback. That
+# adapter requires loading a shared library and publishing executable pages.
+dawn_use_swiftshader = false
