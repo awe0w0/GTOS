@@ -20,6 +20,8 @@ namespace perfetto {
 namespace base {
 namespace {
 constexpr size_t kPage = GTOS_VM_PAGE_BYTES;
+// The native VM's per-request limit is smaller than the Content page budget.
+constexpr size_t kCommitLimit = 256 * kPage;
 static_assert(sizeof(void*) == 4 && sizeof(unsigned) == 4, "native VM wire layout");
 
 int Call(unsigned operation, const void* request, unsigned bytes) {
@@ -34,6 +36,19 @@ int Call(unsigned operation, const void* request, unsigned bytes) {
 }
 
 size_t Rounded(size_t bytes) { return (bytes + kPage - 1) & ~(kPage - 1); }
+
+bool Commit(unsigned handle, size_t begin, size_t end) {
+  while (begin < end) {
+    const size_t remaining = end - begin;
+    const size_t length = remaining < kCommitLimit ? remaining : kCommitLimit;
+    const GtosVmRangeRequest request{GTOS_VM_ABI_VERSION, handle,
+                                    static_cast<unsigned>(kPage + begin),
+                                    static_cast<unsigned>(length), GTOS_VM_READ_WRITE};
+    if (Call(GTOS_SYS_VM_SET_PERMISSIONS, &request, sizeof(request)) != 0) return false;
+    begin += length;
+  }
+  return true;
+}
 
 int Release(unsigned handle) {
   const GtosVmControlRequest request{GTOS_VM_ABI_VERSION, handle, 0};
@@ -69,15 +84,10 @@ PagedMemory PagedMemory::Allocate(size_t bytes, int flags) {
                  result.base != 0 && result.base % kPage == 0 &&
                  result.length == outer && result.page_size == kPage &&
                  result.base <= UINT32_MAX - outer);
-  if (!(flags & kDontCommit)) {
-    const GtosVmRangeRequest commit{GTOS_VM_ABI_VERSION, result.handle,
-                                    static_cast<unsigned>(kPage), static_cast<unsigned>(rounded),
-                                    GTOS_VM_READ_WRITE};
-    if (Call(GTOS_SYS_VM_SET_PERMISSIONS, &commit, sizeof(commit)) != 0) {
-      PERFETTO_CHECK(Release(result.handle) == 0);
-      if (flags & kMayFail) return PagedMemory();
-      PERFETTO_FATAL("native VM commit failed");
-    }
+  if (!(flags & kDontCommit) && !Commit(result.handle, 0, rounded)) {
+    PERFETTO_CHECK(Release(result.handle) == 0);
+    if (flags & kMayFail) return PagedMemory();
+    PERFETTO_FATAL("native VM commit failed");
   }
   PagedMemory memory(reinterpret_cast<char*>(result.base + kPage), bytes);
   memory.gtos_handle_ = result.handle;
@@ -113,10 +123,7 @@ void PagedMemory::EnsureCommitted(size_t bytes) {
   if (bytes <= committed_size_) return;
   const size_t begin = Rounded(committed_size_);
   const size_t end = Rounded(bytes);
-  const GtosVmRangeRequest request{GTOS_VM_ABI_VERSION, gtos_handle_,
-                                  static_cast<unsigned>(kPage + begin),
-                                  static_cast<unsigned>(end - begin), GTOS_VM_READ_WRITE};
-  PERFETTO_CHECK(Call(GTOS_SYS_VM_SET_PERMISSIONS, &request, sizeof(request)) == 0);
+  PERFETTO_CHECK(Commit(gtos_handle_, begin, end));
   const size_t committed = end < size_ ? end : size_;
   ANNOTATE_CHANGE_SIZE(p_, size_, committed_size_, committed)
   committed_size_ = committed;

@@ -5,10 +5,12 @@
 #include <utility>
 
 namespace {
-alignas(4096) unsigned char pages[2][65536];
+constexpr unsigned kCommitBytes = 256 * 4096;
+alignas(4096) unsigned char pages[2][kCommitBytes + 4 * 4096];
 struct Reservation { bool active; unsigned length, committed; } regions[2];
 unsigned calls, reserves, commits, releases, discards, checks, failures;
 int reserve_error, commit_error, release_error, discard_error;
+unsigned commit_error_offset;
 bool malformed;
 void Write(const char* text) {
   unsigned length = 0;
@@ -73,7 +75,9 @@ int GtosPerfettoVmTestCall(unsigned operation, const void* data, unsigned bytes)
   if (operation == GTOS_SYS_VM_SET_PERMISSIONS) {
     ++commits;
     Check(request.protection == GTOS_VM_READ_WRITE && request.offset == 4096 + region.committed);
-    if (commit_error) return commit_error;
+    if (request.length > kCommitBytes) return GTOS_VM_ERR_LIMIT;
+    if (commit_error && (!commit_error_offset || request.offset == commit_error_offset))
+      return commit_error;
     region.committed += request.length;
   } else {
     ++discards;
@@ -180,6 +184,26 @@ extern "C" int MemoryTestMain() {
     memory.EnsureCommitted(memory.size());
     Check(regions[0].committed == 16384 && pointer[0] == 88 && pointer[12290] == 0);
     Check(pages[0][regions[0].length - 1] == 0xA5);
+  }
+  Check(Active() == 0);
+  const unsigned old_commits = commits;
+  const unsigned old_releases = releases;
+  commit_error = GTOS_VM_ERR_NO_MEMORY;
+  commit_error_offset = 4096 + kCommitBytes;
+  Check(!PagedMemory::Allocate(kCommitBytes + 1, PagedMemory::kMayFail).IsValid());
+  Check(Active() == 0 && commits == old_commits + 2 && releases == old_releases + 1);
+  commit_error = 0;
+  commit_error_offset = 0;
+  {
+    auto memory = PagedMemory::Allocate(kCommitBytes + 4097, PagedMemory::kDontCommit);
+    auto* pointer = static_cast<unsigned char*>(memory.Get());
+    const unsigned before = commits;
+    memory.EnsureCommitted(1);
+    pointer[0] = 44;
+    memory.EnsureCommitted(memory.size());
+    Check(commits == before + 3 && regions[0].committed == kCommitBytes + 8192);
+    Check(pointer[0] == 44 && pointer[kCommitBytes] == 0 && pointer[memory.size() - 1] == 0);
+    Check(pages[0][0] == 0xA5 && pages[0][regions[0].length - 1] == 0xA5);
   }
   Check(Active() == 0);
 #if defined(GTOS_MEMORY_WRONG_EXPECTATION)

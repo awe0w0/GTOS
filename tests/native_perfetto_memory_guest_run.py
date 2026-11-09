@@ -36,11 +36,13 @@ def judge(lines, code):
     if complete:
         cases, reaps = groups['PMEM CASE'], groups['PMEM REAP']
         baseline = reaps[0]['expected']
+        # Begin/pass/exit, sixteen small lifecycles, and three large lifecycles.
+        normal_calls = 3 + 16 * 9 + 3 * 5
         for mode, value in cases.items():
-            if value['cs'] != 0x23 or value['calls'] != [147, 3, 3, 2, 4][mode]:
+            if value['cs'] != 0x23 or value['calls'] != [normal_calls, 3, 3, 2, 4][mode]:
                 problems.append('context/call count ' + str(mode))
             if mode == 0:
-                if any(value[name] for name in ['base', 'exit', 'fault', 'error']) or value['checks'] != 114:
+                if any(value[name] for name in ['base', 'exit', 'fault', 'error']) or value['checks'] != 120:
                     problems.append('consumer comparisons')
             else:
                 offset = -4096 if mode == 1 else 8192 if mode == 2 else 0

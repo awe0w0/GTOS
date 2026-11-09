@@ -57,7 +57,9 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         Elf32LoadPlan plan;
         MemoryRequire(ValidateElf32(memoryElf, bytes, plan), "native ELF plan");
         uint32_t id;
-        MemoryRequire(runtime.CreateElf(memoryElf, bytes, id), "actual ELF admission");
+        const NativeElfLaunchProfile largeAllocation = {Elf32MaximumPages, 2, 512};
+        MemoryRequire(mode == 0 ? runtime.CreateElf(memoryElf, bytes, id, largeAllocation)
+                                : runtime.CreateElf(memoryElf, bytes, id), "actual ELF admission");
         NativeStatus status = WaitStopped(runtime, tasks, id);
         gtos_perfetto_probe::Record record = {};
         MemoryRequire(runtime.ReadMemory(id, gtos_perfetto_probe::RecordAddress, &record, sizeof(record)), "consumer record");
@@ -66,7 +68,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
             && status.directory != paging.getStatistics().directoryAddress
             && status.systemCalls >= (mode == 3 ? 2U : 3U), "CPL3 private context");
         if (!mode) {
-            MemoryRequire(record.stage == 2 && record.checks == 114 && status.exitCode == 0 && !status.faultVector,
+            MemoryRequire(record.stage == 2 && record.checks == 120 && status.exitCode == 0 && !status.faultVector,
                 "normal lifetime and byte comparisons");
         } else {
             const uint32_t error = mode == 3 ? 4 : 6;

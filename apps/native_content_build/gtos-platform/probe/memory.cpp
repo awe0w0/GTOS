@@ -70,6 +70,32 @@ extern "C" int NativeEntry() {
   }
   Check(!PagedMemory::Allocate(0, PagedMemory::kMayFail).IsValid());
   Check(!PagedMemory::Allocate(0xFFFFFFFFU, PagedMemory::kMayFail).IsValid());
+  constexpr unsigned kCommitBytes = 256 * 4096;
+  constexpr unsigned kLarge = kCommitBytes + 4097;
+  // The observer provisions 512 runtime pages. This fails after committing
+  // two chunks and must leave enough capacity for both subsequent allocations.
+  Check(!PagedMemory::Allocate(2 * kCommitBytes + 1, PagedMemory::kMayFail).IsValid());
+  {
+    auto memory = PagedMemory::Allocate(kLarge, PagedMemory::kMayFail);
+    Check(memory.IsValid());
+    if (memory.IsValid()) {
+      auto* pointer = static_cast<unsigned char*>(memory.Get());
+      Check(Zero(pointer, kLarge));
+      pointer[0] = 77;
+      pointer[kCommitBytes] = 66;
+      Check(memory.AdviseDontNeed(pointer + kCommitBytes, 4096) &&
+            pointer[0] == 77 && Zero(pointer + kCommitBytes, 4096));
+    }
+  }
+  {
+    auto memory = PagedMemory::Allocate(kLarge, PagedMemory::kDontCommit);
+    Check(memory.IsValid());
+    auto* pointer = static_cast<unsigned char*>(memory.Get());
+    memory.EnsureCommitted(1);
+    pointer[0] = 55;
+    memory.EnsureCommitted(kLarge);
+    Check(pointer[0] == 55 && Zero(pointer + 4096, kLarge - 4096));
+  }
 #if defined(GTOS_MEMORY_GUEST_WRONG_EXPECTATION)
   Check(false);
 #endif
