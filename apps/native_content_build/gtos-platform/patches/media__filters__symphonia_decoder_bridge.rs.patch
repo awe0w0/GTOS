@@ -1,0 +1,11 @@
+--- a/media/filters/symphonia_decoder_bridge.rs
++++ b/media/filters/symphonia_decoder_bridge.rs
+@@ -46,6 +46,8 @@
+ //! This bridge is built using the `cxx` crate, which automates the generation
+ //! of safe FFI bindings between the two languages.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use symphonia_core::audio::conv::ConvertibleSample;
+ use symphonia_core::audio::sample::SampleBytes;
+ use symphonia_core::audio::{Audio, Channels, GenericAudioBufferRef, Position};

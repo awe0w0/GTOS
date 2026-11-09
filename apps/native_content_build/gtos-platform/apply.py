@@ -14,6 +14,12 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'media/filters/BUILD.gn': '553c20d3bcf6d26f26a99ea715c2b27fd03d38f17ef4b533a7865a8aaaf4d745',
+    'media/filters/symphonia_decoder_bridge.rs': '5509e4d0f5702c7e25e4a31c72e61c9878dd87282140031e144a6c443026552a',
+    'third_party/rust/incremental_font_transfer/v0_7/BUILD.gn': '8f87c166f55cb70b77c96c0fb692cfde332c6dfd050f4542a082f045af23df41',
+    'third_party/rust/chromium_crates_io/vendor/incremental-font-transfer-v0_7/src/lib.rs': 'd7c57cdafb2b7f4fbefbba12914225db188eb89469fe626ae90d557aec131abb',
+    'third_party/rust/jxl/v0_7/BUILD.gn': '878fa1f1b9c1bdc89b6eede1aef65d83a6f4892c7ef0dfeaf5c298de3b4c9dbe',
+    'third_party/rust/chromium_crates_io/vendor/jxl-v0_7/src/lib.rs': '05bd3165b0041f99618b8db0ebfe82b54225e837f708e77e5b6783422b0b5ac3',
     'gin/v8_platform_page_allocator.cc': '01f41de8d876c72ce05da4c3e12e5b7eabeee9f289f35b2d242ee0cf57aa5358',
     'base/allocator/partition_allocator/src/partition_alloc/page_allocator.h': '2ef57bd01707f69865a055297e6d9ef3c7f1d111d2867c9d04fcfddaf077ec99',
     'third_party/blink/renderer/platform/wtf/stack_util.cc': '9daf8af7c2c1b81564f0feddfeed99680ef6e7f3d07ee14963937337b8eee847',

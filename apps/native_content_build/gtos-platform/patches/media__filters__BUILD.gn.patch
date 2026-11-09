@@ -1,0 +1,13 @@
+--- a/media/filters/BUILD.gn
++++ b/media/filters/BUILD.gn
+@@ -12,6 +12,10 @@ if (media_use_symphonia_decoder) {
+     allow_unsafe = true
+ 
+     crate_root = "symphonia_decoder_bridge.rs"
++    if (is_gtos) {
++      configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++      rustflags = [ "-Zallow-features=restricted_std" ]
++    }
+     sources = [ "symphonia_decoder_bridge.rs" ]
+     cxx_bindings = [ "symphonia_decoder_bridge.rs" ]
+     visibility = [ ":*" ]
