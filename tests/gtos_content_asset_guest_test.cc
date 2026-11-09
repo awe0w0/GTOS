@@ -19,6 +19,9 @@ int TestBaseRandom();
 #if defined(GTOS_CONTENT_WEBRTC_AUDIO_TEST)
 int TestWebRtcAudioIsa();
 #endif
+#if defined(GTOS_CONTENT_POLICY_TEST)
+int TestContentPolicy();
+#endif
 
 namespace {
 
@@ -185,6 +188,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_WEBRTC_AUDIO_TEST)
     if (const int status = TestWebRtcAudioIsa()) return status;
     Say("GTOS WEBRTC AUDIO ISA PASS\n");
+#endif
+#if defined(GTOS_CONTENT_POLICY_TEST)
+    if (const int status = TestContentPolicy()) return status;
+    Say("GTOS CONTENT POLICY PASS\n");
 #endif
     return 37;
 }

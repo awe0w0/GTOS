@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'services/network/public/cpp/content_security_policy/content_security_policy.cc': '24f4e0ab596ba249547cf69675e8181aefad59421b5991d047b8aa94f537c923',
+    'services/network/public/cpp/permissions_policy/permissions_policy_features_bitset.cc': '23e4d107c1d3dc5f11209a2373d7d76afc22a649da1052043b35847924a4c316',
+    'third_party/angle/src/common/FixedVector.h': 'ff0f3938df85fc1f6bc414e88b0398267b213127531d481546eef13ba9db26e3',
     'third_party/boringssl/src/crypto/mem.cc': '38ae0d587e73f60c9ee09c84acc3c5145f909c83b26a6e1fdf7ab26d13c0ddbf',
     'third_party/webrtc/modules/audio_processing/aec3/BUILD.gn': '177b5368375b60be5041f7e158184f01b178d896ad0bba3f7c9067730c225add',
     'third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter.cc': 'e760819bd42ba0047900bbe2644d632090743a81027585b474723b1212132d7b',

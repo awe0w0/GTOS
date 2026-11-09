@@ -1,0 +1,20 @@
+--- a/services/network/public/cpp/permissions_policy/permissions_policy_features_bitset.cc
++++ b/services/network/public/cpp/permissions_policy/permissions_policy_features_bitset.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "services/network/public/cpp/permissions_policy/permissions_policy_features_bitset.h"
+ 
+-#include <cstring>
++#include <algorithm>
+ 
+ #include "base/check_op.h"
+ #include "base/containers/span.h"
+@@ -75,7 +75,7 @@ bool PermissionsPolicyFeaturesBitset::Deserialize(std::string_view data) {
+   // Zero out the rest of `bitset_` to clear any residual data.
+   size_t zero_count = kPermissionsPolicyFeaturesBitsetArraySize - data.size();
+   if (zero_count > 0) {
+-    std::fill(bitset_.begin(), bitset_.begin() + zero_count, 0);
++    std::ranges::fill(base::span(bitset_).first(zero_count), 0);
+   }
+ 
+   return true;

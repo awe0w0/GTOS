@@ -1,0 +1,28 @@
+--- a/third_party/angle/src/common/FixedVector.h
++++ b/third_party/angle/src/common/FixedVector.h
+@@ -15,6 +15,7 @@
+ #include <algorithm>
+ #include <array>
+ #include <initializer_list>
++#include <iterator>
+ 
+ namespace angle
+ {
+@@ -219,13 +220,15 @@ typename FixedVector<T, N, Storage>::const_iterator FixedVector<T, N, Storage>::
+ template <class T, size_t N, class Storage>
+ typename FixedVector<T, N, Storage>::iterator FixedVector<T, N, Storage>::end()
+ {
+-    return mStorage.begin() + mSize;
++    ASSERT(mSize <= N);
++    return std::next(mStorage.begin(), static_cast<ptrdiff_t>(mSize));
+ }
+ 
+ template <class T, size_t N, class Storage>
+ typename FixedVector<T, N, Storage>::const_iterator FixedVector<T, N, Storage>::end() const
+ {
+-    return mStorage.begin() + mSize;
++    ASSERT(mSize <= N);
++    return std::next(mStorage.begin(), static_cast<ptrdiff_t>(mSize));
+ }
+ 
+ template <class T, size_t N, class Storage>
