@@ -199,6 +199,7 @@ if args.component == 'expat':
     environment = args.view / 'tools/gtos_native_sdk/environment'
     flags += ['-std=c++23', '-I' + str(args.view), '-I' + str(environment),
               '-I' + str(llvm_libc), '-DXML_STATIC']
+ffmpeg_opus = False
 if args.component in ('vp9', 'ffmpeg_webm'):
     llvm_libc = full / 'third_party/llvm-libc/src'
     flags += ['-I' + str(args.view / 'third_party/libvpx/source/libvpx'),
@@ -210,6 +211,11 @@ if args.component in ('vp9', 'ffmpeg_webm'):
     if webm:
         assert len(data) == 67504 and data[:4] == b'\x1aE\xdf\xa3'
         assert hashlib.sha256(data).hexdigest() == '7cd68c55f4bb47a2df22a85fac9e8b942cbbba24286c037048131944eb0a09eb'
+        components = args.provider_root / 'build/config_components.h'
+        bind(components)
+        opus_define = re.search(r'^#define CONFIG_LIBOPUS_DECODER ([01])$', components.read_text(), re.M)
+        assert opus_define is not None
+        ffmpeg_opus = opus_define[1] == '1'
         flags += ['-std=c++23', '-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE',
                   '-I' + str(product / 'sdk/ffmpeg'),
                   '-I' + str(args.view), '-I' + str(args.view / 'v8'),
@@ -236,6 +242,16 @@ if args.component in ('vp9', 'ffmpeg_webm'):
         with fixture_source.open('a') as stream:
             stream.write('.globl gtos_vp9_reference\ngtos_vp9_reference:\n'
                          f'.incbin "{reference}", 0, 3912\n')
+        if ffmpeg_opus:
+            opus = full / 'media/test/data/bear-opus.ogg'
+            bind(opus)
+            opus_bytes = opus.read_bytes()
+            assert len(opus_bytes) == 22397 and opus_bytes[:4] == b'OggS'
+            assert hashlib.sha256(opus_bytes).hexdigest() == (
+                'c074407b7126060972b5e9eb4081e04e35c88857d7125151cbb9e5d9a1191dae')
+            with fixture_source.open('a') as stream:
+                stream.write('.globl gtos_opus_fixture\ngtos_opus_fixture:\n'
+                             f'.incbin "{opus}"\n')
     fixture_object = args.out / 'fixture.o'
     run('assemble-vp9-fixture', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf',
                                 '-c', fixture_source, '-o', fixture_object])
@@ -288,7 +304,14 @@ else:
     layout_text = layout_source.read_text().replace('native_vm_record', record_name)
     record_address = '40020000'
     image_limit = 65536
-    if args.component in ('vp9', 'ffmpeg_webm', 'webrtc_thread', 'skia_semaphore',
+    if ffmpeg_opus:
+        record_address = '40300000'
+        image_limit = 4 * 1024 * 1024
+        layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
+                       .replace('0x20000', '0x300000')
+                       .replace('<= 4096, "VM probe data exceeds one page"',
+                                '<= 0x100000, "VM probe data exceeds full media budget"'))
+    elif args.component in ('vp9', 'ffmpeg_webm', 'webrtc_thread', 'skia_semaphore',
                           'expat', 'address_text', 'net_protocol', 'v8_platform',
                           'platform_libraries'):
         record_address = '40200000'
@@ -538,11 +561,14 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
             media_record = media / 'identity.json'
             bind(media_record)
             providers_record = json.loads(media_record.read_text())
-            for name in ('libvpx.a', 'gtos-clock-bridge.o', 'gtos-semaphore.o'):
-                path = media / name
+            provider_names = ['libvpx.a', 'gtos-clock-bridge.o', 'gtos-semaphore.o']
+            if ffmpeg_opus:
+                provider_names.append('libopus.a')
+            for provider_name in provider_names:
+                path = media / provider_name
                 actual = identity(path)
                 assert not path.is_symlink() and not path.stat().st_mode & 0o222
-                assert all(actual[key] == providers_record[name][key]
+                assert all(actual[key] == providers_record[provider_name][key]
                            for key in ('sha256', 'bytes'))
                 bind(path)
             codec = media / 'libvpx.a'
@@ -554,8 +580,6 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
             configured = json.loads(configuration_path.read_text())
             assert built['configuration'] == {
                 k: v for k, v in identity(configuration_path).items() if k != 'path'}
-            assert '#define CONFIG_LIBOPUS_DECODER 0' in (
-                args.provider_root / 'build/config_components.h').read_text()
             for product_name, expected in configured['outputs'].items():
                 path = args.provider_root / 'build' / product_name
                 assert {k: v for k, v in identity(path).items() if k != 'path'} == expected
@@ -583,7 +607,9 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                       for name in ('gtos-clock-bridge', 'gtos-semaphore')]
             for path in engine:
                 bind(path)
-            extra += [fixture_object, jump_object, codec, *libraries, *providers, *engine, archive]
+            opus_archive = [media / 'libopus.a'] if ffmpeg_opus else []
+            extra += [fixture_object, jump_object, codec, *libraries, *opus_archive,
+                      *providers, *engine, archive]
         if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9', 'expat', 'address_text',
                                      'net_protocol', 'ffmpeg_webm', 'v8_platform', 'platform_libraries'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
@@ -643,6 +669,8 @@ if args.component == 'vp9':
     kernel_flags.append('-DGTOS_CONTENT_VP9_PROBE')
 if args.component == 'ffmpeg_webm':
     kernel_flags.append('-DGTOS_CONTENT_FFMPEG_WEBM_PROBE')
+    if ffmpeg_opus:
+        kernel_flags.append('-DGTOS_CONTENT_FFMPEG_OPUS_PROBE')
 if args.component == 'v8_platform':
     kernel_flags.append('-DGTOS_CONTENT_V8_PLATFORM_PROBE')
 if args.component == 'platform_libraries':

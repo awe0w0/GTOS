@@ -1,0 +1,14 @@
+--- a/third_party/opus/BUILD.gn
++++ b/third_party/opus/BUILD.gn
+@@ -8,7 +8,10 @@ import("//testing/test.gni")
+ # If ARM optimizations shall be used to accelerate performance.
+ use_opus_arm_optimization = current_cpu == "arm" || current_cpu == "arm64"
+ 
+-use_opus_x86_optimization = current_cpu == "x86" || current_cpu == "x64"
++# The GTOS compiler and process ABI expose the IA32 SSE2 baseline.
++# Keep the portable codec on GTOS; the x86 bundle includes SSE4.1 and AVX2.
++use_opus_x86_optimization =
++    !is_gtos && (current_cpu == "x86" || current_cpu == "x64")
+ 
+ config("opus_config") {
+   include_dirs = [ "src/include" ]

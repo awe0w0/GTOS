@@ -9,7 +9,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config_components.h"
+
 extern "C" {
+#include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/mem.h"
 #include "vpx/vp8dx.h"
@@ -17,6 +20,9 @@ extern "C" {
 
 extern const uint8_t gtos_webm_fixture[];
 extern const uint8_t gtos_vp9_reference[];
+#if CONFIG_LIBOPUS_DECODER
+extern const uint8_t gtos_opus_fixture[];
+#endif
 int gtos_native_heap_enable_large_allocations() noexcept;
 
 __attribute__((section(".data.vm_record"), used))
@@ -101,6 +107,7 @@ bool TestThread() {
 }
 
 struct Cursor {
+  const uint8_t* data;
   int size;
   int position = 0;
 };
@@ -112,7 +119,7 @@ int Read(void* opaque, uint8_t* output, int size) {
   const int remaining = cursor.size - cursor.position;
   if (size > remaining)
     size = remaining;
-  memcpy(output, gtos_webm_fixture + cursor.position, size);
+  memcpy(output, cursor.data + cursor.position, size);
   cursor.position += size;
   return size;
 }
@@ -137,7 +144,7 @@ int64_t Seek(void* opaque, int64_t offset, int whence) {
 
 class Demuxer {
  public:
-  explicit Demuxer(int size) : cursor_{size} {}
+  explicit Demuxer(int size, const uint8_t* data = gtos_webm_fixture) : cursor_{data, size} {}
   ~Demuxer() {
     if (opened_)
       avformat_close_input(&format_);
@@ -261,11 +268,77 @@ void TestWebM() {
   Check(status == AVERROR_INVALIDDATA || status == AVERROR_EOF);
 }
 
+#if CONFIG_LIBOPUS_DECODER
+void DecodeOpus(AVFormatContext* input, const AVCodec* decoder,
+                AVCodecContext* context, AVPacket* packet, AVFrame* frame) {
+  if (!Check(avcodec_parameters_to_context(context, input->streams[0]->codecpar) == 0))
+    return;
+  context->request_sample_fmt = AV_SAMPLE_FMT_S16;
+  if (!Check(avcodec_open2(context, decoder, nullptr) == 0))
+    return;
+
+  // The pinned Ogg page lacing identifies the first two audio packets.
+  // Both packets carry one 10 ms frame at 48 kHz. OpusHead specifies a
+  // 312-sample pre-skip from the first packet.
+  const struct {
+    unsigned offset;
+    int bytes;
+    int samples;
+  } expected[] = {{256, 213, 168}, {469, 103, 480}};
+  unsigned nonzero = 0;
+  for (const auto& next : expected) {
+    if (!Check(av_read_frame(input, packet) == 0 && packet->stream_index == 0 &&
+               packet->size == next.bytes &&
+               memcmp(packet->data, gtos_opus_fixture + next.offset, next.bytes) == 0))
+      return;
+    if (!Check(avcodec_send_packet(context, packet) == 0))
+      return;
+    av_packet_unref(packet);
+    const int sample_bytes = next.samples * 2 * sizeof(int16_t);
+    if (!Check(avcodec_receive_frame(context, frame) == 0 &&
+               frame->format == AV_SAMPLE_FMT_S16 && frame->sample_rate == 48000 &&
+               frame->ch_layout.nb_channels == 2 && frame->nb_samples == next.samples &&
+               frame->data[0] && frame->linesize[0] >= sample_bytes))
+      return;
+    for (int i = 0; i < sample_bytes; ++i)
+      nonzero += frame->data[0][i] != 0;
+    av_frame_unref(frame);
+  }
+  Check(nonzero > 0);
+}
+
+void TestOpus() {
+  Demuxer input(22397, gtos_opus_fixture);
+  if (!Check(input.Open() == 0) || !Check(input.get()->nb_streams == 1))
+    return;
+  const auto* parameters = input.get()->streams[0]->codecpar;
+  if (!Check(parameters->codec_id == AV_CODEC_ID_OPUS &&
+             parameters->sample_rate == 48000 && parameters->ch_layout.nb_channels == 2 &&
+             parameters->initial_padding == 312))
+    return;
+  const AVCodec* decoder = avcodec_find_decoder(AV_CODEC_ID_OPUS);
+  if (!Check(decoder && strcmp(decoder->name, "libopus") == 0))
+    return;
+  AVCodecContext* context = avcodec_alloc_context3(decoder);
+  AVPacket* packet = av_packet_alloc();
+  AVFrame* frame = av_frame_alloc();
+  if (Check(context && packet && frame))
+    DecodeOpus(input.get(), decoder, context, packet, frame);
+  av_frame_free(&frame);
+  av_packet_free(&packet);
+  avcodec_free_context(&context);
+}
+#endif
+
 }  // namespace
 
 extern "C" int NativeEntry() {
-  if (Check(gtos_native_heap_enable_large_allocations() == 0) && TestThread())
+  if (Check(gtos_native_heap_enable_large_allocations() == 0) && TestThread()) {
     TestWebM();
+#if CONFIG_LIBOPUS_DECODER
+    TestOpus();
+#endif
+  }
   native_memory_record.stage = 2;
   return native_memory_record.failures != 0;
 }

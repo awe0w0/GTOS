@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/opus/BUILD.gn': '436f0bfedbfc18c2a46f39f10667fe815e0aca6bf097e999930bfc36118deb33',
     'third_party/cpuinfo/src/src/api.c': '1b97568435c0c89bba9d3084dd6783dcb0a2d2958125fe983fc57f263d92ea30',
     'third_party/cpuinfo/src/src/init.c': 'ab4e4342540438bc7862417aba3c4f6d75a2a87bef99aaa5e2c0c9412b9ccc7c',
     'third_party/angle/src/common/platform.h': '6c839dfbe39dfb6453b4cd8a0f5151d9c8d50be9530151f6562a6a9b3de57d88',
@@ -273,6 +274,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/alloca.h': 'sdk/alloca.h',
     'third_party/cpuinfo/src/src/x86/gtos/init.c': 'sdk/cpuinfo-init.c',
     'build/config/gtos/runtime/file_internal.h': '../../native_libxml_file/file_internal.h',
     'build/config/gtos/runtime/ffmpeg/clock.cc': 'sdk/ffmpeg/clock.cc',

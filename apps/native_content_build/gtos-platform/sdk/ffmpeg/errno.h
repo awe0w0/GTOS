@@ -18,6 +18,9 @@
 #ifndef ENOTEMPTY
 #define ENOTEMPTY 39
 #endif
+#ifndef ENOPROTOOPT
+#define ENOPROTOOPT 92
+#endif
 #ifndef ENOTSUP
 #define ENOTSUP 95
 #endif

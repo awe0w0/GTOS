@@ -13,8 +13,13 @@ static const unsigned ExpectedChecks = 25;
 static const char* const CheckDescription = "native clocks, memory and concurrent V8 once";
 #elif defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT FFMPEG WEBM"
+#if defined(GTOS_CONTENT_FFMPEG_OPUS_PROBE)
+static const unsigned ExpectedChecks = 46;
+static const char* const CheckDescription = "WebM VP9 and Ogg Opus with native synchronization";
+#else
 static const unsigned ExpectedChecks = 32;
 static const char* const CheckDescription = "WebM demux, VP9 frames and native synchronization";
+#endif
 #elif defined(GTOS_CONTENT_VP9_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT VP9"
 static const unsigned ExpectedChecks = 20;
@@ -58,7 +63,10 @@ static const char* const CheckDescription = "exact process and worker identity";
 #endif
 
 namespace {
-#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
+#if defined(GTOS_CONTENT_FFMPEG_OPUS_PROBE)
+    static const unsigned MaximumImageBytes = 4 * 1024 * 1024;
+    static const unsigned RecordAddress = 0x40300000U;
+#elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
     defined(GTOS_CONTENT_V8_PLATFORM_PROBE) || \
     defined(GTOS_CONTENT_PLATFORM_LIBRARIES_PROBE) || \
     defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
