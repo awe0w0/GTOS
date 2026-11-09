@@ -1,0 +1,58 @@
+--- a/third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc
++++ b/third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc
+@@ -26,7 +26,9 @@
+ 
+ #include "absl/base/call_once.h"
+ #include "absl/base/config.h"
++#if !defined(__GTOS__)
+ #include "absl/base/internal/direct_mmap.h"
++#endif
+ #include "absl/base/internal/scheduling_mode.h"
+ #include "absl/base/macros.h"
+ #include "absl/base/thread_annotations.h"
+@@ -36,7 +38,9 @@
+ // LowLevelAlloc.
+ #ifndef ABSL_LOW_LEVEL_ALLOC_MISSING
+ 
+-#ifndef _WIN32
++#if defined(__GTOS__)
++#include "absl/base/internal/gtos-low-level-pages.h"
++#elif !defined(_WIN32)
+ #include <pthread.h>
+ #include <signal.h>
+ #include <sys/mman.h>
+@@ -360,7 +364,9 @@ inline static uintptr_t Magic(uintptr_t magic, AllocList::Header *ptr) {
+ 
+ namespace {
+ size_t GetPageSize() {
+-#ifdef _WIN32
++#if defined(__GTOS__)
++  return GtosLowLevelPageSize();
++#elif defined(_WIN32)
+   SYSTEM_INFO system_info;
+   GetSystemInfo(&system_info);
+   return std::max(system_info.dwPageSize, system_info.dwAllocationGranularity);
+@@ -437,7 +443,10 @@ bool LowLevelAlloc::DeleteArena(Arena *arena) {
+     ABSL_RAW_CHECK(reinterpret_cast<uintptr_t>(region) % arena->pagesize == 0,
+                    "empty arena has non-page-aligned block");
+     int munmap_result;
+-#ifdef _WIN32
++#if defined(__GTOS__)
++    munmap_result = GtosLowLevelUnmapPages(region, size);
++    ABSL_RAW_CHECK(munmap_result != 0, "GTOS page release failed");
++#elif defined(_WIN32)
+     munmap_result = VirtualFree(region, 0, MEM_RELEASE);
+     ABSL_RAW_CHECK(munmap_result != 0,
+                    "LowLevelAlloc::DeleteArena: VitualFree failed");
+@@ -584,7 +593,10 @@ static void *DoAllocWithArena(size_t request, LowLevelAlloc::Arena *arena) {
+       // the chances/impact of fragmentation:
+       size_t new_pages_size = RoundUp(req_rnd, arena->pagesize * 16);
+       void *new_pages;
+-#ifdef _WIN32
++#if defined(__GTOS__)
++      new_pages = GtosLowLevelMapPages(new_pages_size, arena->pagesize);
++      ABSL_RAW_CHECK(new_pages != nullptr, "GTOS page allocation failed");
++#elif defined(_WIN32)
+       new_pages = VirtualAlloc(nullptr, new_pages_size,
+                                MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+       ABSL_RAW_CHECK(new_pages != nullptr, "VirtualAlloc failed");

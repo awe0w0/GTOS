@@ -1,0 +1,22 @@
+--- a/third_party/flac/src/libFLAC/metadata_iterators.c
++++ b/third_party/flac/src/libFLAC/metadata_iterators.c
+@@ -3460,6 +3460,11 @@ FLAC__bool get_file_stats_(const char *filename, struct flac_stat_s *stats)
+ 
+ void set_file_stats_(const char *filename, struct flac_stat_s *stats)
+ {
++#if defined(__GTOS__)
++	/* LittleFS exposes file size and kind, without mode, owner or timestamps. */
++	(void)filename;
++	(void)stats;
++#else
+ #if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200809L) && !defined(_WIN32)
+ 	struct timespec srctime[2] = {};
+ 	srctime[0].tv_sec = stats->st_atime;
+@@ -3479,6 +3484,7 @@ void set_file_stats_(const char *filename, struct flac_stat_s *stats)
+ 	FLAC_CHECK_RETURN(chown(filename, stats->st_uid, -1));
+ 	FLAC_CHECK_RETURN(chown(filename, -1, stats->st_gid));
+ #endif
++#endif  /* defined(__GTOS__) */
+ }
+ 
+ int fseek_wrapper_(FLAC__IOHandle handle, FLAC__int64 offset, int whence)

@@ -1,0 +1,13 @@
+--- a/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h
++++ b/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h
+@@ -11,8 +11,8 @@ namespace absl {
+ ABSL_NAMESPACE_BEGIN
+ namespace base_internal {
+ 
+-// These internal operations require one user task in its private GTOS address
+-// space. They do not implement POSIX mmap or async-signal-safe allocation.
++// These operations serialize reservation ownership across threads sharing a
++// GTOS address space. They require the native VM and scheduler ABI.
+ size_t GtosLowLevelPageSize();
+ 
+ // Returns a fully committed RW reservation, or nullptr for an invalid request,

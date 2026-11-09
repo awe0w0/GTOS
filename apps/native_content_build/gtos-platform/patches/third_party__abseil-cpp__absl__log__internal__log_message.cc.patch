@@ -1,0 +1,20 @@
+--- a/third_party/abseil-cpp/absl/log/internal/log_message.cc
++++ b/third_party/abseil-cpp/absl/log/internal/log_message.cc
+@@ -363,7 +363,7 @@ LogMessage& LogMessage::ToSinkOnly(absl::LogSink* absl_nonnull sink) {
+   return *this;
+ }
+ 
+-#ifdef __ELF__
++#if defined(__ELF__) && !defined(__GTOS__)
+ extern "C" void __gcov_dump() ABSL_ATTRIBUTE_WEAK;
+ extern "C" void __gcov_flush() ABSL_ATTRIBUTE_WEAK;
+ #endif
+@@ -376,7 +376,7 @@ void LogMessage::FailWithoutStackTrace() {
+   __debugbreak();
+ #endif
+ 
+-#ifdef __ELF__
++#if defined(__ELF__) && !defined(__GTOS__)
+   // For b/8737634, flush coverage if we are in coverage mode.
+   if (&__gcov_dump != nullptr) {
+     __gcov_dump();

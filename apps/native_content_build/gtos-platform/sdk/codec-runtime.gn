@@ -89,7 +89,10 @@ source_set("native_file_output") {
 
 source_set("native_locale") {
   assert(is_gtos && current_cpu == "x86")
-  sources = [ "//third_party/llvm-libc/src/src/locale/setlocale.cpp" ]
+  sources = [
+    "//third_party/llvm-libc/src/src/locale/localeconv.cpp",
+    "//third_party/llvm-libc/src/src/locale/setlocale.cpp",
+  ]
   include_dirs = [ "//third_party/llvm-libc/src" ]
   defines = [
     "LIBC_NAMESPACE=__llvm_libc_cr",

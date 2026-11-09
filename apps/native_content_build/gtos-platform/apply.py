@@ -14,6 +14,20 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/abseil-cpp/absl/base/internal/low_level_alloc.h': '0f7dd074b79f49b57c2491987e722dbc0301018937e2a0573e10b3df8afe0649',
+    'third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc': 'c8d0eb92b93100e440fc2f0c764c0161cc47024948762899fccc9dc0d38f7b69',
+    'third_party/abseil-cpp/absl/base/internal/raw_logging.cc': 'fced9c4d26a623f867f8518576a31666221d869036576bdfd577894cafebfde9',
+    'third_party/abseil-cpp/absl/log/internal/log_message.cc': '4775adc6ed08fe96973ad5df71c51e900afad18fc19b0567728fba2d82b6410a',
+    'third_party/abseil-cpp/absl/synchronization/internal/futex.h': '15ee5c469729872e037599244cbe9fbd980408bb78776bc17ea57e3785edf6d2',
+    'third_party/federated_compute/BUILD.gn': '10f6597f3b3b8d35900bb62f93b39f317f5758169a904182618b10476e5079ad',
+    'third_party/federated_compute/src/fcp/base/platform.cc': '38c4c5065f8ccd732746bbd0b59d371c4fc988de237defbd465879eb4f830aaa',
+    'third_party/iamf_tools/src/iamf/common/read_bit_buffer.cc': '1fa256493a2295ecc19a311baac65f33587623f910c99190eaffcc4f43f15fd4',
+    'third_party/iamf_tools/src/iamf/common/read_bit_buffer.h': 'efe6e090b2645150797908e7d05f9b8923263facd6fbce290f10eb84e460799b',
+    'third_party/iamf_tools/src/iamf/common/write_bit_buffer.cc': 'eb43e5827d0f05820764b530d32ad32cddfeb8bd2689691a287bb5360f99377f',
+    'third_party/iamf_tools/src/iamf/common/write_bit_buffer.h': '5900055accfb48bfb3dfe6d44465f8135112d023b59a01c2c579f0906a89b7f5',
+    'third_party/flac/include/share/compat.h': 'a004f501349d8f7612dbe45d6e4af1992f447db2fe9a16bb4ed22ae563c767e6',
+    'third_party/flac/src/libFLAC/metadata_iterators.c': '8dcfb62d22351742f9b340067f323f42a52741e41407ce0ae1e505b903cdc001',
+    'third_party/libwebm/source/mkvmuxer/mkvmuxerutil.cc': '1a3028c7a332eb00e220b033630e62b6c7b295dd46a7f441ee64e0fb932e65d8',
     'third_party/libc++/src/src/support/runtime/exception_libcxxabi.ipp': '4af2f8818ec6e5c38c167f76ec711e6a2f0dcab9c98e6980fc3a6139bd2a4a54',
     'build/rust/crubit/BUILD.gn': 'c9d2a19973860b3562144ad1056ec9e124445b458ecd37f63c870dc0380fd748',
     'build/rust/gni_impl/cpp_api_from_rust.gni': '2e2707c33968c4af5741978ace64bd304a74c0d30a48a0359d3446adb3e63714',
@@ -321,6 +335,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc': '../../native_v8_integration/overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
+    'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h': '../../native_v8_integration/overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h',
     'v8/tools/gtos_isolate_diagnostic/runtime/thread-exit.h': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-exit.h',
     'v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc',
     'v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc',
@@ -465,6 +481,8 @@ ADDITIONS = {
 
 # Patch private copies of the qualified V8 platform sources.
 PATCHED_ADDITIONS = {
+    'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
+    'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h',
     'tools/gtos_native_sdk/native-services.h',
     'v8/src/base/platform/gtos-native-services.h',
     'v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc',
@@ -476,6 +494,8 @@ PATCHED_ADDITIONS = {
 
 # These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
+    'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc': '4971352adbf49f1ef041b06eb28710094a35415a6102a88534e401c0829ec8f9',
+    'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h': 'bbfcc0c66da3784d6735963d343f5f947d92f85f3907f44a27b1d3823ca1bb2d',
     'v8/src/base/platform/gtos-native-services.h': '116d34133d4b3809db535b97e28f1a413c4a07b9a09ffff02813c3665292294b',
     'v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc': 'f1c3fb0f57ee63e5e4182d35a0e744cfc97042aa0fac03b88c086ca08340f09f',
     'v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc': '7512bf2745e4ff4a145539aa75b44377a2482192dd476f68509a7c62baaf08fa',

@@ -1,0 +1,29 @@
+--- a/third_party/iamf_tools/src/iamf/common/write_bit_buffer.h
++++ b/third_party/iamf_tools/src/iamf/common/write_bit_buffer.h
+@@ -13,8 +13,10 @@
+ #define COMMON_WRITE_BIT_BUFFER_H_
+ 
+ #include <cstdint>
++#if !defined(__GTOS__)
+ #include <fstream>
+ #include <optional>
++#endif
+ #include <string>
+ #include <vector>
+ 
+@@ -127,6 +129,7 @@ class WriteBitBuffer {
+    */
+   absl::Status WriteIso14496_1Expanded(uint32_t size_of_instance);
+ 
++#if !defined(__GTOS__)
+   /*!\brief Flushes and writes a byte-aligned buffer to a file.
+    *
+    * \param output_file File to write to. Or `std::nullopt` to omit writing.
+@@ -135,6 +138,7 @@ class WriteBitBuffer {
+    *         failed.
+    */
+   absl::Status FlushAndWriteToFile(std::optional<std::fstream>& output_file);
++#endif  // !defined(__GTOS__)
+ 
+   /*!\brief Gets the offset in bits of the buffer.
+    * \return Offset in bits of the write buffer.

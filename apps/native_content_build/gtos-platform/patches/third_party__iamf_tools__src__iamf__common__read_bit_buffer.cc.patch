@@ -1,0 +1,30 @@
+--- a/third_party/iamf_tools/src/iamf/common/read_bit_buffer.cc
++++ b/third_party/iamf_tools/src/iamf/common/read_bit_buffer.cc
+@@ -16,8 +16,10 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <cstdio>
++#if !defined(__GTOS__)
+ #include <filesystem>
+ #include <fstream>
++#endif
+ #include <ios>
+ #include <limits>
+ #include <memory>
+@@ -441,6 +443,7 @@ MemoryBasedReadBitBuffer::MemoryBasedReadBitBuffer(
+     : ReadBitBuffer(capacity_bytes, static_cast<int64_t>(source.size()) * 8),
+       source_vector_(source.begin(), source.end()) {}
+ 
++#if !defined(__GTOS__)
+ // ----- FileBasedReadBitBuffer -----
+ 
+ std::unique_ptr<FileBasedReadBitBuffer>
+@@ -490,6 +493,8 @@ FileBasedReadBitBuffer::FileBasedReadBitBuffer(size_t capacity_bytes,
+                                                std::ifstream&& ifs)
+     : ReadBitBuffer(capacity_bytes, source_size), source_ifs_(std::move(ifs)) {}
+ 
++#endif  // !defined(__GTOS__)
++
+ // ----- StreamBasedReadBitBuffer -----
+ std::unique_ptr<StreamBasedReadBitBuffer> StreamBasedReadBitBuffer::Create(
+     int64_t capacity_bytes) {

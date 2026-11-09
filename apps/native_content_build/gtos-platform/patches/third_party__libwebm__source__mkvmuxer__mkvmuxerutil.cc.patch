@@ -1,0 +1,13 @@
+--- a/third_party/libwebm/source/mkvmuxer/mkvmuxerutil.cc
++++ b/third_party/libwebm/source/mkvmuxer/mkvmuxerutil.cc
+@@ -630,6 +630,10 @@ uint64 MakeUID(unsigned int* seed) {
+       close(fd);
+     }
+     const int32 nn = temp_num;
++#elif defined(__GTOS__)
++    // These container IDs use the caller-owned non-cryptographic sequence.
++    *seed = *seed * 1103515245U + 12345U;
++    const int32 nn = static_cast<int32>(*seed >> 16);
+ #else
+     const int32 nn = rand_r(seed);
+ #endif

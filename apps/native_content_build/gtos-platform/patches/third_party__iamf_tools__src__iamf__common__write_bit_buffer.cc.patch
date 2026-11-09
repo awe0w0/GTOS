@@ -1,0 +1,49 @@
+--- a/third_party/iamf_tools/src/iamf/common/write_bit_buffer.cc
++++ b/third_party/iamf_tools/src/iamf/common/write_bit_buffer.cc
+@@ -14,9 +14,11 @@
+ #include <algorithm>
+ #include <cstddef>
+ #include <cstdint>
+-#include <fstream>
+ #include <iterator>
++#if !defined(__GTOS__)
++#include <fstream>
+ #include <optional>
++#endif
+ #include <string>
+ #include <vector>
+ 
+@@ -125,6 +127,7 @@ absl::Status InternalWriteUnsigned(int max_bits, uint64_t data, int num_bits,
+   return absl::OkStatus();
+ }
+ 
++#if !defined(__GTOS__)
+ absl::Status WriteBufferToFile(const std::vector<uint8_t>& buffer,
+                                std::fstream& output_file) {
+   if (!output_file.is_open()) {
+@@ -140,6 +143,8 @@ absl::Status WriteBufferToFile(const std::vector<uint8_t>& buffer,
+   return absl::OkStatus();
+ }
+ 
++#endif  // !defined(__GTOS__)
++
+ }  // namespace
+ 
+ WriteBitBuffer::WriteBitBuffer(int64_t initial_capacity,
+@@ -268,6 +273,7 @@ absl::Status WriteBitBuffer::WriteUint8Span(absl::Span<const uint8_t> data) {
+   return absl::OkStatus();
+ }
+ 
++#if !defined(__GTOS__)
+ absl::Status WriteBitBuffer::FlushAndWriteToFile(
+     std::optional<std::fstream>& output_file) {
+   if (!IsByteAligned()) {
+@@ -286,6 +292,8 @@ absl::Status WriteBitBuffer::FlushAndWriteToFile(
+   return absl::OkStatus();
+ }
+ 
++#endif  // !defined(__GTOS__)
++
+ void WriteBitBuffer::Reset() {
+   bit_offset_ = 0;
+   bit_buffer_.clear();

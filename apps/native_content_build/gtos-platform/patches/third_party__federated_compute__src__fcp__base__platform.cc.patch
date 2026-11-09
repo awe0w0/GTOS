@@ -1,0 +1,115 @@
+--- a/third_party/federated_compute/src/fcp/base/platform.cc
++++ b/third_party/federated_compute/src/fcp/base/platform.cc
+@@ -20,8 +20,14 @@
+ #include <sys/stat.h>
+ 
+ #include <cstdio>
++#if defined(__GTOS__)
++#include <array>
++#include <memory>
++#include <utility>
++#else
+ #include <fstream>
+ #include <sstream>
++#endif
+ #include <string>
+ 
+ #include "absl/status/status.h"
+@@ -34,6 +40,9 @@
+ #include "absl/strings/string_view.h"
+ #include "absl/strings/strip.h"
+ #include "fcp/base/monitoring.h"
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#endif
+ 
+ namespace fcp {
+ 
+@@ -43,6 +52,11 @@ constexpr char kPathSeparator[] = "\\";
+ #else
+ constexpr char kPathSeparator[] = "/";
+ #endif
++#if defined(__GTOS__)
++using OutputFile = gtos::native::FileOutput;
++#else
++using OutputFile = std::ofstream;
++#endif
+ }  // namespace
+ 
+ std::string ConcatPath(absl::string_view path1, absl::string_view path2) {
+@@ -61,6 +75,24 @@ namespace internal {
+ template <typename T>
+ absl::StatusOr<T> ReadFile(absl::string_view file_name) {
+   auto file_name_str = std::string(file_name);
++#if defined(__GTOS__)
++  std::unique_ptr<FILE, decltype(&std::fclose)> file(
++      std::fopen(file_name_str.c_str(), "rb"), std::fclose);
++  if (!file) {
++    return absl::InternalError(absl::StrCat("cannot read file ", file_name_str));
++  }
++  std::string result;
++  std::array<char, 4096> chunk;
++  size_t size;
++  do {
++    size = std::fread(chunk.data(), 1, chunk.size(), file.get());
++    result.append(chunk.data(), size);
++  } while (size == chunk.size());
++  if (std::ferror(file.get()) || !std::feof(file.get())) {
++    return absl::InternalError(absl::StrCat("error reading file ", file_name_str));
++  }
++  return T(std::move(result));
++#else
+   std::ifstream is(file_name_str);
+   if (!is) {
+     return absl::InternalError(
+@@ -73,6 +105,7 @@ absl::StatusOr<T> ReadFile(absl::string_view file_name) {
+         absl::StrCat("error reading file ", file_name_str));
+   }
+   return static_cast<T>(buffer.str());
++#endif
+ }
+ 
+ }  // namespace internal
+@@ -88,7 +121,7 @@ absl::StatusOr<absl::Cord> ReadFileToCord(absl::string_view file_name) {
+ absl::Status WriteStringToFile(absl::string_view file_name,
+                                absl::string_view content) {
+   auto file_name_str = std::string(file_name);
+-  std::ofstream os(file_name_str);
++  OutputFile os(file_name_str.c_str());
+   if (!os) {
+     return absl::InternalError(
+         absl::StrCat("cannot create file ", file_name_str));
+@@ -98,13 +131,19 @@ absl::Status WriteStringToFile(absl::string_view file_name,
+     return absl::InternalError(
+         absl::StrCat("error writing to file ", file_name_str));
+   }
++#if defined(__GTOS__)
++  os.close();
++  if (!os) {
++    return absl::InternalError(absl::StrCat("error closing file ", file_name_str));
++  }
++#endif
+   return absl::OkStatus();
+ }
+ 
+ absl::Status WriteCordToFile(absl::string_view file_name,
+                              const absl::Cord& content) {
+   auto file_name_str = std::string(file_name);
+-  std::ofstream os(file_name_str);
++  OutputFile os(file_name_str.c_str());
+   if (!os) {
+     return absl::InternalError(
+         absl::StrCat("cannot create file ", file_name_str));
+@@ -116,6 +155,12 @@ absl::Status WriteCordToFile(absl::string_view file_name,
+           absl::StrCat("error writing to file ", file_name_str));
+     }
+   }
++#if defined(__GTOS__)
++  os.close();
++  if (!os) {
++    return absl::InternalError(absl::StrCat("error closing file ", file_name_str));
++  }
++#endif
+   return absl::OkStatus();
+ }
+ 

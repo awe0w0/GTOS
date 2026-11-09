@@ -1,0 +1,12 @@
+--- a/third_party/federated_compute/BUILD.gn
++++ b/third_party/federated_compute/BUILD.gn
+@@ -54,6 +54,9 @@ source_set("base") {
+     "//third_party/protobuf:io_gzip_stream",
+     "//third_party/protobuf:timestamp_proto",
+   ]
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++  }
+ }
+ 
+ proto_library("confidential_compute_proto") {

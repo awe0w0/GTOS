@@ -1,0 +1,29 @@
+--- a/third_party/flac/include/share/compat.h
++++ b/third_party/flac/include/share/compat.h
+@@ -108,6 +108,7 @@
+ #include <unistd.h> /* for chown(), unlink() */
+ #endif
+ 
++#if !defined(__GTOS__)
+ #if defined _MSC_VER || defined __BORLANDC__ || defined __MINGW32__
+ #if defined __BORLANDC__
+ #include <utime.h> /* for utime() */
+@@ -122,6 +123,7 @@
+ #include <utime.h> /* for utime() */
+ #endif
+ #endif
++#endif  /* !defined(__GTOS__) */
+ 
+ #if defined _MSC_VER
+ #if _MSC_VER >= 1800
+@@ -197,7 +199,9 @@
+ #define flac_rename rename
+ #define flac_stat stat
+ 
+-#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200809L)
++#if defined(__GTOS__)
++/* No per-file timestamp API. */
++#elif defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200809L)
+ #define flac_utime(a, b) utimensat(AT_FDCWD, a, *b, 0)
+ #else
+ #define flac_utime utime

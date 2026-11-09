@@ -1,0 +1,30 @@
+--- a/third_party/iamf_tools/src/iamf/common/read_bit_buffer.h
++++ b/third_party/iamf_tools/src/iamf/common/read_bit_buffer.h
+@@ -14,8 +14,10 @@
+ 
+ #include <cstddef>
+ #include <cstdint>
++#if !defined(__GTOS__)
+ #include <filesystem>
+ #include <fstream>
++#endif
+ #include <memory>
+ #include <string>
+ #include <vector>
+@@ -349,6 +351,7 @@ class MemoryBasedReadBitBuffer : public ReadBitBuffer {
+   std::vector<uint8_t> source_vector_;
+ };
+ 
++#if !defined(__GTOS__)
+ /*!\brief File-based read bit buffer.
+  *
+  * The file is read and the buffer is loaded only when necessary.
+@@ -395,6 +398,8 @@ class FileBasedReadBitBuffer : public ReadBitBuffer {
+   std::ifstream source_ifs_;
+ };
+ 
++#endif  // !defined(__GTOS__)
++
+ /*!\brief Stream-based read bit buffer.
+  *
+  * The buffer is loaded from a stream. The user should Create() the stream

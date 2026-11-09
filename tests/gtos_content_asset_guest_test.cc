@@ -28,6 +28,9 @@ int TestLibcppThread();
 #if defined(GTOS_CONTENT_SQLITE_TEST)
 int TestSqliteVfs();
 #endif
+#if defined(GTOS_CONTENT_FILE_CONSUMERS_TEST)
+int TestFileConsumers();
+#endif
 
 namespace {
 
@@ -172,7 +175,7 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
     constexpr unsigned char prefix[] = {'<', '!', 'd', 'o', 'c', 't', 'y', 'p', 'e'};
     if (page <= 0 || !ReadMatches(page, 0, prefix) || Close(page)) return 3;
 
-#if defined(GTOS_CONTENT_SQLITE_TEST)
+#if defined(GTOS_CONTENT_SQLITE_TEST) || defined(GTOS_CONTENT_FILE_CONSUMERS_TEST)
     if (Open(GTOS_CONTENT_ASSET_DIRECTORY "/missing", GTOS_FILE_READ) != -2) return 4;
     Say("GTOS CONTENT ASSETS PASS\n");
 #else
@@ -211,6 +214,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_SQLITE_TEST)
     if (const int status = TestSqliteVfs()) return status;
     Say("GTOS SQLITE VFS PASS\n");
+#endif
+#if defined(GTOS_CONTENT_FILE_CONSUMERS_TEST)
+    if (const int status = TestFileConsumers()) return status;
+    Say("GTOS CONTENT FILE CONSUMERS PASS\n");
 #endif
     return 37;
 }

@@ -1,0 +1,163 @@
+--- a/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc
++++ b/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc
+@@ -8,10 +8,13 @@
+ #include <process/info_abi.h>
+ #include <process/vm_abi.h>
+ 
+-#if !defined(__GTOS__) || !defined(__i386__) || \
+-    !defined(GTOS_ISOLATE_COMPILE_DIAGNOSTIC) || defined(__linux__) || \
++#include "absl/base/internal/raw_logging.h"
++#include "absl/base/internal/spinlock.h"
++#include "tools/gtos_native_sdk/native-services.h"
++
++#if !defined(__GTOS__) || !defined(__i386__) || defined(__linux__) || \
+     defined(__unix__) || defined(_WIN32)
+-#error This backend requires the private single-user-task GTOS IA32 diagnostic
++#error This backend requires the native GTOS IA32 ABI
+ #endif
+ 
+ static_assert(sizeof(void*) == 4 && sizeof(size_t) == 4 && sizeof(unsigned) == 4,
+@@ -22,6 +25,7 @@ ABSL_NAMESPACE_BEGIN
+ namespace base_internal {
+ namespace {
+ constexpr unsigned kMaximumRegions = 32;
++constexpr unsigned kCommitBytes = 256 * GTOS_VM_PAGE_BYTES;
+ constexpr unsigned kRegionBegin = 0x80000000U;
+ constexpr unsigned kRegionEnd = 0xBFFFC000U;
+ constexpr unsigned kMaximumHandle = 0x7FFFFFFFU;
+@@ -31,22 +35,10 @@ struct Region {
+ };
+ Region regions[kMaximumRegions];
+ unsigned owner_process;
+-bool operation_active;
++ABSL_CONST_INIT SpinLock region_lock(absl::kConstInit, SCHEDULE_KERNEL_ONLY);
+ 
+ [[noreturn]] void ContractFailure() { __builtin_trap(); }
+ 
+-class PageOperation {
+- public:
+-  PageOperation() {
+-    if (operation_active) ContractFailure();
+-    operation_active = true;
+-  }
+-  ~PageOperation() { operation_active = false; }
+-
+-  PageOperation(const PageOperation&) = delete;
+-  PageOperation& operator=(const PageOperation&) = delete;
+-};
+-
+ int NativeCall(unsigned call, const void* request, unsigned bytes) {
+   asm volatile("int $0x80"
+                : "+a"(call)
+@@ -57,24 +49,9 @@ int NativeCall(unsigned call, const void* request, unsigned bytes) {
+ }
+ 
+ GtosProcessInfoResult CurrentProcessInfo() {
+-  GtosProcessInfoResult result = {};
+-  GtosProcessInfoRequest request = {
+-      GTOS_PROCESS_INFO_ABI_VERSION, 0,
+-      static_cast<unsigned>(reinterpret_cast<uintptr_t>(&result)),
+-      sizeof(result)};
+-  if (NativeCall(GTOS_SYS_PROCESS_INFO, &request, sizeof(request)) != 0 ||
+-      result.version != GTOS_PROCESS_INFO_ABI_VERSION ||
+-      result.process_id == 0 || result.process_id > kMaximumHandle ||
+-      result.thread_id != result.process_id ||
+-      result.stack_begin >= result.stack_end ||
+-      result.user_begin > result.stack_begin ||
+-      result.stack_end > result.user_end || result.user_begin >= result.user_end ||
+-      result.page_bytes != GTOS_VM_PAGE_BYTES || result.maximum_pages == 0 ||
+-      result.maximum_regions == 0 || result.maximum_regions > kMaximumRegions ||
+-      result.maximum_parallel_threads != 1 || result.scheduler_cpu_count != 1) {
+-    ContractFailure();
+-  }
+-  if (owner_process != 0 && owner_process != result.process_id) {
++  const auto result = gtos::native::CurrentProcessInfo();
++  if (result.maximum_regions > kMaximumRegions ||
++      (owner_process != 0 && owner_process != result.process_id)) {
+     ContractFailure();
+   }
+   owner_process = result.process_id;
+@@ -144,20 +121,22 @@ bool ReleaseRegion(Region* region) {
+ }  // namespace
+ 
+ size_t GtosLowLevelPageSize() {
+-  PageOperation operation;
++  SpinLockHolder operation(&region_lock);
+   const GtosProcessInfoResult info = CurrentProcessInfo();
+   Validate(info);
+   return info.page_bytes;
+ }
+ 
+ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+-  PageOperation operation;
++  SpinLockHolder operation(&region_lock);
+   const GtosProcessInfoResult info = CurrentProcessInfo();
+   Validate(info);
+   if (size == 0 || (size & (GTOS_VM_PAGE_BYTES - 1)) != 0 ||
+       size > kRegionEnd - kRegionBegin ||
+       size / GTOS_VM_PAGE_BYTES > info.maximum_pages ||
+       alignment < GTOS_VM_PAGE_BYTES || (alignment & (alignment - 1)) != 0) {
++    ABSL_RAW_LOG(ERROR, "GTOS VM allocation request size=%u alignment=%u pages=%u",
++                 static_cast<unsigned>(size), static_cast<unsigned>(alignment), info.maximum_pages);
+     return nullptr;
+   }
+   Region* slot = nullptr;
+@@ -167,7 +146,10 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+       break;
+     }
+   }
+-  if (slot == nullptr) return nullptr;
++  if (slot == nullptr) {
++    ABSL_RAW_LOG(ERROR, "GTOS VM region table is full");
++    return nullptr;
++  }
+ 
+   GtosVmReserveResult result = {};
+   GtosVmReserveRequest reserve = {
+@@ -176,7 +158,10 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+       static_cast<unsigned>(reinterpret_cast<uintptr_t>(&result))};
+   int status = NativeCall(GTOS_SYS_VM_RESERVE, &reserve, sizeof(reserve));
+   if (status > 0) ContractFailure();
+-  if (status < 0) return nullptr;
++  if (status < 0) {
++    ABSL_RAW_LOG(ERROR, "GTOS VM reserve failed: %d", status);
++    return nullptr;
++  }
+   const Region candidate = {result.handle, result.base, result.length};
+   if (result.version != GTOS_VM_ABI_VERSION ||
+       result.page_size != GTOS_VM_PAGE_BYTES || result.length != size ||
+@@ -191,12 +176,20 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+   }
+   *slot = candidate;
+ 
+-  GtosVmRangeRequest commit = {
+-      GTOS_VM_ABI_VERSION, result.handle, 0, static_cast<unsigned>(size),
+-      GTOS_VM_READ_WRITE};
+-  status = NativeCall(GTOS_SYS_VM_SET_PERMISSIONS, &commit, sizeof(commit));
+-  if (status > 0) ContractFailure();
++  unsigned committed = 0;
++  while (committed < size) {
++    const unsigned remaining = static_cast<unsigned>(size) - committed;
++    const unsigned chunk = remaining > kCommitBytes ? kCommitBytes : remaining;
++    const GtosVmRangeRequest commit = {
++        GTOS_VM_ABI_VERSION, result.handle, committed, chunk, GTOS_VM_READ_WRITE};
++    status = NativeCall(GTOS_SYS_VM_SET_PERMISSIONS, &commit, sizeof(commit));
++    if (status > 0) ContractFailure();
++    if (status < 0) break;
++    committed += chunk;
++  }
+   if (status < 0 || !CurrentRegion(*slot)) {
++    ABSL_RAW_LOG(ERROR, "GTOS VM commit/query failed: %d at %u of %u bytes",
++                 status, committed, static_cast<unsigned>(size));
+     if (!ReleaseRegion(slot)) ContractFailure();
+     Validate(info);
+     return nullptr;
+@@ -206,7 +199,7 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+ }
+ 
+ bool GtosLowLevelUnmapPages(void* address, size_t size) {
+-  PageOperation operation;
++  SpinLockHolder operation(&region_lock);
+   const GtosProcessInfoResult info = CurrentProcessInfo();
+   Validate(info);
+   const uintptr_t base = reinterpret_cast<uintptr_t>(address);

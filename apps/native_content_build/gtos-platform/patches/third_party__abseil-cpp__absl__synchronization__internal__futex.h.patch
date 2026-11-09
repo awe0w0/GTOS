@@ -1,0 +1,11 @@
+--- a/third_party/abseil-cpp/absl/synchronization/internal/futex.h
++++ b/third_party/abseil-cpp/absl/synchronization/internal/futex.h
+@@ -26,7 +26,7 @@
+ #include "absl/base/optimization.h"
+ #include "absl/synchronization/internal/kernel_timeout.h"
+ 
+-#ifndef _WIN32
++#if !defined(_WIN32) && !defined(__GTOS__)
+ #include <sys/time.h>
+ #include <unistd.h>
+ #endif
