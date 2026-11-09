@@ -1,0 +1,18 @@
+--- a/third_party/libc++/src/src/support/runtime/exception_libcxxabi.ipp
++++ b/third_party/libc++/src/src/support/runtime/exception_libcxxabi.ipp
+@@ -19,6 +19,8 @@ namespace std {
+ 
+ bool uncaught_exception() noexcept { return uncaught_exceptions() > 0; }
+ 
++// The GTOS runtime archive provides this together with __throw_bad_alloc.
++#if !defined(__GTOS__)
+ int uncaught_exceptions() noexcept {
+ #if _LIBCPPABI_VERSION > 1001
+   return abi::__cxa_uncaught_exceptions();
+@@ -26,5 +28,6 @@ int uncaught_exceptions() noexcept {
+   return abi::__cxa_uncaught_exception() ? 1 : 0;
+ #endif
+ }
++#endif
+ 
+ } // namespace std

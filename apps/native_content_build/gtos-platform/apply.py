@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/libc++/src/src/support/runtime/exception_libcxxabi.ipp': '4af2f8818ec6e5c38c167f76ec711e6a2f0dcab9c98e6980fc3a6139bd2a4a54',
     'build/rust/crubit/BUILD.gn': 'c9d2a19973860b3562144ad1056ec9e124445b458ecd37f63c870dc0380fd748',
     'build/rust/gni_impl/cpp_api_from_rust.gni': '2e2707c33968c4af5741978ace64bd304a74c0d30a48a0359d3446adb3e63714',
     'third_party/rust-toolchain/lib/third_party/crubit/support/crubit_bridge_rust/src/bridge.rs': 'e3ae4b6d991b8fd0d9aeed2a31b54703cc730bd9061555cae5f4536c56d0afef',
