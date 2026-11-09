@@ -1,0 +1,17 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/page_allocator.h
++++ b/base/allocator/partition_allocator/src/partition_alloc/page_allocator.h
+@@ -177,6 +177,14 @@ void FreePages(uintptr_t address, size_t length);
+ PA_COMPONENT_EXPORT(PARTITION_ALLOC)
+ void FreePages(void* address, size_t length);
+ 
++#if PA_BUILDFLAG(IS_GTOS)
++// Releases the trailing pages of an exact allocation. Use |new_length| for
++// subsequent operations. A zero |new_length| releases the entire allocation.
++// Failure leaves the allocation unchanged.
++PA_COMPONENT_EXPORT(PARTITION_ALLOC)
++bool TryShrinkPages(void* address, size_t length, size_t new_length);
++#endif
++
+ // Marks one or more system pages, starting at |address| with the given
+ // |page_accessibility|. |length| must be a multiple of |SystemPageSize()|
+ // bytes.

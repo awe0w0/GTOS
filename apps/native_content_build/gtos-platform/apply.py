@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'gin/v8_platform_page_allocator.cc': '01f41de8d876c72ce05da4c3e12e5b7eabeee9f289f35b2d242ee0cf57aa5358',
+    'base/allocator/partition_allocator/src/partition_alloc/page_allocator.h': '2ef57bd01707f69865a055297e6d9ef3c7f1d111d2867c9d04fcfddaf077ec99',
     'third_party/blink/renderer/platform/wtf/stack_util.cc': '9daf8af7c2c1b81564f0feddfeed99680ef6e7f3d07ee14963937337b8eee847',
     'components/url_pattern_index/fuzzy_pattern_matching.cc': 'b5f70c07dc93c520c237d3139319031293752b90bf569acaedaf03338686f836',
     'components/url_pattern_index/string_splitter.h': 'e0ddd80d13db82d600b090250d819ac1b70e7c6bdb5028fb5223639f92b1d27f',

@@ -152,6 +152,32 @@ void FreePagesInternal(uintptr_t address, size_t length) {
   PA_CHECK(false);
 }
 
+bool TryShrinkPagesInternal(uintptr_t address, size_t length,
+                            size_t new_length) {
+  if (new_length >= length || (new_length & (GTOS_VM_PAGE_BYTES - 1))) {
+    return false;
+  }
+  ScopedGuard guard(g_vm_lock);
+  for (auto& entry : g_reservations) {
+    if (!entry.handle || entry.address != address || entry.length != length) {
+      continue;
+    }
+    const GtosVmControlRequest request{
+        GTOS_VM_ABI_VERSION, entry.handle, static_cast<unsigned>(new_length)};
+    const unsigned operation = new_length ? GTOS_SYS_VM_TRIM : GTOS_SYS_VM_RELEASE;
+    if (VmCall(operation, request) != 0) {
+      return false;
+    }
+    if (new_length) {
+      entry.length = new_length;
+    } else {
+      entry = {};
+    }
+    return true;
+  }
+  return false;
+}
+
 uintptr_t TrimMappingInternal(uintptr_t base_address,
                               size_t base_length,
                               size_t trim_length,

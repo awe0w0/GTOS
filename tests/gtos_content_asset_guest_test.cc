@@ -37,6 +37,9 @@ int TestXmlArchiveConsumers();
 #if defined(GTOS_CONTENT_AVIF_TEST)
 int TestAvif();
 #endif
+#if defined(GTOS_GIN_PAGE_TEST)
+int TestGinPageAllocator();
+#endif
 
 namespace {
 
@@ -233,6 +236,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_AVIF_TEST)
     if (const int status = TestAvif()) return status;
     Say("GTOS CONTENT AVIF PASS\n");
+#endif
+#if defined(GTOS_GIN_PAGE_TEST)
+    if (const int status = TestGinPageAllocator()) return status;
+    Say("GTOS GIN PAGES PASS\n");
 #endif
     return 37;
 }

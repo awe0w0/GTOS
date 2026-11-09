@@ -9,3 +9,22 @@
  #else
  #error Platform not supported.
  #endif
+@@ -281,6 +283,18 @@ void FreePages(void* address, size_t length) {
+   FreePages(reinterpret_cast<uintptr_t>(address), length);
+ }
+ 
++#if PA_BUILDFLAG(IS_GTOS)
++bool TryShrinkPages(void* address, size_t length, size_t new_length) {
++  if (!internal::TryShrinkPagesInternal(reinterpret_cast<uintptr_t>(address),
++                                        length, new_length)) {
++    return false;
++  }
++  g_total_mapped_address_space.fetch_sub(length - new_length,
++                                        std::memory_order_relaxed);
++  return true;
++}
++#endif
++
+ bool TrySetSystemPagesAccess(uintptr_t address,
+                              size_t length,
+                              PageAccessibilityConfiguration accessibility) {
