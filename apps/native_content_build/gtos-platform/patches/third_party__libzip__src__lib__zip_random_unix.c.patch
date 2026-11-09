@@ -1,0 +1,34 @@
+--- a/third_party/libzip/src/lib/zip_random_unix.c
++++ b/third_party/libzip/src/lib/zip_random_unix.c
+@@ -37,7 +37,24 @@
+ #include "zip_crypto.h"
+ #endif
+ 
+-#ifdef HAVE_ARC4RANDOM
++#if defined(__GTOS__)
++#include "openssl/rand.h"
++
++bool zip_secure_random(zip_uint8_t *buffer, zip_uint16_t length) {
++    return RAND_bytes(buffer, length) == 1;
++}
++
++zip_uint32_t zip_random_uint32(void) {
++    zip_uint32_t value;
++    if (zip_secure_random((zip_uint8_t *)&value, sizeof(value))) {
++        return value;
++    }
++    /* Used for temporary names only; exclusive creation resolves collisions. */
++    static zip_uint32_t sequence;
++    return __atomic_add_fetch(&sequence, 1, __ATOMIC_RELAXED);
++}
++
++#elif defined(HAVE_ARC4RANDOM)
+ 
+ #include <stdlib.h>
+ 
+@@ -103,4 +120,4 @@ zip_uint32_t zip_random_uint32(void) {
+ }
+ #endif
+ 
+-#endif /* HAVE_ARC4RANDOM */
++#endif /* __GTOS__ || HAVE_ARC4RANDOM */

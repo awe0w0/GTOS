@@ -1,0 +1,14 @@
+--- a/third_party/libxslt/BUILD.gn
++++ b/third_party/libxslt/BUILD.gn
+@@ -92,7 +92,10 @@ static_library("libxslt") {
+   }
+ 
+   cflags = []
+-  if (is_linux || is_chromeos || is_android || is_fuchsia) {
++  if (is_gtos) {
++    sources += [ "gtos/config.h" ]
++    include_dirs = [ "gtos" ]
++  } else if (is_linux || is_chromeos || is_android || is_fuchsia) {
+     include_dirs = [ "linux" ]
+   } else if (is_win) {
+     include_dirs = [ "win32" ]

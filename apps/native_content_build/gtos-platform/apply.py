@@ -14,6 +14,11 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/libxslt/BUILD.gn': 'b110b5f7f8adf4ba550556bd99cd9d5ada2d39d72d29dba8c87c0f64fcb92b06',
+    'third_party/libzip/BUILD.gn': 'ed5976841b7f05bebe8f18e8497ca887c05394115a308844f2bb88a53bf06bfc',
+    'third_party/libzip/src/lib/zip_source_file_stdio.c': 'dfd727bbc85d5fe3c760545bb5c191908d7def1e4b635d7e87f580828dee7da9',
+    'third_party/libzip/src/lib/zip_source_file_stdio_named.c': 'dfca47299bd6c810a5f3c1e485bba1faa7139258e31becc78752f8d4202b4efb',
+    'third_party/libzip/src/lib/zip_random_unix.c': 'bdfb21c46c74ed01c4c90c7fa71299d2064e075020900ac3f7773135162295cc',
     'third_party/abseil-cpp/absl/base/internal/low_level_alloc.h': '0f7dd074b79f49b57c2491987e722dbc0301018937e2a0573e10b3df8afe0649',
     'third_party/abseil-cpp/absl/base/internal/low_level_alloc.cc': 'c8d0eb92b93100e440fc2f0c764c0161cc47024948762899fccc9dc0d38f7b69',
     'third_party/abseil-cpp/absl/base/internal/raw_logging.cc': 'fced9c4d26a623f867f8518576a31666221d869036576bdfd577894cafebfde9',
@@ -335,6 +340,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/libxslt/gtos/config.h': 'xslt/config.h',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc': '../../native_v8_integration/overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h': '../../native_v8_integration/overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h',
     'v8/tools/gtos_isolate_diagnostic/runtime/thread-exit.h': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-exit.h',
@@ -494,6 +500,7 @@ PATCHED_ADDITIONS = {
 
 # These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
+    'third_party/libxslt/gtos/config.h': '5a00bcd7d287f424eeed0341af302d8493301700bbe8c6fed21a4ed859cbd2c0',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc': '4971352adbf49f1ef041b06eb28710094a35415a6102a88534e401c0829ec8f9',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h': 'bbfcc0c66da3784d6735963d343f5f947d92f85f3907f44a27b1d3823ca1bb2d',
     'v8/src/base/platform/gtos-native-services.h': '116d34133d4b3809db535b97e28f1a413c4a07b9a09ffff02813c3665292294b',

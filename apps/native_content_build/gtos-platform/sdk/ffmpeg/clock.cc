@@ -28,3 +28,12 @@ extern "C" clock_t clock() noexcept {
   }
   return static_cast<clock_t>(result.microseconds);
 }
+
+extern "C" time_t time(time_t* output) noexcept {
+  timespec value{};
+  if (clock_gettime(CLOCK_REALTIME, &value) != 0)
+    return static_cast<time_t>(-1);
+  if (output != nullptr)
+    *output = value.tv_sec;
+  return value.tv_sec;
+}

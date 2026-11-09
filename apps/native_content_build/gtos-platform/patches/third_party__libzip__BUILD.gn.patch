@@ -1,0 +1,12 @@
+--- a/third_party/libzip/BUILD.gn
++++ b/third_party/libzip/BUILD.gn
+@@ -149,6 +149,9 @@ static_library("libzip") {
+   }
+ 
+   deps = [ "//third_party/zlib" ]
++  if (is_gtos) {
++    deps += [ "//third_party/boringssl" ]
++  }
+ 
+   public_deps = [ ":libzip_public_headers" ]
+ 

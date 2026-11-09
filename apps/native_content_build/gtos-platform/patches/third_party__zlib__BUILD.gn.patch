@@ -1,12 +1,22 @@
 --- a/third_party/zlib/BUILD.gn
 +++ b/third_party/zlib/BUILD.gn
-@@ -73,7 +73,8 @@
+@@ -73,7 +73,8 @@ use_arm_neon_optimizations =
      (current_cpu == "arm" || current_cpu == "arm64") && !(is_win && !is_clang)
  
-+# GTOS uses the scalar path until the SIMD initializer has a native once API.
  use_x86_x64_optimizations =
 -    (current_cpu == "x86" || current_cpu == "x64") && !is_ios
++# GTOS uses the scalar path until the SIMD initializer has a native once API.
 +    (current_cpu == "x86" || current_cpu == "x64") && !is_ios && !is_gtos
  
  config("zlib_adler32_simd_config") {
    if (use_x86_x64_optimizations) {
+@@ -416,6 +417,9 @@ static_library("minizip") {
+     # Mac, Android and the BSDs don't have fopen64, ftello64, or fseeko64. We
+     # use fopen, ftell, and fseek instead on these systems.
+     defines = [ "USE_FILE32API" ]
++  } else if (is_gtos) {
++    # The SDK uses 64-bit off_t in fseeko and ftello.
++    defines = [ "MINIZIP_FOPEN_NO_64" ]
+   }
+ 
+   deps = [ ":zlib" ]
