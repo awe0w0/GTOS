@@ -1,0 +1,30 @@
+--- a/third_party/blink/renderer/platform/wtf/stack_util.cc
++++ b/third_party/blink/renderer/platform/wtf/stack_util.cc
+@@ -14,6 +14,8 @@
+ #include <intrin.h>
+ #include <stddef.h>
+ #include <winnt.h>
++#elif BUILDFLAG(IS_GTOS)
++#include "tools/gtos_native_sdk/native-services.h"
+ #elif defined(__GLIBC__)
+ extern "C" void* __libc_stack_end;  // NOLINT
+ #endif
+@@ -94,6 +96,9 @@ size_t GetUnderestimatedStackSize() {
+   return pthread_get_stacksize_np(pthread_self());
+ #elif BUILDFLAG(IS_WIN) && defined(COMPILER_MSVC)
+   return Threading::ThreadStackSize();
++#elif BUILDFLAG(IS_GTOS)
++  const auto info = gtos::native::CurrentProcessInfo();
++  return info.stack_end - info.stack_begin;
+ #else
+ #error "Stack frame size estimation not supported on this platform."
+   return 0;
+@@ -157,6 +162,8 @@ void* GetStackStartImpl() {
+   ::GetCurrentThreadStackLimits(&low_limit, &high_limit);
+   return reinterpret_cast<void*>(high_limit);
+ #endif
++#elif BUILDFLAG(IS_GTOS)
++  return reinterpret_cast<void*>(gtos::native::CurrentProcessInfo().stack_end);
+ #else
+ #error Unsupported getStackStart on this platform.
+ #endif

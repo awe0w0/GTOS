@@ -15,11 +15,22 @@
 #include <process/thread_abi.h>
 #include <process/thread_slot_abi.h>
 
+#include "third_party/blink/renderer/platform/wtf/stack_util.h"
 #include "tools/gtos_native_sdk/native-services.h"
 #include "tools/gtos_native_sdk/native-thread.h"
 #include "v8/src/base/platform/platform.h"
 
 namespace {
+
+bool BlinkStackMatches(const GtosProcessInfoResult& info) {
+    static int outside_stack;
+    int local = 0;
+    const uintptr_t position = blink::GetCurrentStackPosition();
+    return reinterpret_cast<uintptr_t>(blink::GetStackStart()) == info.stack_end &&
+           blink::GetUnderestimatedStackSize() == info.stack_end - info.stack_begin &&
+           position >= info.stack_begin && position < info.stack_end &&
+           blink::IsOnStack(&local) && !blink::IsOnStack(&outside_stack);
+}
 
 struct ThreadGate {
     std::mutex mutex;
@@ -105,6 +116,8 @@ private:
 
 int TestLibcppThread() {
     const auto process = gtos::native::CurrentProcessInfo();
+    blink::internal::InitializeMainThreadStackEstimate();
+    if (!BlinkStackMatches(process) || blink::MayNotBeMainThread()) return 96;
     if (!process.scheduler_cpu_count ||
         std::thread::hardware_concurrency() != process.scheduler_cpu_count)
         return 40;
@@ -116,10 +129,13 @@ int TestLibcppThread() {
         return 46;
 
     unsigned worker_id = 0;
+    bool worker_stack_valid = false;
     std::promise<void> promise;
     auto completed = promise.get_future();
     std::thread worker([&] {
-        worker_id = gtos::native::CurrentProcessInfo().thread_id;
+        const auto info = gtos::native::CurrentProcessInfo();
+        worker_id = info.thread_id;
+        worker_stack_valid = BlinkStackMatches(info) && blink::MayNotBeMainThread();
         promise.set_value_at_thread_exit();
     });
     std::thread moved = std::move(worker);
@@ -128,6 +144,7 @@ int TestLibcppThread() {
     moved.join();
     if (moved.joinable() || !worker_id || worker_id == process.thread_id)
         return 42;
+    if (!worker_stack_valid || !BlinkStackMatches(process)) return 97;
 
     std::atomic<bool> ran{false};
     std::thread detached([&] { ran.store(true, std::memory_order_release); });

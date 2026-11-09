@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/blink/renderer/platform/wtf/stack_util.cc': '9daf8af7c2c1b81564f0feddfeed99680ef6e7f3d07ee14963937337b8eee847',
     'components/url_pattern_index/fuzzy_pattern_matching.cc': 'b5f70c07dc93c520c237d3139319031293752b90bf569acaedaf03338686f836',
     'components/url_pattern_index/string_splitter.h': 'e0ddd80d13db82d600b090250d819ac1b70e7c6bdb5028fb5223639f92b1d27f',
     'components/url_pattern_index/ngram_extractor.h': '8b58710d0387ce0fa19a8928024405bd6d7485bcb0db92ebac8f281ebd04c80d',
