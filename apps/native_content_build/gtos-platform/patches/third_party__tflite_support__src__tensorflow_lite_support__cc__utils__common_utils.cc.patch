@@ -1,0 +1,38 @@
+--- a/third_party/tflite_support/src/tensorflow_lite_support/cc/utils/common_utils.cc
++++ b/third_party/tflite_support/src/tensorflow_lite_support/cc/utils/common_utils.cc
+@@ -15,7 +15,11 @@ limitations under the License.
+ 
+ #include "tensorflow_lite_support/cc/utils/common_utils.h"
+ 
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/file-input.hpp"
++#else
+ #include <fstream>
++#endif
+ 
+ #include "absl/strings/str_split.h"  // from @com_google_absl
+ 
+@@ -63,7 +67,11 @@ std::vector<std::string> ReadIStreamByLine(std::istream* istream) {
+ 
+ std::vector<std::string> LoadVocabFromFile(const std::string& path_to_vocab) {
+   std::vector<std::string> vocab_from_file;
++#if defined(__GTOS__)
++  gtos::native::FileInput in(path_to_vocab.c_str());
++#else
+   std::ifstream in(path_to_vocab.c_str());
++#endif
+   return ReadIStreamByLine(&in);
+ }
+ 
+@@ -77,7 +85,11 @@ std::vector<std::string> LoadVocabFromBuffer(const char* vocab_buffer_data,
+ 
+ absl::node_hash_map<std::string, int> LoadVocabAndIndexFromFile(
+     const std::string& path_to_vocab) {
++#if defined(__GTOS__)
++  gtos::native::FileInput in(path_to_vocab.c_str());
++#else
+   std::ifstream in(path_to_vocab.c_str());
++#endif
+   return ReadIStreamLineSplits(&in);
+ }
+ 

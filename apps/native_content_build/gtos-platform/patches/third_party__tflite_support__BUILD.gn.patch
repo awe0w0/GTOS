@@ -1,0 +1,15 @@
+--- a/third_party/tflite_support/BUILD.gn
++++ b/third_party/tflite_support/BUILD.gn
+@@ -151,6 +151,12 @@ static_library("tflite_support") {
+     "//third_party/tflite",
+     "//third_party/zlib:minizip",
+   ]
++  if (is_gtos) {
++    deps += [
++      "//build/config/gtos/runtime:ffmpeg_support",
++      "//build/config/gtos/runtime:native_file_input",
++    ]
++  }
+ 
+   public_deps = [
+     ":tflite_support_proto",

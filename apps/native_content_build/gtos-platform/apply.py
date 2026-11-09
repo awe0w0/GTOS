@@ -14,6 +14,11 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/tflite_support/BUILD.gn': '28d2c16ec25adf6e333b3226e1c1409bf6b9d99230a1f0787d99466efd8af2e1',
+    'third_party/tflite_support/src/tensorflow_lite_support/cc/utils/common_utils.cc': 'ba96c3d968c0cf7c0deec4367fbe99b39221d2d7f7cc2fc9d85c173da62919a3',
+    'third_party/tflite_support/src/tensorflow_lite_support/cc/task/core/task_utils.cc': 'ddb387c15b1b8800b3410b155428e9ae0c206893111375da590b21053eb54db4',
+    'third_party/tflite_support/src/tensorflow_lite_support/cc/task/core/external_file_handler.h': '6d27a1918e4e5352c2a58b79e3b562d92313ce57d21cf301045f038df55e3ed5',
+    'third_party/tflite_support/src/tensorflow_lite_support/cc/task/core/external_file_handler.cc': '75ef020892c2546d270c6256e6ed3aee0187d481147d3003ed7b7411ba015d1d',
     'v8/src/snapshot/sort-builtins.cc': '254b4cd602f3bbe5e6b3ec992199af59f8f88aa8131a0a142b395b61ccc61578',
     'v8/src/maglev/maglev-graph-printer.cc': '52053c63f1fb1952a02722650e08003b8fa7a0a29bf15f7ee4642939815e9c42',
     'v8/src/maglev/maglev-graph-serializer.cc': 'cd48267c83d41c90b0b2e210051f95745208d53c06f36b1f91969b8822492387',

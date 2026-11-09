@@ -28,6 +28,10 @@
 #include "v8/src/libsampler/sampler.h"
 #endif
 
+#ifdef GTOS_CONTENT_TFLITE_SUPPORT_FILES_TEST
+int TestTfliteFileConsumers();
+#endif
+
 namespace {
 
 int TestAbslThreadStorage() {
@@ -243,6 +247,9 @@ int TestFileConsumers() {
     if (const int status = TestFileInput(path, missing)) return status;
 #ifdef GTOS_CONTENT_V8_SAMPLER_TEST
     if (const int status = TestV8Sampler()) return status;
+#endif
+#ifdef GTOS_CONTENT_TFLITE_SUPPORT_FILES_TEST
+    if (const int status = TestTfliteFileConsumers()) return status;
 #endif
 
     auto stream = iamf_tools::StreamBasedReadBitBuffer::Create(2);

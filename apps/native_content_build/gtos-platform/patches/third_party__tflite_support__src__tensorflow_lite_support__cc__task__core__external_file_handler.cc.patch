@@ -1,0 +1,118 @@
+--- a/third_party/tflite_support/src/tensorflow_lite_support/cc/task/core/external_file_handler.cc
++++ b/third_party/tflite_support/src/tensorflow_lite_support/cc/task/core/external_file_handler.cc
+@@ -19,7 +19,14 @@ limitations under the License.
+ #include <fcntl.h>
+ #include <stddef.h>
+ 
+-#ifdef ABSL_HAVE_MMAP
++#if defined(__GTOS__)
++#include <process/file_abi.h>
++#include <sys/stat.h>
++
++#include <algorithm>
++#include <limits>
++#include <new>
++#elif defined(ABSL_HAVE_MMAP)
+ #include <sys/mman.h>
+ #endif
+ 
+@@ -82,6 +89,7 @@ StatusOr<std::wstring> Utf8ToWideChar(const std::string& utf8str) {
+ }
+ #endif
+ 
++#if !defined(__GTOS__)
+ // Gets the offset aligned to page size for mapping given files into memory by
+ // file descriptor correctly, as according to mmap(2), the offset used in mmap
+ // must be a multiple of sysconf(_SC_PAGE_SIZE).
+@@ -99,6 +107,7 @@ int64_t GetPageSizeAlignedOffset(int64_t offset) {
+   }
+   return aligned_offset;
+ }
++#endif
+ 
+ }  // namespace
+ 
+@@ -299,6 +308,49 @@ absl::Status ExternalFileHandler::MapExternalFile() {
+     buffer_offset_ = external_file_.file_descriptor_meta().offset();
+     buffer_size_ = external_file_.file_descriptor_meta().length();
+   }
++#if defined(__GTOS__)
++  struct stat info {};
++  if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode) || info.st_size <= 0) {
++    return CreateStatusWithPayload(StatusCode::kUnknown,
++                                   "Unable to get regular file size",
++                                   TfLiteSupportStatus::kFileReadError);
++  }
++  if (buffer_offset_ < 0 || buffer_offset_ >= info.st_size) {
++    return CreateStatusWithPayload(StatusCode::kInvalidArgument,
++                                   "Provided file offset is out of range",
++                                   TfLiteSupportStatus::kInvalidArgumentError);
++  }
++  const int64_t remaining = info.st_size - buffer_offset_;
++  if (buffer_size_ <= 0) {
++    buffer_size_ = remaining;
++  }
++  if (buffer_size_ > remaining ||
++      static_cast<uint64_t>(buffer_size_) > std::numeric_limits<size_t>::max()) {
++    return CreateStatusWithPayload(StatusCode::kInvalidArgument,
++                                   "Provided file length is out of range",
++                                   TfLiteSupportStatus::kInvalidArgumentError);
++  }
++  const size_t size = static_cast<size_t>(buffer_size_);
++  std::unique_ptr<char[]> bytes(new (std::nothrow) char[size]);
++  if (!bytes) {
++    return CreateStatusWithPayload(StatusCode::kResourceExhausted,
++                                   "Unable to allocate file buffer",
++                                   TfLiteSupportStatus::kFileReadError);
++  }
++  for (size_t copied = 0; copied < size;) {
++    const size_t chunk = std::min<size_t>(size - copied, GTOS_FILE_TRANSFER_LIMIT);
++    const ssize_t count = gtos_read_at(fd, bytes.get() + copied, chunk,
++                                       buffer_offset_ + static_cast<int64_t>(copied));
++    if (count <= 0 || static_cast<size_t>(count) > chunk) {
++      return CreateStatusWithPayload(StatusCode::kDataLoss,
++                                     "Unable to read requested file range",
++                                     TfLiteSupportStatus::kFileReadError);
++    }
++    copied += static_cast<size_t>(count);
++  }
++  buffer_ = bytes.release();
++  buffer_aligned_offset_ = buffer_offset_;
++#else
+   // Get actual file size. Always use 0 as offset to lseek(2) to get the actual
+   // file size, as SEEK_END returns the size of the file *plus* offset.
+   size_t file_size = lseek(fd, /*offset=*/0, SEEK_END);
+@@ -343,7 +395,8 @@ absl::Status ExternalFileHandler::MapExternalFile() {
+         absl::StrFormat("Unable to map file to memory buffer, errno=%d", errno),
+         TfLiteSupportStatus::kFileMmapError);
+   }
+-#endif
++#endif  // defined(__GTOS__)
++#endif  // _WIN32
+   return absl::OkStatus();
+ }
+ 
+@@ -352,7 +405,7 @@ absl::string_view ExternalFileHandler::GetFileContent() {
+     return external_file_.file_content();
+   } else {
+     return absl::string_view(static_cast<const char*>(buffer_) +
+-                                 buffer_offset_ - buffer_aligned_offset_,
++                                 (buffer_offset_ - buffer_aligned_offset_),
+                              buffer_size_);
+   }
+ }
+@@ -365,10 +418,14 @@ ExternalFileHandler::~ExternalFileHandler() {
+   if (file_mapping_) {
+     ::CloseHandle(file_mapping_);
+   }
++#else
++#if defined(__GTOS__)
++  delete[] static_cast<char*>(buffer_);
+ #else
+   if (buffer_ != MAP_FAILED) {
+     munmap(buffer_, buffer_aligned_size_);
+   }
++#endif
+   if (owned_fd_ >= 0) {
+     close(owned_fd_);
+   }
