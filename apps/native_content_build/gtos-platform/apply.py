@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/ffmpeg/libavutil/file_open.c': '67c5c007f53735f9d6fdd64fd18c5d1098b792b6eac6a1111b8dfe02f653a0bf',
+    'third_party/ffmpeg/BUILD.gn': '23753f7fc167adf7387e796b5345c5f3cd812ed0f446b09fe251927a22771989',
     'net/cookies/cookie_util.cc': '659f1db784a243eae768d2af6d8705d2f99073b5cbfb73ef02ddc7e57b72f4f3',
     'net/cookies/parsed_cookie.cc': 'b1efd075b3356d30c7a79812b6756aac2c303284fe4a46116471adb2194e91b3',
     'net/dns/dns_names_util.cc': 'cc13fdeaa87730a3ab3c879715a7667ee02165c0b1c7aea208a9d96d6fa5fd94',
@@ -262,6 +264,26 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/runtime/file_internal.h': '../../native_libxml_file/file_internal.h',
+    'build/config/gtos/runtime/ffmpeg/clock.cc': 'sdk/ffmpeg/clock.cc',
+    'build/config/gtos/runtime/ffmpeg/libc_sources.gni': 'sdk/ffmpeg/libc_sources.gni',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/config.h': 'ffmpeg/config.h',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/config_components.h': 'ffmpeg/config_components.h',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavutil/avconfig.h': 'ffmpeg/libavutil/avconfig.h',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavutil/ffversion.h': 'ffmpeg/libavutil/ffversion.h',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavformat/demuxer_list.c': 'ffmpeg/libavformat/demuxer_list.c',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavformat/muxer_list.c': 'ffmpeg/libavformat/muxer_list.c',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavformat/protocol_list.c': 'ffmpeg/libavformat/protocol_list.c',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavcodec/parser_list.c': 'ffmpeg/libavcodec/parser_list.c',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavcodec/codec_list.c': 'ffmpeg/libavcodec/codec_list.c',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/libavcodec/bsf_list.c': 'ffmpeg/libavcodec/bsf_list.c',
+    'third_party/ffmpeg/chromium/config/Chromium/gtos/ia32/sources.gni': 'ffmpeg/sources.gni',
+    'build/config/gtos/runtime/ffmpeg/pthread.h': 'sdk/ffmpeg/pthread.h',
+    'build/config/gtos/runtime/ffmpeg/pthread.cc': 'sdk/ffmpeg/pthread.cc',
+    'build/config/gtos/runtime/ffmpeg/errno.h': 'sdk/ffmpeg/errno.h',
+    'build/config/gtos/runtime/ffmpeg/math.h': 'sdk/ffmpeg/math.h',
+    'build/config/gtos/runtime/ffmpeg/hyperbolic.cc': 'sdk/ffmpeg/hyperbolic.cc',
+    'build/config/gtos/runtime/posix_file.cpp': '../../native_libxml_file/posix_file.cpp',
     'build/config/gtos/include/arpa/inet.h': 'sdk/arpa/inet.h',
     'build/config/gtos/runtime/address_text.cc': 'runtime/address_text.cc',
     'build/config/gtos/include/process/thread_abi.h': '../../../include/process/thread_abi.h',

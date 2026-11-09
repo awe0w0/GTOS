@@ -3,7 +3,11 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 
-#if defined(GTOS_CONTENT_VP9_PROBE)
+#if defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT FFMPEG WEBM"
+static const unsigned ExpectedChecks = 32;
+static const char* const CheckDescription = "WebM demux, VP9 frames and native synchronization";
+#elif defined(GTOS_CONTENT_VP9_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT VP9"
 static const unsigned ExpectedChecks = 20;
 static const char* const CheckDescription = "VP9 frame decode and truncated packet";
@@ -46,7 +50,8 @@ static const char* const CheckDescription = "exact process and worker identity";
 #endif
 
 namespace {
-#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
+    defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
     defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
     static const unsigned MaximumImageBytes = 2 * 1024 * 1024;
@@ -108,7 +113,8 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         frames.getStatistics().freeFrames == baseline, "failed admissions leave no allocated frames");
     const NativeElfLaunchProfile profile{9000, 32, 12288};
     Need(runtime.CreateContentElf(image, bytes, id, profile, environment), "Content ELF admission");
-#elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
+#elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
+    defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
     defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
     const NativeElfLaunchProfile profile{1024, 32, 1024};
@@ -123,7 +129,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     Need(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
         status.directory != paging.getStatistics().directoryAddress && !status.faultVector,
         "CPL3 isolation");
-#if defined(GTOS_CONTENT_VP9_PROBE)
+#if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
     printf((char*)CONTENT_BASE_PROBE " RECORD frame0="); printfHex32(record.base);
     printf((char*)" frame1="); printfHex32(record.fault_address);
     const bool values = record.base && record.fault_address && record.base != record.fault_address;

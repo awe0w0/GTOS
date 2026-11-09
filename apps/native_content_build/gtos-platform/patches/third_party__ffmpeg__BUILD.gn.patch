@@ -1,0 +1,52 @@
+--- a/third_party/ffmpeg/BUILD.gn
++++ b/third_party/ffmpeg/BUILD.gn
+@@ -13,6 +13,25 @@ import("//build/config/sanitizers/sanitizers.gni")
+ platform_config_root =
+     "chromium/config/$ffmpeg_branding/$os_config/$ffmpeg_arch"
+ 
++if (is_gtos) {
++  assert(ffmpeg_branding == "Chromium" && ffmpeg_arch == "ia32")
++  import("chromium/config/Chromium/gtos/ia32/sources.gni")
++  ffmpeg_c_sources = gtos_ffmpeg_c_sources
++  ffmpeg_c_deps += [
++    "$platform_config_root/config.h",
++    "$platform_config_root/config_components.h",
++    "$platform_config_root/libavutil/avconfig.h",
++    "$platform_config_root/libavutil/ffversion.h",
++    "$platform_config_root/libavformat/demuxer_list.c",
++    "$platform_config_root/libavformat/muxer_list.c",
++    "$platform_config_root/libavformat/protocol_list.c",
++    "$platform_config_root/libavcodec/parser_list.c",
++    "$platform_config_root/libavcodec/codec_list.c",
++    "$platform_config_root/libavcodec/bsf_list.c",
++  ]
++  assert(ffmpeg_asm_sources == [] && ffmpeg_gas_sources == [])
++}
++
+ has_nasm_deps =
+     ffmpeg_asm_sources != [] &&
+     (current_cpu == "x86" || current_cpu == "x64") && os_config != "linux-noasm"
+@@ -275,6 +294,23 @@ target(link_target_type, "ffmpeg_internal") {
+     "//third_party/opus",
+   ]
+ 
++  if (is_gtos) {
++    include_dirs += [
++      "compat/stdbit",
++      "//build/config/gtos/runtime/ffmpeg",
++    ]
++    # The freestanding IA32 callers may provide four-byte stack alignment.
++    # Keep the codec's vector locals aligned at each incoming call boundary.
++    cflags += [ "-mstackrealign" ]
++    defines -= [ "PIC" ]
++    defines += [
++      "_FILE_OFFSET_BITS=64",
++      "_ISOC11_SOURCE",
++      "_LARGEFILE_SOURCE",
++    ]
++    deps += [ "//build/config/gtos/runtime:ffmpeg_support" ]
++  }
++
+   configs -= [ "//build/config/compiler:chromium_code" ]
+   configs += [
+     "//build/config/compiler:no_chromium_code",

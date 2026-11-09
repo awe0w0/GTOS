@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("ffmpeg/libc_sources.gni")
+
 source_set("codec_support") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
@@ -51,4 +53,29 @@ source_set("native_address_text") {
   assert(is_gtos && current_cpu == "x86")
   sources = [ "address_text.cc" ]
   deps = [ "//url" ]
+}
+
+source_set("ffmpeg_support") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "ffmpeg/clock.cc",
+    "ffmpeg/hyperbolic.cc",
+    "ffmpeg/pthread.cc",
+    "ffmpeg/pthread.h",
+    "posix_file.cpp",
+  ] + gtos_ffmpeg_libc_sources
+  include_dirs = [
+    "//third_party/llvm-libc/src",
+    "//v8",
+  ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+  ]
+  deps = [
+    ":codec_support",
+    ":native_environment",
+    ":native_threads",
+    "//v8:v8_libbase",
+  ]
 }

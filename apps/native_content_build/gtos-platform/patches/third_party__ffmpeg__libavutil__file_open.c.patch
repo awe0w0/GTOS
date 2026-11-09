@@ -1,0 +1,19 @@
+--- a/third_party/ffmpeg/libavutil/file_open.c
++++ b/third_party/ffmpeg/libavutil/file_open.c
+@@ -159,6 +159,10 @@ int avpriv_tempfile(const char *prefix, char **filename, int log_offset, void *l
+ 
+ FILE *avpriv_fopen_utf8(const char *path, const char *mode)
+ {
++#if defined(__GTOS__)
++    /* Native FILE streams already own the GTOS file ABI handle. */
++    return fopen(path, mode);
++#else
+     int fd;
+     int access;
+     const char *m = mode;
+@@ -189,4 +193,5 @@ FILE *avpriv_fopen_utf8(const char *path, const char *mode)
+     if (fd == -1)
+         return NULL;
+     return fdopen(fd, mode);
++#endif
+ }

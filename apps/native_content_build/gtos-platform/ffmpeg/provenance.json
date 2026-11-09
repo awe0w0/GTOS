@@ -1,0 +1,211 @@
+{
+  "ffmpeg_commit": "9db86ce5b5b454dfc96c435f9f0723012980c37f",
+  "configure_stage": "codex-c-ffmpeg-configure-ff17",
+  "build_stage": "codex-c-ffmpeg-build-fb11",
+  "configure_record": {
+    "bytes": 23395,
+    "sha256": "9e252f4f52ad27eb28bb0564a611f4179c5a79224b222876507c4475bdf0df52"
+  },
+  "build_record": {
+    "bytes": 40211,
+    "sha256": "6254b4e3addbbf947c4c5268bb4d3dfa74736b17d191d75f9b7cc44dd32f2d60"
+  },
+  "feature_policy": [
+    [
+      "FLAC",
+      "DECODER"
+    ],
+    [
+      "MP3",
+      "DECODER"
+    ],
+    [
+      "VORBIS",
+      "DECODER"
+    ],
+    [
+      "PCM_ALAW",
+      "DECODER"
+    ],
+    [
+      "PCM_F32LE",
+      "DECODER"
+    ],
+    [
+      "PCM_MULAW",
+      "DECODER"
+    ],
+    [
+      "PCM_S16BE",
+      "DECODER"
+    ],
+    [
+      "PCM_S16LE",
+      "DECODER"
+    ],
+    [
+      "PCM_S24BE",
+      "DECODER"
+    ],
+    [
+      "PCM_S24LE",
+      "DECODER"
+    ],
+    [
+      "PCM_S32LE",
+      "DECODER"
+    ],
+    [
+      "PCM_U8",
+      "DECODER"
+    ],
+    [
+      "LIBOPUS",
+      "DECODER"
+    ],
+    [
+      "FLAC",
+      "PARSER"
+    ],
+    [
+      "MPEGAUDIO",
+      "PARSER"
+    ],
+    [
+      "OPUS",
+      "PARSER"
+    ],
+    [
+      "VORBIS",
+      "PARSER"
+    ],
+    [
+      "VP9",
+      "PARSER"
+    ],
+    [
+      "FLAC",
+      "DEMUXER"
+    ],
+    [
+      "MATROSKA",
+      "DEMUXER"
+    ],
+    [
+      "MOV",
+      "DEMUXER"
+    ],
+    [
+      "MP3",
+      "DEMUXER"
+    ],
+    [
+      "OGG",
+      "DEMUXER"
+    ],
+    [
+      "WAV",
+      "DEMUXER"
+    ]
+  ],
+  "compile_sources": 238,
+  "aliases": {
+    "libavcodec/autorename_libavcodec_mpegaudiodsp.c": {
+      "source": "libavcodec/mpegaudiodsp.c",
+      "bytes": 140,
+      "sha256": "965c5e9b6322a01b95e7f14b987299db6c02f91970465a66591c5d9823298add"
+    },
+    "libavcodec/autorename_libavcodec_parser.c": {
+      "source": "libavcodec/parser.c",
+      "bytes": 134,
+      "sha256": "262ae043a03b612f0e962f30fc4a8a60fdb8133137329f7b49642c29122e38ed"
+    },
+    "libavformat/autorename_libavformat_flacdec.c": {
+      "source": "libavformat/flacdec.c",
+      "bytes": 136,
+      "sha256": "bbbc1ab29676f6ef367534c42cf2f07e9c631cbc8f4c4db05a616d6c74b2ca21"
+    },
+    "libavformat/autorename_libavformat_options.c": {
+      "source": "libavformat/options.c",
+      "bytes": 136,
+      "sha256": "6337b73f2d0bc91043f4998ffb9641f81098371c0932dc9649090395b92d6952"
+    },
+    "libavformat/autorename_libavformat_pcm.c": {
+      "source": "libavformat/pcm.c",
+      "bytes": 132,
+      "sha256": "4e9964aceda1d294cd65bbef1b65b4d723cacb75e8a95520bcc928f5f9f02678"
+    },
+    "libavformat/autorename_libavformat_utils.c": {
+      "source": "libavformat/utils.c",
+      "bytes": 134,
+      "sha256": "1e7b98d9bb954d8f385e9f0da0387f32cbab72af166dd743f8a482126941af24"
+    },
+    "libavformat/autorename_libavformat_version.c": {
+      "source": "libavformat/version.c",
+      "bytes": 136,
+      "sha256": "332fc384cbce25fa099d25ef57bb1d34e309ce4d8fa7bf99f589495cc631beed"
+    },
+    "libavutil/autorename_libavutil_cpu.c": {
+      "source": "libavutil/cpu.c",
+      "bytes": 130,
+      "sha256": "83bf33749dd07189b649f7b9715a817a4a8c706345870d441c45a09176581511"
+    },
+    "libavutil/autorename_libavutil_utils.c": {
+      "source": "libavutil/utils.c",
+      "bytes": 132,
+      "sha256": "98a278bf7b70d76f0b0c8ccc076ef698a602e129be930822ccafc305b5f4eddb"
+    },
+    "libavutil/autorename_libavutil_version.c": {
+      "source": "libavutil/version.c",
+      "bytes": 134,
+      "sha256": "16aa964007d4087b3b2c1e76aff04a3e9e4283183fe0ef5ad8dc40921800a4d5"
+    }
+  },
+  "projection": "Use the real upstream generated headers. Apply Chromium’s configuration string elision to omit build-machine paths.",
+  "files": {
+    "config.h": {
+      "bytes": 24170,
+      "sha256": "aeaaf2afa0c4778c7999806b5faac249ed974b5f02c26d0a6f0211e547450116"
+    },
+    "config_components.h": {
+      "bytes": 76392,
+      "sha256": "f9411729b8c2bce3b4adb477893205900f04e1574fc25ede7502e4b830e5eee6"
+    },
+    "libavutil/avconfig.h": {
+      "bytes": 180,
+      "sha256": "975611ad5eba15212d9e1d5fca9d4fdf0daec6d2269b2fcab8e29af8667164bc"
+    },
+    "libavutil/ffversion.h": {
+      "bytes": 201,
+      "sha256": "08055401e22f0d317ccb0ac04d73ebbf5472b19abb696c610ca8722a21f8f07c"
+    },
+    "libavformat/demuxer_list.c": {
+      "bytes": 198,
+      "sha256": "3bf2a158ad6fbf424a4100f51e6bbf6fc1e8bfa31c196cf6080721668e7cb70b"
+    },
+    "libavformat/muxer_list.c": {
+      "bytes": 65,
+      "sha256": "286605f176b8f4c91f8e1eefabef037c51ccc12b16b7e7e94758996c490059c2"
+    },
+    "libavformat/protocol_list.c": {
+      "bytes": 65,
+      "sha256": "20390d2af0b45f7de454ca6f3b806275de063a3de97e80feea6857da98e60b67"
+    },
+    "libavcodec/parser_list.c": {
+      "bytes": 176,
+      "sha256": "6a004f9bc097280a252a03d656a4b14ba109717eb46a3e4692683d67df72d1be"
+    },
+    "libavcodec/codec_list.c": {
+      "bytes": 389,
+      "sha256": "52d6e9367fe38da6d7b11f3796b8a03ad1e96ca2de1cd02562d6a1fdf7402c1a"
+    },
+    "libavcodec/bsf_list.c": {
+      "bytes": 113,
+      "sha256": "f78d6a5a476373d3dacebd4812007fc2cd2ebbb8509b9892edeba6279d3dc7be"
+    },
+    "sources.gni": {
+      "bytes": 6906,
+      "sha256": "76fbbf45e4f97e5914c7c26921a237f1e2a02280f4bb96aa76c00a3d4cbb0870"
+    }
+  }
+}

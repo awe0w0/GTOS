@@ -17,17 +17,21 @@ parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'e
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
                                             'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
                                             'skia_semaphore', 'expat', 'address_text', 'net_protocol',
-                                            'content_capacity'],
+                                            'content_capacity', 'ffmpeg_webm'],
                     default='memory')
 parser.add_argument('--payload', type=Path)
 parser.add_argument('--payload-record', type=Path)
 parser.add_argument('--provider-root', type=Path)
+parser.add_argument('--ffmpeg-config-root', type=Path)
+parser.add_argument('--media-provider-root', type=Path)
 args = parser.parse_args()
 if args.component == 'crt_arguments':
     assert args.payload is not None and args.payload_record is not None
 else:
     assert args.payload is None and args.payload_record is None
-assert (args.provider_root is not None) == (args.component == 'expat')
+assert (args.provider_root is not None) == (args.component in ('expat', 'ffmpeg_webm'))
+assert (args.ffmpeg_config_root is not None) == (args.component == 'ffmpeg_webm')
+assert (args.media_provider_root is not None) == (args.component == 'ffmpeg_webm')
 repo = Path(__file__).resolve().parents[1]
 args.out.mkdir(parents=True, exist_ok=False)
 sdk = repo / 'apps/native_v8_runtime'
@@ -68,6 +72,8 @@ component = {
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'vp9': ('native_memory_record', None, 'vp9.cpp',
             'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'ffmpeg_webm': ('native_memory_record', None, 'ffmpeg_webm.cpp',
+                    'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'crt_arguments': (None, None, None,
                       'gtos_content_arguments_kernel.cpp', 'ContentArgumentsUnusedBaseline', 0),
 }[args.component]
@@ -176,21 +182,43 @@ if args.component == 'expat':
     environment = args.view / 'tools/gtos_native_sdk/environment'
     flags += ['-std=c++23', '-I' + str(args.view), '-I' + str(environment),
               '-I' + str(llvm_libc), '-DXML_STATIC']
-if args.component == 'vp9':
+if args.component in ('vp9', 'ffmpeg_webm'):
     llvm_libc = full / 'third_party/llvm-libc/src'
     flags += ['-I' + str(args.view / 'third_party/libvpx/source/libvpx'),
               '-I' + str(llvm_libc)]
-    fixture = full / 'media/test/data/bear-vp9.ivf'
+    webm = args.component == 'ffmpeg_webm'
+    fixture = full / ('media/test/data/bear-vp9.webm' if webm else 'media/test/data/bear-vp9.ivf')
     bind(fixture)
     data = fixture.read_bytes()
-    assert hashlib.sha256(data).hexdigest() == '02e3eb33651a3e54a07a4f8644e59b065f7dc48257787710b193b82728594f59'
-    assert data[:4] == b'DKIF' and data[8:12] == b'VP90'
-    assert struct.unpack_from('<HH', data, 12) == (320, 240)
-    assert struct.unpack_from('<IQ', data, 32) == (3792, 0)
-    assert struct.unpack_from('<IQ', data, 3836) == (64, 33)
+    if webm:
+        assert len(data) == 67504 and data[:4] == b'\x1aE\xdf\xa3'
+        assert hashlib.sha256(data).hexdigest() == '7cd68c55f4bb47a2df22a85fac9e8b942cbbba24286c037048131944eb0a09eb'
+        flags += ['-std=c++23', '-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE',
+                  '-I' + str(product / 'sdk/ffmpeg'),
+                  '-I' + str(args.view), '-I' + str(args.view / 'v8'),
+                  '-I' + str(args.view / 'third_party/ffmpeg'),
+                  '-I' + str(args.provider_root / 'build')]
+        fixture_symbol, fixture_size = 'gtos_webm_fixture', len(data)
+    else:
+        assert hashlib.sha256(data).hexdigest() == '02e3eb33651a3e54a07a4f8644e59b065f7dc48257787710b193b82728594f59'
+        assert data[:4] == b'DKIF' and data[8:12] == b'VP90'
+        assert struct.unpack_from('<HH', data, 12) == (320, 240)
+        assert struct.unpack_from('<IQ', data, 32) == (3792, 0)
+        assert struct.unpack_from('<IQ', data, 3836) == (64, 33)
+        fixture_symbol, fixture_size = 'gtos_vp9_fixture', 3912
     fixture_source = args.out / 'fixture.S'
-    fixture_source.write_text('.section .rodata.vp9,"a"\n.globl gtos_vp9_fixture\n'
-                              'gtos_vp9_fixture:\n.incbin "' + str(fixture) + '", 0, 3912\n')
+    fixture_source.write_text(f'.section .rodata.vp9,"a"\n.globl {fixture_symbol}\n'
+                              f'{fixture_symbol}:\n.incbin "{fixture}", 0, {fixture_size}\n')
+    if webm:
+        reference = full / 'media/test/data/bear-vp9.ivf'
+        bind(reference)
+        reference_bytes = reference.read_bytes()
+        assert hashlib.sha256(reference_bytes).hexdigest() == '02e3eb33651a3e54a07a4f8644e59b065f7dc48257787710b193b82728594f59'
+        assert struct.unpack_from('<IQ', reference_bytes, 32) == (3792, 0)
+        assert struct.unpack_from('<IQ', reference_bytes, 3836) == (64, 33)
+        with fixture_source.open('a') as stream:
+            stream.write('.globl gtos_vp9_reference\ngtos_vp9_reference:\n'
+                         f'.incbin "{reference}", 0, 3912\n')
     fixture_object = args.out / 'fixture.o'
     run('assemble-vp9-fixture', [args.clang_bin / 'clang', '--target=i686-unknown-none-elf',
                                 '-c', fixture_source, '-o', fixture_object])
@@ -243,7 +271,8 @@ else:
     layout_text = layout_source.read_text().replace('native_vm_record', record_name)
     record_address = '40020000'
     image_limit = 65536
-    if args.component in ('vp9', 'webrtc_thread', 'skia_semaphore', 'expat', 'address_text', 'net_protocol'):
+    if args.component in ('vp9', 'ffmpeg_webm', 'webrtc_thread', 'skia_semaphore',
+                          'expat', 'address_text', 'net_protocol'):
         record_address = '40200000'
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
@@ -280,6 +309,12 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                           ('codec-once', args.view / 'build/config/gtos/runtime/codec_once.cc'),
                           ('thread-core', runtime / 'thread-core.cc'),
                           ('qsort', llvm_libc / 'src/stdlib/qsort.cpp')]
+    elif args.component == 'ffmpeg_webm':
+        native_sources = [('codec-once', args.view / 'build/config/gtos/runtime/codec_once.cc'),
+                          ('qsort', llvm_libc / 'src/stdlib/qsort.cpp'),
+                          ('hyperbolic', product / 'sdk/ffmpeg/hyperbolic.cc'),
+                          ('tanh', product / 'sdk/tanh.cc'),
+                          ('ieee754', args.view / 'v8/src/base/ieee754.cc')]
     elif args.component == 'webrtc_thread':
         rtc_sources = args.view / 'third_party/webrtc/rtc_base'
         native_sources = [('native-thread', args.view / 'tools/gtos_native_sdk/native-thread.cc'),
@@ -390,7 +425,7 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         linked = image.with_suffix('.unstripped.elf') if args.component in (
             'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
             'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore', 'expat', 'address_text',
-            'net_protocol') else image
+            'net_protocol', 'ffmpeg_webm') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if args.component == 'skia_semaphore':
             archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
@@ -444,14 +479,67 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
             for path in [codec, archive, *providers]:
                 bind(path)
             extra += [fixture_object, jump_object, codec, *providers, archive]
+        if args.component == 'ffmpeg_webm':
+            archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
+            media = args.media_provider_root
+            media_record = media / 'identity.json'
+            bind(media_record)
+            providers_record = json.loads(media_record.read_text())
+            for name in ('libvpx.a', 'gtos-clock-bridge.o', 'gtos-semaphore.o'):
+                path = media / name
+                actual = identity(path)
+                assert not path.is_symlink() and not path.stat().st_mode & 0o222
+                assert all(actual[key] == providers_record[name][key]
+                           for key in ('sha256', 'bytes'))
+                bind(path)
+            codec = media / 'libvpx.a'
+            record_path = args.provider_root / 'build-identity.json'
+            configuration_path = args.ffmpeg_config_root / 'identity.json'
+            for path in (record_path, configuration_path, archive, codec):
+                bind(path)
+            built = json.loads(record_path.read_text())
+            configured = json.loads(configuration_path.read_text())
+            assert built['configuration'] == {
+                k: v for k, v in identity(configuration_path).items() if k != 'path'}
+            assert '#define CONFIG_LIBOPUS_DECODER 0' in (
+                args.provider_root / 'build/config_components.h').read_text()
+            for product_name, expected in configured['outputs'].items():
+                path = args.provider_root / 'build' / product_name
+                assert {k: v for k, v in identity(path).items() if k != 'path'} == expected
+                bind(path)
+            libraries = []
+            for family_name in ('avformat', 'avcodec', 'avutil'):
+                library_name = 'lib' + family_name
+                relative = library_name + '/' + library_name + '.a'
+                path = args.provider_root / 'build' / relative
+                actual = identity(path)
+                assert all(actual[key] == built['archives'][relative][key]
+                           for key in ('sha256', 'bytes'))
+                bind(path)
+                libraries.append(path)
+            providers = []
+            for path_name, expected in sorted(configured['inputs'].items()):
+                path = Path(path_name)
+                if path.parent == args.ffmpeg_config_root and path.suffix == '.o':
+                    assert {k: v for k, v in identity(path).items() if k != 'path'} == expected
+                    bind(path)
+                    providers.append(path)
+            assert {p.name for p in providers} >= {
+                'assert.o', 'pthread.o', 'native-thread.o', 'thread-core.o'}
+            engine = [media / (name + '.o')
+                      for name in ('gtos-clock-bridge', 'gtos-semaphore')]
+            for path in engine:
+                bind(path)
+            extra += [fixture_object, jump_object, codec, *libraries, *providers, *engine, archive]
         if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9', 'expat', 'address_text',
-                                     'net_protocol'):
+                                     'net_protocol', 'ffmpeg_webm'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
             extra.append(builtins)
         run(directory.name + '-' + name + '-link', [args.clang_bin / 'ld.lld', '-m', 'elf_i386',
-            '-static', '-e', '_start', '-T', layout, '--gc-sections', '-o', linked,
+            '-static', '-e', '_start', '-T', layout, '--gc-sections',
+            *(['--error-limit=0'] if args.component == 'ffmpeg_webm' else []), '-o', linked,
             args.out / 'start.o', *objects, output, *extra])
         assert not run(directory.name + '-' + name + '-undefined', ['/usr/bin/nm', '-u', linked]).strip()
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-n', linked])
@@ -500,6 +588,8 @@ if args.component == 'webrtc_thread':
     kernel_flags.append('-DGTOS_CONTENT_WEBRTC_THREAD_PROBE')
 if args.component == 'vp9':
     kernel_flags.append('-DGTOS_CONTENT_VP9_PROBE')
+if args.component == 'ffmpeg_webm':
+    kernel_flags.append('-DGTOS_CONTENT_FFMPEG_WEBM_PROBE')
 directory = args.out / 'kernel'
 directory.mkdir()
 objects = []
@@ -540,6 +630,7 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
 prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
     'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
-    'skia_semaphore', 'expat', 'address_text', 'net_protocol', 'content_capacity') else 'PERFETTO_'
+    'skia_semaphore', 'expat', 'address_text', 'net_protocol', 'content_capacity',
+    'ffmpeg_webm') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')
