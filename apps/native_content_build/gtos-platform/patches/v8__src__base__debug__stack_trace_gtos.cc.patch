@@ -1,0 +1,13 @@
+--- a/v8/src/base/debug/stack_trace_gtos.cc
++++ b/v8/src/base/debug/stack_trace_gtos.cc
+@@ -9,8 +9,8 @@
+ #include "src/base/platform/platform.h"
+ 
+ #if !V8_OS_GTOS || V8_OS_POSIX || V8_OS_LINUX || !defined(__i386__) || \
+-    !defined(GTOS_ISOLATE_COMPILE_DIAGNOSTIC)
+-#error This backend requires the independent GTOS IA32 diagnostic target
++    (!defined(GTOS_ISOLATE_COMPILE_DIAGNOSTIC) && !defined(GTOS_CONTENT_V8_PLATFORM))
++#error This backend requires a GTOS IA32 V8 target
+ #endif
+ 
+ namespace v8 {

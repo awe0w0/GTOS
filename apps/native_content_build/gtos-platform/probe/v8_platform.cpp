@@ -8,7 +8,9 @@
 #include <process/system_memory_abi.h>
 
 #include "src/base/once.h"
+#include "src/base/page-allocator.h"
 #include "src/base/platform/gtos-native-services.h"
+#include "src/base/platform/platform.h"
 #include "src/base/platform/time.h"
 #include "src/base/sys-info.h"
 #include "tools/gtos_native_sdk/native-thread.h"
@@ -27,6 +29,37 @@ bool Check(bool value) {
   return value;
 }
 
+using v8::base::OS;
+using v8::base::PageAllocator;
+using v8::base::Thread;
+using Permission = v8::PageAllocator::Permission;
+
+void TestPages(const GtosProcessInfoResult& process) {
+  PageAllocator allocator;
+  const size_t page = process.page_bytes;
+  Check(OS::GetCurrentProcessId() == static_cast<int>(process.process_id));
+  Check(v8::base::Stack::GetCommittedStackLimit() == process.stack_begin);
+  Check(allocator.AllocatePageSize() == page && allocator.CommitPageSize() == page);
+  Check(allocator.AllocatePages(nullptr, page - 1, page, Permission::kReadWrite) == nullptr);
+  Check(allocator.AllocatePages(nullptr, page, page, Permission::kReadExecute) == nullptr);
+  Check(!allocator.CanAllocateSharedPages());
+  void* region = allocator.AllocatePages(nullptr, 2 * page, page, Permission::kReadWrite);
+  if (!Check(region != nullptr))
+    return;
+  auto* data = static_cast<unsigned char*>(region);
+  Check(data[0] == 0 && data[page] == 0);
+  data[0] = 42;
+  Check(!allocator.SetPermissions(data + 1, page, Permission::kRead));
+  Check(!allocator.SetPermissions(data + 2 * page, page, Permission::kRead));
+  Check(allocator.SetPermissions(data, page, Permission::kRead) && data[0] == 42);
+  Check(allocator.DecommitPages(data, page) &&
+        allocator.RecommitPages(data, page, Permission::kReadWrite) && data[0] == 0);
+  Check(allocator.ReleasePages(region, 2 * page, page) &&
+        !allocator.SetPermissions(data + page, page, Permission::kRead));
+  Check(allocator.FreePages(region, page) &&
+        !allocator.SetPermissions(region, page, Permission::kRead));
+}
+
 struct State {
   v8::base::OnceType once{v8::base::ONCE_STATE_UNINITIALIZED};
   unsigned started = 0;
@@ -35,6 +68,8 @@ struct State {
   unsigned returned = 0;
   unsigned calls = 0;
   unsigned value = 0;
+  Thread::LocalStorageKey key = 0;
+  unsigned memory[2]{};
 };
 
 bool Wait(unsigned* value) {
@@ -46,6 +81,29 @@ bool Wait(unsigned* value) {
   return false;
 }
 
+bool WorkerPages(State& state, unsigned index) {
+  if (Thread::GetThreadLocal(state.key) != nullptr)
+    return false;
+  Thread::SetThreadLocal(state.key, &state.memory[index]);
+  PageAllocator allocator;
+  const size_t page = allocator.AllocatePageSize();
+  for (unsigned round = 0; round < 32; ++round) {
+    void* region = allocator.AllocatePages(nullptr, page, page, Permission::kReadWrite);
+    if (!region)
+      return false;
+    auto* data = static_cast<unsigned*>(region);
+    const bool zero = *data == 0;
+    const unsigned pattern = 1 + round + 32 * index;
+    *data = pattern;
+    v8::base::gtos::Yield();
+    const bool retained = allocator.SetPermissions(region, page, Permission::kRead) &&
+                          *data == pattern;
+    if (!allocator.FreePages(region, page) || !zero || !retained)
+      return false;
+  }
+  return Thread::GetThreadLocal(state.key) == &state.memory[index];
+}
+
 void* Initialize(void* argument) {
   auto& state = *static_cast<State*>(argument);
   v8::base::CallOnceImpl(&state.once, [&] {
@@ -54,6 +112,7 @@ void* Initialize(void* argument) {
     if (Wait(&state.release))
       state.value = 42;
   });
+  __atomic_store_n(&state.memory[0], WorkerPages(state, 0), __ATOMIC_RELEASE);
   return argument;
 }
 
@@ -65,6 +124,7 @@ void* Observe(void* argument) {
     state.value = 99;
   });
   __atomic_store_n(&state.returned, state.value, __ATOMIC_RELEASE);
+  __atomic_store_n(&state.memory[1], WorkerPages(state, 1), __ATOMIC_RELEASE);
   return argument;
 }
 
@@ -103,6 +163,7 @@ extern "C" int NativeEntry() {
         calendar.ToInternalValue() < epoch + 86400LL * 1000000);
   Check(calendar_after >= calendar &&
         calendar_after.ToInternalValue() < epoch + 86400LL * 1000000);
+  TestPages(process);
 
   v8::base::OnceType fast{v8::base::ONCE_STATE_UNINITIALIZED};
   unsigned calls = 0;
@@ -111,6 +172,8 @@ extern "C" int NativeEntry() {
   Check(calls == 1 && fast.load() == v8::base::ONCE_STATE_DONE);
 
   State state;
+  state.key = Thread::CreateThreadLocalKey();
+  Thread::SetThreadLocal(state.key, &state);
   unsigned first = 0;
   unsigned second = 0;
   if (!Check(gtos::native::StartThread(16384, Initialize, &state, &first) == 0))
@@ -130,6 +193,10 @@ extern "C" int NativeEntry() {
   Check(gtos::native::JoinThread(first, &result) == 0 && result == &state);
   result = nullptr;
   Check(gtos::native::JoinThread(second, &result) == 0 && result == &state);
+  Check(__atomic_load_n(&state.memory[0], __ATOMIC_ACQUIRE) == 1);
+  Check(__atomic_load_n(&state.memory[1], __ATOMIC_ACQUIRE) == 1);
+  Check(Thread::GetThreadLocal(state.key) == &state);
+  Thread::DeleteThreadLocalKey(state.key);
   Check(state.calls == 1 && state.value == 42 && state.returned == 42);
   Check(state.once.load() == v8::base::ONCE_STATE_DONE);
   v8::base::CallOnceImpl(&state.once, [&] { state.value = 99; });

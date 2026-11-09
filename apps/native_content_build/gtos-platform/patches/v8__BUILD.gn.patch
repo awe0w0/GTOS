@@ -18,13 +18,16 @@
      if (is_win) {
        args += [ "--driver-mode=cl" ]
      } else {
-@@ -7728,6 +7739,15 @@ v8_component("v8_libbase") {
+@@ -7728,6 +7739,18 @@ v8_component("v8_libbase") {
      defines = [ "BUILDING_V8_BASE_SHARED" ]
    }
  
 +  if (is_gtos) {
++    defines += [ "GTOS_CONTENT_V8_PLATFORM=1" ]
 +    sources += [
++      "src/base/debug/stack_trace_gtos.cc",
 +      "src/base/platform/gtos-clock-bridge.cc",
++      "src/base/platform/platform-gtos.cc",
 +      "tools/gtos_isolate_diagnostic/runtime/gtos-semaphore.cc",
 +      "tools/gtos_isolate_diagnostic/runtime/thread-context.cc",
 +      "tools/gtos_isolate_diagnostic/runtime/thread-core.cc",

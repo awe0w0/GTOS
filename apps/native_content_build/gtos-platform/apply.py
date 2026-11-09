@@ -274,6 +274,10 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'v8/src/base/debug/stack_trace_gtos.cc': '../../native_v8_integration/overlay/src/base/debug/stack_trace_gtos.cc',
+    'v8/src/base/platform/platform-gtos.cc': '../../native_v8_integration/overlay/src/base/platform/platform-gtos.cc',
+    'v8/src/base/platform/gtos-native-api/vm_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/vm_abi.h',
+    'v8/src/base/platform/gtos-native-api/readonly_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/readonly_abi.h',
     'build/config/gtos/include/alloca.h': 'sdk/alloca.h',
     'third_party/cpuinfo/src/src/x86/gtos/init.c': 'sdk/cpuinfo-init.c',
     'build/config/gtos/runtime/file_internal.h': '../../native_libxml_file/file_internal.h',
@@ -402,8 +406,18 @@ ADDITIONS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs': 'rust/futex.rs',
 }
 
-# These provider bytes are pinned by the BoringSSL and PartitionAlloc source locks.
+# Patch private copies of the qualified V8 platform sources.
+PATCHED_ADDITIONS = {
+    'v8/src/base/debug/stack_trace_gtos.cc',
+    'v8/src/base/platform/platform-gtos.cc',
+}
+
+# These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
+    'v8/src/base/debug/stack_trace_gtos.cc': 'b264765845298b2406ed31cbb328b1ca94e4abd499280f4ce6e43f630302130a',
+    'v8/src/base/platform/platform-gtos.cc': '4a5f12d773bfdc87994b1984d1538070aa420b652ab9ffc477c1821171fec185',
+    'v8/src/base/platform/gtos-native-api/vm_abi.h': '35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11',
+    'v8/src/base/platform/gtos-native-api/readonly_abi.h': '3c30d437057c17fcad09a0efc33c40d8c99cb9f008b7a133c31a65e19fffa383',
     'third_party/libaom/source/config/gtos/generic/config/aom_config.c': '4652780bd3ba3c0c76f37c57ccb7c4be1a4c044e048a568774920bba47349473',
     'third_party/libaom/source/config/gtos/generic/config/aom_config.h': '32fdc8b766b308e99b914f7fae3761bfd12950c7a529b25758dc1bc64080d8da',
     'third_party/libaom/source/config/gtos/generic/config/aom_dsp_rtcd.h': 'efc25489dc85b1aca8122d9a980e85b45a1b68dcdb8a1e00c6893c96ecd73a1e',
@@ -481,6 +495,8 @@ def apply(view):
     receipt = view / 'gtos-platform.json'
     if receipt.exists():
         raise SystemExit('refusing to overwrite this platform generation: ' + str(receipt))
+    if not PATCHED_ADDITIONS <= ADDITIONS.keys() & ADDITION_SHA256.keys():
+        raise SystemExit('patched additions must have a pinned origin')
     for rel, expected in INPUTS.items():
         if candidate.digest(view / rel) != expected:
             raise SystemExit('platform input changed: ' + rel)
@@ -497,6 +513,10 @@ def apply(view):
         expected = ADDITION_SHA256.get(rel)
         if expected is not None and candidate.digest(path) != expected:
             raise SystemExit('qualified addition changed: ' + rel)
+        if rel in PATCHED_ADDITIONS:
+            patch = HERE / 'patches' / candidate.patch_name(rel)
+            subprocess.run(['/usr/bin/patch', '--dry-run', '--batch', '--fuzz=0',
+                            '--input', str(patch), str(path)], check=True)
     for rel in INPUTS:
         patch = HERE / 'patches' / candidate.patch_name(rel)
         subprocess.run(['/usr/bin/patch', '--dry-run', '--batch', '--fuzz=0',
@@ -545,7 +565,13 @@ def apply(view):
         expected = ADDITION_SHA256.get(rel)
         if expected is not None and digest != expected:
             raise SystemExit('qualified addition changed during copy: ' + rel)
-        added.append({'path': rel, 'source': source, 'sha256': digest})
+        entry = {'path': rel, 'source': source, 'sha256': digest}
+        if rel in PATCHED_ADDITIONS:
+            patch = HERE / 'patches' / candidate.patch_name(rel)
+            subprocess.run(['/usr/bin/patch', '--batch', '--fuzz=0', '--input', str(patch), str(target)], check=True)
+            entry.update(origin_sha256=digest, patch_sha256=candidate.digest(patch),
+                         sha256=candidate.digest(target))
+        added.append(entry)
     with receipt.open('x') as handle:
         json.dump({'files': applied, 'additions': added,
                    'real_directories': real_directories}, handle, indent=2)

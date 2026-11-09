@@ -161,6 +161,8 @@ if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 
 if args.component in ('v8_platform', 'platform_libraries'):
     flags.insert(0, '-I' + str(args.view / 'v8'))
     flags.append('-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE')
+if args.component == 'v8_platform':
+    flags += ['-DGTOS_CONTENT_V8_PLATFORM=1', '-femulated-tls']
 if args.component == 'platform_libraries':
     cpuinfo = args.view / 'third_party/cpuinfo/src'
     angle = args.view / 'third_party/angle'
@@ -361,6 +363,9 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         native_runtime = args.view / 'v8/tools/gtos_isolate_diagnostic/runtime'
         native_sources = [('v8-once', args.view / 'v8/src/base/once.cc'),
                           ('v8-sys-info', args.view / 'v8/src/base/sys-info.cc'),
+                          ('v8-page-allocator', args.view / 'v8/src/base/page-allocator.cc'),
+                          ('v8-native-os', platform / 'platform-gtos.cc'),
+                          ('v8-native-stack-trace', args.view / 'v8/src/base/debug/stack_trace_gtos.cc'),
                           ('v8-time', platform / 'time.cc'),
                           ('clock-bridge', platform / 'gtos-clock-bridge.cc'),
                           ('native-thread', args.view / 'tools/gtos_native_sdk/native-thread.cc'),

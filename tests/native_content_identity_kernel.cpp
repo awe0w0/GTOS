@@ -9,8 +9,8 @@ static const unsigned ExpectedChecks = 33;
 static const char* const CheckDescription = "native CPU topology, ANGLE strings and Dawn sleep";
 #elif defined(GTOS_CONTENT_V8_PLATFORM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT V8 PLATFORM"
-static const unsigned ExpectedChecks = 25;
-static const char* const CheckDescription = "native clocks, memory and concurrent V8 once";
+static const unsigned ExpectedChecks = 42;
+static const char* const CheckDescription = "V8 native pages, TLS, clocks and concurrent once";
 #elif defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT FFMPEG WEBM"
 #if defined(GTOS_CONTENT_FFMPEG_OPUS_PROBE)
