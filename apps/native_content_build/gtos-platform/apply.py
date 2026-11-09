@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'v8/src/snapshot/sort-builtins.cc': '254b4cd602f3bbe5e6b3ec992199af59f8f88aa8131a0a142b395b61ccc61578',
+    'v8/src/maglev/maglev-graph-printer.cc': '52053c63f1fb1952a02722650e08003b8fa7a0a29bf15f7ee4642939815e9c42',
+    'v8/src/maglev/maglev-graph-serializer.cc': 'cd48267c83d41c90b0b2e210051f95745208d53c06f36b1f91969b8822492387',
+    'v8/src/maglev/maglev-graph-serializer.h': '0fd666b274048a275a238a507b4527ef603081d523a5d010d6af2694ce7a1a23',
     'v8/include/v8-profiler.h': '45fea61546186a64d2880ec67d779314471b7009a31f4371d2e6848164323c8e',
     'v8/src/libsampler/sampler.cc': '820b7369a57081f84785d4bcaa13b7e9d796ed0c556ef1557b8fe1d7ba506535',
     'v8/src/libsampler/sampler.h': 'c9da2e480aee8f7e9ec7f02db6a1d342f6115e6e786554989ea22391c9a7ba96',

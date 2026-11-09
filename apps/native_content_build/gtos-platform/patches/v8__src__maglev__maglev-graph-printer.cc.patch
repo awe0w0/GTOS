@@ -1,0 +1,25 @@
+--- a/v8/src/maglev/maglev-graph-printer.cc
++++ b/v8/src/maglev/maglev-graph-printer.cc
+@@ -22,6 +22,10 @@
+ #include "src/maglev/maglev-basic-block.h"
+ #include "src/maglev/maglev-graph-labeller.h"
+ #include "src/maglev/maglev-graph-printer.h"
++
++#if defined(V8_OS_GTOS)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#endif
+ #include "src/maglev/maglev-graph-processor.h"
+ #include "src/maglev/maglev-graph.h"
+ #include "src/maglev/maglev-ir-inl.h"
+@@ -1144,7 +1148,11 @@ void PrintGraphToFile(Graph* const graph, MaglevPhase phase) {
+   std::string func_name = graph->compilation_info()->function_name();
+   std::string filename = GetMaglevGraphFilename(
+       func_name, graph->compilation_info()->optimization_id());
++#if defined(V8_OS_GTOS)
++  gtos::native::FileOutput file(filename.c_str());
++#else
+   std::ofstream file(filename);
++#endif
+   if (file.is_open()) {
+     PrintGraph(file, graph, phase);
+   } else {

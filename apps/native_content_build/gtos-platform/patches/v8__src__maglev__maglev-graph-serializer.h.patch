@@ -1,0 +1,28 @@
+--- a/v8/src/maglev/maglev-graph-serializer.h
++++ b/v8/src/maglev/maglev-graph-serializer.h
+@@ -11,6 +11,10 @@
+ #include "src/handles/handles.h"
+ #include "src/maglev/maglev-phase.h"
+ 
++#if defined(V8_OS_GTOS)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#endif
++
+ namespace v8 {
+ namespace internal {
+ class Isolate;
+@@ -39,7 +43,13 @@ void JsonPrintFunctionSource(std::ostream& os, int source_id,
+                              DirectHandle<SharedFunctionInfo> shared,
+                              bool with_key = false);
+ 
+-class MaglevJsonFile : public std::ofstream {
++#if defined(V8_OS_GTOS)
++using MaglevTraceFile = gtos::native::FileOutput;
++#else
++using MaglevTraceFile = std::ofstream;
++#endif
++
++class MaglevJsonFile : public MaglevTraceFile {
+  public:
+   MaglevJsonFile(MaglevCompilationInfo* info, std::ios_base::openmode mode);
+   ~MaglevJsonFile() override;

@@ -1,0 +1,36 @@
+--- a/v8/src/snapshot/sort-builtins.cc
++++ b/v8/src/snapshot/sort-builtins.cc
+@@ -6,6 +6,11 @@
+ 
+ #include <algorithm>
+ #include <fstream>
++#include <sstream>
++
++#if defined(V8_OS_GTOS)
++#include "tools/gtos_native_sdk/file-input.hpp"
++#endif
+ 
+ #include "src/snapshot/embedded/embedded-data-inl.h"
+ #include "src/snapshot/embedded/embedded-data.h"
+@@ -272,7 +277,11 @@ void BuiltinsSorter::ProcessBuiltinDensityLineInfo(
+ 
+ void BuiltinsSorter::InitializeCallGraph(const char* profiling_file,
+                                          const std::vector<uint32_t>& size) {
++#if defined(V8_OS_GTOS)
++  gtos::native::FileInput file(profiling_file);
++#else
+   std::ifstream file(profiling_file);
++#endif
+   CHECK_WITH_MSG(file.good(), "Can't read log file");
+ 
+   std::unordered_map<std::string, Builtin> name2id;
+@@ -295,6 +304,9 @@ void BuiltinsSorter::InitializeCallGraph(const char* profiling_file,
+       ProcessBuiltinDensityLineInfo(line_stream, name2id);
+     }
+   }
++#if defined(V8_OS_GTOS)
++  CHECK_WITH_MSG(!file.bad(), "Can't read log file");
++#endif
+ }
+ 
+ std::vector<Builtin> BuiltinsSorter::SortBuiltins(

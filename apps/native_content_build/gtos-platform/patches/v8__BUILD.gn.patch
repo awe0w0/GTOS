@@ -40,18 +40,21 @@
    configs = [ ":internal_config" ]
  }
  
-@@ -7283,6 +7302,10 @@ v8_cluster_source_set("v8_base_without_compiler") {
+@@ -7283,6 +7302,13 @@ v8_cluster_source_set("v8_base_without_compiler") {
      "//third_party/highway:libhwy",
    ]
  
 +  if (is_gtos) {
-+    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++    deps += [
++      "//build/config/gtos/runtime:native_file_input",
++      "//build/config/gtos/runtime:native_file_output",
++    ]
 +  }
 +
    if (v8_enable_generated_code_validator) {
      sources += [ "src/sandbox/generated-code-validator.cc" ]
      if (v8_current_cpu == "x64") {
-@@ -7728,6 +7751,18 @@ v8_component("v8_libbase") {
+@@ -7728,6 +7754,18 @@ v8_component("v8_libbase") {
      defines = [ "BUILDING_V8_BASE_SHARED" ]
    }
  

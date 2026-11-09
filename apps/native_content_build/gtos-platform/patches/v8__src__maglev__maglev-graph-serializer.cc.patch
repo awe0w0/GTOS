@@ -1,0 +1,11 @@
+--- a/v8/src/maglev/maglev-graph-serializer.cc
++++ b/v8/src/maglev/maglev-graph-serializer.cc
+@@ -832,7 +832,7 @@ void JsonPrintFunctionSource(std::ostream& os, int source_id,
+ 
+ MaglevJsonFile::MaglevJsonFile(MaglevCompilationInfo* info,
+                                std::ios_base::openmode mode)
+-    : std::ofstream(GetMaglevVisualizerLogFileName(
++    : MaglevTraceFile(GetMaglevVisualizerLogFileName(
+                         info, v8_flags.trace_turbo_path, nullptr, "json")
+                         .get(),
+                     mode) {}
