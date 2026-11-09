@@ -1,0 +1,27 @@
+--- a/components/url_pattern_index/string_splitter.h
++++ b/components/url_pattern_index/string_splitter.h
+@@ -65,16 +65,18 @@ class StringSplitter {
+     }
+ 
+     void Advance() {
+-      std::string_view::const_iterator begin = remaining_.begin();
+-      while (begin != remaining_.end() && splitter_->is_separator_(*begin)) {
++      size_t begin = 0;
++      while (begin < remaining_.size() &&
++             splitter_->is_separator_(remaining_[begin])) {
+         ++begin;
+       }
+-      std::string_view::const_iterator end = begin;
+-      while (end != remaining_.end() && !splitter_->is_separator_(*end)) {
++      size_t end = begin;
++      while (end < remaining_.size() &&
++             !splitter_->is_separator_(remaining_[end])) {
+         ++end;
+       }
+-      current_ = std::string_view(begin, end);
+-      remaining_ = std::string_view(end, remaining_.end());
++      current_ = remaining_.substr(begin, end - begin);
++      remaining_.remove_prefix(end);
+     }
+ 
+     raw_ptr<const StringSplitter<IsSeparator>> splitter_;

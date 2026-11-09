@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/url_pattern_index/fuzzy_pattern_matching.cc': 'b5f70c07dc93c520c237d3139319031293752b90bf569acaedaf03338686f836',
+    'components/url_pattern_index/string_splitter.h': 'e0ddd80d13db82d600b090250d819ac1b70e7c6bdb5028fb5223639f92b1d27f',
+    'components/url_pattern_index/ngram_extractor.h': '8b58710d0387ce0fa19a8928024405bd6d7485bcb0db92ebac8f281ebd04c80d',
     'third_party/rust/rustfft/v6/BUILD.gn': '130464aff608f94b86cf02e5db3c7a6a8791e03f5400c98f454cf71eb91812a6',
     'third_party/rust/chromium_crates_io/vendor/rustfft-v6/src/lib.rs': '615bfdec27855e78548a42cabfac5b0f573e891c5a80c9db493ca5dc2955a671',
     'third_party/rust/symphonia_core/v0_6/BUILD.gn': 'a4cd2daa8932ef86f3b56aa8600ea6647e977a4a1a489a323a7e823ddb477952',

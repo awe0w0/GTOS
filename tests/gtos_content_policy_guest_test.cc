@@ -6,8 +6,12 @@
 #include <array>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 #include "common/FixedVector.h"
+#include "components/url_pattern_index/fuzzy_pattern_matching.h"
+#include "components/url_pattern_index/ngram_extractor.h"
+#include "components/url_pattern_index/string_splitter.h"
 #include "services/network/public/cpp/content_security_policy/content_security_policy.cc"
 #include "services/network/public/cpp/permissions_policy/permissions_policy_features_bitset.h"
 
@@ -57,5 +61,33 @@ int TestContentPolicy() {
         return 32;
     const angle::FixedVector<int, 3> filled(3, 7);
     if (!std::ranges::equal(filled, std::array<int, 3>{7, 7, 7})) return 35;
+
+    using url_pattern_index::FindFuzzy;
+    constexpr std::string_view url = "xxfoo/bar#foo?bar";
+    if (FindFuzzy(url, "foo^bar", 0) != 2 || FindFuzzy(url, "foo^bar", 3) != 10 ||
+        FindFuzzy(url, "foo^bar", 11) != std::string_view::npos ||
+        FindFuzzy({}, {}, 0) != 0 || FindFuzzy({}, "x", 0) != std::string_view::npos ||
+        FindFuzzy("a", {}, 2) != std::string_view::npos)
+        return 91;
+
+    const auto separator = [](char c) { return c == '*'; };
+    const auto words = url_pattern_index::CreateStringSplitter("**One***two*", separator);
+    auto word = words.begin();
+    if (word == words.end() || *word++ != "One" || word == words.end() ||
+        *word++ != "two" || word != words.end())
+        return 92;
+    for (std::string_view text : {"", "***"}) {
+        const auto empty = url_pattern_index::CreateStringSplitter(text, separator);
+        if (empty.begin() != empty.end()) return 93;
+    }
+
+    using url_pattern_index::NGramCaseExtraction;
+    const auto grams = url_pattern_index::CreateNGramExtractor<
+        3, unsigned, NGramCaseExtraction::kLowerCase>("AbCD*xyZ**Q", separator);
+    auto gram = grams.begin();
+    for (unsigned expected : {0x616263u, 0x626364u, 0x78797au}) {
+        if (gram == grams.end() || *gram++ != expected) return 94;
+    }
+    if (gram != grams.end()) return 95;
     return 0;
 }

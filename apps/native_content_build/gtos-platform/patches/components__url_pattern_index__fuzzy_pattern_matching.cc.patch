@@ -1,0 +1,19 @@
+--- a/components/url_pattern_index/fuzzy_pattern_matching.cc
++++ b/components/url_pattern_index/fuzzy_pattern_matching.cc
+@@ -53,10 +53,12 @@ size_t FindFuzzy(std::string_view text,
+            (subpattern_char == kSeparatorPlaceholder && IsSeparator(text_char));
+   };
+ 
+-  std::string_view::const_iterator found =
+-      std::search(text.begin() + from, text.end(), subpattern.begin(),
+-                  subpattern.end(), fuzzy_compare);
+-  return found == text.end() ? std::string_view::npos : found - text.begin();
++  const std::string_view suffix = text.substr(from);
++  const auto found = std::search(suffix.begin(), suffix.end(), subpattern.begin(),
++                                 subpattern.end(), fuzzy_compare);
++  return found == suffix.end()
++             ? std::string_view::npos
++             : from + static_cast<size_t>(found - suffix.begin());
+ }
+ 
+ }  // namespace url_pattern_index
