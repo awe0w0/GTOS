@@ -210,6 +210,10 @@ class PrivatePatchTest(unittest.TestCase):
         materialized = mock.patch.dict(self.module.MATERIALIZED, {}, clear=True)
         materialized.start()
         self.addCleanup(materialized.stop)
+        self.patched_additions = self.module.PATCHED_ADDITIONS.copy()
+        patched = mock.patch.object(self.module, 'PATCHED_ADDITIONS', set())
+        patched.start()
+        self.addCleanup(patched.stop)
 
     def test_unchanged_script_is_materialized_without_writing_origin(self):
         root = args.out / 'unchanged-script'
@@ -316,17 +320,34 @@ class PrivatePatchTest(unittest.TestCase):
         pins = self.module.ADDITION_SHA256
         self.assertTrue(pins)
         additions = {rel: self.module.ADDITIONS[rel] for rel in pins}
+        view_inputs = {rel: source[2:] for rel, source in additions.items()
+                       if source.startswith('//')}
+        self.assertTrue(view_inputs)
+        for source in view_inputs.values():
+            target = root / source
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(args.view / source, target)
         with mock.patch.dict(self.module.INPUTS, {}, clear=True), \
-                mock.patch.dict(self.module.ADDITIONS, additions, clear=True):
-            first = next(iter(pins))
-            with mock.patch.dict(pins, {first: '0' * 64}):
-                with self.assertRaisesRegex(SystemExit, 'qualified addition changed: ' + first):
-                    self.module.apply(root)
-            self.assertFalse(any((root / rel).exists() for rel in additions))
-            self.assertFalse((root / 'gtos-platform.json').exists())
+                mock.patch.dict(self.module.ADDITIONS, additions, clear=True), \
+                mock.patch.object(self.module, 'PATCHED_ADDITIONS', self.patched_additions):
+            for first in (next(iter(pins)), next(iter(view_inputs))):
+                with mock.patch.dict(pins, {first: '0' * 64}):
+                    with self.assertRaises(SystemExit) as refused:
+                        self.module.apply(root)
+                self.assertEqual(str(refused.exception), 'qualified addition changed: ' + first)
+                self.assertFalse(any((root / rel).exists() for rel in additions))
+                self.assertFalse((root / 'gtos-platform.json').exists())
             self.module.apply(root)
+        entries = json.loads((root / 'gtos-platform.json').read_text())['additions']
+        recorded = {entry['path']: entry for entry in entries}
+        self.assertEqual(recorded.keys(), pins.keys())
         for rel, expected in pins.items():
+            if rel in self.patched_additions:
+                self.assertEqual(recorded[rel]['origin_sha256'], expected)
+                expected = self.module.candidate.digest(args.view / rel)
+            self.assertEqual(recorded[rel]['sha256'], expected)
             self.assertEqual(self.module.candidate.digest(root / rel), expected)
+
     def test_existing_addition_refuses_before_patching_any_input(self):
         for kind in ['file', 'dangling-link']:
             root = args.out / ('existing-addition-' + kind)
