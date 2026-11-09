@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'gpu/command_buffer/service/shared_image/shared_image_factory.cc': '9f54847958dc5bc11a65d0c2c75fc83bd27a5f9d9a3d9124679f956ea3a07bc6',
+    'gpu/command_buffer/service/shared_image/ozone_image_backing.cc': '3449592a0a83f50deb5e1fd67b76e40f70c75dde17f6eaa718a85c1c1e312cca',
+    'gpu/ipc/service/gpu_init.cc': '477333c1d1d3b0f9027d958d8ba5d92a9be13ed24d716cef6953acdc848d5875',
+    'media/webrtc/helpers.cc': 'd11563f636d44be6f3e477d87ca2499250fc58451f8832c36c8ac1f3df5dde2f',
     'third_party/blink/renderer/platform/fonts/ift/ift_patcher.rs': 'f4751780c29c81f5ef137cb4839d0884953992a1ebc01ddcf28b473de918d547',
     'third_party/rust/jxl/v0_7/wrapper/BUILD.gn': 'e2bf9f6b40031b2bb9df059ebed383f4750449631304adb558c503dd96bd798e',
     'third_party/rust/jxl/v0_7/wrapper/lib.rs': '84f1906b126e73670d10ac886fe06bcc4aaa9e4b5bdc83e4194c984b46a11d6d',

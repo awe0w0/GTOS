@@ -1,0 +1,23 @@
+--- a/media/webrtc/helpers.cc
++++ b/media/webrtc/helpers.cc
+@@ -73,7 +73,11 @@ void ConfigAutomaticGainControl(const AudioProcessingSettings& settings,
+ #endif
+ 
+ #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
+-    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
++    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
++#if BUILDFLAG(IS_GTOS)
++  // The GTOS audio backend has no native input volume control.
++  apm_config.gain_controller2.input_volume_controller.enabled = false;
++#else
+   // Use AGC2 digital and input volume controller.
+   // TODO(crbug.com/40872787): Remove `kWebRtcAllowInputVolumeAdjustment` safely
+   // and set `input_volume_controller.enabled` true.
+@@ -81,6 +85,7 @@ void ConfigAutomaticGainControl(const AudioProcessingSettings& settings,
+       !kInputVolumeAdjustmentOverrideAllowed ||
+       base::FeatureList::IsEnabled(
+           ::features::kWebRtcAllowInputVolumeAdjustment);
++#endif
+   // Enable AGC2 digital.
+   apm_config.gain_controller2.enabled = true;
+   apm_config.gain_controller2.adaptive_digital.enabled = true;

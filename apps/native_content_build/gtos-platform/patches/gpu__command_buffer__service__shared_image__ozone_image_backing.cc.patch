@@ -1,0 +1,17 @@
+--- a/gpu/command_buffer/service/shared_image/ozone_image_backing.cc
++++ b/gpu/command_buffer/service/shared_image/ozone_image_backing.cc
+@@ -136,10 +136,12 @@ gfx::GpuMemoryBufferHandle OzoneImageBacking::GetGpuMemoryBufferHandle() {
+ 
+ gfx::GpuMemoryBufferHandle
+ OzoneImageBacking::GetSinglePlaneGpuMemoryBufferHandle(uint32_t index) {
+-  gfx::NativePixmapHandle native_pixmap_handle = pixmap_->ExportHandle();
+-#if BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_GTOS)
++  return {};
++#elif BUILDFLAG(IS_FUCHSIA)
+   NOTREACHED() << "Cannot get single plane from GPU memory buffer";
+ #else
++  gfx::NativePixmapHandle native_pixmap_handle = pixmap_->ExportHandle();
+   DCHECK(native_pixmap_handle.modifier == 0);
+   auto& planes = native_pixmap_handle.planes;
+   CHECK(!planes.empty());
