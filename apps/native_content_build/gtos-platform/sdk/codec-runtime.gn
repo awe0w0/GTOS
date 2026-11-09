@@ -33,7 +33,11 @@ source_set("native_threads") {
     "//v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc",
   ]
   include_dirs = [ "//v8" ]
-  defines = [ "V8_TARGET_OS_GTOS", "V8_TARGET_ARCH_IA32" ]
+  defines = [
+    "V8_HAVE_TARGET_OS",
+    "V8_TARGET_OS_GTOS",
+    "V8_TARGET_ARCH_IA32",
+  ]
   deps = [ ":native_libcpp_thread" ]
 }
 
