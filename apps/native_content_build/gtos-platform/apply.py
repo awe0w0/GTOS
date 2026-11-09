@@ -14,6 +14,14 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'v8/include/v8-profiler.h': '45fea61546186a64d2880ec67d779314471b7009a31f4371d2e6848164323c8e',
+    'v8/src/libsampler/sampler.cc': '820b7369a57081f84785d4bcaa13b7e9d796ed0c556ef1557b8fe1d7ba506535',
+    'v8/src/libsampler/sampler.h': 'c9da2e480aee8f7e9ec7f02db6a1d342f6115e6e786554989ea22391c9a7ba96',
+    'v8/src/profiler/cpu-profiler.cc': '55b6d006a1286003df0f03f057824c3dadd02683e07d5bd4c8220ffcd57e75cf',
+    'v8/src/profiler/tracing-cpu-profiler.cc': '017f30016edab2401a3ec0e0898542cab3e7b18734ede84adfe63cd9b0d0589b',
+    'v8/src/logging/log.cc': '48bc10532221f2301a37a8015db44dbd7636ebc3a68701ef38e7843f3845fde4',
+    'v8/src/inspector/v8-profiler-agent-impl.cc': '4db6678ad50265752e74d1c918a3a4c751209e13f58b86b7771b314d032bb315',
+    'third_party/blink/renderer/core/timing/profiler_group.cc': 'c17cfbdd64af7a59850a9bfa3657ccd4cf682f40d5054846d2edc63fe85016a6',
     'v8/src/compiler/turbofan-graph-visualizer.h': '2ea062db4022469e9fac4450f91715642337f9487b459104e2794fe6f1ded701',
     'v8/src/compiler/turbofan-graph-visualizer.cc': '3a6be8c85fbc2e2c222f9e7089b6f61c64ac68c6c9c654d356afe69e91bcf85b',
     'v8/src/compiler/pipeline.cc': '3442067d9f4831f8eba4b220df39318dbeb24bdabd1dfc6201fa494547d18d03',

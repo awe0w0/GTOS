@@ -1,0 +1,12 @@
+--- a/v8/src/profiler/cpu-profiler.cc
++++ b/v8/src/profiler/cpu-profiler.cc
+@@ -648,6 +648,9 @@ CpuProfilingResult CpuProfiler::StartProfiling(
+ CpuProfilingResult CpuProfiler::StartProfiling(
+     const char* title, CpuProfilingOptions options,
+     std::unique_ptr<DiscardedSamplesDelegate> delegate) {
++  if (!sampler::Sampler::IsSupported()) {
++    return {0, CpuProfilingStatus::kErrorUnsupportedPlatform};
++  }
+   CpuProfilingResult result =
+       profiles_->StartProfiling(title, std::move(options), std::move(delegate));
+ 

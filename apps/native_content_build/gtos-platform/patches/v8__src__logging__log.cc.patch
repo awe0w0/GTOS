@@ -1,0 +1,17 @@
+--- a/v8/src/logging/log.cc
++++ b/v8/src/logging/log.cc
+@@ -2431,11 +2431,13 @@ bool V8FileLogger::SetUp(Isolate* isolate) {
+   ticker_ = std::make_unique<Ticker>(isolate, v8_flags.prof_sampling_interval);
+   if (v8_flags.log) UpdateIsLogging(true);
+   timer_.Start();
+-  if (v8_flags.prof_cpp) {
++  if (v8_flags.prof_cpp && sampler::Sampler::IsSupported()) {
+     CHECK(v8_flags.log);
+     CHECK(is_logging());
+     profiler_ = std::make_unique<Profiler>(isolate);
+     profiler_->Engage();
++  } else if (v8_flags.prof_cpp) {
++    PrintF(stderr, "V8 CPU sampling is unavailable on this platform\n");
+   }
+   if (is_logging_) {
+     CHECK(logger()->AddListener(this));

@@ -1,0 +1,17 @@
+--- a/v8/src/libsampler/sampler.h
++++ b/v8/src/libsampler/sampler.h
+@@ -47,6 +47,14 @@ class V8_EXPORT_PRIVATE Sampler {
+   // for example buffer samples in a queue.
+   virtual void SampleStack(const v8::RegisterState& regs) = 0;
+ 
++  static constexpr bool IsSupported() {
++#if defined(V8_OS_GTOS)
++    return false;
++#else
++    return true;
++#endif
++  }
++
+   // Start and stop sampler.
+   void Start();
+   void Stop();

@@ -1,0 +1,13 @@
+--- a/third_party/blink/renderer/core/timing/profiler_group.cc
++++ b/third_party/blink/renderer/core/timing/profiler_group.cc
+@@ -227,6 +227,10 @@ Profiler* ProfilerGroup::CreateProfiler(ScriptState* script_state,
+       std::make_unique<DiscardedSamplesDelegate>(this, profiler_id));
+ 
+   switch (status) {
++    case v8::CpuProfilingStatus::kErrorUnsupportedPlatform:
++      exception_state.ThrowDOMException(DOMExceptionCode::kNotSupportedError,
++                                        "CPU sampling is unavailable on this platform");
++      return nullptr;
+     case v8::CpuProfilingStatus::kErrorTooManyProfilers: {
+       exception_state.ThrowTypeError(
+           "Reached maximum concurrent amount of profilers");

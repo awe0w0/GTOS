@@ -1,0 +1,19 @@
+--- a/v8/src/profiler/tracing-cpu-profiler.cc
++++ b/v8/src/profiler/tracing-cpu-profiler.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "src/profiler/tracing-cpu-profiler.h"
+ 
++#include "src/libsampler/sampler.h"
++
+ #include "src/execution/isolate.h"
+ #include "src/init/v8.h"
+ #include "src/profiler/cpu-profiler.h"
+@@ -85,6 +87,7 @@ void TracingCpuProfilerImpl::OnTraceDisabled() {
+ }
+ 
+ void TracingCpuProfilerImpl::StartProfiling() {
++  if (!sampler::Sampler::IsSupported()) return;
+   base::MutexGuard lock(&mutex_);
+   if (!profiling_enabled_ || profiler_) return;
+   int sampling_interval_us = 100;

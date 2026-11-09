@@ -24,6 +24,10 @@
 #include "tools/gtos_native_sdk/file-output.hpp"
 #include "v8/src/utils/output-stream.h"
 
+#ifdef GTOS_CONTENT_V8_SAMPLER_TEST
+#include "v8/src/libsampler/sampler.h"
+#endif
+
 namespace {
 
 int TestAbslThreadStorage() {
@@ -147,6 +151,27 @@ int TestFileInput(const char* path, const char* missing) {
     return 0;
 }
 
+#ifdef GTOS_CONTENT_V8_SAMPLER_TEST
+int TestV8Sampler() {
+    class ProbeSampler final : public v8::sampler::Sampler {
+      public:
+        ProbeSampler() : Sampler(nullptr) {}
+        void SampleStack(const v8::RegisterState&) override { ++samples; }
+        unsigned samples = 0;
+    };
+    if (v8::sampler::Sampler::IsSupported()) return 126;
+    ProbeSampler sampler;
+    for (int i = 0; i < 2; ++i) {
+        sampler.Start();
+        sampler.DoSample();
+        if (sampler.IsActive() || sampler.ShouldRecordSample() || sampler.samples)
+            return 127;
+        sampler.Stop();
+    }
+    return 0;
+}
+#endif
+
 }  // namespace
 
 int TestFileConsumers() {
@@ -216,6 +241,9 @@ int TestFileConsumers() {
     const auto snapshot = fcp::ReadFileToString(path);
     if (!snapshot.ok() || *snapshot != std::string_view("v8\0x", 4)) return 109;
     if (const int status = TestFileInput(path, missing)) return status;
+#ifdef GTOS_CONTENT_V8_SAMPLER_TEST
+    if (const int status = TestV8Sampler()) return status;
+#endif
 
     auto stream = iamf_tools::StreamBasedReadBitBuffer::Create(2);
     constexpr std::array<uint8_t, 1> first{0xab};

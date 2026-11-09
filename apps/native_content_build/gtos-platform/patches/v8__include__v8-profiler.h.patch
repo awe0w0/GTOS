@@ -1,0 +1,12 @@
+--- a/v8/include/v8-profiler.h
++++ b/v8/include/v8-profiler.h
+@@ -339,7 +339,8 @@ enum CpuProfilingLoggingMode {
+ enum class CpuProfilingStatus {
+   kStarted,
+   kAlreadyStarted,
+-  kErrorTooManyProfilers
++  kErrorTooManyProfilers,
++  kErrorUnsupportedPlatform
+ };
+ 
+ /**
