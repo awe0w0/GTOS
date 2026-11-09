@@ -347,7 +347,7 @@ static process::NativeSharedMemory nativeSharedMemory(frames);
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
 static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
-static bool AttachContentAssets(AdvancedTechnologyAttachment &disk) {
+static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writable) {
     if (!disk.ConfigureWaitClock(DiskWaitTicks, 500U) || !disk.Identify() ||
         disk.SectorCount() <= GTOS_CONTENT_VOLUME_FIRST_SECTOR) return false;
 
@@ -360,7 +360,7 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk) {
     if (!volume) return false;
     storage::FileStore::Info info;
     if (volume->store.Mount(&disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
-                            disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, true) == 0 &&
+                            disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable) == 0 &&
         volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
         info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) return true;
     if (volume->store.Mounted()) volume->store.Unmount();
@@ -2855,10 +2855,12 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     bool contentAssetsReady = false;
     if (BootOption(mbi, "content-assets")) {
         // Live boot must not probe any internal ATA device.
-        contentAssetsReady = !liveBoot && AttachContentAssets(contentDisk);
-        if (contentAssetsReady)
+        const bool writable = contentBoot && BootOption(mbi, "content-profile-write");
+        contentAssetsReady = !liveBoot && AttachContentAssets(contentDisk, writable);
+        if (contentAssetsReady) {
             printf("CONTENT ASSET VOLUME READY\n");
-        else
+            if (writable) printf("CONTENT ASSET VOLUME WRITABLE\n");
+        } else
             printf("CONTENT ASSET VOLUME REFUSED\n");
     }
     storage::SettingsStore settings(dataDisk);

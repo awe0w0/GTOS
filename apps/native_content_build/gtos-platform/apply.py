@@ -14,6 +14,11 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'sql/database.cc': 'db203da3ce869d05b737fa1503e48579bb3a98d7ec439292b56e2618fa1f3872',
+    'sql/vfs_wrapper.cc': 'd71dcccbd31583c5be9f935b1e6bd0c2fe1938919cf1dbd162ad520929b21fee',
+    'third_party/sqlite/src/amalgamation/sqlite3.c': 'ea161c3d769c912daae4333711b6ab2f8696c1a68f6bb2b26ef37c07df699f66',
+    'third_party/sqlite/BUILD.gn': 'e1a9aee1339606b6c449048d0e95fbca3d1ba78013a5069a74761fc213e62239',
+    'third_party/llvm-libc/src/src/locale/setlocale.cpp': '59bf8d962804098433065b0392eb8465aef63b0be8fa3e4b5487e90ec4a93698',
     'third_party/libc++/src/src/thread.cpp': '1a998bb19ddf1005203b53cfce97858cdbf2c9ec30da44695641e0f8a7617fe5',
     'third_party/libc++/src/src/future.cpp': 'd80ad8b23273a0966244ab6f6ac311287f02607b1d6932825ed8398974380be2',
     'services/network/public/cpp/content_security_policy/content_security_policy.cc': '24f4e0ab596ba249547cf69675e8181aefad59421b5991d047b8aa94f537c923',
@@ -306,6 +311,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/sqlite/vfs_gtos.cc': 'sqlite/vfs_gtos.cc',
     'base/rand_util_gtos.cc': 'base/rand_util_gtos.cc',
     'tools/gtos_native_sdk/file-output.hpp': 'sdk/native-file-output.hpp',
     'tools/gtos_native_sdk/file-output.cc': 'sdk/native-file-output.cc',

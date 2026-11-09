@@ -25,6 +25,9 @@ int TestContentPolicy();
 #if defined(GTOS_CONTENT_LIBCPP_THREAD_TEST)
 int TestLibcppThread();
 #endif
+#if defined(GTOS_CONTENT_SQLITE_TEST)
+int TestSqliteVfs();
+#endif
 
 namespace {
 
@@ -169,13 +172,18 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
     constexpr unsigned char prefix[] = {'<', '!', 'd', 'o', 'c', 't', 'y', 'p', 'e'};
     if (page <= 0 || !ReadMatches(page, 0, prefix) || Close(page)) return 3;
 
-    // No format or write is allowed from a consumer of this boot volume.
+#if defined(GTOS_CONTENT_SQLITE_TEST)
+    if (Open(GTOS_CONTENT_ASSET_DIRECTORY "/missing", GTOS_FILE_READ) != -2) return 4;
+    Say("GTOS CONTENT ASSETS PASS\n");
+#else
+    // No format or write is allowed from a consumer of the read-only boot volume.
     constexpr int kReadOnly = -30;
     if (Open(icu, GTOS_FILE_WRITE) != kReadOnly ||
         Open(GTOS_CONTENT_ASSET_DIRECTORY "/missing", GTOS_FILE_READ) != -2 ||
         Open(GTOS_CONTENT_ASSET_DIRECTORY "/new",
              GTOS_FILE_WRITE | GTOS_FILE_CREATE) != kReadOnly) return 4;
     Say("GTOS CONTENT ASSETS READONLY PASS\n");
+#endif
 #if defined(GTOS_CONTENT_TFLITE_FILE_TEST)
     if (const int status = TestModelCopies()) return status;
     Say("GTOS TFLITE FILE COPY PASS\n");
@@ -199,6 +207,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_LIBCPP_THREAD_TEST)
     if (const int status = TestLibcppThread()) return status;
     Say("GTOS LIBCPP THREAD PASS\n");
+#endif
+#if defined(GTOS_CONTENT_SQLITE_TEST)
+    if (const int status = TestSqliteVfs()) return status;
+    Say("GTOS SQLITE VFS PASS\n");
 #endif
     return 37;
 }

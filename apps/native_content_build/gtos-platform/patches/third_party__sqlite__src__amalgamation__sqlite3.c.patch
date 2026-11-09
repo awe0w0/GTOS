@@ -1,0 +1,11 @@
+--- a/third_party/sqlite/src/amalgamation/sqlite3.c
++++ b/third_party/sqlite/src/amalgamation/sqlite3.c
+@@ -18403,7 +18403,7 @@ SQLITE_PRIVATE int sqlite3PCacheIsDirty(PCache *pCache);
+ #if !SQLITE_THREADSAFE
+ # define SQLITE_MUTEX_OMIT
+ #endif
+-#if SQLITE_THREADSAFE && !defined(SQLITE_MUTEX_NOOP)
++#if SQLITE_THREADSAFE && !defined(SQLITE_MUTEX_NOOP) && !defined(SQLITE_MUTEX_PTHREADS)
+ #  if SQLITE_OS_UNIX
+ #    define SQLITE_MUTEX_PTHREADS
+ #  elif SQLITE_OS_WIN

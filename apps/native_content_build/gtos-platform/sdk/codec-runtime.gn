@@ -48,9 +48,12 @@ source_set("native_cxx_abi") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
     "//third_party/libc++/src/src/exception.cpp",
+    "//third_party/libc++abi/src/src/cxa_aux_runtime.cpp",
     "//third_party/libc++abi/src/src/cxa_default_handlers.cpp",
     "//third_party/libc++abi/src/src/cxa_handlers.cpp",
     "//third_party/libc++abi/src/src/cxa_noexception.cpp",
+    "//third_party/libc++abi/src/src/private_typeinfo.cpp",
+    "//third_party/libc++abi/src/src/stdlib_typeinfo.cpp",
   ]
   include_dirs = [
     "//third_party/libc++/src/src",
@@ -61,6 +64,14 @@ source_set("native_cxx_abi") {
     "LIBCXX_BUILDING_LIBCXXABI",
     "_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS",
   ]
+  configs -= [
+    "//build/config/compiler:chromium_code",
+    "//build/config/compiler:no_rtti",
+  ]
+  configs += [
+    "//build/config/compiler:no_chromium_code",
+    "//build/config/compiler:rtti",
+  ]
 }
 
 source_set("native_file_output") {
@@ -68,6 +79,17 @@ source_set("native_file_output") {
   sources = [
     "//tools/gtos_native_sdk/file-output.cc",
     "//tools/gtos_native_sdk/file-output.hpp",
+  ]
+}
+
+source_set("native_locale") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [ "//third_party/llvm-libc/src/src/locale/setlocale.cpp" ]
+  include_dirs = [ "//third_party/llvm-libc/src" ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+    "LIBC_FULL_BUILD=1",
   ]
 }
 

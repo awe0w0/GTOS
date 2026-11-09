@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Pinned LLVM libc providers required by the actual IA32 media link.
+# Pinned LLVM libc providers used by media and the native SQLite backend.
 gtos_ffmpeg_libc_sources = [
   "//third_party/llvm-libc/src/src/fenv/feraiseexcept.cpp",
   "//third_party/llvm-libc/src/src/math/generic/acos.cpp",
@@ -14,23 +14,29 @@ gtos_ffmpeg_libc_sources = [
   "//third_party/llvm-libc/src/src/math/generic/copysign.cpp",
   "//third_party/llvm-libc/src/src/math/generic/cos.cpp",
   "//third_party/llvm-libc/src/src/math/generic/exp.cpp",
+  "//third_party/llvm-libc/src/src/math/generic/expf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/frexp.cpp",
   "//third_party/llvm-libc/src/src/math/generic/hypot.cpp",
   "//third_party/llvm-libc/src/src/math/generic/log.cpp",
   "//third_party/llvm-libc/src/src/math/generic/log10.cpp",
   "//third_party/llvm-libc/src/src/math/generic/lrintf.cpp",
+  "//third_party/llvm-libc/src/src/math/generic/modf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/rint.cpp",
   "//third_party/llvm-libc/src/src/math/generic/round.cpp",
   "//third_party/llvm-libc/src/src/math/generic/roundf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/sin.cpp",
   "//third_party/llvm-libc/src/src/math/generic/sqrtf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/tan.cpp",
+  "//third_party/llvm-libc/src/src/math/generic/tanhf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/truncf.cpp",
   "//third_party/llvm-libc/src/src/stdlib/atoi.cpp",
   "//third_party/llvm-libc/src/src/stdlib/bsearch.cpp",
   "//third_party/llvm-libc/src/src/stdlib/llabs.cpp",
   "//third_party/llvm-libc/src/src/stdlib/strtoull.cpp",
+  "//third_party/llvm-libc/src/src/string/strcat.cpp",
   "//third_party/llvm-libc/src/src/string/strcspn.cpp",
+  "//third_party/llvm-libc/src/src/string/strncat.cpp",
+  "//third_party/llvm-libc/src/src/string/strncpy.cpp",
   "//third_party/llvm-libc/src/src/string/strrchr.cpp",
   "//third_party/llvm-libc/src/src/string/strspn.cpp",
   "//third_party/llvm-libc/src/src/time/gmtime_r.cpp",

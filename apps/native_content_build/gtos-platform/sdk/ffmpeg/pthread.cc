@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #include "tools/gtos_native_sdk/native-thread.h"
+#include "tools/gtos_native_sdk/native-services.h"
 
 static_assert(sizeof(pthread_mutex_t) == 8 && alignof(pthread_mutex_t) == 4);
 static_assert(sizeof(pthread_cond_t) == 8 && alignof(pthread_cond_t) == 4);
@@ -60,6 +61,14 @@ int pthread_join(pthread_t thread, void** result) {
   return gtos::native::JoinThread(thread, result);
 }
 
+pthread_t pthread_self() {
+  return gtos::native::CurrentProcessInfo().thread_id;
+}
+
+int pthread_equal(pthread_t left, pthread_t right) {
+  return left == right;
+}
+
 int pthread_mutexattr_init(pthread_mutexattr_t* attr) {
   if (!attr)
     return EINVAL;
@@ -94,6 +103,12 @@ int pthread_mutex_destroy(pthread_mutex_t* mutex) {
 
 int pthread_mutex_lock(pthread_mutex_t* mutex) {
   return std::__libcpp_mutex_lock(mutex);
+}
+
+int pthread_mutex_trylock(pthread_mutex_t* mutex) {
+  if (!mutex)
+    return EINVAL;
+  return std::__libcpp_mutex_trylock(mutex) ? 0 : EBUSY;
 }
 
 int pthread_mutex_unlock(pthread_mutex_t* mutex) {

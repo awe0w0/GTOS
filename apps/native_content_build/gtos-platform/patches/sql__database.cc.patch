@@ -1,0 +1,21 @@
+--- a/sql/database.cc
++++ b/sql/database.cc
+@@ -2731,15 +2731,12 @@ bool Database::FullIntegrityCheck(std::vector<std::string>* messages) {
+ }
+ 
+ bool Database::UseWALMode() const {
+-#if BUILDFLAG(IS_FUCHSIA)
+-  // WAL mode is only enabled on Fuchsia for databases with exclusive
+-  // locking, because this case does not require shared memory support.
+-  // At the time this was implemented (May 2020), Fuchsia's shared
+-  // memory support was insufficient for SQLite's needs.
++#if BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
++  // Exclusive locking allows SQLite to keep the WAL index in memory.
+   return options_.wal_mode_ && options_.exclusive_locking_;
+ #else
+   return options_.wal_mode_;
+-#endif  // BUILDFLAG(IS_FUCHSIA)
++#endif
+ }
+ 
+ bool Database::CheckpointDatabase(bool truncate) {

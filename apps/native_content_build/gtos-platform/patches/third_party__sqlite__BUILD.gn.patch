@@ -1,0 +1,37 @@
+--- a/third_party/sqlite/BUILD.gn
++++ b/third_party/sqlite/BUILD.gn
+@@ -33,6 +33,10 @@ config("common_sqlite3_compile_options") {
+   # source when the amalgamation is generated. These are the same for all
+   # platforms.
+   defines = sqlite_common_configuration_flags
++  if (is_gtos) {
++    # Use the upstream heap path for variable-sized temporary allocations.
++    defines -= [ "SQLITE_USE_ALLOCA" ]
++  }
+ 
+   # The flags not baked in, but common for all platforms.
+   defines += [
+@@ -260,6 +264,23 @@ component("chromium_sqlite3") {
+   }
+ 
+   deps = [ "//third_party/icu" ]
++  if (is_gtos) {
++    sources += [ "vfs_gtos.cc" ]
++    defines += [
++      "SQLITE_OS_OTHER=1",
++      "SQLITE_MUTEX_PTHREADS=1",
++      "SQLITE_HOMEGROWN_RECURSIVE_MUTEX=1",
++      "SQLITE_OMIT_LOCALTIME",
++    ]
++    include_dirs += [ "//build/config/gtos/runtime/ffmpeg" ]
++    cflags_c = [ "-DUCHAR_TYPE=uint16_t" ]
++    deps += [
++      "//build/config/gtos/runtime:ffmpeg_support",
++      "//build/config/gtos/runtime:native_locale",
++      "//build/config/gtos/runtime:native_pthread",
++      "//third_party/boringssl",
++    ]
++  }
+   check_includes_strict = CHECK_INCLUDES_STRICT_PUBLIC_INCLUDES_PRIVATE
+ }
+ 
