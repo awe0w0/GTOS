@@ -18,7 +18,40 @@
      if (is_win) {
        args += [ "--driver-mode=cl" ]
      } else {
-@@ -7728,6 +7739,18 @@ v8_component("v8_libbase") {
+@@ -6197,6 +6208,10 @@ v8_cluster_source_set("v8_compiler_for_mksnapshot_source_set") {
+     ":v8_shared_internal_headers",
+   ]
+ 
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++  }
++
+   if (is_debug && !v8_optimized_debug && v8_enable_fast_mksnapshot) {
+     # The :no_optimize config is added to v8_add_configs in v8.gni.
+     remove_configs = [ "//build/config/compiler:no_optimize" ]
+@@ -6244,6 +6259,10 @@ v8_cluster_source_set("v8_compiler") {
+     ":v8_shared_internal_headers",
+   ]
+ 
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++  }
++
+   configs = [ ":internal_config" ]
+ }
+ 
+@@ -7283,6 +7302,10 @@ v8_cluster_source_set("v8_base_without_compiler") {
+     "//third_party/highway:libhwy",
+   ]
+ 
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++  }
++
+   if (v8_enable_generated_code_validator) {
+     sources += [ "src/sandbox/generated-code-validator.cc" ]
+     if (v8_current_cpu == "x64") {
+@@ -7728,6 +7751,18 @@ v8_component("v8_libbase") {
      defines = [ "BUILDING_V8_BASE_SHARED" ]
    }
  

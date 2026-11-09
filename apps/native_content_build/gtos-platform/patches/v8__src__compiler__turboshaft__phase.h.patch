@@ -1,0 +1,11 @@
+--- a/v8/src/compiler/turboshaft/phase.h
++++ b/v8/src/compiler/turboshaft/phase.h
+@@ -630,7 +630,7 @@ class V8_EXPORT_PRIVATE PipelineData {
+ 
+ void PrintTurboshaftGraph(PipelineData* data, CodeTracer* code_tracer,
+                           const char* phase_name);
+-void PrintTurboshaftGraphForTurbolizer(std::ofstream& stream,
++void PrintTurboshaftGraphForTurbolizer(std::ostream& stream,
+                                        const Graph& graph,
+                                        const char* phase_name,
+                                        NodeOriginTable* node_origins,

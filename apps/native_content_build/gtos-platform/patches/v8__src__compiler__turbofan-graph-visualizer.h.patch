@@ -1,0 +1,34 @@
+--- a/v8/src/compiler/turbofan-graph-visualizer.h
++++ b/v8/src/compiler/turbofan-graph-visualizer.h
+@@ -17,6 +17,10 @@
+ #include "src/handles/handles.h"
+ #include "src/objects/code.h"
+ 
++#if defined(V8_OS_GTOS)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#endif
++
+ namespace v8 {
+ namespace internal {
+ 
+@@ -47,12 +51,18 @@ class Schedule;
+ class SourcePositionTable;
+ class Type;
+ 
+-struct V8_EXPORT_PRIVATE TurboJsonFile : public std::ofstream {
++#if defined(V8_OS_GTOS)
++using TurboTraceFile = gtos::native::FileOutput;
++#else
++using TurboTraceFile = std::ofstream;
++#endif
++
++struct V8_EXPORT_PRIVATE TurboJsonFile : public TurboTraceFile {
+   TurboJsonFile(OptimizedCompilationInfo* info, std::ios_base::openmode mode);
+   ~TurboJsonFile() override;
+ };
+ 
+-struct TurboCfgFile : public std::ofstream {
++struct TurboCfgFile : public TurboTraceFile {
+   explicit TurboCfgFile(Isolate* isolate = nullptr);
+   ~TurboCfgFile() override;
+ };

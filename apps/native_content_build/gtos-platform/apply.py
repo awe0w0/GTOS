@@ -14,6 +14,17 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'v8/src/compiler/turbofan-graph-visualizer.h': '2ea062db4022469e9fac4450f91715642337f9487b459104e2794fe6f1ded701',
+    'v8/src/compiler/turbofan-graph-visualizer.cc': '3a6be8c85fbc2e2c222f9e7089b6f61c64ac68c6c9c654d356afe69e91bcf85b',
+    'v8/src/compiler/pipeline.cc': '3442067d9f4831f8eba4b220df39318dbeb24bdabd1dfc6201fa494547d18d03',
+    'v8/src/compiler/turboshaft/graph-visualizer.cc': 'c4e6302783c1e32d5749f031dc8a341f51a7271feadab04b4d134597023ae1a5',
+    'v8/src/compiler/turboshaft/graph-visualizer.h': 'f29d85496078b2ae982c99dbd5cd68d9253cf26bbc05399587aad12c666208f9',
+    'v8/src/compiler/turboshaft/phase.cc': '6a08581f1cbacfdfb3fadb7dcda94571e6279b59e77f7b8cebac59f75cd7442c',
+    'v8/src/compiler/turboshaft/phase.h': '2a43f994edbefaa5057b4a4dccaf3350e6edaea18dda5841f6449ed78a93e3ee',
+    'v8/src/utils/output-stream.h': 'dbaab33673ad42f09534547e496b7f7bb61deafdc1259342a4608faf083f81f0',
+    'v8/src/init/v8.cc': '0338198c1e3ea35cb04970e9a23fc2d297f13c3d2a60d70a213ba0d588638a39',
+    'v8/src/execution/isolate.cc': 'ba3f4babb60cb76c6a5da1c6de04f6c172a41e39fcc3b3603ba527773a822110',
+    'v8/src/builtins/builtins-effects-analyzer.cc': 'e834889b9e866db4c95eb1c40d5b72292238a00a306988fb283de50bfbde5edb',
     'media/filters/BUILD.gn': '553c20d3bcf6d26f26a99ea715c2b27fd03d38f17ef4b533a7865a8aaaf4d745',
     'media/filters/symphonia_decoder_bridge.rs': '5509e4d0f5702c7e25e4a31c72e61c9878dd87282140031e144a6c443026552a',
     'third_party/rust/incremental_font_transfer/v0_7/BUILD.gn': '8f87c166f55cb70b77c96c0fb692cfde332c6dfd050f4542a082f045af23df41',

@@ -18,6 +18,7 @@ class FileOutput : private std::streambuf, public std::ostream {
   explicit FileOutput(const char* path);
   FileOutput(const char* path, std::ios_base::openmode mode);
   ~FileOutput() override;
+  bool is_open() const { return file_ != nullptr; }
   void close();
 
  private:

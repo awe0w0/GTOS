@@ -1,0 +1,11 @@
+--- a/v8/src/compiler/turboshaft/phase.cc
++++ b/v8/src/compiler/turboshaft/phase.cc
+@@ -60,7 +60,7 @@ void PrintTurboshaftGraph(PipelineData* data, CodeTracer* code_tracer,
+   }
+ }
+ 
+-void PrintTurboshaftGraphForTurbolizer(std::ofstream& stream,
++void PrintTurboshaftGraphForTurbolizer(std::ostream& stream,
+                                        const Graph& graph,
+                                        const char* phase_name,
+                                        NodeOriginTable* node_origins,

@@ -1,0 +1,25 @@
+--- a/v8/src/builtins/builtins-effects-analyzer.cc
++++ b/v8/src/builtins/builtins-effects-analyzer.cc
+@@ -8,6 +8,10 @@
+ 
+ #include "src/execution/isolate.h"
+ 
++#if defined(V8_OS_GTOS)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#endif
++
+ namespace v8::internal {
+ 
+ // static
+@@ -95,7 +99,11 @@ void BuiltinsEffectsAnalyzer::Write(const char* file) {
+   CHECK(is_finalized_);
+   CHECK_NOT_NULL(file);
+ 
++#if defined(V8_OS_GTOS)
++  gtos::native::FileOutput out(file);
++#else
+   std::ofstream out(file, std::ios::out);
++#endif
+ 
+   out << "// Copyright 2025 the V8 project authors. All rights reserved.\n"
+       << "// Use of this source code is governed by a BSD-style license "

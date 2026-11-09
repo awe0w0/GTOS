@@ -1,0 +1,29 @@
+--- a/v8/src/init/v8.cc
++++ b/v8/src/init/v8.cc
+@@ -4,8 +4,6 @@
+ 
+ #include "src/init/v8.h"
+ 
+-#include <fstream>
+-
+ #include "include/cppgc/platform.h"
+ #include "include/v8-sandbox.h"
+ #include "src/api/api.h"
+@@ -36,6 +34,7 @@
+ #include "src/tracing/code-data-source.h"
+ #endif  // defined(V8_USE_PERFETTO)
+ #include "src/tracing/tracing-category-observer.h"
++#include "src/utils/output-stream.h"
+ 
+ #if V8_ENABLE_WEBASSEMBLY
+ #include "src/wasm/wasm-engine.h"
+@@ -197,8 +196,7 @@ void V8::Initialize() {
+ 
+   if (v8_flags.trace_turbo) {
+     // Create an empty file shared by the process (e.g. the wasm engine).
+-    std::ofstream(Isolate::GetTurboCfgFileName(nullptr).c_str(),
+-                  std::ios_base::trunc);
++    FileOutputStream{Isolate::GetTurboCfgFileName(nullptr).c_str()};
+   }
+ 
+   // The --jitless and --interpreted-frames-native-stack flags are incompatible

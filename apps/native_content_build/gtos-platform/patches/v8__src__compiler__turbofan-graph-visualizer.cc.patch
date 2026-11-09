@@ -1,0 +1,17 @@
+--- a/v8/src/compiler/turbofan-graph-visualizer.cc
++++ b/v8/src/compiler/turbofan-graph-visualizer.cc
+@@ -49,12 +49,12 @@ const char* get_cached_trace_turbo_filename(OptimizedCompilationInfo* info) {
+ 
+ TurboJsonFile::TurboJsonFile(OptimizedCompilationInfo* info,
+                              std::ios_base::openmode mode)
+-    : std::ofstream(get_cached_trace_turbo_filename(info), mode) {}
++    : TurboTraceFile(get_cached_trace_turbo_filename(info), mode) {}
+ 
+ TurboJsonFile::~TurboJsonFile() { flush(); }
+ 
+ TurboCfgFile::TurboCfgFile(Isolate* isolate)
+-    : std::ofstream(Isolate::GetTurboCfgFileName(isolate).c_str(),
++    : TurboTraceFile(Isolate::GetTurboCfgFileName(isolate).c_str(),
+                     std::ios_base::app) {}
+ 
+ TurboCfgFile::~TurboCfgFile() { flush(); }

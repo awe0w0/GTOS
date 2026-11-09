@@ -20,6 +20,7 @@
 #include "iamf/common/write_bit_buffer.h"
 #include "mkvmuxer/mkvmuxerutil.h"
 #include "tools/gtos_native_sdk/file-output.hpp"
+#include "v8/src/utils/output-stream.h"
 
 namespace {
 
@@ -173,6 +174,17 @@ int TestFileConsumers() {
     }
     const auto truncated = fcp::ReadFileToString(path);
     if (!truncated.ok() || *truncated != "next") return 104;
+    {
+        v8::internal::FileOutputStream snapshot(path);
+        char chunk[] = {'v', '8', '\0', 'x'};
+        if (!snapshot.IsOpen() ||
+            snapshot.WriteAsciiChunk(chunk, sizeof(chunk)) != v8::OutputStream::kContinue)
+            return 107;
+        snapshot.EndOfStream();
+        if (snapshot.IsOpen()) return 108;
+    }
+    const auto snapshot = fcp::ReadFileToString(path);
+    if (!snapshot.ok() || *snapshot != std::string_view("v8\0x", 4)) return 109;
 
     auto stream = iamf_tools::StreamBasedReadBitBuffer::Create(2);
     constexpr std::array<uint8_t, 1> first{0xab};
