@@ -30,6 +30,37 @@ source_set("native_threads") {
     "//tools/gtos_native_sdk/native-thread.cc",
     "//tools/gtos_native_sdk/native-thread.h",
   ]
+  deps = [ ":native_libcpp_thread" ]
+}
+
+source_set("native_libcpp_thread") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//third_party/libc++/src/src/future.cpp",
+    "//third_party/libc++/src/src/thread.cpp",
+  ]
+  # The upstream ABI pragma region also lists attributes these TUs do not use.
+  cflags_cc = [ "-Wno-pragma-clang-attribute" ]
+  deps = [ ":native_cxx_abi" ]
+}
+
+source_set("native_cxx_abi") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//third_party/libc++/src/src/exception.cpp",
+    "//third_party/libc++abi/src/src/cxa_default_handlers.cpp",
+    "//third_party/libc++abi/src/src/cxa_handlers.cpp",
+    "//third_party/libc++abi/src/src/cxa_noexception.cpp",
+  ]
+  include_dirs = [
+    "//third_party/libc++/src/src",
+    "//third_party/libc++abi/src/include",
+    "//third_party/libunwind/src/include",
+  ]
+  defines = [
+    "LIBCXX_BUILDING_LIBCXXABI",
+    "_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS",
+  ]
 }
 
 source_set("native_file_output") {

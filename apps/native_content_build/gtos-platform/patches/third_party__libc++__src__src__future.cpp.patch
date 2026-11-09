@@ -1,0 +1,11 @@
+--- a/third_party/libc++/src/src/future.cpp
++++ b/third_party/libc++/src/src/future.cpp
+@@ -50,7 +50,7 @@
+     constexpr explicit AvoidDestroyingFutureCategory() : future_error_category() {}
+     ~AvoidDestroyingFutureCategory() {}
+   };
+-  constinit static AvoidDestroyingFutureCategory helper;
++  [[clang::no_destroy]] constinit static AvoidDestroyingFutureCategory helper;
+   return helper.future_error_category;
+ }
+ 

@@ -11,11 +11,81 @@
 #include <process/vm_abi.h>
 
 #include <array>
-#include <thread>
+#include <cstddef>
+#include <cstdlib>
 
 #include "tools/gtos_native_sdk/native-services.h"
 
 extern "C" [[noreturn]] void gtos_native_exit_with_tls(unsigned) noexcept;
+extern "C" void* __emutls_get_address(void*);
+extern "C" int __cxa_thread_atexit(void (*)(void*), void*, void*) noexcept;
+extern "C" void* __dso_handle;
+
+namespace {
+
+struct TlsValue {
+  void* pointer;
+  void (*destroy)(void*);
+};
+
+struct TlsKey {
+  uintptr_t size;
+  uintptr_t alignment;
+  uintptr_t index;
+  const void* initial;
+  void (*destroy)(void*);
+};
+static_assert(sizeof(uintptr_t) == 4 && offsetof(TlsKey, destroy) == 16,
+              "GTOS uses the IA32 compiler emutls control prefix");
+
+TlsValue& TlsCell(TlsKey* key) {
+  return *static_cast<TlsValue*>(__emutls_get_address(key));
+}
+
+void DestroyTlsCell(void* object) {
+  auto& cell = *static_cast<TlsValue*>(object);
+  const auto value = cell;
+  cell = {};
+  if (value.pointer) {
+    value.destroy(value.pointer);
+  }
+}
+
+}  // namespace
+
+extern "C" int gtos_libcpp_tls_create(uint32_t* key, void (*destroy)(void*)) {
+  if (!key) {
+    return EINVAL;
+  }
+  // libc++ retains its TLS key for the life of the process.
+  auto* control = static_cast<TlsKey*>(std::malloc(sizeof(TlsKey)));
+  if (!control) {
+    return ENOMEM;
+  }
+  *control = {sizeof(TlsValue), alignof(TlsValue), 0, nullptr, destroy};
+  *key = reinterpret_cast<uintptr_t>(control);
+  return 0;
+}
+
+extern "C" void* gtos_libcpp_tls_get(uint32_t key) {
+  return key ? TlsCell(reinterpret_cast<TlsKey*>(key)).pointer : nullptr;
+}
+
+extern "C" int gtos_libcpp_tls_set(uint32_t key, void* value) {
+  if (!key) {
+    return EINVAL;
+  }
+  auto* control = reinterpret_cast<TlsKey*>(key);
+  auto& cell = TlsCell(control);
+  if (value && control->destroy && !cell.destroy) {
+    if (__cxa_thread_atexit(DestroyTlsCell, &cell, __dso_handle) != 0) {
+      return ENOMEM;
+    }
+    cell.destroy = control->destroy;
+  }
+  cell.pointer = value;
+  return 0;
+}
 
 namespace gtos::native {
 namespace {
@@ -267,7 +337,3 @@ int __libcpp_thread_detach(__libcpp_thread_t* thread) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-void std::this_thread::sleep_for(const std::chrono::nanoseconds& duration) {
-  std::__libcpp_thread_sleep_for(duration);
-}

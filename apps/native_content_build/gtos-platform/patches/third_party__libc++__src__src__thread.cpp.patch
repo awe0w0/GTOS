@@ -1,0 +1,26 @@
+--- a/third_party/libc++/src/src/thread.cpp
++++ b/third_party/libc++/src/src/thread.cpp
+@@ -17,7 +17,11 @@
+-#if __has_include(<unistd.h>)
++#if !defined(__GTOS__) && __has_include(<unistd.h>)
+ #  include <unistd.h> // for sysconf
+ #endif
+ 
++#if defined(__GTOS__)
++#  include "tools/gtos_native_sdk/native-services.h"
++#endif
++
+ #if defined(__NetBSD__)
+ #  pragma weak pthread_create // Do not create libpthread dependency
+ #endif
+@@ -66,7 +70,9 @@
+ }
+ 
+ unsigned thread::hardware_concurrency() noexcept {
+-#if defined(_SC_NPROCESSORS_ONLN)
++#if defined(__GTOS__)
++  return gtos::native::CurrentProcessInfo().scheduler_cpu_count;
++#elif defined(_SC_NPROCESSORS_ONLN)
+   long result = sysconf(_SC_NPROCESSORS_ONLN);
+   // sysconf returns -1 if the name is invalid, the option does not exist or
+   // does not have a definite limit.

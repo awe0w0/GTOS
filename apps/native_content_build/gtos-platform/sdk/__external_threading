@@ -10,6 +10,12 @@
 #include <ctime>
 #include <stdint.h>
 
+extern "C" {
+int gtos_libcpp_tls_create(uint32_t*, void (*)(void*));
+void* gtos_libcpp_tls_get(uint32_t);
+int gtos_libcpp_tls_set(uint32_t, void*);
+}
+
 // Preserve the ABI of the existing native libc++ thread-core provider.
 // This header supplies declarations, not a new threading implementation.
 // Native linking and guest qualification remain required.
@@ -61,9 +67,17 @@ void __libcpp_thread_sleep_for(const chrono::nanoseconds&);
 
 using __libcpp_tls_key = uint32_t;
 #define _LIBCPP_TLS_DESTRUCTOR_CC
-int __libcpp_tls_create(__libcpp_tls_key*, void (*)(void*));
-void* __libcpp_tls_get(__libcpp_tls_key);
-int __libcpp_tls_set(__libcpp_tls_key, void*);
+inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tls_create(
+    __libcpp_tls_key* key, void (*destroy)(void*)) {
+  return ::gtos_libcpp_tls_create(key, destroy);
+}
+inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_tls_get(__libcpp_tls_key key) {
+  return ::gtos_libcpp_tls_get(key);
+}
+inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key key,
+                                                void* value) {
+  return ::gtos_libcpp_tls_set(key, value);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 #endif

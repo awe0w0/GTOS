@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/libc++/src/src/thread.cpp': '1a998bb19ddf1005203b53cfce97858cdbf2c9ec30da44695641e0f8a7617fe5',
+    'third_party/libc++/src/src/future.cpp': 'd80ad8b23273a0966244ab6f6ac311287f02607b1d6932825ed8398974380be2',
     'services/network/public/cpp/content_security_policy/content_security_policy.cc': '24f4e0ab596ba249547cf69675e8181aefad59421b5991d047b8aa94f537c923',
     'services/network/public/cpp/permissions_policy/permissions_policy_features_bitset.cc': '23e4d107c1d3dc5f11209a2373d7d76afc22a649da1052043b35847924a4c316',
     'third_party/angle/src/common/FixedVector.h': 'ff0f3938df85fc1f6bc414e88b0398267b213127531d481546eef13ba9db26e3',

@@ -22,6 +22,9 @@ int TestWebRtcAudioIsa();
 #if defined(GTOS_CONTENT_POLICY_TEST)
 int TestContentPolicy();
 #endif
+#if defined(GTOS_CONTENT_LIBCPP_THREAD_TEST)
+int TestLibcppThread();
+#endif
 
 namespace {
 
@@ -192,6 +195,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_POLICY_TEST)
     if (const int status = TestContentPolicy()) return status;
     Say("GTOS CONTENT POLICY PASS\n");
+#endif
+#if defined(GTOS_CONTENT_LIBCPP_THREAD_TEST)
+    if (const int status = TestLibcppThread()) return status;
+    Say("GTOS LIBCPP THREAD PASS\n");
 #endif
     return 37;
 }
