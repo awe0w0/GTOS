@@ -11,3 +11,14 @@
    crate_root = "opentype/format_check.rs"
    sources = [ crate_root ]
    cpp_api_from_rust = {
+@@ -19,6 +23,10 @@ rust_static_library("font_format") {
+ }
+ 
+ rust_static_library("ift_patcher_rs") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   crate_root = "ift/ift_patcher.rs"
+   sources = [ crate_root ]
+   cpp_api_from_rust = {

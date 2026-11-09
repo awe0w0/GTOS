@@ -1,0 +1,11 @@
+--- a/third_party/rust/jxl/v0_7/wrapper/lib.rs
++++ b/third_party/rust/jxl/v0_7/wrapper/lib.rs
+@@ -4,6 +4,8 @@
+ 
+ //! Minimal C++ wrapper for jxl-rs decoder.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use jxl::api::{
+     check_signature, Endianness, JxlBasicInfo, JxlColorEncoding, JxlColorProfile, JxlColorType,
+     JxlDataFormat, JxlDecoderInner, JxlDecoderOptions, JxlOutputBuffer, JxlParallelRunner,

@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/blink/renderer/platform/fonts/ift/ift_patcher.rs': 'f4751780c29c81f5ef137cb4839d0884953992a1ebc01ddcf28b473de918d547',
+    'third_party/rust/jxl/v0_7/wrapper/BUILD.gn': 'e2bf9f6b40031b2bb9df059ebed383f4750449631304adb558c503dd96bd798e',
+    'third_party/rust/jxl/v0_7/wrapper/lib.rs': '84f1906b126e73670d10ac886fe06bcc4aaa9e4b5bdc83e4194c984b46a11d6d',
     'third_party/tflite_support/BUILD.gn': '28d2c16ec25adf6e333b3226e1c1409bf6b9d99230a1f0787d99466efd8af2e1',
     'third_party/tflite_support/src/tensorflow_lite_support/cc/utils/common_utils.cc': 'ba96c3d968c0cf7c0deec4367fbe99b39221d2d7f7cc2fc9d85c173da62919a3',
     'third_party/tflite_support/src/tensorflow_lite_support/cc/task/core/task_utils.cc': 'ddb387c15b1b8800b3410b155428e9ae0c206893111375da590b21053eb54db4',

@@ -1,0 +1,11 @@
+--- a/third_party/blink/renderer/platform/fonts/ift/ift_patcher.rs
++++ b/third_party/blink/renderer/platform/fonts/ift/ift_patcher.rs
+@@ -4,6 +4,8 @@
+ 
+ // Exported as "third_party/blink/renderer/platform/fonts/ift_patcher_rs.h"
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use incremental_font_transfer::font_patch::PatchingError;
+ use incremental_font_transfer::patch_group::{PatchGroup, UrlStatus};
+ use incremental_font_transfer::patchmap::{DesignSpace, PatchUrl, SubsetDefinition};
