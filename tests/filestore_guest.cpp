@@ -156,6 +156,22 @@ namespace {
         Require(files.ReadFile(11,a,copy,31)==31&&files.ReadFile(11,b,copy+31,1)==1&&copy[31]==data[0],"independent offsets");
         Require(files.WriteFile(11,a,"BAD",3)==LFS_ERR_BADF&&files.TruncateFile(11,a,0)==LFS_ERR_BADF,"read only descriptor permission");
         Require(files.Close(11,a)==0&&files.Close(11,b)==0,"independent close");
+        const uint32_t locked=FileStore::ReadWrite|FileStore::Locked;
+        Require(files.Open(11,"/browser/session.bin",locked|FileStore::Truncate)==LFS_ERR_INVAL,
+                "locked open rejects truncation");
+        int32_t lock=files.Open(11,"/browser/session.bin",locked);
+        Require(lock>0&&files.Size(11,lock)==8197,"locked file keeps content");
+        Require(files.Open(12,"browser//session.bin",locked)==FileStore::Busy&&files.OpenCount()==1,
+                "different owner and alias contend for the same file");
+        int32_t duplicate=files.Duplicate(11,lock);
+        Require(duplicate>0&&files.Close(11,lock)==0
+                &&files.Open(12,"/browser/session.bin",locked)==FileStore::Busy,
+                "duplicate retains lock after original close");
+        auto reaped=files.Reclaim(11);
+        Require(reaped.released==1&&reaped.error==0&&!files.OpenCount(),"owner reap releases lock");
+        lock=files.Open(12,"/browser/session.bin",locked);
+        Require(lock>0&&files.Size(12,lock)==8197&&files.Close(12,lock)==0,
+                "next owner opens committed data after release");
         f=files.Open(11,"/browser/hole.bin",FileStore::ReadWrite|FileStore::Create|FileStore::Truncate);
         Require(f>0&&files.WriteFile(11,f,"HEAD",4)==4&&files.Seek(11,f,4098,0)==4098,"seek beyond EOF");
         Require(files.WriteFile(11,f,"END",3)==3&&files.Size(11,f)==4101,"write hole extends file");

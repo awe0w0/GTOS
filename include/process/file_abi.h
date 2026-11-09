@@ -33,6 +33,7 @@
 #define GTOS_FILE_TRUNCATE 0x400U
 #define GTOS_FILE_APPEND 0x800U
 #define GTOS_FILE_TEMPORARY 0x1000U
+#define GTOS_FILE_LOCKED 0x2000U
 #define GTOS_FILE_TYPE_REGULAR 1U
 #define GTOS_FILE_TYPE_DIRECTORY 2U
 #define GTOS_FILE_ERR_BAD_ADDRESS (-14)
@@ -73,6 +74,9 @@ typedef struct GtosFileInfo { unsigned version,type,bytes;char name[256]; } Gtos
 // A successful open removes the new directory entry before returning its
 // ordinary owned handle. Existing paths are never overwritten. Close/reap
 // releases the unnamed file; actual I/O failures can have partial disk effects.
+// LOCKED opens exclude other LOCKED opens of the same file, including aliases.
+// Dup retains that lock until its last close or owner reap. LOCKED cannot be
+// combined with TRUNCATE, APPEND or TEMPORARY. Other opens are unchanged.
 // DUP uses GtosFileControlRequest and returns a new positive owner-scoped handle.
 // It shares the same open resource, offset, directory cursor and access mode.
 // Closing one duplicate invalidates only that handle; the final close releases

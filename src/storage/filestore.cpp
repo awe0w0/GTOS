@@ -95,19 +95,38 @@ FileStore::Resource* FileStore::FreeResource() {
     for (uint32_t i=0;i<MaximumHandles;i++) if (!resources[i].references) return resources+i;
     return 0;
 }
+namespace {
+    bool SameRegularFile(const lfs_file_t& a,const lfs_file_t& b) {
+        const lfs_block_t invalid=(lfs_block_t)-1;
+        return a.id==b.id&&a.m.pair[0]!=invalid&&a.m.pair[1]!=invalid
+            &&b.m.pair[0]!=invalid&&b.m.pair[1]!=invalid
+            &&(a.m.pair[0]==b.m.pair[0]||a.m.pair[0]==b.m.pair[1]
+               ||a.m.pair[1]==b.m.pair[0]||a.m.pair[1]==b.m.pair[1]);
+    }
+}
 int32_t FileStore::Open(uint32_t owner,const char* path,uint32_t flags) {
     InterruptGuard guard;if (!mounted||!owner) return LFS_ERR_BADF;
     int32_t error=ValidPath(path);if (error) return error;
     uint32_t access=flags&3;
-    if (!access||(flags&~(3U|Create|Exclusive|Truncate|Append|Temporary))
+    if (!access||(flags&~(3U|Create|Exclusive|Truncate|Append|Temporary|Locked))
         ||((flags&Exclusive)&&!(flags&Create))||((flags&(Truncate|Append))&&access==Read)) return LFS_ERR_INVAL;
     if ((flags&Temporary)&&flags!=(ReadWrite|Create|Exclusive|Temporary)) return LFS_ERR_INVAL;
+    if ((flags&Locked)&&(flags&(Truncate|Append))) return LFS_ERR_INVAL;
     if (readOnly&&(access!=Read||(flags&Create))) return ReadOnly;
     if (nextHandle>0x7FFFFFFFU) return Overflow;
     Slot* slot=FreeSlot();if (!slot) return TooManyHandles;
     Resource* resource=FreeResource();if (!resource) return TooManyHandles;
     gtos_lfs_memset(resource,0,sizeof(*resource));resource->config.buffer=resource->cache;
-    error=lfs_file_opencfg(&filesystem,&resource->file,path,flags&~Temporary,&resource->config);if (error) return error;
+    error=lfs_file_opencfg(&filesystem,&resource->file,path,flags&~(Temporary|Locked),&resource->config);if (error) return error;
+    if (flags&Locked) {
+        for (uint32_t i=0;i<MaximumHandles;i++) {
+            const Resource& other=resources[i];
+            if (!other.references||!other.locked||!SameRegularFile(resource->file,other.file)) continue;
+            error=lfs_file_close(&filesystem,&resource->file);
+            return error?error:Busy;
+        }
+        resource->locked=true;
+    }
     resource->references=1;resource->mode=access;resource->kind=LFS_TYPE_REG;
     slot->owner=owner;slot->handle=nextHandle++;slot->resource=resource;
     if (flags&Temporary) {
@@ -145,14 +164,10 @@ int32_t FileStore::Duplicate(uint32_t owner,uint32_t handle) {
 namespace {
     template<typename Resource> void RefreshReaders(Resource* resources,uint32_t count,const Resource& writer) {
         const lfs_block_t invalid=(lfs_block_t)-1;
-        if (writer.file.m.pair[0]==invalid||writer.file.m.pair[1]==invalid) return;
         for (uint32_t i=0;i<count;i++) {
             Resource& reader=resources[i];
             if (!reader.references||reader.kind!=LFS_TYPE_REG||reader.mode!=FileStore::Read
-                ||reader.file.id!=writer.file.id||reader.file.m.pair[0]==invalid
-                ||reader.file.m.pair[1]==invalid) continue;
-            if (reader.file.m.pair[0]!=writer.file.m.pair[0]&&reader.file.m.pair[0]!=writer.file.m.pair[1]
-                &&reader.file.m.pair[1]!=writer.file.m.pair[0]&&reader.file.m.pair[1]!=writer.file.m.pair[1]) continue;
+                ||!SameRegularFile(reader.file,writer.file)) continue;
             // A committed version replaces each read cache, retaining its cursor.
             reader.file.ctz=writer.file.ctz;
             reader.file.flags=(reader.file.flags&~(LFS_F_READING|LFS_F_DUSTY|LFS_F_INLINE))

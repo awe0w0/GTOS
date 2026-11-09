@@ -17,13 +17,14 @@ class FileStore {
 public:
     enum { SectorSize=512, BlockSize=4096, SectorsPerBlock=8, MaximumHandles=64, PathLimit=512 };
     enum Error { Busy=-16, TooManyHandles=-24, ReadOnly=-30, Overflow=-75 };
-    enum OpenFlag { Read=1, Write=2, ReadWrite=3, Create=0x100, Exclusive=0x200, Truncate=0x400, Append=0x800, Temporary=0x1000 };
+    enum OpenFlag { Read=1, Write=2, ReadWrite=3, Create=0x100, Exclusive=0x200, Truncate=0x400, Append=0x800, Temporary=0x1000, Locked=0x2000 };
     struct Info { uint32_t type,size;char name[256]; };
     struct ReclaimResult { uint32_t released;int32_t error; };
 private:
     friend struct FileStoreDescriptorFixture;
     struct Resource {
         uint32_t references,mode,kind;
+        bool locked;
         lfs_file_t file;
         lfs_dir_t directory;
         lfs_file_config config;
