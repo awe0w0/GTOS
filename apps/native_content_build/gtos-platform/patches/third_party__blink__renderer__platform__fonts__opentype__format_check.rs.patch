@@ -1,0 +1,11 @@
+--- a/third_party/blink/renderer/platform/fonts/opentype/format_check.rs
++++ b/third_party/blink/renderer/platform/fonts/opentype/format_check.rs
+@@ -1,6 +1,8 @@
+ // Copyright 2025 The Chromium Authors
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use font_types::Tag;
+ use read_fonts::{FileRef, FontRef, ReadError, TableProvider};
+ 

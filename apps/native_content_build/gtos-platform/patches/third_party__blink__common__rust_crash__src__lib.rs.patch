@@ -1,0 +1,11 @@
+--- a/third_party/blink/common/rust_crash/src/lib.rs
++++ b/third_party/blink/common/rust_crash/src/lib.rs
+@@ -5,6 +5,8 @@
+ //! Code to generate an artificial Rust panic to exercise our crash handling
+ //! logic and ensure it works for Rust crashes.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ #[cxx::bridge(namespace = "blink")]
+ mod ffi {
+     extern "Rust" {

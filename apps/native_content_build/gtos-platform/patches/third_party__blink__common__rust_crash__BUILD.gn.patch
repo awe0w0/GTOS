@@ -1,0 +1,13 @@
+--- a/third_party/blink/common/rust_crash/BUILD.gn
++++ b/third_party/blink/common/rust_crash/BUILD.gn
+@@ -22,6 +22,10 @@ source_set("cpp") {
+ }
+ 
+ rust_static_library("rs") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   sources = [ "src/lib.rs" ]
+   cxx_bindings = [ "src/lib.rs" ]
+   allow_unsafe = true

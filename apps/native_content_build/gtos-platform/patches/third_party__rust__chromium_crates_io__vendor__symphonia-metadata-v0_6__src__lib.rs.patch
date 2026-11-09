@@ -1,0 +1,11 @@
+--- a/third_party/rust/chromium_crates_io/vendor/symphonia-metadata-v0_6/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/symphonia-metadata-v0_6/src/lib.rs
+@@ -22,6 +22,8 @@
+ //! An embedded metadata format is one that is embedded into the media container. This crate
+ //! implements reading or parsing functions for these metadata formats in the [`embedded`] module.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ #![warn(rust_2018_idioms)]
+ #![forbid(unsafe_code)]
+ // The following lints are allowed in all Symphonia crates. Please see clippy.toml for their

@@ -1,0 +1,13 @@
+--- a/media/formats/BUILD.gn
++++ b/media/formats/BUILD.gn
+@@ -7,6 +7,10 @@ import("//media/media_options.gni")
+ 
+ rust_static_library("safe_mpeg_audio_parsers") {
+   crate_root = "mpeg/lib.rs"
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   sources = [
+     "mpeg/bit_reader.rs",
+     "mpeg/lib.rs",

@@ -1,0 +1,11 @@
+--- a/third_party/blink/renderer/platform/audio/rustfft_ffi.rs
++++ b/third_party/blink/renderer/platform/audio/rustfft_ffi.rs
+@@ -7,6 +7,8 @@
+ //! This module provides helper functions to plan and execute FFTs using the
+ //! `rustfft` crate, designed to be called from C++ WebAudio code.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use rustfft::num_complex::Complex;
+ use rustfft::{Fft, FftPlanner};
+ use std::collections::HashMap;

@@ -1,0 +1,11 @@
+--- a/media/formats/mpeg/lib.rs
++++ b/media/formats/mpeg/lib.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ pub mod bit_reader;
+ pub mod mpeg_audio_parser;
+ pub mod parse_adts;

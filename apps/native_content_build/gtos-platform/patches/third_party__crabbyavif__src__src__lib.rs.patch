@@ -1,0 +1,11 @@
+--- a/third_party/crabbyavif/src/src/lib.rs
++++ b/third_party/crabbyavif/src/src/lib.rs
+@@ -12,6 +12,8 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ #![deny(unsafe_op_in_unsafe_fn)]
+ #![cfg_attr(feature = "disable_cfi", feature(sanitize))]
+ // Clippy flags this as a false positive for some of the uses in this library. Disable this clippy

@@ -1,0 +1,11 @@
+--- a/third_party/crabbyavif/src/sys/libyuv-sys/src/lib.rs
++++ b/third_party/crabbyavif/src/sys/libyuv-sys/src/lib.rs
+@@ -12,6 +12,8 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ #[allow(warnings)]
+ #[cfg(feature = "libyuv")]
+ pub mod bindings {

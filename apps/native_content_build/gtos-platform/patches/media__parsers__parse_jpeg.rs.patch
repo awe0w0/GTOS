@@ -1,0 +1,11 @@
+--- a/media/parsers/parse_jpeg.rs
++++ b/media/parsers/parse_jpeg.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ const K_JPEG_MAX_HUFFMAN_CODE_LENGTHS: usize = 16;
+ const K_JPEG_MAX_HUFFMAN_DC_SYMBOLS: usize = 12;
+ const K_JPEG_MAX_HUFFMAN_AC_SYMBOLS: usize = 162;

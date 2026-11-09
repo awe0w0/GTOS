@@ -1,0 +1,22 @@
+--- a/third_party/rust/chromium_crates_io/vendor/libc-v0_2/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/libc-v0_2/src/lib.rs
+@@ -255,6 +255,19 @@ cfg_if! {
+         pub use crate::unix::*;
+ 
+         prelude!();
++    } else if #[cfg(target_os = "gtos")] {
++        mod primitives;
++        pub use crate::primitives::*;
++
++        // Match the GTOS SDK errno values and C heap declarations.
++        pub type size_t = usize;
++        pub const EPERM: c_int = 1;
++        pub const EAGAIN: c_int = 11;
++
++        extern "C" {
++            pub fn calloc(count: size_t, size: size_t) -> *mut c_void;
++            pub fn free(pointer: *mut c_void);
++        }
+     } else if #[cfg(target_os = "hermit")] {
+         mod primitives;
+         pub use crate::primitives::*;

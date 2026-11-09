@@ -1,0 +1,13 @@
+--- a/media/parsers/BUILD.gn
++++ b/media/parsers/BUILD.gn
+@@ -8,6 +8,10 @@ import("//third_party/libgav1/options.gni")
+ 
+ rust_static_library("safe_parsers") {
+   crate_root = "parse_jpeg.rs"
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   sources = [ "parse_jpeg.rs" ]
+   cxx_bindings = [ "parse_jpeg.rs" ]
+ 

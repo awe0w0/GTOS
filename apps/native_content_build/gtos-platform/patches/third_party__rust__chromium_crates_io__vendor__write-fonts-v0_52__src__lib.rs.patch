@@ -1,0 +1,11 @@
+--- a/third_party/rust/chromium_crates_io/vendor/write-fonts-v0_52/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/write-fonts-v0_52/src/lib.rs
+@@ -134,6 +134,8 @@
+ //! [`FromTableRef`]: from_obj::FromTableRef
+ //! [`ToOwnedTable`]: from_obj::ToOwnedTable
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ #![cfg_attr(docsrs, feature(doc_cfg))]
+ 
+ mod collections;

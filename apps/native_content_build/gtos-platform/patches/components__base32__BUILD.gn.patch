@@ -1,0 +1,13 @@
+--- a/components/base32/BUILD.gn
++++ b/components/base32/BUILD.gn
+@@ -29,6 +29,10 @@ static_library("base32") {
+ }
+ 
+ rust_static_library("base32_rust") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   crate_root = "base32.rs"
+   allow_unsafe = true
+   sources = [ crate_root ]

@@ -1,0 +1,11 @@
+--- a/third_party/rust/chromium_crates_io/vendor/rustfft-v6/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/rustfft-v6/src/lib.rs
+@@ -113,6 +113,8 @@
+ //! If that's too slow, see if you can find a nearby size whose prime factors are all 11 or smaller, and you can expect a 2x-5x speedup.
+ //! If that's still too slow, find a nearby size whose prime factors are all 2 or 3, and you can expect a 1.1x-1.5x speedup.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use std::fmt::Display;
+ 
+ pub use num_complex;

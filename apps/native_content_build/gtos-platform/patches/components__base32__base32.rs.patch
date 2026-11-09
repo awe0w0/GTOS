@@ -1,0 +1,11 @@
+--- a/components/base32/base32.rs
++++ b/components/base32/base32.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use cxx::{CxxString, CxxVector};
+ use std::pin::Pin;
+ 
