@@ -1,6 +1,6 @@
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1055,6 +1055,18 @@ component("base") {
+@@ -1055,6 +1055,19 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
@@ -8,6 +8,7 @@
 +    sources += [
 +      "memory/platform_shared_memory_gtos.cc",
 +      "process/process_metrics_gtos.cc",
++      "rand_util_gtos.cc",
 +      "synchronization/lock_impl_gtos.cc",
 +      "synchronization/waitable_event_gtos.cc",
 +      "threading/platform_thread_gtos.cc",
@@ -19,7 +20,7 @@
    if (is_apple || current_os == "freebsd" || current_os == "openbsd") {
      sources += [
        "posix/sysctl.cc",
-@@ -2675,6 +2687,10 @@ rust_static_library("file_path") {
+@@ -2675,6 +2688,10 @@ rust_static_library("file_path") {
    crate_root = "files/file_path.rs"
    sources = [ "files/file_path.rs" ]
    allow_unsafe = true

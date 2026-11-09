@@ -1,0 +1,13 @@
+--- a/third_party/boringssl/src/crypto/mem.cc
++++ b/third_party/boringssl/src/crypto/mem.cc
+@@ -58,7 +58,9 @@
+ // EDK2 targets UEFI but builds as ELF and then translates the binary to
+ // COFF(!). Thus it builds with __ELF__ defined but cannot actually cope with
+ // weak symbols.
+-#if !defined(__EDK2_BORINGSSL__) && defined(__ELF__) && defined(__GNUC__)
++// GTOS uses the default allocator and BoringSSL's size and clearing policy.
++#if !defined(__EDK2_BORINGSSL__) && !defined(__GTOS__) && defined(__ELF__) && \
++    defined(__GNUC__)
+ #define WEAK_SYMBOL_FUNC(rettype, name, args) \
+   extern "C" {                                \
+   rettype name args __attribute__((weak));    \

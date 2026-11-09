@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/boringssl/src/crypto/mem.cc': '38ae0d587e73f60c9ee09c84acc3c5145f909c83b26a6e1fdf7ab26d13c0ddbf',
     'third_party/webrtc/modules/audio_processing/aec3/BUILD.gn': '177b5368375b60be5041f7e158184f01b178d896ad0bba3f7c9067730c225add',
     'third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter.cc': 'e760819bd42ba0047900bbe2644d632090743a81027585b474723b1212132d7b',
     'third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter_erl.cc': '8c4d958a9c3925ad67a5169f7235b4fe3b215ea630aa3ec4dc933527c15f4b82',
@@ -300,6 +301,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/rand_util_gtos.cc': 'base/rand_util_gtos.cc',
     'tools/gtos_native_sdk/file-output.hpp': 'sdk/native-file-output.hpp',
     'tools/gtos_native_sdk/file-output.cc': 'sdk/native-file-output.cc',
     'v8/src/base/debug/stack_trace_gtos.cc': '../../native_v8_integration/overlay/src/base/debug/stack_trace_gtos.cc',
