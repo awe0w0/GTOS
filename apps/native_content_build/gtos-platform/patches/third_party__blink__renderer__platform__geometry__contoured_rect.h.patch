@@ -1,0 +1,22 @@
+--- a/third_party/blink/renderer/platform/geometry/contoured_rect.h
++++ b/third_party/blink/renderer/platform/geometry/contoured_rect.h
+@@ -8,6 +8,7 @@
+ #include <array>
+ #include <optional>
+ 
++#include "base/containers/span.h"
+ #include "third_party/blink/renderer/platform/geometry/float_rounded_rect.h"
+ #include "third_party/blink/renderer/platform/platform_export.h"
+ #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
+@@ -108,8 +109,9 @@ class PLATFORM_EXPORT ContouredRect {
+         : curvature_(curvature) {
+       vertices_ = {rect.origin(), rect.top_right(), rect.bottom_right(),
+                    rect.bottom_left()};
+-      std::rotate(vertices_.begin(), vertices_.begin() + rotation,
+-                  vertices_.end());
++      const auto vertices = base::span(vertices_);
++      std::rotate(vertices.begin(), vertices.begin() + rotation,
++                  vertices.end());
+     }
+ 
+     constexpr Corner(const std::array<gfx::PointF, 4>& vertices,

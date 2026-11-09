@@ -40,6 +40,9 @@ int TestAvif();
 #if defined(GTOS_GIN_PAGE_TEST)
 int TestGinPageAllocator();
 #endif
+#if defined(GTOS_CONTENT_CONTOUR_TEST)
+int TestContentContour();
+#endif
 
 namespace {
 
@@ -240,6 +243,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_GIN_PAGE_TEST)
     if (const int status = TestGinPageAllocator()) return status;
     Say("GTOS GIN PAGES PASS\n");
+#endif
+#if defined(GTOS_CONTENT_CONTOUR_TEST)
+    if (const int status = TestContentContour()) return status;
+    Say("GTOS CONTENT CONTOUR PASS\n");
 #endif
     return 37;
 }

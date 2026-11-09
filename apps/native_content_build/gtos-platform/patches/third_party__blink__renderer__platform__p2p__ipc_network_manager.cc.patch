@@ -1,0 +1,22 @@
+--- a/third_party/blink/renderer/platform/p2p/ipc_network_manager.cc
++++ b/third_party/blink/renderer/platform/p2p/ipc_network_manager.cc
+@@ -189,7 +189,8 @@ void IpcNetworkManager::OnNetworkListChanged(
+ 
+   if (Platform::Current()->AllowsLoopbackInPeerConnection()) {
+     std::string name_v4("loopback_ipv4");
+-    webrtc::IPAddress ip_address_v4(INADDR_LOOPBACK);
++    const webrtc::IPAddress ip_address_v4 =
++        webrtc::NetIPAddressToRtcIPAddress(net::IPAddress::IPv4Localhost());
+     auto network_v4 = CreateNetwork(name_v4, name_v4, ip_address_v4, 32,
+                                     webrtc::ADAPTER_TYPE_UNKNOWN);
+     network_v4->set_default_local_address_provider(this);
+@@ -204,7 +205,8 @@ void IpcNetworkManager::OnNetworkListChanged(
+     if (GetDefaultLocalAddress(AF_INET6, &ipv6_default_address)) {
+       DCHECK(!ipv6_default_address.IsNil());
+       std::string name_v6("loopback_ipv6");
+-      webrtc::IPAddress ip_address_v6(in6addr_loopback);
++      const webrtc::IPAddress ip_address_v6 =
++          webrtc::NetIPAddressToRtcIPAddress(net::IPAddress::IPv6Localhost());
+       auto network_v6 = CreateNetwork(name_v6, name_v6, ip_address_v6, 64,
+                                       webrtc::ADAPTER_TYPE_UNKNOWN);
+       network_v6->set_default_local_address_provider(this);

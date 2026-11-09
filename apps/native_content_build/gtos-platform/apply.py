@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/blink/renderer/platform/fonts/font_platform_data.cc': '0da9887c8721ddb66fdc64abe91633e2f14247a9de0a49ea02ad72064abfcb8e',
+    'third_party/blink/renderer/platform/geometry/contoured_rect.h': '7bde7e31d79df704ff620b2d9b7bcb2c50b01a716f3c48baf4dd83bc51df3fdf',
+    'third_party/blink/renderer/platform/p2p/ipc_network_manager.cc': '11f7271c30b1e7902c2f5f9ec15daf3812dc860b5baeadd5008a0bb89f534063',
     'gpu/command_buffer/service/shared_image/shared_image_factory.cc': '9f54847958dc5bc11a65d0c2c75fc83bd27a5f9d9a3d9124679f956ea3a07bc6',
     'gpu/command_buffer/service/shared_image/ozone_image_backing.cc': '3449592a0a83f50deb5e1fd67b76e40f70c75dde17f6eaa718a85c1c1e312cca',
     'gpu/ipc/service/gpu_init.cc': '477333c1d1d3b0f9027d958d8ba5d92a9be13ed24d716cef6953acdc848d5875',
