@@ -11,7 +11,18 @@
        defines += [ "TFLITE_MMAP_DISABLED" ]
      }
  
-@@ -1182,7 +1185,7 @@ if (!use_litert_tflite) {
+@@ -857,6 +860,10 @@ if (!use_litert_tflite) {
+       "//third_party/ruy",
+     ]
+ 
++    if (is_gtos) {
++      deps += [ "//base/allocator/partition_allocator/src/partition_alloc" ]
++    }
++
+     conditional_deps = [ "//third_party/pthreadpool" ]
+ 
+     if (use_cpuinfo) {
+@@ -1182,7 +1189,7 @@ if (!use_litert_tflite) {
        "src/third_party/xla/xla/tsl/util/stats_calculator.h",
      ]
  
@@ -20,7 +31,7 @@
        sources +=
            [ "src/tensorflow/compiler/mlir/lite/mmap_allocation_disabled.cc" ]
      } else {
-@@ -1212,6 +1215,9 @@ if (!use_litert_tflite) {
+@@ -1212,6 +1219,9 @@ if (!use_litert_tflite) {
        "//third_party/gemmlowp",
        "//third_party/neon_2_sse",
      ]

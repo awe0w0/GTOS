@@ -40,6 +40,18 @@ source_set("native_file_output") {
   ]
 }
 
+source_set("native_pthread") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "ffmpeg/pthread.cc",
+    "ffmpeg/pthread.h",
+  ]
+  deps = [
+    ":native_threads",
+    "//v8:v8_libbase",
+  ]
+}
+
 source_set("native_environment") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
@@ -68,8 +80,6 @@ source_set("ffmpeg_support") {
   sources = [
     "ffmpeg/clock.cc",
     "ffmpeg/hyperbolic.cc",
-    "ffmpeg/pthread.cc",
-    "ffmpeg/pthread.h",
     "posix_file.cpp",
   ] + gtos_ffmpeg_libc_sources
   include_dirs = [
@@ -83,7 +93,7 @@ source_set("ffmpeg_support") {
   deps = [
     ":codec_support",
     ":native_environment",
-    ":native_threads",
+    ":native_pthread",
     "//v8:v8_libbase",
   ]
 }

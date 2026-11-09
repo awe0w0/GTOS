@@ -1,0 +1,14 @@
+--- a/third_party/gemmlowp/src/profiling/pthread_everywhere.h
++++ b/third_party/gemmlowp/src/profiling/pthread_everywhere.h
+@@ -23,7 +23,11 @@
+ #endif
+ 
+ #if defined GEMMLOWP_USE_PTHREAD
++#if defined(__GTOS__)
++#include "build/config/gtos/runtime/ffmpeg/pthread.h"
++#else
+ #include <pthread.h>
++#endif
+ #else
+ // Implement a small subset of pthread on top of C++11 threads.
+ // The function signatures differ from true pthread functions in two ways:

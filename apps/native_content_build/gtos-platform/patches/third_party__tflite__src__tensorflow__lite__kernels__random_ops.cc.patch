@@ -1,0 +1,42 @@
+--- a/third_party/tflite/src/tensorflow/lite/kernels/random_ops.cc
++++ b/third_party/tflite/src/tensorflow/lite/kernels/random_ops.cc
+@@ -15,7 +15,11 @@ limitations under the License.
+ #include <algorithm>
+ #include <cmath>
+ #include <cstdint>
++#if defined(__GTOS__)
++#include "partition_alloc/partition_alloc_base/rand_util.h"
++#else
+ #include <random>
++#endif
+ 
+ #include "xla/tsl/lib/random/philox_random.h"
+ #include "xla/tsl/lib/random/random_distributions_utils.h"
+@@ -40,18 +44,27 @@ struct OpData {
+ 
+ // Initialize the OpData based on the seed and seed2 values.
+ void InitializeOpData(TfLiteNode* node) {
++#if !defined(__GTOS__)
+   static std::mt19937_64* seed_generator = []() {
+     std::random_device device("/dev/urandom");
+     return new std::mt19937_64(device());
+   }();
++#endif
+   auto* params = static_cast<TfLiteRandomParams*>(node->builtin_data);
+   OpData* data = reinterpret_cast<OpData*>(node->user_data);
+   int64_t seed = params->seed;
+   int64_t seed2 = params->seed2;
+   if (seed == 0 && seed2 == 0) {
+     // If both seeds are unspecified, generate non-deterministic random numbers.
++#if defined(__GTOS__)
++    int64_t seeds[2];
++    partition_alloc::internal::base::RandBytes(seeds, sizeof(seeds));
++    seed = seeds[0];
++    seed2 = seeds[1];
++#else
+     seed = (*seed_generator)();
+     seed2 = (*seed_generator)();
++#endif
+   }
+   Generator rng(seed, seed2);
+   data->rng = rng;

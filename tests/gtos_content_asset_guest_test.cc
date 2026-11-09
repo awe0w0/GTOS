@@ -10,6 +10,9 @@
 #include "tensorflow/compiler/mlir/lite/core/model_builder_base.h"
 #include "tensorflow/lite/delegates/serialization.h"
 #endif
+#if defined(GTOS_CONTENT_TFLITE_PLATFORM_TEST)
+int TestTflitePlatform();
+#endif
 
 namespace {
 
@@ -164,6 +167,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_TFLITE_FILE_TEST)
     if (const int status = TestModelCopies()) return status;
     Say("GTOS TFLITE FILE COPY PASS\n");
+#endif
+#if defined(GTOS_CONTENT_TFLITE_PLATFORM_TEST)
+    if (const int status = TestTflitePlatform()) return status;
+    Say("GTOS TFLITE PLATFORM PASS\n");
 #endif
     return 37;
 }

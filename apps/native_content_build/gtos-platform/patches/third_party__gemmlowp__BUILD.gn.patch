@@ -1,0 +1,10 @@
+--- a/third_party/gemmlowp/BUILD.gn
++++ b/third_party/gemmlowp/BUILD.gn
+@@ -22,4 +22,7 @@ source_set("gemmlowp") {
+     "src/public/output_stages.h",
+   ]
+   public_configs = [ ":gemmlowp_include" ]
++  if (is_gtos) {
++    public_deps = [ "//build/config/gtos/runtime:native_pthread" ]
++  }
+ }

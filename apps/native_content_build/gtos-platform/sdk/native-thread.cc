@@ -11,6 +11,7 @@
 #include <process/vm_abi.h>
 
 #include <array>
+#include <thread>
 
 #include "tools/gtos_native_sdk/native-services.h"
 
@@ -266,3 +267,7 @@ int __libcpp_thread_detach(__libcpp_thread_t* thread) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+void std::this_thread::sleep_for(const std::chrono::nanoseconds& duration) {
+  std::__libcpp_thread_sleep_for(duration);
+}

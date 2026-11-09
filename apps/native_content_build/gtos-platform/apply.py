@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/gemmlowp/BUILD.gn': 'ede2b796e54d518701667df8e0f199c0ba3c25099d8afc42bbbd79b70618e4e8',
+    'third_party/gemmlowp/src/profiling/pthread_everywhere.h': 'f0b652a6a9defe83d1099b0a51ad58d7b055b8bfe61a913aa9ddd4408e32f8c0',
+    'third_party/tflite/src/tensorflow/lite/kernels/random_ops.cc': '9c74899363eb89ca2875d6257a328536093eef5b906e045d3afce759cb9ff7dc',
     'third_party/tflite/BUILD.gn': '31d7583c2433696ff21b52950b03de325d56df8077b1bf8403a07632e9f4c685',
     'third_party/gemmlowp/src/internal/platform.h': 'aee3e89fa60c3266d0636c68e90f077016ada9f45fa32b5bd0e76a86513873c3',
     'third_party/farmhash/src/src/farmhash.cc': '13751fdbc92b7a08670956d5350d288b8fd30f0f1eb83e1b19059d6435a4ac51',
