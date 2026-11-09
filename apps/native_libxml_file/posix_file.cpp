@@ -129,7 +129,13 @@ int path_bytes(const char *path, unsigned *bytes) {
     return -1;
   }
   unsigned length = 0;
+#if defined(__clang__)
+#pragma clang unsafe_buffer_usage begin
+#endif
   while (length < GTOS_FILE_PATH_LIMIT && path[length] != 0) ++length;
+#if defined(__clang__)
+#pragma clang unsafe_buffer_usage end
+#endif
   if (length == GTOS_FILE_PATH_LIMIT) {
     errno = ENAMETOOLONG;
     return -1;
@@ -216,9 +222,17 @@ extern "C" ssize_t write(int fd, const void *buffer, size_t bytes) {
   while (done < bytes) {
     const size_t left = bytes - done;
     const size_t counted = left > GTOS_FILE_TRANSFER_LIMIT ? GTOS_FILE_TRANSFER_LIMIT : left;
+    // The caller supplies bytes of storage. The kernel checks this chunk
+    // before copying from the process.
+#if defined(__clang__)
+#pragma clang unsafe_buffer_usage begin
+#endif
     const GtosFileTransferRequest request{GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd),
                                           reinterpret_cast<unsigned>(static_cast<const char *>(buffer) + done),
                                           static_cast<unsigned>(counted)};
+#if defined(__clang__)
+#pragma clang unsafe_buffer_usage end
+#endif
     const int result = call(GTOS_SYS_FILE_WRITE, &request, sizeof(request));
     if (result < 0) return done == 0 ? translate(result) : static_cast<ssize_t>(done);
     done += static_cast<size_t>(result);
@@ -249,7 +263,7 @@ extern "C" int stat(const char *path, struct stat *buffer) {
   if (result < 0) return translate(result);
   if (result != 0 || info.version != GTOS_FILE_ABI_VERSION ||
       (info.type != GTOS_FILE_TYPE_DIRECTORY && info.type != GTOS_FILE_TYPE_REGULAR)) return fail_with(EIO);
-  memset(buffer, 0, sizeof(*buffer));
+  *buffer = {};
   buffer->st_mode = info.type == GTOS_FILE_TYPE_DIRECTORY ? S_IFDIR : S_IFREG;
   buffer->st_size = static_cast<long long>(info.bytes);
   return 0;
@@ -265,7 +279,7 @@ extern "C" int fstat(int fd, struct stat *buffer) {
   if (result < 0) return translate(result);
   if (result != 0 || info.version != GTOS_FILE_ABI_VERSION ||
       (info.type != GTOS_FILE_TYPE_DIRECTORY && info.type != GTOS_FILE_TYPE_REGULAR)) return fail_with(EIO);
-  memset(buffer, 0, sizeof(*buffer));
+  *buffer = {};
   buffer->st_mode = info.type == GTOS_FILE_TYPE_DIRECTORY ? S_IFDIR : S_IFREG;
   buffer->st_size = static_cast<long long>(info.bytes);
   return 0;
