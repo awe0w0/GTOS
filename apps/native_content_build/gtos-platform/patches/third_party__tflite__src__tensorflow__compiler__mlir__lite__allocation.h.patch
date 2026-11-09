@@ -1,0 +1,22 @@
+--- a/third_party/tflite/src/tensorflow/compiler/mlir/lite/allocation.h
++++ b/third_party/tflite/src/tensorflow/compiler/mlir/lite/allocation.h
+@@ -137,12 +137,19 @@ class FileCopyAllocation : public Allocation {
+  public:
+   /// Loads the provided file into a heap memory region.
+   FileCopyAllocation(const char* filename, ErrorReporter* error_reporter);
++#if defined(__GTOS__)
++  // Borrows the descriptor without advancing its position.
++  FileCopyAllocation(int fd, ErrorReporter* error_reporter);
++#endif
+   ~FileCopyAllocation() override;
+   const void* base() const override;
+   size_t bytes() const override;
+   bool valid() const override;
+ 
+  private:
++#if defined(__GTOS__)
++  void CopyFromDescriptor(int fd);
++#endif
+   std::unique_ptr<const char[]> copied_buffer_;
+   size_t buffer_size_bytes_ = 0;
+ };

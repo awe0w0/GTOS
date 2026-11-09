@@ -1,0 +1,11 @@
+--- a/third_party/farmhash/src/src/farmhash.cc
++++ b/third_party/farmhash/src/src/farmhash.cc
+@@ -88,6 +88,8 @@
+ #ifdef WORDS_BIGENDIAN
+ #undef FARMHASH_BIG_ENDIAN
+ #define FARMHASH_BIG_ENDIAN 1
++#elif defined(__GTOS__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
++#define FARMHASH_LITTLE_ENDIAN 1
+ #endif
+ 
+ #if defined(FARMHASH_LITTLE_ENDIAN) && defined(FARMHASH_BIG_ENDIAN)

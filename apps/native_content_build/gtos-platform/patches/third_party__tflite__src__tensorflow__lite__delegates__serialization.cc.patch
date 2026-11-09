@@ -1,0 +1,81 @@
+--- a/third_party/tflite/src/tensorflow/lite/delegates/serialization.cc
++++ b/third_party/tflite/src/tensorflow/lite/delegates/serialization.cc
+@@ -19,7 +19,7 @@ limitations under the License.
+ #if defined(_WIN32)
+ #include <fstream>
+ #include <iostream>
+-#else
++#elif !defined(__GTOS__)
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <sys/file.h>
+@@ -47,11 +47,13 @@ namespace {
+ 
+ static const char kDelegatedNodesSuffix[] = "_dnodes";
+ 
++#if !defined(__GTOS__)
+ #if defined(_WIN32)
+ static const char kPathSeparator = '\\';
+ #else
+ static const char kPathSeparator = '/';
+ #endif  // defined(_WIN32)
++#endif  // !defined(__GTOS__)
+ 
+ // Farmhash Fingerprint
+ inline uint64_t CombineFingerprints(uint64_t l, uint64_t h) {
+@@ -67,6 +69,7 @@ inline uint64_t CombineFingerprints(uint64_t l, uint64_t h) {
+   return b;
+ }
+ 
++#if !defined(__GTOS__)
+ inline std::string JoinPath(const std::string& path1,
+                             const std::string& path2) {
+   return (path1.back() == kPathSeparator) ? (path1 + path2)
+@@ -79,6 +82,7 @@ inline std::string GetFilePath(const std::string& cache_dir,
+   auto file_name = (model_token + "_" + std::to_string(fingerprint) + ".bin");
+   return JoinPath(cache_dir, file_name);
+ }
++#endif  // !defined(__GTOS__)
+ 
+ }  // namespace
+ 
+@@ -97,6 +101,13 @@ SerializationEntry::SerializationEntry(const std::string& cache_dir,
+ TfLiteStatus SerializationEntry::SetData(TfLiteContext* context,
+                                          const char* data,
+                                          const size_t size) const {
++#if defined(__GTOS__)
++  // GPU and NNAPI delegate caches require a file-locking service.
++  (void)context;
++  (void)data;
++  (void)size;
++  return kTfLiteDelegateDataWriteError;
++#else
+   auto filepath = GetFilePath(cache_dir_, model_token_, fingerprint_);
+   // Temporary file to write data to.
+   const std::string temp_filepath =
+@@ -165,11 +176,17 @@ TfLiteStatus SerializationEntry::SetData(TfLiteContext* context,
+              model_token_.c_str(), size, filepath.c_str());
+ 
+   return kTfLiteOk;
++#endif  // defined(__GTOS__)
+ }
+ 
+ TfLiteStatus SerializationEntry::GetData(TfLiteContext* context,
+                                          std::string* data) const {
+   if (!data) return kTfLiteError;
++#if defined(__GTOS__)
++  (void)context;
++  data->clear();
++  return kTfLiteDelegateDataNotFound;
++#else
+   auto filepath = GetFilePath(cache_dir_, model_token_, fingerprint_);
+ 
+ #if defined(_WIN32)
+@@ -243,6 +260,7 @@ TfLiteStatus SerializationEntry::GetData(TfLiteContext* context,
+                        filepath.c_str());
+     return kTfLiteDelegateDataNotFound;
+   }
++#endif  // defined(__GTOS__)
+ }
+ 
+ uint64_t Serialization::GetFingerprint(

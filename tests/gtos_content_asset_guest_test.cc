@@ -3,6 +3,14 @@
 #include <storage/content_volume_layout.h>
 #include <string.h>
 
+#if defined(GTOS_CONTENT_TFLITE_FILE_TEST)
+#include <fcntl.h>
+#include <unistd.h>
+
+#include "tensorflow/compiler/mlir/lite/core/model_builder_base.h"
+#include "tensorflow/lite/delegates/serialization.h"
+#endif
+
 namespace {
 
 template <class Request>
@@ -48,6 +56,72 @@ struct ExitMarker {
 };
 ExitMarker exit_marker;
 
+#if defined(GTOS_CONTENT_TFLITE_FILE_TEST)
+class ModelReporter final : public tflite::ErrorReporter {
+public:
+    int Report(const char* format, va_list) override {
+        last_error = format;
+        ++errors;
+        return 0;
+    }
+    const char* last_error = nullptr;
+    unsigned errors = 0;
+};
+
+int TestModelCopies() {
+    if (tflite::MMAPAllocation::IsSupported()) return 6;
+    ModelReporter reporter;
+    const auto page = tflite::GetAllocationFromFile(
+        GTOS_CONTENT_ASSET_DIRECTORY "/index.html", &reporter);
+    if (!page || !page->valid() || page->type() != tflite::Allocation::Type::kFileCopy ||
+        page->bytes() != 1214 || memcmp(page->base(), "<!doctype", 9) != 0 ||
+        reporter.errors) return 7;
+
+    const int fd = open(GTOS_CONTENT_ASSET_DIRECTORY "/bear-vp9.webm", O_RDONLY);
+    if (fd < 0) return 8;
+    const bool seek = lseek(fd, 27, SEEK_SET) == 27;
+    const auto model = tflite::GetAllocationFromFile(fd, &reporter);
+    const bool unchanged = lseek(fd, 0, SEEK_CUR) == 27;
+    const bool closed = close(fd) == 0;
+    if (!seek || !unchanged || !closed || reporter.errors || !model ||
+        !model->valid() || model->type() != tflite::Allocation::Type::kFileCopy ||
+        model->bytes() != 67504) return 8;
+    const auto* bytes = static_cast<const unsigned char*>(model->base());
+    unsigned hash = 2166136261u;
+    for (size_t i = 0; i < model->bytes(); ++i)
+        hash = (hash ^ bytes[i]) * 16777619u;
+    if (hash != 0x8b897321u) return 8;
+
+    // The published ICU data exceeds the current native heap allocation limit.
+    const int large_fd = open(GTOS_CONTENT_ASSET_DIRECTORY "/icudtl.dat", O_RDONLY);
+    if (large_fd < 0) return 9;
+    const bool large_seek = lseek(large_fd, 27, SEEK_SET) == 27;
+    const auto large = tflite::GetAllocationFromFile(large_fd, &reporter);
+    const bool large_unchanged = lseek(large_fd, 0, SEEK_CUR) == 27;
+    const bool large_closed = close(large_fd) == 0;
+    if (!large_seek || !large_unchanged || !large_closed || !large ||
+        large->valid() || large->bytes() || reporter.errors != 1 ||
+        strcmp(reporter.last_error, "Could not allocate model copy.") != 0) return 9;
+    Say("GTOS TFLITE FILE HEAP LIMIT PASS\n");
+
+    const auto missing = tflite::GetAllocationFromFile(
+        GTOS_CONTENT_ASSET_DIRECTORY "/missing", &reporter);
+    const auto invalid = tflite::GetAllocationFromFile(-1, &reporter);
+    if (!missing || missing->valid() || missing->bytes() || !invalid ||
+        invalid->valid() || invalid->bytes() || reporter.errors != 3) return 10;
+
+    const tflite::delegates::SerializationParams params{
+        "model", GTOS_CONTENT_ASSET_DIRECTORY};
+    tflite::delegates::Serialization serialization(params);
+    const auto cache = serialization.GetEntryForDelegate("fixture", nullptr);
+    std::string cache_data = "stale";
+    if (cache.SetData(nullptr, "x", 1) != kTfLiteDelegateDataWriteError ||
+        cache.GetData(nullptr, &cache_data) != kTfLiteDelegateDataNotFound ||
+        !cache_data.empty()) return 11;
+    return 0;
+}
+#endif
+
 } // namespace
 
 extern "C" int GtosContentShellMain(int argc, const char** argv) {
@@ -87,5 +161,9 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
         Open(GTOS_CONTENT_ASSET_DIRECTORY "/new",
              GTOS_FILE_WRITE | GTOS_FILE_CREATE) != kReadOnly) return 4;
     Say("GTOS CONTENT ASSETS READONLY PASS\n");
+#if defined(GTOS_CONTENT_TFLITE_FILE_TEST)
+    if (const int status = TestModelCopies()) return status;
+    Say("GTOS TFLITE FILE COPY PASS\n");
+#endif
     return 37;
 }

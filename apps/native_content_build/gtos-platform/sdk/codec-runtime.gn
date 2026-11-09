@@ -32,6 +32,14 @@ source_set("native_threads") {
   ]
 }
 
+source_set("native_file_output") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//tools/gtos_native_sdk/file-output.cc",
+    "//tools/gtos_native_sdk/file-output.hpp",
+  ]
+}
+
 source_set("native_environment") {
   assert(is_gtos && current_cpu == "x86")
   sources = [

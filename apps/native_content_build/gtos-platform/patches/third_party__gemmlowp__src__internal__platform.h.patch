@@ -1,0 +1,27 @@
+--- a/third_party/gemmlowp/src/internal/platform.h
++++ b/third_party/gemmlowp/src/internal/platform.h
+@@ -26,7 +26,9 @@
+ #include <unistd.h>
+ #endif
+ 
+-#ifdef __APPLE__
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/native-services.h"
++#elif defined(__APPLE__)
+ #include <sys/time.h>
+ #endif
+ 
+@@ -91,9 +93,13 @@ inline void *aligned_alloc(size_t alignment, size_t size) {
+ 
+ inline int GetHardwareConcurrency(int max_threads) {
+   if (max_threads == 0) {
++#if defined(__GTOS__)
++    return gtos::native::CurrentProcessInfo().scheduler_cpu_count;
++#else
+     static const int hardware_threads_count =
+         static_cast<int>(sysconf(_SC_NPROCESSORS_CONF));
+     return hardware_threads_count;
++#endif
+   }
+   return max_threads;
+ }

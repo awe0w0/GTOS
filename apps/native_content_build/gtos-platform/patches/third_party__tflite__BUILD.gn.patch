@@ -1,0 +1,32 @@
+--- a/third_party/tflite/BUILD.gn
++++ b/third_party/tflite/BUILD.gn
+@@ -275,7 +275,10 @@ if (!use_litert_tflite) {
+         "/DTFL_COMPILE_LIBRARY",
+         "/wd4018",
+       ]
++    }
+ 
++    if (is_win || is_gtos) {
++      # GTOS model files use the existing file-copy path.
+       defines += [ "TFLITE_MMAP_DISABLED" ]
+     }
+ 
+@@ -1182,7 +1185,7 @@ if (!use_litert_tflite) {
+       "src/third_party/xla/xla/tsl/util/stats_calculator.h",
+     ]
+ 
+-    if (is_win) {
++    if (is_win || is_gtos) {
+       sources +=
+           [ "src/tensorflow/compiler/mlir/lite/mmap_allocation_disabled.cc" ]
+     } else {
+@@ -1212,6 +1215,9 @@ if (!use_litert_tflite) {
+       "//third_party/gemmlowp",
+       "//third_party/neon_2_sse",
+     ]
++    if (is_gtos) {
++      deps += [ "//build/config/gtos/runtime:native_file_output" ]
++    }
+ 
+     conditional_deps = [
+       ":tflite_logging",

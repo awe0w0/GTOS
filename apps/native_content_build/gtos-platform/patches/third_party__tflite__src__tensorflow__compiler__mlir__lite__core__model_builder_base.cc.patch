@@ -1,0 +1,15 @@
+--- a/third_party/tflite/src/tensorflow/compiler/mlir/lite/core/model_builder_base.cc
++++ b/third_party/tflite/src/tensorflow/compiler/mlir/lite/core/model_builder_base.cc
+@@ -51,8 +51,12 @@ std::unique_ptr<Allocation> GetAllocationFromFile(int fd,
+     allocation = std::make_unique<MMAPAllocation>(fd, error_reporter,
+                                                   allow_modifications);
+   } else {
++#if defined(__GTOS__)
++    allocation = std::make_unique<FileCopyAllocation>(fd, error_reporter);
++#else
+     allocation = std::make_unique<FileCopyAllocation>(
+         absl::StrCat("/proc/self/fd/", fd).c_str(), error_reporter);
++#endif
+   }
+   return allocation;
+ }

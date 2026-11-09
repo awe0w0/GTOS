@@ -14,6 +14,16 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/tflite/BUILD.gn': '31d7583c2433696ff21b52950b03de325d56df8077b1bf8403a07632e9f4c685',
+    'third_party/gemmlowp/src/internal/platform.h': 'aee3e89fa60c3266d0636c68e90f077016ada9f45fa32b5bd0e76a86513873c3',
+    'third_party/farmhash/src/src/farmhash.cc': '13751fdbc92b7a08670956d5350d288b8fd30f0f1eb83e1b19059d6435a4ac51',
+    'third_party/tflite/src/tensorflow/compiler/mlir/lite/allocation.h': '4cbaceee8c6b95ffc4354dd44d9677dde8fe8f977edadbafc528f500d02029c9',
+    'third_party/tflite/src/tensorflow/compiler/mlir/lite/allocation.cc': 'bd87fb228a9abf0e1ace4736348ec99a222975b18f87a691cd321338c77e7f06',
+    'third_party/tflite/src/tensorflow/compiler/mlir/lite/core/model_builder_base.cc': '0f8bff9190efbaf267af3f1d3207a5771439bfa5ce914f508c731204cc7a6f03',
+    'third_party/tflite/src/tensorflow/lite/core/interpreter_builder.cc': '6df9f8539edda57344e922f252424afa65168d1462d88e810793f6bbceb88a98',
+    'third_party/tflite/src/tensorflow/lite/delegates/serialization.cc': 'f4e0d9879f02247efb23e8f7b4997796e3586096dfa5d2591f491528b46f884b',
+    'third_party/tflite/src/tensorflow/lite/profiling/model_runtime_info.cc': '9a6edf838fe149c54efe0700bcdc2faf58dd5343f1370538e91bf5ed8a0e11b6',
+    'third_party/tflite/src/tensorflow/lite/profiling/profile_summary_formatter.cc': '63610631c01e5fee014ddf95350ca7b43db0696a21519448ee0d472a4c4c1718',
     'third_party/opus/BUILD.gn': '436f0bfedbfc18c2a46f39f10667fe815e0aca6bf097e999930bfc36118deb33',
     'third_party/cpuinfo/src/src/api.c': '1b97568435c0c89bba9d3084dd6783dcb0a2d2958125fe983fc57f263d92ea30',
     'third_party/cpuinfo/src/src/init.c': 'ab4e4342540438bc7862417aba3c4f6d75a2a87bef99aaa5e2c0c9412b9ccc7c',
@@ -274,6 +284,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'tools/gtos_native_sdk/file-output.hpp': 'sdk/native-file-output.hpp',
+    'tools/gtos_native_sdk/file-output.cc': 'sdk/native-file-output.cc',
     'v8/src/base/debug/stack_trace_gtos.cc': '../../native_v8_integration/overlay/src/base/debug/stack_trace_gtos.cc',
     'v8/src/base/platform/platform-gtos.cc': '../../native_v8_integration/overlay/src/base/platform/platform-gtos.cc',
     'v8/src/base/platform/gtos-native-api/vm_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/vm_abi.h',
@@ -468,6 +480,7 @@ MATERIALIZED = {
 # BoringSSL traverses sibling directories with quoted relative includes.
 # A linked directory can carry a subsequent ".." back into the shared tree.
 RELATIVE_INCLUDE_TREES = {
+    'third_party/gemmlowp/src/internal/platform.h': 'third_party/gemmlowp/src',
     'third_party/boringssl/src/crypto/internal.h': 'third_party/boringssl/src',
 }
 

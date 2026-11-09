@@ -1,0 +1,69 @@
+--- a/third_party/tflite/src/tensorflow/lite/profiling/profile_summary_formatter.cc
++++ b/third_party/tflite/src/tensorflow/lite/profiling/profile_summary_formatter.cc
+@@ -15,7 +15,11 @@ limitations under the License.
+ 
+ #include "tensorflow/lite/profiling/profile_summary_formatter.h"
+ 
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#else
+ #include <fstream>
++#endif
+ #include <iomanip>
+ #include <ios>
+ #include <map>
+@@ -108,7 +112,11 @@ std::string ProfileSummaryDefaultFormatter::GenerateReport(
+ void ProfileSummaryDefaultFormatter::HandleOutput(
+     const std::string& init_output, const std::string& run_output,
+     std::string output_file_path) const {
++#if defined(__GTOS__)
++  gtos::native::FileOutput output_file(output_file_path.c_str());
++#else
+   std::ofstream output_file(output_file_path);
++#endif
+   std::ostream* output_stream = nullptr;
+   if (output_file.good()) {
+     output_stream = &output_file;
+@@ -122,6 +130,14 @@ void ProfileSummaryDefaultFormatter::HandleOutput(
+         "Operator-wise Profiling Info for Regular Benchmark Runs:", run_output,
+         output_stream == nullptr ? &TFLITE_LOG(INFO) : output_stream);
+   }
++#if defined(__GTOS__)
++  if (output_stream) {
++    output_file.close();
++    if (!output_file.good()) {
++      TFLITE_LOG(ERROR) << "Failed to write file: " << output_file_path;
++    }
++  }
++#endif
+ }
+ 
+ tensorflow::StatSummarizerOptions
+@@ -286,7 +302,11 @@ ProfileSummaryProtoFormatter::GetStatSummarizerOptions() const {
+ void ProfileSummaryProtoFormatter::HandleOutput(
+     const std::string& init_output, const std::string& run_output,
+     std::string output_file_path) const {
++#if defined(__GTOS__)
++  gtos::native::FileOutput output_file(output_file_path.c_str());
++#else
+   std::ofstream output_file(output_file_path, std::ios_base::binary);
++#endif
+   std::ostream* output_stream = nullptr;
+   if (output_file.good()) {
+     output_stream = &output_file;
+@@ -305,7 +325,15 @@ void ProfileSummaryProtoFormatter::HandleOutput(
+   if (output_stream == nullptr) {
+     TFLITE_LOG(INFO) << benchmark_profiling_data.DebugString();
+   } else {
++#if defined(__GTOS__)
++    const bool serialized = benchmark_profiling_data.SerializeToOstream(output_stream);
++    output_file.close();
++    if (!serialized || !output_file.good()) {
++      TFLITE_LOG(ERROR) << "Failed to write file: " << output_file_path;
++    }
++#else
+     benchmark_profiling_data.SerializeToOstream(output_stream);
++#endif
+   }
+ }
+ #endif  // TFLITE_WITHOUT_PROTO

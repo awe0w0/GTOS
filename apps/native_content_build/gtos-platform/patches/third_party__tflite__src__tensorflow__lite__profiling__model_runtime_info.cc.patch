@@ -1,0 +1,45 @@
+--- a/third_party/tflite/src/tensorflow/lite/profiling/model_runtime_info.cc
++++ b/third_party/tflite/src/tensorflow/lite/profiling/model_runtime_info.cc
+@@ -17,7 +17,11 @@ limitations under the License.
+ 
+ #include <cstdint>
+ #include <cstdio>
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/file-output.hpp"
++#else
+ #include <fstream>
++#endif
+ #include <ios>
+ #include <iostream>
+ #include <string>
+@@ -235,14 +239,30 @@ TfLiteStatus GenerateModelRuntimeInfo(const tflite::Interpreter& interpreter,
+     TFLITE_LOG(ERROR) << "Failed to generate model runtime info: " << status;
+     return status;
+   }
++#if defined(__GTOS__)
++  gtos::native::FileOutput ofs(std::string(output_file_path).c_str());
++#else
+   std::ofstream ofs(std::string(output_file_path),
+                     std::ios::out | std::ios::binary);
++#endif
+   if (ofs.good()) {
++#if defined(__GTOS__)
++    const bool serialized = model_runtime_details.SerializeToOstream(&ofs);
++    ofs.close();
++    if (!serialized || !ofs.good()) {
++      TFLITE_LOG(ERROR) << "Failed to write file: " << output_file_path;
++      return kTfLiteError;
++    }
++#else
+     model_runtime_details.SerializeToOstream(&ofs);
+     ofs.close();
++#endif
+   } else {
+     TFLITE_LOG(ERROR) << "Failed to open file: " << output_file_path;
+     TFLITE_LOG(INFO) << model_runtime_details.DebugString();
++#if defined(__GTOS__)
++    return kTfLiteError;
++#endif
+   }
+ 
+   return kTfLiteOk;
