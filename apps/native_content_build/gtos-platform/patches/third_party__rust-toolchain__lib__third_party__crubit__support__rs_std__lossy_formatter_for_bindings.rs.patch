@@ -1,0 +1,11 @@
+--- a/third_party/rust-toolchain/lib/third_party/crubit/support/rs_std/lossy_formatter_for_bindings.rs
++++ b/third_party/rust-toolchain/lib/third_party/crubit/support/rs_std/lossy_formatter_for_bindings.rs
+@@ -1,6 +1,8 @@
+ // Part of the Crubit project, under the Apache License v2.0 with LLVM
+ // Exceptions. See /LICENSE for license information.
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use lossy_formatter::LossyFormatter;
+ 
+ /// FFI bindings for `LossyFormatter::write_bytes` to be linked to by

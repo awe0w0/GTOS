@@ -1,0 +1,11 @@
+--- a/third_party/rust-toolchain/lib/third_party/crubit/support/crubit_bridge_rust/src/bridge.rs
++++ b/third_party/rust-toolchain/lib/third_party/crubit/support/crubit_bridge_rust/src/bridge.rs
+@@ -4,6 +4,8 @@
+ 
+ //! Forwarding module to `crubit_support::bridge`.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ pub use crubit_support::bridge::*;
+ // Replicates the interface of `crubit_support::bridge`.
+ pub use crubit_support::{unstable_encode, unstable_return};

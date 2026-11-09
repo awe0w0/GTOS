@@ -1,0 +1,17 @@
+--- a/build/rust/gni_impl/cpp_api_from_rust.gni
++++ b/build/rust/gni_impl/cpp_api_from_rust.gni
+@@ -264,6 +264,14 @@ template("cpp_api_from_rust") {
+ 
+     crate_root = _rs_out
+     sources = [ crate_root ]
++    if (is_gtos) {
++      # rustc_wrapper expands this file in Rust response-file syntax.
++      _gtos_flags = "//build/rust/crubit/gtos-generated.rsp"
++      inputs = [ _gtos_flags ]
++      rustflags = [ "@" + rebase_path(_gtos_flags, root_build_dir) ]
++      configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++      configs += [ "//build/rust/crubit:allow_unstable_features_required_by_crubit" ]
++    }
+     configs += [ "//build/rust:default_edition" ]
+   }
+ 

@@ -14,6 +14,15 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'build/rust/crubit/BUILD.gn': 'c9d2a19973860b3562144ad1056ec9e124445b458ecd37f63c870dc0380fd748',
+    'build/rust/gni_impl/cpp_api_from_rust.gni': '2e2707c33968c4af5741978ace64bd304a74c0d30a48a0359d3446adb3e63714',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/crubit_bridge_rust/src/bridge.rs': 'e3ae4b6d991b8fd0d9aeed2a31b54703cc730bd9061555cae5f4536c56d0afef',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/crubit_support/src/lib.rs': '92fc21116e8000e4d4be17db18080c83b3b94e6cfbfb3b448c070c41080f72f0',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/forward_declare.rs': 'b711e197208a90ac74472024dafe3b6fc9a8d4b4854f839db23ac8ab38fe5e21',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/oops.rs': '4c3c21b5dfe0e7519b6a054a0c2b55532740f14f09a09b5a5b3e729933a77c21',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/operator.rs': '897a90a4b27f2ca4773672507cb5b4aee34683b8e056d4c8aabf676eeb3db922',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/rs_std/lossy_formatter.rs': '3c5c2e594d512ddf39f6af424fe4d05ae05e0fea4aeb393229416e6232e9c71b',
+    'third_party/rust-toolchain/lib/third_party/crubit/support/rs_std/lossy_formatter_for_bindings.rs': 'aa4e8cf9cbabff4ec98df2a23d587c7099a824d834f0997bffa281d49ee3346d',
     'sql/database.cc': 'db203da3ce869d05b737fa1503e48579bb3a98d7ec439292b56e2618fa1f3872',
     'sql/vfs_wrapper.cc': 'd71dcccbd31583c5be9f935b1e6bd0c2fe1938919cf1dbd162ad520929b21fee',
     'third_party/sqlite/src/amalgamation/sqlite3.c': 'ea161c3d769c912daae4333711b6ab2f8696c1a68f6bb2b26ef37c07df699f66',
@@ -311,6 +320,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/rust/crubit/gtos-generated.rsp': 'rust/gtos-generated.rsp',
     'build/config/gtos/include/process/file_abi.h': '../../../include/process/file_abi.h',
     'build/config/gtos/include/process/realtime_abi.h': '../../../include/process/realtime_abi.h',
     'third_party/sqlite/vfs_gtos.cc': 'sqlite/vfs_gtos.cc',

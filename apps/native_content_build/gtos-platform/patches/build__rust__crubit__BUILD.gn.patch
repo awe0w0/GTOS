@@ -1,0 +1,11 @@
+--- a/build/rust/crubit/BUILD.gn
++++ b/build/rust/crubit/BUILD.gn
+@@ -63,5 +63,8 @@ config("allow_unstable_features_required_by_crubit") {
+     "super_let",
+     "unsized_const_params",
+   ]
++  if (is_gtos) {
++    _allowed_features += [ "restricted_std" ]
++  }
+   rustflags = [ "-Zallow-features=" + string_join(",", _allowed_features) ]
+ }

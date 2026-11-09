@@ -1,0 +1,11 @@
+--- a/third_party/rust-toolchain/lib/third_party/crubit/support/operator.rs
++++ b/third_party/rust-toolchain/lib/third_party/crubit/support/operator.rs
+@@ -2,6 +2,8 @@
+ // Exceptions. See /LICENSE for license information.
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use core::pin::Pin;
+ 
+ /// Trait for the const version of the C++ `operator[]` overload.
