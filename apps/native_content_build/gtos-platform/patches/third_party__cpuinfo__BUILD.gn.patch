@@ -1,0 +1,24 @@
+--- a/third_party/cpuinfo/BUILD.gn
++++ b/third_party/cpuinfo/BUILD.gn
+@@ -73,6 +73,9 @@ target(_cpuinfo_target_type, "cpuinfo") {
+     ":cpu_specific",
+     ":os_specific",
+   ]
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:codec_support" ]
++  }
+ 
+   configs -= [
+     "//build/config/compiler:chromium_code",
+@@ -169,6 +172,11 @@ source_set("x86_cache") {
+ }
+ 
+ source_set("cpu_and_os_specific") {
++  if (is_gtos) {
++    assert(current_cpu == "x86")
++    sources = [ "src/src/x86/gtos/init.c" ]
++  }
++
+   if ((is_linux || is_chromeos) &&
+       (current_cpu == "x86" || current_cpu == "x64")) {
+     sources = [

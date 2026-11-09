@@ -1,0 +1,149 @@
+--- a/third_party/angle/src/common/string_utils.cpp
++++ b/third_party/angle/src/common/string_utils.cpp
+@@ -10,6 +10,7 @@
+ #include "common/string_utils.h"
+ #include "common/unsafe_buffers.h"
+ 
++#include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <algorithm>
+@@ -200,6 +201,33 @@ bool HexStringToUInt(const std::string_view &input, unsigned int *uintOut)
+ 
+ bool ReadFileToString(const std::string &path, std::string *stringOut)
+ {
++#if defined(ANGLE_PLATFORM_GTOS)
++    FILE *inFile = fopen(path.c_str(), "rb");
++    if (inFile == nullptr)
++    {
++        return false;
++    }
++    std::string contents;
++    char buffer[4096];
++    size_t count;
++    while ((count = ANGLE_UNSAFE_BUFFERS(fread(buffer, 1, sizeof(buffer), inFile))) != 0)
++    {
++        if (count > contents.max_size() - contents.size())
++        {
++            fclose(inFile);
++            return false;
++        }
++        contents.append(buffer, count);
++    }
++    const bool readOk = ferror(inFile) == 0;
++    const bool closeOk = fclose(inFile) == 0;
++    if (!readOk || !closeOk)
++    {
++        return false;
++    }
++    *stringOut = std::move(contents);
++    return true;
++#else
+     std::ifstream inFile(path.c_str(), std::ios::binary);
+     if (inFile.fail())
+     {
+@@ -213,6 +241,7 @@ bool ReadFileToString(const std::string &path, std::string *stringOut)
+ 
+     inFile.read(stringOut->data(), size);
+     return !inFile.fail();
++#endif
+ }
+ 
+ bool BeginsWith(const std::string &str, const std::string &prefix)
+@@ -365,69 +394,39 @@ bool IsGlobPattern(const std::string_view &pattern)
+ 
+ bool NamesMatchWithWildcard(const std::string_view &glob, const std::string_view &name)
+ {
+-    // This function implements a linear-time string globbing algorithm based on
+-    // https://research.swtch.com/glob.
+-    // It is mostly taken from the implementation in gtest.cc.
+-
+-    using StringIter = std::string_view::iterator;
+-
+-    StringIter nameIter        = name.begin();
+-    const StringIter nameBegin = name.begin();
+-    const StringIter nameEnd   = name.end();
+-
+-    StringIter globIter      = glob.begin();
+-    const StringIter globEnd = glob.end();
+-
+-    StringIter globNext = globIter;
+-    StringIter nameNext = nameIter;
+-
+-    while (globIter < globEnd || nameIter < nameEnd)
++    size_t globPos = 0;
++    size_t namePos = 0;
++    size_t star = std::string_view::npos;
++    size_t matchedByStar = 0;
++    while (namePos < name.size())
+     {
+-        if (globIter < globEnd)
++        if (globPos < glob.size() && glob[globPos] == '*')
+         {
+-            switch (*globIter)
+-            {
+-                default:  // Match an ordinary character.
+-                    if (nameIter < nameEnd && *nameIter == *globIter)
+-                    {
+-                        ++globIter;
+-                        ++nameIter;
+-                        continue;
+-                    }
+-                    break;
+-
+-                case '?':  // Match any single character.
+-                    if (nameIter < nameEnd)
+-                    {
+-                        ++globIter;
+-                        ++nameIter;
+-                        continue;
+-                    }
+-                    break;
+-
+-                case '*':
+-                    // Match zero or more characters. Start by skipping over the wildcard
+-                    // and matching zero characters from name. If that fails, restart and
+-                    // match one more character than the last attempt.
+-                    globNext = globIter;
+-                    nameNext = nameIter + 1;
+-                    ++globIter;
+-                    continue;
+-            }
++            star = globPos++;
++            matchedByStar = namePos;
+         }
+-
+-        // Failed to match a character. Restart if possible.
+-        if (nameBegin < nameNext && nameNext <= nameEnd)
++        else if (globPos < glob.size() &&
++                 (glob[globPos] == '?' || glob[globPos] == name[namePos]))
+         {
+-            globIter = globNext;
+-            nameIter = nameNext;
+-            continue;
++            ++globPos;
++            ++namePos;
++        }
++        else if (star != std::string_view::npos)
++        {
++            // Extend the last '*' by one character and retry its suffix.
++            globPos = star + 1;
++            namePos = ++matchedByStar;
++        }
++        else
++        {
++            return false;
+         }
+-
+-        return false;
+     }
+-
+-    return true;
++    while (globPos < glob.size() && glob[globPos] == '*')
++    {
++        ++globPos;
++    }
++    return globPos == glob.size();
+ }
+ 
+ std::vector<uint8_t> HexStringToUintVector(const std::string_view &hexStr)

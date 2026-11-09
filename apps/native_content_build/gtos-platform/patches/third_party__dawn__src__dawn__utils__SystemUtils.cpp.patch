@@ -1,0 +1,23 @@
+--- a/third_party/dawn/src/dawn/utils/SystemUtils.cpp
++++ b/third_party/dawn/src/dawn/utils/SystemUtils.cpp
+@@ -31,6 +31,8 @@
+ 
+ #if DAWN_PLATFORM_IS(WINDOWS)
+ #include "src/utils/windows_with_undefs.h"
++#elif DAWN_PLATFORM_IS(GTOS)
++#include <time.h>
+ #elif DAWN_PLATFORM_IS(POSIX)
+ #include <unistd.h>
+ #else
+@@ -43,6 +45,11 @@ namespace dawn::utils {
+ void USleep(unsigned int usecs) {
+     Sleep(static_cast<DWORD>(usecs / 1000));
+ }
++#elif DAWN_PLATFORM_IS(GTOS)
++void USleep(unsigned int usecs) {
++    const timespec duration{usecs / 1000000, (usecs % 1000000) * 1000};
++    nanosleep(&duration, nullptr);
++}
+ #elif DAWN_PLATFORM_IS(POSIX)
+ void USleep(unsigned int usecs) {
+     usleep(usecs);

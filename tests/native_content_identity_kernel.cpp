@@ -3,7 +3,11 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 
-#if defined(GTOS_CONTENT_V8_PLATFORM_PROBE)
+#if defined(GTOS_CONTENT_PLATFORM_LIBRARIES_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT PLATFORM LIBRARIES"
+static const unsigned ExpectedChecks = 33;
+static const char* const CheckDescription = "native CPU topology, ANGLE strings and Dawn sleep";
+#elif defined(GTOS_CONTENT_V8_PLATFORM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT V8 PLATFORM"
 static const unsigned ExpectedChecks = 25;
 static const char* const CheckDescription = "native clocks, memory and concurrent V8 once";
@@ -56,6 +60,7 @@ static const char* const CheckDescription = "exact process and worker identity";
 namespace {
 #if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
     defined(GTOS_CONTENT_V8_PLATFORM_PROBE) || \
+    defined(GTOS_CONTENT_PLATFORM_LIBRARIES_PROBE) || \
     defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
     defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
@@ -120,6 +125,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     Need(runtime.CreateContentElf(image, bytes, id, profile, environment), "Content ELF admission");
 #elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
     defined(GTOS_CONTENT_V8_PLATFORM_PROBE) || \
+    defined(GTOS_CONTENT_PLATFORM_LIBRARIES_PROBE) || \
     defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
     defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
@@ -132,6 +138,18 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     gtos_perfetto_probe::Record record = {};
     Need(runtime.ReadMemory(id, RecordAddress, &record, sizeof(record)) &&
         record.version == 1 && record.mode == 0 && record.stage == 2, "completed consumer record");
+#if defined(GTOS_CONTENT_PLATFORM_LIBRARIES_PROBE)
+    struct {
+        uint32_t failedLow, failedHigh, detectedL1dBytes, publishedL1dCount;
+    } details = {};
+    Need(runtime.ReadMemory(id, RecordAddress + sizeof(record), &details,
+                            sizeof(details)), "consumer check mask");
+    printf((char*)CONTENT_BASE_PROBE " MASK high="); printfHex32(details.failedHigh);
+    printf((char*)" low="); printfHex32(details.failedLow);
+    printf((char*)" l1d_bytes="); printfHex32(details.detectedL1dBytes);
+    printf((char*)" l1d_count="); printfHex32(details.publishedL1dCount);
+    printf((char*)"\n");
+#endif
     Need(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
         status.directory != paging.getStatistics().directoryAddress && !status.faultVector,
         "CPL3 isolation");

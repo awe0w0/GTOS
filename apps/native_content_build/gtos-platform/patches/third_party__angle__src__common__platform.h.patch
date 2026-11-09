@@ -1,0 +1,11 @@
+--- a/third_party/angle/src/common/platform.h
++++ b/third_party/angle/src/common/platform.h
+@@ -11,6 +11,8 @@
+ 
+ #if defined(_WIN32)
+ #    define ANGLE_PLATFORM_WINDOWS 1
++#elif defined(__GTOS__)
++#    define ANGLE_PLATFORM_GTOS 1
+ #elif defined(__Fuchsia__)
+ #    define ANGLE_PLATFORM_FUCHSIA 1
+ #    define ANGLE_PLATFORM_POSIX 1

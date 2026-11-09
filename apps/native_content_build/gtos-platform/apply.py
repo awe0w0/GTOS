@@ -14,6 +14,12 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/cpuinfo/src/src/api.c': '1b97568435c0c89bba9d3084dd6783dcb0a2d2958125fe983fc57f263d92ea30',
+    'third_party/cpuinfo/src/src/init.c': 'ab4e4342540438bc7862417aba3c4f6d75a2a87bef99aaa5e2c0c9412b9ccc7c',
+    'third_party/angle/src/common/platform.h': '6c839dfbe39dfb6453b4cd8a0f5151d9c8d50be9530151f6562a6a9b3de57d88',
+    'third_party/angle/src/common/string_utils.cpp': '5e64535b45efdac784650c84c6de016454be91c9711f0eb1dde5a89cf6de0df8',
+    'third_party/dawn/src/dawn/utils/SystemUtils.cpp': 'b62b16e0c37ce9e1bf349db145ed9d5468d3068fb5c5bc0379b936df66671945',
+    'third_party/cpuinfo/BUILD.gn': '0e9d61e0368cce5d45e0ac15132748a9c36b2b0d4189d67d3a8a54db1d83afe5',
     'v8/src/base/once.cc': '10ca64fffb257aadb05e8cb5b2d9b86890773986c73cf1a21d9b939f586d4bd1',
     'v8/src/base/platform/time.cc': 'f6273ee921bb880a03571b78c26d87d4077b51fff8c1f9bc4f47f7570868aebd',
     'v8/src/base/sys-info.cc': '1bddf26ff8424543a1be79a4dfb8c83d977f7d2ab101c90e13fc23f9a64f9b1c',
@@ -267,6 +273,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/cpuinfo/src/src/x86/gtos/init.c': 'sdk/cpuinfo-init.c',
     'build/config/gtos/runtime/file_internal.h': '../../native_libxml_file/file_internal.h',
     'build/config/gtos/runtime/ffmpeg/clock.cc': 'sdk/ffmpeg/clock.cc',
     'build/config/gtos/runtime/ffmpeg/libc_sources.gni': 'sdk/ffmpeg/libc_sources.gni',

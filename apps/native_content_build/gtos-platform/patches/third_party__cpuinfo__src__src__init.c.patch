@@ -1,0 +1,33 @@
+--- a/third_party/cpuinfo/src/src/init.c
++++ b/third_party/cpuinfo/src/src/init.c
+@@ -1,4 +1,6 @@
+-#if defined(_WIN32) || defined(__CYGWIN__)
++#if defined(__GTOS__)
++#include <gtos/once.h>
++#elif defined(_WIN32) || defined(__CYGWIN__)
+ #include <windows.h>
+ #elif !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+ #include <pthread.h>
+@@ -12,7 +14,10 @@
+ #include "TargetConditionals.h"
+ #endif
+ 
+-#if defined(_WIN32) || defined(__CYGWIN__)
++#if defined(__GTOS__)
++CPUINFO_PRIVATE void cpuinfo_x86_gtos_init(void);
++static uint32_t init_guard;
++#elif defined(_WIN32) || defined(__CYGWIN__)
+ static INIT_ONCE init_guard = INIT_ONCE_STATIC_INIT;
+ #elif !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+ static pthread_once_t init_guard = PTHREAD_ONCE_INIT;
+@@ -22,7 +27,9 @@ static bool init_guard = false;
+ 
+ bool CPUINFO_ABI cpuinfo_initialize(void) {
+ #if CPUINFO_ARCH_X86 || CPUINFO_ARCH_X86_64
+-#if defined(__MACH__) && defined(__APPLE__)
++#if defined(__GTOS__)
++	gtos_call_once(&init_guard, &cpuinfo_x86_gtos_init);
++#elif defined(__MACH__) && defined(__APPLE__)
+ 	pthread_once(&init_guard, &cpuinfo_x86_mach_init);
+ #elif defined(__FreeBSD__)
+ 	pthread_once(&init_guard, &cpuinfo_x86_freebsd_init);

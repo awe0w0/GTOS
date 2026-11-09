@@ -17,7 +17,8 @@ parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'e
                                             'base_identity', 'base_event', 'base_shared', 'base_tls',
                                             'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
                                             'skia_semaphore', 'expat', 'address_text', 'net_protocol',
-                                            'content_capacity', 'ffmpeg_webm', 'v8_platform'],
+                                            'content_capacity', 'ffmpeg_webm', 'v8_platform',
+                                            'platform_libraries'],
                     default='memory')
 parser.add_argument('--payload', type=Path)
 parser.add_argument('--payload-record', type=Path)
@@ -76,6 +77,8 @@ component = {
                     'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'v8_platform': ('native_memory_record', None, 'v8_platform.cpp',
                    'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'platform_libraries': ('native_memory_record', None, 'platform_libraries.cpp',
+                           'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
     'crt_arguments': (None, None, None,
                       'gtos_content_arguments_kernel.cpp', 'ContentArgumentsUnusedBaseline', 0),
 }[args.component]
@@ -146,7 +149,7 @@ if args.component == 'exit':
     flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
 if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread',
                       'webrtc_thread', 'vp9', 'skia_semaphore', 'address_text', 'net_protocol',
-                      'v8_platform'):
+                      'v8_platform', 'platform_libraries'):
     v8 = repo / 'apps/native_v8_integration/overlay'
     runtime = v8 / 'tools/gtos_isolate_diagnostic/runtime'
     partition = Path('base/allocator/partition_allocator/src')
@@ -155,9 +158,17 @@ if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 
               '-I' + str(args.view / 'third_party/abseil-cpp'),
               '-I' + str(args.view / 'third_party/boringssl/src/include'),
               '-I' + str(v8), '-I' + str(runtime / 'sdk')]
-if args.component == 'v8_platform':
+if args.component in ('v8_platform', 'platform_libraries'):
     flags.insert(0, '-I' + str(args.view / 'v8'))
     flags.append('-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE')
+if args.component == 'platform_libraries':
+    cpuinfo = args.view / 'third_party/cpuinfo/src'
+    angle = args.view / 'third_party/angle'
+    dawn = args.view / 'third_party/dawn'
+    flags += ['-I' + str(path) for path in (
+        cpuinfo / 'include', cpuinfo / 'src', cpuinfo / 'deps/clog/include',
+        angle / 'src', angle / 'include', dawn)]
+    flags += ['-DCPUINFO_INTERNAL=', '-DCPUINFO_PRIVATE=', '-DCPUINFO_LOG_LEVEL=0']
 if args.component == 'base_event':
     # Isolate the event and diagnostic paths from the trace-session runtime.
     # The real trace-enabled object is compiled separately by Content Ninja.
@@ -278,7 +289,8 @@ else:
     record_address = '40020000'
     image_limit = 65536
     if args.component in ('vp9', 'ffmpeg_webm', 'webrtc_thread', 'skia_semaphore',
-                          'expat', 'address_text', 'net_protocol', 'v8_platform'):
+                          'expat', 'address_text', 'net_protocol', 'v8_platform',
+                          'platform_libraries'):
         record_address = '40200000'
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
@@ -333,6 +345,26 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                           ('thread-core', native_runtime / 'thread-core.cc'),
                           ('gtos-semaphore', native_runtime / 'gtos-semaphore.cc'),
                           ('assert', product / 'runtime/assert.cc')]
+    elif args.component == 'platform_libraries':
+        cpu_sources = (
+            'api.c', 'cache.c', 'init.c', 'log.c', 'x86/gtos/init.c',
+            'x86/info.c', 'x86/init.c', 'x86/isa.c', 'x86/name.c',
+            'x86/topology.c', 'x86/uarch.c', 'x86/vendor.c',
+            'x86/cache/descriptor.c', 'x86/cache/deterministic.c', 'x86/cache/init.c',
+        )
+        native_sources = [('cpuinfo-' + name.replace('/', '-'), cpuinfo / 'src' / name)
+                          for name in cpu_sources]
+        native_runtime = args.view / 'v8/tools/gtos_isolate_diagnostic/runtime'
+        native_sources += [
+            ('angle-strings', angle / 'src/common/string_utils.cpp'),
+            ('dawn-sleep', dawn / 'src/dawn/utils/SystemUtils.cpp'),
+            ('codec-once', args.view / 'build/config/gtos/runtime/codec_once.cc'),
+            ('native-thread', args.view / 'tools/gtos_native_sdk/native-thread.cc'),
+            ('thread-context', native_runtime / 'thread-context.cc'),
+            ('thread-core', native_runtime / 'thread-core.cc'),
+            ('clock-bridge', args.view / 'v8/src/base/platform/gtos-clock-bridge.cc'),
+            ('assert', product / 'runtime/assert.cc'),
+        ]
     elif args.component == 'webrtc_thread':
         rtc_sources = args.view / 'third_party/webrtc/rtc_base'
         native_sources = [('native-thread', args.view / 'tools/gtos_native_sdk/native-thread.cc'),
@@ -423,7 +455,10 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                                  'environment', 'environ_internal', 'getenv') else [])
         if name == 'base-event':
             packaging += ['-include', str(disabled)]
-        run(directory.name + '-' + name, [args.clang_bin / 'clang', *flags, *packaging, '-O' + str(optimization),
+        compile_flags = flags
+        if source.suffix == '.c':
+            compile_flags = [flag for flag in flags if not flag.startswith('-std=')] + ['-std=c11']
+        run(directory.name + '-' + name, [args.clang_bin / 'clang', *compile_flags, *packaging, '-O' + str(optimization),
             '-MD', '-MF', str(output) + '.d', '-c', source, '-o', output])
         dependencies(output)
         symbols = run(directory.name + '-' + name + '-symbols', ['/usr/bin/nm', '-u', output])
@@ -443,13 +478,13 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
         linked = image.with_suffix('.unstripped.elf') if args.component in (
             'partition', 'boringssl', 'base_event', 'base_shared', 'base_tls',
             'native_thread', 'webrtc_thread', 'vp9', 'skia_semaphore', 'expat', 'address_text',
-            'net_protocol', 'ffmpeg_webm', 'v8_platform') else image
+            'net_protocol', 'ffmpeg_webm', 'v8_platform', 'platform_libraries') else image
         extra = [asm_obj] if args.component == 'boringssl' else []
         if args.component == 'skia_semaphore':
             archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
             bind(archive)
             extra.append(archive)
-        if args.component in ('address_text', 'net_protocol', 'v8_platform'):
+        if args.component in ('address_text', 'net_protocol', 'v8_platform', 'platform_libraries'):
             archive = args.view.parent / 'runtime-archive-ra03/libgtos_content_runtime.a'
             bind(archive)
             extra.append(archive)
@@ -550,7 +585,7 @@ for optimization in (() if args.component == 'crt_arguments' else (0, 2)):
                 bind(path)
             extra += [fixture_object, jump_object, codec, *libraries, *providers, *engine, archive]
         if cpu or args.component in ('wait', 'partition', 'webrtc_thread', 'vp9', 'expat', 'address_text',
-                                     'net_protocol', 'ffmpeg_webm', 'v8_platform'):
+                                     'net_protocol', 'ffmpeg_webm', 'v8_platform', 'platform_libraries'):
             builtins = Path('/mnt/f/GTOS-Chromium/sources/chromium-gtos/src/out/gtos-scalar-integer-x86-v2/obj/tools/gtos/compiler_runtime/libscalar_integer.a')
             assert hashlib.sha256(builtins.read_bytes()).hexdigest() == 'f2340f1a4fd61b7472983e04fda2a0fc86108e649f614a25d043bff5fdc2f528'
             bind(builtins)
@@ -610,6 +645,8 @@ if args.component == 'ffmpeg_webm':
     kernel_flags.append('-DGTOS_CONTENT_FFMPEG_WEBM_PROBE')
 if args.component == 'v8_platform':
     kernel_flags.append('-DGTOS_CONTENT_V8_PLATFORM_PROBE')
+if args.component == 'platform_libraries':
+    kernel_flags.append('-DGTOS_CONTENT_PLATFORM_LIBRARIES_PROBE')
 directory = args.out / 'kernel'
 directory.mkdir()
 objects = []
@@ -651,6 +688,6 @@ prefix = 'CONTENT_' if args.component in (
     'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
     'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
     'skia_semaphore', 'expat', 'address_text', 'net_protocol', 'content_capacity',
-    'ffmpeg_webm', 'v8_platform') else 'PERFETTO_'
+    'ffmpeg_webm', 'v8_platform', 'platform_libraries') else 'PERFETTO_'
 print(prefix + args.component.upper() + '_GUEST_BUILD_PASS kernel=1 modules=' +
       str(len(modules)) + ' undefined=0 scalar_kernel=true')
