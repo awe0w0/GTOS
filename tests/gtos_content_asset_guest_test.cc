@@ -43,6 +43,9 @@ int TestGinPageAllocator();
 #if defined(GTOS_CONTENT_CONTOUR_TEST)
 int TestContentContour();
 #endif
+#if defined(GTOS_CONTENT_RUST_XML_TEST)
+extern "C" int GtosRustXmlProbe();
+#endif
 
 namespace {
 
@@ -247,6 +250,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_CONTOUR_TEST)
     if (const int status = TestContentContour()) return status;
     Say("GTOS CONTENT CONTOUR PASS\n");
+#endif
+#if defined(GTOS_CONTENT_RUST_XML_TEST)
+    if (const int status = GtosRustXmlProbe()) return status;
+    Say("GTOS CONTENT RUST XML PASS\n");
 #endif
     return 37;
 }

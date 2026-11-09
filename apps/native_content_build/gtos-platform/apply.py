@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/rust/xml/v1/BUILD.gn': '3e8bac014fec61ff8d85bdaaa37bd5d20ca5521b0871374160ebeb4edde8dae2',
+    'third_party/rust/chromium_crates_io/vendor/xml-v1/src/lib.rs': '9f68b90c472b7bc35c74d8b22425669b434f12bdd86bf39442cf8b2624907b9d',
     'third_party/blink/renderer/platform/fonts/font_platform_data.cc': '0da9887c8721ddb66fdc64abe91633e2f14247a9de0a49ea02ad72064abfcb8e',
     'third_party/blink/renderer/platform/geometry/contoured_rect.h': '7bde7e31d79df704ff620b2d9b7bcb2c50b01a716f3c48baf4dd83bc51df3fdf',
     'third_party/blink/renderer/platform/p2p/ipc_network_manager.cc': '11f7271c30b1e7902c2f5f9ec15daf3812dc860b5baeadd5008a0bb89f534063',
