@@ -48,6 +48,7 @@ gtos_ffmpeg_libc_sources = [
   "//third_party/llvm-libc/src/src/string/strerror_r.cpp",
   "//third_party/llvm-libc/src/src/string/strncat.cpp",
   "//third_party/llvm-libc/src/src/string/strncpy.cpp",
+  "//third_party/llvm-libc/src/src/string/strpbrk.cpp",
   "//third_party/llvm-libc/src/src/string/strrchr.cpp",
   "//third_party/llvm-libc/src/src/string/strspn.cpp",
   "//third_party/llvm-libc/src/src/strings/strcasecmp.cpp",

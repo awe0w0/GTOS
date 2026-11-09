@@ -34,6 +34,9 @@ int TestFileConsumers();
 #if defined(GTOS_CONTENT_XML_ARCHIVE_TEST)
 int TestXmlArchiveConsumers();
 #endif
+#if defined(GTOS_CONTENT_AVIF_TEST)
+int TestAvif();
+#endif
 
 namespace {
 
@@ -226,6 +229,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_XML_ARCHIVE_TEST)
     if (const int status = TestXmlArchiveConsumers()) return status;
     Say("GTOS CONTENT XML ARCHIVE PASS\n");
+#endif
+#if defined(GTOS_CONTENT_AVIF_TEST)
+    if (const int status = TestAvif()) return status;
+    Say("GTOS CONTENT AVIF PASS\n");
 #endif
     return 37;
 }
