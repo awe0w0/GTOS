@@ -29,7 +29,11 @@ source_set("native_threads") {
   sources = [
     "//tools/gtos_native_sdk/native-thread.cc",
     "//tools/gtos_native_sdk/native-thread.h",
+    "//v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc",
+    "//v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc",
   ]
+  include_dirs = [ "//v8" ]
+  defines = [ "V8_TARGET_OS_GTOS", "V8_TARGET_ARCH_IA32" ]
   deps = [ ":native_libcpp_thread" ]
 }
 

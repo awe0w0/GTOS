@@ -38,7 +38,7 @@ struct ThreadValues {
   uint32_t owner;
   bool registered;
 };
-constinit std::array<ThreadValues, GTOS_THREAD_SLOT_LIMIT> thread_values{};
+constinit std::array<ThreadValues, GTOS_CONTENT_THREAD_SLOT_LIMIT> thread_values{};
 
 ThreadValues& CurrentValues() {
   // This lookup also runs in allocator and lock instrumentation. Compiler
@@ -50,7 +50,7 @@ ThreadValues& CurrentValues() {
   asm volatile("int $0x80" : "+a"(operation)
                : "b"(&request), "c"(sizeof(request)) : "memory", "cc");
   if (operation || info.version != GTOS_THREAD_SLOT_ABI_VERSION ||
-      info.index >= GTOS_THREAD_SLOT_LIMIT || !info.thread_id) {
+      info.index >= thread_values.size() || !info.thread_id) {
     ImmediateCrash();
   }
   ThreadValues& values = thread_values[info.index];

@@ -1,6 +1,7 @@
 #ifndef __GTOS__PROCESS__NATIVE_FP_H
 #define __GTOS__PROCESS__NATIVE_FP_H
 #include <common/types.h>
+#include <process/thread_slot_abi.h>
 namespace gtos { namespace memory { class KernelPaging; } namespace process {
     enum NativeFpPolicy : uint32_t { NativeFpDisabled, NativeFpSse2, NativeFpSse3 };
     enum NativeFpError : uint32_t {
@@ -116,7 +117,7 @@ namespace gtos { namespace memory { class KernelPaging; } namespace process {
     class NativeFp {
         NativeFpTransition transition;
         NativeFpContext canonical, scratch;
-        NativeFpRecord* records[4];
+        NativeFpRecord* records[GTOS_CONTENT_THREAD_SLOT_LIMIT];
         uint32_t count, mask, saves, initializations, invalidations, failures;
         uint32_t userKeyboardInterrupts, userMouseInterrupts;
         NativeFpPolicy policy;

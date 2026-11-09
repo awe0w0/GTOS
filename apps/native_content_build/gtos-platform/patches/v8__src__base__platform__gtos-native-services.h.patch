@@ -1,0 +1,21 @@
+--- a/v8/src/base/platform/gtos-native-services.h
++++ b/v8/src/base/platform/gtos-native-services.h
+@@ -2,6 +2,7 @@
+ #define V8_BASE_PLATFORM_GTOS_NATIVE_SERVICES_H_
+ 
+ #include <stdint.h>
++#include <process/thread_slot_abi.h>
+ 
+ #include "src/base/platform/gtos-native-api/abi.h"
+ #include "src/base/platform/gtos-native-api/info_abi.h"
+@@ -35,7 +36,9 @@ inline GtosProcessInfoResult CurrentProcessInfo() {
+       ((result.stack_begin | result.stack_end) & 4095) != 0 ||
+       result.page_bytes != 4096 || result.maximum_pages < 2 ||
+       result.maximum_regions == 0 ||
+-      (result.maximum_parallel_threads != 1 && result.maximum_parallel_threads != 4) ||
++      (result.maximum_parallel_threads != 1 &&
++       result.maximum_parallel_threads != GTOS_THREAD_SLOT_LIMIT &&
++       result.maximum_parallel_threads != GTOS_CONTENT_THREAD_SLOT_LIMIT) ||
+       (result.maximum_parallel_threads == 1 && result.thread_id != result.process_id) ||
+       result.scheduler_cpu_count != 1) {
+     UnsupportedService();

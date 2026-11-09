@@ -103,7 +103,7 @@ struct Worker {
   bool ready = false;
 };
 
-std::array<Worker, GTOS_THREAD_SLOT_LIMIT - 1> workers;
+std::array<Worker, GTOS_CONTENT_THREAD_SLOT_LIMIT - 1> workers;
 std::__libcpp_mutex_t mutex = _LIBCPP_MUTEX_INITIALIZER;
 
 class WorkerLock {
@@ -212,7 +212,8 @@ int StartThread(size_t stack_bytes, ThreadRoutine routine, void* argument,
   WorkerLock lock;
   CollectLocked(info.thread_id);
   Worker* free = nullptr;
-  for (auto& worker : workers) {
+  for (unsigned i = 0; i + 1 < info.maximum_parallel_threads; ++i) {
+    auto& worker = workers[i];
     if (worker.state == State::kEmpty) {
       free = &worker;
       break;

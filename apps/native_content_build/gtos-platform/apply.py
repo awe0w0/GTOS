@@ -321,6 +321,9 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-exit.h': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/thread-exit.h',
+    'v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc',
+    'v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc',
     'build/rust/crubit/gtos-generated.rsp': 'rust/gtos-generated.rsp',
     'build/config/gtos/include/process/file_abi.h': '../../../include/process/file_abi.h',
     'build/config/gtos/include/process/realtime_abi.h': '../../../include/process/realtime_abi.h',
@@ -462,12 +465,22 @@ ADDITIONS = {
 
 # Patch private copies of the qualified V8 platform sources.
 PATCHED_ADDITIONS = {
+    'tools/gtos_native_sdk/native-services.h',
+    'v8/src/base/platform/gtos-native-services.h',
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc',
+    'v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc',
+    'v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc',
     'v8/src/base/debug/stack_trace_gtos.cc',
     'v8/src/base/platform/platform-gtos.cc',
 }
 
 # These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
+    'v8/src/base/platform/gtos-native-services.h': '116d34133d4b3809db535b97e28f1a413c4a07b9a09ffff02813c3665292294b',
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc': 'f1c3fb0f57ee63e5e4182d35a0e744cfc97042aa0fac03b88c086ca08340f09f',
+    'v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc': '7512bf2745e4ff4a145539aa75b44377a2482192dd476f68509a7c62baaf08fa',
+    'v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc': '2d9fc70c28f00c493ba99c685099e3f96b3a6cf0f5749c1fcaa88f82f7df1f25',
+    'v8/tools/gtos_isolate_diagnostic/runtime/thread-exit.h': '74ee5c8353f5ec509a70751e198e05886003ccbf20b736c5e584b3d99270be24',
     'v8/src/base/debug/stack_trace_gtos.cc': 'b264765845298b2406ed31cbb328b1ca94e4abd499280f4ce6e43f630302130a',
     'v8/src/base/platform/platform-gtos.cc': '4a5f12d773bfdc87994b1984d1538070aa420b652ab9ffc477c1821171fec185',
     'v8/src/base/platform/gtos-native-api/vm_abi.h': '35692ed3e81152863a97cf8aeb8a24613465a01879e76500c369cb59f6e23c11',

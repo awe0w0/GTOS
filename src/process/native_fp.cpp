@@ -56,7 +56,7 @@ NativeFp::NativeFp() : count(0), mask(0), saves(0), initializations(0), invalida
     transition.phase = NativeFpOff; transition.owner = 0;
     transition.generation = transition.restores = 0;
     NativeFpScrub(&canonical, sizeof(canonical)); NativeFpScrub(&scratch, sizeof(scratch));
-    for (uint32_t i = 0; i < 4; ++i) records[i] = 0;
+    for (auto& record : records) record = 0;
 }
 bool NativeFp::PrepareBsp(NativeFpPolicy requested, gtos::memory::KernelPaging& kernel,
                           NativeFpRecord* const* supplied, uint32_t suppliedCount) {
@@ -65,7 +65,8 @@ bool NativeFp::PrepareBsp(NativeFpPolicy requested, gtos::memory::KernelPaging& 
     error = ValidateNativeFpCapabilities(Capabilities(), requested);
     if (error != NativeFpOk) return false;
     if (!Resident(kernel, this, sizeof(*this)) || ((uint32_t)&canonical & 15U)
-        || ((uint32_t)&scratch & 15U) || !supplied || suppliedCount != 4) {
+        || ((uint32_t)&scratch & 15U) || !supplied ||
+        (suppliedCount != GTOS_THREAD_SLOT_LIMIT && suppliedCount != GTOS_CONTENT_THREAD_SLOT_LIMIT)) {
         error = NativeFpBadBuffer; return false;
     }
     for (uint32_t i = 0; i < suppliedCount; ++i) {

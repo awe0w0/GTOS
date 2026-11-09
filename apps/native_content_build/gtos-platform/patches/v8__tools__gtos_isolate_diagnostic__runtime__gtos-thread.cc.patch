@@ -1,0 +1,11 @@
+--- a/v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc
++++ b/v8/tools/gtos_isolate_diagnostic/runtime/gtos-thread.cc
+@@ -76,7 +76,7 @@ bool Thread::Start() {
+     return false;
+   };
+   const auto info = gtos::CurrentNativeThreadInfo();
+-  if (info.maximum_parallel_threads != 4 || stack_size_ < 0 ||
++  if (info.maximum_parallel_threads == 1 || stack_size_ < 0 ||
+       priority_ != Priority::kDefault) return failed();
+   uint32_t bytes = stack_size_ == 0 ? 65536U : static_cast<uint32_t>(stack_size_);
+   if (bytes < 8192) bytes = 8192;

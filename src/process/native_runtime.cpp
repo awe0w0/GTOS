@@ -1,5 +1,5 @@
 #include <process/native_runtime.h>
-#include <process/thread_slot_abi.h>
+#include <memorymanagement.h>
 #include <process/resources.h>
 #include <process/native_surface.h>
 #include <process/native_windows.h>
@@ -109,7 +109,8 @@ namespace {
     }
 }
 NativeRuntime* NativeRuntime::active = 0;
-NativeRuntime::NativeRuntime() : paging(0), frames(0), scheduler(0), gdt(0),
+NativeRuntime::NativeRuntime() : slots(defaultSlots), slotCount(MaximumProcesses),
+    paging(0), frames(0), scheduler(0), gdt(0),
     stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), events(0), sharedMemory(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
@@ -136,7 +137,8 @@ bool NativeRuntime::AttachSharedMemory(NativeSharedMemoryEndpoint& endpoint) {
     sharedMemory = &endpoint;
     return true;
 }
-bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& allocator) {
+bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& allocator,
+                                  bool contentThreads) {
     InterruptGuard guard;
     PagingStatistics info = kernel.getStatistics();
     if (!BootstrapProcessor() || !kernel.usesAllocator(allocator) || stacksPrepared || enabled
@@ -144,13 +146,22 @@ bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& a
         return false;
     // Include every leading/inter-slot/trailing guard in collision checks.
     PagingMapping mapping;
-    const uint32_t total = MaximumProcesses * (KernelStackPages + 1) + 1;
+    const uint32_t count = contentThreads ? GTOS_CONTENT_THREAD_SLOT_LIMIT : MaximumProcesses;
+    const uint32_t total = count * (KernelStackPages + 1) + 1;
     for (uint32_t i = 0; i < total; ++i)
         if (kernel.query(KernelStackArena + i * 4096, mapping)) return false;
+    uint32_t storage = 0;
+    const uint32_t storagePages = (count * sizeof(Slot) + 4095) / 4096;
+    Slot* prepared = defaultSlots;
+    if (contentThreads) {
+        if (!allocator.allocateContiguous(storagePages, storage)) return false;
+        Zero(reinterpret_cast<void*>(storage), storagePages * 4096);
+        prepared = new (reinterpret_cast<void*>(storage)) Slot[GTOS_CONTENT_THREAD_SLOT_LIMIT];
+    }
     uint32_t mapped = 0;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < count; ++i) {
         for (uint32_t j = 0; j < KernelStackPages; ++j) {
-            uint32_t& frame = slots[i].stackFrames[j];
+            uint32_t& frame = prepared[i].stackFrames[j];
             const uint32_t address = StackTop(i) - (KernelStackPages - j) * 4096;
             if (!allocator.allocate(frame)) goto rollback;
             Zero((void*)frame, 4096);
@@ -160,13 +171,18 @@ bool NativeRuntime::PrepareStacks(KernelPaging& kernel, PhysicalMemoryManager& a
             ++mapped;
         }
     }
+    slots = prepared; slotCount = count;
     paging = &kernel; frames = &allocator; stacksPrepared = true;
     return true;
 rollback:
     for (uint32_t n = 0; n < mapped; ++n) {
         const uint32_t i = n / KernelStackPages, j = n % KernelStackPages;
         kernel.unmapOwnedPage(StackTop(i) - (KernelStackPages - j) * 4096);
-        allocator.free(slots[i].stackFrames[j]); slots[i].stackFrames[j] = 0;
+        allocator.free(prepared[i].stackFrames[j]); prepared[i].stackFrames[j] = 0;
+    }
+    if (storage) {
+        for (uint32_t i = 0; i < count; ++i) prepared[i].~Slot();
+        allocator.freeContiguous(storage, storagePages);
     }
     // KernelPaging retains any newly created empty supervisor page table; it
     // still owns that frame and will reclaim it on pre-enable abandon().
@@ -187,9 +203,9 @@ bool NativeRuntime::Activate(TaskManager& tasks, GlobalDescriptorTable& descript
         || frames != &allocator || !kernel.usesAllocator(allocator) || !info.enabled || !info.sealedForSharing
         || Cr3() != info.directoryAddress || tasks.CurrentTask()) return false;
     if (!DisableFastEntry()) return false;
-    NativeFpRecord* records[MaximumProcesses];
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) records[i] = &slots[i].fp;
-    if (!fp.PrepareBsp(policy, kernel, records, MaximumProcesses)) return false;
+    NativeFpRecord* records[GTOS_CONTENT_THREAD_SLOT_LIMIT];
+    for (uint32_t i = 0; i < slotCount; ++i) records[i] = &slots[i].fp;
+    if (!fp.PrepareBsp(policy, kernel, records, slotCount)) return false;
     scheduler = &tasks; gdt = &descriptors;
     tasks.nativeGdt = gdt; tasks.kernelDirectory = info.directoryAddress;
     tasks.nativeFpEnabled = fp.Enabled();
@@ -212,7 +228,7 @@ bool NativeRuntime::SafeKernelContext() const {
         && Cr3() == paging->getStatistics().directoryAddress;
 }
 NativeRuntime::Slot* NativeRuntime::FreeSlot(uint32_t& index) {
-    for (index = 0; index < MaximumProcesses; ++index)
+    for (index = 0; index < slotCount; ++index)
         if (!slots[index].occupied && !slots[index].space.Prepared()) return &slots[index];
     return 0;
 }
@@ -385,7 +401,7 @@ rollback:
 bool NativeRuntime::MemoryStatistics(uint32_t id, ProcessMemoryStatistics& result) const {
     InterruptGuard guard;
     if (!SafeKernelContext()) return false;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i)
+    for (uint32_t i = 0; i < slotCount; ++i)
         if (slots[i].occupied && slots[i].status.id == id && !slots[i].status.reaped)
             return slots[i].Space().QueryStatistics(result);
     return false;
@@ -394,7 +410,7 @@ NativeRuntime::Slot* NativeRuntime::Current() {
     if (!enabled) return 0;
     Task* task = scheduler->CurrentTask();
     if (!task || !task->UserMode()) return 0;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i)
+    for (uint32_t i = 0; i < slotCount; ++i)
         if (slots[i].occupied && &slots[i].task == task
             && Cr3() == slots[i].Space().DirectoryAddress()) return &slots[i];
     return 0;
@@ -410,7 +426,7 @@ CPUState* NativeRuntime::Stop(Slot& slot, CPUState* cpu, uint32_t code) {
 void NativeRuntime::StopGroup(Slot& process, uint32_t code) {
     NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
     NativeWindows::Instance().ReclaimOwner(process.status.id);
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < slotCount; ++i) {
         Slot& member = slots[i];
         if (!member.occupied || member.process != &process || !member.status.live) continue;
         member.status.live = false; member.status.exitCode = code;
@@ -420,7 +436,7 @@ void NativeRuntime::StopGroup(Slot& process, uint32_t code) {
 }
 bool NativeRuntime::StackPinned(const Slot& process, uint32_t handle) const {
     if (!handle) return false;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i)
+    for (uint32_t i = 0; i < slotCount; ++i)
         if (slots[i].occupied && slots[i].process == &process && slots[i].stackHandle == handle)
             return true;
     return false;
@@ -509,7 +525,7 @@ int NativeRuntime::TryJoin(Slot& caller, const GtosThreadJoinRequest& request) {
     if (!space.ValidateUserRange(request.result_va, sizeof(uint32_t), true))
         return GTOS_THREAD_ERR_BAD_ADDRESS;
     if (request.thread_id == caller.status.id) return GTOS_THREAD_ERR_DEADLOCK;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < slotCount; ++i) {
         Slot& target = slots[i];
         if (!target.occupied || !request.thread_id || target.status.id != request.thread_id) continue;
         if (target.process != caller.process || target.process == &target)
@@ -534,7 +550,7 @@ void NativeRuntime::EventNotification(void* context) {
 void NativeRuntime::WakeEventWaiters() {
     InterruptGuard guard;
     if (!enabled || !scheduler || !events) return;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < slotCount; ++i) {
         Slot& thread = slots[i];
         if (!thread.occupied || !thread.status.live || !thread.eventWaitCount
             || !thread.eventWaitFrame || thread.task.State() != TaskSleeping) continue;
@@ -658,7 +674,6 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         break;
     }
     case GTOS_SYS_THREAD_SLOT_INFO: {
-        static_assert(MaximumProcesses == GTOS_THREAD_SLOT_LIMIT, "Native thread slot ABI");
         if (cpu->ecx != sizeof(GtosThreadSlotRequest)) {
             cpu->eax = (uint32_t)GTOS_THREAD_SLOT_ERR_SIZE; break;
         }
@@ -807,7 +822,7 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
             GTOS_VM_PAGE_BYTES, memory.capacityPages,
-            ProcessAddressSpace::MaximumRegions, threadsEnabled ? MaximumProcesses : 1, 1};
+            ProcessAddressSpace::MaximumRegions, threadsEnabled ? slotCount : 1, 1};
         // The request was consumed before any write. IF is clear on BSP, so
         // full output validation also covers aliases and mixed-page failures.
         cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
@@ -1107,11 +1122,11 @@ uint32_t NativeRuntime::Reap() {
     InterruptGuard guard;
     if (!SafeKernelContext()) return 0;
     uint32_t reaped = 0;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < slotCount; ++i) {
         Slot& process = slots[i];
         if (!process.occupied || process.process != &process || process.status.live) continue;
         bool removed = true;
-        for (uint32_t j = 0; j < MaximumProcesses; ++j) {
+        for (uint32_t j = 0; j < slotCount; ++j) {
             Slot& member = slots[j];
             if (!member.occupied || member.process != &process) continue;
             if (member.status.live || member.task.State() != TaskTerminated) { removed = false; continue; }
@@ -1127,7 +1142,7 @@ uint32_t NativeRuntime::Reap() {
         if (events) events->ReclaimOwner(process.status.id);
         if (!process.space.Destroy()) continue;
         if (sharedMemory) sharedMemory->ReclaimOwner(process.status.id);
-        for (uint32_t j = 0; j < MaximumProcesses; ++j) {
+        for (uint32_t j = 0; j < slotCount; ++j) {
             Slot& member = slots[j];
             if (!member.occupied || member.process != &process) continue;
             member.occupied = false; member.status.reaped = true; member.stackHandle = 0;
@@ -1140,7 +1155,7 @@ uint32_t NativeRuntime::Reap() {
 }
 bool NativeRuntime::Status(uint32_t id, NativeStatus& result) const {
     InterruptGuard guard;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) if (id && slots[i].status.id == id) {
+    for (uint32_t i = 0; i < slotCount; ++i) if (id && slots[i].status.id == id) {
         result = slots[i].status;
         if (slots[i].occupied) result.statistics = slots[i].task.Statistics();
         return true;
@@ -1150,7 +1165,7 @@ bool NativeRuntime::Status(uint32_t id, NativeStatus& result) const {
 bool NativeRuntime::ReadMemory(uint32_t id, uint32_t address, void* out, uint32_t bytes) const {
     InterruptGuard guard;
     if (!SafeKernelContext()) return false;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i)
+    for (uint32_t i = 0; i < slotCount; ++i)
         if (slots[i].occupied && slots[i].status.id == id)
             return slots[i].Space().CopyFromUser(out, address, bytes);
     return false;
@@ -1159,7 +1174,7 @@ NativeStatistics NativeRuntime::Statistics() const { InterruptGuard guard; retur
 NativeRuntime* NativeRuntime::Active() { return active; }
 bool NativeRuntime::ObserveSlot(uint32_t id, SlotObservation& result) const {
     InterruptGuard guard;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < slotCount; ++i) {
         if (!id || slots[i].status.id != id) continue;
         result.index = i;
         result.id = slots[i].status.id;
@@ -1174,14 +1189,14 @@ bool NativeRuntime::ObserveSlot(uint32_t id, SlotObservation& result) const {
 uint32_t NativeRuntime::OccupiedSlots() const {
     InterruptGuard guard;
     uint32_t count = 0;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) if (slots[i].occupied) ++count;
+    for (uint32_t i = 0; i < slotCount; ++i) if (slots[i].occupied) ++count;
     return count;
 }
 
 bool NativeRuntime::RequestExit(uint32_t id, uint32_t code) {
     InterruptGuard guard;
     if (!SafeKernelContext()) return false;
-    for (uint32_t i = 0; i < MaximumProcesses; ++i) {
+    for (uint32_t i = 0; i < slotCount; ++i) {
         Slot& slot = slots[i];
         if (id && slot.occupied && slot.status.id == id && slot.status.live) {
             ++statistics.exited;

@@ -1,0 +1,38 @@
+--- a/v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc
++++ b/v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc
+@@ -2,7 +2,7 @@
+ #include "src/base/platform/gtos-native-services.h"
+ namespace v8 { namespace base { namespace gtos {
+ namespace {
+-NativeThreadState states[4];
++NativeThreadState states[GTOS_CONTENT_THREAD_SLOT_LIMIT];
+ uint32_t context_lock;
+ class ContextGuard {
+  public:
+@@ -20,25 +20,7 @@ class ContextGuard {
+ };
+ }
+ GtosProcessInfoResult CurrentNativeThreadInfo() {
+-  GtosProcessInfoResult result = {};
+-  GtosProcessInfoRequest request = {GTOS_PROCESS_INFO_ABI_VERSION, 0,
+-      static_cast<unsigned>(reinterpret_cast<uintptr_t>(&result)), sizeof(result)};
+-  unsigned call = GTOS_SYS_PROCESS_INFO;
+-  asm volatile("int $0x80" : "+a"(call)
+-      : "b"(static_cast<unsigned>(reinterpret_cast<uintptr_t>(&request))),
+-        "c"(sizeof(request)) : "memory", "cc");
+-  if (call != 0 || result.version != GTOS_PROCESS_INFO_ABI_VERSION ||
+-      result.process_id == 0 || result.thread_id == 0 ||
+-      result.process_id > 0x7fffffffU || result.thread_id > 0x7fffffffU ||
+-      result.user_begin != 0x40000000U || result.user_end != 0xc0000000U ||
+-      result.stack_begin < result.user_begin || result.stack_end > result.user_end ||
+-      result.stack_begin >= result.stack_end || result.stack_end - result.stack_begin < 8192 ||
+-      ((result.stack_begin | result.stack_end) & 4095) != 0 ||
+-      result.page_bytes != 4096 || result.maximum_pages < 2 || result.maximum_regions == 0 ||
+-      (result.maximum_parallel_threads != 1 && result.maximum_parallel_threads != 4) ||
+-      (result.maximum_parallel_threads == 1 && result.thread_id != result.process_id) ||
+-      result.scheduler_cpu_count != 1) UnsupportedService();
+-  return result;
++  return CurrentProcessInfo();
+ }
+ NativeThreadState& CurrentNativeThreadState() {
+   const uint32_t id = CurrentNativeThreadInfo().thread_id;

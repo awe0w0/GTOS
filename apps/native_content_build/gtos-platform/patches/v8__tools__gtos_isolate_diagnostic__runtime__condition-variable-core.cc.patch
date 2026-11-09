@@ -1,0 +1,20 @@
+--- a/v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc
++++ b/v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc
+@@ -5,7 +5,7 @@
+ 
+ #include "src/base/platform/gtos-native-services.h"
+ 
+-// Up to four native contexts share one address space. Wait records stay local
++// Native threads share one address space. Wait records stay local
+ // to that address space; notification selects one or all registered waiters.
+ // Real scheduler yields and clock deadlines preserve mutex ownership on return.
+ namespace {
+@@ -23,7 +23,7 @@ struct WaitRecord {
+   uint32_t owner;
+   bool notified;
+ };
+-WaitRecord records[4];
++WaitRecord records[GTOS_CONTENT_THREAD_SLOT_LIMIT];
+ uint32_t condition_lock;
+ class ConditionGuard {
+  public:

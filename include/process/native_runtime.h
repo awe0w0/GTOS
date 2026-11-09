@@ -10,6 +10,7 @@
 #include <process/native_shared_memory_endpoint.h>
 #include <process/native_environment.h>
 #include <process/thread_abi.h>
+#include <process/thread_slot_abi.h>
 #include <process/elf32.h>
 namespace gtos { namespace process {
     // A bounded kernel-provided isolation fixture. This is NOT an ELF loader.
@@ -39,7 +40,7 @@ namespace gtos { namespace process {
     class NativeRuntime {
         friend struct ::gtos::NativeClockFixture;
     public:
-        static const uint32_t MaximumProcesses = 4;
+        static const uint32_t MaximumProcesses = GTOS_THREAD_SLOT_LIMIT;
         static const uint32_t CodeAddress = 0x40000000U;
         static const uint32_t DataAddress = 0x40002000U;
         static const uint32_t UserStackBottom = 0xBFFFD000U;
@@ -80,7 +81,9 @@ namespace gtos { namespace process {
             memory::ProcessAddressSpace& Space() { return process->space; }
             const memory::ProcessAddressSpace& Space() const { return process->space; }
         };
-        Slot slots[MaximumProcesses];
+        Slot defaultSlots[MaximumProcesses];
+        Slot* slots;
+        uint32_t slotCount;
         memory::KernelPaging* paging;
         memory::PhysicalMemoryManager* frames;
         TaskManager* scheduler;
@@ -128,7 +131,8 @@ namespace gtos { namespace process {
         bool AttachSharedMemory(NativeSharedMemoryEndpoint& endpoint);
         // Call after prepareIdentity, before enable/AP sharing. Guard aliases
         // are retained permanently; no alias changes after sealing.
-        bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&);
+        bool PrepareStacks(memory::KernelPaging&, memory::PhysicalMemoryManager&,
+                           bool contentThreads = false);
         // Call after enable + sealForSharedProcessors, on BSP kernel CR3, IF=0.
         bool Activate(TaskManager&, GlobalDescriptorTable&, memory::KernelPaging&,
                       memory::PhysicalMemoryManager&, NativeFpPolicy = NativeFpDisabled,

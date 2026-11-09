@@ -148,7 +148,6 @@ void* operator new(unsigned size) noexcept {
 }
 void* operator new[](unsigned size) noexcept { return ::operator new(size); }
 void* operator new(unsigned, void* ptr) noexcept { return ptr; }
-void* operator new[](unsigned, void* ptr) noexcept { return ptr; }
 void operator delete(void* ptr) noexcept {
     if (MemoryManager::activeMemoryManager) MemoryManager::activeMemoryManager->free(ptr);
 }

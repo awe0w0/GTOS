@@ -2931,7 +2931,8 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
                           (apsPrepared && apReport.localApicAddress) ? apReport.localApicAddress : 0);
     if (!paging.prepareIdentity(frames, pagingConfig))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
-    bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames);
+    const bool contentThreads = contentBoot && BootOption(mbi, "content-threads");
+    bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames, contentThreads);
     bool workersStarted = workersPrepared && workers.Start(paging);
     // Only a pre-handoff failure may use the original parked path. Once an AP
     // has been handed off (even if it times out), never resend INIT/SIPI.

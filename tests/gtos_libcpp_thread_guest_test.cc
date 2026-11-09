@@ -2,14 +2,106 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
 #include <atomic>
+#include <cerrno>
+#include <condition_variable>
 #include <exception>
 #include <future>
+#include <mutex>
 #include <thread>
 #include <utility>
 
+#include <process/thread_abi.h>
+#include <process/thread_slot_abi.h>
+
 #include "tools/gtos_native_sdk/native-services.h"
 #include "tools/gtos_native_sdk/native-thread.h"
+#include "v8/src/base/platform/platform.h"
+
+namespace {
+
+struct ThreadGate {
+    std::mutex mutex;
+    std::condition_variable ready;
+    unsigned entered = 0;
+    bool released = false;
+};
+
+void* WaitAtGate(void* argument) {
+    auto& gate = *static_cast<ThreadGate*>(argument);
+    const auto thread = gtos::native::CurrentProcessInfo();
+    static thread_local unsigned local_id;
+    if (local_id != 0) return nullptr;
+    local_id = thread.thread_id;
+    errno = static_cast<int>(thread.thread_id);
+    std::unique_lock lock(gate.mutex);
+    ++gate.entered;
+    gate.ready.wait(lock, [&] { return gate.released; });
+    if (local_id != thread.thread_id || errno != static_cast<int>(thread.thread_id))
+        return nullptr;
+    return reinterpret_cast<void*>(thread.thread_id);
+}
+
+int TestThreadCapacity(const GtosProcessInfoResult& process) {
+    const unsigned limit = process.maximum_parallel_threads;
+#if defined(GTOS_EXPECT_CONTENT_THREADS)
+    if (limit != GTOS_CONTENT_THREAD_SLOT_LIMIT) return 47;
+#else
+    if (limit != GTOS_THREAD_SLOT_LIMIT) return 47;
+#endif
+    ThreadGate gate;
+    std::array<unsigned, GTOS_CONTENT_THREAD_SLOT_LIMIT - 1> ids{};
+    unsigned count = 0;
+    int status = 0;
+    for (; count < limit - 1; ++count) {
+        if (gtos::native::StartThread(0, WaitAtGate, &gate, &ids[count])) {
+            status = 48;
+            break;
+        }
+    }
+    bool all_waiting = false;
+    for (unsigned attempt = 0; attempt < 4096 && !all_waiting; ++attempt) {
+        {
+            std::lock_guard lock(gate.mutex);
+            all_waiting = gate.entered == count;
+        }
+        std::this_thread::yield();
+    }
+    if (!status && !all_waiting) status = 49;
+
+    unsigned extra = 0;
+    if (!status && (gtos::native::StartThread(0, WaitAtGate, &gate, &extra) !=
+                        -GTOS_THREAD_ERR_LIMIT || extra != 0))
+        status = 50;
+
+    {
+        std::lock_guard lock(gate.mutex);
+        gate.released = true;
+        gate.ready.notify_all();
+    }
+    if (extra && gtos::native::JoinThread(extra)) status = 51;
+    for (unsigned i = 0; i < count; ++i) {
+        void* result = nullptr;
+        if (gtos::native::JoinThread(ids[i], &result) ||
+            reinterpret_cast<uintptr_t>(result) != ids[i])
+            status = 51;
+    }
+    return status;
+}
+
+class V8Worker : public v8::base::Thread {
+public:
+    V8Worker() : Thread(Options("gtos-v8-worker")) {}
+    unsigned id = 0;
+
+private:
+    void Run() override {
+        id = gtos::native::CurrentProcessInfo().thread_id;
+    }
+};
+
+}  // namespace
 
 int TestLibcppThread() {
     const auto process = gtos::native::CurrentProcessInfo();
@@ -52,5 +144,11 @@ int TestLibcppThread() {
     std::thread next([&] { reused = gtos::native::CurrentProcessInfo().thread_id; });
     next.join();
     if (reused <= worker_id || next.joinable()) return 45;
+    if (const int status = TestThreadCapacity(process)) return status;
+
+    V8Worker v8_worker;
+    if (!v8_worker.StartSynchronously()) return 52;
+    v8_worker.Join();
+    if (v8_worker.id <= reused) return 53;
     return 0;
 }
