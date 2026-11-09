@@ -311,6 +311,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/process/file_abi.h': '../../../include/process/file_abi.h',
+    'build/config/gtos/include/process/realtime_abi.h': '../../../include/process/realtime_abi.h',
     'third_party/sqlite/vfs_gtos.cc': 'sqlite/vfs_gtos.cc',
     'base/rand_util_gtos.cc': 'base/rand_util_gtos.cc',
     'tools/gtos_native_sdk/file-output.hpp': 'sdk/native-file-output.hpp',

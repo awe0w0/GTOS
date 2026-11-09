@@ -53,6 +53,7 @@ source_set("native_cxx_abi") {
     "//third_party/libc++abi/src/src/cxa_handlers.cpp",
     "//third_party/libc++abi/src/src/cxa_noexception.cpp",
     "//third_party/libc++abi/src/src/private_typeinfo.cpp",
+    "//third_party/libc++abi/src/src/stdlib_exception.cpp",
     "//third_party/libc++abi/src/src/stdlib_typeinfo.cpp",
   ]
   include_dirs = [
