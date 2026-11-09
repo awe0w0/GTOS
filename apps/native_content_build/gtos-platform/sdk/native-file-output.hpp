@@ -16,6 +16,7 @@ namespace gtos::native {
 class FileOutput : private std::streambuf, public std::ostream {
  public:
   explicit FileOutput(const char* path);
+  FileOutput(const char* path, std::ios_base::openmode mode);
   ~FileOutput() override;
   void close();
 

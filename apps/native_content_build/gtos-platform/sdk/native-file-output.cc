@@ -7,8 +7,13 @@
 namespace gtos::native {
 
 FileOutput::FileOutput(const char* path)
-    : std::ostream(static_cast<std::streambuf*>(this)),
-      file_(std::fopen(path, "wb")) {
+    : FileOutput(path, std::ios_base::trunc) {}
+
+FileOutput::FileOutput(const char* path, std::ios_base::openmode mode)
+    : std::ostream(static_cast<std::streambuf*>(this)), file_(nullptr) {
+  if (mode == std::ios_base::trunc || mode == std::ios_base::app) {
+    file_ = std::fopen(path, mode == std::ios_base::app ? "ab" : "wb");
+  }
   if (!file_)
     setstate(std::ios::failbit);
 }

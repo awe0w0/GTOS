@@ -19,6 +19,7 @@
 #include "iamf/common/read_bit_buffer.h"
 #include "iamf/common/write_bit_buffer.h"
 #include "mkvmuxer/mkvmuxerutil.h"
+#include "tools/gtos_native_sdk/file-output.hpp"
 
 namespace {
 
@@ -144,6 +145,34 @@ int TestFileConsumers() {
         fcp::ReadFileToString(missing).ok() || fcp::WriteStringToFile(missing, bytes).ok() ||
         fcp::ReadFileToString(GTOS_CONTENT_ASSET_DIRECTORY).ok())
         return 68;
+
+    {
+        gtos::native::FileOutput trace(path);
+        trace << "first";
+        trace.close();
+        if (!trace) return 98;
+    }
+    {
+        gtos::native::FileOutput invalid(path, std::ios_base::in);
+        if (invalid) return 99;
+        gtos::native::FileOutput trace(path, std::ios_base::app);
+        trace.write(tail.data(), tail.size()).flush();
+        trace.close();
+        if (!trace) return 100;
+    }
+    const auto appended = fcp::ReadFileToString(path);
+    if (!appended.ok() || *appended != std::string_view("first\0\r\n", 8))
+        return 101;
+    {
+        gtos::native::FileOutput trace(path, std::ios_base::trunc);
+        trace << "next";
+        trace.close();
+        if (!trace) return 102;
+        gtos::native::FileOutput denied(missing, std::ios_base::app);
+        if (denied) return 103;
+    }
+    const auto truncated = fcp::ReadFileToString(path);
+    if (!truncated.ok() || *truncated != "next") return 104;
 
     auto stream = iamf_tools::StreamBasedReadBitBuffer::Create(2);
     constexpr std::array<uint8_t, 1> first{0xab};
