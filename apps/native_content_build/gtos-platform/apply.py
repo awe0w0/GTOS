@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'v8/src/base/once.cc': '10ca64fffb257aadb05e8cb5b2d9b86890773986c73cf1a21d9b939f586d4bd1',
+    'v8/src/base/platform/time.cc': 'f6273ee921bb880a03571b78c26d87d4077b51fff8c1f9bc4f47f7570868aebd',
+    'v8/src/base/sys-info.cc': '1bddf26ff8424543a1be79a4dfb8c83d977f7d2ab101c90e13fc23f9a64f9b1c',
     'third_party/ffmpeg/libavutil/file_open.c': '67c5c007f53735f9d6fdd64fd18c5d1098b792b6eac6a1111b8dfe02f653a0bf',
     'third_party/ffmpeg/BUILD.gn': '23753f7fc167adf7387e796b5345c5f3cd812ed0f446b09fe251927a22771989',
     'net/cookies/cookie_util.cc': '659f1db784a243eae768d2af6d8705d2f99073b5cbfb73ef02ddc7e57b72f4f3',

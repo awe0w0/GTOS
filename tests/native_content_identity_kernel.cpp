@@ -3,7 +3,11 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 
-#if defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
+#if defined(GTOS_CONTENT_V8_PLATFORM_PROBE)
+#define CONTENT_BASE_PROBE "CONTENT V8 PLATFORM"
+static const unsigned ExpectedChecks = 25;
+static const char* const CheckDescription = "native clocks, memory and concurrent V8 once";
+#elif defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT FFMPEG WEBM"
 static const unsigned ExpectedChecks = 32;
 static const char* const CheckDescription = "WebM demux, VP9 frames and native synchronization";
@@ -51,6 +55,7 @@ static const char* const CheckDescription = "exact process and worker identity";
 
 namespace {
 #if defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
+    defined(GTOS_CONTENT_V8_PLATFORM_PROBE) || \
     defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
     defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)
@@ -114,6 +119,7 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     const NativeElfLaunchProfile profile{9000, 32, 12288};
     Need(runtime.CreateContentElf(image, bytes, id, profile, environment), "Content ELF admission");
 #elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
+    defined(GTOS_CONTENT_V8_PLATFORM_PROBE) || \
     defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \
     defined(GTOS_CONTENT_ADDRESS_TEXT_PROBE) || defined(GTOS_CONTENT_NET_PROTOCOL_PROBE)

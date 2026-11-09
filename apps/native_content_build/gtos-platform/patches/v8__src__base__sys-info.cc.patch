@@ -1,0 +1,71 @@
+--- a/v8/src/base/sys-info.cc
++++ b/v8/src/base/sys-info.cc
+@@ -4,6 +4,11 @@
+ 
+ #include "src/base/sys-info.h"
+ 
++#if V8_OS_GTOS
++#include <process/system_memory_abi.h>
++#include "src/base/platform/gtos-native-services.h"
++#endif
++
+ #if V8_OS_POSIX
+ #include <sys/stat.h>
+ #include <sys/time.h>
+@@ -35,7 +40,9 @@ namespace base {
+ 
+ // static
+ int SysInfo::NumberOfProcessors() {
+-#if V8_OS_OPENBSD
++#if V8_OS_GTOS
++  return static_cast<int>(gtos::CurrentProcessInfo().scheduler_cpu_count);
++#elif V8_OS_OPENBSD
+   int mib[2] = {CTL_HW, HW_NCPU};
+   int ncpu = 0;
+   size_t len = sizeof(ncpu);
+@@ -64,7 +71,21 @@ int SysInfo::NumberOfProcessors() {
+ 
+ // static
+ int64_t SysInfo::AmountOfPhysicalMemory() {
+-#if V8_OS_DARWIN
++#if V8_OS_GTOS
++  GtosSystemMemoryInfo memory{};
++  const GtosSystemMemoryRequest request{GTOS_SYSTEM_MEMORY_ABI_VERSION,
++                                       reinterpret_cast<unsigned>(&memory)};
++  unsigned operation = GTOS_SYS_SYSTEM_MEMORY_INFO;
++  asm volatile("int $0x80" : "+a"(operation)
++               : "b"(&request), "c"(sizeof(request)) : "memory", "cc");
++  if (operation || memory.version != GTOS_SYSTEM_MEMORY_ABI_VERSION ||
++      memory.page_bytes != 4096 || !memory.total_frames ||
++      memory.free_frames > memory.total_frames) {
++    return 0;
++  }
++  // The allocator reports usable physical frames, excluding reserved ranges.
++  return static_cast<int64_t>(memory.total_frames) * memory.page_bytes;
++#elif V8_OS_DARWIN
+   int mib[2] = {CTL_HW, HW_MEMSIZE};
+   int64_t memsize = 0;
+   size_t len = sizeof(memsize);
+@@ -118,7 +139,10 @@ int64_t SysInfo::AmountOfPhysicalMemory() {
+ 
+ // static
+ int64_t SysInfo::AmountOfVirtualMemory() {
+-#if V8_OS_WIN || V8_OS_FUCHSIA
++#if V8_OS_GTOS
++  const auto info = gtos::CurrentProcessInfo();
++  return static_cast<int64_t>(info.maximum_pages) * info.page_bytes;
++#elif V8_OS_WIN || V8_OS_FUCHSIA
+   return 0;
+ #elif V8_OS_POSIX
+   struct rlimit rlim;
+@@ -134,7 +158,9 @@ int64_t SysInfo::AmountOfVirtualMemory() {
+ 
+ // static
+ uintptr_t SysInfo::AddressSpaceEnd() {
+-#if V8_OS_WIN
++#if V8_OS_GTOS
++  return gtos::CurrentProcessInfo().user_end;
++#elif V8_OS_WIN
+   SYSTEM_INFO info;
+   GetSystemInfo(&info);
+   uintptr_t max_address =
