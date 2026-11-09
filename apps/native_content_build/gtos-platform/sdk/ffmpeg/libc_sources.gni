@@ -23,6 +23,7 @@ gtos_ffmpeg_libc_sources = [
   "//third_party/llvm-libc/src/src/math/generic/round.cpp",
   "//third_party/llvm-libc/src/src/math/generic/roundf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/sin.cpp",
+  "//third_party/llvm-libc/src/src/math/generic/sqrtf.cpp",
   "//third_party/llvm-libc/src/src/math/generic/tan.cpp",
   "//third_party/llvm-libc/src/src/math/generic/truncf.cpp",
   "//third_party/llvm-libc/src/src/stdlib/atoi.cpp",

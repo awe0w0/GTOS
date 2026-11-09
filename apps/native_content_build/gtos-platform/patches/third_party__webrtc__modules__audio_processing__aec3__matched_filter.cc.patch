@@ -1,0 +1,18 @@
+--- a/third_party/webrtc/modules/audio_processing/aec3/matched_filter.cc
++++ b/third_party/webrtc/modules/audio_processing/aec3/matched_filter.cc
+@@ -695,6 +695,7 @@ void MatchedFilter::Update(const DownsampledRenderBuffer& render_buffer,
+             filters_[n], &filters_updated, &error_sum, compute_pre_echo,
+             instantaneous_accumulated_error_, scratch_memory_);
+         break;
++#if defined(WEBRTC_ENABLE_AVX2)
+       case Aec3Optimization::kAvx2:
+         MatchedFilterCore_AVX2(
+             x_start_index, x2_sum_threshold, smoothing, render_buffer.buffer, y,
+@@ -702,6 +703,7 @@ void MatchedFilter::Update(const DownsampledRenderBuffer& render_buffer,
+             instantaneous_accumulated_error_, scratch_memory_);
+         break;
+ #endif
++#endif
+ #if defined(WEBRTC_HAS_NEON)
+       case Aec3Optimization::kNeon:
+         MatchedFilterCore_NEON(

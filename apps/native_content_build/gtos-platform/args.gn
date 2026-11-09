@@ -29,3 +29,6 @@ use_cups = false
 # The GTOS software compositor does not use Dawn's Vulkan fallback. That
 # adapter requires loading a shared library and publishing executable pages.
 dawn_use_swiftshader = false
+
+# Native GTOS thread contexts preserve SSE2 state.
+rtc_enable_avx2 = false

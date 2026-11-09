@@ -1,0 +1,16 @@
+--- a/third_party/webrtc/modules/audio_processing/aec3/aec3_common.cc
++++ b/third_party/webrtc/modules/audio_processing/aec3/aec3_common.cc
+@@ -20,9 +20,12 @@ namespace webrtc {
+ 
+ Aec3Optimization DetectOptimization() {
+ #if defined(WEBRTC_ARCH_X86_FAMILY)
++#if defined(WEBRTC_ENABLE_AVX2)
+   if (cpu_info::Supports(cpu_info::ISA::kAVX2)) {
+     return Aec3Optimization::kAvx2;
+-  } else if (cpu_info::Supports(cpu_info::ISA::kSSE2)) {
++  }
++#endif
++  if (cpu_info::Supports(cpu_info::ISA::kSSE2)) {
+     return Aec3Optimization::kSse2;
+   }
+ #endif

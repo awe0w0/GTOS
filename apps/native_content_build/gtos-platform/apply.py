@@ -14,6 +14,19 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/webrtc/modules/audio_processing/aec3/BUILD.gn': '177b5368375b60be5041f7e158184f01b178d896ad0bba3f7c9067730c225add',
+    'third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter.cc': 'e760819bd42ba0047900bbe2644d632090743a81027585b474723b1212132d7b',
+    'third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter_erl.cc': '8c4d958a9c3925ad67a5169f7235b4fe3b215ea630aa3ec4dc933527c15f4b82',
+    'third_party/webrtc/modules/audio_processing/aec3/aec3_common.cc': 'e5545cb727c15ceed8e62fe6e18abafe9afbc161f0917bb4a4df2aa99a323d3f',
+    'third_party/webrtc/modules/audio_processing/aec3/fft_data.h': '33c45c409d9432df52b5c559eccac085c8eb8052baa1580616d28a0b5066989c',
+    'third_party/webrtc/modules/audio_processing/aec3/matched_filter.cc': '73714cc1d01753431c2a5a6d05efad44fa85bc1dfbb98e461c68c657e622f81d',
+    'third_party/webrtc/modules/audio_processing/aec3/vector_math.h': '62b6544f006d31072274d81f352fd82cd57b9e1ae30b2193f3e03463d9391b98',
+    'third_party/webrtc/modules/audio_processing/agc2/cpu_features.cc': 'e349f99aeaa3ddf4c34716e3ef4ec7fee97e9be33ba22af3990d7729e8a0b9c7',
+    'third_party/webrtc/modules/audio_processing/agc2/rnn_vad/BUILD.gn': 'c2e57563cdf25487949ed6916600a89e0a087b4f87be0b8094d845eba0050955',
+    'third_party/webrtc/modules/audio_processing/agc2/rnn_vad/vector_math.h': '4fcc1e06ffe291a1d3814e0ce5826b38537b534f8a6891d4221fbe3b8f15ec9a',
+    'third_party/webrtc/common_audio/BUILD.gn': 'c3a27f67638e3f87399bf5424794d10310a0a8ac59a8b0e3e6287406695929f2',
+    'third_party/webrtc/common_audio/fir_filter_factory.cc': '2126e889eabd21e96a6104ff368dab29c1a3cbbaa283a0d62b3219107523aa9b',
+    'third_party/webrtc/common_audio/resampler/sinc_resampler.cc': '46d31828695b45ba75ed455ba05fccade490da2c1ea9e314bdec5e1b6fc66e4c',
     'third_party/gemmlowp/BUILD.gn': 'ede2b796e54d518701667df8e0f199c0ba3c25099d8afc42bbbd79b70618e4e8',
     'third_party/gemmlowp/src/profiling/pthread_everywhere.h': 'f0b652a6a9defe83d1099b0a51ad58d7b055b8bfe61a913aa9ddd4408e32f8c0',
     'third_party/tflite/src/tensorflow/lite/kernels/random_ops.cc': '9c74899363eb89ca2875d6257a328536093eef5b906e045d3afce759cb9ff7dc',

@@ -13,6 +13,9 @@
 #if defined(GTOS_CONTENT_TFLITE_PLATFORM_TEST)
 int TestTflitePlatform();
 #endif
+#if defined(GTOS_CONTENT_WEBRTC_AUDIO_TEST)
+int TestWebRtcAudioIsa();
+#endif
 
 namespace {
 
@@ -171,6 +174,10 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_TFLITE_PLATFORM_TEST)
     if (const int status = TestTflitePlatform()) return status;
     Say("GTOS TFLITE PLATFORM PASS\n");
+#endif
+#if defined(GTOS_CONTENT_WEBRTC_AUDIO_TEST)
+    if (const int status = TestWebRtcAudioIsa()) return status;
+    Say("GTOS WEBRTC AUDIO ISA PASS\n");
 #endif
     return 37;
 }

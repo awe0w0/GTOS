@@ -1,0 +1,15 @@
+--- a/third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter_erl.cc
++++ b/third_party/webrtc/modules/audio_processing/aec3/adaptive_fir_filter_erl.cc
+@@ -90,10 +90,12 @@ void ComputeErl(const Aec3Optimization& optimization,
+     case Aec3Optimization::kSse2:
+       ErlComputer_SSE2(H2, erl);
+       break;
++#if defined(WEBRTC_ENABLE_AVX2)
+     case Aec3Optimization::kAvx2:
+       ErlComputer_AVX2(H2, erl);
+       break;
+ #endif
++#endif
+ #if defined(WEBRTC_HAS_NEON)
+     case Aec3Optimization::kNeon:
+       ErlComputer_NEON(H2, erl);

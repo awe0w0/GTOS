@@ -1,0 +1,14 @@
+--- a/third_party/webrtc/modules/audio_processing/agc2/cpu_features.cc
++++ b/third_party/webrtc/modules/audio_processing/agc2/cpu_features.cc
+@@ -43,7 +43,11 @@ std::string AvailableCpuFeatures::ToString() const {
+ AvailableCpuFeatures GetAvailableCpuFeatures() {
+ #if defined(WEBRTC_ARCH_X86_FAMILY)
+   return {/*sse2=*/cpu_info::Supports(cpu_info::ISA::kSSE2),
++#if defined(WEBRTC_ENABLE_AVX2)
+           /*avx2=*/cpu_info::Supports(cpu_info::ISA::kAVX2),
++#else
++          /*avx2=*/false,
++#endif
+           /*neon=*/false};
+ #elif defined(WEBRTC_HAS_NEON)
+   return {/*sse2=*/false,
