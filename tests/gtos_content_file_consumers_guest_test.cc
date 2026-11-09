@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -19,6 +20,7 @@
 #include "iamf/common/read_bit_buffer.h"
 #include "iamf/common/write_bit_buffer.h"
 #include "mkvmuxer/mkvmuxerutil.h"
+#include "tools/gtos_native_sdk/file-input.hpp"
 #include "tools/gtos_native_sdk/file-output.hpp"
 #include "v8/src/utils/output-stream.h"
 
@@ -117,6 +119,34 @@ int TestFlacFile() {
     return 0;
 }
 
+int TestFileInput(const char* path, const char* missing) {
+    std::string first(8193, 'x');
+    first[4095] = '\0';
+    first[4096] = static_cast<char>(0xff);
+    const std::string bytes = first + "\n\nlast";
+    if (!fcp::WriteStringToFile(path, bytes).ok()) return 110;
+    {
+        gtos::native::FileInput input(path);
+        std::string line;
+        if (!input.is_open() || !std::getline(input, line) || line != first ||
+            !std::getline(input, line) || !line.empty() ||
+            !std::getline(input, line) || line != "last" ||
+            std::getline(input, line) || !input.eof() || input.bad())
+            return 111;
+    }
+    {
+        gtos::native::FileInput input(path);
+        const std::string copy((std::istreambuf_iterator<char>(input)),
+                               std::istreambuf_iterator<char>());
+        if (input.bad() || copy != bytes) return 112;
+    }
+    gtos::native::FileInput absent(missing);
+    std::string line;
+    if (absent.is_open() || !absent.fail() || std::getline(absent, line))
+        return 113;
+    return 0;
+}
+
 }  // namespace
 
 int TestFileConsumers() {
@@ -185,6 +215,7 @@ int TestFileConsumers() {
     }
     const auto snapshot = fcp::ReadFileToString(path);
     if (!snapshot.ok() || *snapshot != std::string_view("v8\0x", 4)) return 109;
+    if (const int status = TestFileInput(path, missing)) return status;
 
     auto stream = iamf_tools::StreamBasedReadBitBuffer::Create(2);
     constexpr std::array<uint8_t, 1> first{0xab};

@@ -91,6 +91,14 @@ source_set("native_file_output") {
   ]
 }
 
+source_set("native_file_input") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//tools/gtos_native_sdk/file-input.cc",
+    "//tools/gtos_native_sdk/file-input.hpp",
+  ]
+}
+
 source_set("native_locale") {
   assert(is_gtos && current_cpu == "x86")
   sources = [

@@ -425,6 +425,8 @@ ADDITIONS = {
     'base/rand_util_gtos.cc': 'base/rand_util_gtos.cc',
     'tools/gtos_native_sdk/file-output.hpp': 'sdk/native-file-output.hpp',
     'tools/gtos_native_sdk/file-output.cc': 'sdk/native-file-output.cc',
+    'tools/gtos_native_sdk/file-input.hpp': 'sdk/native-file-input.hpp',
+    'tools/gtos_native_sdk/file-input.cc': 'sdk/native-file-input.cc',
     'v8/src/base/debug/stack_trace_gtos.cc': '../../native_v8_integration/overlay/src/base/debug/stack_trace_gtos.cc',
     'v8/src/base/platform/platform-gtos.cc': '../../native_v8_integration/overlay/src/base/platform/platform-gtos.cc',
     'v8/src/base/platform/gtos-native-api/vm_abi.h': '../../native_v8_integration/overlay/src/base/platform/gtos-native-api/vm_abi.h',
