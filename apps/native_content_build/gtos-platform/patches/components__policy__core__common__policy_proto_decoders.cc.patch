@@ -1,0 +1,10 @@
+--- a/components/policy/core/common/policy_proto_decoders.cc
++++ b/components/policy/core/common/policy_proto_decoders.cc
+@@ -25,6 +25,7 @@
+ #include "components/policy/policy_constants.h"
+ #include "components/policy/proto/cloud_policy.pb.h"
+ #include "components/policy/proto/device_management_backend.pb.h"
++#include "components/policy/proto/policy_common_definitions.pb.h"
+ #include "components/strings/grit/components_strings.h"
+ 
+ namespace policy {

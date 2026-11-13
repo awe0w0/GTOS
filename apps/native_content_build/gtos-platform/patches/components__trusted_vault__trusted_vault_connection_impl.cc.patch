@@ -1,0 +1,12 @@
+--- a/components/trusted_vault/trusted_vault_connection_impl.cc
++++ b/components/trusted_vault/trusted_vault_connection_impl.cc
+@@ -115,6 +115,9 @@ GetLocalPhysicalDeviceType() {
+   return trusted_vault_pb::PhysicalDeviceMetadata::DEVICE_TYPE_MAC_OS;
+ #elif BUILDFLAG(IS_WIN)
+   return trusted_vault_pb::PhysicalDeviceMetadata::DEVICE_TYPE_WINDOWS;
++#elif BUILDFLAG(IS_GTOS)
++  // The wire enum has no GTOS value.
++  return trusted_vault_pb::PhysicalDeviceMetadata::DEVICE_TYPE_UNKNOWN;
+ #elif BUILDFLAG(IS_FUCHSIA)
+   // Not used in Fuchsia.
+   return trusted_vault_pb::PhysicalDeviceMetadata::DEVICE_TYPE_UNKNOWN;

@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/policy/tools/generate_policy_source_test_data.py': '2cd9856badf515dfebf09ee7de63c40e276d0cc12f91629c763845a015dbc4a1',
+    'components/policy/core/common/policy_proto_decoders.cc': '719c45aabbcfb5bf596a758cae64c8ec34463d1a0646d27dea0925c9ef019cd3',
+    'components/trusted_vault/trusted_vault_connection_impl.cc': '4883af6c471743d3cf108f1c3d006f6c071c24636061ac75bd6559ccfcecda76',
+    'components/signin/internal/identity_manager/profile_oauth2_token_service_builder.cc': '2a4eddfa209120fd21a95583fa642f5d361911196fa9c9568805a6ef65cbba3c',
     'mojo/core/BUILD.gn': '9a7918fe485cbb69ae3f0541b6a56eb71e320a3a36544fdda339dee7ca6a3c9a',
     'mojo/core/channel.cc': 'a0e103a7b48fc717d6277567ffaf0492df0881d476ff049ed6a7a52c597781f0',
     'mojo/core/ipcz_driver/driver.cc': '1ebff7d08ecace30299584918b833d6a853c7fb197b81ba1a622e7d145edf655',

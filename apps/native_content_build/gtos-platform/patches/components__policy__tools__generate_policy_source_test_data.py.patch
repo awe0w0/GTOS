@@ -1,0 +1,68 @@
+--- a/components/policy/tools/generate_policy_source_test_data.py
++++ b/components/policy/tools/generate_policy_source_test_data.py
+@@ -572,6 +572,7 @@ EXPECTED_POLICY_CONSTANTS_HEADER = '''
+ #ifndef COMPONENTS_POLICY_POLICY_CONSTANTS_H_
+ #define COMPONENTS_POLICY_POLICY_CONSTANTS_H_
+ 
++#include <array>
+ #include <cstdint>
+ #include <string>
+ 
+@@ -652,8 +653,8 @@ extern const size_t kPolicyAtomicGroupMappingsLength;
+ // Arrays of metapolicies.
+ namespace metapolicy {
+ 
+-extern const char* const kMerge[1];
+-extern const char* const kPrecedence[1];
++extern const std::array<const char*, 1> kMerge;
++extern const std::array<const char*, 1> kPrecedence;
+ 
+ }  // namespace metapolicy
+ 
+@@ -719,6 +720,7 @@ EXPECTED_POLICY_CONSTANTS_HEADER_MUTABLE = '''
+ #ifndef COMPONENTS_POLICY_POLICY_CONSTANTS_MUTABLE_H_
+ #define COMPONENTS_POLICY_POLICY_CONSTANTS_MUTABLE_H_
+ 
++#include <array>
+ #include <cstdint>
+ #include <string>
+ 
+@@ -799,8 +801,8 @@ extern const size_t kPolicyAtomicGroupMappingsLength;
+ // Arrays of metapolicies.
+ namespace metapolicy {
+ 
+-extern const char* const kMerge[1];
+-extern const char* const kPrecedence[1];
++extern const std::array<const char*, 1> kMerge;
++extern const std::array<const char*, 1> kPrecedence;
+ 
+ }  // namespace metapolicy
+ 
+@@ -1097,11 +1099,11 @@ const size_t kPolicyAtomicGroupMappingsLength = 0;
+ 
+ namespace metapolicy {
+ 
+-const char* const kMerge[1] = {
++const std::array<const char*, 1> kMerge = {
+   key::kExampleBoolMergeMetapolicy,
+ };
+ 
+-const char* const kPrecedence[1] = {
++const std::array<const char*, 1> kPrecedence = {
+   key::kExampleBoolPrecedenceMetapolicy,
+ };
+ 
+@@ -1520,11 +1522,11 @@ const size_t kPolicyAtomicGroupMappingsLength = 0;
+ 
+ namespace metapolicy {
+ 
+-const char* const kMerge[1] = {
++const std::array<const char*, 1> kMerge = {
+   key::kExampleBoolMergeMetapolicy,
+ };
+ 
+-const char* const kPrecedence[1] = {
++const std::array<const char*, 1> kPrecedence = {
+   key::kExampleBoolPrecedenceMetapolicy,
+ };
+ 

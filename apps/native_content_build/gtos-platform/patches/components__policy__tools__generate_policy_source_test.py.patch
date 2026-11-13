@@ -8,7 +8,7 @@
  import unittest
  from unittest.mock import patch, mock_open, call
  from typing import NamedTuple
-@@ -467,6 +468,18 @@ class PolicyGenerationTest(unittest.TestCase):
+@@ -467,6 +468,52 @@ class PolicyGenerationTest(unittest.TestCase):
        sensitive_policies,
      )
  
@@ -23,6 +23,40 @@
 +      '}\n\n',
 +      output.getvalue(),
 +    )
++
++  def testGtosKeepsKeysWithoutEnablingPolicies(self):
++    target = 'gtos'
++    policies = [
++      PolicyDetails(policy, self.chrome_major_version, target,
++                    self.risk_tags.GetValidTags())
++      for policy in self.TEMPLATES_JSON['policy_definitions']
++    ]
++    self.assertEqual([], generate_policy_source._GetSupportedPolicies(
++      policies, target))
++    for mutable in (False, True):
++      with self.subTest(mutable=mutable):
++        header = io.StringIO()
++        source = io.StringIO()
++        proto = io.StringIO()
++        args = (policies, self.policy_atomic_groups, target)
++        generate_policy_source._WritePolicyConstantHeader(
++          *args, header, self.risk_tags, True, mutable)
++        generate_policy_source._WritePolicyConstantSource(
++          *args, source, self.risk_tags, True, mutable)
++        generate_policy_source._WriteCloudPolicyProtobuf(
++          *args, proto, self.risk_tags, True, mutable)
++        self.assertIn('extern const char kExampleBoolPolicy[];',
++                      header.getvalue())
++        self.assertIn('const char kExampleBoolPolicy[] = "ExampleBoolPolicy";',
++                      source.getvalue())
++        self.assertIn('std::array<const char*, 0> kPrecedence',
++                      header.getvalue())
++        self.assertIn('std::array<const char*, 0> kMerge',
++                      source.getvalue())
++        self.assertIn('return nullptr;}', source.getvalue())
++        self.assertIn('BooleanPolicyAccess, 0>', source.getvalue())
++        self.assertIn('message CloudPolicySettings {\n}\n', proto.getvalue())
++        self.assertNotIn('optional ', proto.getvalue())
 +
    def testWritePolicyConstantHeader(self):
      output_path = 'mock_policy_constants_h'
