@@ -1,0 +1,66 @@
+--- a/content/test/BUILD.gn
++++ b/content/test/BUILD.gn
+@@ -65,10 +65,35 @@ static_library("setup_field_trials") {
+     "//components/metrics",
+     "//components/metrics:test_support",
+     "//components/prefs",
+-    "//components/variations:test_support",
+     "//components/variations/service",
+     "//content/public/common",
+   ]
++  if (is_gtos) {
++    deps += [ "//components/variations:scoped_ids_provider" ]
++  } else {
++    deps += [ "//components/variations:test_support" ]
++  }
++}
++
++# Ordinary Shell profiles use these two controllers and the same field trials.
++source_set("shell_support") {
++  testonly = true
++  sources = [
++    "mock_background_sync_controller.cc",
++    "mock_background_sync_controller.h",
++    "mock_reduce_accept_language_controller_delegate.cc",
++    "mock_reduce_accept_language_controller_delegate.h",
++  ]
++  public_deps = [
++    ":setup_field_trials",
++    "//content/public/browser",
++  ]
++  deps = [
++    "//base",
++    "//content/public/common",
++    "//net",
++    "//url",
++  ]
+ }
+ 
+ # Use a static library here because many test binaries depend on this but don't
+@@ -427,8 +452,6 @@ static_library("test_support") {
+     "ipc_interfaces_dumper.cc",
+     "mock_agent_scheduling_group_host.cc",
+     "mock_agent_scheduling_group_host.h",
+-    "mock_background_sync_controller.cc",
+-    "mock_background_sync_controller.h",
+     "mock_badge_service.cc",
+     "mock_badge_service.h",
+     "mock_client_hints_controller_delegate.cc",
+@@ -443,8 +466,6 @@ static_library("test_support") {
+     "mock_platform_notification_service.h",
+     "mock_process_selection_deferring_condition_tester.cc",
+     "mock_process_selection_deferring_condition_tester.h",
+-    "mock_reduce_accept_language_controller_delegate.cc",
+-    "mock_reduce_accept_language_controller_delegate.h",
+     "mock_render_input_router.cc",
+     "mock_render_input_router.h",
+     "mock_render_widget_host_delegate.cc",
+@@ -521,7 +542,7 @@ static_library("test_support") {
+   ]
+ 
+   public_deps = [
+-    ":setup_field_trials",
++    ":shell_support",
+     ":test_interfaces",
+     "//components/download/public/common:test_support",
+     "//components/file_access:test_support",

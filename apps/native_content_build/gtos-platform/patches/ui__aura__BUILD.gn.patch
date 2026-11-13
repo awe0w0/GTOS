@@ -1,0 +1,46 @@
+--- a/ui/aura/BUILD.gn
++++ b/ui/aura/BUILD.gn
+@@ -178,6 +178,18 @@ component("aura") {
+   check_includes_strict = CHECK_INCLUDES_STRICT_PUBLIC_INCLUDES_PRIVATE
+ }
+ 
++source_set("shell_window_support") {
++  testonly = true
++  sources = [
++    "test/test_focus_client.cc",
++    "test/test_focus_client.h",
++    "test/test_window_parenting_client.cc",
++    "test/test_window_parenting_client.h",
++  ]
++  public_deps = [ ":aura" ]
++  deps = [ "//base" ]
++}
++
+ static_library("test_support") {
+   testonly = true
+   sources = [
+@@ -195,16 +207,12 @@ static_library("test_support") {
+     "test/find_window.h",
+     "test/test_cursor_client.cc",
+     "test/test_cursor_client.h",
+-    "test/test_focus_client.cc",
+-    "test/test_focus_client.h",
+     "test/test_screen.cc",
+     "test/test_screen.h",
+     "test/test_window_builder.cc",
+     "test/test_window_builder.h",
+     "test/test_window_delegate.cc",
+     "test/test_window_delegate.h",
+-    "test/test_window_parenting_client.cc",
+-    "test/test_window_parenting_client.h",
+     "test/test_window_targeter.cc",
+     "test/test_window_targeter.h",
+     "test/test_windows.cc",
+@@ -223,6 +231,7 @@ static_library("test_support") {
+ 
+   public_deps = [
+     ":aura",
++    ":shell_window_support",
+ 
+     # Must be public as headers include buildflags.h.
+     "//ui/base:buildflags",

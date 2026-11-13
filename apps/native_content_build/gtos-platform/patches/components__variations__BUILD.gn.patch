@@ -1,0 +1,31 @@
+--- a/components/variations/BUILD.gn
++++ b/components/variations/BUILD.gn
+@@ -204,11 +204,19 @@ if (is_android) {
+   }
+ }
+ 
+-static_library("test_support") {
++source_set("scoped_ids_provider") {
+   testonly = true
+   sources = [
+     "scoped_variations_ids_provider.cc",
+     "scoped_variations_ids_provider.h",
++  ]
++  public_deps = [ ":variations" ]
++  deps = [ "//base" ]
++}
++
++static_library("test_support") {
++  testonly = true
++  sources = [
+     "service/test_variations_service.cc",
+     "service/test_variations_service.h",
+     "variations_test_utils.cc",
+@@ -216,6 +224,7 @@ static_library("test_support") {
+   ]
+ 
+   public_deps = [
++    ":scoped_ids_provider",
+     ":variations",
+     ":variations_mojom",
+   ]

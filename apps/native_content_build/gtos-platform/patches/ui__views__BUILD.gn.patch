@@ -1,0 +1,40 @@
+--- a/ui/views/BUILD.gn
++++ b/ui/views/BUILD.gn
+@@ -1067,6 +1067,20 @@ if (is_win || is_mac || is_linux || is_chromeos) {
+   }
+ }
+ 
++if (is_gtos && use_aura) {
++  source_set("shell_desktop_delegate") {
++    testonly = true
++    sources = [
++      "test/desktop_test_views_delegate.h",
++      "test/desktop_test_views_delegate_aura.cc",
++      "test/test_views_delegate.h",
++      "test/test_views_delegate_aura.cc",
++    ]
++    public_deps = [ ":views" ]
++    deps = [ "//ui/aura" ]
++  }
++}
++
+ source_set("test_support") {
+   testonly = true
+   sources = [
+@@ -1268,6 +1282,16 @@ source_set("test_support") {
+     ]
+   }
+ 
++  if (is_gtos && use_aura) {
++    sources -= [
++      "test/desktop_test_views_delegate.h",
++      "test/desktop_test_views_delegate_aura.cc",
++      "test/test_views_delegate.h",
++      "test/test_views_delegate_aura.cc",
++    ]
++    public_deps += [ ":shell_desktop_delegate" ]
++  }
++
+   if (use_ozone && enable_desktop_aura) {
+     sources += [
+       "test/test_desktop_screen_ozone.cc",

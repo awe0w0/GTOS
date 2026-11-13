@@ -10,7 +10,93 @@
  }
  
  config("content_shell_lib_warnings") {
-@@ -759,6 +762,23 @@ if (is_android) {
+@@ -58,8 +61,8 @@ config("content_shell_lib_warnings") {
+   }
+ }
+ 
+-# Web test support not built on android, but is everywhere else.
+-support_web_tests = !is_android
++# The GTOS Shell supports normal navigation and does not build the web test runner.
++support_web_tests = !is_android && !is_gtos
+ 
+ source_set("android_shell_descriptors") {
+   testonly = true
+@@ -347,7 +350,6 @@ static_library("content_shell_lib") {
+     "//components/performance_manager",
+     "//components/permissions",
+     "//components/prefs",
+-    "//components/services/storage/test_api",
+     "//components/surface_embed/renderer",
+     "//components/url_formatter",
+     "//components/variations/service",
+@@ -356,14 +358,12 @@ static_library("content_shell_lib") {
+     "//content/common:main_frame_counter",
+     "//content/public/common",
+     "//content/test:content_test_mojo_bindings",
+-    "//content/test:test_support",
+     "//device/bluetooth",
+     "//media",
+     "//media/mojo:buildflags",
+     "//media/mojo/services",
+     "//net",
+     "//net:net_resources",
+-    "//services/device/public/cpp:test_support",
+     "//services/network/public/cpp",
+     "//services/test/echo:lib",
+     "//services/test/echo/public/mojom",
+@@ -383,6 +383,16 @@ static_library("content_shell_lib") {
+     "//v8",
+   ]
+ 
++  if (is_gtos) {
++    deps += [ "//content/test:shell_support" ]
++  } else {
++    deps += [
++      "//components/services/storage/test_api",
++      "//content/test:test_support",
++      "//services/device/public/cpp:test_support",
++    ]
++  }
++
+   if (is_fuchsia) {
+     sources += [
+       "browser/fuchsia_view_presenter.cc",
+@@ -455,10 +465,14 @@ static_library("content_shell_lib") {
+   if (use_aura) {
+     deps += [
+       "//ui/aura",
+-      "//ui/aura:test_support",
+       "//ui/events",
+       "//ui/wm",
+     ]
++    if (is_gtos) {
++      deps += [ "//ui/aura:shell_window_support" ]
++    } else {
++      deps += [ "//ui/aura:test_support" ]
++    }
+ 
+     if (shell_use_toolkit_views) {
+       sources += [
+@@ -469,10 +483,16 @@ static_library("content_shell_lib") {
+       deps += [
+         "//ui/color:color_headers",
+         "//ui/resources",
+-        "//ui/views:test_support",
+         "//ui/views/controls/webview",
+-        "//ui/wm:test_support",
+       ]
++      if (is_gtos) {
++        deps += [ "//ui/views:shell_desktop_delegate" ]
++      } else {
++        deps += [
++          "//ui/views:test_support",
++          "//ui/wm:test_support",
++        ]
++      }
+     } else {
+       sources += [
+         "browser/shell_platform_delegate_aura.cc",
+@@ -759,6 +779,23 @@ if (is_android) {
  
      sources = [ "app/shell_main.cc" ]
  
@@ -34,7 +120,7 @@
      if (is_win) {
        sources += [ "app/shell.rc" ]
      }
-@@ -775,6 +795,13 @@ if (is_android) {
+@@ -774,6 +811,13 @@ if (is_android) {
        "//sandbox",
      ]
  

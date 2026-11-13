@@ -14,6 +14,14 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/variations/BUILD.gn': '7d1396e4f3d76bf971768656bada3ec446d1240548e4feef759a388cfc9fdb8b',
+    'content/shell/app/shell_main_delegate.cc': 'c22470ba2711a4c3c5a672da9d23519234aee785fb9d82a1ab03b97478a6b260',
+    'content/shell/app/shell_main_delegate.h': '5948c20805ff067ebfcba616f2674de75234c07ef10286502de74e586b59fb61',
+    'content/shell/utility/shell_content_utility_client.cc': '717a140d90467bcea90f1350d3f8e95a1f203b66b186901a58cfdac56a6d2e32',
+    'content/shell/utility/shell_content_utility_client.h': 'e03b6eeafbfd25d7145e9a9e6d505f222979d38be5073782ef3db257d1e01254',
+    'content/test/BUILD.gn': '0b88488b2711e92398cb75044339f6079c4303a25b302c00934ec97599b5a2be',
+    'ui/aura/BUILD.gn': '414922b2a08bd599710c68d1677ab768d12a2bdceda9ac3c8111306062540255',
+    'ui/views/BUILD.gn': '0b43be000d19b5dbb598b11038fc5e7e3509beded45a8e7018ed4c71c2c191a9',
     'components/sync_device_info/local_device_info_util.cc': 'f94d5ee21002bcdd3a1ec77f73c8a52f4eae95760f3cf56ff2d0065cbf9b1fa3',
     'components/variations/service/variations_service.cc': 'ce6bd6fc780294154f330a721c1f15a7159423ca6cd4949e67f75a61d0d034ac',
     'components/webui/flags/flags_state.cc': '64aa06d9e6dfc9fa6b66460b47339f59e0382cab0273d4f236692fe9e8f284b6',
