@@ -4,6 +4,7 @@
 
 declare_args() {
   gtos_content_probe_runtime_archive = ""
+  gtos_content_window_interaction_test = false
 }
 
 assert(is_gtos && current_cpu == "x86")
@@ -33,6 +34,9 @@ executable("content_base_probe") {
     "GTOS_CONTENT_CONDVAR_TEST",
     "GTOS_CONTENT_EVENT_WATCHER_TEST",
   ]
+  if (gtos_content_window_interaction_test) {
+    defines += [ "GTOS_CONTENT_WINDOW_INTERACTION_TEST=1" ]
+  }
   inputs = [
     "//content/shell/app/native.ld",
     gtos_content_probe_runtime_archive,

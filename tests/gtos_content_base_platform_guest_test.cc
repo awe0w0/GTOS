@@ -26,6 +26,9 @@
 #include "base/process/process.h"
 #include "base/process/process_metrics.h"
 #include "base/system/sys_info.h"
+#if defined(GTOS_CONTENT_WINDOW_INTERACTION_TEST)
+#include "base/threading/platform_thread.h"
+#endif
 #include "base/time/time.h"
 #include "base/version_info/version_info.h"
 #include "tools/gtos_native_sdk/native-services.h"
@@ -51,6 +54,75 @@ int CheckRuntimeErrors() {
     return 0;
 }
 
+#if defined(GTOS_CONTENT_WINDOW_INTERACTION_TEST)
+constexpr int kMarkerBegin = 48;
+constexpr int kMarkerEnd = 96;
+
+bool InWindowMarker(const GtosInputEvent& event) {
+    return event.x >= kMarkerBegin && event.x < kMarkerEnd &&
+           event.y >= kMarkerBegin && event.y < kMarkerEnd;
+}
+
+bool WaitForWindowInput(gtos::process::NativeWindowAdapter& window,
+                        unsigned down, unsigned up, unsigned code) {
+    const bool pointer = down == GTOS_INPUT_POINTER_DOWN;
+    const auto deadline = base::TimeTicks::Now() + base::Seconds(45);
+    GtosInputEvent motion{}, pressed{};
+    std::array<GtosInputEvent, GTOS_INPUT_READ_LIMIT> events;
+    while (base::TimeTicks::Now() < deadline) {
+        const int count = window.ReadInput(events.data(), events.size());
+        if (count < 0 || static_cast<unsigned>(count) > events.size()) return false;
+        for (int i = 0; i < count; ++i) {
+            const auto& event = events[i];
+            if (event.type == GTOS_INPUT_CLOSE || event.type == GTOS_INPUT_RESET) return false;
+            if (event.type == GTOS_INPUT_POINTER_MOVE) motion = event;
+            if (event.type == down && event.code == code) {
+                if (pointer && (!InWindowMarker(event) || motion.type != GTOS_INPUT_POINTER_MOVE ||
+                                motion.x != event.x || motion.y != event.y))
+                    return false;
+                pressed = event;
+            }
+            if (event.type == up && event.code == code) {
+                return pressed.type == down &&
+                       (!pointer || (pressed.x == event.x && pressed.y == event.y));
+            }
+        }
+        base::PlatformThread::Sleep(base::Milliseconds(10));
+    }
+    return false;
+}
+
+int CheckWindowInteraction(gtos::process::NativeWindowAdapter& window,
+                           std::array<unsigned char, GTOS_WINDOW_LARGE_BYTES>& frame) {
+    const unsigned handle = window.kernel_handle();
+    for (unsigned offset = 0; offset < frame.size(); offset += 4) {
+        frame[offset] = frame[offset + 1] = frame[offset + 2] = 0x20;
+        frame[offset + 3] = 255;
+    }
+    auto present = [&](unsigned char red, unsigned char green, unsigned char blue) {
+        for (int y = kMarkerBegin; y < kMarkerEnd; ++y) {
+            for (int x = kMarkerBegin; x < kMarkerEnd; ++x) {
+                const unsigned offset = (y * GTOS_WINDOW_LARGE_WIDTH + x) * 4;
+                frame[offset] = red;
+                frame[offset + 1] = green;
+                frame[offset + 2] = blue;
+            }
+        }
+        return gtos::process::PresentLargeNativeWindowFrame(handle, frame.data(), frame.size()) == 0;
+    };
+    if (!present(0xA5, 0x2B, 0xC7) ||
+        !WaitForWindowInput(window, GTOS_INPUT_POINTER_DOWN, GTOS_INPUT_POINTER_UP, 1))
+        return 220;
+    if (!present(0x12, 0xA8, 0x6D) ||
+        !WaitForWindowInput(window, GTOS_INPUT_KEY_DOWN, GTOS_INPUT_KEY_UP, 'g'))
+        return 221;
+    if (!present(0xF4, 0xAF, 0x22) ||
+        !WaitForWindowInput(window, GTOS_INPUT_KEY_DOWN, GTOS_INPUT_KEY_UP, 'q'))
+        return 222;
+    return 0;
+}
+#endif
+
 int CheckBrowserWindow() {
     using namespace gtos::process;
     constexpr unsigned kWidth = GTOS_WINDOW_LARGE_WIDTH;
@@ -61,9 +133,9 @@ int CheckBrowserWindow() {
         window.CreateLarge(kWidth, kHeight) <= 0)
         return 204;
     for (unsigned offset = 0; offset < frame.size(); offset += 4) {
-        frame[offset] = 0xA5;
-        frame[offset + 1] = 0x2B;
-        frame[offset + 2] = 0xC7;
+        frame[offset] = 0x31;
+        frame[offset + 1] = 0x43;
+        frame[offset + 2] = 0x59;
         frame[offset + 3] = 255;
     }
     const unsigned handle = window.kernel_handle();
@@ -77,8 +149,12 @@ int CheckBrowserWindow() {
     frame.back() = 0;
     if (PresentLargeNativeWindowFrame(handle, frame.data(), frame.size()) !=
             GTOS_WINDOW_ERR_BAD_PIXELS ||
-        window.Info(&info) != 0 || info.frame_generation != 1 ||
-        window.Close() != 0 ||
+        window.Info(&info) != 0 || info.frame_generation != 1)
+        return 206;
+#if defined(GTOS_CONTENT_WINDOW_INTERACTION_TEST)
+    if (const int status = CheckWindowInteraction(window, frame)) return status;
+#endif
+    if (window.Close() != 0 ||
         PresentLargeNativeWindowFrame(handle, frame.data(), frame.size()) !=
             GTOS_WINDOW_ERR_BAD_HANDLE)
         return 206;
