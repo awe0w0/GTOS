@@ -1,0 +1,11 @@
+--- a/third_party/blink/renderer/core/xml/parser/xml_ffi.rs
++++ b/third_party/blink/renderer/core/xml/parser/xml_ffi.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ mod entities;
+ 
+ use std::io::Cursor;

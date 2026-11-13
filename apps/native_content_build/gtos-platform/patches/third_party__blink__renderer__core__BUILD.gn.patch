@@ -1,0 +1,13 @@
+--- a/third_party/blink/renderer/core/BUILD.gn
++++ b/third_party/blink/renderer/core/BUILD.gn
+@@ -240,6 +240,10 @@ blink_python_runner("make_deprecation_info") {
+ }
+ 
+ rust_static_library("xml_ffi") {
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   allow_unsafe = true  # Needed for FFI that underpins the `cxx` crate.
+   crate_root = "xml/parser/xml_ffi.rs"
+   sources = [
