@@ -482,6 +482,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/gtos/diagnostic.h': 'sdk/diagnostic.h',
+    'build/config/gtos/runtime/perror_gtos.cc': 'runtime/perror_gtos.cc',
     'third_party/dav1d/config/gtos/x86/config.h': 'dav1d/config.h',
     'third_party/dav1d/config/gtos/x86/config.asm': 'dav1d/config.asm',
     'build/config/gtos/ozone_extra.gni': 'ozone/ozone_extra.gni',

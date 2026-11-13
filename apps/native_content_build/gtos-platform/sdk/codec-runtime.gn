@@ -44,6 +44,7 @@ source_set("native_threads") {
 source_set("native_libcpp_thread") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
+    "//third_party/libc++/src/src/atomic.cpp",
     "//third_party/libc++/src/src/error_category.cpp",
     "//third_party/libc++/src/src/future.cpp",
     "//third_party/libc++/src/src/stdexcept.cpp",
@@ -178,6 +179,7 @@ source_set("native_base_libc") {
   sources = [
     "exit_gtos.cc",
     "fnmatch_gtos.cc",
+    "perror_gtos.cc",
     "putc_gtos.cc",
     "//third_party/llvm-libc/src/src/ctype/isalpha.cpp",
     "//third_party/llvm-libc/src/src/ctype/isgraph.cpp",
@@ -193,6 +195,7 @@ source_set("native_base_libc") {
   ]
   deps = [
     ":native_environment",
+    ":native_error_strings",
     ":native_file_api",
     ":native_locale",
   ]

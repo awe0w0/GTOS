@@ -11,3 +11,7 @@ extern "C" double cosh(double value) {
 extern "C" double sinh(double value) {
   return v8::base::ieee754::sinh(value);
 }
+
+extern "C" double atanh(double value) {
+  return v8::base::ieee754::atanh(value);
+}

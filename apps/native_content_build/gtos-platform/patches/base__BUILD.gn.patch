@@ -1,6 +1,6 @@
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1055,6 +1055,31 @@ component("base") {
+@@ -1055,6 +1055,32 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
@@ -16,6 +16,7 @@
 +      "native_library_gtos.cc",
 +      "process/process_gtos.cc",
 +      "process/process_metrics_gtos.cc",
++      "process/memory_stubs.cc",
 +      "profiler/stack_sampler_posix.cc",
 +      "rand_util_gtos.cc",
 +      "synchronization/condition_variable_gtos.cc",
@@ -32,7 +33,7 @@
    if (is_apple || current_os == "freebsd" || current_os == "openbsd") {
      sources += [
        "posix/sysctl.cc",
-@@ -1155,6 +1174,13 @@ component("base") {
+@@ -1155,6 +1175,13 @@ component("base") {
      "//third_party/modp_b64",
    ]
  
@@ -46,7 +47,7 @@
    # Used by metrics/crc32
    deps += [ "//third_party/zlib" ]
  
-@@ -2675,6 +2701,10 @@ rust_static_library("file_path") {
+@@ -2675,6 +2702,10 @@ rust_static_library("file_path") {
    crate_root = "files/file_path.rs"
    sources = [ "files/file_path.rs" ]
    allow_unsafe = true
