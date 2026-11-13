@@ -1,0 +1,34 @@
+--- a/mojo/public/cpp/platform/named_platform_channel.cc
++++ b/mojo/public/cpp/platform/named_platform_channel.cc
+@@ -41,6 +41,11 @@ NamedPlatformChannel::ServerName NamedPlatformChannel::ServerNameFromUTF8(
+ 
+ void NamedPlatformChannel::PassServerNameOnCommandLine(
+     base::CommandLine* command_line) {
++#if BUILDFLAG(IS_GTOS)
++  if (server_name_.empty()) {
++    return;
++  }
++#endif
+   command_line->AppendSwitchNative(kNamedHandleSwitch, server_name_);
+ }
+ 
+@@ -70,4 +75,19 @@ PlatformChannelEndpoint NamedPlatformChannel::ConnectToServer(
+   return ConnectToServer(name);
+ }
+ 
++#if BUILDFLAG(IS_GTOS)
++// The in-process Mojo transport does not support named remote servers.
++PlatformChannelServerEndpoint NamedPlatformChannel::CreateServerEndpoint(
++    const Options& options,
++    ServerName* server_name) {
++  server_name->clear();
++  return PlatformChannelServerEndpoint();
++}
++
++PlatformChannelEndpoint NamedPlatformChannel::CreateClientEndpoint(
++    const Options& options) {
++  return PlatformChannelEndpoint();
++}
++#endif
++
+ }  // namespace mojo

@@ -1,0 +1,32 @@
+--- a/third_party/boringssl/src/crypto/thread_gtos.cc
++++ b/third_party/boringssl/src/crypto/thread_gtos.cc
+@@ -50,5 +50,6 @@
+              result.maximum_regions > 0 && result.scheduler_cpu_count == 1 &&
+              (result.maximum_parallel_threads == 1 ||
+-              result.maximum_parallel_threads == 4) &&
++              result.maximum_parallel_threads == GTOS_THREAD_SLOT_LIMIT ||
++               result.maximum_parallel_threads == GTOS_CONTENT_THREAD_SLOT_LIMIT) &&
+              (result.maximum_parallel_threads != 1 ||
+               result.thread_id == result.process_id));
+@@ -57,5 +58,5 @@
+ 
+ void Yield(const GtosProcessInfoResult &info) {
+-  BSSL_CHECK(info.maximum_parallel_threads == 4);
++  BSSL_CHECK(info.maximum_parallel_threads > 1);
+   unsigned call = GTOS_SYS_YIELD;
+   asm volatile("int $0x80" : "+a"(call) : "b"(0U), "c"(0U) : "memory", "cc");
+@@ -100,5 +101,5 @@
+ 
+ std::atomic<uint32_t> g_thread_local_gate{0};
+-ThreadLocalState g_thread_locals[4];
++ThreadLocalState g_thread_locals[GTOS_CONTENT_THREAD_SLOT_LIMIT];
+ thread_local_destructor_t g_destructors[NUM_OPENSSL_THREAD_LOCALS] = {};
+ 
+@@ -183,5 +184,6 @@
+       BSSL_CHECK(reader.owner != info.thread_id);
+     }
+-    BSSL_CHECK(lock_.next_ticket - lock_.serving_ticket < 4);
++    BSSL_CHECK(lock_.next_ticket - lock_.serving_ticket <
++               info.maximum_parallel_threads);
+     ticket = lock_.next_ticket++;
+   }

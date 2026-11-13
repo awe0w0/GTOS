@@ -1,0 +1,19 @@
+--- a/mojo/core/BUILD.gn
++++ b/mojo/core/BUILD.gn
+@@ -127,10 +127,12 @@
+     sources += [ "channel_mac.cc" ]
+   }
+ 
+-  sources += [
+-    "broker_host.cc",
+-    "broker_host.h",
+-  ]
++  if (!is_gtos) {
++    sources += [
++      "broker_host.cc",
++      "broker_host.h",
++    ]
++  }
+ 
+   configs += [ "//build/config/compiler:wexit_time_destructors" ]
+ 

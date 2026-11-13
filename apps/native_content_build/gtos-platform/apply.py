@@ -14,6 +14,14 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'mojo/core/BUILD.gn': '9a7918fe485cbb69ae3f0541b6a56eb71e320a3a36544fdda339dee7ca6a3c9a',
+    'mojo/core/channel.cc': 'a0e103a7b48fc717d6277567ffaf0492df0881d476ff049ed6a7a52c597781f0',
+    'mojo/core/ipcz_driver/driver.cc': '1ebff7d08ecace30299584918b833d6a853c7fb197b81ba1a622e7d145edf655',
+    'mojo/core/ipcz_driver/transport.cc': '2005a844e71e677458ff7adf847f7f75d7a090bf9f39e6cb41211b65db15c262',
+    'mojo/public/cpp/platform/platform_channel.cc': 'af834d21b74125b3096e4feb5c659538d491c1aa8dd92fd9aa2be3d36e7f57dc',
+    'mojo/public/cpp/platform/platform_channel_endpoint.cc': '65f0385f7d7442d0610a08816e9bb5548f1a6fc33dede615dbd168a3374362c0',
+    'mojo/public/cpp/platform/platform_channel_endpoint.h': '3d26d0e1b19534639212ddba42370de512f1701a706e5b9a6a63932e1cee0e5e',
+    'mojo/public/cpp/platform/named_platform_channel.cc': '516d470b9f535b905404fe33e02dfa92fc4e6b9983c3d60a674cc6a371fe8227',
     'base/test/BUILD.gn': '56ca0337fff3fd1bfb8c9920e2474b145b0fbbe8bfc6c8422615c3e6607fe5fa',
     'ui/gl/BUILD.gn': 'a784d51205f7e6b4b58be36af9d54e4aeeef395b452fe34372b5c2af19a3c28c',
     'ui/gl/features.gni': 'ff407f0a766edbd90d275a00c823b91da608485d6d1f4ced58f6f45e712b362c',
@@ -485,6 +493,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'tools/gtos_native_sdk/probe/gtos_content_mojo_guest_test.cc': '../../../tests/gtos_content_mojo_guest_test.cc',
     'tools/gtos_native_sdk/probe/gtos_content_ozone_guest_test.cc': '../../../tests/gtos_content_ozone_guest_test.cc',
     'build/config/gtos/include/gtos/diagnostic.h': 'sdk/diagnostic.h',
     'build/config/gtos/runtime/perror_gtos.cc': 'runtime/perror_gtos.cc',
@@ -669,8 +678,9 @@ ADDITIONS = {
     'third_party/rust-toolchain/lib/rustlib/src/rust/library/std/src/sys/sync/futex/gtos.rs': 'rust/futex.rs',
 }
 
-# Patch private copies of the qualified V8 platform sources.
+# Patch private copies of the qualified platform sources.
 PATCHED_ADDITIONS = {
+    'third_party/boringssl/src/crypto/thread_gtos.cc',
     'build/config/gtos/runtime/directory.cpp',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h',

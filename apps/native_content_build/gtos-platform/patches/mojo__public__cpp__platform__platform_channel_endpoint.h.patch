@@ -1,0 +1,11 @@
+--- a/mojo/public/cpp/platform/platform_channel_endpoint.h
++++ b/mojo/public/cpp/platform/platform_channel_endpoint.h
+@@ -32,6 +32,8 @@ class COMPONENT_EXPORT(MOJO_CPP_PLATFORM) PlatformChannelEndpoint {
+   using HandlePassingInfo = base::MachPortsForRendezvous;
+ #elif BUILDFLAG(IS_POSIX)
+   using HandlePassingInfo = base::FileHandleMappingVector;
++#elif BUILDFLAG(IS_GTOS)
++  struct HandlePassingInfo {};
+ #else
+ #error "Unsupported platform."
+ #endif

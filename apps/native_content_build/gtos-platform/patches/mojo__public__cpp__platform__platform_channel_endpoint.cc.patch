@@ -1,0 +1,39 @@
+--- a/mojo/public/cpp/platform/platform_channel_endpoint.cc
++++ b/mojo/public/cpp/platform/platform_channel_endpoint.cc
+@@ -88,6 +88,10 @@ void PlatformChannelEndpoint::PrepareToPass(HandlePassingInfo& info,
+ 
+ void PlatformChannelEndpoint::PrepareToPass(HandlePassingInfo& info,
+                                             std::string& value) {
++#if BUILDFLAG(IS_GTOS)
++  // Native GTOS has no cross-process endpoint transfer.
++  value.clear();
++#else
+   DCHECK(is_valid());
+ #if BUILDFLAG(IS_WIN)
+   info.push_back(platform_handle().GetHandle().Get());
+@@ -129,6 +133,7 @@ void PlatformChannelEndpoint::PrepareToPass(HandlePassingInfo& info,
+   info.emplace_back(platform_handle().GetFD().get(), target_fd);
+   value = base::NumberToString(target_fd);
+ #endif
++#endif
+ }
+ 
+ void PlatformChannelEndpoint::PrepareToPass(base::LaunchOptions& options,
+@@ -150,7 +155,7 @@ std::string PlatformChannelEndpoint::PrepareToPass(
+   PrepareToPass(options.mach_ports_for_rendezvous, value);
+ #elif BUILDFLAG(IS_POSIX)
+   PrepareToPass(options.fds_to_remap, value);
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #error "Platform not supported."
+ #endif
+   return value;
+@@ -220,6 +225,8 @@ PlatformChannelEndpoint PlatformChannelEndpoint::RecoverFromString(
+     return PlatformChannelEndpoint();
+   }
+   return PlatformChannelEndpoint(PlatformHandle(base::ScopedFD(fd)));
++#elif BUILDFLAG(IS_GTOS)
++  return PlatformChannelEndpoint();
+ #endif
+ }
+ 

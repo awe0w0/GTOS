@@ -1,0 +1,29 @@
+--- a/mojo/public/cpp/platform/platform_channel.cc
++++ b/mojo/public/cpp/platform/platform_channel.cc
+@@ -162,12 +162,17 @@ void CreateChannel(PlatformHandle* local_endpoint,
+   DCHECK(local_endpoint->is_valid());
+   DCHECK(remote_endpoint->is_valid());
+ }
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #error "Unsupported platform."
+ #endif
+ 
+ }  // namespace
+ 
++#if BUILDFLAG(IS_GTOS)
++// In-process Mojo message pipes do not require a platform channel.
++// The default endpoints remain invalid for unsupported remote transport.
++PlatformChannel::PlatformChannel() = default;
++#else
+ PlatformChannel::PlatformChannel() {
+   PlatformHandle local_handle;
+   PlatformHandle remote_handle;
+@@ -175,6 +180,7 @@ PlatformChannel::PlatformChannel() {
+   local_endpoint_ = PlatformChannelEndpoint(std::move(local_handle));
+   remote_endpoint_ = PlatformChannelEndpoint(std::move(remote_handle));
+ }
++#endif
+ 
+ PlatformChannel::PlatformChannel(PlatformChannelEndpoint local,
+                                  PlatformChannelEndpoint remote)

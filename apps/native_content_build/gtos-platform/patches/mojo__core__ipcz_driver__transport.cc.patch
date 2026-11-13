@@ -1,0 +1,22 @@
+--- a/mojo/core/ipcz_driver/transport.cc
++++ b/mojo/core/ipcz_driver/transport.cc
+@@ -325,6 +325,11 @@
+ 
+ bool Transport::Activate(IpczHandle transport,
+                          IpczTransportActivityHandler activity_handler) {
++#if BUILDFLAG(IS_GTOS)
++  // Local Mojo portals do not use a platform transport. A native GTOS file
++  // handle cannot be used as a cross-process channel.
++  return false;
++#else
+   scoped_refptr<Channel> channel;
+   std::vector<PendingTransmission> pending_transmissions;
+   {
+@@ -371,6 +376,7 @@
+   }
+ 
+   return true;
++#endif  // BUILDFLAG(IS_GTOS)
+ }
+ 
+ bool Transport::Deactivate() {

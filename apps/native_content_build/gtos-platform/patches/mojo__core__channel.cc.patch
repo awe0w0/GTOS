@@ -1,0 +1,18 @@
+--- a/mojo/core/channel.cc
++++ b/mojo/core/channel.cc
+@@ -1033,6 +1033,7 @@
+   }
+ }
+ 
++#if !BUILDFLAG(IS_GTOS)
+ // static
+ scoped_refptr<Channel> Channel::CreateForIpczDriver(
+     Delegate* delegate,
+@@ -1041,6 +1042,7 @@
+   return Create(delegate, ConnectionParams{std::move(endpoint)},
+                 HandlePolicy::kAcceptHandles, std::move(io_task_runner));
+ }
++#endif  // !BUILDFLAG(IS_GTOS)
+ 
+ void Channel::ShutDown() {
+   ShutDownImpl();
