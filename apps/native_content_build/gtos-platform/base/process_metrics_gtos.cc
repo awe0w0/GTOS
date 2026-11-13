@@ -5,6 +5,7 @@
 #include "base/process/process_metrics.h"
 
 #include <limits>
+#include <common/version.h>
 #include <process/cpu_clock_abi.h>
 #include <process/system_memory_abi.h>
 
@@ -108,6 +109,18 @@ ByteSize SysInfo::AmountOfVirtualMemory() {
 
 std::string SysInfo::OperatingSystemName() {
   return "GTOS";
+}
+
+std::string SysInfo::OperatingSystemVersion() {
+  return GTOS_VERSION_STRING;
+}
+
+void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
+                                            int32_t* minor_version,
+                                            int32_t* bugfix_version) {
+  *major_version = GTOS_VERSION_MAJOR;
+  *minor_version = GTOS_VERSION_MINOR;
+  *bugfix_version = GTOS_VERSION_PATCH;
 }
 
 std::string SysInfo::OperatingSystemArchitecture() {

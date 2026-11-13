@@ -1,0 +1,30 @@
+--- a/components/policy/core/common/cloud/cloud_policy_util.cc
++++ b/components/policy/core/common/cloud/cloud_policy_util.cc
+@@ -138,6 +138,8 @@ std::string GetMachineName() {
+     return result;
+   }
+   return std::string();
++#elif BUILDFLAG(IS_GTOS)
++  return net::GetHostName();
+ #elif BUILDFLAG(IS_ANDROID)
+   return std::string();
+ #elif BUILDFLAG(IS_CHROMEOS)
+@@ -149,7 +151,7 @@ std::string GetMachineName() {
+ 
+ std::string GetOSVersion() {
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_APPLE) || \
+-    BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
++    BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   return base::SysInfo::OperatingSystemVersion();
+ #elif BUILDFLAG(IS_WIN)
+   base::win::OSInfo::VersionNumber version_number =
+@@ -200,6 +202,9 @@ std::string GetOSUsername() {
+     return std::string();
+   }
+   return primary_session->account_id().GetUserEmail();
++#elif BUILDFLAG(IS_GTOS)
++  // GTOS has no logged-in user identity.
++  return {};
+ #elif BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
+   // TODO(crbug.com/40200780): This should be fully implemented when there is
+   // support in fuchsia.

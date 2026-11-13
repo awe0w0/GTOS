@@ -10,6 +10,7 @@
 #include <string>
 #include <system_error>
 
+#include <common/version.h>
 #include <fnmatch.h>
 #include <stdio.h>
 #include <storage/content_volume_layout.h>
@@ -24,6 +25,7 @@
 #include "base/process/process_metrics.h"
 #include "base/system/sys_info.h"
 #include "base/time/time.h"
+#include "base/version_info/version_info.h"
 #include "tools/gtos_native_sdk/native-services.h"
 
 namespace {
@@ -58,6 +60,16 @@ int CheckSystemInfoAndTime() {
         base::SysInfo::OperatingSystemName() != "GTOS" ||
         base::SysInfo::OperatingSystemArchitecture() != "x86")
         return 181;
+
+    int32_t major = -1;
+    int32_t minor = -1;
+    int32_t patch = -1;
+    base::SysInfo::OperatingSystemVersionNumbers(&major, &minor, &patch);
+    if (version_info::GetOSType() != "GTOS" ||
+        base::SysInfo::OperatingSystemVersion() != GTOS_VERSION_STRING ||
+        major != GTOS_VERSION_MAJOR || minor != GTOS_VERSION_MINOR ||
+        patch != GTOS_VERSION_PATCH)
+        return 203;
 
     const auto before_epoch = base::Time::UnixEpoch() - base::Milliseconds(500);
     const auto leap_day = base::Time::FromMillisecondsSinceUnixEpoch(951782400000);

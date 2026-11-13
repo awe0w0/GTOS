@@ -1,6 +1,31 @@
 --- a/components/policy/tools/generate_policy_source.py
 +++ b/components/policy/tools/generate_policy_source.py
-@@ -1805,8 +1805,6 @@ package enterprise_management;
+@@ -1670,15 +1670,19 @@ def _WriteSensitivePoliciesSource(f, policies):
+   Note that this 'sensitive' flag is different from the 'sensitiveValue' flag
+   in schemas, which is used to mask values in the chrome://policy UI.
+   """
+-  f.write('const char* const kSensitivePolicies[] = {\n')
+   sensitive_policies = sorted(
+     [p for p in policies if p.is_sensitive], key=lambda p: p.name
+   )
+-  for p in sensitive_policies:
+-    f.write('    key::k%s,\n' % p.name)
+-  f.write('};\n\n')
++  if sensitive_policies:
++    f.write('const char* const kSensitivePolicies[] = {\n')
++    for p in sensitive_policies:
++      f.write('    key::k%s,\n' % p.name)
++    f.write('};\n\n')
+   f.write('base::span<const char* const> GetSensitivePolicies() {\n')
+-  f.write('  return kSensitivePolicies;\n')
++  if sensitive_policies:
++    f.write('  return kSensitivePolicies;\n')
++  else:
++    f.write('  return {};\n')
+   f.write('}\n\n')
+ 
+ 
+@@ -1805,8 +1809,6 @@ package enterprise_management;
  
  option go_package="chromium/policy/enterprise_management_proto";
  
@@ -9,7 +34,7 @@
  '''
  
  # Field IDs [1..RESERVED_IDS] will not be used in the wrapping protobuf.
-@@ -1967,15 +1965,17 @@ def _WriteCloudPolicyProtobuf(
+@@ -1967,15 +1969,17 @@ def _WriteCloudPolicyProtobuf(
        % (policy.policy_protobuf_type, policy.name, field_number)
      )
  

@@ -1,6 +1,7 @@
 #include <common/types.h>
 #include <common/boot_log.h>
 #include <common/boot_diagnostic.h>
+#include <common/version.h>
 #include <gui/modern_painter.h>
 #include <gdt.h>
 #include <memorymanagement.h>
@@ -1082,7 +1083,7 @@ static void ServiceNativeDemo(TaskManager &tasks) {
 extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     common::BootLog::Reset();
     BootStage("B01", "HANDOFF");
-    printf("GTOS 0.3 PROTECTED DESKTOP BOOT\n");
+    printf("GTOS " GTOS_VERSION_RELEASE " PROTECTED DESKTOP BOOT\n");
     BootStage("B02", "MEMORY");
     if (!frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end))
         Panic("INVALID MEMORY MAP", "E01");

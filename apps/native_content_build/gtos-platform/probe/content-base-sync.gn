@@ -44,6 +44,7 @@ executable("content_base_probe") {
   libs = [ gtos_content_probe_runtime_archive ]
   deps = [
     "//base",
+    "//base/version_info",
     "//build/config/gtos/runtime:ffmpeg_support",
   ]
 }

@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/version_info/version_info.h': 'e4e286ddc4b778a11161381eb60be02ba6bb049566d7023852a6620816010959',
+    'components/policy/core/common/cloud/cloud_policy_util.cc': '792e95152fa99df555138805883521a71f948b45248f18e1ca1372661f193913',
+    'components/policy/tools/generate_policy_source_test.py': '5742525afea88d2238ada162b6e901bc0bdd32afe21d1c3e0508353293fb2cb2',
     'base/base_paths.cc': '6370d403ef63f5e94bcd252fdd3d0eee858c671275d6f44873745adbe7c4f7da',
     'base/files/file.h': '9f14d7ae8876aefc5b2c240814822d5a503c595a29f00656bc7690d744465fd2',
     'base/files/file_enumerator.h': '19ab1de1387f34f0ff1b3969ef0a43f5f22d3bbc9dbfb363188fcbef2174a1e9',
@@ -476,6 +479,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/include/common/version.h': '../../../include/common/version.h',
     'base/debug/debugger_gtos.cc': 'base/debugger_gtos.cc',
     'base/debug/stack_trace_gtos.cc': 'base/stack_trace_gtos.cc',
     'base/files/file_gtos.cc': 'base/file_gtos.cc',

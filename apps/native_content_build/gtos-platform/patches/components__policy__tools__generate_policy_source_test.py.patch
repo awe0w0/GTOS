@@ -1,0 +1,29 @@
+--- a/components/policy/tools/generate_policy_source_test.py
++++ b/components/policy/tools/generate_policy_source_test.py
+@@ -3,6 +3,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import io
+ import unittest
+ from unittest.mock import patch, mock_open, call
+ from typing import NamedTuple
+@@ -467,6 +468,18 @@ class PolicyGenerationTest(unittest.TestCase):
+       sensitive_policies,
+     )
+ 
++  def testWriteEmptySensitivePolicies(self):
++    output = io.StringIO()
++    generate_policy_source._WriteSensitivePoliciesSource(
++      output, [p for p in self.policies if not p.is_sensitive]
++    )
++    self.assertEqual(
++      'base::span<const char* const> GetSensitivePolicies() {\n'
++      '  return {};\n'
++      '}\n\n',
++      output.getvalue(),
++    )
++
+   def testWritePolicyConstantHeader(self):
+     output_path = 'mock_policy_constants_h'
+ 
