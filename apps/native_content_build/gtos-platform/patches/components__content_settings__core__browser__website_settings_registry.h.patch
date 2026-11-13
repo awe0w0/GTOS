@@ -1,0 +1,23 @@
+--- a/components/content_settings/core/browser/website_settings_registry.h
++++ b/components/content_settings/core/browser/website_settings_registry.h
+@@ -37,15 +37,14 @@ class WebsiteSettingsRegistry {
+     PLATFORM_ANDROID = 1 << 4,
+     PLATFORM_IOS = 1 << 5,
+     PLATFORM_FUCHSIA = 1 << 6,
++    PLATFORM_GTOS = 1 << 7,
+ 
+-    // Settings only applied to win, mac, linux, chromeos, and fuchsia.
++    // Settings that apply to desktop platforms.
+     DESKTOP = PLATFORM_WINDOWS | PLATFORM_LINUX | PLATFORM_CHROMEOS |
+-              PLATFORM_MAC | PLATFORM_FUCHSIA,
++              PLATFORM_MAC | PLATFORM_FUCHSIA | PLATFORM_GTOS,
+ 
+-    // Settings applied to all platforms, including win, mac, linux, chromeos,
+-    // android, ios, and fuchsia.
+-    ALL_PLATFORMS =
+-        DESKTOP | PLATFORM_ANDROID | PLATFORM_IOS | PLATFORM_FUCHSIA,
++    // Settings that apply to all platforms.
++    ALL_PLATFORMS = DESKTOP | PLATFORM_ANDROID | PLATFORM_IOS,
+   };
+ 
+   using Map =

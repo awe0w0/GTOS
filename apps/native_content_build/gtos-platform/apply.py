@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/content_settings/core/browser/website_settings_registry.cc': '17715bfd3889557540b351cb26f4c152e28facd5bac2dda0bc3d7666ad25f09b',
+    'components/content_settings/core/browser/website_settings_registry.h': '89de2faf75dc475d10c56057ed2e60602407464f194e3e0eb5477249014e67f4',
     'components/variations/BUILD.gn': '7d1396e4f3d76bf971768656bada3ec446d1240548e4feef759a388cfc9fdb8b',
     'content/shell/app/shell_main_delegate.cc': 'c22470ba2711a4c3c5a672da9d23519234aee785fb9d82a1ab03b97478a6b260',
     'content/shell/app/shell_main_delegate.h': '5948c20805ff067ebfcba616f2674de75234c07ef10286502de74e586b59fb61',
