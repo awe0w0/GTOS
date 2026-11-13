@@ -1,0 +1,14 @@
+--- a/base/test/BUILD.gn
++++ b/base/test/BUILD.gn
+@@ -299,6 +299,11 @@ static_library("test_support") {
+   # that would require special support in gn2bp (AOSP Cronet).
+   if (!is_cronet_build) {
+     public_deps += [ "//third_party/perfetto:perfetto_test_support" ]
++  }
++
++  # The test SQL processor requires a shared library to isolate its SQLite.
++  # The GTOS executable uses a static loader and keeps the tracing client.
++  if (!is_cronet_build && !is_gtos) {
+     public_deps += [ ":test_trace_processor" ]
+     sources += [
+       "tracing/test_trace_processor.cc",

@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/test/BUILD.gn': '56ca0337fff3fd1bfb8c9920e2474b145b0fbbe8bfc6c8422615c3e6607fe5fa',
     'ui/gl/BUILD.gn': 'a784d51205f7e6b4b58be36af9d54e4aeeef395b452fe34372b5c2af19a3c28c',
     'ui/gl/features.gni': 'ff407f0a766edbd90d275a00c823b91da608485d6d1f4ced58f6f45e712b362c',
     'third_party/blink/renderer/core/layout/layout_shift_tracker.cc': 'eb4ebd43f1ee795131596d5db8927f93b068b9dc8a9a565abc35900969e1ab38',
