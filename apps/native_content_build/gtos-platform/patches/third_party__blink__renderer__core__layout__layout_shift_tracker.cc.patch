@@ -1,0 +1,38 @@
+--- a/third_party/blink/renderer/core/layout/layout_shift_tracker.cc
++++ b/third_party/blink/renderer/core/layout/layout_shift_tracker.cc
+@@ -857,27 +857,27 @@ std::unique_ptr<TracedValue> LayoutShiftTracker::PerFrameTraceData(
+ }
+ 
+ void LayoutShiftTracker::AttributionsToTracedValue(TracedValue& value) const {
+-  auto it = attributions_.begin();
+-  if (!*it)
++  if (!attributions_.front())
+     return;
+ 
+   bool should_include_names = TRACE_EVENT_CATEGORY_ENABLED(
+       TRACE_DISABLED_BY_DEFAULT("layout_shift.debug"));
+ 
+   value.BeginArray("impacted_nodes");
+-  while (it != attributions_.end() && it->node_id != kInvalidDOMNodeId) {
++  for (const auto& attribution : attributions_) {
++    if (attribution.node_id == kInvalidDOMNodeId)
++      break;
+     value.BeginDictionary();
+-    value.SetInteger("node_id", it->node_id);
+-    RectToTracedValue(gfx::ToRoundedRect(it->old_visual_rect), value,
++    value.SetInteger("node_id", attribution.node_id);
++    RectToTracedValue(gfx::ToRoundedRect(attribution.old_visual_rect), value,
+                       "old_rect");
+-    RectToTracedValue(gfx::ToRoundedRect(it->new_visual_rect), value,
++    RectToTracedValue(gfx::ToRoundedRect(attribution.new_visual_rect), value,
+                       "new_rect");
+     if (should_include_names) {
+-      Node* node = DOMNodeIds::NodeForId(it->node_id);
++      Node* node = DOMNodeIds::NodeForId(attribution.node_id);
+       value.SetString("debug_name", node ? node->DebugName() : "");
+     }
+     value.EndDictionary();
+-    it++;
+   }
+   value.EndArray();
+ }

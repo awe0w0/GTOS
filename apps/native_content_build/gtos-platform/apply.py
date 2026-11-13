@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/blink/renderer/core/layout/layout_shift_tracker.cc': 'eb4ebd43f1ee795131596d5db8927f93b068b9dc8a9a565abc35900969e1ab38',
     'third_party/dav1d/BUILD.gn': '855545b101e94030da1ad77810f9dd36fcfab56c7d01437118079e871a6af5ab',
     'build/config/ozone.gni': '84edd6072e1c69b9132514bc3cdc526cac8f95ca730a6665946cb25f09900c09',
     'base/version_info/version_info.h': 'e4e286ddc4b778a11161381eb60be02ba6bb049566d7023852a6620816010959',
