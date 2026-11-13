@@ -1,0 +1,11 @@
+--- a/ui/gl/BUILD.gn
++++ b/ui/gl/BUILD.gn
+@@ -245,7 +245,7 @@
+   }
+ 
+   if (use_ozone) {
+-    if (!is_fuchsia) {
++    if (!is_fuchsia && !is_gtos) {
+       if (!use_static_angle || is_chromeos) {
+         data_deps += [
+           "//third_party/angle:libEGL",

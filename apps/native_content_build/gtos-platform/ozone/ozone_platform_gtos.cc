@@ -24,7 +24,9 @@
 #include "ui/events/event.h"
 #include "ui/events/keycodes/keyboard_code_conversion.h"
 #include "ui/events/platform/platform_event_source.h"
+#include "ui/gfx/client_native_pixmap_factory.h"
 #include "ui/gfx/geometry/point_f.h"
+#include "ui/gfx/native_pixmap_handle.h"
 #include "ui/ozone/common/bitmap_cursor_factory.h"
 #include "ui/ozone/common/stub_overlay_manager.h"
 #include "ui/ozone/platform/gtos/surface_factory_gtos.h"
@@ -348,6 +350,18 @@ class GtosScreen : public PlatformScreen {
 
 class GtosEventSource : public PlatformEventSource {};
 
+class GtosClientNativePixmapFactory : public gfx::ClientNativePixmapFactory {
+ public:
+  std::unique_ptr<gfx::ClientNativePixmap> ImportFromHandle(
+      gfx::NativePixmapHandle handle,
+      const gfx::Size& size,
+      viz::SharedImageFormat format,
+      gfx::BufferUsage usage) override {
+    // GTOS presents CPU canvas pixels and does not expose GPU pixmap handles.
+    return nullptr;
+  }
+};
+
 class OzonePlatformGtos : public OzonePlatform {
  public:
   SurfaceFactoryOzone* GetSurfaceFactoryOzone() override { return &factory_; }
@@ -410,6 +424,10 @@ class OzonePlatformGtos : public OzonePlatform {
 
 OzonePlatform* CreateOzonePlatformGtos() {
   return new OzonePlatformGtos();
+}
+
+gfx::ClientNativePixmapFactory* CreateClientNativePixmapFactoryGtos() {
+  return new GtosClientNativePixmapFactory();
 }
 
 }  // namespace ui

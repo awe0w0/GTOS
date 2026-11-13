@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/ozone.gni")
+
 declare_args() {
   gtos_content_probe_runtime_archive = ""
   gtos_content_window_interaction_test = false
+  gtos_content_ozone_test = false
 }
 
 assert(is_gtos && current_cpu == "x86")
@@ -16,6 +19,9 @@ group("content_with_base_probe") {
     ":content_base_probe",
     "//content/shell:content_shell",
   ]
+  if (gtos_content_ozone_test) {
+    deps += [ ":content_ozone_probe" ]
+  }
 }
 
 executable("content_base_probe") {
@@ -51,4 +57,36 @@ executable("content_base_probe") {
     "//base/version_info",
     "//build/config/gtos/runtime:ffmpeg_support",
   ]
+}
+
+if (gtos_content_ozone_test) {
+  assert(gtos_ozone)
+  executable("content_ozone_probe") {
+    testonly = true
+    sources = [
+      "//build/config/gtos/runtime/assert.cc",
+      "//content/shell/app/entry_gtos.cc",
+      "//content/shell/app/native-start.s",
+      "gtos_content_ozone_guest_test.cc",
+    ]
+    inputs = [
+      "//content/shell/app/native.ld",
+      gtos_content_probe_runtime_archive,
+    ]
+    ldflags = [
+      "-Wl,-T," + rebase_path("//content/shell/app/native.ld", root_build_dir),
+      "-Wl,--gc-sections",
+    ]
+    libs = [ gtos_content_probe_runtime_archive ]
+    deps = [
+      "//base",
+      "//build/config/gtos/runtime:ffmpeg_support",
+      "//build/config/gtos/runtime:native_environment",
+      "//skia",
+      "//ui/events",
+      "//ui/gfx/geometry",
+      "//ui/ozone",
+      "//ui/platform_window",
+    ]
+  }
 }

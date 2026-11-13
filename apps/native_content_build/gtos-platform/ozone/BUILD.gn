@@ -15,6 +15,7 @@ source_set("gtos") {
     "//ui/events",
     "//ui/events:events_base",
     "//ui/events/platform",
+    "//ui/gfx",
     "//ui/gfx/geometry",
     "//ui/ozone:ozone_base",
     "//ui/ozone/common",
