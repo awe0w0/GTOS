@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/update_client/update_query_params.cc': '58ff124c2ff76af8b412c599bb79ec22db02af3a80acda69e1fb271fc4f2b896',
     'components/web_package/signed_web_bundles/signed_web_bundle_id.cc': '861151c5449c65e887c8a7f538453a030da67cd3385184b89aad14e0587376fc',
     'components/webrtc/thread_wrapper.cc': '29e492e293ee4f655e2f368e00e8e85ababf974f32352adbe803201311dde756',
     'third_party/blink/renderer/modules/peerconnection/rtc_peer_connection_ice_error_event.cc': '87e36b9d3f2f1df791028a4144d4c39c483901f0927564ac2e40a34a61e128bb',
@@ -501,6 +502,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'net/socket/udp_socket_gtos.h': 'net/udp_socket_gtos.h',
     'tools/gtos_native_sdk/probe/gtos_content_resources_guest_test.cc': '../../../tests/gtos_content_resources_guest_test.cc',
     'tools/gtos_native_sdk/probe/gtos_content_mojo_guest_test.cc': '../../../tests/gtos_content_mojo_guest_test.cc',
     'tools/gtos_native_sdk/probe/gtos_content_ozone_guest_test.cc': '../../../tests/gtos_content_ozone_guest_test.cc',
