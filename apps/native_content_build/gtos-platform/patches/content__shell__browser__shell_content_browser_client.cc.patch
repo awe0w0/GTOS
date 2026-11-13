@@ -1,0 +1,67 @@
+--- a/content/shell/browser/shell_content_browser_client.cc
++++ b/content/shell/browser/shell_content_browser_client.cc
+@@ -63,13 +63,11 @@
+ #include "content/public/common/isolated_world_ids.h"
+ #include "content/public/common/url_constants.h"
+ #include "content/public/test/setup_field_trials.h"
+-#include "content/shell/browser/rust_test_service_ffi.rs.h"
+ #include "content/shell/browser/shell.h"
+ #include "content/shell/browser/shell_browser_context.h"
+ #include "content/shell/browser/shell_browser_main_parts.h"
+ #include "content/shell/browser/shell_devtools_manager_delegate.h"
+ #include "content/shell/browser/shell_web_contents_view_delegate_creator.h"
+-#include "content/shell/common/rust_test.test-mojom.h"
+ #include "content/shell/common/shell_controller.test-mojom.h"
+ #include "content/shell/common/shell_paths.h"
+ #include "content/shell/common/shell_switches.h"
+@@ -102,6 +100,11 @@
+ #include "url/url_canon.h"
+ #include "url/url_constants.h"
+ 
++#if !BUILDFLAG(IS_GTOS)
++#include "content/shell/browser/rust_test_service_ffi.rs.h"
++#include "content/shell/common/rust_test.test-mojom.h"
++#endif
++
+ #if BUILDFLAG(IS_ANDROID)
+ #include "base/android/apk_assets.h"
+ #include "base/android/path_utils.h"
+@@ -198,6 +201,7 @@ class ShellControllerImpl : public mojom::ShellController {
+   void ShutDown() override { Shell::Shutdown(); }
+ };
+ 
++#if !BUILDFLAG(IS_GTOS)
+ void BindRustTestServiceReceiver(
+     RenderFrameHost* render_frame_host,
+     mojo::PendingReceiver<content::rust_test::mojom::RustTestService>
+@@ -206,6 +210,7 @@ void BindRustTestServiceReceiver(
+       receiver.PassPipe());
+   content::rust_test::BindRustTestService(std::move(pipe));
+ }
++#endif
+ 
+ void BindNetworkHintsHandler(
+     content::RenderFrameHost* frame_host,
+@@ -353,7 +358,11 @@ blink::UserAgentMetadata GetShellUserAgentMetadata() {
+   metadata.brand_full_version_list.emplace_back("content_shell",
+                                                 CONTENT_SHELL_VERSION);
+   metadata.full_version = CONTENT_SHELL_VERSION;
++#if BUILDFLAG(IS_GTOS)
++  metadata.platform = "GTOS";
++#else
+   metadata.platform = "Unknown";
++#endif
+   metadata.architecture = embedder_support::GetCpuArchitecture();
+   metadata.model = embedder_support::BuildModelInfo();
+ 
+@@ -637,8 +646,10 @@ void ShellContentBrowserClient::RegisterBrowserInterfaceBindersForFrame(
+       ->GetBinders()
+       .ExposeInterfacesToRenderFrame(map);
+   map->Add<network_hints::mojom::NetworkHintsHandler>(&BindNetworkHintsHandler);
++#if !BUILDFLAG(IS_GTOS)
+   map->Add<content::rust_test::mojom::RustTestService>(
+       base::BindRepeating(&BindRustTestServiceReceiver));
++#endif
+ #if BUILDFLAG(IS_WIN)
+   map->Add<media::mojom::MediaFoundationPreferences>(
+       &BindMediaFoundationPreferences);
