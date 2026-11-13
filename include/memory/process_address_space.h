@@ -56,10 +56,14 @@ namespace gtos { namespace memory {
         PendingTable pendingTables[2];
         uint32_t pendingPageCount, pendingTableCount;
         bool prepared, sealed;
+        // Only large spaces own persistent indexes in supervisor memory.
+        mutable bool contentCopyLayoutValid;
         mutable ProcessMemoryError error;
         bool Fail(ProcessMemoryError value) const;
         bool Context(bool allowOwnDirectory) const;
         bool KernelAlias(uint32_t address, uint32_t length, bool writable) const;
+        bool LayoutRoot() const;
+        bool LayoutDirectories(bool complete) const;
         bool Layout(bool complete) const;
         bool Range(uint32_t address, uint32_t length, bool writable) const;
         bool Buffer(uint32_t address, uint32_t length, bool writable) const;
@@ -70,7 +74,8 @@ namespace gtos { namespace memory {
         static uint32_t MetadataFrameCount(uint32_t capacityPages);
         bool IsMetadataFrame(uint32_t address) const;
         uint32_t* LayoutIndex(bool byFrame) const;
-        // Valid only after Layout succeeds, before ownership records change.
+        // Valid after Layout succeeds and until a mapping mutation. Normal
+        // spaces share the scratch indexes and may only use them immediately.
         int IndexedLayoutPage(uint32_t key, bool byFrame = false) const;
         int FindRegion(uint32_t handle) const;
         bool SharesFrame(const Page& page) const;

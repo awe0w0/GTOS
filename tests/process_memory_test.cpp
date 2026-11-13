@@ -823,11 +823,56 @@ namespace {
         CHECK(second.CopyFromUser(output, alias, 4096) && all(output, 4096, 0x9A));
         CHECK(first.Destroy()); CHECK(second.Destroy()); CHECK(used() == baseline);
     }
+    void contentCopies() {
+        const uint32_t capacity = ProcessAddressSpace::MaximumCapacityPages + 1;
+        CHECK(first.PrepareContent(kernel, frames, capacity, ProcessAddressSpace::DynamicLimit));
+        CHECK(first.MapNewRange(UserBase, 8192, true));
+        CHECK(second.Prepare(kernel, frames));
+        CHECK(second.MapNewPage(UserBase, true));
+        CHECK(first.Seal());
+        fill(input, 64, 0x42);
+        CHECK(first.CopyToUser(UserBase + 4096 - 32, input, 64));
+        CHECK(second.CopyToUser(UserBase, input, 32)); // Ordinary scratch index can be reused.
+        CHECK(first.CopyFromUser(output, UserBase + 4096 - 32, 64) && all(output, 64, 0x42));
+
+        uint32_t& leaf = entry(first, UserBase + 4096);
+        const uint32_t savedLeaf = leaf;
+        leaf = (leaf & 4095) | physical(second, UserBase);
+        fill(output, 64, 0x85);
+        CHECK(!first.CopyFromUser(output, UserBase + 4096 - 32, 64));
+        CHECK(all(output, 64, 0x85));
+        leaf = savedLeaf;
+        CHECK(first.CopyFromUser(output, UserBase + 4096 - 32, 64));
+        uint32_t& pde = directory(first)[UserBase >> 22];
+        const uint32_t savedPde = pde;
+        pde &= ~4u;
+        CHECK(!first.ValidateUserRange(UserBase, 1, false));
+        pde = savedPde | 0x20;
+        leaf |= 0x60;
+        CHECK(first.ValidateUserRange(UserBase + 4096, 1, true));
+        CHECK(first.SetDataReadOnly(UserBase + 4096, 4096));
+        CHECK(!first.CopyToUser(UserBase + 4096 - 32, output, 64));
+        CHECK(first.CopyFromUser(output, UserBase + 4096 - 32, 64) && all(output, 64, 0x42));
+
+        uint32_t base, handle;
+        CHECK(first.Reserve(8192, 4096, 0, base, handle));
+        CHECK(first.SetPermissions(handle, 0, 8192, ProcessMemoryReadWrite));
+        CHECK(first.CopyToUser(base + 4096, input, 32));
+        CHECK(first.Decommit(handle, 0, 4096)); // Swaps the surviving ownership record.
+        CHECK(!first.ValidateUserRange(base, 1, false));
+        CHECK(first.CopyFromUser(output, base + 4096, 32) && all(output, 32, 0x42));
+        CHECK(first.Release(handle));
+        CHECK(!first.ValidateUserRange(base + 4096, 1, false));
+        CHECK(first.Destroy());
+        CHECK(second.Destroy());
+        CHECK(used() == baseline);
+    }
     void dynamicVirtualMemory() {
         dynamicRegionsAndPermissions(); dynamicQuotaAndOwnership(); dynamicInvalidationsAndContext();
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
         protectRangeSeam();
         indexedOwnership();
+        contentCopies();
     }
 }
 extern "C" int processMemoryTests() {
