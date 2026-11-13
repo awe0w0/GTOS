@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/blink/renderer/modules/mediastream/web_media_player_ms_compositor.cc': '949e3dfd732a6ff8393a1b8de623034d2347824388c422b398a3e7c752d6dbb6',
     'components/policy/tools/generate_policy_source_test_data.py': '2cd9856badf515dfebf09ee7de63c40e276d0cc12f91629c763845a015dbc4a1',
     'components/policy/core/common/policy_proto_decoders.cc': '719c45aabbcfb5bf596a758cae64c8ec34463d1a0646d27dea0925c9ef019cd3',
     'components/trusted_vault/trusted_vault_connection_impl.cc': '4883af6c471743d3cf108f1c3d006f6c071c24636061ac75bd6559ccfcecda76',

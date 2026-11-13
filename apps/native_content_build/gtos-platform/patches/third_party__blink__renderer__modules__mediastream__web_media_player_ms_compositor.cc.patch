@@ -1,0 +1,24 @@
+--- a/third_party/blink/renderer/modules/mediastream/web_media_player_ms_compositor.cc
++++ b/third_party/blink/renderer/modules/mediastream/web_media_player_ms_compositor.cc
+@@ -14,6 +14,7 @@
+ #include <string_view>
+ #include <utility>
+ 
++#include "base/containers/span.h"
+ #include "base/hash/hash.h"
+ #include "base/metrics/histogram_functions.h"
+ #include "base/moving_window.h"
+@@ -292,9 +293,10 @@ class WebMediaPlayerMSCompositor::RtpRenderIntervalEstimator {
+       intervals[count++] = interval;
+     }
+     const size_t median_index = (count - 1) / 2;
+-    std::nth_element(intervals.begin(), intervals.begin() + median_index,
+-                     intervals.begin() + count);
+-    return intervals[median_index];
++    auto samples = base::span(intervals).first(count);
++    std::nth_element(samples.begin(), samples.begin() + median_index,
++                     samples.end());
++    return samples[median_index];
+   }
+ 
+   // Called for each presented frame that uses the estimate. For metrics,
