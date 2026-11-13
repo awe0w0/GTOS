@@ -57,10 +57,10 @@
 -      command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}}"
 +      if (gtos_content_link_via_clang) {
 +        rspfile = "{{output}}.rsp"
-+        rspfile_content = "{{inputs}} {{solibs}} {{libs}}"
++        rspfile_content = "{{inputs}} {{solibs}} {{libs}} {{rlibs}}"
 +        command = "$gtos_clang_bin/clang++ --target=$_triple -nostdlib -static --ld-path=$gtos_clang_bin/ld.lld -Wl,-m,$_elf {{ldflags}} -o {{output}} @{{output}}.rsp"
 +      } else {
-+        command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}}"
++        command = "$gtos_clang_bin/ld.lld -m $_elf {{ldflags}} -o {{output}} {{inputs}} {{solibs}} {{libs}} {{rlibs}}"
 +      }
        description = "GTOS LINK {{output}}"
        outputs =
