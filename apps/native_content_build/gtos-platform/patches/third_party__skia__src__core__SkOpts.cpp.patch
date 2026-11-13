@@ -1,0 +1,11 @@
+--- a/third_party/skia/src/core/SkOpts.cpp
++++ b/third_party/skia/src/core/SkOpts.cpp
+@@ -51,7 +51,7 @@ namespace SkOpts {
+     static bool init() {
+     #if defined(SK_ENABLE_OPTIMIZE_SIZE)
+         // All Init_foo functions are omitted when optimizing for size
+-    #elif defined(SK_CPU_X86)
++    #elif defined(SK_CPU_X86) && !defined(__GTOS__)
+         #if SK_CPU_X64_LEVEL < SK_CPU_X64_LEVEL_AVX2
+             if (SkCpu::Supports(SkX64::ML3)) { Init_ml3(); }
+         #endif

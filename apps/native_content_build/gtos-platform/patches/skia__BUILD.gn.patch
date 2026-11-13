@@ -89,3 +89,27 @@
    visibility = [ ":*" ]
    allow_unsafe = true  # For FFI
    crate_root = skia_rust_exif_ffi_crate_root
+@@ -1047,7 +1080,7 @@ skia_source_set("skia_core_and_effects") {
+ 
+ # Bits that involve special vector-y hardware.
+ # https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+-if (current_cpu == "x86" || current_cpu == "x64") {
++if (!is_gtos && (current_cpu == "x86" || current_cpu == "x64")) {
+   skia_source_set("skia_opts_ml3") {
+     sources = skia_opts.ml3_sources
+     if (!is_win) {
+@@ -1089,9 +1122,11 @@ skia_source_set("skia_opts") {
+   deps = [ "//base" ]
+ 
+   if (current_cpu == "x86" || current_cpu == "x64") {
+-    deps += [ ":skia_opts_ml3" ]
+-    if (allow_avx512) {
+-      deps += [ ":skia_opts_ml4" ]
++    if (!is_gtos) {
++      deps += [ ":skia_opts_ml3" ]
++      if (allow_avx512) {
++        deps += [ ":skia_opts_ml4" ]
++      }
+     }
+   } else if (current_cpu == "arm") {
+     # The assembly uses the frame pointer register (r7 in Thumb/r11 in

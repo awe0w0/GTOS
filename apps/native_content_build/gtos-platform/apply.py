@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/skia/src/core/SkOpts.cpp': '62eb755303ba4380a3c9b1c775dff01a369c85baf7e66106b75851de4a3c089e',
     'content/shell/browser/shell_content_browser_client.cc': '2aadd02a544344e32895593d1dce9cf3fd053b17b3b0952aff921ae7c670b796',
     'components/content_settings/core/browser/website_settings_registry.cc': '17715bfd3889557540b351cb26f4c152e28facd5bac2dda0bc3d7666ad25f09b',
     'components/content_settings/core/browser/website_settings_registry.h': '89de2faf75dc475d10c56057ed2e60602407464f194e3e0eb5477249014e67f4',
