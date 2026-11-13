@@ -1,0 +1,25 @@
+--- a/third_party/blink/renderer/core/frame/performance_monitor.cc
++++ b/third_party/blink/renderer/core/frame/performance_monitor.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/core/frame/performance_monitor.h"
+ 
++#include "base/containers/span.h"
+ #include "base/format_macros.h"
+ #include "third_party/blink/public/platform/platform.h"
+ #include "third_party/blink/renderer/bindings/core/v8/capture_source_location.h"
+@@ -139,10 +140,10 @@ void PerformanceMonitor::UpdateInstrumentation() {
+   static_assert(kLongTask == 0u,
+                 "kLongTask should be the first value in Violation for the "
+                 "|enabled_| definition below to be correct");
+-  // Since kLongTask is the first in |thresholds_|, we count from one after
+-  // begin(thresholds_).
+-  enabled_ = std::count(std::begin(thresholds_) + 1, std::end(thresholds_),
+-                        base::TimeDelta()) < static_cast<int>(kAfterLast) - 1;
++  // The thresholds for all other violations follow kLongTask.
++  enabled_ = std::ranges::any_of(
++      base::span(thresholds_).subspan<1>(),
++      [](base::TimeDelta threshold) { return !threshold.is_zero(); });
+ }
+ 
+ void PerformanceMonitor::WillExecuteScript(ExecutionContext* context) {

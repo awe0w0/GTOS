@@ -1,0 +1,38 @@
+--- a/third_party/blink/renderer/core/dom/node.cc
++++ b/third_party/blink/renderer/core/dom/node.cc
+@@ -29,6 +29,7 @@
+ #include <algorithm>
+ 
+ #include "base/containers/adapters.h"
++#include "base/containers/span.h"
+ #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_get_root_node_options.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_union_node_string_trustedscript.h"
+@@ -416,9 +417,10 @@ Node* Node::PseudoAwarePreviousSibling() const {
+     }
+   }
+ 
+-  auto pseudo_iter = std::ranges::find(kElementChildPseudoOrder, pseudo_id);
+-  if (pseudo_iter != kElementChildPseudoOrder.end()) {
+-    while (pseudo_iter != kElementChildPseudoOrder.begin()) {
++  const auto pseudo_order = base::span(kElementChildPseudoOrder);
++  auto pseudo_iter = std::ranges::find(pseudo_order, pseudo_id);
++  if (pseudo_iter != pseudo_order.end()) {
++    while (pseudo_iter != pseudo_order.begin()) {
+       --pseudo_iter;
+       switch (*pseudo_iter) {
+         case kPseudoIdColumn:
+@@ -499,9 +501,10 @@ Node* Node::PseudoAwareNextSibling() const {
+       return columns->at(column->Index() + 1u);
+     }
+   }
+-  auto pseudo_iter = std::ranges::find(kElementChildPseudoOrder, pseudo_id);
+-  if (pseudo_iter != kElementChildPseudoOrder.end()) {
+-    while (++pseudo_iter != kElementChildPseudoOrder.end()) {
++  const auto pseudo_order = base::span(kElementChildPseudoOrder);
++  auto pseudo_iter = std::ranges::find(pseudo_order, pseudo_id);
++  if (pseudo_iter != pseudo_order.end()) {
++    while (++pseudo_iter != pseudo_order.end()) {
+       switch (*pseudo_iter) {
+         case kPseudoIdColumn:
+           // kPseudoIdColumn is an array of indexed pseudo-elements.  If this

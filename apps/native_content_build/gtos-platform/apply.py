@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/blink/renderer/core/css/font_size_functions.cc': 'edb62eaf6521d50b017de1575b400f54871a4c3a7cafdd837aa2743c7eafe494',
+    'third_party/blink/renderer/core/dom/layout_tree_builder_traversal.cc': '6b5b92b781684d6b307f3144b7b2a28650bff26e14c7878db5610c90a104aed5',
+    'third_party/blink/renderer/core/dom/node.cc': '1bd5779c5c64a6a73797610e6e4e76162272f759c0ef5a45c5e652d61cb52f5b',
+    'third_party/blink/renderer/core/frame/performance_monitor.cc': '92153300e9a32c8fd75305671d5236775e6f0fc6acdc13ea51d2d8ec6e56e8ca',
     'third_party/blink/renderer/core/BUILD.gn': '5759bc29587d365cd29730da721952f81314daba2b7a11810c5912c9daa37041',
     'third_party/blink/renderer/core/xml/parser/xml_ffi.rs': '9492a6ae1838f2ee99ac882b0e8daac5f662b1d06c7ad391b8a92f70374c38c1',
     'storage/common/file_system/file_system_util.cc': '4f75282a4143fbf50483d2edb30173745188efe0ad00e95384e0dae7142b6a7d',

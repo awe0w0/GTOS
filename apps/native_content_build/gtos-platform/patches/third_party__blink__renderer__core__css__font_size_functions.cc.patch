@@ -1,0 +1,30 @@
+--- a/third_party/blink/renderer/core/css/font_size_functions.cc
++++ b/third_party/blink/renderer/core/css/font_size_functions.cc
+@@ -30,6 +30,7 @@
+ 
+ #include "third_party/blink/renderer/core/css/font_size_functions.h"
+ 
++#include "base/containers/span.h"
+ #include "third_party/blink/renderer/core/css_value_keywords.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/frame/settings.h"
+@@ -301,7 +302,7 @@ double FontSizeFunctions::SnapToClosestFontScaleBucket(double raw_font_scale) {
+       0.85, 1, 1.15, 1.3, 1.5, 1.8, 2, 2.5, 3, 3.5};
+ 
+   // Handle cases where the input value is outside the range of literals.
+-  if (raw_font_scale <= font_scale_buckets.front()) {
++  if (!(raw_font_scale > font_scale_buckets.front())) {
+     return font_scale_buckets.front();
+   }
+   if (raw_font_scale >= font_scale_buckets.back()) {
+@@ -309,8 +310,8 @@ double FontSizeFunctions::SnapToClosestFontScaleBucket(double raw_font_scale) {
+   }
+ 
+   // std::lower_bound finds the first element >= raw_font_scale.
+-  const auto it = std::lower_bound(font_scale_buckets.begin(),
+-                                   font_scale_buckets.end(), raw_font_scale);
++  const auto buckets = base::span(font_scale_buckets);
++  const auto it = std::lower_bound(buckets.begin(), buckets.end(), raw_font_scale);
+ 
+   const double higher_candidate = *it;
+   const double lower_candidate = *(it - 1);

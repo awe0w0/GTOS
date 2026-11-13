@@ -1,0 +1,61 @@
+--- a/third_party/blink/renderer/core/dom/layout_tree_builder_traversal.cc
++++ b/third_party/blink/renderer/core/dom/layout_tree_builder_traversal.cc
+@@ -29,6 +29,7 @@
+ #include <algorithm>
+ 
+ #include "base/containers/adapters.h"
++#include "base/containers/span.h"
+ #include "third_party/blink/renderer/core/css/style_engine.h"
+ #include "third_party/blink/renderer/core/dom/column_pseudo_element.h"
+ #include "third_party/blink/renderer/core/dom/element.h"
+@@ -138,10 +139,10 @@ Node* LayoutTreeBuilderTraversal::NextSibling(const Node& node) {
+       return columns->at(column->Index() + 1u);
+     }
+   }
+-  auto pseudo_iter =
+-      std::ranges::find(Node::kElementChildPseudoOrder, pseudo_id);
+-  if (pseudo_iter != Node::kElementChildPseudoOrder.end()) {
+-    while (++pseudo_iter != Node::kElementChildPseudoOrder.end()) {
++  const auto pseudo_order = base::span(Node::kElementChildPseudoOrder);
++  auto pseudo_iter = std::ranges::find(pseudo_order, pseudo_id);
++  if (pseudo_iter != pseudo_order.end()) {
++    while (++pseudo_iter != pseudo_order.end()) {
+       switch (*pseudo_iter) {
+         case kPseudoIdColumn:
+           // kPseudoIdColumn is an array of indexed pseudo-elements.  If this
+@@ -261,10 +262,10 @@ Node* LayoutTreeBuilderTraversal::PreviousSibling(const Node& node) {
+     }
+   }
+ 
+-  auto pseudo_iter =
+-      std::ranges::find(Node::kElementChildPseudoOrder, pseudo_id);
+-  if (pseudo_iter != Node::kElementChildPseudoOrder.end()) {
+-    while (pseudo_iter != Node::kElementChildPseudoOrder.begin()) {
++  const auto pseudo_order = base::span(Node::kElementChildPseudoOrder);
++  auto pseudo_iter = std::ranges::find(pseudo_order, pseudo_id);
++  if (pseudo_iter != pseudo_order.end()) {
++    while (pseudo_iter != pseudo_order.begin()) {
+       --pseudo_iter;
+       switch (*pseudo_iter) {
+         case kPseudoIdColumn:
+@@ -562,8 +563,9 @@ static Node* NextLayoutSiblingInBoxTreeOrder(const Node& node) {
+   PseudoId current_id =
+       element->IsPseudoElement() ? element->GetPseudoId() : kPseudoIdNone;
+ 
+-  auto it = std::find(kBoxTreeOrder.begin(), kBoxTreeOrder.end(), current_id);
+-  if (it == kBoxTreeOrder.end()) {
++  const auto box_order = base::span(kBoxTreeOrder);
++  const auto it = std::ranges::find(box_order, current_id);
++  if (it == box_order.end()) {
+     return next;
+   }
+ 
+@@ -575,7 +577,7 @@ static Node* NextLayoutSiblingInBoxTreeOrder(const Node& node) {
+     return next;
+   }
+ 
+-  for (auto next_it = std::next(it); next_it != kBoxTreeOrder.end();
++  for (auto next_it = std::next(it); next_it != box_order.end();
+        ++next_it) {
+     PseudoId pseudo_id = *next_it;
+     if (pseudo_id == kPseudoIdNone) {
