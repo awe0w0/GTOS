@@ -1,0 +1,24 @@
+source_set("gtos") {
+  visibility = [ "//ui/ozone/*" ]
+  sources = [
+    "ozone_platform_gtos.cc",
+    "surface_factory_gtos.cc",
+    "surface_factory_gtos.h",
+  ]
+  defines = [ "OZONE_IMPLEMENTATION" ]
+  deps = [
+    "//base",
+    "//skia",
+    "//ui/base/cursor",
+    "//ui/base/ime",
+    "//ui/display",
+    "//ui/events",
+    "//ui/events:events_base",
+    "//ui/events/platform",
+    "//ui/gfx/geometry",
+    "//ui/ozone:ozone_base",
+    "//ui/ozone/common",
+    "//ui/platform_window",
+    "//ui/platform_window/stub",
+  ]
+}

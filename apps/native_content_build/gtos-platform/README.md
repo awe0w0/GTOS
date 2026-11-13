@@ -19,9 +19,11 @@ port does not claim a shared-library loader or a working Dawn GPU backend.
 
 `args.gn` selects existing Aura/Views code and disables unsupported dynamic CDMs,
 GLib, CUPS and Linux PipeWire capture. Host toolchains keep their platform D-Bus
-default; GTOS does not become Linux. It does not implement the missing GTOS Ozone
-backend or remove the port's refusal to enable it. These are configuration changes,
-not a claim that windows or Chromium currently run on GTOS.
+default. Set `gtos_ozone=true` for the native GTOS display profile. The backend
+uses one 480×360-or-smaller Content window and presents a Skia software canvas
+through the native frame ABI. It reads keyboard, pointer and close events from
+the same handle. The backend requires single-process Content so the UI and Viz
+threads share that handle.
 
 ## Replay
 

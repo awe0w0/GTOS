@@ -1,0 +1,63 @@
+--- a/build/config/ozone.gni
++++ b/build/config/ozone.gni
+@@ -6,24 +6,25 @@ import("//build/config/cast.gni")
+ import("//build/toolchain/toolchain.gni")
+ 
+ declare_args() {
+-  # Indicates if Ozone is enabled. Ozone is a low-level library layer for Linux
+-  # that does not require X11.
+-  use_ozone = is_chromeos || is_fuchsia || is_linux
++  gtos_ozone = false
+ }
+ 
+-if (is_gtos) {
+-  assert(
+-      !use_ozone,
+-      "GTOS Ozone surface/input backend is not implemented. The Linux headless FileSurface is not a GTOS display backend.")
++declare_args() {
++  # Indicates if Ozone is enabled. Ozone is a low-level library layer for Linux
++  # that does not require X11.
++  use_ozone = is_chromeos || is_fuchsia || is_linux || (is_gtos && gtos_ozone)
+ }
+ 
+ declare_args() {
+   # Ozone extra platforms file path. Can be overridden to build out of
+   # tree ozone platforms.
+   ozone_extra_path = "//build/config/ozone_extra.gni"
++  if (is_gtos && gtos_ozone) {
++    ozone_extra_path = "//build/config/gtos/ozone_extra.gni"
++  }
+ 
+   # Select platforms automatically. Turn this off for manual control.
+-  ozone_auto_platforms = use_ozone
++  ozone_auto_platforms = use_ozone && !is_gtos
+ 
+   # TODO(petermcneeley): Backwards compatiblity support for VM images.
+   # Remove when deprecated. (https://crbug.com/1122009)
+@@ -43,6 +44,9 @@ declare_args() {
+   # The platform that will used at runtime by default. This can be overridden
+   # with the command line flag --ozone-platform=<platform>.
+   ozone_platform = ""
++  if (is_gtos && gtos_ozone) {
++    ozone_platform = "gtos"
++  }
+ 
+   # Compile the 'cast' platform.
+   ozone_platform_cast = false
+@@ -101,6 +105,16 @@ declare_args() {
+   }
+ }
+ 
++if (is_gtos && (use_ozone || gtos_ozone)) {
++  assert(use_ozone && gtos_ozone && ozone_platform == "gtos" &&
++             ozone_extra_path == "//build/config/gtos/ozone_extra.gni" &&
++             !ozone_auto_platforms && !ozone_platform_cast &&
++             !ozone_platform_drm && !ozone_platform_headless &&
++             !ozone_platform_flatland && !ozone_platform_x11 &&
++             !ozone_platform_wayland,
++         "GTOS Ozone requires its native software window backend")
++}
++
+ import(ozone_extra_path)
+ 
+ _ozone_extra_directory = get_path_info(ozone_extra_path, "dir")

@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'build/config/ozone.gni': '84edd6072e1c69b9132514bc3cdc526cac8f95ca730a6665946cb25f09900c09',
     'base/version_info/version_info.h': 'e4e286ddc4b778a11161381eb60be02ba6bb049566d7023852a6620816010959',
     'components/policy/core/common/cloud/cloud_policy_util.cc': '792e95152fa99df555138805883521a71f948b45248f18e1ca1372661f193913',
     'components/policy/tools/generate_policy_source_test.py': '5742525afea88d2238ada162b6e901bc0bdd32afe21d1c3e0508353293fb2cb2',
@@ -479,6 +480,15 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/ozone_extra.gni': 'ozone/ozone_extra.gni',
+    'ui/ozone/platform/gtos/BUILD.gn': 'ozone/BUILD.gn',
+    'ui/ozone/platform/gtos/ozone_platform_gtos.cc': 'ozone/ozone_platform_gtos.cc',
+    'ui/ozone/platform/gtos/surface_factory_gtos.cc': 'ozone/surface_factory_gtos.cc',
+    'ui/ozone/platform/gtos/surface_factory_gtos.h': 'ozone/surface_factory_gtos.h',
+    'build/config/gtos/include/process/native_window_adapter.h': '../../../include/process/native_window_adapter.h',
+    'build/config/gtos/include/process/native_window_frame.h': '../../../include/process/native_window_frame.h',
+    'build/config/gtos/include/process/window_abi.h': '../../../include/process/window_abi.h',
+    'build/config/gtos/include/process/window_client.h': '../../../include/process/window_client.h',
     'build/config/gtos/include/common/version.h': '../../../include/common/version.h',
     'base/debug/debugger_gtos.cc': 'base/debugger_gtos.cc',
     'base/debug/stack_trace_gtos.cc': 'base/stack_trace_gtos.cc',

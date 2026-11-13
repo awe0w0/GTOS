@@ -13,8 +13,7 @@ concurrent_links = 3
 # requires a separate host Chromium build for the target CPU.
 use_v8_context_snapshot = false
 
-# Use the existing Aura window lifecycle and Views implementations. This does
-# not supply an Ozone backend: its existing GTOS refusal remains in force.
+# Use Aura and Views with the native GTOS Ozone backend when a display is supplied.
 use_aura = true
 toolkit_views = true
 
