@@ -1,0 +1,12 @@
+--- a/third_party/abseil-cpp/absl/flags/BUILD.gn
++++ b/third_party/abseil-cpp/absl/flags/BUILD.gn
+@@ -242,6 +242,9 @@ absl_source_set("parse") {
+     "//third_party/abseil-cpp/absl/strings:string_view",
+     "//third_party/abseil-cpp/absl/synchronization",
+   ]
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_input" ]
++  }
+ }
+ 
+ # Conflicts at link_time with "parse_test" because defines the same flags.

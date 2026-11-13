@@ -1,0 +1,13 @@
+--- a/services/data_decoder/xml/BUILD.gn
++++ b/services/data_decoder/xml/BUILD.gn
+@@ -18,6 +18,10 @@ rust_static_library("xml_parser_rs") {
+   ]
+   cxx_bindings = [ "cxx.rs" ]
+   allow_unsafe = true
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+   deps = [
+     ":xml_parser_ffi_helpers",
+     "//base",

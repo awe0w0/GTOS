@@ -1,0 +1,26 @@
+--- a/third_party/abseil-cpp/absl/flags/parse.cc
++++ b/third_party/abseil-cpp/absl/flags/parse.cc
+@@ -21,7 +21,11 @@
+ #include <atomic>
+ #include <cstdint>
+ #include <cstdlib>
++#if defined(__GTOS__)
++#include "tools/gtos_native_sdk/file-input.hpp"
++#else
+ #include <fstream>
++#endif
+ #include <iostream>
+ #include <ostream>
+ #include <string>
+@@ -194,7 +198,11 @@ class ArgsList {
+ };
+ 
+ bool ArgsList::ReadFromFlagfile(const std::string& flag_file_name) {
++#if defined(__GTOS__)
++  gtos::native::FileInput flag_file(flag_file_name.c_str());
++#else
+   std::ifstream flag_file(flag_file_name);
++#endif
+ 
+   if (!flag_file) {
+     flags_internal::ReportUsageError(

@@ -1,0 +1,11 @@
+--- a/components/sync_device_info/local_device_info_util.cc
++++ b/components/sync_device_info/local_device_info_util.cc
+@@ -126,6 +126,8 @@ DeviceInfo::OsType GetLocalDeviceOSType() {
+   return DeviceInfo::OsType::kWindows;
+ #elif BUILDFLAG(IS_FUCHSIA)
+   return DeviceInfo::OsType::kFuchsia;
++#elif BUILDFLAG(IS_GTOS)
++  return DeviceInfo::OsType::kUnknown;
+ #else
+ #error Please handle your new device OS here.
+ #endif

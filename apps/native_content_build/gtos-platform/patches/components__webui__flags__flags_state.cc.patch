@@ -1,0 +1,19 @@
+--- a/components/webui/flags/flags_state.cc
++++ b/components/webui/flags/flags_state.cc
+@@ -79,6 +79,7 @@ const struct {
+     {kOsLinux, "Linux"},     {kOsCrOS, "ChromeOS"},
+     {kOsAndroid, "Android"}, {kOsCrOSOwnerOnly, "ChromeOS (owner only)"},
+     {kOsIos, "iOS"},         {kOsFuchsia, "Fuchsia"},
++    {kOsGtos, "GTOS"},
+ };
+ 
+ // Adds a |StringValue| to |list| for each platform where |bitmask| indicates
+@@ -799,6 +800,8 @@ unsigned short FlagsState::GetCurrentPlatform() {
+   return kOsAndroid;
+ #elif BUILDFLAG(IS_FUCHSIA)
+   return kOsFuchsia;
++#elif BUILDFLAG(IS_GTOS)
++  return kOsGtos;
+ #else
+ #error Unknown platform
+ #endif

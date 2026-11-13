@@ -1,0 +1,10 @@
+--- a/components/webui/flags/flags_state.h
++++ b/components/webui/flags/flags_state.h
+@@ -55,6 +55,7 @@ enum {
+   // Flags marked with this are internal to the flags system. Never set this on
+   // a manually-added flag.
+   kFlagInfrastructure = 1 << 10,
++  kOsGtos = 1 << 11,
+ };
+ 
+ // A flag controlling the behavior of the |ConvertFlagsToSwitches| function -

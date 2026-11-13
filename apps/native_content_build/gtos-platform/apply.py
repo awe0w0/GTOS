@@ -14,6 +14,14 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/sync_device_info/local_device_info_util.cc': 'f94d5ee21002bcdd3a1ec77f73c8a52f4eae95760f3cf56ff2d0065cbf9b1fa3',
+    'components/variations/service/variations_service.cc': 'ce6bd6fc780294154f330a721c1f15a7159423ca6cd4949e67f75a61d0d034ac',
+    'components/webui/flags/flags_state.cc': '64aa06d9e6dfc9fa6b66460b47339f59e0382cab0273d4f236692fe9e8f284b6',
+    'components/webui/flags/flags_state.h': '63668ddb8349048e6e49cf59aa83111777eb395f321cc9235b459358604e38df',
+    'services/data_decoder/xml/BUILD.gn': '10127a1dca3537dedbfeac9a6ef65cb94fbf8bb2d5e85262eaf0378467216f19',
+    'services/data_decoder/xml/lib.rs': '2be0ffb6e74c7de7f103a1fba92bc19abda2a6b294e05363ab008a93f58558b0',
+    'third_party/abseil-cpp/absl/flags/BUILD.gn': '743a9fa7a460b1c95aa0bbf5cc3c011c6fabd5df622f9855d39f76df941c280e',
+    'third_party/abseil-cpp/absl/flags/parse.cc': '7a14edc39d268763e4d817ed112deac88d4ad99e9141d3833e32a58fbf9a6d14',
     'components/update_client/update_query_params.cc': '58ff124c2ff76af8b412c599bb79ec22db02af3a80acda69e1fb271fc4f2b896',
     'components/web_package/signed_web_bundles/signed_web_bundle_id.cc': '861151c5449c65e887c8a7f538453a030da67cd3385184b89aad14e0587376fc',
     'components/webrtc/thread_wrapper.cc': '29e492e293ee4f655e2f368e00e8e85ababf974f32352adbe803201311dde756',
