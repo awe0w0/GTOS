@@ -493,6 +493,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'tools/gtos_native_sdk/probe/gtos_content_resources_guest_test.cc': '../../../tests/gtos_content_resources_guest_test.cc',
     'tools/gtos_native_sdk/probe/gtos_content_mojo_guest_test.cc': '../../../tests/gtos_content_mojo_guest_test.cc',
     'tools/gtos_native_sdk/probe/gtos_content_ozone_guest_test.cc': '../../../tests/gtos_content_ozone_guest_test.cc',
     'build/config/gtos/include/gtos/diagnostic.h': 'sdk/diagnostic.h',

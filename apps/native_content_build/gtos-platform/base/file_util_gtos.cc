@@ -8,11 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <process/file_abi.h>
 #include <unistd.h>
 
 #include "base/files/file_enumerator.h"
 #include "base/rand_util.h"
 #include "base/strings/strcat.h"
+#include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/threading/scoped_blocking_call.h"
 #include "build/branding_buildflags.h"
@@ -76,6 +78,61 @@ bool DirectoryExists(const FilePath& path) {
   ScopedBlockingCall blocking(FROM_HERE, BlockingType::MAY_BLOCK);
   struct stat info {};
   return stat(path.value().c_str(), &info) == 0 && S_ISDIR(info.st_mode);
+}
+
+bool GetCurrentDirectory(FilePath* path) {
+  // Native paths are relative to the mounted volume root. There is no chdir.
+  const FilePath root("/");
+  if (!DirectoryExists(root)) {
+    return false;
+  }
+  *path = root;
+  return true;
+}
+
+FilePath MakeAbsoluteFilePath(const FilePath& input) {
+  if (input.empty() || input.value().size() >= GTOS_FILE_PATH_LIMIT) {
+    return {};
+  }
+
+  // The native store has no symbolic links. Resolve dot components while
+  // checking each directory, including components later removed by "..".
+  const FilePath root("/");
+  FilePath path = root;
+  const auto components = SplitStringPiece(
+      input.value(), "/", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY);
+  for (size_t i = 0; i < components.size(); ++i) {
+    const auto component = components[i];
+    if (component == ".") {
+      continue;
+    }
+    if (component == "..") {
+      if (path == root) {
+        return {};
+      }
+      path = path.DirName();
+      continue;
+    }
+    path = path.Append(component);
+    if (i + 1 < components.size() && !DirectoryExists(path)) {
+      return {};
+    }
+  }
+  const bool exists =
+      input.EndsWithSeparator() ? DirectoryExists(path) : PathExists(path);
+  return exists ? path : FilePath();
+}
+
+FilePath GetHomeDir() {
+  if (const char* home = getenv("HOME"); home && *home) {
+    const FilePath configured(home);
+    if (configured.IsAbsolute() && !configured.ReferencesParent() &&
+        DirectoryExists(configured)) {
+      return configured;
+    }
+  }
+  FilePath fallback;
+  return GetTempDir(&fallback) ? fallback : FilePath("/");
 }
 
 bool DeletePathRecursively(const FilePath& path) {

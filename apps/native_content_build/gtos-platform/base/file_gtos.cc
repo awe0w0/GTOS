@@ -76,10 +76,14 @@ void File::DoInitialize(const FilePath& path, uint32_t flags) {
   ScopedBlockingCall blocking(FROM_HERE, BlockingType::MAY_BLOCK);
   constexpr uint32_t kDisposition = FLAG_OPEN | FLAG_CREATE | FLAG_OPEN_ALWAYS |
                                     FLAG_CREATE_ALWAYS | FLAG_OPEN_TRUNCATED;
+  // Chromium supplies Windows-only sharing hints at cross-platform call sites.
+  // The native store uses its ordinary open rules for those hints.
+  constexpr uint32_t kWindowsHints = FLAG_WIN_SHARE_DELETE |
+                                    FLAG_WIN_EXCLUSIVE_WRITE |
+                                    FLAG_WIN_NO_EXECUTE;
   // Native paths have no symlinks, and a file handle grants no execute access.
   constexpr uint32_t kSupported = kDisposition | FLAG_READ | FLAG_WRITE |
-                                  FLAG_APPEND | FLAG_NO_FOLLOW |
-                                  FLAG_WIN_NO_EXECUTE;
+                                  FLAG_APPEND | FLAG_NO_FOLLOW | kWindowsHints;
   const uint32_t disposition = flags & kDisposition;
   const bool can_read = (flags & FLAG_READ) != 0;
   const bool can_write = (flags & (FLAG_WRITE | FLAG_APPEND)) != 0;
