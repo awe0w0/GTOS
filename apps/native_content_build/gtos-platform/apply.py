@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/web_package/signed_web_bundles/signed_web_bundle_id.cc': '861151c5449c65e887c8a7f538453a030da67cd3385184b89aad14e0587376fc',
+    'components/webrtc/thread_wrapper.cc': '29e492e293ee4f655e2f368e00e8e85ababf974f32352adbe803201311dde756',
+    'third_party/blink/renderer/modules/peerconnection/rtc_peer_connection_ice_error_event.cc': '87e36b9d3f2f1df791028a4144d4c39c483901f0927564ac2e40a34a61e128bb',
     'third_party/blink/renderer/modules/mediastream/web_media_player_ms_compositor.cc': '949e3dfd732a6ff8393a1b8de623034d2347824388c422b398a3e7c752d6dbb6',
     'components/policy/tools/generate_policy_source_test_data.py': '2cd9856badf515dfebf09ee7de63c40e276d0cc12f91629c763845a015dbc4a1',
     'components/policy/core/common/policy_proto_decoders.cc': '719c45aabbcfb5bf596a758cae64c8ec34463d1a0646d27dea0925c9ef019cd3',

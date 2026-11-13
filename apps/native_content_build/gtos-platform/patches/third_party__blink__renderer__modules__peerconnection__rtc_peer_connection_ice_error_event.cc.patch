@@ -1,0 +1,22 @@
+--- a/third_party/blink/renderer/modules/peerconnection/rtc_peer_connection_ice_error_event.cc
++++ b/third_party/blink/renderer/modules/peerconnection/rtc_peer_connection_ice_error_event.cc
+@@ -4,8 +4,8 @@
+ 
+ #include "third_party/blink/renderer/modules/peerconnection/rtc_peer_connection_ice_error_event.h"
+ 
+-#include <climits>
+ #include <cstdint>
++#include <limits>
+ #include <optional>
+ 
+ #include "base/check.h"
+@@ -26,7 +26,8 @@ RTCPeerConnectionIceErrorEvent* RTCPeerConnectionIceErrorEvent::Create(
+     const String& url,
+     int error_code,
+     const String& txt) {
+-  DCHECK(error_code > 0 && error_code <= USHRT_MAX);
++  DCHECK(error_code > 0 &&
++         error_code <= std::numeric_limits<uint16_t>::max());
+   return MakeGarbageCollected<RTCPeerConnectionIceErrorEvent>(
+       address, port, host_candidate, url, static_cast<uint16_t>(error_code),
+       txt);

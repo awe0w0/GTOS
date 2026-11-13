@@ -1,0 +1,31 @@
+--- a/components/web_package/signed_web_bundles/signed_web_bundle_id.cc
++++ b/components/web_package/signed_web_bundles/signed_web_bundle_id.cc
+@@ -86,8 +86,7 @@ SignedWebBundleId SignedWebBundleId::CreateForPublicKey(
+     const Ed25519PublicKey& public_key) {
+   std::array<uint8_t, kEd25519DecodedIdLength> decoded_id;
+   std::ranges::copy(public_key.bytes(), decoded_id.begin());
+-  std::ranges::copy(kTypeEd25519PublicKey,
+-                    decoded_id.end() - kTypeSuffixLength);
++  base::span(decoded_id).last<kTypeSuffixLength>().copy_from(kTypeEd25519PublicKey);
+ 
+   auto encoded_id_uppercase = base32::Base32Encode(
+       decoded_id, base32::Base32EncodePolicy::OMIT_PADDING);
+@@ -100,8 +99,7 @@ SignedWebBundleId SignedWebBundleId::CreateForPublicKey(
+     const EcdsaP256PublicKey& public_key) {
+   std::array<uint8_t, kEcdsaP256DecodedIdLength> decoded_id;
+   std::ranges::copy(public_key.bytes(), decoded_id.begin());
+-  std::ranges::copy(kTypeEcdsaP256PublicKey,
+-                    decoded_id.end() - kTypeSuffixLength);
++  base::span(decoded_id).last<kTypeSuffixLength>().copy_from(kTypeEcdsaP256PublicKey);
+ 
+   auto encoded_id_uppercase = base32::Base32Encode(
+       decoded_id, base32::Base32EncodePolicy::OMIT_PADDING);
+@@ -114,7 +112,7 @@ SignedWebBundleId SignedWebBundleId::CreateForProxyMode(
+     base::span<const uint8_t, kProxyModeKeyLength> data) {
+   std::array<uint8_t, kProxyModeKeyLength + kTypeSuffixLength> decoded_id;
+   std::ranges::copy(data, decoded_id.begin());
+-  std::ranges::copy(kTypeProxyMode, decoded_id.end() - kTypeSuffixLength);
++  base::span(decoded_id).last<kTypeSuffixLength>().copy_from(kTypeProxyMode);
+ 
+   auto encoded_id_uppercase = base32::Base32Encode(
+       decoded_id, base32::Base32EncodePolicy::OMIT_PADDING);
