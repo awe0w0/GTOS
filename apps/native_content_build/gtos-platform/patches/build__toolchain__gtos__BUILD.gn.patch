@@ -50,7 +50,20 @@
        description = "GTOS ASM {{source}}"
        outputs =
            [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
-@@ -56,7 +63,13 @@ template("gtos_freestanding_toolchain") {
+@@ -46,7 +55,11 @@ template("gtos_freestanding_toolchain") {
+     }
+ 
+     tool("alink") {
+-      command = "$gtos_clang_bin/llvm-ar rcs {{output}} {{inputs}}"
++      # The Blink core member list exceeds the host per-argument limit.
++      # Replace the archive so removed inputs cannot leave stale members.
++      rspfile = "{{output}}.rsp"
++      rspfile_content = "{{inputs}}"
++      command = "rm -f {{output}} && $gtos_clang_bin/llvm-ar rcs {{output}} @$rspfile"
+       description = "GTOS AR {{output}}"
+       outputs = [ "{{target_out_dir}}/{{target_output_name}}.a" ]
+       default_output_extension = ".a"
+@@ -56,7 +69,13 @@ template("gtos_freestanding_toolchain") {
      }
  
      tool("link") {
@@ -65,7 +78,7 @@
        description = "GTOS LINK {{output}}"
        outputs =
            [ "{{root_out_dir}}/{{target_output_name}}{{output_extension}}" ]
-@@ -98,14 +111,15 @@ template("gtos_freestanding_toolchain") {
+@@ -98,14 +117,15 @@ template("gtos_freestanding_toolchain") {
        command = "cp -af {{source}} {{output}}"
        description = "GTOS COPY {{source}}"
      }
