@@ -25,13 +25,20 @@ void CopyBytes(unsigned char* destination, const unsigned char* source, unsigned
 NativeWindows bankInstance;
 }
 
-NativeWindows::NativeWindows() : nextHandle(1), available(false) {
-    for (unsigned i = 0; i < GTOS_WINDOW_MAX_OBJECTS; ++i) ClearSlot(slots[i]);
+NativeWindows::NativeWindows() : nextHandle(1), largeFront(0), largeDraft(0), available(false) {
+    for (unsigned i = 0; i < GTOS_WINDOW_MAX_OBJECTS; ++i) {
+        slots[i].large = false;
+        ClearSlot(slots[i]);
+    }
 }
 
 NativeWindows& NativeWindows::Instance() { return bankInstance; }
 
 void NativeWindows::ClearSlot(Slot& slot) {
+    if (slot.large && slot.total) {
+        ZeroBytes(largeFront, slot.total);
+        ZeroBytes(largeDraft, slot.total);
+    }
     slot.handle = slot.owner = slot.lifecycle = 0;
     slot.width = slot.height = slot.stride = slot.total = 0;
     slot.progress = slot.frameGeneration = 0;
@@ -39,6 +46,7 @@ void NativeWindows::ClearSlot(Slot& slot) {
     ZeroBytes(slot.front, GTOS_WINDOW_MAX_BYTES);
     ClearQueue(slot);
     slot.lifecycle = GTOS_WINDOW_DEAD;
+    slot.large = false;
 }
 
 void NativeWindows::ClearQueue(Slot& slot) {
@@ -49,6 +57,14 @@ void NativeWindows::ClearQueue(Slot& slot) {
 void NativeWindows::SetAvailable(bool value) {
     WindowGuard guard;
     available = value;
+}
+
+void NativeWindows::AttachLargeBuffers(unsigned char* backing) {
+    WindowGuard guard;
+    if (backing && !largeFront) {
+        largeFront = backing;
+        largeDraft = backing + GTOS_WINDOW_LARGE_BYTES;
+    }
 }
 
 NativeWindows::Slot* NativeWindows::Find(unsigned ownerId, unsigned handle) {
@@ -101,21 +117,30 @@ bool NativeWindows::PushNormal(Slot& slot, const GtosInputEvent& event) {
 }
 
 int NativeWindows::Create(unsigned ownerId, const GtosWindowCreateRequest& request) {
+    return CreateWindow(ownerId, request, false);
+}
+
+int NativeWindows::CreateWindow(unsigned ownerId, const GtosWindowCreateRequest& request,
+                               bool large) {
     WindowGuard guard;
     if (!available) return GTOS_WINDOW_ERR_BAD_STATE;
     if (request.version != GTOS_WINDOW_ABI_VERSION) return GTOS_WINDOW_ERR_UNSUPPORTED_VERSION;
     if (!ownerId) return GTOS_WINDOW_ERR_BAD_STATE;
     if (request.format != GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED)
         return GTOS_WINDOW_ERR_UNSUPPORTED_FORMAT;
-    if (!request.width || request.width > GTOS_WINDOW_MAX_WIDTH) return GTOS_WINDOW_ERR_RANGE;
-    if (!request.height || request.height > GTOS_WINDOW_MAX_HEIGHT) return GTOS_WINDOW_ERR_RANGE;
-    // Bounded before multiplication: both factors are already <= 32.
+    const unsigned maxWidth = large ? GTOS_WINDOW_LARGE_WIDTH : GTOS_WINDOW_MAX_WIDTH;
+    const unsigned maxHeight = large ? GTOS_WINDOW_LARGE_HEIGHT : GTOS_WINDOW_MAX_HEIGHT;
+    if (!request.width || request.width > maxWidth) return GTOS_WINDOW_ERR_RANGE;
+    if (!request.height || request.height > maxHeight) return GTOS_WINDOW_ERR_RANGE;
+    if (large && !largeFront) return GTOS_WINDOW_ERR_BAD_STATE;
     unsigned total = request.width * request.height * 4U;
-    if (total > GTOS_WINDOW_MAX_BYTES) return GTOS_WINDOW_ERR_TOO_LARGE;
     if (request.stride != request.width * 4U) return GTOS_WINDOW_ERR_RANGE;
     unsigned owned = 0;
-    for (unsigned i = 0; i < GTOS_WINDOW_MAX_OBJECTS; ++i)
-        if (slots[i].owner == ownerId && slots[i].lifecycle != GTOS_WINDOW_DEAD) ++owned;
+    for (unsigned i = 0; i < GTOS_WINDOW_MAX_OBJECTS; ++i) {
+        if (slots[i].lifecycle == GTOS_WINDOW_DEAD) continue;
+        if (slots[i].owner == ownerId) ++owned;
+        if (large && slots[i].large) return GTOS_WINDOW_ERR_LIMIT;
+    }
     if (owned >= GTOS_WINDOW_MAX_PER_OWNER) return GTOS_WINDOW_ERR_LIMIT;
     Slot* slot = FreeSlot();
     if (!slot) return GTOS_WINDOW_ERR_LIMIT;
@@ -131,13 +156,14 @@ int NativeWindows::Create(unsigned ownerId, const GtosWindowCreateRequest& reque
     slot->total = total;
     slot->progress = 0;
     slot->frameGeneration = 0;
+    slot->large = large;
     return (int)slot->handle;
 }
 
 int NativeWindows::ValidateSubmit(const Slot& slot,
                                  const GtosWindowSubmitRequest& request) const {
     if (request.version != GTOS_WINDOW_ABI_VERSION) return GTOS_WINDOW_ERR_UNSUPPORTED_VERSION;
-    if (slot.lifecycle != GTOS_WINDOW_LIVE) return GTOS_WINDOW_ERR_BAD_STATE;
+    if (slot.lifecycle != GTOS_WINDOW_LIVE || slot.large) return GTOS_WINDOW_ERR_BAD_STATE;
     // First version rejects restart: only the exact next sequential offset.
     if (request.offset != slot.progress) return GTOS_WINDOW_ERR_BAD_STATE;
     if (!request.length || request.length > GTOS_WINDOW_WRITE_LIMIT)
@@ -163,12 +189,33 @@ int NativeWindows::Submit(unsigned ownerId, const GtosWindowSubmitRequest& reque
     return (int)request.length;
 }
 
+int NativeWindows::PublishLargeFrame(unsigned ownerId, UserMemory& memory,
+                                    const GtosWindowFrameRequest& request) {
+    Slot* slot = Find(ownerId, request.handle);
+    if (!slot) return GTOS_WINDOW_ERR_BAD_HANDLE;
+    if (!slot->large || slot->lifecycle != GTOS_WINDOW_LIVE) return GTOS_WINDOW_ERR_BAD_STATE;
+    if (request.length != slot->total) return GTOS_WINDOW_ERR_BAD_SIZE;
+    if (slot->frameGeneration == 0xffffffffU) return GTOS_WINDOW_ERR_OVERFLOW;
+    if (!memory.CopyFromUser(largeDraft, request.source, request.length))
+        return GTOS_WINDOW_ERR_BAD_ADDRESS;
+    for (unsigned at = 0; at < request.length; at += 4) {
+        const unsigned alpha = largeDraft[at + 3];
+        if (largeDraft[at] > alpha || largeDraft[at + 1] > alpha || largeDraft[at + 2] > alpha)
+            return GTOS_WINDOW_ERR_BAD_PIXELS;
+    }
+    unsigned char* previous = largeFront;
+    largeFront = largeDraft;
+    largeDraft = previous;
+    ++slot->frameGeneration;
+    return 0;
+}
+
 int NativeWindows::Present(unsigned ownerId, const GtosWindowControlRequest& request) {
     WindowGuard guard;
     Slot* slot = Find(ownerId, request.handle);
     if (!slot) return GTOS_WINDOW_ERR_BAD_HANDLE;
     if (request.version != GTOS_WINDOW_ABI_VERSION) return GTOS_WINDOW_ERR_UNSUPPORTED_VERSION;
-    if (slot->lifecycle != GTOS_WINDOW_LIVE) return GTOS_WINDOW_ERR_BAD_STATE;
+    if (slot->lifecycle != GTOS_WINDOW_LIVE || slot->large) return GTOS_WINDOW_ERR_BAD_STATE;
     if (slot->progress != slot->total) return GTOS_WINDOW_ERR_BAD_STATE;
     if (slot->frameGeneration == 0xffffffffU) return GTOS_WINDOW_ERR_OVERFLOW;
     CopyBytes(slot->front, slot->draft, slot->total);
@@ -282,10 +329,10 @@ void NativeWindows::CommitLocked(Slot& slot, unsigned selected) {
 }
 
 int NativeWindows::Call(unsigned ownerId, UserMemory& memory, unsigned operation,
-                        unsigned address, unsigned bytes) {
+                        unsigned address, unsigned bytes, bool allowLarge) {
     WindowGuard guard;
     if (!ownerId) return GTOS_WINDOW_ERR_BAD_STATE;
-    if (operation == GTOS_SYS_WINDOW_CREATE) {
+    if (operation == GTOS_SYS_WINDOW_CREATE || operation == GTOS_SYS_WINDOW_CREATE_LARGE) {
         if (bytes != GTOS_WINDOW_CREATE_REQUEST_BYTES) return GTOS_WINDOW_ERR_BAD_SIZE;
         GtosWindowCreateRequest request;
         if (!memory.CopyFromUser(&request, address, sizeof(request)))
@@ -293,7 +340,19 @@ int NativeWindows::Call(unsigned ownerId, UserMemory& memory, unsigned operation
         // Same snapshot-then-version order as every other operation.
         if (request.version != GTOS_WINDOW_ABI_VERSION)
             return GTOS_WINDOW_ERR_UNSUPPORTED_VERSION;
-        return Create(ownerId, request);
+        const bool large = operation == GTOS_SYS_WINDOW_CREATE_LARGE;
+        if (large && !allowLarge) return GTOS_WINDOW_ERR_BAD_STATE;
+        return CreateWindow(ownerId, request, large);
+    }
+    if (operation == GTOS_SYS_WINDOW_FRAME) {
+        if (bytes != GTOS_WINDOW_FRAME_REQUEST_BYTES) return GTOS_WINDOW_ERR_BAD_SIZE;
+        GtosWindowFrameRequest request;
+        if (!memory.CopyFromUser(&request, address, sizeof(request)))
+            return GTOS_WINDOW_ERR_BAD_ADDRESS;
+        if (request.version != GTOS_WINDOW_ABI_VERSION)
+            return GTOS_WINDOW_ERR_UNSUPPORTED_VERSION;
+        if (!allowLarge) return GTOS_WINDOW_ERR_BAD_STATE;
+        return PublishLargeFrame(ownerId, memory, request);
     }
     if (operation == GTOS_SYS_WINDOW_SUBMIT) {
         if (bytes != GTOS_WINDOW_SUBMIT_REQUEST_BYTES) return GTOS_WINDOW_ERR_BAD_SIZE;
@@ -398,6 +457,7 @@ bool NativeWindows::CopySlot(unsigned index, gui::NativeWindowView& view,
     const Slot& slot = slots[index];
     view.handle = slot.handle;
     view.lifecycle = slot.lifecycle;
+    view.large = slot.large;
     if (slot.lifecycle == GTOS_WINDOW_DEAD) {
         view.width = view.height = view.frameGeneration = 0;
         out.generation = out.width = out.height = 0;
@@ -407,7 +467,7 @@ bool NativeWindows::CopySlot(unsigned index, gui::NativeWindowView& view,
     view.width = slot.width;
     view.height = slot.height;
     view.frameGeneration = slot.frameGeneration;
-    if (slot.frameGeneration) {
+    if (slot.frameGeneration && !slot.large) {
         out.generation = slot.frameGeneration;
         CopyBytes(out.rgba, slot.front, GTOS_WINDOW_MAX_BYTES);
     } else {
@@ -419,6 +479,20 @@ bool NativeWindows::CopySlot(unsigned index, gui::NativeWindowView& view,
     out.width = slot.width;
     out.height = slot.height;
     return true;
+}
+
+bool NativeWindows::CopyLargeFrame(unsigned handle, unsigned generation,
+                                   unsigned char* pixels, unsigned bytes) const {
+    WindowGuard guard;
+    if (!handle || !generation || !pixels) return false;
+    for (unsigned i = 0; i < GTOS_WINDOW_MAX_OBJECTS; ++i) {
+        const Slot& slot = slots[i];
+        if (slot.handle != handle || !slot.large) continue;
+        if (generation != slot.frameGeneration || bytes != slot.total) return false;
+        CopyBytes(pixels, largeFront, bytes);
+        return true;
+    }
+    return false;
 }
 
 bool NativeWindows::ContainsWindow(unsigned handle) const {

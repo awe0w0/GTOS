@@ -74,10 +74,10 @@ namespace gtos { namespace process {
             struct CodeRange { uint32_t begin, end; } code[Elf32MaximumSegments];
             struct DataRange { uint32_t begin, end; } data[Elf32MaximumSegments];
             uint32_t codeCount, dataCount;
-            bool occupied;
+            bool occupied, content;
             Slot() : task((uint16_t)0, 0), process(this), userStackBegin(UserStackBottom),
                 userStackEnd(UserStackTop), stackHandle(0), eventWaitCount(0), eventWaitSleepCount(0), eventWaitFrame(0),
-                codeCount(0), dataCount(0), occupied(false) {}
+                codeCount(0), dataCount(0), occupied(false), content(false) {}
             memory::ProcessAddressSpace& Space() { return process->space; }
             const memory::ProcessAddressSpace& Space() const { return process->space; }
         };

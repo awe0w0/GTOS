@@ -12,6 +12,8 @@
 
 #include <common/version.h>
 #include <fnmatch.h>
+#include <process/native_window_adapter.h>
+#include <process/native_window_frame.h>
 #include <stdio.h>
 #include <storage/content_volume_layout.h>
 
@@ -46,6 +48,40 @@ int CheckRuntimeErrors() {
     if (future_error.code() != future_code ||
         std::string_view(copy.what()) != future_code.message())
         return 202;
+    return 0;
+}
+
+int CheckBrowserWindow() {
+    using namespace gtos::process;
+    constexpr unsigned kWidth = GTOS_WINDOW_LARGE_WIDTH;
+    constexpr unsigned kHeight = GTOS_WINDOW_LARGE_HEIGHT;
+    static std::array<unsigned char, GTOS_WINDOW_LARGE_BYTES> frame{};
+    NativeWindowAdapter window;
+    if (window.Create(kWidth, kHeight) != GTOS_WINDOW_ERR_RANGE ||
+        window.CreateLarge(kWidth, kHeight) <= 0)
+        return 204;
+    for (unsigned offset = 0; offset < frame.size(); offset += 4) {
+        frame[offset] = 0xA5;
+        frame[offset + 1] = 0x2B;
+        frame[offset + 2] = 0xC7;
+        frame[offset + 3] = 255;
+    }
+    const unsigned handle = window.kernel_handle();
+    GtosWindowInfoResponse info{};
+    if (PresentLargeNativeWindowFrame(handle, frame.data(), frame.size() - 4) !=
+            GTOS_WINDOW_ERR_BAD_SIZE ||
+        PresentLargeNativeWindowFrame(handle, frame.data(), frame.size()) != 0 ||
+        window.Info(&info) != 0 || info.frame_generation != 1 ||
+        info.width != kWidth || info.height != kHeight || info.total != frame.size())
+        return 205;
+    frame.back() = 0;
+    if (PresentLargeNativeWindowFrame(handle, frame.data(), frame.size()) !=
+            GTOS_WINDOW_ERR_BAD_PIXELS ||
+        window.Info(&info) != 0 || info.frame_generation != 1 ||
+        window.Close() != 0 ||
+        PresentLargeNativeWindowFrame(handle, frame.data(), frame.size()) !=
+            GTOS_WINDOW_ERR_BAD_HANDLE)
+        return 206;
     return 0;
 }
 
@@ -214,6 +250,7 @@ int CheckNativeFile() {
 int TestContentBasePlatform() {
     if (const int status = CheckRuntimeErrors()) return status;
     if (const int status = CheckSystemInfoAndTime()) return status;
+    if (const int status = CheckBrowserWindow()) return status;
     if (const int status = CheckNativeFile()) return status;
     return CheckDirectoryAndTemporaryFiles();
 }

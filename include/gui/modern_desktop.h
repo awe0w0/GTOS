@@ -29,6 +29,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     NativeWindowProvider *windowProvider;
     NativeWindowView windowViews[4];
     NativeImageSnapshot windowFrames[4];
+    unsigned char* largeWindowFrame;
+    uint32_t largeWindowHandle, largeWindowGeneration;
     uint32_t windowHandles[4];
     uint32_t windowCapture;
     uint32_t windowFocusHandle;
@@ -116,7 +118,8 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     ModernDesktop(drivers::Framebuffer *framebuffer, storage::AppStore *store,
                   storage::SettingsStore *settings = 0, bool live = false,
                   const NativeImageProvider *imageProvider = 0,
-                  NativeWindowProvider *windowProvider = 0);
+                  NativeWindowProvider *windowProvider = 0,
+                  unsigned char *largeWindowBacking = 0);
     void SetInstaller(const uint8_t *data, uint32_t length);
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);

@@ -37,6 +37,8 @@ class Framebuffer {
     void Blend(int32_t x, int32_t y, uint32_t color, uint8_t alpha);
     uint32_t ReadPixel(int32_t x, int32_t y) const;
     void Rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color);
+    void BlitRgba(int32_t x, int32_t y, int32_t w, int32_t h, const uint8_t* source,
+                  uint32_t sourceWidth, uint32_t sourceHeight);
     void Clear(uint32_t color);
     void Present();
 };

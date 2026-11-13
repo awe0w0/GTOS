@@ -238,6 +238,75 @@ unsigned PutRequest(const void* record, unsigned size) {
     return 64;
 }
 
+void LargeFrames() {
+    static unsigned char backing[2 * GTOS_WINDOW_LARGE_BYTES];
+    static unsigned char copied[GTOS_WINDOW_LARGE_BYTES];
+    NativeWindows windows;
+    windows.SetAvailable(true);
+    auto create = CreateReq(64, 32);
+    unsigned address = PutRequest(&create, sizeof(create));
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_CREATE, address, sizeof(create), true) ==
+          GTOS_WINDOW_ERR_RANGE, "ordinary create retains 32 pixel limit");
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_CREATE_LARGE, address, sizeof(create), true) ==
+          GTOS_WINDOW_ERR_BAD_STATE, "large create requires backing");
+    windows.AttachLargeBuffers(backing);
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_CREATE_LARGE, address, sizeof(create)) ==
+          GTOS_WINDOW_ERR_BAD_STATE, "ordinary process cannot create large window");
+    const int handle = windows.Call(41, arena, GTOS_SYS_WINDOW_CREATE_LARGE,
+                                    address, sizeof(create), true);
+    Check(handle > 0, "Content process creates large window");
+    if (handle <= 0) return;
+    const unsigned h = (unsigned)handle;
+    Check(windows.Call(42, arena, GTOS_SYS_WINDOW_CREATE_LARGE, address, sizeof(create), true) ==
+          GTOS_WINDOW_ERR_LIMIT, "one large window owns the backing");
+    const int small = windows.Create(42, CreateReq(8, 8));
+    Check(small > 0, "large frame backing does not consume the ordinary bank");
+
+    const unsigned bytes = create.width * create.height * 4;
+    for (unsigned i = 0; i < bytes; i += 4) {
+        arena.bytes[256 + i] = (unsigned char)(i % 251);
+        arena.bytes[256 + i + 1] = 12;
+        arena.bytes[256 + i + 2] = 31;
+        arena.bytes[256 + i + 3] = 255;
+    }
+    const GtosWindowFrameRequest frame{GTOS_WINDOW_ABI_VERSION, h, 256, bytes};
+    address = PutRequest(&frame, sizeof(frame));
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame)) ==
+          GTOS_WINDOW_ERR_BAD_STATE, "ordinary process cannot submit a large frame");
+    Check(windows.Call(42, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame), true) ==
+          GTOS_WINDOW_ERR_BAD_HANDLE, "foreign owner cannot submit a large frame");
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame) - 1, true) ==
+          GTOS_WINDOW_ERR_BAD_SIZE, "malformed frame request refused");
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame), true) == 0,
+          "complete large frame published");
+    Check(windows.CopyLargeFrame(h, 1, copied, bytes) &&
+          WINMEMCMP(copied, arena.bytes + 256, bytes) == 0, "published large frame bytes");
+    arena.readableLimit = 256 + bytes - 1;
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame), true) ==
+          GTOS_WINDOW_ERR_BAD_ADDRESS, "one inaccessible byte rejects the whole frame");
+    arena.readableLimit = sizeof(arena.bytes);
+    const unsigned last = 256 + bytes - 1;
+    arena.bytes[last] = 0;
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame), true) ==
+          GTOS_WINDOW_ERR_BAD_PIXELS, "invalid last pixel rejects the whole frame");
+    Check(!windows.CopyLargeFrame(h, 2, copied, bytes) &&
+          windows.CopyLargeFrame(h, 1, copied, bytes) && copied[bytes - 1] == 255,
+          "failed copy and validation preserve the front frame");
+    arena.bytes[last] = 255;
+    arena.bytes[256] = 73;
+    Check(windows.Call(41, arena, GTOS_SYS_WINDOW_FRAME, address, sizeof(frame), true) == 0 &&
+          !windows.CopyLargeFrame(h, 1, copied, bytes) &&
+          windows.CopyLargeFrame(h, 2, copied, bytes) && copied[0] == 73,
+          "republish advances the exact frame generation");
+    windows.ReclaimOwner(41);
+    Check(!windows.ContainsWindow(h) && !windows.CopyLargeFrame(h, 2, copied, bytes),
+          "reaping invalidates a large frame");
+    Check(backing[0] == 0 && backing[bytes - 1] == 0 &&
+          backing[GTOS_WINDOW_LARGE_BYTES] == 0 &&
+          backing[GTOS_WINDOW_LARGE_BYTES + bytes - 1] == 0,
+          "reaping clears both used pixel buffers");
+}
+
 void WireLayout() {
     Check(sizeof(GtosWindowCreateRequest) == GTOS_WINDOW_CREATE_REQUEST_BYTES, "create size");
     Check(sizeof(GtosWindowSubmitRequest) == GTOS_WINDOW_SUBMIT_REQUEST_BYTES, "submit size");
@@ -811,6 +880,7 @@ int Run() {
     FourOwnersFillSlots();
     HandleAndGenerationExhaustion();
     FramesAndPresent();
+    LargeFrames();
     SubmitValidation();
     InputReadVersionGate();
     DeliverInputReportsThisOverflow();

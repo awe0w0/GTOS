@@ -256,7 +256,7 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     Zero(&slot.status, sizeof(slot.status));
     id = slot.status.id = nextId++; slot.status.directory = slot.space.DirectoryAddress();
     slot.status.live = slot.occupied = true; ++statistics.created;
-    slot.process = &slot; slot.stackHandle = 0;
+    slot.process = &slot; slot.stackHandle = 0; slot.content = false;
     slot.eventWaitCount = 0; slot.eventWaitFrame = 0;
     slot.userStackBegin = stackBottom; slot.userStackEnd = UserStackTop;
     return true;
@@ -381,6 +381,7 @@ bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, ui
             goto rollback;
     }
     if (Admit(slot, index, plan.entry, id, stackPages, environment)) {
+        slot.content = content;
         slot.codeCount = slot.dataCount = 0;
         for (uint32_t i = 0; i < plan.segmentCount; ++i) {
             const Elf32LoadSegment& segment = plan.segments[i];
@@ -956,7 +957,9 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         break;
     }
     case GTOS_SYS_WINDOW_CREATE:
+    case GTOS_SYS_WINDOW_CREATE_LARGE:
     case GTOS_SYS_WINDOW_SUBMIT:
+    case GTOS_SYS_WINDOW_FRAME:
     case GTOS_SYS_WINDOW_PRESENT:
     case GTOS_SYS_WINDOW_CLOSE:
     case GTOS_SYS_WINDOW_INFO:
@@ -964,9 +967,10 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         // One syscall-shaped entry: the endpoint snapshots the request, applies
         // the version gate and does every copy through this adapter, which
         // forwards to the same production checked-copy used above.
-        WindowAddressSpace memory(slot->space);
+        Slot& process = *slot->process;
+        WindowAddressSpace memory(process.space);
         cpu->eax = (uint32_t)NativeWindows::Instance().Call(
-            slot->status.id, memory, cpu->eax, cpu->ebx, cpu->ecx);
+            process.status.id, memory, cpu->eax, cpu->ebx, cpu->ecx, process.content);
         break;
     }
     case GTOS_SYS_VM_RESERVE: {

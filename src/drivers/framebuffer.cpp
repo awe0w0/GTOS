@@ -140,6 +140,41 @@ void Framebuffer::Rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c) {
 void Framebuffer::Clear(uint32_t c) {
     Rect(0, 0, Width(), Height(), c);
 }
+
+void Framebuffer::BlitRgba(int32_t x, int32_t y, int32_t w, int32_t h, const uint8_t* source,
+                           uint32_t sourceWidth, uint32_t sourceHeight) {
+    if (!ready || !source || w <= 0 || h <= 0 || w > 1920 || h > 1080 ||
+        !sourceWidth || !sourceHeight ||
+        sourceWidth > 1920 || sourceHeight > 1080)
+        return;
+    const int64_t right = (int64_t)x + w, bottom = (int64_t)y + h;
+    const int32_t left = x > clipX ? x : clipX, top = y > clipY ? y : clipY;
+    const int32_t endX = right < clipR ? (int32_t)right : clipR;
+    const int32_t endY = bottom < clipB ? (int32_t)bottom : clipB;
+    if (left >= endX || top >= endY) return;
+    for (int32_t row = top; row < endY; ++row) {
+        const uint32_t sourceY = (uint32_t)(row - y) * sourceHeight / (uint32_t)h;
+        const uint8_t* sourceRow = source + sourceY * sourceWidth * 4;
+        uint32_t* output = pixels + row * mode.width;
+        for (int32_t column = left; column < endX; ++column) {
+            const uint32_t sourceX = (uint32_t)(column - x) * sourceWidth / (uint32_t)w;
+            const uint8_t* rgba = sourceRow + sourceX * 4;
+            uint32_t color = (uint32_t)rgba[0] << 16 | (uint32_t)rgba[1] << 8 | rgba[2];
+            if (rgba[3] != 255) {
+                const uint32_t background = output[column], inverseAlpha = 255 - rgba[3];
+                color = 0;
+                for (uint32_t channel = 0; channel < 3; ++channel) {
+                    const uint32_t shift = 16 - channel * 8;
+                    const uint32_t value = rgba[channel] +
+                        (((background >> shift) & 255) * inverseAlpha + 127) / 255;
+                    color |= value << shift;
+                }
+            }
+            output[column] = color;
+        }
+    }
+    Damage(left, top, endX, endY);
+}
 void Framebuffer::Present() {
     if (!ready || dirtyX >= dirtyR || dirtyY >= dirtyB)
         return;

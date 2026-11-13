@@ -20,6 +20,7 @@ struct NativeWindowView {
     unsigned width, height;    // CREATE dimensions, valid even before publication
     unsigned frameGeneration;  // 0 means nothing has been published yet
     unsigned lifecycle;
+    unsigned large;            // 1 for a desktop-sized window
 };
 class NativeWindowProvider {
 public:
@@ -27,6 +28,10 @@ public:
     // Every in-range index fully defines `view` and `out`.
     virtual bool CopySlot(unsigned index, NativeWindowView& view,
                           NativeImageSnapshot& out) const = 0;
+    // A large frame is copied into the caller's backing store by exact identity.
+    virtual bool CopyLargeFrame(unsigned, unsigned, unsigned char*, unsigned) const {
+        return false;
+    }
 
     // Trusted kernel-side desktop operations. These are NOT reachable from a user
     // system call: the bank resolves the owner from the non-reusable handle under
@@ -43,6 +48,6 @@ protected:
     // Non-owning: the kernel instance must not gain a deleting destructor.
     ~NativeWindowProvider() {}
 };
-static_assert(sizeof(NativeWindowView) == 20, "Native window view layout");
+static_assert(sizeof(NativeWindowView) == 24, "Native window view layout");
 } }
 #endif

@@ -2885,6 +2885,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     Framebuffer framebuffer;
     FramebufferMode mode;
     gui::ModernDesktop *modern = 0;
+    unsigned char* largeWindowBacking = 0;
     uint32_t backbuffer = 0, backbufferPages = 0;
     if (!BootOption(mbi, "legacy") && Framebuffer::ReadMode(mbi, mode) && mode.width >= 640 &&
         mode.height >= 480) {
@@ -2892,9 +2893,20 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         if (frames.allocateContiguous(backbufferPages, backbuffer) &&
             framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
             printf("FB CONFIGURED\n");
+            if (contentBoot && contentAssetsReady)
+                largeWindowBacking = new unsigned char[3 * GTOS_WINDOW_LARGE_BYTES];
             modern = new gui::ModernDesktop(&framebuffer, &store, &settings, liveBoot,
                                             &process::NativeSurfaceBank::Instance(),
-                                            &process::NativeWindows::Instance());
+                                            &process::NativeWindows::Instance(),
+                                            largeWindowBacking
+                                                ? largeWindowBacking + 2 * GTOS_WINDOW_LARGE_BYTES
+                                                : 0);
+            if (modern)
+                process::NativeWindows::Instance().AttachLargeBuffers(largeWindowBacking);
+            else {
+                delete[] largeWindowBacking;
+                largeWindowBacking = 0;
+            }
         }
         if (!modern && backbuffer)
             frames.freeContiguous(backbuffer, backbufferPages);
@@ -2981,7 +2993,8 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     tasks.AddTask(&sleeper);
     tasks.AddTask(&yielder);
     if (contentBoot) {
-        if (!nativeStacksPrepared || !contentAssetsReady || !modern || !StartContentShell(tasks, gdt, mbi))
+        if (!nativeStacksPrepared || !contentAssetsReady || !modern ||
+            !largeWindowBacking || !StartContentShell(tasks, gdt, mbi))
             printf("CONTENT SHELL LIMITED\n");
     } else {
         nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);

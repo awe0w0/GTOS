@@ -37,6 +37,13 @@ inline int PresentNativeWindowFrame(unsigned handle, const void* pixels,
     return WindowPresent(&request);
 }
 
+inline int PresentLargeNativeWindowFrame(unsigned handle, const void* pixels,
+                                         unsigned bytes) {
+    const GtosWindowFrameRequest request{
+        GTOS_WINDOW_ABI_VERSION, handle, (unsigned)pixels, bytes};
+    return WindowCall(GTOS_SYS_WINDOW_FRAME, (unsigned)&request, sizeof(request));
+}
+
 } // namespace process
 } // namespace gtos
 

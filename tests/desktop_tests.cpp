@@ -1302,6 +1302,74 @@ static bool FillQueueTo(ModernDesktop &d, process::NativeWindows &bank, uint32_t
     return info.queue_depth == target;
 }
 
+static void BrowserWindowTests() {
+    static unsigned char frames[3 * GTOS_WINDOW_LARGE_BYTES];
+    process::NativeWindows bank;
+    bank.AttachLargeBuffers(frames);
+    bank.SetAvailable(true);
+    drivers::Framebuffer fb;
+    Check(fb.Bind(Mode(800, 600, 3200), (uint8_t*)display, surface, 800 * 600),
+          "browser framebuffer");
+    ModernDesktop desktop(&fb, 0, 0, true, 0, &bank, frames + 2 * GTOS_WINDOW_LARGE_BYTES);
+    pointerX = 770;
+    pointerY = 16;
+    snapshot.ticks = 0;
+    DesktopArena arena;
+    const GtosWindowCreateRequest create{GTOS_WINDOW_ABI_VERSION, 64, 24, 256,
+                                         GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED};
+    const auto request = [&](unsigned operation, const void* value, unsigned size) {
+        const uint8_t* bytes = (const uint8_t*)value;
+        for (unsigned i = 0; i < size; ++i) arena.bytes[64 + i] = bytes[i];
+        return bank.Call(88, arena, operation, 64, size, true);
+    };
+    const int handle = request(GTOS_SYS_WINDOW_CREATE_LARGE, &create, sizeof(create));
+    Check(handle > 0, "browser window created");
+    if (handle <= 0) return;
+    const unsigned total = create.width * create.height * 4;
+    const unsigned source = 512;
+    Check(source + total <= sizeof(arena.bytes), "browser test backing size");
+    if (source + total > sizeof(arena.bytes)) return;
+    for (unsigned offset = 0; offset < total; offset += 4) {
+        arena.bytes[source + offset] = 0xA5;
+        arena.bytes[source + offset + 1] = 0x2B;
+        arena.bytes[source + offset + 2] = 0xC7;
+        arena.bytes[source + offset + 3] = 255;
+    }
+    const GtosWindowFrameRequest frame{GTOS_WINDOW_ABI_VERSION, (unsigned)handle, source, total};
+    Check(request(GTOS_SYS_WINDOW_FRAME, &frame, sizeof(frame)) == 0, "browser frame submitted");
+    OneUpdate(desktop);
+    const ModernWindow &window = desktop.Windows().Window(ModernNative0);
+    const ModernRect r = window.bounds;
+    const int32_t x = r.x + (r.w - (int32_t)create.width) / 2;
+    const int32_t y = r.y + 44 + (r.h - 56 - (int32_t)create.height) / 2;
+    Check(window.open && fb.ReadPixel(x + 32, y + 12) == 0xA52BC7 &&
+          fb.ReadPixel(x + 63, y + 23) == 0xA52BC7, "desktop draws the full browser frame");
+    BeginPress(desktop, x + 23, y + 18);
+    EndPress(desktop, x + 23, y + 18);
+    desktop.OnKeyDown('h');
+    desktop.OnKeyUp('h');
+    desktop.OnKeyDown(':');
+    desktop.OnKeyUp(':');
+    desktop.OnKeyDown('A');
+    desktop.OnKeyUp('A');
+    OneUpdate(desktop);
+    GtosInputEvent events[GTOS_INPUT_READ_LIMIT];
+    const int count = DrainEvents(bank, 88, (unsigned)handle, events, GTOS_INPUT_READ_LIMIT,
+                                  "browser reads routed input");
+    bool pointer = false, letter = false, colon = false, uppercase = false;
+    for (int i = 0; i < count; ++i) {
+        const auto& event = events[i];
+        pointer |= event.type == GTOS_INPUT_POINTER_DOWN && event.x == 23 && event.y == 18;
+        letter |= event.type == GTOS_INPUT_KEY_DOWN && event.code == 'h';
+        colon |= event.type == GTOS_INPUT_KEY_DOWN && event.code == ':';
+        uppercase |= event.type == GTOS_INPUT_KEY_DOWN && event.code == 'A';
+    }
+    Check(pointer && letter && colon && uppercase, "browser receives physical pointer and URL keys");
+    bank.ReclaimOwner(88);
+    OneUpdate(desktop);
+    Check(!desktop.Windows().Window(ModernNative0).open, "browser reap removes the desktop window");
+}
+
 static void NativeWindowRedrawTests() {
     process::NativeWindows &bank = process::NativeWindows::Instance();
     bank.SetAvailable(true);
@@ -2182,6 +2250,7 @@ struct NativeGroup {
     void (*run)();
 };
 static const NativeGroup nativeGroups[] = {
+    {"browser", BrowserWindowTests},
     {"basic", NativeWindowTests},
     {"redraw", NativeWindowRedrawTests},
     {"focus", NativeWindowFocusBatchTests},

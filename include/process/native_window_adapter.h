@@ -84,13 +84,22 @@ class NativeWindowAdapter {
   // object is left exactly as it was (so a refusal does not destroy an existing
   // window). `stride` is width * 4 for the only supported format.
   int Create(unsigned width, unsigned height) {
+    return CreateWindow(width, height, GTOS_SYS_WINDOW_CREATE);
+  }
+
+  int CreateLarge(unsigned width, unsigned height) {
+    return CreateWindow(width, height, GTOS_SYS_WINDOW_CREATE_LARGE);
+  }
+
+ private:
+  int CreateWindow(unsigned width, unsigned height, unsigned operation) {
     GtosWindowCreateRequest request;
     request.version = GTOS_WINDOW_ABI_VERSION;
     request.width = width;
     request.height = height;
     request.stride = width * 4u;
     request.format = GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED;
-    const int result = WindowCreate(&request);
+    const int result = WindowCall(operation, (unsigned)&request, sizeof(request));
     if (result < 0) {
       return result;
     }
@@ -101,6 +110,8 @@ class NativeWindowAdapter {
     closing_ = false;
     return result;
   }
+
+ public:
 
   // SUBMIT. `offset` is the byte offset inside the window content,
   // `pixels`/`bytes` describe one contiguous premultiplied RGBA8 chunk. Returns

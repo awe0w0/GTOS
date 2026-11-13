@@ -33,12 +33,14 @@ class NativeWindows : public gui::NativeWindowProvider {
         unsigned char front[GTOS_WINDOW_MAX_BYTES];
         GtosInputEvent queue[GTOS_INPUT_NORMAL_ENTRIES];
         unsigned queueHead, queueCount, dropped;
-        bool resetPending, closePending;
+        bool resetPending, closePending, large;
     };
     Slot slots[GTOS_WINDOW_MAX_OBJECTS];
     // Bank scratch for one INPUT_READ transaction; never on the kernel stack.
     GtosInputEvent scratch[GTOS_INPUT_READ_LIMIT];
     unsigned nextHandle;
+    unsigned char* largeFront;
+    unsigned char* largeDraft;
     bool available;
 
     Slot* Find(unsigned ownerId, unsigned handle);
@@ -50,6 +52,9 @@ class NativeWindows : public gui::NativeWindowProvider {
     // Returns true only when THIS delivery performed an overflow reset.
     bool PushNormal(Slot& slot, const GtosInputEvent& event);
     int ValidateSubmit(const Slot& slot, const GtosWindowSubmitRequest& request) const;
+    int CreateWindow(unsigned ownerId, const GtosWindowCreateRequest& request, bool large);
+    int PublishLargeFrame(unsigned ownerId, UserMemory& memory,
+                          const GtosWindowFrameRequest& request);
     void ScrubDraft(Slot& slot);
     // Locked helpers: only valid inside one Call() transaction.
     int SelectLocked(Slot& slot, unsigned count, unsigned& selected);
@@ -62,6 +67,8 @@ public:
     static NativeWindows& Instance();
     // Boot configuration only, after a framebuffer desktop actually exists.
     void SetAvailable(bool value);
+    // Storage is reserved by the kernel before admitting the Content process.
+    void AttachLargeBuffers(unsigned char* backing);
 
     int Create(unsigned ownerId, const GtosWindowCreateRequest& request);
     int Submit(unsigned ownerId, const GtosWindowSubmitRequest& request,
@@ -74,7 +81,7 @@ public:
     // One syscall-shaped entry: size, request snapshot, version gate, validation,
     // response copy. This is the only path an application can reach.
     int Call(unsigned ownerId, UserMemory& memory, unsigned operation,
-             unsigned address, unsigned bytes);
+             unsigned address, unsigned bytes, bool allowLarge = false);
 
     // Desktop request-close: idempotent, at most one CLOSE, never destroys.
     void RequestClose(unsigned ownerId, unsigned handle);
@@ -104,6 +111,8 @@ public:
     // in-range index fully defines both outputs, including empty and unpublished.
     virtual bool CopySlot(unsigned index, gui::NativeWindowView& view,
                           gui::NativeImageSnapshot& out) const;
+    virtual bool CopyLargeFrame(unsigned handle, unsigned generation,
+                                unsigned char* pixels, unsigned bytes) const;
     virtual bool ContainsWindow(unsigned handle) const;
     virtual int RouteInput(unsigned handle, const GtosInputEvent& event);
     virtual void ResetWindowInput(unsigned handle);

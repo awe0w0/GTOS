@@ -12,6 +12,8 @@
 #define GTOS_SYS_WINDOW_CLOSE     0x4753U
 #define GTOS_SYS_WINDOW_INFO      0x4754U
 #define GTOS_SYS_INPUT_READ       0x4755U
+#define GTOS_SYS_WINDOW_CREATE_LARGE 0x4756U
+#define GTOS_SYS_WINDOW_FRAME        0x4757U
 
 #define GTOS_WINDOW_FORMAT_RGBA8_PREMULTIPLIED 1U
 #define GTOS_WINDOW_MAX_WIDTH      32U
@@ -20,6 +22,12 @@
 #define GTOS_WINDOW_WRITE_LIMIT    256U
 #define GTOS_WINDOW_MAX_OBJECTS    4U
 #define GTOS_WINDOW_MAX_PER_OWNER  1U
+// A Content launch can use one desktop-sized window with fixed backing storage.
+// CREATE_LARGE uses the CREATE request. FRAME takes one tightly packed
+// premultiplied RGBA8 frame and publishes it only after the whole copy validates.
+#define GTOS_WINDOW_LARGE_WIDTH    480U
+#define GTOS_WINDOW_LARGE_HEIGHT   360U
+#define GTOS_WINDOW_LARGE_BYTES    (GTOS_WINDOW_LARGE_WIDTH * GTOS_WINDOW_LARGE_HEIGHT * 4U)
 #define GTOS_INPUT_STORAGE_ENTRIES 128U
 #define GTOS_INPUT_NORMAL_ENTRIES  126U
 #define GTOS_INPUT_READ_LIMIT      32U
@@ -28,6 +36,7 @@
 
 #define GTOS_WINDOW_CREATE_REQUEST_BYTES   20U
 #define GTOS_WINDOW_SUBMIT_REQUEST_BYTES   20U
+#define GTOS_WINDOW_FRAME_REQUEST_BYTES    16U
 #define GTOS_WINDOW_CONTROL_REQUEST_BYTES   8U
 #define GTOS_WINDOW_INFO_REQUEST_BYTES     12U
 #define GTOS_INPUT_READ_REQUEST_BYTES      16U
@@ -73,6 +82,10 @@ typedef struct GtosWindowSubmitRequest {
     unsigned version, handle, offset, source, length;
 } GtosWindowSubmitRequest;
 
+typedef struct GtosWindowFrameRequest {
+    unsigned version, handle, source, length;
+} GtosWindowFrameRequest;
+
 typedef struct GtosWindowControlRequest {
     unsigned version, handle;
 } GtosWindowControlRequest;
@@ -102,6 +115,7 @@ static_assert(sizeof(unsigned) == 4, "Window ABI requires 32-bit unsigned");
 static_assert(sizeof(int) == 4, "Window ABI requires 32-bit int");
 static_assert(sizeof(GtosWindowCreateRequest) == GTOS_WINDOW_CREATE_REQUEST_BYTES, "Window create ABI");
 static_assert(sizeof(GtosWindowSubmitRequest) == GTOS_WINDOW_SUBMIT_REQUEST_BYTES, "Window submit ABI");
+static_assert(sizeof(GtosWindowFrameRequest) == GTOS_WINDOW_FRAME_REQUEST_BYTES, "Window frame ABI");
 static_assert(sizeof(GtosWindowControlRequest) == GTOS_WINDOW_CONTROL_REQUEST_BYTES, "Window control ABI");
 static_assert(sizeof(GtosWindowInfoRequest) == GTOS_WINDOW_INFO_REQUEST_BYTES, "Window info ABI");
 static_assert(sizeof(GtosInputReadRequest) == GTOS_INPUT_READ_REQUEST_BYTES, "Input read ABI");
@@ -115,6 +129,7 @@ _Static_assert(sizeof(unsigned) == 4, "Window ABI requires 32-bit unsigned");
 _Static_assert(sizeof(int) == 4, "Window ABI requires 32-bit int");
 _Static_assert(sizeof(GtosWindowCreateRequest) == GTOS_WINDOW_CREATE_REQUEST_BYTES, "Window create ABI");
 _Static_assert(sizeof(GtosWindowSubmitRequest) == GTOS_WINDOW_SUBMIT_REQUEST_BYTES, "Window submit ABI");
+_Static_assert(sizeof(GtosWindowFrameRequest) == GTOS_WINDOW_FRAME_REQUEST_BYTES, "Window frame ABI");
 _Static_assert(sizeof(GtosWindowControlRequest) == GTOS_WINDOW_CONTROL_REQUEST_BYTES, "Window control ABI");
 _Static_assert(sizeof(GtosWindowInfoRequest) == GTOS_WINDOW_INFO_REQUEST_BYTES, "Window info ABI");
 _Static_assert(sizeof(GtosInputReadRequest) == GTOS_INPUT_READ_REQUEST_BYTES, "Input read ABI");

@@ -47,9 +47,10 @@ static bool BundledCatch(const gtos::storage::AppInfo *app) {
 ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppStore *s,
                              gtos::storage::SettingsStore *settings, bool live,
                              const NativeImageProvider *source,
-                             NativeWindowProvider *windows)
+                             NativeWindowProvider *windows, unsigned char *largeWindowBacking)
     : fb(*f), paint(*f), wm(f->Width(), f->Height()), imageProvider(source), image(), pendingImage(),
-      windowProvider(windows), windowViews(), windowFrames(), windowHandles(), windowCapture(0),
+      windowProvider(windows), windowViews(), windowFrames(), largeWindowFrame(largeWindowBacking),
+      largeWindowHandle(0), largeWindowGeneration(0), windowHandles(), windowCapture(0),
       windowFocusHandle(0),
       imageTraceBounds(), imageSeenGeneration(0), imageTraceGeneration(0), imageX(0), imageY(0), imageScale(0),
       imageTraceX(0), imageTraceY(0), imageTraceScale(0), imageTraceVisible(false),
@@ -307,6 +308,7 @@ void ModernDesktop::SyncNativeWindows() {
             view.lifecycle = NativeWindowDead;
             view.frameGeneration = 0;
             view.width = view.height = 0;
+            view.large = false;
         }
         const bool gone = !view.handle || view.lifecycle == NativeWindowDead;
         if (gone) {
@@ -318,6 +320,16 @@ void ModernDesktop::SyncNativeWindows() {
             continue;
         }
         windowViews[slot] = view;
+        if (view.large && largeWindowFrame && view.frameGeneration &&
+            (view.handle != largeWindowHandle || view.frameGeneration != largeWindowGeneration)) {
+            if (view.width <= GTOS_WINDOW_LARGE_WIDTH && view.height <= GTOS_WINDOW_LARGE_HEIGHT &&
+                windowProvider->CopyLargeFrame(view.handle, view.frameGeneration, largeWindowFrame,
+                                               view.width * view.height * 4)) {
+                largeWindowHandle = view.handle;
+                largeWindowGeneration = view.frameGeneration;
+                changed = true;
+            }
+        }
         if (!view.frameGeneration) {
             // The provider already zeroed the cache for an unpublished object.
             for (uint32_t i = 0; i < NativeImageMaximumBytes; ++i) windowFrames[slot].rgba[i] = 0;
@@ -331,7 +343,10 @@ void ModernDesktop::SyncNativeWindows() {
             // WM entry are dropped first so none of it can act on the new owner.
             if (previous) RetireNativeSlot(slot);
             windowHandles[slot] = view.handle;
-            wm.Open((ModernWindowKind)(ModernNative0 + slot));
+            const auto kind = (ModernWindowKind)(ModernNative0 + slot);
+            wm.Open(kind);
+            if (view.large)
+                wm.Resize(kind, (int32_t)view.width + 16, (int32_t)view.height + 56);
             changed = true;
         } else if (view.frameGeneration != previousGeneration ||
                    view.lifecycle != previousLifecycle) {
@@ -366,6 +381,9 @@ void ModernDesktop::RetireNativeSlot(uint32_t slot) {
 // Drop the binding AND the cached frame; used when the object is really gone.
 void ModernDesktop::ForgetNativeWindow(uint32_t slot) {
     RetireNativeSlot(slot);
+    if (windowHandles[slot] == largeWindowHandle) {
+        largeWindowHandle = largeWindowGeneration = 0;
+    }
     windowHandles[slot] = 0;
     windowViews[slot] = NativeWindowView();
     windowFrames[slot].generation = windowFrames[slot].width = windowFrames[slot].height = 0;
@@ -419,6 +437,16 @@ bool ModernDesktop::ApplyRouteResult(int routed, uint32_t handle, bool newDown) 
     if (newDown) windowCapture = handle;
     return true;
 }
+
+static int32_t NativeCoordinate(int32_t offset, uint32_t pixels, int32_t extent, bool large) {
+    if (!pixels || !extent) return 0;
+    if (!large) {
+        const int32_t scale = extent / (int32_t)pixels;
+        return scale > 0 ? offset / scale : 0;
+    }
+    const int32_t mapped = offset * (int32_t)pixels / extent;
+    return offset < 0 && !mapped ? -1 : mapped;
+}
 bool ModernDesktop::RouteKeyNative(uint8_t code, bool down) {
     if (!windowProvider) return false;
     // A key is routed only to the focus that is current right now; a focus change
@@ -426,13 +454,14 @@ bool ModernDesktop::RouteKeyNative(uint8_t code, bool down) {
     SyncNativeFocus();
     const int32_t focused = wm.Focused();
     if (focused < (int32_t)ModernNative0 || focused >= (int32_t)ModernWindowCount) return false;
-    // Desktop-reserved keys keep their meaning: Esc closes, and the launcher,
-    // image and window-management shortcuts stay with the desktop.
-    if (code == 27 || code == '`' || code == '5' || code == 'l' || code == 'b' ||
-        code == 'h' || (code >= '1' && code <= '4'))
-        return false;
     uint32_t slot = (uint32_t)(focused - (int32_t)ModernNative0);
     if (!windowHandles[slot]) return false;
+    // Escape closes either kind of window. The browser owns ordinary text keys.
+    if (code == 27 ||
+        (!windowViews[slot].large &&
+         (code == '`' || code == '5' || code == 'l' || code == 'b' || code == 'h' ||
+          (code >= '1' && code <= '4'))))
+        return false;
     GtosInputEvent event;
     event.type = down ? GTOS_INPUT_KEY_DOWN : GTOS_INPUT_KEY_UP;
     event.code = code;
@@ -581,6 +610,14 @@ void ModernDesktop::LauncherActivate(uint8_t item) {
     }
 }
 void ModernDesktop::Key(uint8_t k, bool down) {
+    const int32_t focused = wm.Focused();
+    const bool browserFocus = !launcher && !confirmRemove &&
+        focused >= (int32_t)ModernNative0 && focused < (int32_t)ModernWindowCount &&
+        windowViews[focused - (int32_t)ModernNative0].large;
+    if (browserFocus && k != 27) {
+        RouteKeyNative(k, down);
+        return;
+    }
     if (k >= 'A' && k <= 'Z')
         k += 32;
     bool repeat = down && keys[k];
@@ -792,10 +829,9 @@ void ModernDesktop::Pointer(const Input &e) {
                 event.code = e.type == 4 ? 1 : 0;
                 const ModernRect r = wm.Window((ModernWindowKind)(ModernNative0 + slot)).bounds;
                 const ModernRect content = NativeContentRect(r, windowViews[slot]);
-                const int32_t scale = windowViews[slot].width && content.w
-                    ? content.w / (int32_t)windowViews[slot].width : 1;
-                event.x = scale > 0 ? (x - content.x) / scale : 0;
-                event.y = scale > 0 ? (y - content.y) / scale : 0;
+                const auto& view = windowViews[slot];
+                event.x = NativeCoordinate(x - content.x, view.width, content.w, view.large);
+                event.y = NativeCoordinate(y - content.y, view.height, content.h, view.large);
                 // A reset or a refusal drops the capture; the event itself stays
                 // queued when the application accepted it.
                 ApplyRouteResult(windowProvider->RouteInput(captured, event), captured, false);
@@ -838,13 +874,12 @@ void ModernDesktop::Pointer(const Input &e) {
                 const ModernRect content = NativeContentRect(
                     wm.Window((ModernWindowKind)hitSlot).bounds, windowViews[slot]);
                 if (windowViews[slot].handle && content.Contains(x, y)) {
-                    const int32_t scale = windowViews[slot].width
-                        ? content.w / (int32_t)windowViews[slot].width : 1;
+                    const auto& view = windowViews[slot];
                     GtosInputEvent event;
                     event.type = GTOS_INPUT_POINTER_MOVE;
                     event.code = 0;
-                    event.x = scale > 0 ? (x - content.x) / scale : 0;
-                    event.y = scale > 0 ? (y - content.y) / scale : 0;
+                    event.x = NativeCoordinate(x - content.x, view.width, content.w, view.large);
+                    event.y = NativeCoordinate(y - content.y, view.height, content.h, view.large);
                     // Hover never creates a capture, but a reset still invalidates
                     // any capture held from an earlier press.
                     ApplyRouteResult(windowProvider->RouteInput(windowViews[slot].handle, event),
@@ -958,13 +993,12 @@ void ModernDesktop::Pointer(const Input &e) {
         uint32_t slot = (uint32_t)(k - ModernNative0);
         const ModernRect content = NativeContentRect(r, windowViews[slot]);
         if (windowViews[slot].handle && content.Contains(x, y)) {
-            const int32_t scale = windowViews[slot].width
-                ? content.w / (int32_t)windowViews[slot].width : 1;
+            const auto& view = windowViews[slot];
             GtosInputEvent event;
             event.type = GTOS_INPUT_POINTER_DOWN;
             event.code = 1;
-            event.x = scale > 0 ? (x - content.x) / scale : 0;
-            event.y = scale > 0 ? (y - content.y) / scale : 0;
+            event.x = NativeCoordinate(x - content.x, view.width, content.w, view.large);
+            event.y = NativeCoordinate(y - content.y, view.height, content.h, view.large);
             // A reset clears the old capture first; this down is already queued,
             // so the new capture is established after it.
             if (ApplyRouteResult(windowProvider->RouteInput(windowViews[slot].handle, event),

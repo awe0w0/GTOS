@@ -446,6 +446,24 @@ ModernRect ModernDesktop::NativeContentRect(const ModernRect &r,
                                             const NativeWindowView &view) const {
     ModernRect out = {0, 0, 0, 0};
     if (!view.width || !view.height) return out;
+    if (view.large) {
+        const int32_t availableWidth = r.w - 16, availableHeight = r.h - 56;
+        if (availableWidth <= 0 || availableHeight <= 0) return out;
+        int32_t width = view.width, height = view.height;
+        if (width > availableWidth) {
+            height = height * availableWidth / width;
+            width = availableWidth;
+        }
+        if (height > availableHeight) {
+            width = width * availableHeight / height;
+            height = availableHeight;
+        }
+        out.x = r.x + (r.w - width) / 2;
+        out.y = r.y + 44 + (availableHeight - height) / 2;
+        out.w = width;
+        out.h = height;
+        return out;
+    }
     const int32_t availableWidth = r.w - 48, availableHeight = r.h - 124;
     int32_t scale = availableWidth / (int32_t)view.width;
     const int32_t verticalScale = availableHeight / (int32_t)view.height;
@@ -466,7 +484,8 @@ void ModernDesktop::DrawNativeSlot(const ModernRect &r, uint32_t slot) {
     // A cached view is not proof the object is still alive: ask the provider.
     if (windowProvider && !windowProvider->ContainsWindow(view.handle)) return;
     Theme c = Colors();
-    paint.Text(r.x + 24, r.y + 54, Label("Native application window"), c.muted);
+    if (!view.large)
+        paint.Text(r.x + 24, r.y + 54, Label("Native application window"), c.muted);
     const ModernRect content = NativeContentRect(r, view);
     if (!content.w || !content.h) {
         paint.Text(r.x + 24, r.y + 82, Label("Window too small to present"), c.muted);
@@ -475,9 +494,18 @@ void ModernDesktop::DrawNativeSlot(const ModernRect &r, uint32_t slot) {
     paint.Outline(content.x - 2, content.y - 2, content.w + 4, content.h + 4, c.line);
     const NativeImageSnapshot &frame = windowFrames[slot];
     // An unpublished window keeps its rectangle but paints no pixels.
-    if (!view.frameGeneration || !frame.width || !frame.height) {
+    const bool cached = view.large
+        ? largeWindowFrame && largeWindowHandle == view.handle &&
+          largeWindowGeneration == view.frameGeneration
+        : frame.width && frame.height;
+    if (!view.frameGeneration || !cached) {
         fb.Rect(content.x, content.y, content.w, content.h, c.panel);
         paint.Text(content.x + 12, content.y + 12, Label("Waiting for the first frame"), c.muted);
+        return;
+    }
+    if (view.large) {
+        fb.BlitRgba(content.x, content.y, content.w, content.h,
+                    largeWindowFrame, view.width, view.height);
         return;
     }
     const int32_t scale = content.w / (int32_t)view.width;
