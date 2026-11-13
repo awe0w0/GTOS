@@ -1,0 +1,11 @@
+--- a/base/files/file.h
++++ b/base/files/file.h
+@@ -372,7 +372,7 @@ class BASE_EXPORT File {
+ 
+   // Precondition: last_error is not 0, also known as ERROR_SUCCESS.
+   static Error OSErrorToFileError(DWORD last_error);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   // Precondition: saved_errno is not 0.
+   static Error OSErrorToFileError(int saved_errno);
+ #endif

@@ -1,0 +1,38 @@
+--- a/base/profiler/stack_sampler_posix.cc
++++ b/base/profiler/stack_sampler_posix.cc
+@@ -4,13 +4,16 @@
+ 
+ #include "base/profiler/stack_sampler.h"
+ 
++#include "build/build_config.h"
++
++#if !BUILDFLAG(IS_GTOS)
+ #include <pthread.h>
++#endif
+ 
+ #include <memory>
+ 
+ #include "base/memory/ptr_util.h"
+ #include "base/threading/platform_thread.h"
+-#include "build/build_config.h"
+ 
+ #if BUILDFLAG(IS_CHROMEOS) && \
+     (defined(ARCH_CPU_X86_64) || defined(ARCH_CPU_ARM64))
+@@ -39,6 +42,9 @@ std::unique_ptr<StackSampler> StackSampler::Create(
+ }
+ 
+ size_t StackSampler::GetStackBufferSize() {
++#if BUILDFLAG(IS_GTOS)
++  return 0;
++#else
+   size_t stack_size = PlatformThread::GetDefaultThreadStackSize();
+ 
+   pthread_attr_t attr;
+@@ -52,6 +58,7 @@ size_t StackSampler::GetStackBufferSize() {
+   // Maximum limits under NPTL implementation.
+   constexpr size_t kDefaultStackLimit = 4 * (1 << 20);
+   return stack_size > 0 ? stack_size : kDefaultStackLimit;
++#endif
+ }
+ 
+ }  // namespace base

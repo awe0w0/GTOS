@@ -1,0 +1,21 @@
+--- a/base/profiler/module_cache.cc
++++ b/base/profiler/module_cache.cc
+@@ -11,9 +11,18 @@
+ 
+ #include "base/check_op.h"
+ #include "base/strings/strcat.h"
++#include "build/build_config.h"
+ 
+ namespace base {
+ 
++#if BUILDFLAG(IS_GTOS)
++std::unique_ptr<const ModuleCache::Module> ModuleCache::CreateModuleForAddress(
++    uintptr_t) {
++  // Native GTOS images have no dynamic module enumeration.
++  return nullptr;
++}
++#endif
++
+ namespace {
+ 
+ // Supports heterogeneous comparisons on modules and addresses, for use in

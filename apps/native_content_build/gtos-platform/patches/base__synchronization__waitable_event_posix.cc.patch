@@ -1,0 +1,88 @@
+--- a/base/synchronization/waitable_event_posix.cc
++++ b/base/synchronization/waitable_event_posix.cc
+@@ -65,12 +65,12 @@ void WaitableEvent::SignalImpl() {
+   }
+ 
+   if (kernel_->manual_reset_) {
+-    SignalAll();
++    kernel_->SignalAll(this);
+     kernel_->signaled_ = true;
+   } else {
+     // In the case of auto reset, if no waiters were woken, we remain
+     // signaled.
+-    if (!SignalOne()) {
++    if (!kernel_->SignalOne(this)) {
+       kernel_->signaled_ = true;
+     }
+   }
+@@ -358,70 +358,4 @@ size_t WaitableEvent::EnqueueMany(base::span<WaiterAndIndex> waitables,
+ // -----------------------------------------------------------------------------
+ // Private functions...
+ 
+-WaitableEvent::WaitableEventKernel::WaitableEventKernel(
+-    ResetPolicy reset_policy,
+-    InitialState initial_state)
+-    : manual_reset_(reset_policy == ResetPolicy::MANUAL),
+-      signaled_(initial_state == InitialState::SIGNALED) {}
+-
+-WaitableEvent::WaitableEventKernel::~WaitableEventKernel() = default;
+-
+-// -----------------------------------------------------------------------------
+-// Wake all waiting waiters. Called with lock held.
+-// -----------------------------------------------------------------------------
+-bool WaitableEvent::SignalAll() {
+-  bool signaled_at_least_one = false;
+-
+-  for (Waiter* i : kernel_->waiters_) {
+-    if (i->Fire(this)) {
+-      signaled_at_least_one = true;
+-    }
+-  }
+-
+-  kernel_->waiters_.clear();
+-  return signaled_at_least_one;
+-}
+-
+-// ---------------------------------------------------------------------------
+-// Try to wake a single waiter. Return true if one was woken. Called with lock
+-// held.
+-// ---------------------------------------------------------------------------
+-bool WaitableEvent::SignalOne() {
+-  for (;;) {
+-    if (kernel_->waiters_.empty()) {
+-      return false;
+-    }
+-
+-    const bool r = (*kernel_->waiters_.begin())->Fire(this);
+-    kernel_->waiters_.pop_front();
+-    if (r) {
+-      return true;
+-    }
+-  }
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Add a waiter to the list of those waiting. Called with lock held.
+-// -----------------------------------------------------------------------------
+-void WaitableEvent::Enqueue(Waiter* waiter) {
+-  kernel_->waiters_.push_back(waiter);
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Remove a waiter from the list of those waiting. Return true if the waiter was
+-// actually removed. Called with lock held.
+-// -----------------------------------------------------------------------------
+-bool WaitableEvent::WaitableEventKernel::Dequeue(Waiter* waiter, void* tag) {
+-  for (auto i = waiters_.begin(); i != waiters_.end(); ++i) {
+-    if (*i == waiter && (*i)->Compare(tag)) {
+-      waiters_.erase(i);
+-      return true;
+-    }
+-  }
+-
+-  return false;
+-}
+-
+-// -----------------------------------------------------------------------------
+-
+ }  // namespace base

@@ -1,0 +1,109 @@
+--- a/base/files/file_util.cc
++++ b/base/files/file_util.cc
+@@ -18,6 +18,10 @@
+ #include <io.h>
+ #endif
+ #include <stdio.h>
++#if BUILDFLAG(IS_GTOS)
++#include <sys/stat.h>
++#include <unistd.h>
++#endif
+ 
+ #include <algorithm>
+ #include <fstream>
+@@ -50,6 +54,20 @@ namespace base {
+ 
+ namespace {
+ 
++#if BUILDFLAG(IS_GTOS)
++// Keep binary bytes (including NUL) and the same trailing-CR treatment as
++// TextContentsEqual on the other platforms. The caller checks ferror/feof.
++std::string ReadNativeLine(FILE* stream) {
++  std::string line;
++  for (int byte; (byte = fgetc(stream)) != EOF && byte != '\n';) {
++    line.push_back(static_cast<char>(byte));
++  }
++  const size_t last = line.find_last_not_of('\r');
++  line.resize(last == std::string::npos ? 0 : last + 1);
++  return line;
++}
++#endif
++
+ #if !BUILDFLAG(IS_WIN)
+ 
+ void RunAndReply(OnceCallback<bool()> action_callback,
+@@ -100,7 +118,12 @@ bool ReadStreamToSpanWithMaxSize(
+   constexpr size_t kSmallChunkSize = 4096;
+   chunk_size = kSmallChunkSize - 1;
+   stat_wrapper_t file_info = {};
+-  if (!File::Fstat(fileno(stream), &file_info) && file_info.st_size > 0) {
++#if BUILDFLAG(IS_GTOS)
++  const int status = ::fstat(fileno(stream), &file_info);
++#else
++  const int status = File::Fstat(fileno(stream), &file_info);
++#endif
++  if (status == 0 && file_info.st_size > 0) {
+     chunk_size = static_cast<size_t>(file_info.st_size);
+   }
+ #endif  // BUILDFLAG(IS_WIN)
+@@ -232,6 +255,25 @@ bool CopyFileContents(File& infile, File& outfile) {
+ }
+ 
+ bool ContentsEqual(const FilePath& filename1, const FilePath& filename2) {
++#if BUILDFLAG(IS_GTOS)
++  ScopedFILE first(fopen(filename1.value().c_str(), "rb"));
++  ScopedFILE second(fopen(filename2.value().c_str(), "rb"));
++  if (!first || !second) {
++    return false;
++  }
++  std::array<uint8_t, 4096> left, right;
++  for (;;) {
++    const size_t a = UNSAFE_TODO(fread(left.data(), 1, left.size(), first.get()));
++    const size_t b = UNSAFE_TODO(fread(right.data(), 1, right.size(), second.get()));
++    if (a != b || ferror(first.get()) || ferror(second.get()) ||
++        span(left).first(a) != span(right).first(b)) {
++      return false;
++    }
++    if (feof(first.get()) || feof(second.get()) || a == 0) {
++      return feof(first.get()) && feof(second.get());
++    }
++  }
++#else
+   // We open the file in binary format even if they are text files because
+   // we are just comparing that bytes are exactly same in both files and not
+   // doing anything smart with text formatting.
+@@ -270,9 +312,26 @@ bool ContentsEqual(const FilePath& filename1, const FilePath& filename2) {
+   } while (!file1.eof() || !file2.eof());
+ 
+   return true;
++#endif  // BUILDFLAG(IS_GTOS)
+ }
+ 
+ bool TextContentsEqual(const FilePath& filename1, const FilePath& filename2) {
++#if BUILDFLAG(IS_GTOS)
++  ScopedFILE first(fopen(filename1.value().c_str(), "rb"));
++  ScopedFILE second(fopen(filename2.value().c_str(), "rb"));
++  if (!first || !second) {
++    return false;
++  }
++  do {
++    const auto left = ReadNativeLine(first.get());
++    const auto right = ReadNativeLine(second.get());
++    if (left != right || ferror(first.get()) || ferror(second.get()) ||
++        !!feof(first.get()) != !!feof(second.get())) {
++      return false;
++    }
++  } while (!feof(first.get()));
++  return true;
++#else
+ #if BUILDFLAG(IS_WIN)
+   std::ifstream file1(filename1.value().c_str(), std::ios::in);
+   std::ifstream file2(filename2.value().c_str(), std::ios::in);
+@@ -318,6 +377,7 @@ bool TextContentsEqual(const FilePath& filename1, const FilePath& filename2) {
+   } while (!file1.eof() || !file2.eof());
+ 
+   return true;
++#endif  // BUILDFLAG(IS_GTOS)
+ }
+ 
+ bool ReadStreamToString(FILE* stream, std::string* contents) {

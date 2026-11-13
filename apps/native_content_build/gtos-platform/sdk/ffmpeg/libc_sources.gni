@@ -4,7 +4,6 @@
 
 # Pinned LLVM libc providers used by media and the native SQLite backend.
 gtos_ffmpeg_libc_sources = [
-  "//third_party/llvm-libc/src/src/__support/StringUtil/error_to_string.cpp",
   "//third_party/llvm-libc/src/src/ctype/isdigit.cpp",
   "//third_party/llvm-libc/src/src/fenv/feraiseexcept.cpp",
   "//third_party/llvm-libc/src/src/math/generic/acos.cpp",
@@ -45,7 +44,6 @@ gtos_ffmpeg_libc_sources = [
   "//third_party/llvm-libc/src/src/stdlib/strtoull.cpp",
   "//third_party/llvm-libc/src/src/string/strcat.cpp",
   "//third_party/llvm-libc/src/src/string/strcspn.cpp",
-  "//third_party/llvm-libc/src/src/string/strerror_r.cpp",
   "//third_party/llvm-libc/src/src/string/strncat.cpp",
   "//third_party/llvm-libc/src/src/string/strncpy.cpp",
   "//third_party/llvm-libc/src/src/string/strpbrk.cpp",

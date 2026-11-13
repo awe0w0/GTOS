@@ -1,0 +1,17 @@
+--- a/base/synchronization/waitable_event_watcher_posix.cc
++++ b/base/synchronization/waitable_event_watcher_posix.cc
+@@ -151,10 +151,14 @@ bool WaitableEventWatcher::StartWatching(
+ 
+   AutoLock locked(kernel->lock_);
+ 
++#if BUILDFLAG(IS_GTOS)
++  if (event->IsSignaled()) {
++#else
+   if (kernel->signaled_) {
+     if (!kernel->manual_reset_) {
+       kernel->signaled_ = false;
+     }
++#endif
+ 
+     // No hairpinning - we can't call the delegate directly here. We have to
+     // post a task to |task_runner| as usual.

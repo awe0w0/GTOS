@@ -1,0 +1,18 @@
+--- a/base/process/environment_internal.cc
++++ b/base/process/environment_internal.cc
+@@ -32,6 +32,7 @@ extern char** environ;
+ 
+ namespace base::internal {
+ 
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_WIN)
+ namespace {
+ 
+ // Parses a null-terminated input string of an environment block. The key is
+@@ -47,6 +48,7 @@ size_t ParseEnvLine(NativeEnvironmentCStringView input,
+ }
+ 
+ }  // namespace
++#endif
+ 
+ #if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ 

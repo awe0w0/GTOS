@@ -14,6 +14,34 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/base_paths.cc': '6370d403ef63f5e94bcd252fdd3d0eee858c671275d6f44873745adbe7c4f7da',
+    'base/files/file.h': '9f14d7ae8876aefc5b2c240814822d5a503c595a29f00656bc7690d744465fd2',
+    'base/files/file_enumerator.h': '19ab1de1387f34f0ff1b3969ef0a43f5f22d3bbc9dbfb363188fcbef2174a1e9',
+    'base/files/file_enumerator_posix.cc': 'bdfaafde8ca67ceab788ae43f87104c2454046446748857c2169f5d831240615',
+    'base/files/file_util.cc': '3a882fea594885cc3984a2fa270b95e1e91c19b208bf79cd8f4c2d626a9b84aa',
+    'base/memory/shared_memory_switch.cc': 'f00cd09c7eb1dd1c8064423d90c2e08a87eac38f25d0b3d878a251a6ff934f06',
+    'base/metrics/persistent_histogram_storage.cc': 'a4952a6cc19495cd5b87e99c2eb69d160431fcfde6baddc31bffb9edd7589a69',
+    'base/metrics/persistent_memory_allocator.cc': '5c7db4765f8b87f2666bc71c21e257a17734d2dab759a0cd983708e31097208e',
+    'base/native_library.h': 'c2eaae3baa116ade56005ad1dcb1e14049df28519d9f89b506d664e193175ca2',
+    'base/path_service.cc': '72b079e8e471bd896b2080cf1dfe13f469d66f43e13c40da88767ab2cf46d724',
+    'base/process/environment_internal.cc': 'c675a99a9de0b0dc0e58fc9f66d82d114562f605634813ba195441366218daf1',
+    'base/process/kill.cc': '69dfbf4143ea6bf21f51a1e3333985d4b8bb6d107d26464b2e30d50eea2a9b11',
+    'base/process/process_iterator.cc': '36364cb42578682338e3842caecd2de4e0e3b7246a08eeb3302a5f32f9337cea',
+    'base/process/process_iterator.h': '65c4c4bc46822bf489e6c5bb31ee366de8454b16418b1b37c1f87b6dcac24411',
+    'base/profiler/module_cache.cc': '3eafd695681416a3fce5f34ea3fb399042041fdcfcbda8e5f3d0fd0696fd7132',
+    'base/profiler/stack_sampler_posix.cc': 'd6394f26281ed8cc2fe05d035d2d238fda62739a4f0056f374f01a9a4cf2f5e1',
+    'base/strings/string_number_conversions_internal.h': 'ee28831afd3b0563f5b5d0bffb7f3354a96b15dae169e1fbeeb236f177074037',
+    'base/strings/string_util_impl_helpers.h': 'c2fdb48b59d55836c735a2007c1251df017c5e88cbd0250090e77eeb3408a2ac',
+    'base/synchronization/condition_variable.h': '782208ef78207479f09d8f4562ca20b863a17075aa09d48d4769b29dc624282d',
+    'base/synchronization/waitable_event_posix.cc': '7f233208fed348aa2b87a6ce1758498b7e579b2d2118cd48502bc93f8f949524',
+    'base/synchronization/waitable_event_watcher_posix.cc': '4ff72ab1af4b22b14b2d0579f7b1815461cabaacab06ea39824c25da64386139',
+    'base/task/common/task_annotator.cc': 'bf44b4514e741fe48cd9e79f43f24b7aa09bf5c2e691122348a9a82f2f4b1862',
+    'base/threading/scoped_blocking_call_internal.cc': 'd68e34b2acf1914e5b6fb040bdba22fc17b6e80319ef425036c735640c3da4a7',
+    'base/time/time_exploded_posix.cc': '71b40743ad0c11933e5b6460c6119b44c8347ae477864c6a336a1fcc0a189d99',
+    'base/trace_event/malloc_dump_provider.cc': 'eb0a7c37d9d041cbfa1f4d575bb1ee750d00f1a954b390661c07df059c635c23',
+    'base/trace_event/process_memory_dump.cc': 'e3f8edcd27ca5b1c74ef4ca569e158fe283b5c02b1a135d8e11b7c062e2f417e',
+    'third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc': 'deec1045dec9fe5a4ac9d404459080039cdaa34769a9331fcbc0dbb1b604ddc0',
+    'third_party/perfetto/src/tracing/BUILD.gn': 'd4469453da5cce17e6368fc3ceb0c6e664c46be27a600d87f1a562a16ae15d80',
     'third_party/blink/renderer/core/css/font_size_functions.cc': 'edb62eaf6521d50b017de1575b400f54871a4c3a7cafdd837aa2743c7eafe494',
     'third_party/blink/renderer/core/dom/layout_tree_builder_traversal.cc': '6b5b92b781684d6b307f3144b7b2a28650bff26e14c7878db5610c90a104aed5',
     'third_party/blink/renderer/core/dom/node.cc': '1bd5779c5c64a6a73797610e6e4e76162272f759c0ef5a45c5e652d61cb52f5b',
@@ -448,6 +476,28 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'base/debug/debugger_gtos.cc': 'base/debugger_gtos.cc',
+    'base/debug/stack_trace_gtos.cc': 'base/stack_trace_gtos.cc',
+    'base/files/file_gtos.cc': 'base/file_gtos.cc',
+    'base/files/file_util_gtos.cc': 'base/file_util_gtos.cc',
+    'base/files/gtos_file_snapshot.h': 'base/gtos_file_snapshot.h',
+    'base/files/memory_mapped_file_gtos.cc': 'base/memory_mapped_file_gtos.cc',
+    'base/native_library_gtos.cc': 'base/native_library_gtos.cc',
+    'base/process/process_gtos.cc': 'base/process_gtos.cc',
+    'base/synchronization/condition_variable_gtos.cc': 'base/condition_variable_gtos.cc',
+    'build/config/gtos/include/fnmatch.h': 'sdk/fnmatch.h',
+    'build/config/gtos/include/gtos_condition_variable.h': 'sdk/gtos_condition_variable.h',
+    'build/config/gtos/include/llvm-libc-macros/fnmatch-macros.h': '//third_party/llvm-libc/src/include/llvm-libc-macros/fnmatch-macros.h',
+    'build/config/gtos/runtime/directory.cpp': '../../native_libxml_file/directory.cpp',
+    'build/config/gtos/runtime/exit_gtos.cc': 'runtime/exit_gtos.cc',
+    'build/config/gtos/runtime/fnmatch_gtos.cc': 'runtime/fnmatch_gtos.cc',
+    'build/config/gtos/runtime/putc_gtos.cc': 'runtime/putc_gtos.cc',
+    'third_party/perfetto/src/tracing/platform_gtos.cc': 'perfetto/platform_gtos.cc',
+    'tools/gtos_native_sdk/probe/BUILD.gn': 'probe/content-base-sync.gn',
+    'tools/gtos_native_sdk/probe/gtos_content_asset_guest_test.cc': '../../../tests/gtos_content_asset_guest_test.cc',
+    'tools/gtos_native_sdk/probe/gtos_content_base_platform_guest_test.cc': '../../../tests/gtos_content_base_platform_guest_test.cc',
+    'tools/gtos_native_sdk/probe/gtos_content_condition_variable_guest_test.cc': '../../../tests/gtos_content_condition_variable_guest_test.cc',
+    'tools/gtos_native_sdk/probe/gtos_content_event_watcher_guest_test.cc': '../../../tests/gtos_content_event_watcher_guest_test.cc',
     'third_party/libxslt/gtos/config.h': 'xslt/config.h',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc': '../../native_v8_integration/overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h': '../../native_v8_integration/overlay/third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h',
@@ -597,6 +647,7 @@ ADDITIONS = {
 
 # Patch private copies of the qualified V8 platform sources.
 PATCHED_ADDITIONS = {
+    'build/config/gtos/runtime/directory.cpp',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h',
     'tools/gtos_native_sdk/native-services.h',
@@ -610,6 +661,8 @@ PATCHED_ADDITIONS = {
 
 # These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
+    'build/config/gtos/runtime/directory.cpp': 'bdc65bf6eeb758adf8bd1d541dce9a8cd49508d9b545e40d7b6bad2a08bc7aae',
+    'build/config/gtos/include/llvm-libc-macros/fnmatch-macros.h': 'beaf82fb2c84c3135286d48a40814d266456716543d7971d603e5b0d2c3b6a23',
     'third_party/libxslt/gtos/config.h': '5a00bcd7d287f424eeed0341af302d8493301700bbe8c6fed21a4ed859cbd2c0',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc': '4971352adbf49f1ef041b06eb28710094a35415a6102a88534e401c0829ec8f9',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.h': 'bbfcc0c66da3784d6735963d343f5f947d92f85f3907f44a27b1d3823ca1bb2d',
@@ -656,6 +709,15 @@ ADDITION_SHA256 = {
 # the unchanged TypeScript entry inside the private checkout so its validators
 # and GN arguments agree on the source root. No dependency check is relaxed.
 MATERIALIZED = {
+    'third_party/libc++/src/src/error_category.cpp': '06dff42f4f4dbb2d143b5e677f8bec24cc33bfd3f828562d53765f088a3e5fad',
+    'third_party/libc++/src/src/include/atomic_support.h': 'c01d71b5a8fe48773f3670166030284b1050413e22f24bf21bb8c64637036f9e',
+    'third_party/libc++/src/src/include/config_elast.h': '5954265d6afa068330beadd159eaa6a4821398a8c20fa4c3ae7886fe5e9cc155',
+    'third_party/libc++/src/src/include/refstring.h': '8051168ed2c4e4fd0ecb921ad90b15422b62f0c66678c11f9acf90940736f8d4',
+    'third_party/libc++/src/src/stdexcept.cpp': 'af6a2e2aea77ebf269f858d1056e50aff8aa572fd82f7750c32a4069fb76e063',
+    'third_party/libc++/src/src/support/runtime/stdexcept_default.ipp': '4f4a99af12f8a6c2d6eeb9894ebd9c4ee524feb3932766251ceced008d2eefc5',
+    'third_party/libc++/src/src/system_error.cpp': '32dea8edfe92738c0d35f1edc9fcd6088a30fb9861b57d728674ef23c7b919fe',
+    'third_party/llvm-libc/src/src/__support/StringUtil/error_to_string.cpp': '670d4d07e825e449d81d0f94451e3d326c16b185eb00fbc888370fec1ab1c839',
+    'third_party/llvm-libc/src/src/string/strerror_r.cpp': 'e8a677f36276abecf6cb1fa93528882518175029bb092812b456f943914cc940',
     'base/threading/platform_thread.cc': 'a55c93de98faebc8fa1faa27ea56c1b576bbe9cb4bb5e6a62ee6d877248e8f1c',
     'tools/typescript/ts_library.py': '65386df09493d3a9cf7201321df9930b66c368459d54378afc917b2c24ac788b',
     # Keep Python's generator and imported modules under the same GN root.

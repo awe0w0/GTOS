@@ -1,0 +1,24 @@
+--- a/base/task/common/task_annotator.cc
++++ b/base/task/common/task_annotator.cc
+@@ -164,9 +164,8 @@ void TaskAnnotator::WillQueueTask(perfetto::StaticString trace_event_name,
+   }
+ 
+   pending_task->task_backtrace[0] = parent_task->posted_from.program_counter();
+-  std::copy(parent_task->task_backtrace.begin(),
+-            parent_task->task_backtrace.end() - 1,
+-            pending_task->task_backtrace.begin() + 1);
++  base::span(pending_task->task_backtrace).subspan<1>().copy_from(
++      base::span(parent_task->task_backtrace).first<PendingTask::kTaskBacktraceLength - 1>());
+   pending_task->task_backtrace_overflow =
+       parent_task->task_backtrace_overflow ||
+       parent_task->task_backtrace.back();
+@@ -201,7 +200,8 @@ void TaskAnnotator::RunTaskImpl(PendingTask& pending_task) {
+   task_backtrace.back() = static_cast<uintptr_t>(0x0d00d1d1d178119);
+ 
+   task_backtrace[1] = pending_task.posted_from.program_counter();
+-  std::ranges::copy(pending_task.task_backtrace, task_backtrace.begin() + 2);
++  base::span(task_backtrace).subspan<2, PendingTask::kTaskBacktraceLength>().copy_from(
++      pending_task.task_backtrace);
+   task_backtrace[kStackTaskTraceSnapshotSize - 2] = pending_task.ipc_hash;
+   debug::Alias(&task_backtrace);
+ 

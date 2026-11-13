@@ -1,0 +1,22 @@
+--- a/base/process/kill.cc
++++ b/base/process/kill.cc
+@@ -15,6 +15,11 @@ namespace base {
+ bool KillProcesses(const FilePath::StringType& executable_name,
+                    int exit_code,
+                    const ProcessFilter* filter) {
++#if BUILDFLAG(IS_GTOS)
++  // Native process enumeration exposes only the caller, and no remote
++  // termination capability. In particular, do not terminate the caller.
++  return false;
++#else
+   bool result = true;
+   NamedProcessIterator iter(executable_name, filter);
+   while (const ProcessEntry* entry = iter.NextProcessEntry()) {
+@@ -30,6 +35,7 @@ bool KillProcesses(const FilePath::StringType& executable_name,
+     result &= process.Terminate(exit_code, true);
+   }
+   return result;
++#endif
+ }
+ 
+ #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_FUCHSIA)

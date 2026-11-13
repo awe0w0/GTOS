@@ -1,0 +1,53 @@
+--- a/base/memory/shared_memory_switch.cc
++++ b/base/memory/shared_memory_switch.cc
+@@ -68,6 +68,7 @@ namespace base::shared_memory {
+ namespace {
+ 
+ using base::subtle::PlatformSharedMemoryRegion;
++#if !BUILDFLAG(IS_GTOS)
+ using base::subtle::ScopedPlatformSharedMemoryHandle;
+ 
+ // The max shared memory size is artificially limited. This serves as a sanity
+@@ -336,6 +337,15 @@ void AddToLaunchParametersImpl(const RegionType& memory_region,
+                                   switch_value);
+ }
+ 
++#else
++expected<PlatformSharedMemoryRegion, SharedMemoryError> Deserialize(
++    std::string_view,
++    PlatformSharedMemoryRegion::Mode) {
++  // Process-local handles cannot be recovered from a child command line.
++  return unexpected(SharedMemoryError::kInvalidHandle);
++}
++#endif  // !BUILDFLAG(IS_GTOS)
++
+ }  // namespace
+ 
+ SharedMemorySwitch::SharedMemorySwitch(
+@@ -361,18 +371,26 @@ void SharedMemorySwitch::AddToLaunchParameters(
+     const ReadOnlySharedMemoryRegion& read_only_memory_region,
+     CommandLine* command_line,
+     LaunchOptions* launch_options) {
++#if BUILDFLAG(IS_GTOS)
++  CHECK(false) << "GTOS cannot transfer shared memory to a child process";
++#else
+   CHECK(command_line);
+   AddToLaunchParametersImpl(read_only_memory_region, this, command_line,
+                             launch_options);
++#endif
+ }
+ 
+ void SharedMemorySwitch::AddToLaunchParameters(
+     const UnsafeSharedMemoryRegion& unsafe_memory_region,
+     CommandLine* command_line,
+     LaunchOptions* launch_options) {
++#if BUILDFLAG(IS_GTOS)
++  CHECK(false) << "GTOS cannot transfer shared memory to a child process";
++#else
+   CHECK(command_line);
+   AddToLaunchParametersImpl(unsafe_memory_region, this, command_line,
+                             launch_options);
++#endif
+ }
+ 
+ expected<UnsafeSharedMemoryRegion, SharedMemoryError>

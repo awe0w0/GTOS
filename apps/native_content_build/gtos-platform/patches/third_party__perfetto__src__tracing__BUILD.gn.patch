@@ -1,0 +1,12 @@
+--- a/third_party/perfetto/src/tracing/BUILD.gn
++++ b/third_party/perfetto/src/tracing/BUILD.gn
+@@ -108,6 +108,9 @@ source_set("client_api_without_backends") {
+     "track_event_state_tracker.cc",
+     "virtual_destructors.cc",
+   ]
++  if (is_gtos) {
++    sources += [ "platform_gtos.cc" ]
++  }
+   assert_no_deps = [ "service" ]
+   if (enable_perfetto_ipc) {
+     assert_no_deps += [

@@ -1,0 +1,14 @@
+--- a/base/strings/string_number_conversions_internal.h
++++ b/base/strings/string_number_conversions_internal.h
+@@ -163,8 +163,9 @@ auto StringToNumber(std::basic_string_view<CharT> input) {
+   using Result = typename Parser::Result;
+ 
+   bool has_leading_whitespace = false;
+-  auto begin = input.begin();
+-  auto end = input.end();
++  const auto characters = base::span(input);
++  auto begin = characters.begin();
++  auto end = characters.end();
+ 
+   while (begin != end && IsAsciiWhitespace(*begin)) {
+     has_leading_whitespace = true;

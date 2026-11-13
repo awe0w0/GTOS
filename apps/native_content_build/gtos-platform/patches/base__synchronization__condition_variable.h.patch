@@ -1,0 +1,14 @@
+--- a/base/synchronization/condition_variable.h
++++ b/base/synchronization/condition_variable.h
+@@ -119,6 +119,11 @@ class BASE_EXPORT ConditionVariable {
+ #if BUILDFLAG(IS_WIN)
+   CHROME_CONDITION_VARIABLE cv_;
+   const raw_ptr<CHROME_SRWLOCK> srwlock_;
++#elif BUILDFLAG(IS_GTOS)
++  void WaitImpl(const Location& location, const timespec* deadline);
++
++  std::__libcpp_condvar_t condition_ = _LIBCPP_CONDVAR_INITIALIZER;
++  const raw_ptr<std::__libcpp_mutex_t> user_mutex_;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   pthread_cond_t condition_;
+   raw_ptr<pthread_mutex_t> user_mutex_;

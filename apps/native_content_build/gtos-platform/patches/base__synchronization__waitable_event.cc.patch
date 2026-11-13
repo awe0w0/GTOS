@@ -23,3 +23,82 @@
    DCHECK(!events.empty()) << "Cannot wait on no events";
  
    for (size_t i = 0; i < events.size(); ++i) {
+@@ -105,4 +114,78 @@ OnceClosure WaitableEvent::GetWaitCallbackForTesting() {
+   return BindOnce(&WaitableEvent::Wait, Unretained(this), FROM_HERE);
+ }
+ 
++#if BUILDFLAG(IS_GTOS) || BUILDFLAG(IS_FUCHSIA) || \
++    (BUILDFLAG(IS_POSIX) && \
++     (!BUILDFLAG(IS_APPLE) || (BUILDFLAG(IS_IOS) && BUILDFLAG(USE_BLINK))))
++WaitableEvent::WaitableEventKernel::WaitableEventKernel(
++    ResetPolicy reset_policy,
++    [[maybe_unused]] InitialState initial_state)
++    : manual_reset_(reset_policy == ResetPolicy::MANUAL) {
++#if !BUILDFLAG(IS_GTOS)
++  signaled_ = initial_state == InitialState::SIGNALED;
++#endif
++}
++
++WaitableEvent::WaitableEventKernel::~WaitableEventKernel() = default;
++
++// -----------------------------------------------------------------------------
++// Wake all waiting waiters. Called with lock held.
++// -----------------------------------------------------------------------------
++bool WaitableEvent::WaitableEventKernel::SignalAll(WaitableEvent* event) {
++  bool signaled_at_least_one = false;
++
++  for (Waiter* i : waiters_) {
++    if (i->Fire(event)) {
++      signaled_at_least_one = true;
++    }
++  }
++
++  waiters_.clear();
++  return signaled_at_least_one;
++}
++
++// ---------------------------------------------------------------------------
++// Try to wake a single waiter. Return true if one was woken. Called with lock
++// held.
++// ---------------------------------------------------------------------------
++bool WaitableEvent::WaitableEventKernel::SignalOne(WaitableEvent* event) {
++  for (;;) {
++    if (waiters_.empty()) {
++      return false;
++    }
++
++    const bool r = (*waiters_.begin())->Fire(event);
++    waiters_.pop_front();
++    if (r) {
++      return true;
++    }
++  }
++}
++
++// -----------------------------------------------------------------------------
++// Add a waiter to the list of those waiting. Called with lock held.
++// -----------------------------------------------------------------------------
++void WaitableEvent::Enqueue(Waiter* waiter) {
++  kernel_->waiters_.push_back(waiter);
++}
++
++// -----------------------------------------------------------------------------
++// Remove a waiter from the list of those waiting. Return true if the waiter was
++// actually removed. Called with lock held.
++// -----------------------------------------------------------------------------
++bool WaitableEvent::WaitableEventKernel::Dequeue(Waiter* waiter, void* tag) {
++  for (auto i = waiters_.begin(); i != waiters_.end(); ++i) {
++    if (*i == waiter && (*i)->Compare(tag)) {
++      waiters_.erase(i);
++      return true;
++    }
++  }
++
++  return false;
++}
++
++// -----------------------------------------------------------------------------
++
++#endif
++
+ }  // namespace base

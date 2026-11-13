@@ -44,12 +44,33 @@ source_set("native_threads") {
 source_set("native_libcpp_thread") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
+    "//third_party/libc++/src/src/error_category.cpp",
     "//third_party/libc++/src/src/future.cpp",
+    "//third_party/libc++/src/src/stdexcept.cpp",
+    "//third_party/libc++/src/src/system_error.cpp",
     "//third_party/libc++/src/src/thread.cpp",
   ]
   # The upstream ABI pragma region also lists attributes these TUs do not use.
   cflags_cc = [ "-Wno-pragma-clang-attribute" ]
-  deps = [ ":native_cxx_abi" ]
+  # The libc++ error categories deliberately use no-op exit destructors.
+  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
+  deps = [
+    ":native_cxx_abi",
+    ":native_error_strings",
+  ]
+}
+
+source_set("native_error_strings") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//third_party/llvm-libc/src/src/__support/StringUtil/error_to_string.cpp",
+    "//third_party/llvm-libc/src/src/string/strerror_r.cpp",
+  ]
+  include_dirs = [ "//third_party/llvm-libc/src" ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+  ]
 }
 
 source_set("native_cxx_abi") {
@@ -130,6 +151,8 @@ source_set("native_environment") {
   sources = [
     "//third_party/llvm-libc/src/src/stdlib/environ_internal.cpp",
     "//third_party/llvm-libc/src/src/stdlib/getenv.cpp",
+    "//third_party/llvm-libc/src/src/stdlib/linux/setenv.cpp",
+    "//third_party/llvm-libc/src/src/stdlib/linux/unsetenv.cpp",
     "//tools/gtos_native_sdk/environment/environment.cc",
   ]
   include_dirs = [
@@ -139,6 +162,39 @@ source_set("native_environment") {
   defines = [
     "LIBC_NAMESPACE=__llvm_libc_cr",
     "LIBC_COPT_PUBLIC_PACKAGING=1",
+  ]
+}
+
+source_set("native_file_api") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "directory.cpp",
+    "posix_file.cpp",
+  ]
+}
+
+source_set("native_base_libc") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "exit_gtos.cc",
+    "fnmatch_gtos.cc",
+    "putc_gtos.cc",
+    "//third_party/llvm-libc/src/src/ctype/isalpha.cpp",
+    "//third_party/llvm-libc/src/src/ctype/isgraph.cpp",
+    "//third_party/llvm-libc/src/src/math/generic/nextafter.cpp",
+    "//third_party/llvm-libc/src/src/string/strnlen.cpp",
+    "//third_party/llvm-libc/src/src/time/gmtime.cpp",
+    "//third_party/llvm-libc/src/src/wchar/wcschr.cpp",
+  ]
+  include_dirs = [ "//third_party/llvm-libc/src" ]
+  defines = [
+    "LIBC_NAMESPACE=__llvm_libc_cr",
+    "LIBC_COPT_PUBLIC_PACKAGING=1",
+  ]
+  deps = [
+    ":native_environment",
+    ":native_file_api",
+    ":native_locale",
   ]
 }
 
@@ -153,7 +209,6 @@ source_set("ffmpeg_support") {
   sources = [
     "ffmpeg/clock.cc",
     "ffmpeg/hyperbolic.cc",
-    "posix_file.cpp",
   ] + gtos_ffmpeg_libc_sources
   include_dirs = [
     "//third_party/llvm-libc/src",
@@ -166,6 +221,8 @@ source_set("ffmpeg_support") {
   deps = [
     ":codec_support",
     ":native_environment",
+    ":native_error_strings",
+    ":native_file_api",
     ":native_pthread",
     "//v8:v8_libbase",
   ]

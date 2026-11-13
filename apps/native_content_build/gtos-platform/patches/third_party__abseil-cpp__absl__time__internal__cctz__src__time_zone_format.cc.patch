@@ -1,0 +1,32 @@
+--- a/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc
++++ b/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc
+@@ -13,7 +13,7 @@
+ //   limitations under the License.
+ 
+ #if !defined(HAS_STRPTIME)
+-#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__VXWORKS__)
++#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__VXWORKS__) || defined(__GTOS__)
+ #define HAS_STRPTIME 0
+ #else
+ #define HAS_STRPTIME 1  // Assume everyone else has strptime().
+@@ -71,7 +71,7 @@ bool isspace(char ch) {
+ 
+ #if !HAS_STRPTIME
+ // Build a strptime() using C++11's std::get_time().
+-char* strptime(const char* s, const char* fmt, std::tm* tm) {
++char* ParseTimeWithLocale(const char* s, const char* fmt, std::tm* tm) {
+   std::istringstream input(s);
+   input >> std::get_time(tm, fmt);
+   if (input.fail()) return nullptr;
+@@ -665,7 +665,11 @@ const char* ParseSubSeconds(const char* dp, detail::femtoseconds* subseconds) {
+ // Parses a string into a std::tm using strptime(3).
+ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
+   if (dp != nullptr) {
++#if HAS_STRPTIME
+     dp = strptime(dp, fmt, tm);
++#else
++    dp = ParseTimeWithLocale(dp, fmt, tm);
++#endif
+   }
+   return dp;
+ }

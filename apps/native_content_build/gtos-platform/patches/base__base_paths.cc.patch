@@ -1,0 +1,38 @@
+--- a/base/base_paths.cc
++++ b/base/base_paths.cc
+@@ -73,6 +73,22 @@ bool PathProvider(int key, FilePath* result) {
+       return true;
+     case DIR_ASSETS:
++#if BUILDFLAG(IS_GTOS)
++    {
++      const auto assets =
++          Environment::Create()->GetVar("GTOS_CONTENT_ASSET_DIR");
++      if (!assets) {
++        return false;
++      }
++      FilePath path(*assets);
++      if (!path.IsAbsolute() || path.ReferencesParent()) {
++        return false;
++      }
++      *result = path;
++      return true;
++    }
++#else
+       return PathService::Get(DIR_MODULE, result);
++#endif
+ #endif  // !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_IOS)
+     case DIR_TEMP:
+       return GetTempDir(result);
+@@ -80,8 +96,12 @@ bool PathProvider(int key, FilePath* result) {
+       *result = GetHomeDir();
+       return true;
+     case base::DIR_SRC_TEST_DATA_ROOT:
++#if BUILDFLAG(IS_GTOS)
++      return false;  // Native packages have no source checkout path.
++#else
+       // This is only used by tests and overridden by each platform.
+       NOTREACHED();
++#endif
+ #if !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_IOS)
+     case DIR_OUT_TEST_DATA_ROOT:
+       // On most platforms test binaries are run directly from the build-output

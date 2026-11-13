@@ -1,6 +1,11 @@
 --- a/v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc
 +++ b/v8/tools/gtos_isolate_diagnostic/runtime/condition-variable-core.cc
-@@ -5,7 +5,7 @@
+@@ -1,11 +1,11 @@
+-#include <__external_threading>
++#include <gtos_condition_variable.h>
+ #include <errno.h>
+ #include <stdint.h>
+ #include <time.h>
  
  #include "src/base/platform/gtos-native-services.h"
  
@@ -18,3 +23,35 @@
  uint32_t condition_lock;
  class ConditionGuard {
   public:
+@@ -51,7 +51,7 @@ uint32_t Registered(__libcpp_condvar_t* condition) {
+ }
+ 
+ int Wait(__libcpp_condvar_t* condition, __libcpp_mutex_t* mutex,
+-         const __libcpp_timespec_t* deadline) {
++         const __libcpp_timespec_t* deadline, clockid_t clock = CLOCK_REALTIME) {
+   if (condition == nullptr || mutex == nullptr) return EINVAL;
+   const auto info = v8::base::gtos::CurrentProcessInfo();
+   if (!ValidCondition(condition, info.maximum_parallel_threads)) return EINVAL;
+@@ -88,7 +88,7 @@ int Wait(__libcpp_condvar_t* condition, __libcpp_mutex_t* mutex,
+     if (deadline != nullptr) {
+       timespec now = {};
+       const int saved_errno = errno;
+-      const int status = clock_gettime(CLOCK_REALTIME, &now);
++      const int status = clock_gettime(clock, &now);
+       const int error = errno;
+       errno = saved_errno;
+       if (status != 0) {
+@@ -155,6 +155,13 @@ int __libcpp_condvar_timedwait(__libcpp_condvar_t* condition,
+   return Wait(condition, mutex, deadline);
+ }
+ 
++int __libcpp_condvar_timedwait_monotonic(__libcpp_condvar_t* condition,
++                                        __libcpp_mutex_t* mutex,
++                                        const timespec* deadline) {
++  if (deadline == nullptr) return EINVAL;
++  return Wait(condition, mutex, deadline, CLOCK_MONOTONIC);
++}
++
+ int __libcpp_condvar_destroy(__libcpp_condvar_t* condition) {
+   if (condition == nullptr) return EINVAL;
+   const auto info = v8::base::gtos::CurrentProcessInfo();

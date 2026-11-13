@@ -1,0 +1,11 @@
+--- a/base/path_service.cc
++++ b/base/path_service.cc
+@@ -153,6 +153,8 @@ struct PathData {
+     providers = &base_provider_android;
+ #elif BUILDFLAG(IS_FUCHSIA)
+     providers = &base_provider_fuchsia;
++#elif BUILDFLAG(IS_GTOS)
++    providers = &base_provider;
+ #elif BUILDFLAG(IS_POSIX)
+     providers = &base_provider_posix;
+ #endif

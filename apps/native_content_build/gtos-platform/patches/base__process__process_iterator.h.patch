@@ -1,0 +1,22 @@
+--- a/base/process/process_iterator.h
++++ b/base/process/process_iterator.h
+@@ -41,7 +41,7 @@ struct ProcessEntry : public PROCESSENTRY32 {
+   ProcessId parent_pid() const { return th32ParentProcessID; }
+   const FilePath::CharType* exe_file() const { return szExeFile; }
+ };
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ struct BASE_EXPORT ProcessEntry {
+   ProcessEntry();
+   ProcessEntry(const ProcessEntry& other);
+@@ -124,6 +124,10 @@ class BASE_EXPORT ProcessIterator {
+     }
+   };
+   std::unique_ptr<DIR, DIRClose> procfs_dir_;
++#endif
++#if BUILDFLAG(IS_GTOS)
++  // Native GTOS exposes only the calling process to this iterator.
++  bool returned_current_process_ = false;
+ #endif
+   ProcessEntry entry_;
+   raw_ptr<const ProcessFilter> filter_;

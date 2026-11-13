@@ -1,0 +1,11 @@
+--- a/base/metrics/persistent_histogram_storage.cc
++++ b/base/metrics/persistent_histogram_storage.cc
+@@ -48,7 +48,7 @@ void* AllocateLocalMemory(size_t size) {
+   if (address != MAP_FAILED) {
+     return address;
+   }
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #error This architecture is not (yet) supported.
+ #endif
+ 

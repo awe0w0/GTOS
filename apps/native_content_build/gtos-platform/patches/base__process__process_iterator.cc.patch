@@ -1,0 +1,48 @@
+--- a/base/process/process_iterator.cc
++++ b/base/process/process_iterator.cc
+@@ -6,14 +6,44 @@
+ 
+ #include "build/build_config.h"
+ 
++#if BUILDFLAG(IS_GTOS)
++#include "base/command_line.h"
++#endif
+ namespace base {
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ ProcessEntry::ProcessEntry() : pid_(0), ppid_(0), gid_(0) {}
+ ProcessEntry::ProcessEntry(const ProcessEntry& other) = default;
+ ProcessEntry::~ProcessEntry() = default;
+ #endif
+ 
++#if BUILDFLAG(IS_GTOS)
++ProcessIterator::ProcessIterator(const ProcessFilter* filter) : filter_(filter) {}
++ProcessIterator::~ProcessIterator() = default;
++
++bool ProcessIterator::CheckForNextProcess() {
++  if (returned_current_process_) {
++    return false;
++  }
++  returned_current_process_ = true;
++  entry_.pid_ = GetCurrentProcId();
++  if (CommandLine::InitializedForCurrentProcess()) {
++    const auto* command = CommandLine::ForCurrentProcess();
++    entry_.exe_file_ = command->GetProgram().BaseName().value();
++    entry_.cmd_line_args_ = command->argv();
++  }
++  return entry_.pid_ != kNullProcessId;
++}
++
++bool NamedProcessIterator::IncludeEntry() {
++  const auto& name = entry().exe_file_;
++  return !name.empty() &&
++         (use_prefix_match_ ? name.starts_with(executable_name_)
++                            : name == executable_name_) &&
++         ProcessIterator::IncludeEntry();
++}
++#endif
++
+ const ProcessEntry* ProcessIterator::NextProcessEntry() {
+   bool result = false;
+   do {

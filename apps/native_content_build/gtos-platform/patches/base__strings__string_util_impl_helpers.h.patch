@@ -1,0 +1,33 @@
+--- a/base/strings/string_util_impl_helpers.h
++++ b/base/strings/string_util_impl_helpers.h
+@@ -301,7 +301,8 @@ inline bool DoIsStringUTF8(std::string_view str) {
+ inline constexpr std::array<unsigned char, 256> kToLower = []() {
+   std::array<unsigned char, 256> table;
+   std::ranges::iota(table, 0);
+-  std::iota(table.begin() + size_t{'A'}, table.begin() + size_t{'Z'} + 1, 'a');
++  std::ranges::iota(base::span(table).subspan<'A', 26>(),
++                    static_cast<unsigned char>('a'));
+   return table;
+ }();
+ 
+@@ -594,16 +595,17 @@ std::optional<std::basic_string<CharT>> DoReplaceStringPlaceholders(
+   if (offsets) {
+     r_offsets.reserve(substitutions);
+   }
+-  for (auto i = format_string.begin(); i != format_string.end(); ++i) {
++  const auto format = base::span(format_string);
++  for (auto i = format.begin(); i != format.end(); ++i) {
+     if (placeholder_prefix == *i) {
+-      if (i + 1 != format_string.end()) {
++      if (i + 1 != format.end()) {
+         ++i;
+         if (placeholder_prefix == *i) {
+           do {
+             formatted.push_back(placeholder_prefix);
+             ++i;
+           } while (should_escape_multiple_placeholder_prefixes &&
+-                   i != format_string.end() && placeholder_prefix == *i);
++                   i != format.end() && placeholder_prefix == *i);
+           --i;
+         } else {
+           if (*i < '1' || *i > '9') {

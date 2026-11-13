@@ -1,0 +1,57 @@
+--- a/base/files/file_enumerator.h
++++ b/base/files/file_enumerator.h
+@@ -20,7 +20,7 @@
+ 
+ #if BUILDFLAG(IS_WIN)
+ #include "base/win/windows_types.h"
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ #include <sys/stat.h>
+ #include <unistd.h>
+ 
+@@ -92,7 +92,7 @@ class BASE_EXPORT FileEnumerator {
+     const WIN32_FIND_DATA& find_data() const {
+       return *ChromeToWindowsType(&find_data_);
+     }
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+     const stat_wrapper_t& stat() const { return stat_; }
+ #endif
+ 
+@@ -105,7 +105,7 @@ class BASE_EXPORT FileEnumerator {
+ #endif
+ #if BUILDFLAG(IS_WIN)
+     CHROME_WIN32_FIND_DATA find_data_ = {};
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+     stat_wrapper_t stat_;
+     FilePath filename_;
+ #endif
+@@ -125,7 +125,7 @@ class BASE_EXPORT FileEnumerator {
+     // called.
+     NAMES_ONLY = 1 << 3,
+ 
+-#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+     // Report symlinks in the enumeration. If not set, instead report their
+     // targets. Recursive enumerations traverse symlinks to directories only if
+     // SHOW_SYM_LINKS is not set.
+@@ -248,7 +248,7 @@ class BASE_EXPORT FileEnumerator {
+   CHROME_WIN32_FIND_DATA find_data_ = {};
+   HANDLE find_handle_ = INVALID_HANDLE_VALUE;
+ 
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   // Marks the given inode as visited. Returns true if it is the first time that
+   // it got marked as visited.
+   bool MarkVisited(const stat_wrapper_t& st) {
+@@ -258,7 +258,8 @@ class BASE_EXPORT FileEnumerator {
+   // The files in the current directory
+   std::vector<FileInfo> directory_entries_;
+ 
+-#if BUILDFLAG(IS_ANDROID)
++#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_GTOS)
++  // Use the native stat field types where the SDK has no dev_t/ino_t.
+   // The Android NDK (r23) does not declare `st_dev` as a `dev_t`, nor `st_ino`
+   // as an `ino_t`, hence the need for these decltypes.
+   using dev_t = decltype(stat_wrapper_t::st_dev);

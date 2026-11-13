@@ -85,14 +85,26 @@ void WaitableEvent::NativeEventTraits::Free(unsigned handle) {
 }
 
 WaitableEvent::WaitableEvent(ResetPolicy reset, InitialState initial)
-    : handle_(CreateEvent(reset, initial)) {}
+    : handle_(CreateEvent(reset, initial)),
+      kernel_(MakeRefCounted<WaitableEventKernel>(reset, initial)) {}
 
 void WaitableEvent::Reset() {
+  AutoLock locked(kernel_->lock_);
   ControlEvent(GTOS_SYS_EVENT_RESET, handle_.get());
 }
 
 void WaitableEvent::SignalImpl() {
-  ControlEvent(GTOS_SYS_EVENT_SET, handle_.get());
+  // A waiter can destroy this event after notification. Keep the queue alive
+  // and avoid accessing event members after waking anyone.
+  const scoped_refptr<WaitableEventKernel> kernel = kernel_;
+  const unsigned handle = handle_.get();
+  AutoLock locked(kernel->lock_);
+  if (kernel->manual_reset_) {
+    ControlEvent(GTOS_SYS_EVENT_SET, handle);
+    kernel->SignalAll(this);
+  } else if (!kernel->SignalOne(this)) {
+    ControlEvent(GTOS_SYS_EVENT_SET, handle);
+  }
 }
 
 bool WaitableEvent::IsSignaled() const {

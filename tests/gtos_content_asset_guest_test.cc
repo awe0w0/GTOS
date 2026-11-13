@@ -43,6 +43,15 @@ int TestGinPageAllocator();
 #if defined(GTOS_CONTENT_CONTOUR_TEST)
 int TestContentContour();
 #endif
+#if defined(GTOS_CONTENT_EVENT_WATCHER_TEST)
+int TestContentEventWatcher();
+#endif
+#if defined(GTOS_CONTENT_CONDVAR_TEST)
+int TestContentConditionVariable();
+#endif
+#if defined(GTOS_CONTENT_BASE_PLATFORM_TEST)
+int TestContentBasePlatform();
+#endif
 #if defined(GTOS_CONTENT_RUST_XML_TEST)
 extern "C" int GtosRustXmlProbe();
 #endif
@@ -90,7 +99,11 @@ bool ReadMatches(unsigned handle, unsigned offset, const Byte (&expected)[Size])
 struct ExitMarker {
     ~ExitMarker() { Say("GTOS CRT DESTRUCTOR\n"); }
 };
+// This fixture exercises the native CRT's exit-time destructor registration.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexit-time-destructors"
 ExitMarker exit_marker;
+#pragma clang diagnostic pop
 
 #if defined(GTOS_CONTENT_TFLITE_FILE_TEST)
 class ModelReporter final : public tflite::ErrorReporter {
@@ -191,7 +204,7 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
     if (page <= 0 || !ReadMatches(page, 0, prefix) || Close(page)) return 3;
 
 #if defined(GTOS_CONTENT_SQLITE_TEST) || defined(GTOS_CONTENT_FILE_CONSUMERS_TEST) || \
-    defined(GTOS_CONTENT_XML_ARCHIVE_TEST)
+    defined(GTOS_CONTENT_XML_ARCHIVE_TEST) || defined(GTOS_CONTENT_BASE_PLATFORM_TEST)
     if (Open(GTOS_CONTENT_ASSET_DIRECTORY "/missing", GTOS_FILE_READ) != -2) return 4;
     Say("GTOS CONTENT ASSETS PASS\n");
 #else
@@ -250,6 +263,18 @@ extern "C" int GtosContentShellMain(int argc, const char** argv) {
 #if defined(GTOS_CONTENT_CONTOUR_TEST)
     if (const int status = TestContentContour()) return status;
     Say("GTOS CONTENT CONTOUR PASS\n");
+#endif
+#if defined(GTOS_CONTENT_EVENT_WATCHER_TEST)
+    if (const int status = TestContentEventWatcher()) return status;
+    Say("GTOS CONTENT EVENT WATCHER PASS\n");
+#endif
+#if defined(GTOS_CONTENT_CONDVAR_TEST)
+    if (const int status = TestContentConditionVariable()) return status;
+    Say("GTOS CONTENT CONDITION VARIABLE PASS\n");
+#endif
+#if defined(GTOS_CONTENT_BASE_PLATFORM_TEST)
+    if (const int status = TestContentBasePlatform()) return status;
+    Say("GTOS CONTENT BASE PLATFORM PASS\n");
 #endif
 #if defined(GTOS_CONTENT_RUST_XML_TEST)
     if (const int status = GtosRustXmlProbe()) return status;

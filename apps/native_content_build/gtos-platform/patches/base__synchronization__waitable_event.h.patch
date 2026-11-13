@@ -1,24 +1,69 @@
 --- a/base/synchronization/waitable_event.h
 +++ b/base/synchronization/waitable_event.h
-@@ -19,6 +19,8 @@
+@@ -27,11 +27,14 @@
  
- #if BUILDFLAG(IS_WIN)
- #include "base/win/scoped_handle.h"
-+#elif BUILDFLAG(IS_GTOS)
+ #include "base/apple/scoped_mach_port.h"
+ #include "base/memory/ref_counted.h"
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ #include <utility>
+ 
+ #include "base/memory/ref_counted.h"
+ #include "base/synchronization/lock.h"
++#if BUILDFLAG(IS_GTOS)
 +#include "base/scoped_generic.h"
- #elif BUILDFLAG(IS_APPLE)
- #include <mach/mach.h>
++#endif
+ #endif
  
-@@ -192,6 +194,12 @@ class BASE_EXPORT WaitableEvent {
+ namespace base {
+@@ -239,7 +242,15 @@ class BASE_EXPORT WaitableEvent {
+   apple::ScopedMachSendRight send_right_;
  
- #if BUILDFLAG(IS_WIN)
-   win::ScopedHandle handle_;
-+#elif BUILDFLAG(IS_GTOS)
+   mutable std::atomic<bool> signal_estimate_{false};
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
++#if BUILDFLAG(IS_GTOS)
 +  struct NativeEventTraits {
 +    static constexpr unsigned InvalidValue() { return 0; }
 +    static void Free(unsigned handle);
 +  };
 +  ScopedGeneric<unsigned, NativeEventTraits> handle_;
- #elif BUILDFLAG(IS_APPLE) && (!BUILDFLAG(IS_IOS) || !BUILDFLAG(USE_BLINK))
-   // iOS which supports blink must use the posix variant since opening
-   // mach_ports is prevented inside sandbox profiles.
++#endif
++
+   // On Windows, you must not close a HANDLE which is currently being waited on.
+   // The MSDN documentation says that the resulting behaviour is 'undefined'.
+   // To solve that issue each WaitableEventWatcher duplicates the given event
+@@ -256,11 +267,15 @@ class BASE_EXPORT WaitableEvent {
+    public:
+     WaitableEventKernel(ResetPolicy reset_policy, InitialState initial_state);
+ 
++    bool SignalAll(WaitableEvent* event);
++    bool SignalOne(WaitableEvent* event);
+     bool Dequeue(Waiter* waiter, void* tag);
+ 
+     base::Lock lock_;
+     const bool manual_reset_;
++#if !BUILDFLAG(IS_GTOS)
+     bool signaled_;
++#endif
+     base::circular_deque<raw_ptr<Waiter, CtnExperimental>> waiters_;
+ 
+    private:
+@@ -268,6 +283,7 @@ class BASE_EXPORT WaitableEvent {
+     ~WaitableEventKernel();
+   };
+ 
++#if !BUILDFLAG(IS_GTOS)
+   using WaiterAndIndex = std::pair<WaitableEvent*, size_t>;
+ 
+   // When dealing with arrays of WaitableEvent*, we want to sort by the address
+@@ -278,8 +294,7 @@ class BASE_EXPORT WaitableEvent {
+   static size_t EnqueueMany(base::span<WaiterAndIndex> waitables,
+                             Waiter* waiter);
+ 
+-  bool SignalAll();
+-  bool SignalOne();
++#endif
+   void Enqueue(Waiter* waiter);
+ 
+   scoped_refptr<WaitableEventKernel> kernel_;

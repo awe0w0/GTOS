@@ -1,0 +1,33 @@
+--- a/base/time/time_exploded_posix.cc
++++ b/base/time/time_exploded_posix.cc
+@@ -104,7 +104,12 @@ typedef time_t SysTime;
+ 
+ SysTime SysTimeFromTimeStruct(struct tm* timestruct, bool is_local) {
+   base::AutoLock locked(*GetSysTimeToTimeStructLock());
++#if BUILDFLAG(IS_GTOS)
++  // GTOS libc uses UTC for both calendar views.
++  return mktime(timestruct);
++#else
+   return is_local ? mktime(timestruct) : timegm(timestruct);
++#endif
+ }
+ 
+ void SysTimeToTimeStruct(SysTime t, struct tm* timestruct, bool is_local) {
+@@ -130,7 +135,7 @@ void Time::Explode(bool is_local, Exploded* exploded) const {
+   if (sizeof(SysTime) < 8) {
+ // TODO(b/167763382) Find an alternate solution for Chromecast devices, since
+ // adding the icui18n dep significantly increases the binary size.
+-#if !BUILDFLAG(IS_CASTOS) && !BUILDFLAG(IS_CAST_ANDROID)
++#if !BUILDFLAG(IS_CASTOS) && !BUILDFLAG(IS_CAST_ANDROID) && !BUILDFLAG(IS_GTOS)
+     ExplodeUsingIcu(millis_since_unix_epoch, is_local, exploded);
+     return;
+ #endif  // !BUILDFLAG(IS_CASTOS) && !BUILDFLAG(IS_CAST_ANDROID)
+@@ -183,7 +188,7 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
+   timestruct.tm_wday = exploded.day_of_week;  // mktime/timegm ignore this
+   timestruct.tm_yday = 0;                     // mktime/timegm ignore this
+   timestruct.tm_isdst = -1;                   // attempt to figure it out
+-#if !BUILDFLAG(IS_SOLARIS) && !BUILDFLAG(IS_AIX)
++#if !BUILDFLAG(IS_SOLARIS) && !BUILDFLAG(IS_AIX) && !BUILDFLAG(IS_GTOS)
+   timestruct.tm_gmtoff = 0;      // not a POSIX field, so mktime/timegm ignore
+   timestruct.tm_zone = nullptr;  // not a POSIX field, so mktime/timegm ignore
+ #endif

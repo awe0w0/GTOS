@@ -1,0 +1,40 @@
+--- a/base/threading/scoped_blocking_call_internal.cc
++++ b/base/threading/scoped_blocking_call_internal.cc
+@@ -9,6 +9,7 @@
+ 
+ #include "base/check_op.h"
+ #include "base/compiler_specific.h"
++#include "base/containers/span.h"
+ #include "base/functional/bind.h"
+ #include "base/functional/callback_helpers.h"
+ #include "base/no_destructor.h"
+@@ -272,25 +273,16 @@ void IOJankMonitoringWindow::AddJank(size_t local_jank_start_index,
+   const size_t jank_end_index = local_jank_start_index + num_janky_intervals;
+   const size_t local_jank_end_index = std::min(kNumIntervals, jank_end_index);
+ 
+-  const ptrdiff_t jank_start_index_ptrdiff =
+-      checked_cast<ptrdiff_t>(local_jank_start_index);
+-  const ptrdiff_t jank_end_index_ptrdiff =
+-      checked_cast<ptrdiff_t>(local_jank_end_index);
+-
+   {
+     // Note: while this window could be |canceled| here we must add our count
+     // unconditionally as it is only thread-safe to read |canceled| in
+     // ~IOJankMonitoringWindow().
+     AutoLock lock(intervals_lock_);
+ 
+-    DCHECK_LE(static_cast<size_t>(jank_start_index_ptrdiff),
+-              intervals_jank_count_.size());
+-    DCHECK_LE(static_cast<size_t>(jank_end_index_ptrdiff),
+-              intervals_jank_count_.size());
+-
+-    std::for_each(intervals_jank_count_.begin() + jank_start_index_ptrdiff,
+-                  intervals_jank_count_.begin() + jank_end_index_ptrdiff,
+-                  [](size_t& n) { ++n; });
++    for (size_t& count : base::span(intervals_jank_count_).subspan(
++             local_jank_start_index, local_jank_end_index - local_jank_start_index)) {
++      ++count;
++    }
+   }
+ 
+   if (jank_end_index != local_jank_end_index) {

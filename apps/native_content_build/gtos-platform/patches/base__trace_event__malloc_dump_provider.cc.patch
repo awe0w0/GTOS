@@ -1,0 +1,39 @@
+--- a/base/trace_event/malloc_dump_provider.cc
++++ b/base/trace_event/malloc_dump_provider.cc
+@@ -29,7 +29,7 @@
+ 
+ #if BUILDFLAG(IS_APPLE)
+ #include <malloc/malloc.h>
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #include <malloc.h>
+ #endif
+ #if BUILDFLAG(IS_WIN)
+@@ -266,7 +266,7 @@ void ReportAppleAllocStats(size_t* total_virtual_size,
+ 
+ #if (PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC) && BUILDFLAG(IS_ANDROID)) || \
+     (!PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC) && !BUILDFLAG(IS_WIN) &&    \
+-     !BUILDFLAG(IS_APPLE) && !BUILDFLAG(IS_FUCHSIA))
++     !BUILDFLAG(IS_APPLE) && !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_GTOS))
+ void ReportMallinfoStats(ProcessMemoryDump* pmd,
+                          size_t* total_virtual_size,
+                          size_t* resident_size,
+@@ -451,6 +451,10 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
+     }
+   }
+ 
++#if BUILDFLAG(IS_GTOS) && !PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
++  // The native allocator does not yet expose its own allocation counters.
++  return false;
++#else
+   size_t total_virtual_size = 0;
+   size_t resident_size = 0;
+   size_t allocated_objects_size = 0;
+@@ -654,6 +658,7 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
+       elud_dump_for_small_objects, elud_dump_for_large_objects);
+ 
+   return true;
++#endif  // BUILDFLAG(IS_GTOS) && !PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+ }
+ 
+ void MallocDumpProvider::ReportPerMinuteStats(
