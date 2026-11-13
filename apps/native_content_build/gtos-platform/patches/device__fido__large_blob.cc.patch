@@ -1,0 +1,38 @@
+--- a/device/fido/large_blob.cc
++++ b/device/fido/large_blob.cc
+@@ -31,9 +31,9 @@ std::array<uint8_t, kAssociatedDataLength> GenerateLargeBlobAdditionalData(
+     size_t size) {
+   std::array<uint8_t, kAssociatedDataLength> additional_data;
+   const auto size_bytes = base::U64ToLittleEndian(size);
+-  std::ranges::copy(kLargeBlobADPrefix, additional_data.begin());
+-  std::ranges::copy(size_bytes,
+-                    additional_data.begin() + kLargeBlobADPrefix.size());
++  auto data = base::span(additional_data);
++  data.first<kLargeBlobADPrefix.size()>().copy_from(kLargeBlobADPrefix);
++  data.subspan<kLargeBlobADPrefix.size()>().copy_from(size_bytes);
+   return additional_data;
+ }
+ 
+@@ -71,9 +71,8 @@ bool VerifyLargeBlobArrayIntegrity(base::span<const uint8_t> large_blob_array) {
+ 
+   base::span<const uint8_t> large_blob_trail =
+       large_blob_array.subspan(trail_offset);
+-  return std::equal(large_blob_hash.begin(),
+-                    large_blob_hash.begin() + kTruncatedHashBytes,
+-                    large_blob_trail.begin(), large_blob_trail.end());
++  return std::ranges::equal(
++      base::span(large_blob_hash).first<kTruncatedHashBytes>(), large_blob_trail);
+ }
+ 
+ // static
+@@ -290,8 +289,8 @@ LargeBlobArrayWriter::LargeBlobArrayWriter(
+   bytes_ = *cbor::Writer::Write(cbor::Value(std::move(large_blob_array)));
+   std::array<uint8_t, crypto::hash::kSha256Size> large_blob_hash =
+       crypto::hash::Sha256(bytes_);
+-  bytes_.insert(bytes_.end(), large_blob_hash.begin(),
+-                large_blob_hash.begin() + kTruncatedHashBytes);
++  const auto checksum = base::span(large_blob_hash).first<kTruncatedHashBytes>();
++  bytes_.insert(bytes_.end(), checksum.begin(), checksum.end());
+   DCHECK(VerifyLargeBlobArrayIntegrity(bytes_));
+ }
+ LargeBlobArrayWriter::LargeBlobArrayWriter(LargeBlobArrayWriter&&) = default;

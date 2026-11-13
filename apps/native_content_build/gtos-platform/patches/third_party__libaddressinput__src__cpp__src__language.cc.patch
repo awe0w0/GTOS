@@ -1,0 +1,10 @@
+--- a/third_party/libaddressinput/src/cpp/src/language.cc
++++ b/third_party/libaddressinput/src/cpp/src/language.cc
+@@ -19,6 +19,7 @@
+ #include <string>
+ #include <vector>
+ 
++#include "format_element.h"
+ #include "rule.h"
+ #include "util/string_split.h"
+ 

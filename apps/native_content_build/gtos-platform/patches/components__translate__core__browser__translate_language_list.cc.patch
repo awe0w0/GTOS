@@ -1,0 +1,11 @@
+--- a/components/translate/core/browser/translate_language_list.cc
++++ b/components/translate/core/browser/translate_language_list.cc
+@@ -49,7 +49,7 @@ using ::base::i18n::LanguageTag;
+ // This list is identical to above except that it excludes
+ // {ilo lus mni-Mtei gom doi bm ckb}.
+ constexpr auto kDefaultSupportedPartialTranslateLanguages =
+-    base::MakeFixedFlatSet<LanguageTag>({
++    base::MakeFixedFlatSet<LanguageTag>(base::sorted_unique, {
+         GetKnownLanguageTag("af"),     // Afrikaans
+         GetKnownLanguageTag("ak"),     // Akan
+         GetKnownLanguageTag("am"),     // Amharic

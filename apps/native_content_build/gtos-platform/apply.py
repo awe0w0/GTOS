@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/libaddressinput/src/cpp/src/language.cc': '34bc28e146cc1f84bfd2d123cc3762e4d252eb0a1d4f426e72dfc87e267bfa1d',
+    'components/translate/core/browser/translate_language_list.cc': '192caec2c15b5324c9c02b9a61b504612b8d55e8cf00f3a6a02724f7bab1b5b0',
+    'device/fido/large_blob.cc': '6c3695370114ccfb3757405d7ee47ec3ab25b24ec28429fd265963d9a978edf2',
     'third_party/skia/src/core/SkOpts.cpp': '62eb755303ba4380a3c9b1c775dff01a369c85baf7e66106b75851de4a3c089e',
     'content/shell/browser/shell_content_browser_client.cc': '2aadd02a544344e32895593d1dce9cf3fd053b17b3b0952aff921ae7c670b796',
     'components/content_settings/core/browser/website_settings_registry.cc': '17715bfd3889557540b351cb26f4c152e28facd5bac2dda0bc3d7666ad25f09b',
