@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/dav1d/BUILD.gn': '855545b101e94030da1ad77810f9dd36fcfab56c7d01437118079e871a6af5ab',
     'build/config/ozone.gni': '84edd6072e1c69b9132514bc3cdc526cac8f95ca730a6665946cb25f09900c09',
     'base/version_info/version_info.h': 'e4e286ddc4b778a11161381eb60be02ba6bb049566d7023852a6620816010959',
     'components/policy/core/common/cloud/cloud_policy_util.cc': '792e95152fa99df555138805883521a71f948b45248f18e1ca1372661f193913',
@@ -480,6 +481,8 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'third_party/dav1d/config/gtos/x86/config.h': 'dav1d/config.h',
+    'third_party/dav1d/config/gtos/x86/config.asm': 'dav1d/config.asm',
     'build/config/gtos/ozone_extra.gni': 'ozone/ozone_extra.gni',
     'ui/ozone/platform/gtos/BUILD.gn': 'ozone/BUILD.gn',
     'ui/ozone/platform/gtos/ozone_platform_gtos.cc': 'ozone/ozone_platform_gtos.cc',
