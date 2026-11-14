@@ -1,23 +1,63 @@
 --- a/third_party/dawn/src/dawn/common/DynamicLib.cpp
 +++ b/third_party/dawn/src/dawn/common/DynamicLib.cpp
-@@ -41,0 +42,2 @@
+@@ -39,6 +39,8 @@
+ #endif
+ #elif DAWN_PLATFORM_IS(POSIX)
+ #include <dlfcn.h>
 +#elif DAWN_PLATFORM_IS(GTOS)
-+// GTOS loads statically linked native executables, not shared libraries.
-@@ -108,0 +111,4 @@ bool DynamicLib::Open(const std::string& filename, std::string* error) {
++// GTOS loads statically linked native executables.
+ #else
+ #error "Unsupported platform for DynamicLib"
+ #endif
+@@ -106,6 +108,10 @@ bool DynamicLib::Open(const std::string& filename, std::string* error) {
+     if (mHandle == nullptr && error != nullptr) {
+         *error = dlerror();
+     }
 +#elif DAWN_PLATFORM_IS(GTOS)
 +    if (error != nullptr) {
 +        *error = "GTOS dynamic libraries are unavailable: " + filename;
 +    }
-@@ -132,0 +139,4 @@ bool DynamicLib::OpenLoaded(const std::string& filename, std::string* error) {
+ #else
+ #error "Unsupported platform for DynamicLib"
+ #endif
+@@ -130,6 +136,10 @@ bool DynamicLib::OpenLoaded(const std::string& filename, std::string* error) {
+     if (mHandle == nullptr && error != nullptr) {
+         *error = dlerror();
+     }
 +#elif DAWN_PLATFORM_IS(GTOS)
 +    if (error != nullptr) {
 +        *error = "GTOS dynamic libraries are unavailable: " + filename;
 +    }
-@@ -169,0 +180,2 @@ void DynamicLib::Close() {
-+#elif DAWN_PLATFORM_IS(GTOS)
-+        DAWN_UNREACHABLE();  // Open/OpenLoaded never create an owned handle.
-@@ -193,0 +206,4 @@ void* DynamicLib::GetProc(const std::string& procName, std::string* error) const
+ #else
+ #error "Unsupported platform for DynamicLib"
+ #endif
+@@ -152,6 +162,10 @@ bool DynamicLib::Open(const std::string& filename,
+ }
+ 
+ void DynamicLib::Close() {
++#if DAWN_PLATFORM_IS(GTOS)
++    DAWN_ASSERT(mHandle == nullptr);
++    mNeedsClose = false;
++#else
+     if (mHandle == nullptr) {
+         return;
+     }
+@@ -174,6 +188,7 @@ void DynamicLib::Close() {
+ 
+     mNeedsClose = false;
+     mHandle = nullptr;
++#endif
+ }
+ 
+ void* DynamicLib::GetProc(const std::string& procName, std::string* error) const {
+@@ -191,6 +206,10 @@ void* DynamicLib::GetProc(const std::string& procName, std::string* error) const
+     if (proc == nullptr && error != nullptr) {
+         *error = dlerror();
+     }
 +#elif DAWN_PLATFORM_IS(GTOS)
 +    if (error != nullptr) {
 +        *error = "GTOS dynamic symbols are unavailable: " + procName;
 +    }
+ #else
+ #error "Unsupported platform for DynamicLib"
+ #endif
