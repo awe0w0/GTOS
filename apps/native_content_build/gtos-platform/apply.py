@@ -345,6 +345,7 @@ INPUTS = {
     'third_party/rust/image/v0_25/BUILD.gn': '7e4c22cf475df0f764019d2914796b1203f607529759852ef09346d102b13d11',
     'third_party/rust/chromium_crates_io/vendor/image-v0_25/src/lib.rs': '6e47fec523655d8881a7d638045062f3b30f28e13a0ab041cdaf80027b6156a3',
     'skia/BUILD.gn': '8dab5d0b349107e9f599123676f1e7f9a74e793ee2f8abb5c1ca7165abf9e68c',
+    'skia/ext/font_utils.cc': '2b535e7bfcd11e3610c0850ab73c617568e469bc1b9b761c1b9363c549406f9f',
     'third_party/skia/src/ports/fontations/src/ffi.rs': 'fbccc6be9e4638281145faf539dffdd8d214cebd507d76a83a353b71521347e5',
     'third_party/expat/BUILD.gn': 'efe6d8963001dac722c293cfeb70a023bd4f4f6909f2ae62f6bb3606b853f86f',
     'third_party/expat/include/expat_config/expat_config.h': 'd2dc338829c92cfd73fcad53eaaeab004260edc1b3331ea29be42a081684d285',

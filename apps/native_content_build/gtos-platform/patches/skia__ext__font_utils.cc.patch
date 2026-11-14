@@ -1,0 +1,42 @@
+--- a/skia/ext/font_utils.cc
++++ b/skia/ext/font_utils.cc
+@@ -53,6 +53,14 @@
+ #include "third_party/skia/include/ports/SkFontMgr_empty.h"
+ #endif
+ 
++#if BUILDFLAG(IS_GTOS)
++#include "base/base_paths.h"
++#include "base/files/file_util.h"
++#include "base/path_service.h"
++#include "third_party/skia/include/core/SkData.h"
++#include "third_party/skia/include/ports/SkFontMgr_data.h"
++#endif
++
+ #include <mutex>
+ 
+ namespace {
+@@ -100,6 +108,24 @@ static sk_sp<SkFontMgr> fontmgr_factory() {
+                                SkFontScanner_Make_Fontations());
+ #elif BUILDFLAG(IS_WIN)
+   return SkFontMgr_New_DirectWrite();
++#elif BUILDFLAG(IS_GTOS)
++  base::FilePath assets;
++  if (base::PathService::Get(base::DIR_ASSETS, &assets)) {
++    constexpr size_t kMaximumFontBytes = 1 << 20;
++    std::string bytes;
++    if (base::ReadFileToStringWithMaxSize(
++            assets.AppendASCII("Roboto-Regular.ttf"), &bytes,
++            kMaximumFontBytes) &&
++        !bytes.empty()) {
++      sk_sp<SkData> data = SkData::MakeWithCopy(bytes.data(), bytes.size());
++      auto manager = SkFontMgr_New_Custom_Data(SkSpan(&data, 1));
++      if (manager && manager->countFamilies() > 0 &&
++          manager->matchFamilyStyle("Roboto", SkFontStyle())) {
++        return manager;
++      }
++    }
++  }
++  return SkFontMgr_New_Custom_Empty();
+ #elif defined(SK_FONTMGR_FREETYPE_EMPTY_AVAILABLE)
+   return SkFontMgr_New_Custom_Empty();
+ #else

@@ -12,7 +12,18 @@
    deps = [
      ":path_bridge",
      "//third_party/rust/font_types/v0_12:lib",
-@@ -648,6 +653,10 @@ component("skia_switches") {
+@@ -431,6 +436,10 @@ component("skia") {
+       sources += skia_ports_fontmgr_custom_sources
+       sources += skia_ports_fontmgr_empty_sources
+       public += skia_ports_fontmgr_empty_public
++      if (is_gtos) {
++        sources += skia_ports_fontmgr_embedded_sources
++        public += skia_ports_fontmgr_embedded_public
++      }
+     }
+     sources += skia_ports_typeface_proxy_sources
+     sources += skia_ports_typeface_fontations_sources
+@@ -648,6 +657,10 @@ component("skia_switches") {
  }
  
  rust_static_library("rust_common_ffi") {
@@ -23,7 +34,7 @@
    visibility = [ ":*" ]
    crate_name = "skia_rust_common"
    allow_unsafe = true  # For FFI
-@@ -681,6 +690,10 @@ source_set("rust_common_ffi_cpp") {
+@@ -681,6 +694,10 @@ source_set("rust_common_ffi_cpp") {
  }
  
  rust_static_library("rust_png_ffi") {
@@ -34,7 +45,7 @@
    visibility = [ ":*" ]
    edition = "2021"
    allow_unsafe = true  # For FFI
-@@ -712,6 +725,10 @@ source_set("rust_png_ffi_cpp") {
+@@ -712,6 +729,10 @@ source_set("rust_png_ffi_cpp") {
  }
  
  rust_static_library("rust_bmp_ffi") {
@@ -45,7 +56,7 @@
    visibility = [ ":*" ]
    allow_unsafe = true  # For FFI
    crate_root = skia_codec_rust_bmp_ffi_crate_root
-@@ -754,6 +771,10 @@ source_set("rust_bmp_ffi_cpp") {
+@@ -754,6 +775,10 @@ source_set("rust_bmp_ffi_cpp") {
  }
  
  rust_static_library("rust_ico_ffi") {
@@ -56,7 +67,7 @@
    visibility = [ ":*" ]
    allow_unsafe = true  # For FFI
    crate_root = skia_codec_rust_ico_ffi_crate_root
-@@ -804,6 +825,10 @@ source_set("rust_ico_ffi_cpp") {
+@@ -804,6 +829,10 @@ source_set("rust_ico_ffi_cpp") {
  }
  
  rust_static_library("rust_jpeg_ffi") {
@@ -67,7 +78,7 @@
    visibility = [ ":*" ]
    allow_unsafe = true  # For FFI
    crate_root = skia_codec_rust_jpeg_ffi_crate_root
-@@ -851,6 +876,10 @@ source_set("rust_jpeg_ffi_cpp") {
+@@ -851,6 +880,10 @@ source_set("rust_jpeg_ffi_cpp") {
  }
  
  rust_static_library("rust_icc_ffi") {
@@ -78,7 +89,7 @@
    visibility = [ ":*" ]
    allow_unsafe = true  # For FFI
    crate_root = skia_rust_icc_ffi_crate_root
-@@ -893,6 +922,10 @@ source_set("rust_icc_ffi_cpp") {
+@@ -893,6 +926,10 @@ source_set("rust_icc_ffi_cpp") {
  }
  
  rust_static_library("rust_exif_ffi") {
@@ -89,7 +100,7 @@
    visibility = [ ":*" ]
    allow_unsafe = true  # For FFI
    crate_root = skia_rust_exif_ffi_crate_root
-@@ -1047,7 +1080,7 @@ skia_source_set("skia_core_and_effects") {
+@@ -1047,7 +1084,7 @@ skia_source_set("skia_core_and_effects") {
  
  # Bits that involve special vector-y hardware.
  # https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
@@ -98,7 +109,7 @@
    skia_source_set("skia_opts_ml3") {
      sources = skia_opts.ml3_sources
      if (!is_win) {
-@@ -1089,9 +1122,11 @@ skia_source_set("skia_opts") {
+@@ -1089,9 +1126,11 @@ skia_source_set("skia_opts") {
    deps = [ "//base" ]
  
    if (current_cpu == "x86" || current_cpu == "x64") {
