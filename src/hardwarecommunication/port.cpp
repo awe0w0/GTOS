@@ -61,6 +61,12 @@ uint16_t Port16Bit::Read() {
     return result;
 }
 
+void Port16Bit::ReadWords(uint8_t* destination, uint32_t count) {
+    // Native kernel entry and interrupt stubs establish a flat ES selector.
+    __asm__ volatile("cld; rep insw"
+        : "+D"(destination), "+c"(count) : "d"(portnumber) : "memory", "cc");
+}
+
 Port32Bit::Port32Bit(uint16_t portnumber) 
 : Port(portnumber){
 

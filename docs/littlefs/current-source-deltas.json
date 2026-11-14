@@ -3,7 +3,11 @@
   "files": {
     "include/storage/filestore.h": "3951e42323b9a8451cbd7791ac420c4fc23259de4f1da8591323aca2e135dabc",
     "src/storage/filestore.cpp": "d9f426e35b05ee013e21485a00d34518d87a0968bff91dc974e33767f358a581",
-    "tests/filestore_guest.cpp": "10da4773d1cda48ce1721f23ad25d404174bcfd807efac9f304d99a89b472300",
-    "tools/build-filestore-probe.py": "6f8eeddd597508ec349e1d25215627d6568bfc1dd47ec8416b2320a60dd8974d"
+    "tests/filestore_guest.cpp": "8f93fe5ee008e8087cb1bf832c8a245f13e7f74bb83bd0f155c0649d18907485",
+    "tools/build-filestore-probe.py": "6f8eeddd597508ec349e1d25215627d6568bfc1dd47ec8416b2320a60dd8974d",
+    "Makefile": "afbf866aebd5e58dabf100f89edf8c789c3fbf10f892a81917c1066597b6f7e2",
+    "include/hardwarecommunication/port.h": "024c651b7b87423b2add17ee7624596727d6ade3ee2cd4aa40088b15504c25ea",
+    "src/drivers/ata.cpp": "d817a5d4d3243a0b9c3b60186f707ced80dacca35f6a3c35381fe051623df3be",
+    "src/hardwarecommunication/port.cpp": "324c267b29382aca2999500ddac1ba24e019282157dc312811a56c85ba921980"
   }
 }

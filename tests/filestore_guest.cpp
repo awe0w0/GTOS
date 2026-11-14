@@ -51,6 +51,17 @@ namespace {
         }
         virtual bool Identify() { return device.Identify(); }
         virtual uint32_t SectorCount() const { return device.SectorCount(); }
+        void CheckSectorTransfers() {
+            alignas(2) uint8_t buffer[514];
+            for (unsigned i=0;i<sizeof(buffer);i++) buffer[i]=0xD3;
+            Require(device.Read28(0,buffer+1,511),"odd partial ATA read");
+            Require(buffer[0]==0xD3&&buffer[512]==0xD3&&buffer[513]==0xD3,
+                    "partial transfer leaves both guards intact");
+            for (unsigned i=1;i<=511;i++) Require(buffer[i]==0xA5,"partial sector bytes");
+            Require(device.ReadSector(1,buffer+1),"unaligned full ATA read after partial transfer");
+            Require(buffer[0]==0xD3&&buffer[513]==0xD3,"full transfer leaves both guards intact");
+            for (unsigned i=1;i<=512;i++) Require(buffer[i]==0xA6,"full sector bytes");
+        }
         virtual bool ReadSector(uint32_t s,uint8_t* p) {
             Stack();reads++;return !failRead&&device.ReadSector(s,p);
         }
@@ -338,6 +349,7 @@ extern "C" void NativeProcessSmoke(void* info,uint32_t magic) {
     for (uint32_t i=0;i<512;i++) (&filesystem_stack_bottom)[i]=0xC3;
     static FileStore files;ObservedDisk disk;
     Require(disk.Identify()&&disk.SectorCount()==2064,"actual ATA dedicated disk");
+    disk.CheckSectorTransfers();
     const uint32_t* boot=(const uint32_t*)info;
     bool writer=(boot[0]&4)&&Contains((const char*)boot[4],"writer");
     const char* command=(boot[0]&4)?(const char*)boot[4]:"";

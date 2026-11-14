@@ -59,10 +59,14 @@ bool AdvancedTechnologyAttachment::Read28(uint32_t sector, uint8_t* data, int co
     if (!Select(sector)) return false;
     commandPort.Write(0x20); Delay();
     if (!Wait(true)) return false;
-    for (int i=0;i<512;i+=2) {
-        uint16_t w=dataPort.Read();
-        if (i<count) data[i]=w&255;
-        if (i+1<count) data[i+1]=w>>8;
+    if (count==512) {
+        dataPort.ReadWords(data,256);
+    } else {
+        for (int i=0;i<512;i+=2) {
+            uint16_t w=dataPort.Read();
+            if (i<count) data[i]=w&255;
+            if (i+1<count) data[i+1]=w>>8;
+        }
     }
     Delay(); return Wait(false);
 }

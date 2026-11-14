@@ -34,6 +34,7 @@ namespace gtos {
                 ~Port16Bit();
                 virtual void Write(uint16_t data);
                 virtual uint16_t Read();
+                void ReadWords(uint8_t* destination, uint32_t count);
         };
 
         class Port32Bit : public Port {
@@ -46,4 +47,4 @@ namespace gtos {
     }
 }
 
-#endif 
+#endif
