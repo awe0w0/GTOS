@@ -1,0 +1,240 @@
+--- a/third_party/blink/renderer/platform/audio/cpu/x86/vector_math_x86.h
++++ b/third_party/blink/renderer/platform/audio/cpu/x86/vector_math_x86.h
+@@ -10,6 +10,7 @@
+ #include "base/containers/span.h"
+ #include "base/cpu.h"
+ #include "base/numerics/safe_conversions.h"
++#include "build/build_config.h"
+ #include "third_party/blink/renderer/platform/audio/cpu/x86/vector_math_avx.h"
+ #include "third_party/blink/renderer/platform/audio/cpu/x86/vector_math_sse.h"
+ #include "third_party/blink/renderer/platform/audio/vector_math_scalar.h"
+@@ -26,10 +27,12 @@ struct FrameCounts {
+   size_t scalar;
+ };
+ 
++#if !BUILDFLAG(IS_GTOS)
+ static bool CPUSupportsAVX() {
+   static const bool supports = ::base::CPU().has_avx();
+   return supports;
+ }
++#endif
+ 
+ static size_t GetAVXAlignmentOffsetInNumberOfFloats(const float* source_p) {
+   constexpr size_t kBytesPerRegister = avx::kBitsPerRegister / 8u;
+@@ -54,17 +57,20 @@ ALWAYS_INLINE static FrameCounts SplitFramesToProcess(
+       ~avx::kFramesToProcessMask;
+   const size_t scalar_for_alignment =
+       total_for_alignment & ~sse::kFramesToProcessMask;
+-  const size_t sse_for_alignment =
+-      total_for_alignment & sse::kFramesToProcessMask;
+-
+   size_t frames_to_process = source.size();
+ 
+   // Check which CPU features can be used based on the number of frames to
+   // process and based on CPU support.
++#if BUILDFLAG(IS_GTOS)
++  constexpr bool use_at_least_avx = false;
++#else
++  const size_t sse_for_alignment =
++      total_for_alignment & sse::kFramesToProcessMask;
+   const bool use_at_least_avx =
+       CPUSupportsAVX() &&
+       frames_to_process >= scalar_for_alignment + sse_for_alignment +
+                                avx::kPackedFloatsPerRegister;
++#endif
+   const bool use_at_least_sse =
+       use_at_least_avx ||
+       frames_to_process >= scalar_for_alignment + sse::kPackedFloatsPerRegister;
+@@ -75,6 +81,7 @@ ALWAYS_INLINE static FrameCounts SplitFramesToProcess(
+     // The remaining frames are SSE aligned.
+     DCHECK(sse::IsAligned(source.subspan(counts.scalar_for_alignment).data()));
+ 
++#if !BUILDFLAG(IS_GTOS)
+     if (use_at_least_avx) {
+       counts.sse_for_alignment = sse_for_alignment;
+       frames_to_process -= counts.sse_for_alignment;
+@@ -87,6 +94,7 @@ ALWAYS_INLINE static FrameCounts SplitFramesToProcess(
+       counts.avx = frames_to_process & avx::kFramesToProcessMask;
+       frames_to_process -= counts.avx;
+     }
++#endif
+ 
+     // Process as many as possible of the remaining frames using SSE.
+     counts.sse = frames_to_process & sse::kFramesToProcessMask;
+@@ -101,11 +109,13 @@ ALWAYS_INLINE static FrameCounts SplitFramesToProcess(
+ ALWAYS_INLINE static void PrepareFilterForConv(
+     base::span<const float> filter,
+     AudioFloatArray* prepared_filter) {
++#if !BUILDFLAG(IS_GTOS)
+   if (CPUSupportsAVX()) {
+     avx::PrepareFilterForConv(filter, prepared_filter);
+-  } else {
+-    sse::PrepareFilterForConv(filter, prepared_filter);
++    return;
+   }
++#endif
++  sse::PrepareFilterForConv(filter, prepared_filter);
+ }
+ 
+ ALWAYS_INLINE static void Conv(base::span<const float> source,
+@@ -116,13 +126,16 @@ ALWAYS_INLINE static void Conv(base::span<const float> source,
+   const size_t filter_size = filter.size();
+   size_t offset = 0;
+   if (!prepared_filter.empty()) {
++#if !BUILDFLAG(IS_GTOS)
+     if (CPUSupportsAVX() && (filter_size & ~avx::kFramesToProcessMask) == 0u) {
+       const size_t avx_frames = frames_to_process & avx::kFramesToProcessMask;
+       if (avx_frames > 0u) {
+         avx::Conv(source, prepared_filter, dest.first(avx_frames), filter_size);
+         offset = avx_frames;
+       }
+-    } else if ((filter_size & ~sse::kFramesToProcessMask) == 0u) {
++    } else
++#endif
++    if ((filter_size & ~sse::kFramesToProcessMask) == 0u) {
+       const size_t sse_frames = frames_to_process & sse::kFramesToProcessMask;
+       if (sse_frames > 0u) {
+         sse::Conv(source, prepared_filter, dest.first(sse_frames), filter_size);
+@@ -156,12 +169,14 @@ ALWAYS_INLINE static void Vadd(base::span<const float> source1,
+               dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vadd(source1.subspan(offset, frame_counts.avx),
+               source2.subspan(offset, frame_counts.avx),
+               dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vadd(source1.subspan(offset, frame_counts.sse),
+               source2.subspan(offset, frame_counts.sse),
+@@ -198,12 +213,14 @@ ALWAYS_INLINE static void Vsub(base::span<const float> source1,
+               dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vsub(source1.subspan(offset, frame_counts.avx),
+               source2.subspan(offset, frame_counts.avx),
+               dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vsub(source1.subspan(offset, frame_counts.sse),
+               source2.subspan(offset, frame_counts.sse),
+@@ -240,11 +257,13 @@ ALWAYS_INLINE static void Vclip(base::span<const float> source,
+                dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vclip(source.subspan(offset, frame_counts.avx), low_threshold,
+                high_threshold, dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vclip(source.subspan(offset, frame_counts.sse), low_threshold,
+                high_threshold, dest.subspan(offset, frame_counts.sse));
+@@ -273,10 +292,12 @@ ALWAYS_INLINE static float Vmaxmgv(base::span<const float> source) {
+                             offset, frame_counts.sse_for_alignment)));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     max = std::max(max, avx::Vmaxmgv(source.subspan(offset, frame_counts.avx)));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     max = std::max(max, sse::Vmaxmgv(source.subspan(offset, frame_counts.sse)));
+     offset += frame_counts.sse;
+@@ -311,12 +332,14 @@ ALWAYS_INLINE static void Vmul(base::span<const float> source1,
+               dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vmul(source1.subspan(offset, frame_counts.avx),
+               source2.subspan(offset, frame_counts.avx),
+               dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vmul(source1.subspan(offset, frame_counts.sse),
+               source2.subspan(offset, frame_counts.sse),
+@@ -350,11 +373,13 @@ ALWAYS_INLINE static void Vsma(base::span<const float> source,
+               dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vsma(source.subspan(offset, frame_counts.avx), scale,
+               dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vsma(source.subspan(offset, frame_counts.sse), scale,
+               dest.subspan(offset, frame_counts.sse));
+@@ -386,11 +411,13 @@ ALWAYS_INLINE static void Vsmul(base::span<const float> source,
+                dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vsmul(source.subspan(offset, frame_counts.avx), scale,
+                dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vsmul(source.subspan(offset, frame_counts.sse), scale,
+                dest.subspan(offset, frame_counts.sse));
+@@ -422,11 +449,13 @@ ALWAYS_INLINE static void Vsadd(base::span<const float> source,
+                dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Vsadd(source.subspan(offset, frame_counts.avx), addend,
+                dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Vsadd(source.subspan(offset, frame_counts.sse), addend,
+                dest.subspan(offset, frame_counts.sse));
+@@ -454,10 +483,12 @@ ALWAYS_INLINE static float Vsvesq(base::span<const float> source) {
+     sum += sse::Vsvesq(source.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     sum += avx::Vsvesq(source.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sum += sse::Vsvesq(source.subspan(offset, frame_counts.sse));
+     offset += frame_counts.sse;
+@@ -503,6 +534,7 @@ ALWAYS_INLINE static void Zvmul(base::span<const float> real1,
+                imag_dest.subspan(offset, frame_counts.sse_for_alignment));
+     offset += frame_counts.sse_for_alignment;
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (frame_counts.avx > 0u) {
+     avx::Zvmul(real1.subspan(offset, frame_counts.avx),
+                imag1.subspan(offset, frame_counts.avx),
+@@ -512,6 +544,7 @@ ALWAYS_INLINE static void Zvmul(base::span<const float> real1,
+                imag_dest.subspan(offset, frame_counts.avx));
+     offset += frame_counts.avx;
+   }
++#endif
+   if (frame_counts.sse > 0u) {
+     sse::Zvmul(real1.subspan(offset, frame_counts.sse),
+                imag1.subspan(offset, frame_counts.sse),

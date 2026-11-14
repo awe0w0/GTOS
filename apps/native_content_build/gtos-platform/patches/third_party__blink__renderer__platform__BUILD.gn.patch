@@ -11,3 +11,26 @@
    allow_unsafe = true  # Needed for FFI that underpins the `cxx` crate.
    crate_root = "audio/rustfft_ffi.rs"
    sources = [ crate_root ]
+@@ -2042,9 +2046,11 @@ component("platform") {
+   }
+ 
+   if (current_cpu == "x86" || current_cpu == "x64") {
+-    deps += [ ":blink_x86_avx" ]
+     sources += [ "audio/cpu/x86/delay_sse2.cc" ]
+-    allow_circular_includes_from += [ ":blink_x86_avx" ]
++    if (!is_gtos) {
++      deps += [ ":blink_x86_avx" ]
++      allow_circular_includes_from += [ ":blink_x86_avx" ]
++    }
+   }
+ 
+   if (current_cpu == "arm64" || current_cpu == "arm64e" ||
+@@ -2762,7 +2768,7 @@ group("blink_platform_unittests_data") {
+   ]
+ }
+ 
+-if (current_cpu == "x86" || current_cpu == "x64") {
++if (!is_gtos && (current_cpu == "x86" || current_cpu == "x64")) {
+   source_set("blink_x86_avx") {
+     sources = blink_platform_avx_files
+     configs += [
