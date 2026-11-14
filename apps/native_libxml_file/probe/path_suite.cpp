@@ -2,6 +2,7 @@
 #include <process/file_abi.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <gtos_file_lock.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -37,6 +38,27 @@ extern "C" int NativeEntry() {
 #if GTOS_PATH_GUEST_MODE == 0
   struct stat value;
   Check(mkdir("/paths", 0700) == 0);
+  const char* lock_path = "/paths/LOCK";
+  int lock = gtos_open_locked(lock_path);
+  Check(lock > 0);
+  Check(write(lock, "lock", 4) == 4);
+  Check(gtos_open_locked(lock_path) == -1 && errno == EBUSY);
+  Check(gtos_open_locked("/paths/./LOCK") == -1 && errno == EBUSY);
+  const int duplicate = dup(lock);
+  Check(duplicate > 0 && duplicate != lock);
+  Check(close(lock) == 0);
+  Check(gtos_open_locked(lock_path) == -1 && errno == EBUSY);
+  Check(close(duplicate) == 0);
+  lock = gtos_open_locked(lock_path);
+  Check(lock > 0);
+  char lock_bytes[4] = {};
+  Check(read(lock, lock_bytes, sizeof(lock_bytes)) == 4 &&
+        lock_bytes[0] == 'l' && lock_bytes[1] == 'o' &&
+        lock_bytes[2] == 'c' && lock_bytes[3] == 'k');
+  Check(close(lock) == 0);
+  Check(unlink(lock_path) == 0);
+  Check(gtos_open_locked("/missing/LOCK") == -1 && errno == ENOENT);
+  Check(gtos_open_locked(nullptr) == -1 && errno == EINVAL);
   Check(access("/paths", F_OK) == 0);
   Check(stat("/paths", &value) == 0 && S_ISDIR(value.st_mode));
   Check(unlink("/paths") == -1 && errno == EISDIR);
@@ -92,6 +114,7 @@ extern "C" int NativeEntry() {
   Check(access("/typed", F_OK) == -1 && errno == ENOENT);
 #else
   Check(open("/missing", O_RDONLY) == -1 && errno == ENODEV);
+  Check(gtos_open_locked("/missing") == -1 && errno == ENODEV);
   Check(access("/missing", F_OK) == -1 && errno == ENODEV);
   Check(mkdir("/missing", 0) == -1 && errno == ENODEV);
   Check(unlink("/missing") == -1 && errno == ENODEV);

@@ -71,14 +71,14 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         NativePathRecord record = {};
         PathRequire(runtime.ReadMemory(id, 0x40020000, &record, sizeof(record)), "consumer record");
         PathRequire(record.version == 1 && record.mode == (phase ? 1U : 0U) && record.stage == 2 &&
-            record.checks == (phase ? 5U : 57U) && !record.failures && !status.exitCode && !status.faultVector,
+            record.checks == (phase ? 6U : 71U) && !record.failures && !status.exitCode && !status.faultVector,
             "consumer result");
         const uint32_t calls = files.Statistics().calls - before;
         PathRequire(status.observedCs == 0x23 && status.observedCr3 == status.directory &&
             status.directory != paging.getStatistics().directoryAddress && status.systemCalls > 3,
             "actual CPL3 calls");
         PathRequire(calls == (phase == 2 ? 0 : status.systemCalls - 3) &&
-            (phase == 2 ? status.systemCalls == 8 : calls >= 5) &&
+            (phase == 2 ? status.systemCalls == 9 : calls >= 6) &&
             record.raw_calls == (phase ? 0U : 11U) && store.OpenCount() == 0, "endpoint calls and closed handles");
         printf((char*)"PATH CASE phase="); printfHex32(phase);
         printf((char*)" iteration="); printfHex32(iteration);

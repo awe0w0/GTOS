@@ -36,12 +36,12 @@ def judge(lines, code, phase):
     if all(set(group) == set(range(count)) for group in groups.values()):
         baseline = groups['PATH REAP'][0]['expected']
         for index, value in groups['PATH CASE'].items():
-            if value['phase'] != phase or value['cs'] != 0x23 or value['checks'] != (5 if phase else 57):
+            if value['phase'] != phase or value['cs'] != 0x23 or value['checks'] != (6 if phase else 71):
                 problems.append('phase/context/checks')
             if value['mounted'] != int(phase == 0) or value['open'] or value['raw'] != (0 if phase else 11):
                 problems.append('store/handle/raw state')
             if phase:
-                if value['calls'] != 8 or value['service'] != (0 if phase == 2 else 5):
+                if value['calls'] != 9 or value['service'] != (0 if phase == 2 else 6):
                     problems.append('unavailable endpoint layer')
             elif value['service'] < 5 or value['service'] != value['calls'] - 3:
                 problems.append('actual file dispatch count')

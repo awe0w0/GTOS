@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/services/storage/public/cpp/filesystem/filesystem_impl.cc': 'ca76030394b7f8d26697c5c709d97abe462b22e459a123b300f08bfac8ec2374',
+    'components/services/storage/public/cpp/filesystem/filesystem_proxy.cc': 'fa0af3b31502c198b4b0659d140574162cd5af4ca058c1566d1c12d0251b10f0',
     'ui/compositor/BUILD.gn': 'a5a5f7c08e8d4be004c1d501edb3203daddb12028a1317cceb769e5797b9def1',
     'third_party/blink/renderer/platform/fonts/skia/sktypeface_factory.cc': 'ec0fa7b3780fc4b8e6c607089475e495072292d7762dc5e91115932adcbcd269',
     'third_party/llvm-libc/src/src/locale/uselocale.cpp': '68b67471ab63fec07a8eda3861bae4acb80af9a78afd8e293a5db6d72c01892d',

@@ -1,0 +1,100 @@
+--- a/components/services/storage/public/cpp/filesystem/filesystem_impl.cc
++++ b/components/services/storage/public/cpp/filesystem/filesystem_impl.cc
+@@ -21,6 +21,11 @@
+ 
+ #if BUILDFLAG(IS_WIN)
+ #include <windows.h>
++#elif BUILDFLAG(IS_GTOS)
++#include <gtos_file_lock.h>
++#include <unistd.h>
++
++#include "base/threading/scoped_blocking_call.h"
+ #endif
+ 
+ namespace storage {
+@@ -70,8 +75,14 @@ class FileLockImpl : public mojom::FileLock {
+   }
+ 
+   ~FileLockImpl() override {
++#if BUILDFLAG(IS_GTOS)
++    if (file_.IsValid()) {
++      (void)ReleaseNativeLock();
++    }
++#else
+     if (file_.IsValid())
+       GetLockTable().RemoveLock(path_);
++#endif
+   }
+ 
+   // mojom::FileLock implementation:
+@@ -81,6 +92,9 @@ class FileLockImpl : public mojom::FileLock {
+       return;
+     }
+ 
++#if BUILDFLAG(IS_GTOS)
++    std::move(callback).Run(ReleaseNativeLock());
++#else
+ #if BUILDFLAG(IS_FUCHSIA)
+     std::move(callback).Run(base::File::FILE_OK);
+ #else
+@@ -88,9 +102,21 @@ class FileLockImpl : public mojom::FileLock {
+ #endif
+     GetLockTable().RemoveLock(path_);
+     file_.Close();
++#endif
+   }
+ 
+  private:
++#if BUILDFLAG(IS_GTOS)
++  base::File::Error ReleaseNativeLock() {
++    base::ScopedBlockingCall blocking(FROM_HERE, base::BlockingType::MAY_BLOCK);
++    const int result = close(file_.TakePlatformFile());
++    const auto error = result == 0 ? base::File::FILE_OK
++                                   : base::File::GetLastFileError();
++    GetLockTable().RemoveLock(path_);
++    return error;
++  }
++#endif
++
+   const base::FilePath path_;
+   base::File file_;
+ };
+@@ -253,6 +279,30 @@ base::FileErrorOr<base::File> FilesystemImpl::LockFileLocal(
+     const base::FilePath& path,
+     bool* same_process_failure) {
+   DCHECK(path.IsAbsolute());
++#if BUILDFLAG(IS_GTOS)
++  // Preserve the path boundary of base::File::Initialize().
++  if (path.ReferencesParent()) {
++    return base::unexpected(base::File::FILE_ERROR_ACCESS_DENIED);
++  }
++  if (!GetLockTable().AddLock(path)) {
++    if (same_process_failure) {
++      *same_process_failure = true;
++    }
++    return base::unexpected(base::File::FILE_ERROR_IN_USE);
++  }
++
++  int handle;
++  {
++    base::ScopedBlockingCall blocking(FROM_HERE, base::BlockingType::MAY_BLOCK);
++    handle = gtos_open_locked(path.value().c_str());
++  }
++  if (handle < 0) {
++    const auto failure = base::File::GetLastFileError();
++    UnlockFileLocal(path);
++    return base::unexpected(failure);
++  }
++  return base::File(handle);
++#else
+   base::File file(path, base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_READ |
+                             base::File::FLAG_WRITE);
+   if (!file.IsValid())
+@@ -274,6 +324,7 @@ base::FileErrorOr<base::File> FilesystemImpl::LockFileLocal(
+ #endif
+ 
+   return file;
++#endif
+ }
+ 
+ // static

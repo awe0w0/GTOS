@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include <fcntl.h>
+#include <gtos_file_lock.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include "file_internal.h"
@@ -148,6 +149,12 @@ int path_bytes(const char *path, unsigned *bytes) {
   return 0;
 }
 
+int open_path(const char *path, unsigned bytes, unsigned flags) {
+  const GtosFileOpenRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes, flags};
+  const int handle = call(GTOS_SYS_FILE_OPEN, &request, sizeof(request));
+  return handle < 0 ? translate(handle) : handle;
+}
+
 ssize_t transfer_at(unsigned operation, int fd, const void *buffer, size_t bytes, off_t offset) {
   if (fd <= 0) return fail_with(EBADF);
   if (!buffer && bytes) return fail_with(EFAULT);
@@ -179,11 +186,13 @@ extern "C" int open(const char *path, int flags, ...) {
   unsigned bytes = 0;
   if (path_bytes(path, &bytes) != 0) return -1;
   const int translated = open_flags(flags);
-  if (translated < 0) return -1;
-  const GtosFileOpenRequest request{GTOS_FILE_ABI_VERSION, reinterpret_cast<unsigned>(path), bytes, static_cast<unsigned>(translated)};
-  const int handle = call(GTOS_SYS_FILE_OPEN, &request, sizeof(request));
-  if (handle < 0) return translate(handle);
-  return handle;
+  return translated < 0 ? -1 : open_path(path, bytes, static_cast<unsigned>(translated));
+}
+
+extern "C" int gtos_open_locked(const char *path) {
+  unsigned bytes = 0;
+  if (path_bytes(path, &bytes) != 0) return -1;
+  return open_path(path, bytes, GTOS_FILE_READ_WRITE | GTOS_FILE_CREATE | GTOS_FILE_LOCKED);
 }
 
 extern "C" int close(int fd) {
