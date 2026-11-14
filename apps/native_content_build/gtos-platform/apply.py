@@ -14,6 +14,18 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/unguessable_token.rs': '6dc88eb50bc751cb41e811b85744f2a6b22c977abd9779c7c221f2b77352f77a',
+    'content/browser/browsing_instance_id.rs': '9c208a19c634aa006b6fb152cd9b6a38d9febdd56e93fdc53bcfe09b9f9aa932',
+    'content/common/child_process_id.rs': '85ac5606dae48a977d701a8d6bf31f11e63e5980f3a89d65eff59835cf5d01d2',
+    'storage/common/file_system/file_system_types.rs': '069dc8441496f5e30b65d92b930b23d68753ba242812a4483cc5feead0794ff1',
+    'url/url.rs': 'bccdb6a1881cc4709a6cb1bf175965f6a7599a468b9a86b74395f2787e11f947',
+    'url/gurl.rs': 'f7af581ac470692e51989635ec946dcebd7d58c600694f046e246dee8c685961',
+    'url/origin.rs': '68240485bfe8381a43583b47fdbaae621ff6ef40dfcc63a6aacd17f24cdbd8d0',
+    'content/browser/BUILD.gn': '8e50e4cf05ee4966357c6914a876e3f710a593c55dd777d57da69d311528a859',
+    'content/browser/security/cpsp/lib.rs': '25c7ffb3fa6ee7f6a535c6d53c3b91818802469c01f563256c5d97e844301e5f',
+    'content/browser/security/cpsp/child_process_security_policy_impl.rs': '24028ee74dadb0a32154dada4a59d83458dd84f9a04fabc9e987545946399322',
+    'content/browser/child_process_launcher_helper.cc': 'd115b945a53dbf3e24ea5814a5530217bb5326014f847219622a3f9ff5359503',
+    'content/browser/child_process_launcher_helper.h': '362d971600352b59705a30a05d5abfe02276d8d4469554ecbd312c88c4c3867f',
     'components/services/filesystem/util.cc': 'f4ee6abf67092ac202513e81304cb2032ce5b72d0cb2e2a8946f1ce2a488b04b',
     'components/services/storage/indexed_db/scopes/varint_coding.cc': 'caf061d160b255c29b04fd2fe9fac75c487aa4554dd032656a2e5c401cbab8c1',
     'content/browser/indexed_db/indexed_db_leveldb_coding.cc': '8301d98989bdd2a6589b6b1218720256d027d9270b7a0f458b3ea5440982526b',
@@ -536,6 +548,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'content/browser/child_process_launcher_helper_gtos.cc': 'content/child_process_launcher_helper_gtos.cc',
     'net/socket/udp_socket_gtos.h': 'net/udp_socket_gtos.h',
     'tools/gtos_native_sdk/probe/gtos_content_resources_guest_test.cc': '../../../tests/gtos_content_resources_guest_test.cc',
     'tools/gtos_native_sdk/probe/gtos_content_mojo_guest_test.cc': '../../../tests/gtos_content_mojo_guest_test.cc',

@@ -1,0 +1,34 @@
+--- a/url/gurl.rs
++++ b/url/gurl.rs
+@@ -6,7 +6,7 @@
+ // be removed and replaced with directly using the C++ `GURL` type using
+ // Crubit-generated `rs_bindings_from_cc`-based bindings.
+ 
+-use std::fmt::Debug;
++use core::fmt::Debug;
+ 
+ #[cxx::bridge]
+ pub mod ffi {
+@@ -41,19 +41,19 @@ impl PartialEq for ffi::GURL {
+ impl Eq for ffi::GURL {}
+ 
+ impl PartialOrd for ffi::GURL {
+-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
++    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+         Some(self.cmp(other))
+     }
+ }
+ 
+ impl Ord for ffi::GURL {
+-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
++    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+         ffi::possibly_invalid_spec(self).cmp(ffi::possibly_invalid_spec(other))
+     }
+ }
+ 
+ impl Debug for ffi::GURL {
+-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+         f.debug_struct("GURL").field("spec", &ffi::possibly_invalid_spec(self)).finish()
+     }
+ }

@@ -1,0 +1,26 @@
+--- a/content/browser/BUILD.gn
++++ b/content/browser/BUILD.gn
+@@ -90,8 +90,13 @@ rust_static_library("child_process_security_policy_impl") {
+     "//third_party/rust/cxx/v1:lib",
+     "//url:url_rust",
+   ]
++  rustflags = []
+   if (is_component_build) {
+-    rustflags = [ "--cfg=component_build" ]
++    rustflags += [ "--cfg=component_build" ]
++  }
++  if (is_gtos) {
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags += [ "-Zallow-features=restricted_std" ]
+   }
+ }
+ 
+@@ -2627,6 +2632,8 @@ source_set("browser") {
+       "//third_party/fuchsia-sdk/sdk/pkg/zx",
+       "//ui/accessibility",
+     ]
++  } else if (is_gtos) {
++    sources += [ "child_process_launcher_helper_gtos.cc" ]
+   } else if (is_posix) {
+     sources += [
+       "child_process_launcher_helper_posix.cc",

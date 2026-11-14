@@ -1,0 +1,14 @@
+--- a/content/browser/browsing_instance_id.rs
++++ b/content/browser/browsing_instance_id.rs
+@@ -2,9 +2,10 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![no_std]
+ #![allow(unsafe_code)]
+ 
+-use std::num::NonZero;
++use core::num::NonZero;
+ 
+ /// Matches C++ `content::BrowsingInstanceId`, wrapping `Option<NonZero<i32>>`
+ /// to idiomatically represent valid vs. invalid (`0`) IDs. With

@@ -1,0 +1,10 @@
+--- a/content/browser/security/cpsp/lib.rs
++++ b/content/browser/security/cpsp/lib.rs
+@@ -5,6 +5,7 @@
+ // By default, unsafe code should be disallowed, and only the FFI code in the
+ // modules needs to make an exception to allow it.
+ #![deny(unsafe_code)]
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ 
+ chromium::import! {
+     "//base:unguessable_token";

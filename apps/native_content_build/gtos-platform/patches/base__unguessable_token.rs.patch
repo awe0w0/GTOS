@@ -1,0 +1,25 @@
+--- a/base/unguessable_token.rs
++++ b/base/unguessable_token.rs
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![no_std]
+ #![deny(unsafe_code)]
+ 
+ use subtle::ConstantTimeEq;
+@@ -42,10 +43,10 @@ impl Eq for UnguessableToken {}
+ // Compile-time checks to ensure memory layout matches C++
+ // base::UnguessableToken.
+ const _: () = {
+-    assert!(std::mem::size_of::<UnguessableToken>() == 16);
+-    assert!(std::mem::align_of::<UnguessableToken>() == std::mem::align_of::<u64>());
+-    assert!(std::mem::offset_of!(UnguessableToken, high) == 0);
+-    assert!(std::mem::offset_of!(UnguessableToken, low) == 8);
++    assert!(core::mem::size_of::<UnguessableToken>() == 16);
++    assert!(core::mem::align_of::<UnguessableToken>() == core::mem::align_of::<u64>());
++    assert!(core::mem::offset_of!(UnguessableToken, high) == 0);
++    assert!(core::mem::offset_of!(UnguessableToken, low) == 8);
+ };
+ 
+ #[allow(unsafe_code)]

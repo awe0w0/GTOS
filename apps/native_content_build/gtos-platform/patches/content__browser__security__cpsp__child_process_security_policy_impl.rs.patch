@@ -1,0 +1,14 @@
+--- a/content/browser/security/cpsp/child_process_security_policy_impl.rs
++++ b/content/browser/security/cpsp/child_process_security_policy_impl.rs
+@@ -540,9 +540,9 @@ fn revoke_file_for_browser_upload(owner_token: UnguessableToken) {
+ 
+ fn can_read_file_for_browser_upload(file: &FilePath) -> bool {
+     let cpsp = ChildProcessSecurityPolicyImpl::get_locked_instance();
+-    #[cfg(unix)]
++    #[cfg(any(unix, target_os = "gtos"))]
+     {
+-        // On Unix, `as_path()` provides a zero-copy `&Path` reference to the
++        // For byte-oriented file paths, `as_path()` provides a zero-copy `&Path` reference to the
+         // underlying bytes in `FilePath`, avoiding a heap allocation.
+         cpsp.browser_granted_files.contains_key(file.as_path())
+     }

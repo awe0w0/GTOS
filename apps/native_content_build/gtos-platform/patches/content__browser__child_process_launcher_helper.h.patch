@@ -1,0 +1,44 @@
+--- a/content/browser/child_process_launcher_helper.h
++++ b/content/browser/child_process_launcher_helper.h
+@@ -37,7 +37,7 @@
+ #include "base/win/scoped_handle.h"
+ #include "base/win/windows_types.h"
+ #include "sandbox/win/src/sandbox_types.h"
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #include "content/public/browser/posix_file_descriptor_info.h"
+ #endif
+ 
+@@ -78,7 +78,7 @@ namespace internal {
+ 
+ #if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ using FileMappedForLaunch = PosixFileDescriptorInfo;
+-#else
++#elif BUILDFLAG(IS_WIN)
+ using FileMappedForLaunch = base::HandlesToInheritVector;
+ #endif
+ 
+@@ -146,11 +146,15 @@ class ChildProcessLauncherHelper
+   // Starts the flow of launching the process.
+   void StartLaunchOnClientThread();
+ 
++#if !BUILDFLAG(IS_GTOS)
+   // Platform specific.
+   void BeforeLaunchOnClientThread();
++#endif
+ 
+   ChildProcessId child_process_id() const { return child_process_id_; }
+ 
++#if !BUILDFLAG(IS_GTOS)
++
+ #if !BUILDFLAG(IS_FUCHSIA)
+   // Called to give implementors a chance at creating a server pipe. Platform-
+   // specific. Returns |std::nullopt| if the helper should initialize
+@@ -209,6 +213,7 @@ class ChildProcessLauncherHelper
+   void AfterLaunchOnLauncherThread(
+       const ChildProcessLauncherHelper::Process& process,
+       const base::LaunchOptions* options);
++#endif  // !BUILDFLAG(IS_GTOS)
+ 
+   // Called once the process has been created, successfully or not.
+   void PostLaunchOnLauncherThread(ChildProcessLauncherHelper::Process process,

@@ -1,0 +1,10 @@
+--- a/content/common/child_process_id.rs
++++ b/content/common/child_process_id.rs
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![no_std]
+ #![allow(unsafe_code)]
+ 
+ #[repr(transparent)]

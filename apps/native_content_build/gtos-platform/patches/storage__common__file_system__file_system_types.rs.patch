@@ -1,0 +1,11 @@
+--- a/storage/common/file_system/file_system_types.rs
++++ b/storage/common/file_system/file_system_types.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![no_std]
++
+ #[cxx::bridge(namespace = "storage")]
+ pub mod ffi {
+     #[repr(i32)]

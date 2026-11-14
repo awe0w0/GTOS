@@ -1,0 +1,58 @@
+--- a/content/browser/child_process_launcher_helper.cc
++++ b/content/browser/child_process_launcher_helper.cc
+@@ -64,6 +64,7 @@ void RecordHistogramsOnLauncherThread(base::TimeDelta launch_time) {
+   }
+ }
+ 
++#if !BUILDFLAG(IS_GTOS)
+ // On POSIX, the descriptor is transferred to `files_to_register, which will
+ // then pass it to the zygote via the launch service.
+ void TransferSharedMemorySwitchDescriptor(
+@@ -177,6 +178,8 @@ void PassPseudonymizationSaltSharedMemoryHandle(
+   TransferSharedMemorySwitchDescriptor(shared_memory_switch, files_to_register);
+ }
+ 
++#endif  // !BUILDFLAG(IS_GTOS)
++
+ }  // namespace
+ 
+ ChildProcessLauncherHelper::Process::Process() = default;
+@@ -264,7 +267,9 @@ void ChildProcessLauncherHelper::StartLaunchOnClientThread() {
+   CHECK(client_task_runner_->RunsTasksInCurrentSequence(),
+         base::NotFatalUntil::M160);
+ 
++#if !BUILDFLAG(IS_GTOS)
+   BeforeLaunchOnClientThread();
++#endif
+ 
+   GetProcessLauncherTaskRunner()->PostTask(
+       FROM_HERE,
+@@ -275,6 +280,11 @@ void ChildProcessLauncherHelper::StartLaunchOnClientThread() {
+ void ChildProcessLauncherHelper::LaunchOnLauncherThread() {
+   CHECK(CurrentlyOnProcessLauncherTaskRunner(), base::NotFatalUntil::M160);
+ 
++#if BUILDFLAG(IS_GTOS)
++  // The local shell uses the in-process renderer. An explicit subprocess
++  // request must fail before a platform channel or shared handles are created.
++  PostLaunchOnLauncherThread(Process(), LAUNCH_RESULT_FAILURE);
++#else
+   // Record the delay in getting to the launcher thread.
+   UMA_HISTOGRAM_TIMES("MPArch.ChildProcessLauncher.PreLaunchDelay",
+                       base::TimeTicks::Now() - init_start_time_);
+@@ -373,6 +383,7 @@ void ChildProcessLauncherHelper::LaunchOnLauncherThread() {
+ #endif
+                                launch_result);
+   }
++#endif  // BUILDFLAG(IS_GTOS)
+ }
+ 
+ void ChildProcessLauncherHelper::PostLaunchOnLauncherThread(
+@@ -506,7 +517,7 @@ void ChildProcessLauncherHelper::ForceNormalProcessTerminationAsync(
+           std::move(process)));
+ }
+ 
+-#if !BUILDFLAG(IS_WIN)
++#if !BUILDFLAG(IS_WIN) && !BUILDFLAG(IS_GTOS)
+ void ChildProcessLauncherHelper::PassLoggingSwitches(
+     base::LaunchOptions* launch_options,
+     base::CommandLine* cmd_line) {

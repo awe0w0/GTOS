@@ -1,0 +1,11 @@
+--- a/url/url.rs
++++ b/url/url.rs
+@@ -28,6 +28,8 @@
+ //! via `cxx::UniquePtr`. Calling methods on `GURL` or `Origin` also incurs some
+ //! FFI call overhead.
+ 
++#![no_std]
++
+ pub mod gurl;
+ pub use gurl::ffi::GURL;
+ 
