@@ -688,6 +688,7 @@ ADDITIONS = {
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/process/process_handle_gtos.cc',
     'base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc': '../../native_partition_platform/overlay/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc',
     'tools/gtos_native_sdk/native-services.h': '../../native_partition_platform/overlay/tools/gtos_native_sdk/native-services.h',
+    'build/config/gtos/include/process/loopback_abi.h': '../../../include/process/loopback_abi.h',
     'build/config/gtos/include/process/abi.h': 'sdk/process/abi.h',
     'third_party/perfetto/include/perfetto/ext/base/native_wait.h': 'perfetto/native_wait.h',
     'third_party/perfetto/src/base/native_wait_gtos.cc': 'perfetto/native_wait_gtos.cc',
