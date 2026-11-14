@@ -30,6 +30,7 @@
 #include <process/native_runtime.h>
 #include <process/native_events.h>
 #include <process/native_files.h>
+#include <process/native_loopback.h>
 #include <process/native_shared_memory.h>
 #include <process/native_surface.h>
 #include <process/native_windows.h>
@@ -344,6 +345,7 @@ static memory::PagingConfig BuildPagingConfig(const memory::MultibootInfo *mbi,
 }
 static memory::PhysicalMemoryManager frames;
 static process::NativeEvents nativeEvents;
+static process::NativeLoopback nativeLoopback;
 static process::NativeSharedMemory nativeSharedMemory(frames);
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
@@ -921,6 +923,7 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         stackPages, runtimePages};
     process::NativeEnvironment environment;
     if (!environment.Assign(launch, sizeof(launch) - 1) ||
+        (BootOption(boot, "content-loopback") && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
         !paging.sealForSharedProcessors() || !nativeRuntime.AttachEvents(nativeEvents) ||
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
         !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))

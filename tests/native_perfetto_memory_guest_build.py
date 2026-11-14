@@ -14,7 +14,7 @@ parser.add_argument('--clang-bin', required=True, type=Path)
 parser.add_argument('--generated', required=True, type=Path)
 parser.add_argument('--out', required=True, type=Path)
 parser.add_argument('--component', choices=['memory', 'cpu', 'event', 'wait', 'exit', 'partition', 'boringssl',
-                                            'base_identity', 'base_event', 'base_shared', 'base_tls',
+                                            'base_identity', 'base_event', 'base_shared', 'base_tls', 'loopback',
                                             'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
                                             'skia_semaphore', 'expat', 'address_text', 'net_protocol',
                                             'content_capacity', 'ffmpeg_webm', 'v8_platform',
@@ -51,6 +51,8 @@ component = {
                   'native_content_boringssl_kernel.cpp', 'ContentBoringSslUnusedBaseline', 3),
     'base_identity': ('native_memory_record', None, 'base_identity.cpp',
                       'native_content_identity_kernel.cpp', 'ContentIdentityUnusedBaseline', 1),
+    'loopback': ('native_memory_record', None, 'loopback.cpp',
+                 'native_content_loopback_kernel.cpp', 'ContentLoopbackUnusedBaseline', 2),
     'base_event': ('native_memory_record', None, 'base_event.cpp',
                    'native_content_base_event_kernel.cpp', 'ContentBaseEventUnusedBaseline', 1),
     'base_shared': ('native_memory_record', None, 'base_shared_memory.cpp',
@@ -650,6 +652,8 @@ if args.component in ('event', 'wait', 'base_event'):
     sources.append('src/process/native_events.cpp')
 if args.component == 'base_shared':
     sources.append('src/process/native_shared_memory.cpp')
+if args.component == 'loopback':
+    sources.append('src/process/native_loopback.cpp')
 assembly = ['tests/native_process_loader.s', 'tests/native_process_user.s',
             'src/process/native_fp.s', 'src/hardwarecommunication/interruptstubs.s']
 bind(repo / 'tools/kernel-cxxflags')
@@ -718,7 +722,7 @@ assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == value for path
     'inputs': inputs, 'commands': commands, 'source_before_after_identical': True,
     'scope': 'actual native ' + args.component + ' backend, current-source observer kernel; build only, no guest verdict'}, indent=2) + '\n')
 prefix = 'CONTENT_' if args.component in (
-    'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared',
+    'exit', 'partition', 'boringssl', 'base_identity', 'base_event', 'base_shared', 'loopback',
     'base_tls', 'native_thread', 'webrtc_thread', 'vp9', 'crt_arguments',
     'skia_semaphore', 'expat', 'address_text', 'net_protocol', 'content_capacity',
     'ffmpeg_webm', 'v8_platform', 'platform_libraries') else 'PERFETTO_'

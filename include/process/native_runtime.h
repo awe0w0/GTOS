@@ -6,6 +6,7 @@
 #include <process/native_fp.h>
 #include <process/native_realtime.h>
 #include <process/native_file_endpoint.h>
+#include <process/native_loopback_endpoint.h>
 #include <process/native_event_endpoint.h>
 #include <process/native_shared_memory_endpoint.h>
 #include <process/native_environment.h>
@@ -95,6 +96,7 @@ namespace gtos { namespace process {
         NativeFp fp;
         NativeRealtimeClock realtime;
         NativeFileEndpoint* files;
+        NativeLoopbackEndpoint* loopback;
         NativeEventEndpoint* events;
         NativeSharedMemoryEndpoint* sharedMemory;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
@@ -127,6 +129,7 @@ namespace gtos { namespace process {
         NativeRuntime();
         // Non-owning endpoint must outlive activation; attach only once, before Activate.
         bool AttachFiles(NativeFileEndpoint& endpoint);
+        bool AttachLoopback(NativeLoopbackEndpoint& endpoint);
         bool AttachEvents(NativeEventEndpoint& endpoint);
         bool AttachSharedMemory(NativeSharedMemoryEndpoint& endpoint);
         // Call after prepareIdentity, before enable/AP sharing. Guard aliases

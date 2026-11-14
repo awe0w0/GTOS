@@ -111,7 +111,7 @@ namespace {
 NativeRuntime* NativeRuntime::active = 0;
 NativeRuntime::NativeRuntime() : slots(defaultSlots), slotCount(MaximumProcesses),
     paging(0), frames(0), scheduler(0), gdt(0),
-    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), events(0), sharedMemory(0) {
+    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), loopback(0), events(0), sharedMemory(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
@@ -125,6 +125,13 @@ bool NativeRuntime::AttachFiles(NativeFileEndpoint& endpoint) {
     files = &endpoint;
     return true;
 }
+bool NativeRuntime::AttachLoopback(NativeLoopbackEndpoint& endpoint) {
+    InterruptGuard guard;
+    if (enabled || loopback) return false;
+    loopback = &endpoint;
+    return true;
+}
+
 bool NativeRuntime::AttachEvents(NativeEventEndpoint& endpoint) {
     InterruptGuard guard;
     if (enabled || events || !endpoint.SetNotifier(EventNotification, this)) return false;
@@ -636,6 +643,20 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             sizeof(GtosEnvironmentReadResult)) ? 0 : (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_ADDRESS;
         break;
     }
+    case GTOS_SYS_LOOPBACK_OPEN:
+    case GTOS_SYS_LOOPBACK_BIND:
+    case GTOS_SYS_LOOPBACK_LISTEN:
+    case GTOS_SYS_LOOPBACK_CONNECT:
+    case GTOS_SYS_LOOPBACK_ACCEPT:
+    case GTOS_SYS_LOOPBACK_READ:
+    case GTOS_SYS_LOOPBACK_WRITE:
+    case GTOS_SYS_LOOPBACK_SHUTDOWN_WRITE:
+    case GTOS_SYS_LOOPBACK_INFO:
+    case GTOS_SYS_LOOPBACK_CLOSE:
+        cpu->eax = loopback ? (uint32_t)loopback->Call(
+            slot->status.id, slot->space, cpu->eax, cpu->ebx, cpu->ecx)
+            : (uint32_t)GTOS_LOOPBACK_ERR_UNAVAILABLE;
+        break;
     case GTOS_SYS_EVENT_CREATE:
     case GTOS_SYS_EVENT_DUP:
     case GTOS_SYS_EVENT_CLOSE:
@@ -1143,6 +1164,7 @@ uint32_t NativeRuntime::Reap() {
         NativeSurfaceBank::Instance().ReclaimOwner(process.status.id);
         NativeWindows::Instance().ReclaimOwner(process.status.id);
         if (files) files->ReclaimOwner(process.status.id);
+        if (loopback) loopback->ReclaimOwner(process.status.id);
         if (events) events->ReclaimOwner(process.status.id);
         if (!process.space.Destroy()) continue;
         if (sharedMemory) sharedMemory->ReclaimOwner(process.status.id);
