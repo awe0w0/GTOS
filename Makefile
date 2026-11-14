@@ -9,6 +9,7 @@ OPTIMIZATION ?= -O2
 GRUB_MKRESCUE ?= grub-mkrescue
 BASE_CXXFLAGS := $(OPTIMIZATION) -m32 -std=c++11 -Iinclude -ffreestanding -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fno-stack-protector -fno-pie -fno-asynchronous-unwind-tables -fcheck-new -Wno-write-strings -MMD -MP
 CXXFLAGS ?= $(BASE_CXXFLAGS)
+KERNEL_CPPFLAGS := -Iinclude/storage/littlefs-sdk
 # Keep the mandatory kernel policy last, even when callers override CXXFLAGS.
 override KERNEL_INTEGER_FLAGS := $(shell cat tools/kernel-cxxflags)
 # User probes have a separate policy; enabled FP probes may replace these flags.
@@ -27,10 +28,10 @@ OBJECTS := $(patsubst src/%.cpp,$(KERNEL_OBJDIR)/%.o,$(CPP_SOURCES)) $(patsubst 
 all: GTOS.iso
 $(KERNEL_OBJDIR)/%.o: src/%.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -Iinclude/storage/littlefs-sdk $(KERNEL_INTEGER_FLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(KERNEL_CPPFLAGS) $(KERNEL_INTEGER_FLAGS) -c $< -o $@
 $(KERNEL_OBJDIR)/storage/littlefs/%.c.o: src/storage/littlefs/%.c tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(filter-out -std=% -fno-rtti -fno-exceptions -fcheck-new -fno-use-cxa-atexit -Wno-write-strings,$(CXXFLAGS)) -x c -std=c99 -nostdinc -Iinclude/storage/littlefs-sdk -Iinclude/storage/littlefs -DLFS_DEFINES=storage/littlefs_port.h $(KERNEL_INTEGER_FLAGS) -c $< -o $@
+	$(CXX) $(filter-out -std=% -fno-rtti -fno-exceptions -fcheck-new -fno-use-cxa-atexit -Wno-write-strings,$(CXXFLAGS)) -x c -std=c99 -nostdinc $(KERNEL_CPPFLAGS) -Iinclude/storage/littlefs -DLFS_DEFINES=storage/littlefs_port.h $(KERNEL_INTEGER_FLAGS) -c $< -o $@
 $(KERNEL_OBJDIR)/%.asm.o: src/%.s
 	mkdir -p $(@D)
 	$(AS) $(ASFLAGS) $< -o $@
@@ -72,10 +73,10 @@ FP_DIAGNOSTIC_ISO ?= GTOS-native-fp-diagnostic.iso
 FP_DIAGNOSTIC_OBJECTS := $(filter-out $(KERNEL_OBJDIR)/kernel.o,$(OBJECTS)) $(FP_DIAGNOSTIC_OBJDIR)/kernel.o $(FP_DIAGNOSTIC_OBJDIR)/qualifier.o $(FP_DIAGNOSTIC_OBJDIR)/qualifier-asm.o
 $(FP_DIAGNOSTIC_OBJDIR)/kernel.o: src/kernel.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_FP_DESKTOP_DIAGNOSTIC=1 -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(KERNEL_CPPFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_FP_DESKTOP_DIAGNOSTIC=1 -c $< -o $@
 $(FP_DIAGNOSTIC_OBJDIR)/qualifier.o: tests/native_fp_desktop_diagnostic.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(KERNEL_CPPFLAGS) $(KERNEL_INTEGER_FLAGS) -c $< -o $@
 $(FP_DIAGNOSTIC_OBJDIR)/qualifier-asm.o: tests/native_fp_desktop_diagnostic.s
 	mkdir -p $(@D)
 	$(AS) $(ASFLAGS) $< -o $@
@@ -169,10 +170,10 @@ RECLAIM_ISO ?= GTOS-native-reclaim.iso
 # macro, and the production object must not carry it.
 $(RECLAIM_OBJDIR)/kernel.o: src/kernel.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_NATIVE_RECLAIM=1 -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(KERNEL_CPPFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_NATIVE_RECLAIM=1 -c $< -o $@
 $(RECLAIM_OBJDIR)/native_windows.o: src/process/native_windows.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_NATIVE_RECLAIM=1 -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(KERNEL_CPPFLAGS) $(KERNEL_INTEGER_FLAGS) -DGTOS_NATIVE_RECLAIM=1 -c $< -o $@
 RECLAIM_OBJECTS := $(filter-out $(KERNEL_OBJDIR)/kernel.o $(KERNEL_OBJDIR)/process/native_windows.o,$(OBJECTS)) $(RECLAIM_OBJDIR)/kernel.o $(RECLAIM_OBJDIR)/native_windows.o
 $(RECLAIM_BINARY): linker.ld $(RECLAIM_OBJECTS) tools/audit-kernel-instructions.py
 	$(LD) $(LDFLAGS) -T $< -Map $(RECLAIM_OBJDIR)/kernel.map -o $@ $(RECLAIM_OBJECTS)
