@@ -141,7 +141,7 @@
      } else {
        sources += [
          "browser/shell_platform_delegate_aura.cc",
-@@ -759,6 +783,23 @@ if (is_android) {
+@@ -759,6 +783,25 @@ if (is_android) {
  
      sources = [ "app/shell_main.cc" ]
  
@@ -149,6 +149,7 @@
 +      sources += [
 +        "//build/config/gtos/runtime/assert.cc",
 +        "app/entry_gtos.cc",
++        "app/heap_gtos.cc",
 +        "app/native-start.s",
 +      ]
 +      inputs = [
@@ -160,17 +161,30 @@
 +        "-Wl,--gc-sections",
 +      ]
 +      libs = [ gtos_content_runtime_archive ]
++      include_dirs = [ "//base/allocator/partition_allocator/src" ]
 +    }
 +
      if (is_win) {
        sources += [ "app/shell.rc" ]
      }
-@@ -774,6 +815,13 @@ if (is_android) {
+@@ -766,14 +809,25 @@ if (is_android) {
+     defines = []
++    if (is_gtos && gtos_content_runtime_archive != "") {
++      defines += [ "GTOS_CONTENT_PARTITION_HEAP" ]
++    }
+ 
+     deps = [
+       ":content_shell_app",
+       ":content_shell_lib",
+       ":pak",
+       "//build/win:default_exe_manifest",
+       "//content/public/app",
        "//sandbox",
      ]
  
 +    if (is_gtos && gtos_content_runtime_archive != "") {
 +      deps += [
++        "//base/allocator/partition_allocator:partition_alloc",
 +        "//build/config/gtos/runtime:native_address_text",
 +        "//build/config/gtos/runtime:native_environment",
 +      ]

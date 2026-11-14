@@ -570,6 +570,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'content/shell/app/heap_gtos.cc': 'content/heap_gtos.cc',
     'content/common/font_list_gtos.cc': 'content/font_list_gtos.cc',
     'content/browser/child_process_launcher_helper_gtos.cc': 'content/child_process_launcher_helper_gtos.cc',
     'net/socket/udp_socket_gtos.h': 'net/udp_socket_gtos.h',

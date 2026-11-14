@@ -11,7 +11,11 @@
 
 extern "C" int GtosContentShellMain(int argc, const char** argv);
 extern "C" int gtos_native_environment_initialize() noexcept;
+#if defined(GTOS_CONTENT_PARTITION_HEAP)
+extern "C" int gtos_content_heap_initialize() noexcept;
+#else
 extern "C" int gtos_native_heap_enable_large_allocations() noexcept;
+#endif
 
 using Initializer = void (*)();
 extern "C" Initializer __init_array_start[], __init_array_end[];
@@ -65,8 +69,13 @@ volatile unsigned native_v8_integration_result = 0xffffffffU;
 
 [[noreturn]] void NativeEntry() {
   native_v8_integration_stage = 1;
+#if defined(GTOS_CONTENT_PARTITION_HEAP)
+  if (gtos_content_heap_initialize() != 0 ||
+      gtos_native_environment_initialize() != 0) {
+#else
   if (gtos_native_environment_initialize() != 0 ||
       gtos_native_heap_enable_large_allocations() != 0) {
+#endif
     __builtin_trap();
   }
   Arguments argv{};
