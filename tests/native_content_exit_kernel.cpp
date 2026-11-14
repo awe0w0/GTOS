@@ -35,18 +35,19 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     NativeRuntime runtime;
     ExitRequire(runtime.PrepareStacks(paging, frames), "guarded stacks");
     ExitRequire(paging.enable() && paging.sealForSharedProcessors(), "sealed paging template");
-    ExitRequire(runtime.Activate(tasks, gdt, paging, frames, NativeFpSse2), "native activation");
+    const auto* boot = static_cast<const MultibootInfo*>(multiboot);
+    const bool content = (boot->flags & 4) &&
+        Contains(reinterpret_cast<const char*>(boot->commandLine), "case=content");
+    ExitRequire(runtime.Activate(tasks, gdt, paging, frames, NativeFpSse2, content), "native activation");
     const uint32_t baseline = frames.getStatistics().freeFrames;
     Task ring0(&gdt, Ring0Task);
     ExitRequire(tasks.AddTask(&ring0), "kernel peer");
-    const auto* boot = static_cast<const MultibootInfo*>(multiboot);
-    ExitRequire((boot->flags & 8) && boot->moduleCount == 2, "two supplied ELFs");
+    const uint32_t modes = content ? 3 : 2;
+    ExitRequire((boot->flags & 8) && boot->moduleCount == modes, "exact supplied ELF count");
     const auto* modules = reinterpret_cast<const MultibootModule*>(boot->modules);
-    const bool content = (boot->flags & 4) &&
-        Contains(reinterpret_cast<const char*>(boot->commandLine), "case=content");
 
     interrupts.Activate();
-    for (uint32_t mode = 0; mode < 2; ++mode) {
+    for (uint32_t mode = 0; mode < modes; ++mode) {
         const auto& module = modules[mode];
         ExitRequire(module.end > module.start && module.end - module.start <= sizeof(exitElf), "bounded ELF");
         const uint32_t bytes = module.end - module.start;
@@ -65,10 +66,20 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         printf((char*)" code="); printfHex32(status.exitCode);
         printf((char*)" vector="); printfHex32(status.faultVector);
         printf((char*)" calls="); printfHex32(status.systemCalls); printf((char*)"\n");
-        ExitRequire(status.exitCode == (mode == 0 ? 0x12345678U : 0x80000006U) &&
-            status.faultVector == (mode == 0 ? 0U : 6U) &&
-            status.systemCalls == 2, "exact exit status");
-        ExitRequire(runtime.Reap() == 1 && frames.getStatistics().freeFrames == baseline, "exact Reap frames");
+        if (mode == 2) {
+            NativeStatus worker = {};
+            ExitRequire(status.exitCode == 0x80000006U && status.faultVector == 0 &&
+                runtime.Status(id + 1, worker) && !worker.live && worker.observedCs == 0x23 &&
+                worker.directory == status.directory && worker.observedCr3 == status.directory &&
+                worker.exitCode == status.exitCode && worker.faultVector == 6,
+                "worker fault stops its private CPL3 group");
+        } else {
+            ExitRequire(status.exitCode == (mode == 0 ? 0x12345678U : 0x80000006U) &&
+                status.faultVector == (mode == 0 ? 0U : 6U) &&
+                status.systemCalls == 2, "exact exit status");
+        }
+        ExitRequire(runtime.Reap() == (mode == 2 ? 2U : 1U) &&
+            frames.getStatistics().freeFrames == baseline, "exact Reap frames");
         printf((char*)"CONTENT EXIT REAP mode="); printfHex32(mode);
         printf((char*)" free="); printfHex32(frames.getStatistics().freeFrames);
         printf((char*)" expected="); printfHex32(baseline); printf((char*)"\n");

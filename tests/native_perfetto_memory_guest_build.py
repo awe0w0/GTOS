@@ -44,7 +44,7 @@ component = {
     'cpu': ('native_cpu_record', 'cpu_time_gtos.cc', 'cpu_time.cpp', 'native_perfetto_cpu_time_kernel.cpp', 'PerfettoCpuUnusedBaseline', 3),
     'event': ('native_event_record', 'event_fd_gtos.cc', 'event.cpp', 'native_perfetto_event_kernel.cpp', 'PerfettoEventUnusedBaseline', 3),
     'wait': ('native_wait_record', 'native_wait_gtos.cc', 'wait.cpp', 'native_perfetto_wait_kernel.cpp', 'PerfettoWaitUnusedBaseline', 3),
-    'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 2),
+    'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 3),
     'partition': ('native_memory_record', None, 'partition_pages.cpp',
                   'native_partition_pages_kernel.cpp', 'PartitionPagesUnusedBaseline', 2),
     'boringssl': ('native_memory_record', None, 'boringssl.cpp',
@@ -148,7 +148,8 @@ flags = ['--target=i686-unknown-none-elf', '-D__GTOS__=1', '-ffreestanding', '-f
 if args.component == 'wait':
     flags += ['-I' + str(sdk / 'include')]
 if args.component == 'exit':
-    flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp')]
+    flags += ['-I' + str(args.view), '-I' + str(args.view / 'third_party/abseil-cpp'),
+              '-idirafter', str(repo / 'include')]
 if args.component in ('base_identity', 'base_event', 'base_shared', 'base_tls', 'native_thread',
                       'webrtc_thread', 'vp9', 'skia_semaphore', 'address_text', 'net_protocol',
                       'v8_platform', 'platform_libraries'):
