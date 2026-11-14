@@ -221,15 +221,15 @@ def removal_blends():
             ('peer', expected_content(PEER_TONE))]
 
 
-def screendump(guest, out, name):
+def screendump(guest, out, name, save_png=True):
     """Save the real framebuffer as PPM plus a PNG copy, and return the image."""
     from PIL import Image
     ppm = (out / (name + '.ppm')).resolve()
     guest.call('screendump', {'filename': str(ppm)})
-    time.sleep(0.4)
     image = Image.open(ppm)
     image.load()
-    image.resize((image.width * 2, image.height * 2)).save(out / (name + '.png'))
+    if save_png:
+        image.resize((image.width * 2, image.height * 2)).save(out / (name + '.png'))
     return image
 
 
@@ -323,15 +323,29 @@ def main():
         # The fault payload's window is live with a published frame and a draft.
         wait_for(guest, FAULT_WINDOW, 120, 'the fault payload never got a live window')
         checks['fault_window_live'] = True
-        before = screendump(guest, out, 'fault-window')
-        checks['framebuffer_800x600'] = (before.width, before.height) == SCREEN
         expected = expected_content(FAULT_TONE)
-        mismatches = content_mismatches(before, expected)
+        # Publication precedes the desktop's first paint. Look for the exact
+        # frame while its owner is still live, before interacting with the peer.
+        deadline = time.monotonic() + 2
+        for attempt in range(1, 9):
+            name = 'fault-window-%02d' % attempt
+            before = screendump(guest, out, name, save_png=False)
+            checks['framebuffer_800x600'] = (before.width, before.height) == SCREEN
+            mismatches = (content_mismatches(before, expected)
+                          if checks['framebuffer_800x600'] else None)
+            before_fault = 'NATIVE CPL3 FAULT PROBE' not in guest.text()
+            if mismatches == [] or not before_fault or time.monotonic() >= deadline:
+                break
+            time.sleep(0.05)
+        (out / (name + '.ppm')).rename(out / 'fault-window.ppm')
+        before.resize((before.width * 2, before.height * 2)).save(out / 'fault-window.png')
+        state['fault_window_samples'] = attempt
         state['pixel_mismatches'] = mismatches
         # The exact blend can only appear where the desktop composited this
         # payload's own frame, so a match is direct evidence the window was there.
-        checks['window_visible_before_stop'] = not mismatches
-        state['sample_content_before'] = before.getpixel(CENTRE)
+        checks['window_visible_before_stop'] = before_fault and mismatches == []
+        state['sample_content_before'] = (before.getpixel(CENTRE)
+                                          if checks['framebuffer_800x600'] else None)
 
         # The fault payload now faults; the peer then creates its own window in the
         # slot the fault owner used, and waits for one real routed input record.
