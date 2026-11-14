@@ -1,0 +1,13 @@
+--- a/third_party/openscreen/src/util/BUILD.gn
++++ b/third_party/openscreen/src/util/BUILD.gn
+@@ -49,6 +49,10 @@ if (use_json_serde) {
+     ]
+     configs += openscreen_add_public_configs
+     configs += [ ":json_serde_config" ]
++    if (defined(is_gtos) && is_gtos) {
++      configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++      rustflags = [ "-Zallow-features=restricted_std" ]
++    }
+   }
+ }
+ 

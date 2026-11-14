@@ -1,0 +1,11 @@
+--- a/content/renderer/render_thread_impl.cc
++++ b/content/renderer/render_thread_impl.cc
+@@ -207,7 +207,7 @@
+ 
+ #if BUILDFLAG(IS_APPLE)
+ #include <malloc/malloc.h>
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #include <malloc.h>
+ #endif
+ 

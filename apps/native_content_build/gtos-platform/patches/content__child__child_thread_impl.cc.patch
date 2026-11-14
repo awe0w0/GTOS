@@ -1,0 +1,11 @@
+--- a/content/child/child_thread_impl.cc
++++ b/content/child/child_thread_impl.cc
+@@ -4,8 +4,6 @@
+ 
+ #include "content/child/child_thread_impl.h"
+ 
+-#include <signal.h>
+-
+ #include <memory>
+ #include <string>
+ #include <tuple>

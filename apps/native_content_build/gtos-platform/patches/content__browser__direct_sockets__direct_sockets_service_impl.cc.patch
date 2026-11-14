@@ -1,0 +1,29 @@
+--- a/content/browser/direct_sockets/direct_sockets_service_impl.cc
++++ b/content/browser/direct_sockets/direct_sockets_service_impl.cc
+@@ -57,7 +57,9 @@
+ 
+ #if BUILDFLAG(IS_POSIX)
+ #include <sys/socket.h>
+-#endif  // BUILDFLAG(IS_POSIX)
++#elif BUILDFLAG(IS_GTOS)
++#include <process/loopback_abi.h>
++#endif
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+ #include "content/browser/direct_sockets/firewall_hole_delegate.h"
+@@ -619,9 +621,13 @@ void DirectSocketsServiceImpl::OpenTCPServerSocket(
+ 
+   auto server_options = network::mojom::TCPServerSocketOptions::New();
+   server_options->ipv6_only = options->ipv6_only;
+-  // Substitute |options->backlog| with SOMAXCONN if not specified.
++#if BUILDFLAG(IS_GTOS)
++  constexpr uint32_t kMaxBacklog = GTOS_LOOPBACK_BACKLOG_LIMIT;
++#else
++  constexpr uint32_t kMaxBacklog = SOMAXCONN;
++#endif
+   server_options->backlog =
+-      std::min<uint32_t>(SOMAXCONN, options->backlog.value_or(SOMAXCONN));
++      std::min(kMaxBacklog, options->backlog.value_or(kMaxBacklog));
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+   mojo::PendingReceiver<network::mojom::SocketConnectionTracker>

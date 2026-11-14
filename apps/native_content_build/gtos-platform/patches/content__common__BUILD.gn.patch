@@ -1,0 +1,18 @@
+--- a/content/common/BUILD.gn
++++ b/content/common/BUILD.gn
+@@ -396,10 +396,14 @@ source_set("common") {
+     ]
+   }
+ 
+-  if (is_mac || is_win || is_android || is_fuchsia || is_ios) {
++  if (is_mac || is_win || is_android || is_fuchsia || is_ios || is_gtos) {
+     sources -= [ "font_list_fontconfig.cc" ]
+   }
+ 
++  if (is_gtos) {
++    sources += [ "font_list_gtos.cc" ]
++  }
++
+   if (is_mac) {
+     deps += [ "//media/gpu" ]
+   }

@@ -14,6 +14,15 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'content/browser/direct_sockets/direct_sockets_service_impl.cc': '3fc27deb81f18466c9474cb2b05358cc70fcd241697ae689320ee1b881764e34',
+    'content/child/child_thread_impl.cc': '023bf8bc78fd5b947e2e33af2683b36bff5df7434d8885d56afd385b64d4e2a8',
+    'content/common/BUILD.gn': '75118112f64ff9f3fbf7722bdae3e84c30488d7a86e165d4a318b3d97b6908c0',
+    'services/cert_verifier/cert_verifier_creation.cc': '21f22f157b7bcf337553c77783fe50aedcded0ec8f5a25d4da205ec54a89a962',
+    'services/cert_verifier/cert_verifier_service_factory.cc': '876893c412de6ea00bad098201fb1b94b19fc426cabb250eaeb7a858ccb9510c',
+    'components/password_manager/core/browser/password_form_manager.cc': '1e9b39900874ef2731dd50ec5b44015a6759cdb6d02cfba4dec87d4643c77d52',
+    'content/renderer/render_thread_impl.cc': '3b0904ac8fd3296b30f4fd84c8ca071ef952715c03426d92e16131b49606baa8',
+    'third_party/openscreen/src/util/BUILD.gn': 'b9d5f24c1a30f8bee284f064f8240a331554d11318163e3a4aa1d76ebe6c791a',
+    'third_party/openscreen/src/util/json/serde_json.rs': 'e1904815b6e9df8b67d3b800fb390493fe06020a1e418f05a7be9e9f694aaeca',
     'content/browser/video_capture_service_impl.cc': 'fe26d1f908494795feef87e694af03247667e8fbf8ab6be174601f2239071d44',
     'mojo/public/cpp/bindings/clone_traits.h': 'be74adae27302c13c1ae23f507bc1c92d89d501528ea3f4274251e5762d85060',
     'content/browser/renderer_host/media/media_devices_dispatcher_host.h': '0cf8a73547b83e001e7fbee152ae90573b6aa00005f331b353c7acb4b74e077f',
@@ -559,6 +568,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'content/common/font_list_gtos.cc': 'content/font_list_gtos.cc',
     'content/browser/child_process_launcher_helper_gtos.cc': 'content/child_process_launcher_helper_gtos.cc',
     'net/socket/udp_socket_gtos.h': 'net/udp_socket_gtos.h',
     'tools/gtos_native_sdk/probe/gtos_content_resources_guest_test.cc': '../../../tests/gtos_content_resources_guest_test.cc',

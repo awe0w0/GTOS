@@ -105,7 +105,8 @@ int32_t NativeLoopback::Bind(Socket& socket, uint32_t port) {
 }
 
 int32_t NativeLoopback::Listen(Socket& socket, uint32_t backlog) {
-    if (socket.state != Bound || !backlog || backlog > MaximumSockets)
+    static_assert(GTOS_LOOPBACK_BACKLOG_LIMIT <= MaximumSockets);
+    if (socket.state != Bound || !backlog || backlog > GTOS_LOOPBACK_BACKLOG_LIMIT)
         return GTOS_LOOPBACK_ERR_INVALID;
     socket.backlog = backlog;
     socket.state = Listening;

@@ -1,0 +1,11 @@
+--- a/services/cert_verifier/cert_verifier_creation.cc
++++ b/services/cert_verifier/cert_verifier_creation.cc
+@@ -129,7 +129,7 @@ class CertVerifyProcFactoryImpl : public net::CertVerifyProcFactory {
+                                                 root_store_mtc_metadata);
+ 
+     std::unique_ptr<net::SystemTrustStore> trust_store;
+-#if BUILDFLAG(IS_CHROMEOS)
++#if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_GTOS)
+     trust_store = net::CreateChromeOnlySystemTrustStore(std::move(chrome_root));
+ #else
+     if (instance_params.include_system_trust_store) {

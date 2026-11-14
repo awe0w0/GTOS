@@ -1,0 +1,11 @@
+--- a/third_party/openscreen/src/util/json/serde_json.rs
++++ b/third_party/openscreen/src/util/json/serde_json.rs
+@@ -2,6 +2,8 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ use serde::de::{self, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
+ use serde_json_lenient::de::SliceRead;
+ use std::fmt;

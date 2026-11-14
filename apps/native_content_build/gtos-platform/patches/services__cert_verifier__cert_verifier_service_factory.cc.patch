@@ -1,0 +1,18 @@
+--- a/services/cert_verifier/cert_verifier_service_factory.cc
++++ b/services/cert_verifier/cert_verifier_service_factory.cc
+@@ -174,9 +174,15 @@ bool IsAnchorTrustedOnThisChromeVersion(
+ mojom::PlatformRootStoreInfoPtr GetPlatformRootStoreInfoOnBackgroundThread() {
+   mojom::PlatformRootStoreInfoPtr info_ptr =
+       mojom::PlatformRootStoreInfo::New();
++#if BUILDFLAG(IS_GTOS)
++  std::unique_ptr<net::SystemTrustStore> system_trust_store =
++      net::CreateChromeOnlySystemTrustStore(
++          std::make_unique<net::TrustStoreChrome>());
++#else
+   std::unique_ptr<net::SystemTrustStore> system_trust_store =
+       net::CreateSslSystemTrustStoreChromeRoot(
+           std::make_unique<net::TrustStoreChrome>());
++#endif
+ 
+   net::PlatformTrustStore* platform_trust_store =
+       system_trust_store->GetPlatformTrustStore();
