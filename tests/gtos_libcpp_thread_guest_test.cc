@@ -43,7 +43,16 @@ void* WaitAtGate(void* argument) {
     auto& gate = *static_cast<ThreadGate*>(argument);
     const auto thread = gtos::native::CurrentProcessInfo();
     static thread_local unsigned local_id;
-    if (local_id != 0) return nullptr;
+    GtosThreadSlotInfo slot{};
+    const GtosThreadSlotRequest request{
+        GTOS_THREAD_SLOT_ABI_VERSION, reinterpret_cast<unsigned>(&slot)};
+    unsigned operation = GTOS_SYS_THREAD_SLOT_INFO;
+    asm volatile("int $0x80" : "+a"(operation)
+                 : "b"(&request), "c"(sizeof(request)) : "memory", "cc");
+    if (operation || slot.version != GTOS_THREAD_SLOT_ABI_VERSION ||
+        slot.index >= thread.maximum_parallel_threads ||
+        slot.thread_id != thread.thread_id || local_id != 0)
+        return nullptr;
     local_id = thread.thread_id;
     errno = static_cast<int>(thread.thread_id);
     std::unique_lock lock(gate.mutex);
@@ -97,6 +106,14 @@ int TestThreadCapacity(const GtosProcessInfoResult& process) {
         if (gtos::native::JoinThread(ids[i], &result) ||
             reinterpret_cast<uintptr_t>(result) != ids[i])
             status = 51;
+    }
+    if (!status) {
+        unsigned id = 0;
+        void* result = nullptr;
+        if (gtos::native::StartThread(0, WaitAtGate, &gate, &id) ||
+            id <= ids[count - 1] || gtos::native::JoinThread(id, &result) ||
+            reinterpret_cast<uintptr_t>(result) != id)
+            status = 54;
     }
     return status;
 }

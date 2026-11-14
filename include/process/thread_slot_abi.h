@@ -6,7 +6,8 @@
 #define GTOS_SYS_THREAD_SLOT_INFO 0x4769U
 #define GTOS_THREAD_SLOT_ABI_VERSION 1U
 #define GTOS_THREAD_SLOT_LIMIT 4U
-#define GTOS_CONTENT_THREAD_SLOT_LIMIT 24U
+// Trusted Content boot profile, including the browser and in-process renderer.
+#define GTOS_CONTENT_THREAD_SLOT_LIMIT 32U
 #define GTOS_THREAD_SLOT_ERR_ADDRESS (-14)
 #define GTOS_THREAD_SLOT_ERR_SIZE (-22)
 #define GTOS_THREAD_SLOT_ERR_VERSION (-38)
