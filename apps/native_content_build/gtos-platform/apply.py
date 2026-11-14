@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'content/app/content_main_runner_impl.cc': '8e7073d64f9252ec1aaaabaf249c970eba6ff6e9e4eb80d7f0bb8b03c11ba0b2',
+    'content/shell/common/shell_paths.cc': 'd19225ef1c8017cf96466945cf026d5b71da62ef3f78266631d019789a776383',
     'content/browser/direct_sockets/direct_sockets_service_impl.cc': '3fc27deb81f18466c9474cb2b05358cc70fcd241697ae689320ee1b881764e34',
     'content/child/child_thread_impl.cc': '023bf8bc78fd5b947e2e33af2683b36bff5df7434d8885d56afd385b64d4e2a8',
     'content/common/BUILD.gn': '75118112f64ff9f3fbf7722bdae3e84c30488d7a86e165d4a318b3d97b6908c0',

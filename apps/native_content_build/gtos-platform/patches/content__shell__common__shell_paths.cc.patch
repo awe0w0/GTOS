@@ -1,0 +1,14 @@
+--- a/content/shell/common/shell_paths.cc
++++ b/content/shell/common/shell_paths.cc
+@@ -40,6 +40,11 @@ bool GetDefaultUserDataDirectory(base::FilePath* result) {
+ #elif BUILDFLAG(IS_ANDROID)
+   CHECK(base::PathService::Get(base::DIR_ANDROID_APP_DATA, result));
+   *result = result->Append(FILE_PATH_LITERAL("content_shell"));
++#elif BUILDFLAG(IS_GTOS)
++  if (!base::PathService::Get(base::DIR_ASSETS, result)) {
++    return false;
++  }
++  *result = result->AppendASCII("content_shell");
+ #elif BUILDFLAG(IS_FUCHSIA)
+   *result = base::FilePath(base::kPersistedDataDirectoryPath)
+                 .Append(FILE_PATH_LITERAL("content_shell"));
