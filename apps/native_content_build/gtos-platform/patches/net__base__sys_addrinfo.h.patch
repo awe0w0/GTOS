@@ -1,0 +1,20 @@
+--- a/net/base/sys_addrinfo.h
++++ b/net/base/sys_addrinfo.h
+@@ -28,6 +28,17 @@
+ #if BUILDFLAG(IS_WIN)
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#elif BUILDFLAG(IS_GTOS)
++#include <llvm-libc-types/struct_addrinfo.h>
++#include <netinet/in.h>
++#include <sys/socket.h>
++
++// Private Chromium resolver selectors. These do not expose a socket syscall.
++inline constexpr int SOCK_STREAM = 1;
++inline constexpr int AI_CANONNAME = 2;
++inline constexpr int AI_ADDRCONFIG = 32;
++inline constexpr int EAI_NONAME = -2;
++inline constexpr int EAI_SYSTEM = -11;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ #include <netdb.h>
+ #include <netinet/in.h>

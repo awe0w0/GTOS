@@ -1,0 +1,12 @@
+--- a/net/dns/loopback_only.cc
++++ b/net/dns/loopback_only.cc
+@@ -95,6 +95,9 @@ bool HaveOnlyLoopbackAddressesSlow() {
+   return android::HaveOnlyLoopbackAddresses();
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   return HaveOnlyLoopbackAddressesUsingGetifaddrs();
++#elif BUILDFLAG(IS_GTOS)
++  // Native processes have no non-loopback network interfaces.
++  return true;
+ #endif  // defined(various platforms)
+ }
+ 

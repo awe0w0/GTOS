@@ -1,0 +1,138 @@
+--- a/net/dns/address_info.cc
++++ b/net/dns/address_info.cc
+@@ -16,6 +16,12 @@
+ #include "net/base/net_errors.h"
+ #include "net/base/sys_addrinfo.h"
+ 
++#if BUILDFLAG(IS_GTOS)
++#include <errno.h>
++
++#include "base/strings/string_util.h"
++#endif
++
+ #if BUILDFLAG(IS_ANDROID)
+ #include "net/android/network_library.h"
+ #endif  // BUILDFLAG(IS_ANDROID)
+@@ -24,6 +30,65 @@ namespace net {
+ 
+ namespace {
+ 
++#if BUILDFLAG(IS_GTOS)
++struct GtosAddrinfo : addrinfo {
++  GtosAddrinfo(const IPEndPoint& endpoint, const addrinfo& hints)
++      : addrinfo{} {
++    ai_family = endpoint.GetSockAddrFamily();
++    ai_socktype = hints.ai_socktype;
++    ai_protocol = hints.ai_protocol;
++    ai_addr = reinterpret_cast<sockaddr*>(&address);
++    ai_addrlen = sizeof(address);
++    CHECK(endpoint.ToSockAddr(ai_addr, &ai_addrlen));
++  }
++
++  sockaddr_storage address{};
++  std::string canonical;
++  std::unique_ptr<GtosAddrinfo> next;
++};
++
++std::unique_ptr<GtosAddrinfo> ResolveGtosLocalName(
++    const std::string& host, const addrinfo& hints, int* os_error) {
++  const bool localhost = base::EqualsCaseInsensitiveASCII(host, "localhost") ||
++                         base::EqualsCaseInsensitiveASCII(host, "localhost.");
++  std::unique_ptr<GtosAddrinfo> first;
++  const auto add_address = [&](const IPAddress& ip) {
++    const IPEndPoint endpoint(ip, 0);
++    if (hints.ai_family != AF_UNSPEC &&
++        hints.ai_family != endpoint.GetSockAddrFamily()) {
++      return;
++    }
++    auto entry = std::make_unique<GtosAddrinfo>(endpoint, hints);
++    if (first) {
++      first->next = std::move(entry);
++      first->ai_next = first->next.get();
++    } else {
++      first = std::move(entry);
++    }
++  };
++  if (localhost) {
++    add_address(IPAddress::IPv6Localhost());
++    add_address(IPAddress::IPv4Localhost());
++  } else if (auto ip = IPAddress::FromIPLiteral(host)) {
++    add_address(*ip);
++  } else {
++    errno = ENOSYS;
++    *os_error = EAI_SYSTEM;
++    return nullptr;
++  }
++  if (!first) {
++    *os_error = EAI_NONAME;
++    return nullptr;
++  }
++  if (hints.ai_flags & AI_CANONNAME) {
++    first->canonical = localhost ? "localhost" : host;
++    first->ai_canonname = first->canonical.data();
++  }
++  *os_error = 0;
++  return first;
++}
++#endif
++
+ const addrinfo* Next(const addrinfo* ai) {
+   return ai->ai_next;
+ }
+@@ -74,6 +139,9 @@ AddressInfo::AddressInfoAndResult AddressInfo::Get(
+     // error.
+     // http://crbug.com/134142
+     err = ERR_NAME_NOT_RESOLVED;
++#elif BUILDFLAG(IS_GTOS)
++    if (os_error != EAI_NONAME)
++      err = ERR_NAME_RESOLUTION_FAILED;
+ #elif BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_FREEBSD)
+     if (os_error != EAI_NONAME && os_error != EAI_NODATA)
+       err = ERR_NAME_RESOLUTION_FAILED;
+@@ -128,7 +196,11 @@ bool AddressInfo::IsAllLocalhostOfOneFamily() const {
+       case AF_INET6: {
+         const struct sockaddr_in6* addr_in6 =
+             reinterpret_cast<struct sockaddr_in6*>(ai->ai_addr);
++#if BUILDFLAG(IS_GTOS)
++        if (IPAddress(base::span(addr_in6->sin6_addr.s6_addr)).IsLoopback()) {
++#else
+         if (UNSAFE_TODO(IN6_IS_ADDR_LOOPBACK(&addr_in6->sin6_addr))) {
++#endif
+           saw_v6_localhost = true;
+         } else {
+           return false;
+@@ -177,6 +249,26 @@ std::unique_ptr<addrinfo, FreeAddrInfoFunc> AddrInfoGetter::getaddrinfo(
+     const addrinfo* hints,
+     int* out_os_error,
+     handles::NetworkHandle network) {
++#if BUILDFLAG(IS_GTOS)
++  FreeAddrInfoFunc deleter = [](addrinfo* ai) {
++    delete static_cast<GtosAddrinfo*>(ai);
++  };
++  if (network != handles::kInvalidNetworkHandle) {
++    errno = ENOSYS;
++    *out_os_error = EAI_SYSTEM;
++    return {nullptr, deleter};
++  }
++  if (hints && (hints->ai_flags & ~(AI_ADDRCONFIG | AI_CANONNAME))) {
++    errno = EINVAL;
++    *out_os_error = EAI_SYSTEM;
++    return {nullptr, deleter};
++  }
++  addrinfo defaults = {};
++  // There is no interface filter for numeric or localhost lookups.
++  auto result = ResolveGtosLocalName(host, hints ? *hints : defaults,
++                                     out_os_error);
++  return {result.release(), deleter};
++#else
+   addrinfo* ai;
+   // We wrap freeaddrinfo() in a lambda just in case some operating systems use
+   // a different signature for it.
+@@ -210,6 +302,7 @@ std::unique_ptr<addrinfo, FreeAddrInfoFunc> AddrInfoGetter::getaddrinfo(
+ 
+   rv.reset(ai);
+   return rv;
++#endif
+ }
+ 
+ }  // namespace net

@@ -1,0 +1,58 @@
+--- a/net/http/http_content_disposition.cc
++++ b/net/http/http_content_disposition.cc
+@@ -32,30 +32,27 @@ enum RFC2047EncodingType {
+ bool DecodeQEncoding(std::string_view input, std::string* output) {
+   std::string temp;
+   temp.reserve(input.size());
+-  for (auto it = input.begin(); it != input.end(); ++it) {
+-    if (*it == '_') {
++  while (!input.empty()) {
++    const char current = input.front();
++    if (current == '_') {
+       temp.push_back(' ');
+-    } else if (*it == '=') {
+-      if ((input.end() - it < 3) ||
+-          !base::IsHexDigit(static_cast<unsigned char>(*(it + 1))) ||
+-          !base::IsHexDigit(static_cast<unsigned char>(*(it + 2))))
++    } else if (current == '=') {
++      if (input.size() < 3 ||
++          !base::IsHexDigit(static_cast<unsigned char>(input[1])) ||
++          !base::IsHexDigit(static_cast<unsigned char>(input[2]))) {
+         return false;
+-      unsigned char ch =
+-          base::HexDigitToInt(*(it + 1)) * 16 + base::HexDigitToInt(*(it + 2));
+-      temp.push_back(static_cast<char>(ch));
+-      ++it;
+-      ++it;
+-    } else if (0x20 < *it && *it < 0x7F && *it != '?') {
+-      // In a Q-encoded word, only printable ASCII characters
+-      // represent themselves. Besides, space, '=', '_' and '?' are
+-      // not allowed, but they're already filtered out.
+-      DCHECK_NE('=', *it);
+-      DCHECK_NE('?', *it);
+-      DCHECK_NE('_', *it);
+-      temp.push_back(*it);
++      }
++      const unsigned char byte =
++          base::HexDigitToInt(input[1]) * 16 + base::HexDigitToInt(input[2]);
++      temp.push_back(static_cast<char>(byte));
++      input.remove_prefix(3);
++      continue;
++    } else if (0x20 < current && current < 0x7F && current != '?') {
++      temp.push_back(current);
+     } else {
+       return false;
+     }
++    input.remove_prefix(1);
+   }
+   output->swap(temp);
+   return true;
+@@ -175,7 +172,7 @@ bool DecodeWord(std::string_view encoded_word,
+   }
+ 
+   if (*is_rfc2047) {
+-    if (*(encoded_word.end() - 1) == '=') {
++    if (!encoded_word.empty() && encoded_word.back() == '=') {
+       output->swap(decoded_word);
+       *parse_result_flags |=
+           HttpContentDisposition::HAS_RFC2047_ENCODED_STRINGS;

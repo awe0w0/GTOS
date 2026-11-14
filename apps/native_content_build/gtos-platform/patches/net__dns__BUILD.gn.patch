@@ -1,0 +1,24 @@
+--- a/net/dns/BUILD.gn
++++ b/net/dns/BUILD.gn
+@@ -142,6 +142,10 @@
+     ]
+   }
+ 
++  if (is_gtos) {
++    sources += [ "dns_config_service_gtos.cc" ]
++  }
++
+   if (is_fuchsia) {
+     sources += [
+       "dns_config_service_fuchsia.cc",
+@@ -185,6 +189,10 @@
+ 
+   if (enable_built_in_dns) {
+     sources += [ "dns_client.cc" ]
++
++    if (is_gtos) {
++      sources += [ "address_sorter_gtos.cc" ]
++    }
+ 
+     if (is_posix || is_fuchsia) {
+       sources += [

@@ -1,0 +1,39 @@
+--- a/net/base/net_errors.cc
++++ b/net/base/net_errors.cc
+@@ -6,6 +6,12 @@
+ 
+ #include <string>
+ 
++#include "build/build_config.h"
++
++#if BUILDFLAG(IS_GTOS)
++#include <errno.h>
++#endif
++
+ #include "base/check_op.h"
+ #include "base/files/file.h"
+ #include "base/logging.h"
+@@ -105,6 +111,23 @@ bool IsOkOrDefinedError(int error) {
+   return false;
+ }
+ 
++#if BUILDFLAG(IS_GTOS)
++Error MapSystemError(logging::SystemErrorCode os_error) {
++  switch (os_error) {
++    case 0:
++      return OK;
++    case EBADF:
++      return ERR_INVALID_HANDLE;
++    case EINVAL:
++      return ERR_INVALID_ARGUMENT;
++    case ENOSYS:
++      return ERR_NOT_IMPLEMENTED;
++    default:
++      return FileErrorToNetError(base::File::OSErrorToFileError(os_error));
++  }
++}
++#endif
++
+ Error FileErrorToNetError(base::File::Error file_error) {
+   switch (file_error) {
+     case base::File::FILE_OK:

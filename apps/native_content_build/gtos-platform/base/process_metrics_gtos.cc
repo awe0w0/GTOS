@@ -107,6 +107,24 @@ ByteSize SysInfo::AmountOfVirtualMemory() {
   return ByteSize(static_cast<uint64_t>(info.maximum_pages) * info.page_bytes);
 }
 
+std::optional<SysInfo::DiskSpaceInfo> SysInfo::AmountOfDiskSpace(
+    const FilePath&) {
+  // The file service reports file sizes but exposes no volume usage query.
+  return std::nullopt;
+}
+
+std::optional<int64_t> SysInfo::AmountOfFreeDiskSpace(const FilePath& path) {
+  return AmountOfDiskSpace(path).transform([](DiskSpaceInfo info) {
+    return saturated_cast<int64_t>(info.available.InBytes());
+  });
+}
+
+std::optional<int64_t> SysInfo::AmountOfTotalDiskSpace(const FilePath& path) {
+  return AmountOfDiskSpace(path).transform([](DiskSpaceInfo info) {
+    return saturated_cast<int64_t>(info.total.InBytes());
+  });
+}
+
 std::string SysInfo::OperatingSystemName() {
   return "GTOS";
 }

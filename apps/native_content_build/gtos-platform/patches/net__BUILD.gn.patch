@@ -1,0 +1,23 @@
+--- a/net/BUILD.gn
++++ b/net/BUILD.gn
+@@ -1591,6 +1591,20 @@ component("net") {
+     ]
+   }
+ 
++  if (is_gtos) {
++    sources += [
++      "base/file_stream_context_posix.cc",
++      "base/platform_mime_util_gtos.cc",
++      "disk_cache/cache_util_posix.cc",
++      "disk_cache/simple/simple_util_posix.cc",
++      "http/url_security_manager_posix.cc",
++      "socket/tcp_socket_gtos.cc",
++      "socket/tcp_socket_gtos.h",
++      "socket/udp_socket_gtos.h",
++    ]
++    deps += [ "//build/config/gtos/runtime:native_address_text" ]
++  }
++
+   if (is_posix || is_fuchsia) {
+     sources += [
+       "base/file_stream_context_posix.cc",

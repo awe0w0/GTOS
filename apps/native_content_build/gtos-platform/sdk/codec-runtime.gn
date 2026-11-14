@@ -184,6 +184,7 @@ source_set("native_base_libc") {
     "//third_party/llvm-libc/src/src/ctype/isalpha.cpp",
     "//third_party/llvm-libc/src/src/ctype/isgraph.cpp",
     "//third_party/llvm-libc/src/src/math/generic/nextafter.cpp",
+    "//third_party/llvm-libc/src/src/stdlib/atol.cpp",
     "//third_party/llvm-libc/src/src/string/strnlen.cpp",
     "//third_party/llvm-libc/src/src/time/gmtime.cpp",
     "//third_party/llvm-libc/src/src/wchar/wcschr.cpp",

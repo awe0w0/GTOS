@@ -1,0 +1,42 @@
+--- a/net/base/ip_endpoint.cc
++++ b/net/base/ip_endpoint.cc
+@@ -73,9 +73,12 @@ std::optional<uint32_t> IPEndPoint::ScopeIdFromInterfaceName(
+   unsigned int index = 0;
+   if (name_to_index_func_for_testing_) {
+     index = name_to_index_func_for_testing_(name.c_str());
+-  } else {
++  }
++#if !BUILDFLAG(IS_GTOS)
++  else {
+     index = if_nametoindex(name.c_str());
+   }
++#endif
+ 
+   return index;
+ }
+@@ -88,13 +91,23 @@ base::Value IPEndPoint::ScopeIdToInterfaceNameValue(
+   }
+ 
+   char* name = nullptr;
+-  char buf[IF_NAMESIZE + 1] = {0};
++#if BUILDFLAG(IS_GTOS)
++  if (!index_to_name_func_for_testing_) {
++    return base::Value();
++  }
++  char buf[16] = {};
++#else
++  char buf[IF_NAMESIZE + 1] = {};
++#endif
+   if (index_to_name_func_for_testing_) {
+     name = index_to_name_func_for_testing_(scope_id.value(),
+                                            base::span<char>(buf));
+-  } else {
++  }
++#if !BUILDFLAG(IS_GTOS)
++  else {
+     name = if_indextoname(scope_id.value(), buf);
+   }
++#endif
+ 
+   if (!name) {
+     return base::Value();

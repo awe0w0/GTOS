@@ -1,0 +1,29 @@
+--- a/net/base/lookup_string_in_fixed_set.cc
++++ b/net/base/lookup_string_in_fixed_set.cc
+@@ -342,11 +342,14 @@ std::optional<SuffixMatch> LookupSuffixInReversedSet(
+     std::string_view host) {
+   FixedSetIncrementalLookup lookup(graph);
+   std::optional<SuffixMatch> result;
+-  std::string_view::const_iterator pos = host.end();
+   // Look up host from right to left.
+-  while (pos != host.begin() && lookup.Advance(*--pos)) {
++  for (size_t pos = host.size(); pos > 0;) {
++    --pos;
++    if (!lookup.Advance(host[pos])) {
++      break;
++    }
+     // Only host itself or a part that follows a dot can match.
+-    if (pos == host.begin() || *(pos - 1) == '.') {
++    if (pos == 0 || host[pos - 1] == '.') {
+       std::optional<DomainRuleTags> value =
+           lookup.GetResultForCurrentSequence().transform(
+               DomainRuleTags::FromEnumBitmask);
+@@ -360,7 +363,7 @@ std::optional<SuffixMatch> LookupSuffixInReversedSet(
+         // match.
+         result = SuffixMatch{
+             .tags = *value,
+-            .suffix = host.substr(std::distance(host.begin(), pos)),
++            .suffix = host.substr(pos),
+         };
+       }
+     }

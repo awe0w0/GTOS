@@ -1,0 +1,40 @@
+--- a/net/socket/socket_options.cc
++++ b/net/socket/socket_options.cc
+@@ -20,6 +20,30 @@
+ 
+ namespace net {
+ 
++#if BUILDFLAG(IS_GTOS)
++
++int SetTCPNoDelay(SocketDescriptor, bool) {
++  return ERR_NOT_IMPLEMENTED;
++}
++
++int SetReuseAddr(SocketDescriptor, bool) {
++  return ERR_NOT_IMPLEMENTED;
++}
++
++int SetSocketReceiveBufferSize(SocketDescriptor, int32_t) {
++  return ERR_NOT_IMPLEMENTED;
++}
++
++int SetSocketSendBufferSize(SocketDescriptor, int32_t) {
++  return ERR_NOT_IMPLEMENTED;
++}
++
++int SetIPv6Only(SocketDescriptor, bool) {
++  return ERR_NOT_IMPLEMENTED;
++}
++
++#else
++
+ int SetTCPNoDelay(SocketDescriptor fd, bool no_delay) {
+ #if BUILDFLAG(IS_WIN)
+   BOOL on = no_delay ? TRUE : FALSE;
+@@ -97,4 +121,6 @@ int SetIPv6Only(SocketDescriptor fd, bool ipv6_only) {
+   return rv == -1 ? MapSystemError(errno) : OK;
+ }
+ 
++#endif  // BUILDFLAG(IS_GTOS)
++
+ }  // namespace net

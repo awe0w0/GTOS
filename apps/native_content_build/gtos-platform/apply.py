@@ -14,6 +14,29 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'net/BUILD.gn': 'c887d0c1a40d1eb482a3240a26bcb5bcab228dc370a809171571e2597ecc4a8e',
+    'net/base/file_stream_context.cc': 'eb1c646ea8c26c3363caa39b65ca7295c0d08aa01c4071ed8ca5e733e0161c30',
+    'net/base/file_stream_context.h': '638fbb982da2cda622fc555d28272e08ccbdbde9f9748b6ecbef05d08869e67b',
+    'net/base/filename_util_internal.cc': 'd9450e0b8ee057edf9f4ed97430faf1950c7e18b5aa5708d71f0ff0a67733ae7',
+    'net/base/ip_endpoint.cc': 'df5328a95cbbe7e5859ef96bf03d7f549b07194d742d4b706f1ddb33761d3dac',
+    'net/base/lookup_string_in_fixed_set.cc': 'fd4c2a2eae4de9b3965d3d476707da89034dbe6a8fe32e386fa35a57ea8463e4',
+    'net/base/net_errors.cc': '088e9a4414ac079b270bed46cf15956aad513c4274ff51d1b7bad3cd481598ee',
+    'net/base/network_interfaces.cc': '04eaea4ea140838cb0f0598aa01e7c0a25d3b89631900e71a29cebb159a58753',
+    'net/base/sys_addrinfo.h': '40cd6b4f36f9528f8bea49fe32795305ab3270324f7f6ebe2ffd3d0f9a28785f',
+    'net/cert/cert_verify_proc.cc': 'b820ab2c46df0dac3d8502b0e388aea2be1aee40fb0b85e0c2fd3b6bfc91db08',
+    'net/disk_cache/disk_cache.cc': 'f0e1447aaad356d5e9677e7ee8b1d89d109b7bc450cfb31460f991b1a862a0ed',
+    'net/dns/BUILD.gn': '2692ef08a08bbe21320f26b4089603aeb1aebe5fd3dcb7612fee8b73a5b30755',
+    'net/dns/address_info.cc': '7197c4467e9729dc02b80c6b23da58ef8a94d7a67a2a291f47599548402f555d',
+    'net/dns/loopback_only.cc': '503e16367dd1b6c592dfa0c2cd709e32682ef81f4ef52db8819a7a42f7b9014b',
+    'net/dns/public/util.cc': '3c13b39cb56b8248ecce54f248e7d639841bd0f783d0e9671ec2feef6de5e23f',
+    'net/features.gni': 'f4d52e6ee97678da4e198502c2691d0d603ebe931f98d779699c2c1e387faae4',
+    'net/http/http_auth_preferences.cc': 'dfd9a1bfa8d06195b72e87fe2276ac9698699bab69bf8a3627e4cd91c3e792bf',
+    'net/http/http_auth_preferences.h': '1b41df144c5ef87f0b484c5ee53cb6b38579e4a7eb7d824f47ae0b94a0903b5e',
+    'net/http/http_content_disposition.cc': 'e1e84d62467993b4bb37a2e2be6e6428517f87c391a3250927e41fa1184f0808',
+    'net/socket/socket_descriptor.cc': 'ba04b22f8fda15df0fcc89bda64188ff7d7fe873a12039c038313ed43cefe96b',
+    'net/socket/socket_options.cc': '8a97f5fd20e166be884826c360a2ecc443c5e74f7d3b2a087020301119b4e127',
+    'net/socket/tcp_socket.h': '7d685e5b4290a7c484f3d9f6e769ca1cf45a5f41bba25f86f23a107c1cf07fc0',
+    'net/socket/udp_socket.h': '2f0335d2cca3f63952c0f0e1f66ce63138dbf8a1b0d9a9e8278b76520c587d0e',
     'content/app/content_main_runner_impl.cc': '8e7073d64f9252ec1aaaabaf249c970eba6ff6e9e4eb80d7f0bb8b03c11ba0b2',
     'content/shell/common/shell_paths.cc': 'd19225ef1c8017cf96466945cf026d5b71da62ef3f78266631d019789a776383',
     'content/browser/direct_sockets/direct_sockets_service_impl.cc': '3fc27deb81f18466c9474cb2b05358cc70fcd241697ae689320ee1b881764e34',
@@ -571,6 +594,11 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'net/base/platform_mime_util_gtos.cc': 'net/platform_mime_util_gtos.cc',
+    'net/dns/address_sorter_gtos.cc': 'net/address_sorter_gtos.cc',
+    'net/dns/dns_config_service_gtos.cc': 'net/dns_config_service_gtos.cc',
+    'net/socket/tcp_socket_gtos.cc': 'net/tcp_socket_gtos.cc',
+    'net/socket/tcp_socket_gtos.h': 'net/tcp_socket_gtos.h',
     'content/shell/app/heap_gtos.cc': 'content/heap_gtos.cc',
     'content/common/font_list_gtos.cc': 'content/font_list_gtos.cc',
     'content/browser/child_process_launcher_helper_gtos.cc': 'content/child_process_launcher_helper_gtos.cc',
