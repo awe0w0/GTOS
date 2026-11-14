@@ -1,0 +1,12 @@
+--- a/third_party/rust/subtle/v2/BUILD.gn
++++ b/third_party/rust/subtle/v2/BUILD.gn
+@@ -34,6 +34,9 @@ cargo_crate("lib") {
+     "i128",
+     "std",
+   ]
++  if (is_gtos) {
++    features -= [ "std" ]
++  }
+ 
+   #####################################################################
+   # Tweaking which GN `config`s apply to this target.

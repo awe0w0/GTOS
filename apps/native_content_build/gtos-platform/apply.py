@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'base/feature.rs': 'c3213c03ef957a5b207a0eb7626ec420b442ad44fdfc0a7b2f598b2f383dfa1f',
+    'third_party/rust/subtle/v2/BUILD.gn': '448f38faf397e5e80f1c6d4ecc66b6b176343ca71b9d40e9c5500adb0e056f4a',
+    'components/autofill/core/browser/geo/country_data.h': 'f5552f9de42dd9fbeaa8ecc8975cfcbbbdb900d6051031bcfee97c0aeb7e7373',
     'third_party/blink/renderer/platform/audio/cpu/x86/vector_math_x86.h': '776cd5a4563b2e020b44e495289547d0f49efda2548762383b1abeba29c154c3',
     'third_party/libaddressinput/src/cpp/src/language.cc': '34bc28e146cc1f84bfd2d123cc3762e4d252eb0a1d4f426e72dfc87e267bfa1d',
     'components/translate/core/browser/translate_language_list.cc': '192caec2c15b5324c9c02b9a61b504612b8d55e8cf00f3a6a02724f7bab1b5b0',

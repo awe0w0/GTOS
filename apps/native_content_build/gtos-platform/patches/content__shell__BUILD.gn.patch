@@ -21,7 +21,31 @@
  
  source_set("android_shell_descriptors") {
    testonly = true
-@@ -325,9 +328,6 @@ static_library("content_shell_lib") {
+@@ -85,8 +88,6 @@ source_set("android_shell_descriptors") {
+ static_library("content_shell_app") {
+   testonly = true
+   sources = [
+-    "app/shell_crash_reporter_client.cc",
+-    "app/shell_crash_reporter_client.h",
+     "app/shell_main_delegate.cc",
+     "app/shell_main_delegate.h",
+   ]
+@@ -105,7 +106,13 @@ static_library("content_shell_app") {
+       "//ui/native_theme",
+     ]
+   }
+-  if (!is_fuchsia) {
++  if (!is_gtos) {
++    sources += [
++      "app/shell_crash_reporter_client.cc",
++      "app/shell_crash_reporter_client.h",
++    ]
++  }
++  if (!is_fuchsia && !is_gtos) {
+     deps += [
+       "//components/crash/core/app",
+       "//components/crash/core/app:test_support",
+@@ -325,9 +332,6 @@ static_library("content_shell_lib") {
      ":content_browsertests_mojom",
      ":protocol_sources",
      ":resources",
@@ -31,7 +55,7 @@
      ":shell_controller_mojom",
      "//base",
      "//base:base_static",
-@@ -347,7 +347,6 @@ static_library("content_shell_lib") {
+@@ -347,7 +351,6 @@ static_library("content_shell_lib") {
      "//components/performance_manager",
      "//components/permissions",
      "//components/prefs",
@@ -39,7 +63,7 @@
      "//components/surface_embed/renderer",
      "//components/url_formatter",
      "//components/variations/service",
-@@ -356,14 +355,12 @@ static_library("content_shell_lib") {
+@@ -356,14 +359,12 @@ static_library("content_shell_lib") {
      "//content/common:main_frame_counter",
      "//content/public/common",
      "//content/test:content_test_mojo_bindings",
@@ -54,7 +78,7 @@
      "//services/network/public/cpp",
      "//services/test/echo:lib",
      "//services/test/echo/public/mojom",
-@@ -383,6 +380,19 @@ static_library("content_shell_lib") {
+@@ -383,13 +384,26 @@ static_library("content_shell_lib") {
      "//v8",
    ]
  
@@ -74,7 +98,15 @@
    if (is_fuchsia) {
      sources += [
        "browser/fuchsia_view_presenter.cc",
-@@ -455,10 +465,14 @@ static_library("content_shell_lib") {
+       "browser/fuchsia_view_presenter.h",
+     ]
+     deps += [ "//third_party/fuchsia-sdk/sdk/fidl/fuchsia.element:fuchsia.element_hlcpp" ]
+-  } else {
++  } else if (!is_gtos) {
+     deps += [
+       "//components/crash/content/browser",
+       "//components/crash/core/app",
+@@ -455,10 +469,14 @@ static_library("content_shell_lib") {
    if (use_aura) {
      deps += [
        "//ui/aura",
@@ -90,7 +122,7 @@
  
      if (shell_use_toolkit_views) {
        sources += [
-@@ -469,10 +483,16 @@ static_library("content_shell_lib") {
+@@ -469,10 +487,16 @@ static_library("content_shell_lib") {
        deps += [
          "//ui/color:color_headers",
          "//ui/resources",
@@ -109,7 +141,7 @@
      } else {
        sources += [
          "browser/shell_platform_delegate_aura.cc",
-@@ -759,6 +779,23 @@ if (is_android) {
+@@ -759,6 +783,23 @@ if (is_android) {
  
      sources = [ "app/shell_main.cc" ]
  
@@ -133,7 +165,7 @@
      if (is_win) {
        sources += [ "app/shell.rc" ]
      }
-@@ -774,6 +811,13 @@ if (is_android) {
+@@ -774,6 +815,13 @@ if (is_android) {
        "//sandbox",
      ]
  

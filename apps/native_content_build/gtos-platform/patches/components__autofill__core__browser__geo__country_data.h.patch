@@ -1,0 +1,21 @@
+--- a/components/autofill/core/browser/geo/country_data.h
++++ b/components/autofill/core/browser/geo/country_data.h
+@@ -15,6 +15,7 @@
+ #include "base/containers/fixed_flat_map.h"
+ #include "base/containers/fixed_flat_set.h"
+ #include "base/containers/flat_map.h"
++#include "base/containers/span.h"
+ 
+ namespace base {
+ template <typename T>
+@@ -324,8 +325,9 @@ inline constexpr auto kCountryAddressImportRequirementsData =
+ // all the country codes used as keys in kCountryAddressImportRequirementsData
+ constexpr base::fixed_flat_set<std::string_view, 252u> GetCountryCodes() {
+   return []<size_t... I>(std::index_sequence<I...>) {
++    constexpr auto entries = base::span(kCountryAddressImportRequirementsData);
+     return base::MakeFixedFlatSet<std::string_view>(
+-        {kCountryAddressImportRequirementsData.begin()[I].first...});
++        base::sorted_unique, {entries[I].first...});
+   }(std::make_index_sequence<kCountryAddressImportRequirementsData.size()>());
+ }
+ 
