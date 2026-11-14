@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/flate2-v1/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/flate2-v1/src/lib.rs
+@@ -128,6 +128,7 @@
+ #![cfg_attr(test, deny(warnings))]
+ #![cfg_attr(docsrs, feature(doc_cfg))]
+ #![no_std]
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ #![cfg_attr(flate2_unstable_nightly_alloc_io, feature(alloc_io))]
+ 
+ #[cfg(not(feature = "any_impl",))]

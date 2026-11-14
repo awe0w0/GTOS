@@ -1,0 +1,24 @@
+--- a/third_party/angle/src/libANGLE/PixelLocalStorage.cpp
++++ b/third_party/angle/src/libANGLE/PixelLocalStorage.cpp
+@@ -11,6 +11,7 @@
+ #include "libANGLE/PixelLocalStorage.h"
+ #include "common/unsafe_buffers.h"
+ 
++#include <iterator>
+ #include <numeric>
+ #include "common/FixedVector.h"
+ #include "libANGLE/Context.h"
+@@ -888,10 +889,9 @@ class PixelLocalStorageFramebufferFetch : public PixelLocalStorage
+         int numAppDrawBuffers =
+             std::min(static_cast<int>(appDrawBuffers.size()), firstPLSDrawBuffer);
+         DrawBuffersArray<GLenum> plsDrawBuffers;
+-        std::copy(appDrawBuffers.begin(), appDrawBuffers.begin() + numAppDrawBuffers,
+-                  plsDrawBuffers.begin());
+-        std::fill(plsDrawBuffers.begin() + numAppDrawBuffers,
+-                  plsDrawBuffers.begin() + firstPLSDrawBuffer, GL_NONE);
++        std::copy_n(appDrawBuffers.begin(), numAppDrawBuffers, plsDrawBuffers.begin());
++        std::fill_n(std::next(plsDrawBuffers.begin(), numAppDrawBuffers),
++                    firstPLSDrawBuffer - numAppDrawBuffers, GL_NONE);
+ 
+         bool needsClear = false;
+         for (GLsizei i = 0; i < n; ++i)

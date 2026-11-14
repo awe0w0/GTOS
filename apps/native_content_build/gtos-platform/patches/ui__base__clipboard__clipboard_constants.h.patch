@@ -1,0 +1,27 @@
+--- a/ui/base/clipboard/clipboard_constants.h
++++ b/ui/base/clipboard/clipboard_constants.h
+@@ -46,11 +46,14 @@ inline constexpr char kMimeTypeWindowDrag[] = "chromium/x-window-drag";
+ 
+ // ----- LINUX & CHROMEOS & FUCHSIA MIME TYPES -----
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA) || \
++    BUILDFLAG(IS_GTOS)
+ inline constexpr char kMimeTypeLinuxUtf8String[] = "UTF8_STRING";
+ inline constexpr char kMimeTypeLinuxString[] = "STRING";
+ inline constexpr char kMimeTypeLinuxText[] = "TEXT";
++#endif
+ 
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
+ // Used for file transfer using the XDG file transfer portal.
+ inline constexpr char kMimeTypePortalFileTransfer[] =
+     "application/vnd.portal.filetransfer";
+@@ -59,7 +62,7 @@ inline constexpr char kMimeTypePortalFiles[] = "application/vnd.portal.files";
+         // BUILDFLAG(IS_FUCHSIA)
+ 
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA) || \
+-    BUILDFLAG(IS_ANDROID)
++    BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_GTOS)
+ inline constexpr char kMimeTypeSourceUrl[] = "chromium/x-source-url";
+ #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) ||
+         // BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_ANDROID)

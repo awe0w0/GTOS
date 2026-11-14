@@ -1,0 +1,11 @@
+--- a/components/persistent_cache/persistent_cache_collection.cc
++++ b/components/persistent_cache/persistent_cache_collection.cc
+@@ -308,7 +308,7 @@ std::optional<char> RotateChar(char c) {
+   // Use a rotating index to find a character to replace `c`.
+   auto target_index =
+       (char_index + kRotationOffset) % kAllowedCharsInFilenames.size();
+-  return *(kAllowedCharsInFilenames.begin() + target_index);
++  return base::span(kAllowedCharsInFilenames)[target_index];
+ }
+ 
+ // Mapping of characters illegal in filenames to a unique token to represent

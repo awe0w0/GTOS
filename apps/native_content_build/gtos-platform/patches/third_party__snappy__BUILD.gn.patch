@@ -1,0 +1,14 @@
+--- a/third_party/snappy/BUILD.gn
++++ b/third_party/snappy/BUILD.gn
+@@ -13,6 +13,11 @@ config("snappy_config") {
+     include_dirs += [ "win32" ]
+   } else if (is_mac) {
+     include_dirs += [ "mac" ]
++  } else if (is_gtos) {
++    include_dirs += [
++      "gtos",
++      "linux",
++    ]
+   } else {
+     include_dirs += [ "linux" ]
+   }

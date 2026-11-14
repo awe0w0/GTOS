@@ -1,0 +1,11 @@
+--- a/third_party/blink/renderer/core/layout/build.gni
++++ b/third_party/blink/renderer/core/layout/build.gni
+@@ -737,7 +737,7 @@ if (is_android) {
+   ]
+ }
+ 
+-if (is_fuchsia) {
++if (is_fuchsia || is_gtos) {
+   blink_core_sources_layout += [ "layout_theme_fuchsia.cc" ]
+ }
+ 

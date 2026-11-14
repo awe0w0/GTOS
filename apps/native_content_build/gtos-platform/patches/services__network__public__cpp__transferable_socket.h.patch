@@ -1,0 +1,20 @@
+--- a/services/network/public/cpp/transferable_socket.h
++++ b/services/network/public/cpp/transferable_socket.h
+@@ -43,7 +43,7 @@ class COMPONENT_EXPORT(NETWORK_CPP_BASE) TransferableSocket {
+ #if BUILDFLAG(IS_WIN)
+   TransferableSocket(net::SocketDescriptor socket,
+                      base::ProcessId destination_process_id);
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   explicit TransferableSocket(net::SocketDescriptor socket);
+ #else
+ #error "Unsupported Platform"
+@@ -64,7 +64,7 @@ class COMPONENT_EXPORT(NETWORK_CPP_BASE) TransferableSocket {
+                                    network::TransferableSocket>;
+ #if BUILDFLAG(IS_WIN)
+   std::vector<uint8_t> wsa_info_buffer_;
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   explicit TransferableSocket(mojo::PlatformHandle socket);
+   mojo::PlatformHandle socket_;
+ #else

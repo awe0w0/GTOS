@@ -1,0 +1,33 @@
+--- a/services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics.cc
++++ b/services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics.cc
+@@ -6,6 +6,8 @@
+ 
+ #include "build/build_config.h"
+ 
++#include "build/build_config.h"
++
+ namespace memory_instrumentation {
+ 
+ // static
+@@ -45,3 +47,21 @@ OSMetrics::GetMemoryInfo(base::ProcessHandle handle) {
+ #endif  // !BUILDFLAG(IS_APPLE)
+ 
+ }  // namespace memory_instrumentation
++
++#if BUILDFLAG(IS_GTOS)
++namespace memory_instrumentation {
++
++bool OSMetrics::FillOSMemoryDump(base::ProcessHandle,
++                                const MemDumpFlagSet&,
++                                mojom::RawOSMemDump*) {
++  // The memory ABI has no process-wide resident page counter.
++  return false;
++}
++
++std::vector<mojom::VmRegionPtr> OSMetrics::GetProcessMemoryMaps(
++    base::ProcessHandle) {
++  return {};
++}
++
++}  // namespace memory_instrumentation
++#endif

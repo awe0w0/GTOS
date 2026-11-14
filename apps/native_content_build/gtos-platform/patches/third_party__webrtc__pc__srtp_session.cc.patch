@@ -1,0 +1,11 @@
+--- a/third_party/webrtc/pc/srtp_session.cc
++++ b/third_party/webrtc/pc/srtp_session.cc
+@@ -371,7 +371,7 @@ bool SrtpSession::RemoveSsrcFromSession(uint32_t ssrc) {
+   RTC_DCHECK_RUN_ON(&thread_checker_);
+   RTC_DCHECK(session_);
+   // libSRTP expects the SSRC to be in network byte order.
+-  return srtp_remove_stream(session_, htonl(ssrc)) == srtp_err_status_ok;
++  return srtp_remove_stream(session_, HostToNetwork32(ssrc)) == srtp_err_status_ok;
+ }
+ 
+ bool SrtpSession::GetSendStreamPacketIndex(CopyOnWriteBuffer& buffer,

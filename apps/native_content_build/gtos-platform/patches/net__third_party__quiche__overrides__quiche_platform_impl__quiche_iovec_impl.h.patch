@@ -1,0 +1,11 @@
+--- a/net/third_party/quiche/overrides/quiche_platform_impl/quiche_iovec_impl.h
++++ b/net/third_party/quiche/overrides/quiche_platform_impl/quiche_iovec_impl.h
+@@ -15,6 +15,8 @@ struct iovec {
+   void* iov_base; /* Pointer to data.  */
+   size_t iov_len; /* Length of data.  */
+ };
++#elif BUILDFLAG(IS_GTOS)
++#include <llvm-libc-types/struct_iovec.h>
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ #include <sys/uio.h>
+ #endif  // BUILDFLAG(IS_WIN)

@@ -1,0 +1,19 @@
+--- a/third_party/blink/renderer/platform/fonts/skia/sktypeface_factory.cc
++++ b/third_party/blink/renderer/platform/fonts/skia/sktypeface_factory.cc
+@@ -22,12 +22,15 @@ sk_sp<SkTypeface> SkTypeface_Factory::FromFontConfigInterfaceIdAndTtcIndex(
+     int config_id,
+     int ttc_index) {
+ #if !BUILDFLAG(IS_APPLE) && !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_WIN) && \
+-    !BUILDFLAG(IS_FUCHSIA)
++    !BUILDFLAG(IS_FUCHSIA) && !BUILDFLAG(IS_GTOS)
+   sk_sp<SkFontConfigInterface> fci(SkFontConfigInterface::RefGlobal());
+   SkFontConfigInterface::FontIdentity font_identity;
+   font_identity.fID = config_id;
+   font_identity.fTTCIndex = ttc_index;
+   return fci->makeTypeface(font_identity, SkFontMgr_New_Fontations_Empty());
++#elif BUILDFLAG(IS_GTOS)
++  // Fontconfig identifiers have no meaning in the packaged font manager.
++  return nullptr;
+ #else
+   NOTREACHED();
+ #endif

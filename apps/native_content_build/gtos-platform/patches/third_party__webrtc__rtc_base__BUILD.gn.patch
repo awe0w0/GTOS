@@ -10,3 +10,47 @@
  }
  
  rtc_library("rtc_event") {
+@@ -897,13 +900,18 @@ rtc_library("rtc_json") {
+ rtc_library("net_helpers") {
+   visibility = [ "*" ]
+   sources = [
+-    "net_helpers.cc",
+     "net_helpers.h",
+   ]
+   deps = [
+     "system:rtc_export",
+     "//third_party/abseil-cpp/absl/strings:string_view",
+   ]
++  if (build_with_chromium && is_gtos) {
++    sources += [ "net_helpers_gtos.cc" ]
++    deps += [ "//url" ]
++  } else {
++    sources += [ "net_helpers.cc" ]
++  }
+   if (is_android) {
+     deps += [ ":ifaddrs_android" ]
+   }
+@@ -1054,8 +1062,6 @@ rtc_library("threading") {
+     "network_monitor.h",
+     "network_monitor_factory.cc",
+     "network_monitor_factory.h",
+-    "physical_socket_server.cc",
+-    "physical_socket_server.h",
+     "thread.cc",
+     "thread.h",
+   ]
+@@ -1093,6 +1099,14 @@ rtc_library("threading") {
+     "//third_party/abseil-cpp/absl/functional:any_invocable",
+     "//third_party/abseil-cpp/absl/strings:string_view",
+   ]
++  if (build_with_chromium && is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_threads" ]
++  } else {
++    sources += [
++      "physical_socket_server.cc",
++      "physical_socket_server.h",
++    ]
++  }
+   if (is_android) {
+     deps += [ ":ifaddrs_android" ]
+   }

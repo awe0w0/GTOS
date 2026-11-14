@@ -9,6 +9,7 @@
 #include <process/cpu_clock_abi.h>
 #include <process/system_memory_abi.h>
 
+#include "base/cpu.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/page_size.h"
 #include "base/numerics/safe_conversions.h"
@@ -22,6 +23,18 @@ ProcessMetrics::ProcessMetrics(ProcessHandle process) : process_(process) {}
 std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
     ProcessHandle process) {
   return WrapUnique(new ProcessMetrics(process));
+}
+
+base::expected<ProcessMemoryInfo, ProcessUsageError>
+ProcessMetrics::GetMemoryInfo() const {
+  return base::unexpected(process_ == GetCurrentProcessHandle()
+                              ? ProcessUsageError::kSystemError
+                              : ProcessUsageError::kProcessNotFound);
+}
+
+size_t GetMaxFds() {
+  // FileStore has 64 slots shared by all processes on the mounted volume.
+  return 64;
 }
 
 base::expected<TimeDelta, ProcessCPUUsageError>
@@ -143,6 +156,10 @@ void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
 
 std::string SysInfo::OperatingSystemArchitecture() {
   return "x86";
+}
+
+std::string SysInfo::CPUModelName() {
+  return CPU().cpu_brand();
 }
 
 }  // namespace base

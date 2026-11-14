@@ -1,0 +1,13 @@
+--- a/third_party/webrtc/rtc_base/ip_address.h
++++ b/third_party/webrtc/rtc_base/ip_address.h
+@@ -21,7 +21,9 @@
+ #include "rtc_base/net_helpers.h"
+ #include "rtc_base/system/rtc_export.h"
+ 
+-#if defined(WEBRTC_POSIX)
++#if defined(__GTOS__)
++#include <llvm-libc-types/struct_addrinfo.h>
++#elif defined(WEBRTC_POSIX)
+ #include <arpa/inet.h>  // IWYU pragma: keep
+ #include <netdb.h>
+ #include <netinet/in.h>  // IWYU pragma: export

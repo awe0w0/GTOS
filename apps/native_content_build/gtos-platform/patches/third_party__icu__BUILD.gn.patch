@@ -1,0 +1,18 @@
+--- a/third_party/icu/BUILD.gn
++++ b/third_party/icu/BUILD.gn
+@@ -89,6 +89,15 @@ config("icu_code") {
+     "U_CHARSET_IS_UTF8=1",
+   ]
+ 
++  if (is_gtos) {
++    defines += [
++      "U_HAVE_MMAP=0",
++      "U_HAVE_NL_LANGINFO_CODESET=0",
++      "U_HAVE_TZNAME=0",
++      "U_HAVE_TZSET=0",
++    ]
++  }
++
+   if (is_win) {
+     # Disable some compiler warnings.
+     cflags += [

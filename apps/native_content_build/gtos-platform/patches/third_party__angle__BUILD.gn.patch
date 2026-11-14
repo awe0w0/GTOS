@@ -1,0 +1,13 @@
+--- a/third_party/angle/BUILD.gn
++++ b/third_party/angle/BUILD.gn
+@@ -572,6 +572,10 @@ template("angle_common_lib") {
+     ]
+ 
+     deps = [ ":xxhash" ]
++    if (is_gtos) {
++      sources += [ "src/common/system_utils_gtos.cpp" ]
++      deps += [ "//base" ]
++    }
+ 
+     public_deps = [
+       ":angle_abseil",

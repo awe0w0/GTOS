@@ -1,0 +1,22 @@
+--- a/ui/gfx/native_pixmap_handle.cc
++++ b/ui/gfx/native_pixmap_handle.cc
+@@ -73,6 +73,11 @@ NativePixmapHandle& NativePixmapHandle::operator=(NativePixmapHandle&& other) =
+     default;
+ 
+ NativePixmapHandle CloneHandleForIPC(const NativePixmapHandle& handle) {
++#if BUILDFLAG(IS_GTOS)
++  // GTOS presents software buffers and has no transferable pixmap planes.
++  DLOG_IF(ERROR, !handle.planes.empty()) << "GTOS cannot export pixmap planes";
++  return {};
++#else
+   NativePixmapHandle clone;
+   for (auto& plane : handle.planes) {
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+@@ -133,6 +138,7 @@ NativePixmapHandle CloneHandleForIPC(const NativePixmapHandle& handle) {
+ #endif
+ 
+   return clone;
++#endif
+ }
+ 
+ bool CanFitImageForSizeAndFormat(const gfx::NativePixmapHandle& handle,

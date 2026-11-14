@@ -1,0 +1,21 @@
+--- a/third_party/angle/src/libANGLE/Framebuffer.cpp
++++ b/third_party/angle/src/libANGLE/Framebuffer.cpp
+@@ -10,6 +10,8 @@
+ #include "libANGLE/Framebuffer.h"
+ #include "common/unsafe_buffers.h"
+ 
++#include <iterator>
++
+ #include "common/Optional.h"
+ #include "common/bitset_utils.h"
+ #include "common/utilities.h"
+@@ -1119,7 +1121,8 @@ void Framebuffer::setDrawBuffers(size_t count, const GLenum *buffers)
+ 
+     ASSERT(count <= drawStates.size());
+     std::copy(buffers, ANGLE_UNSAFE_TODO(buffers + count), drawStates.begin());
+-    std::fill(drawStates.begin() + count, drawStates.end(), GL_NONE);
++    std::fill(std::next(drawStates.begin(), static_cast<ptrdiff_t>(count)), drawStates.end(),
++              GL_NONE);
+     mDirtyBits.set(DIRTY_BIT_DRAW_BUFFERS);
+ 
+     mState.mEnabledDrawBuffers.reset();

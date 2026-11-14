@@ -1,0 +1,16 @@
+--- a/services/network/public/cpp/transferable_socket_mojom_traits.cc
++++ b/services/network/public/cpp/transferable_socket_mojom_traits.cc
+@@ -46,7 +46,12 @@ bool StructTraits<network::mojom::TransferableSocketDataView,
+   if (!in.ReadProtocolInfo(&out->wsa_info_buffer_))
+     return false;
+ #else
+-  *out = network::TransferableSocket(in.TakeSocket());
++  auto socket = in.TakeSocket();
++#if BUILDFLAG(IS_GTOS)
++  if (socket.is_valid() && !socket.is_fd())
++    return false;
++#endif
++  *out = network::TransferableSocket(std::move(socket));
+ #endif
+ #if DCHECK_IS_ON()
+   out->has_been_transferred_ = true;

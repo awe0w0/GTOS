@@ -1,0 +1,12 @@
+--- a/third_party/swiftshader/src/Pipeline/BUILD.gn
++++ b/third_party/swiftshader/src/Pipeline/BUILD.gn
+@@ -76,6 +76,9 @@ swiftshader_source_set("Pipeline") {
+     "../System:System_headers",
+     "../Vulkan:swiftshader_libvulkan_headers",
+   ]
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++  }
+ 
+   public_deps = [
+     ":Pipeline_headers",

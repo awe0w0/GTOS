@@ -1,0 +1,26 @@
+--- a/third_party/swiftshader/src/Pipeline/SpirvShaderControlFlow.cpp
++++ b/third_party/swiftshader/src/Pipeline/SpirvShaderControlFlow.cpp
+@@ -23,7 +23,11 @@
+ 
+ #include <queue>
+ 
++#if defined(__GTOS__)
++#include "System/GtosTextOutput.hpp"
++#else
+ #include <fstream>
++#endif
+ #include <iostream>
+ 
+ namespace sw {
+@@ -734,7 +738,11 @@ void SpirvEmitter::SetStoresAndAtomicsMask(RValue<SIMD::Int> mask)
+ 
+ void Spirv::WriteCFGGraphVizDotFile(const char *path) const
+ {
++#if defined(__GTOS__)
++	GtosTextOutput file(path);
++#else
+ 	std::ofstream file(path);
++#endif
+ 	file << "digraph D {" << std::endl;
+ 	for(auto &func : functions)
+ 	{

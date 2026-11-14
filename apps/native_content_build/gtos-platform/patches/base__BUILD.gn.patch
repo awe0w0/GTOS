@@ -1,6 +1,6 @@
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1055,6 +1055,32 @@ component("base") {
+@@ -1055,6 +1055,36 @@ component("base") {
      #"system/sys_info_openbsd.cc",
    ]
  
@@ -17,7 +17,10 @@
 +      "process/process_gtos.cc",
 +      "process/process_metrics_gtos.cc",
 +      "process/memory_stubs.cc",
++      "profiler/core_unwinders_posix.cc",
 +      "profiler/stack_sampler_posix.cc",
++      "strings/sys_string_conversions_posix.cc",
++      "sync_socket_gtos.cc",
 +      "rand_util_gtos.cc",
 +      "synchronization/condition_variable_gtos.cc",
 +      "synchronization/lock_impl_gtos.cc",
@@ -27,18 +30,20 @@
 +      "threading/thread_local_storage_gtos.cc",
 +      "time/time_exploded_posix.cc",
 +      "time/time_now_gtos.cc",
++      "timer/hi_res_timer_manager_posix.cc",
 +    ]
 +  }
 +
    if (is_apple || current_os == "freebsd" || current_os == "openbsd") {
      sources += [
        "posix/sysctl.cc",
-@@ -1155,6 +1175,13 @@ component("base") {
+@@ -1156,6 +1186,14 @@ component("base") {
      "//third_party/modp_b64",
    ]
  
 +  if (is_gtos) {
 +    deps += [
++      "//build/config/gtos/runtime:compiler_builtins",
 +      "//build/config/gtos/runtime:native_base_libc",
 +      "//build/config/gtos/runtime:native_threads",
 +    ]
@@ -47,7 +52,7 @@
    # Used by metrics/crc32
    deps += [ "//third_party/zlib" ]
  
-@@ -2675,6 +2702,10 @@ rust_static_library("file_path") {
+@@ -2675,6 +2713,10 @@ rust_static_library("file_path") {
    crate_root = "files/file_path.rs"
    sources = [ "files/file_path.rs" ]
    allow_unsafe = true

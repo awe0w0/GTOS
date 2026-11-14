@@ -1,0 +1,20 @@
+--- a/third_party/webrtc/rtc_base/synchronization/BUILD.gn
++++ b/third_party/webrtc/rtc_base/synchronization/BUILD.gn
+@@ -26,7 +26,7 @@ rtc_source_set("mutex") {
+     "mutex_critical_section.h",
+     "mutex_pthread.h",
+   ]
+-  if (rtc_use_absl_mutex) {
++  if (rtc_use_absl_mutex || is_gtos) {
+     sources += [ "mutex_abseil.h" ]
+   }
+ 
+@@ -35,7 +35,7 @@ rtc_source_set("mutex") {
+     "..:macromagic",
+     "../system:no_unique_address",
+   ]
+-  if (rtc_use_absl_mutex) {
++  if (rtc_use_absl_mutex || is_gtos) {
+     deps += [ "//third_party/abseil-cpp/absl/synchronization" ]
+   }
+ }

@@ -132,3 +132,17 @@ extern "C" int posix_memalign(void** output, size_t alignment,
   *output = result;
   return 0;
 }
+
+extern "C" void* aligned_alloc(size_t alignment, size_t size) noexcept {
+  if (!std::has_single_bit(alignment) || size % alignment) {
+    errno = EINVAL;
+    return nullptr;
+  }
+  void* result = nullptr;
+  const int status =
+      posix_memalign(&result, alignment < sizeof(void*) ? sizeof(void*) : alignment, size);
+  if (status) {
+    errno = status;
+  }
+  return result;
+}

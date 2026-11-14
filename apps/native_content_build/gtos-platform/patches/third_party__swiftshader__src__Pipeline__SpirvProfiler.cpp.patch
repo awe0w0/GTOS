@@ -1,0 +1,26 @@
+--- a/third_party/swiftshader/src/Pipeline/SpirvProfiler.cpp
++++ b/third_party/swiftshader/src/Pipeline/SpirvProfiler.cpp
+@@ -20,7 +20,11 @@
+ 
+ #include <string.h>
+ #include <atomic>
++#if defined(__GTOS__)
++#include "System/GtosTextOutput.hpp"
++#else
+ #include <fstream>
++#endif
+ 
+ namespace {
+ std::string GetSpvOpName(const spv::Op &op)
+@@ -68,7 +72,11 @@ SpirvProfiler::~SpirvProfiler()
+ 
+ void SpirvProfiler::ReportSnapshot()
+ {
++#if defined(__GTOS__)
++	GtosTextOutput f(reportFilePath.c_str());
++#else
+ 	std::ofstream f{ reportFilePath };
++#endif
+ 
+ 	if(!f)
+ 	{

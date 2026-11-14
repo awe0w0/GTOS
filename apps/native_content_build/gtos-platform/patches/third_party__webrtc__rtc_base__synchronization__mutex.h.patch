@@ -1,0 +1,11 @@
+--- a/third_party/webrtc/rtc_base/synchronization/mutex.h
++++ b/third_party/webrtc/rtc_base/synchronization/mutex.h
+@@ -13,7 +13,7 @@
+ 
+ #include "rtc_base/thread_annotations.h"
+ 
+-#if defined(WEBRTC_ABSL_MUTEX)
++#if defined(WEBRTC_ABSL_MUTEX) || defined(__GTOS__)
+ #include "rtc_base/synchronization/mutex_abseil.h"  // nogncheck
+ #elif defined(WEBRTC_WIN)
+ #include "rtc_base/synchronization/mutex_critical_section.h"

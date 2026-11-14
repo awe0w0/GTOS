@@ -1,0 +1,15 @@
+--- a/third_party/rust/png/v0_18/BUILD.gn
++++ b/third_party/rust/png/v0_18/BUILD.gn
+@@ -79,6 +79,12 @@ cargo_crate("lib") {
+   _configs_to_remove += [ "//build/config/compiler:default_optimization" ]
+   _configs_to_add += [ "//build/config/compiler:optimize" ]
+ 
++  if (is_gtos) {
++    # Keep the PNG decoder and encoder stream adapters on GTOS std.
++    _configs_to_remove += [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
++
+   # Applying config changes.
+   library_configs -= _configs_to_remove
+   library_configs += _configs_to_add

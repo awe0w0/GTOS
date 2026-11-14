@@ -1,0 +1,30 @@
+--- a/mojo/public/cpp/platform/platform_channel_server.cc
++++ b/mojo/public/cpp/platform/platform_channel_server.cc
+@@ -7,6 +7,8 @@
+ #include <memory>
+ #include <utility>
+ 
++#include "build/build_config.h"
++
+ namespace mojo {
+ 
+ PlatformChannelServer::PlatformChannelServer() = default;
+@@ -36,6 +38,10 @@ void PlatformChannelServer::WaitForConnection(
+ bool PlatformChannelServer::TryListen(
+     PlatformChannelServerEndpoint& server_endpoint,
+     ConnectionCallback& callback) {
++#if BUILDFLAG(IS_GTOS)
++  // Named endpoints have no transport in the native in-process embedder.
++  return false;
++#else
+   auto listener = Listener::Create();
+   if (!listener->Start(server_endpoint, callback)) {
+     return false;
+@@ -43,6 +49,7 @@ bool PlatformChannelServer::TryListen(
+ 
+   listener_ = std::move(listener);
+   return true;
++#endif
+ }
+ 
+ void PlatformChannelServer::Stop() {

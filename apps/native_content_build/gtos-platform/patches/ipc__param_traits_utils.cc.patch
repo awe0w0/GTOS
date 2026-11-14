@@ -1,0 +1,53 @@
+--- a/ipc/param_traits_utils.cc
++++ b/ipc/param_traits_utils.cc
+@@ -49,6 +49,11 @@
+ #include "ipc/handle_attachment_fuchsia.h"
+ #endif
+ 
++#if BUILDFLAG(IS_GTOS)
++#include "ipc/ipc_mojo_handle_attachment.h"
++#include "mojo/public/cpp/system/platform_handle.h"
++#endif
++
+ #if BUILDFLAG(IS_ANDROID)
+ #include "base/android/scoped_hardware_buffer_handle.h"
+ #include "ipc/ipc_mojo_handle_attachment.h"
+@@ -787,7 +792,12 @@ void ParamTraits<base::subtle::PlatformSharedMemoryRegion>::Write(
+   WriteParam(m, static_cast<uint64_t>(p.GetSize()));
+   WriteParam(m, p.GetGUID());
+ 
+-#if BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_GTOS)
++  auto buffer = mojo::WrapPlatformSharedMemoryRegion(
++      std::move(const_cast<param_type&>(p)));
++  m->WriteAttachment(new internal::MojoHandleAttachment(
++      mojo::ScopedHandle::From(std::move(buffer))));
++#elif BUILDFLAG(IS_WIN)
+   base::win::ScopedHandle h = const_cast<param_type&>(p).PassPlatformHandle();
+   HandleWin handle_win(h.Get());
+   WriteParam(m, handle_win);
+@@ -837,7 +847,23 @@ bool ParamTraits<base::subtle::PlatformSharedMemoryRegion>::Read(
+   }
+   size_t size = static_cast<size_t>(shm_size);
+ 
+-#if BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_GTOS)
++  scoped_refptr<base::Pickle::Attachment> attachment;
++  if (!m->ReadAttachment(iter, &attachment) ||
++      static_cast<MessageAttachment*>(attachment.get())->GetType() !=
++          MessageAttachment::Type::MOJO_HANDLE) {
++    return false;
++  }
++  auto handle = static_cast<internal::MojoHandleAttachment*>(attachment.get())
++                    ->TakeHandle();
++  auto region = mojo::UnwrapPlatformSharedMemoryRegion(
++      mojo::ScopedSharedBufferHandle::From(std::move(handle)));
++  if (!region.IsValid() || region.GetMode() != mode ||
++      region.GetSize() != size || region.GetGUID() != guid) {
++    return false;
++  }
++  *r = std::move(region);
++#elif BUILDFLAG(IS_WIN)
+   HandleWin handle_win;
+   if (!ReadParam(m, iter, &handle_win)) {
+     return false;

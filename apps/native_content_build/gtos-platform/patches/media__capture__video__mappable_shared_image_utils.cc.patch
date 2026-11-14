@@ -1,0 +1,28 @@
+--- a/media/capture/video/mappable_shared_image_utils.cc
++++ b/media/capture/video/mappable_shared_image_utils.cc
+@@ -6,6 +6,7 @@
+ 
+ #include "base/functional/callback_helpers.h"
+ #include "base/logging.h"
++#include "build/build_config.h"
+ #include "media/capture/video/video_capture_gpu_channel_host.h"
+ 
+ namespace media {
+@@ -17,6 +18,9 @@ VideoCaptureDevice::Client::ReserveResult AllocateNV12SharedImage(
+     VideoCaptureDevice::Client::Buffer* out_capture_buffer) {
+   CHECK(out_shared_image);
+   CHECK(out_capture_buffer);
++#if BUILDFLAG(IS_GTOS)
++  return VideoCaptureDevice::Client::ReserveResult::kAllocationFailed;
++#else
+ 
+   // When GpuMemoryBuffer is used, the frame data is opaque to the CPU for most
+   // of the time.  Currently the only supported underlying format is NV12.
+@@ -57,6 +61,7 @@ VideoCaptureDevice::Client::ReserveResult AllocateNV12SharedImage(
+   }
+ 
+   return reserve_result;
++#endif
+ }
+ 
+ }  // namespace media

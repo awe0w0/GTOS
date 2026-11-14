@@ -1,0 +1,21 @@
+--- a/third_party/blink/renderer/platform/fonts/fuchsia/font_cache_fuchsia.cc
++++ b/third_party/blink/renderer/platform/fonts/fuchsia/font_cache_fuchsia.cc
+@@ -24,13 +24,18 @@
+ 
+ #include "third_party/blink/renderer/platform/fonts/font_cache.h"
+ 
++#include "build/build_config.h"
+ #include "skia/ext/font_utils.h"
+ #include "third_party/blink/renderer/platform/fonts/font_platform_data.h"
+ 
+ namespace blink {
+ 
+ static AtomicString& MutableSystemFontFamily() {
++#if BUILDFLAG(IS_GTOS)
++  DEFINE_THREAD_SAFE_STATIC_LOCAL(AtomicString, system_font_family, ("Roboto"));
++#else
+   DEFINE_THREAD_SAFE_STATIC_LOCAL(AtomicString, system_font_family, ());
++#endif
+   return system_font_family;
+ }
+ 

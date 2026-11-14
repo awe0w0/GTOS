@@ -1,0 +1,13 @@
+--- a/third_party/rust/font_types/v0_12/BUILD.gn
++++ b/third_party/rust/font_types/v0_12/BUILD.gn
+@@ -48,6 +48,10 @@ cargo_crate("lib") {
+     "bytemuck",
+     "std",
+   ]
++  if (is_gtos) {
++    # Use the crate's upstream core-only implementation.
++    features -= [ "std" ]
++  }
+ 
+   #####################################################################
+   # Tweaking which GN `config`s apply to this target.

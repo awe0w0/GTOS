@@ -1,0 +1,100 @@
+--- a/third_party/webrtc/rtc_base/ip_address.cc
++++ b/third_party/webrtc/rtc_base/ip_address.cc
+@@ -30,6 +30,15 @@
+ 
+ namespace webrtc {
+ 
++namespace {
++constexpr size_t kIPv6TextBytes = 46;
++constexpr uint32_t kIPv4AnyAddress = 0;
++constexpr uint32_t kIPv4LoopbackAddress = 0x7f000001;
++constexpr in6_addr kIPv6AnyAddress{};
++constexpr in6_addr kIPv6LoopbackAddress = {
++    {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}}};
++}  // namespace
++
+ // Prefixes used for categorizing IPv6 addresses.
+ // V4 mapped addresses are defined in RFC 4291 section 2.5.5.
+ static const in6_addr kV4MappedPrefix = {
+@@ -144,7 +153,7 @@ std::string IPAddress::ToString() const {
+   if (family_ != AF_INET && family_ != AF_INET6) {
+     return std::string();
+   }
+-  char buf[INET6_ADDRSTRLEN] = {0};
++  char buf[kIPv6TextBytes] = {0};
+   const void* src = &u_.ip4;
+   if (family_ == AF_INET6) {
+     src = &u_.ip6;
+@@ -168,7 +177,7 @@ std::string IPAddress::ToSensitiveString() const {
+     }
+     case AF_INET6: {
+       std::string result;
+-      result.resize(INET6_ADDRSTRLEN);
++      result.resize(kIPv6TextBytes);
+       in6_addr addr = ipv6_address();
+       size_t len = snprintf(&(result[0]), result.size(), "%x:%x:%x:x:x:x:x:x",
+                             (addr.s6_addr[0] << 8) + addr.s6_addr[1],
+@@ -345,9 +354,9 @@ bool IPFromString(absl::string_view str, int flags, InterfaceAddress* out) {
+ bool IPIsAny(const IPAddress& ip) {
+   switch (ip.family()) {
+     case AF_INET:
+-      return ip == IPAddress(INADDR_ANY);
++      return ip == IPAddress(kIPv4AnyAddress);
+     case AF_INET6:
+-      return ip == IPAddress(in6addr_any) || ip == IPAddress(kV4MappedPrefix);
++      return ip == IPAddress(kIPv6AnyAddress) || ip == IPAddress(kV4MappedPrefix);
+     case AF_UNSPEC:
+       return false;
+   }
+@@ -360,7 +369,7 @@ static bool IPIsLoopbackV4(const IPAddress& ip) {
+ }
+ 
+ static bool IPIsLoopbackV6(const IPAddress& ip) {
+-  return ip == IPAddress(in6addr_loopback);
++  return ip == IPAddress(kIPv6LoopbackAddress);
+ }
+ 
+ bool IPIsLoopback(const IPAddress& ip) {
+@@ -410,7 +419,7 @@ IPAddress TruncateIP(const IPAddress& ip, int length) {
+       return ip;
+     }
+     if (length == 0) {
+-      return IPAddress(INADDR_ANY);
++      return IPAddress(kIPv4AnyAddress);
+     }
+     int mask = (0xFFFFFFFF << (32 - length));
+     uint32_t host_order_ip = NetworkToHost32(ip.ipv4_address().s_addr);
+@@ -422,7 +431,7 @@ IPAddress TruncateIP(const IPAddress& ip, int length) {
+       return ip;
+     }
+     if (length == 0) {
+-      return IPAddress(in6addr_any);
++      return IPAddress(kIPv6AnyAddress);
+     }
+     in6_addr v6addr = ip.ipv6_address();
+     int position = length / 32;
+@@ -622,20 +631,20 @@ int IPAddressPrecedence(const IPAddress& ip) {
+ 
+ IPAddress GetLoopbackIP(int family) {
+   if (family == AF_INET) {
+-    return IPAddress(INADDR_LOOPBACK);
++    return IPAddress(kIPv4LoopbackAddress);
+   }
+   if (family == AF_INET6) {
+-    return IPAddress(in6addr_loopback);
++    return IPAddress(kIPv6LoopbackAddress);
+   }
+   return IPAddress();
+ }
+ 
+ IPAddress GetAnyIP(int family) {
+   if (family == AF_INET) {
+-    return IPAddress(INADDR_ANY);
++    return IPAddress(kIPv4AnyAddress);
+   }
+   if (family == AF_INET6) {
+-    return IPAddress(in6addr_any);
++    return IPAddress(kIPv6AnyAddress);
+   }
+   return IPAddress();
+ }

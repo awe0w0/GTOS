@@ -1,0 +1,13 @@
+--- a/third_party/blink/renderer/platform/heap/BUILD.gn
++++ b/third_party/blink/renderer/platform/heap/BUILD.gn
+@@ -87,6 +87,10 @@ blink_platform_sources("heap") {
+     "//v8",
+   ]
+ 
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_file_output" ]
++  }
++
+   if (!is_debug && !optimize_for_size) {
+     configs -= [ "//build/config/compiler:default_optimization" ]
+     configs += [ "//build/config/compiler:optimize_max" ]

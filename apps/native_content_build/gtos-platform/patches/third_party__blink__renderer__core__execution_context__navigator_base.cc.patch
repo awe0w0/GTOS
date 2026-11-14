@@ -1,0 +1,20 @@
+--- a/third_party/blink/renderer/core/execution_context/navigator_base.cc
++++ b/third_party/blink/renderer/core/execution_context/navigator_base.cc
+@@ -17,7 +17,7 @@
+ #include "base/android/device_info.h"
+ #endif
+ 
+-#if !BUILDFLAG(IS_MAC) && !BUILDFLAG(IS_WIN)
++#if !BUILDFLAG(IS_MAC) && !BUILDFLAG(IS_WIN) && !BUILDFLAG(IS_GTOS)
+ #include <sys/utsname.h>
+ #include "third_party/blink/renderer/platform/wtf/thread_specific.h"
+ #include "third_party/blink/renderer/platform/wtf/threading.h"
+@@ -45,6 +45,8 @@ String GetReducedNavigatorPlatform() {
+   return "MacIntel";
+ #elif BUILDFLAG(IS_WIN)
+   return "Win32";
++#elif BUILDFLAG(IS_GTOS)
++  return "GTOS i686";
+ #elif BUILDFLAG(IS_FUCHSIA)
+   return "";
+ #elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)

@@ -1,0 +1,24 @@
+--- a/third_party/webrtc/webrtc.gni
++++ b/third_party/webrtc/webrtc.gni
+@@ -185,7 +185,7 @@ declare_args() {
+   }
+ 
+   # Enable this flag to make webrtc::Mutex be implemented by absl::Mutex.
+-  rtc_use_absl_mutex = false
++  rtc_use_absl_mutex = build_with_chromium && current_os == "gtos"
+ 
+   # By default, use normal platform audio support or dummy audio, but don't
+   # use file-based audio playout and record.
+@@ -288,11 +288,7 @@ declare_args() {
+ 
+   # Set this to true to enable the avx2 support in webrtc.
+   # TODO: Make sure that AVX2 works also for non-clang compilers.
+-  if (is_clang == true) {
+-    rtc_enable_avx2 = true
+-  } else {
+-    rtc_enable_avx2 = false
+-  }
++  rtc_enable_avx2 = is_clang && current_os != "gtos"
+ 
+   # Set this to true to build the unit tests.
+   # Disabled when building with Chromium or Mozilla.

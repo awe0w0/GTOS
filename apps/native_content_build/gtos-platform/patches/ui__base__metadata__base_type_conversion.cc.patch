@@ -1,0 +1,13 @@
+--- a/ui/base/metadata/base_type_conversion.cc
++++ b/ui/base/metadata/base_type_conversion.cc
+@@ -442,7 +442,9 @@ std::u16string TypeConverter<UNIQUE_TYPE_NAME(SkColor)>::ToString(
+ 
+ std::optional<SkColor> TypeConverter<UNIQUE_TYPE_NAME(SkColor)>::FromString(
+     std::u16string_view source_value) {
+-  return GetNextColor(source_value.cbegin(), source_value.cend());
++  // The tokenizer uses string iterators, which can differ from view iterators.
++  const std::u16string text(source_value);
++  return GetNextColor(text.cbegin(), text.cend());
+ }
+ 
+ ValidStrings TypeConverter<UNIQUE_TYPE_NAME(SkColor)>::GetValidStrings() {

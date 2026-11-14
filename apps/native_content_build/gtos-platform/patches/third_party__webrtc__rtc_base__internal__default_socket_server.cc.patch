@@ -1,0 +1,24 @@
+--- a/third_party/webrtc/rtc_base/internal/default_socket_server.cc
++++ b/third_party/webrtc/rtc_base/internal/default_socket_server.cc
+@@ -13,12 +13,21 @@
+ #include <memory>
+ 
+ #include "rtc_base/socket_server.h"
++#if defined(__GTOS__)
++#include "rtc_base/null_socket_server.h"
++#else
+ #include "rtc_base/physical_socket_server.h"
++#endif
+ 
+ namespace webrtc {
+ 
+ std::unique_ptr<SocketServer> CreateDefaultSocketServer() {
++#if defined(__GTOS__)
++  // Keep message-queue wakeups available without exposing physical sockets.
++  return std::make_unique<NullSocketServer>();
++#else
+   return std::unique_ptr<SocketServer>(new PhysicalSocketServer);
++#endif
+ }
+ 
+ }  // namespace webrtc

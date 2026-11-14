@@ -1,0 +1,17 @@
+--- a/v8/src/objects/js-duration-format.cc
++++ b/v8/src/objects/js-duration-format.cc
+@@ -817,7 +817,13 @@ void OutputFractional(const char* type, int64_t integer, int32_t powerOfTen,
+   // Pass in the value as int64_t and ask ICU to scale down.
+   nfOpts = nfOpts.scale(icu::number::Scale::powerOfTen(-powerOfTen));
+ 
+-  int64_t factor = static_cast<int64_t>(std::pow(10.0L, powerOfTen));
++  // The scale is integral for every supported fractional unit.
++  DCHECK_GE(powerOfTen, 0);
++  DCHECK_LE(powerOfTen, 9);
++  int64_t factor = 1;
++  for (int32_t digit = 0; digit < powerOfTen; ++digit) {
++    factor *= 10;
++  }
+   int64_t bound = std::numeric_limits<int64_t>::max() / factor - 1;
+   UErrorCode status = U_ZERO_ERROR;
+   // Use faster ICU API formatInt if the value fit the precision int64_t,

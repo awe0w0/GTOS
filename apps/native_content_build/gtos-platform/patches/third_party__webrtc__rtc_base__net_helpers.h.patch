@@ -1,0 +1,14 @@
+--- a/third_party/webrtc/rtc_base/net_helpers.h
++++ b/third_party/webrtc/rtc_base/net_helpers.h
+@@ -11,7 +11,10 @@
+ #ifndef RTC_BASE_NET_HELPERS_H_
+ #define RTC_BASE_NET_HELPERS_H_
+ 
+-#if defined(WEBRTC_POSIX)
++#if defined(__GTOS__)
++#include <netinet/in.h>  // IWYU pragma: export
++#include <sys/socket.h>  // IWYU pragma: export
++#elif defined(WEBRTC_POSIX)
+ #include <sys/socket.h>  // IWYU pragma: export
+ #elif WEBRTC_WIN
+ #include <winsock2.h>  // NOLINT

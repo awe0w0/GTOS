@@ -1,0 +1,11 @@
+--- a/components/url_formatter/url_fixer.cc
++++ b/components/url_formatter/url_fixer.cc
+@@ -717,7 +717,7 @@ GURL FixupRelativeFile(const base::FilePath& base_dir,
+ // Fall back on regular fixup for this input.
+ #if BUILDFLAG(IS_WIN)
+   std::string text_utf8 = base::WideToUTF8(text.value());
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+   std::string text_utf8 = text.value();
+ #endif
+   return FixupURL(text_utf8, std::string());

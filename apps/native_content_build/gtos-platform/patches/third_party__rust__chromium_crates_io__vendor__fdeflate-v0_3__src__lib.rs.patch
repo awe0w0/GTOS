@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/fdeflate-v0_3/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/fdeflate-v0_3/src/lib.rs
+@@ -19,6 +19,7 @@
+ //! * [zune-inflate](https://github.com/etemesi254/zune-image/tree/main/zune-inflate)
+ //! * [RealTime Data Compression blog](https://fastcompression.blogspot.com/2015/10/huffman-revisited-part-4-multi-bytes.html)
+ #![forbid(unsafe_code)]
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ #![warn(missing_docs)]
+ 
+ mod compress;

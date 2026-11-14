@@ -1,0 +1,42 @@
+--- a/services/network/public/cpp/socket_broker_impl.cc
++++ b/services/network/public/cpp/socket_broker_impl.cc
+@@ -23,7 +23,7 @@
+ #include <winsock2.h>
+ 
+ #include "base/scoped_generic.h"
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #include <netinet/in.h>
+ #include <sys/socket.h>
+ #endif
+@@ -72,9 +72,11 @@ void TransferSocketToCallback(CreateSocketCallback callback,
+ 
+ using ScopedSocketDescriptor = base::ScopedFD;
+ 
++#if !BUILDFLAG(IS_GTOS)
+ net::Error GetSystemError() {
+   return net::MapSystemError(errno);
+ }
++#endif
+ 
+ // Transfers `socket` to `callback`, also passing `rv`.
+ void TransferSocketToCallback(CreateSocketCallback callback,
+@@ -100,6 +102,10 @@ std::pair<ScopedSocketDescriptor, int> CreateSocket(
+       return {ScopedSocketDescriptor(net::kInvalidSocket), rv};
+     }
+   }
++#if BUILDFLAG(IS_GTOS)
++  // Native socket handles cannot be brokered to a different address space.
++  return {ScopedSocketDescriptor(net::kInvalidSocket), net::ERR_NOT_IMPLEMENTED};
++#else
+   const int sock_type = type == SocketType::kStream ? SOCK_STREAM : SOCK_DGRAM;
+   int ip_protocol = type == SocketType::kStream ? IPPROTO_TCP : IPPROTO_UDP;
+   if (address_family == AF_UNIX) {
+@@ -113,6 +119,7 @@ std::pair<ScopedSocketDescriptor, int> CreateSocket(
+     socket.reset();
+   }
+   return {std::move(socket), rv};
++#endif
+ }
+ 
+ }  // namespace

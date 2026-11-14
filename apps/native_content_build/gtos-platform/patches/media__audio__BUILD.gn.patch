@@ -1,0 +1,12 @@
+--- a/media/audio/BUILD.gn
++++ b/media/audio/BUILD.gn
+@@ -290,7 +290,8 @@ source_set("audio") {
+     deps += [ "//media/base/android:media_jni_headers" ]
+   }
+ 
+-  if (is_linux || is_chromeos) {
++  # GTOS uses the existing no-device branch without ALSA, CRAS or PulseAudio.
++  if (is_linux || is_chromeos || is_gtos) {
+     sources += [ "linux/audio_manager_linux.cc" ]
+   }
+ 

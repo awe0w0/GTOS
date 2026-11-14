@@ -1,0 +1,27 @@
+--- a/third_party/webrtc/rtc_base/socket_address.cc
++++ b/third_party/webrtc/rtc_base/socket_address.cc
+@@ -281,11 +281,7 @@ void SocketAddress::ToSockAddr(sockaddr_in* saddr) const {
+   }
+   saddr->sin_family = AF_INET;
+   saddr->sin_port = HostToNetwork16(port_);
+-  if (IPIsAny(ip_)) {
+-    saddr->sin_addr.s_addr = INADDR_ANY;
+-  } else {
+-    saddr->sin_addr = ip_.ipv4_address();
+-  }
++  saddr->sin_addr = ip_.ipv4_address();
+ }
+ 
+ bool SocketAddress::FromSockAddr(const sockaddr_in& saddr) {
+@@ -348,9 +344,9 @@ bool SocketAddressFromSockAddrStorage(const sockaddr_storage& addr,
+ 
+ SocketAddress EmptySocketAddressWithFamily(int family) {
+   if (family == AF_INET) {
+-    return SocketAddress(IPAddress(INADDR_ANY), 0);
++    return SocketAddress(IPAddress(in_addr{}), 0);
+   } else if (family == AF_INET6) {
+-    return SocketAddress(IPAddress(in6addr_any), 0);
++    return SocketAddress(IPAddress(in6_addr{}), 0);
+   }
+   return SocketAddress();
+ }

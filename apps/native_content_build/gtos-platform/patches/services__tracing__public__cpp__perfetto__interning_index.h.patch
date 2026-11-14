@@ -1,0 +1,63 @@
+--- a/services/tracing/public/cpp/perfetto/interning_index.h
++++ b/services/tracing/public/cpp/perfetto/interning_index.h
+@@ -11,6 +11,7 @@
+ #include <tuple>
+ 
+ #include "base/component_export.h"
++#include "base/containers/span.h"
+ 
+ namespace tracing {
+ 
+@@ -83,6 +84,8 @@ class InterningIndex<TypeList<ValueTypes...>, SizeList<Sizes...>> {
+   template <size_t N, typename ValueType>
+   class IndexCache {
+    public:
++    using iterator = typename base::span<InterningIndexEntry, N>::iterator;
++
+     IndexCache() {
+       // Assert that N is a power of two. This allows the "% N" in Insert() to
+       // compile to a bunch of bit shifts which improves performance over an
+@@ -100,7 +103,7 @@ class InterningIndex<TypeList<ValueTypes...>, SizeList<Sizes...>> {
+       current_index_ = 0;
+     }
+ 
+-    typename std::array<InterningIndexEntry, N>::iterator Find(
++    iterator Find(
+         const ValueType& value) {
+       // First note that only |valid_index_| worth of entries have been assigned
+       // InterningIDs.
+@@ -117,25 +120,26 @@ class InterningIndex<TypeList<ValueTypes...>, SizeList<Sizes...>> {
+       // By doing this here and not checking the conditional we can only check
+       // it once and saves us a pretty impactful branch (this find is the
+       // majority of the time in LookUpOrInsert when profiled.
+-      auto it = std::find(keys_.begin(), keys_.begin() + valid_index_, value);
+-      return values_.begin() + (it - keys_.begin());
++      const auto keys = base::span(keys_).first(valid_index_);
++      const auto it = std::ranges::find(keys, value);
++      return begin() + (it - keys.begin());
+     }
+ 
+-    typename std::array<InterningIndexEntry, N>::iterator Insert(
++    iterator Insert(
+         const ValueType& key,
+         InterningIndexEntry&& value) {
+       size_t new_position = current_index_++ % N;
+       keys_[new_position] = key;
+       values_[new_position] = std::move(value);
+       valid_index_ = std::min(valid_index_ + 1, values_.size());
+-      return values_.begin() + new_position;
++      return begin() + new_position;
+     }
+ 
+-    typename std::array<InterningIndexEntry, N>::iterator begin() {
+-      return values_.begin();
++    iterator begin() {
++      return base::span(values_).begin();
+     }
+-    typename std::array<InterningIndexEntry, N>::iterator end() {
+-      return values_.begin() + valid_index_;
++    iterator end() {
++      return begin() + valid_index_;
+     }
+ 
+    private:

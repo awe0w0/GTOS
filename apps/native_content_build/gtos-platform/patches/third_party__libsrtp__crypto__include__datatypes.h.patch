@@ -1,0 +1,12 @@
+--- a/third_party/libsrtp/crypto/include/datatypes.h
++++ b/third_party/libsrtp/crypto/include/datatypes.h
+@@ -54,6 +54,9 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <time.h>
++#if defined(__GTOS__)
++#include <arpa/inet.h>
++#endif
+ #ifdef HAVE_NETINET_IN_H
+ #include <netinet/in.h>
+ #elif defined HAVE_WINSOCK2_H

@@ -1,0 +1,16 @@
+--- a/third_party/webrtc/modules/rtp_rtcp/corruption_detection_extension_cxx.rs
++++ b/third_party/webrtc/modules/rtp_rtcp/corruption_detection_extension_cxx.rs
+@@ -8,6 +8,13 @@
+  *  be found in the AUTHORS file in the root of the source tree.
+  */
+ 
++#![cfg_attr(target_os = "gtos", no_std)]
++
++#[cfg(target_os = "gtos")]
++extern crate alloc;
++#[cfg(target_os = "gtos")]
++use alloc::boxed::Box;
++
+ webrtc::import! {
+   "//modules/rtp_rtcp:corruption_detection_extension";
+ }

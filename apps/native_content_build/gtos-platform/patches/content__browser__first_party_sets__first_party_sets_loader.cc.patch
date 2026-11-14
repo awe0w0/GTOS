@@ -1,0 +1,48 @@
+--- a/content/browser/first_party_sets/first_party_sets_loader.cc
++++ b/content/browser/first_party_sets/first_party_sets_loader.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "content/browser/first_party_sets/first_party_sets_loader.h"
+ 
++#include <array>
+ #include <sstream>
+ #include <utility>
+ 
+@@ -11,9 +12,11 @@
+ #include "base/files/file_util.h"
+ #include "base/metrics/histogram_functions.h"
+ #include "base/sequence_checker.h"
++#include "base/strings/string_view_util.h"
+ #include "base/task/task_traits.h"
+ #include "base/task/thread_pool.h"
+ #include "base/version.h"
++#include "build/build_config.h"
+ #include "content/browser/first_party_sets/first_party_set_parser.h"
+ #include "net/base/features.h"
+ #include "net/first_party_sets/global_first_party_sets.h"
+@@ -24,8 +27,25 @@ namespace {
+ 
+ std::string ReadSetsFile(base::File sets_file) {
+   std::string raw_sets;
++#if BUILDFLAG(IS_GTOS)
++  if (sets_file.Seek(base::File::FROM_BEGIN, 0) != 0) {
++    return {};
++  }
++  std::array<uint8_t, 4096> bytes;
++  for (;;) {
++    const auto count = sets_file.ReadAtCurrentPos(bytes);
++    if (!count) {
++      return {};
++    }
++    if (*count == 0) {
++      return raw_sets;
++    }
++    raw_sets.append(base::as_string_view(base::span(bytes).first(*count)));
++  }
++#else
+   base::ScopedFILE file(FileToFILE(std::move(sets_file), "r"));
+   return base::ReadStreamToString(file.get(), &raw_sets) ? raw_sets : "";
++#endif
+ }
+ 
+ }  // namespace

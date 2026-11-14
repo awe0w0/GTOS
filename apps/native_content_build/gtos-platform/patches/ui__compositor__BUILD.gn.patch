@@ -1,0 +1,11 @@
+--- a/ui/compositor/BUILD.gn
++++ b/ui/compositor/BUILD.gn
+@@ -109,7 +109,7 @@ component("compositor") {
+     ]
+   }
+ 
+-  if (is_linux || is_fuchsia) {
++  if (is_linux || is_fuchsia || is_gtos) {
+     sources += [
+       "external_begin_frame_adapter.cc",
+       "external_begin_frame_adapter.h",

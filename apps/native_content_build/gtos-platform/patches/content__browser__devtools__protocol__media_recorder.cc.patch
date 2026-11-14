@@ -1,0 +1,50 @@
+--- a/content/browser/devtools/protocol/media_recorder.cc
++++ b/content/browser/devtools/protocol/media_recorder.cc
+@@ -180,7 +180,7 @@ class MediaRecorderVideoFrameReceiver : public media::VideoFrameReceiver {
+   base::WeakPtr<MediaRecorder> recorder_;
+ };
+ 
+-#if BUILDFLAG(ENABLE_LIBAOM)
++#if BUILDFLAG(ENABLE_LIBAOM) && !BUILDFLAG(IS_GTOS)
+ // Determines the snapshot size that best-fits the Surface's content to the
+ // remote's requested image size.
+ gfx::Size DetermineSnapshotSize(const gfx::Size& surface_size,
+@@ -228,7 +228,9 @@ Response MediaRecorder::Start(RenderFrameHostImpl* host,
+                               int max_width,
+                               int max_height,
+                               int frame_rate) {
+-#if !BUILDFLAG(ENABLE_LIBAOM)
++#if BUILDFLAG(IS_GTOS)
++  return Response::ServerError("DevTools screen recording is unavailable on GTOS.");
++#elif !BUILDFLAG(ENABLE_LIBAOM)
+   return Response::ServerError(
+       "Video recording is not supported without AV1/libaom enabled.");
+ #else
+@@ -330,12 +332,14 @@ Response MediaRecorder::Start(RenderFrameHostImpl* host,
+ }
+ 
+ void MediaRecorder::RequestRefreshFrame() {
++#if !BUILDFLAG(IS_GTOS)
+   constexpr int kIdleKeepAliveIntervalMs = 1000;
+   if (video_capturer_ && (last_frame_receive_time_.is_null() ||
+                           base::TimeTicks::Now() - last_frame_receive_time_ >=
+                               base::Milliseconds(kIdleKeepAliveIntervalMs))) {
+     video_capturer_->RequestRefreshFrame();
+   }
++#endif
+ }
+ 
+ void MediaRecorder::OnNewBuffer(
+@@ -476,10 +480,12 @@ void MediaRecorder::Stop(
+     video_timer_->Stop();
+     video_timer_.reset();
+   }
++#if !BUILDFLAG(IS_GTOS)
+   if (video_capturer_) {
+     video_capturer_->StopAndDeAllocate();
+     video_capturer_.reset();
+   }
++#endif
+   if (audio_capturer_) {
+     audio_capturer_->Stop();
+     audio_capturer_ = nullptr;

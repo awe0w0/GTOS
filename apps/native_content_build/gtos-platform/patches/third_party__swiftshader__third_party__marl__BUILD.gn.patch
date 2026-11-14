@@ -1,0 +1,20 @@
+--- a/third_party/swiftshader/third_party/marl/BUILD.gn
++++ b/third_party/swiftshader/third_party/marl/BUILD.gn
+@@ -18,7 +18,8 @@ import("//testing/test.gni")
+ 
+ config("marl_config") {
+   include_dirs = [ "include" ]
+-  if (!is_win) {
++  # GTOS uses the compiler TLS path backed by the native runtime.
++  if (!is_win && !is_gtos) {
+     defines = [ "MARL_USE_PTHREAD_THREAD_LOCAL=1" ]
+   }
+ }
+@@ -113,4 +114,7 @@ swiftshader_source_set("Marl") {
+   }
+ 
+   public_deps = [ ":Marl_headers" ]
++  if (is_gtos) {
++    deps = [ "//base/allocator/partition_allocator/src/partition_alloc" ]
++  }
+ }

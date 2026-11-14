@@ -1,0 +1,40 @@
+--- a/third_party/webrtc/rtc_base/async_dns_resolver.cc
++++ b/third_party/webrtc/rtc_base/async_dns_resolver.cc
+@@ -30,7 +30,9 @@
+ #include "rtc_base/synchronization/mutex.h"
+ #include "rtc_base/thread_annotations.h"
+ 
+-#if defined(WEBRTC_POSIX)
++#if defined(__GTOS__)
++#include <cerrno>
++#elif defined(WEBRTC_POSIX)
+ #include <netdb.h>
+ #endif
+ 
+@@ -79,6 +81,18 @@ int ResolveHostname(absl::string_view hostname,
+                     int family,
+                     std::vector<IPAddress>& addresses) {
+   RTC_DCHECK(addresses.empty());
++#if defined(__GTOS__)
++  // The offline native port accepts literal addresses. DNS needs a network service.
++  IPAddress address;
++  if (!IPFromString(hostname, &address)) {
++    return ENOSYS;
++  }
++  if (family != AF_UNSPEC && family != address.family()) {
++    return EINVAL;
++  }
++  addresses.push_back(address);
++  return 0;
++#else
+   struct addrinfo* result = nullptr;
+   struct addrinfo hints = {.ai_flags = AI_ADDRCONFIG, .ai_family = family};
+   // `family` here will almost always be AF_UNSPEC, because `family` comes from
+@@ -105,6 +119,7 @@ int ResolveHostname(absl::string_view hostname,
+   addresses = AddressesFromAddrInfo(result, family);
+   freeaddrinfo(result);
+   return 0;
++#endif
+ }
+ #endif  // !defined(WEBRTC_WIN)
+ 

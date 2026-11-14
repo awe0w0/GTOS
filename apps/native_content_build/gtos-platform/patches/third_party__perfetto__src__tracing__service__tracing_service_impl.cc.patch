@@ -1,0 +1,23 @@
+--- a/third_party/perfetto/src/tracing/service/tracing_service_impl.cc
++++ b/third_party/perfetto/src/tracing/service/tracing_service_impl.cc
+@@ -40,8 +40,10 @@
+ 
+ #if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) && \
+     !PERFETTO_BUILDFLAG(PERFETTO_OS_NACL)
++#if !PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+ #include <sys/uio.h>
+ #include <sys/utsname.h>
++#endif
+ #include <unistd.h>
+ #endif
+ 
+@@ -192,7 +194,8 @@ constexpr size_t kMaxLifecycleEventsListedDataSources = 32;
+ 
+ constexpr uint32_t kTracePacketSystemInfoFieldId = 45;
+ 
+-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_NACL)
++#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) || PERFETTO_BUILDFLAG(PERFETTO_OS_NACL) || \
++    PERFETTO_BUILDFLAG(PERFETTO_OS_GTOS)
+ struct iovec {
+   void* iov_base;  // Address
+   size_t iov_len;  // Block size

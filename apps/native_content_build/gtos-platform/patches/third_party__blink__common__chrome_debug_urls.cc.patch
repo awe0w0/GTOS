@@ -1,0 +1,21 @@
+--- a/third_party/blink/common/chrome_debug_urls.cc
++++ b/third_party/blink/common/chrome_debug_urls.cc
+@@ -27,6 +27,8 @@
+ #include "base/process/kill.h"
+ #elif BUILDFLAG(IS_POSIX)
+ #include <signal.h>
++#elif BUILDFLAG(IS_GTOS)
++#include <unistd.h>
+ #elif BUILDFLAG(IS_FUCHSIA)
+ #include <zircon/syscalls.h>
+ #endif
+@@ -190,6 +192,9 @@ void HandleChromeDebugURL(const GURL& url) {
+     PCHECK(kill(base::Process::Current().Pid(), SIGTERM) == 0);
+ #elif BUILDFLAG(IS_FUCHSIA)
+     zx_process_exit(ZX_TASK_RETCODE_SYSCALL_KILL);
++#elif BUILDFLAG(IS_GTOS)
++    // The native ABI provides immediate self-exit without signals.
++    _exit(1);
+ #else
+ #error Unsupported platform
+ #endif

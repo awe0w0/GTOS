@@ -1,0 +1,11 @@
+--- a/third_party/rust/chromium_crates_io/vendor/lazy_static-v1/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/lazy_static-v1/src/lib.rs
+@@ -5,6 +5,8 @@
+ // https://opensource.org/licenses/MIT>, at your option. This file may not be
+ // copied, modified, or distributed except according to those terms.
+ 
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
++
+ /*!
+ A macro for declaring lazily evaluated statics.
+ 

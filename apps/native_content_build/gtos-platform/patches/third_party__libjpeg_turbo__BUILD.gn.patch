@@ -1,0 +1,143 @@
+--- a/third_party/libjpeg_turbo/BUILD.gn
++++ b/third_party/libjpeg_turbo/BUILD.gn
+@@ -26,7 +26,7 @@ source_set("libjpeg_headers") {
+   ]
+ }
+ 
+-if (current_cpu == "x86" || current_cpu == "x64") {
++if (!is_gtos && (current_cpu == "x86" || current_cpu == "x64")) {
+   import("//third_party/nasm/nasm_assemble.gni")
+ 
+   nasm_assemble("simd_asm") {
+@@ -169,7 +169,9 @@ if (current_cpu == "x86" || current_cpu == "x64") {
+ }
+ 
+ config("libjpeg_simd_config") {
+-  if (is_msan && (current_cpu == "x86" || current_cpu == "x64")) {
++  if (is_gtos) {
++    # Use the scalar codec until the i386 assembly has a GTOS build rule.
++  } else if (is_msan && (current_cpu == "x86" || current_cpu == "x64")) {
+     # MemorySanitizer doesn't support assembly code, so keep it disabled in x86
+     # and x64 MSan builds for now.
+   } else if (current_cpu == "x86" || current_cpu == "x64") {
+@@ -183,58 +185,60 @@ config("libjpeg_simd_config") {
+   }
+ }
+ 
+-static_library("simd") {
+-  include_dirs = [ "." ]
+-  deps = [ ":libjpeg_headers" ]
+-  defines = [ "MANGLE_JPEG_NAMES" ]
+-  configs += [ ":libjpeg_simd_config" ]
+-
+-  if (is_msan && (current_cpu == "x86" || current_cpu == "x64")) {
+-    # MemorySanitizer doesn't support assembly code, so keep it disabled in x86
+-    # and x64 MSan builds for now.
+-  } else if (current_cpu == "x86") {
+-    deps += [ ":simd_asm" ]
+-    sources = [ "simd/i386/jsimd.c" ]
+-  } else if (current_cpu == "x64") {
+-    deps += [ ":simd_asm" ]
+-    sources = [ "simd/x86_64/jsimd.c" ]
+-  } else if (current_cpu == "arm" || current_cpu == "arm64" ||
+-             current_cpu == "arm64e") {
+-    include_dirs += [ "simd/arm/" ]
++if (!is_gtos) {
++  static_library("simd") {
++    include_dirs = [ "." ]
++    deps = [ ":libjpeg_headers" ]
++    defines = [ "MANGLE_JPEG_NAMES" ]
++    configs += [ ":libjpeg_simd_config" ]
++
++    if (is_msan && (current_cpu == "x86" || current_cpu == "x64")) {
++      # MemorySanitizer doesn't support assembly code, so keep it disabled in x86
++      # and x64 MSan builds for now.
++    } else if (current_cpu == "x86") {
++      deps += [ ":simd_asm" ]
++      sources = [ "simd/i386/jsimd.c" ]
++    } else if (current_cpu == "x64") {
++      deps += [ ":simd_asm" ]
++      sources = [ "simd/x86_64/jsimd.c" ]
++    } else if (current_cpu == "arm" || current_cpu == "arm64" ||
++               current_cpu == "arm64e") {
++      include_dirs += [ "simd/arm/" ]
+ 
+-    sources = [
+-      "simd/arm/jccolor-neon.c",
+-      "simd/arm/jcgray-neon.c",
+-      "simd/arm/jcphuff-neon.c",
+-      "simd/arm/jcsample-neon.c",
+-      "simd/arm/jdcolor-neon.c",
+-      "simd/arm/jdmerge-neon.c",
+-      "simd/arm/jdsample-neon.c",
+-      "simd/arm/jfdctfst-neon.c",
+-      "simd/arm/jfdctint-neon.c",
+-      "simd/arm/jidctfst-neon.c",
+-      "simd/arm/jidctint-neon.c",
+-      "simd/arm/jidctred-neon.c",
+-      "simd/arm/jquanti-neon.c",
+-    ]
+-    if (current_cpu == "arm") {
+-      sources += [
+-        "simd/arm/aarch32/jchuff-neon.c",
+-        "simd/arm/aarch32/jsimd.c",
+-      ]
+-    } else if (current_cpu == "arm64" || current_cpu == "arm64e") {
+-      sources += [
+-        "simd/arm/aarch64/jchuff-neon.c",
+-        "simd/arm/aarch64/jsimd.c",
++      sources = [
++        "simd/arm/jccolor-neon.c",
++        "simd/arm/jcgray-neon.c",
++        "simd/arm/jcphuff-neon.c",
++        "simd/arm/jcsample-neon.c",
++        "simd/arm/jdcolor-neon.c",
++        "simd/arm/jdmerge-neon.c",
++        "simd/arm/jdsample-neon.c",
++        "simd/arm/jfdctfst-neon.c",
++        "simd/arm/jfdctint-neon.c",
++        "simd/arm/jidctfst-neon.c",
++        "simd/arm/jidctint-neon.c",
++        "simd/arm/jidctred-neon.c",
++        "simd/arm/jquanti-neon.c",
+       ]
+-    }
++      if (current_cpu == "arm") {
++        sources += [
++          "simd/arm/aarch32/jchuff-neon.c",
++          "simd/arm/aarch32/jsimd.c",
++        ]
++      } else if (current_cpu == "arm64" || current_cpu == "arm64e") {
++        sources += [
++          "simd/arm/aarch64/jchuff-neon.c",
++          "simd/arm/aarch64/jsimd.c",
++        ]
++      }
+ 
+-    configs -= [ "//build/config/compiler:default_optimization" ]
+-    configs += [ "//build/config/compiler:optimize_speed" ]
+-  }
++      configs -= [ "//build/config/compiler:default_optimization" ]
++      configs += [ "//build/config/compiler:optimize_speed" ]
++    }
+ 
+-  if (is_win) {
+-    cflags = [ "/wd4245" ]
++    if (is_win) {
++      cflags = [ "/wd4245" ]
++    }
+   }
+ }
+ 
+@@ -365,8 +369,10 @@ static_library("libjpeg") {
+   deps = [
+     ":libjpeg12",
+     ":libjpeg16",
+-    ":simd",
+   ]
++  if (!is_gtos) {
++    deps += [ ":simd" ]
++  }
+ 
+   if (current_cpu == "x86" || current_cpu == "x64") {
+     # Avoid the 64K jpeg_nbits table.

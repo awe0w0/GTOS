@@ -1,0 +1,26 @@
+--- a/base/power_monitor/power_monitor_device_source.cc
++++ b/base/power_monitor/power_monitor_device_source.cc
+@@ -6,6 +6,8 @@
+ 
+ #include "build/build_config.h"
+ 
++#include "build/build_config.h"
++
+ namespace base {
+ 
+ PowerMonitorDeviceSource::PowerMonitorDeviceSource() {
+@@ -21,3 +23,14 @@ PowerMonitorDeviceSource::~PowerMonitorDeviceSource() {
+ }
+ 
+ }  // namespace base
++
++#if BUILDFLAG(IS_GTOS)
++namespace base {
++
++PowerStateObserver::BatteryPowerStatus
++PowerMonitorDeviceSource::GetBatteryPowerStatus() const {
++  return PowerStateObserver::BatteryPowerStatus::kUnknown;
++}
++
++}  // namespace base
++#endif

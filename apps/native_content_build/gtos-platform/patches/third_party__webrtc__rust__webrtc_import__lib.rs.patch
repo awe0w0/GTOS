@@ -1,0 +1,9 @@
+--- a/third_party/webrtc/rust/webrtc_import/lib.rs
++++ b/third_party/webrtc/rust/webrtc_import/lib.rs
+@@ -6,4 +6,6 @@
+ // in the file PATENTS.  All contributing project authors may
+ // be found in the AUTHORS file in the root of the source tree.
+ 
++#![cfg_attr(target_os = "gtos", no_std)]
++
+ pub use import::import;

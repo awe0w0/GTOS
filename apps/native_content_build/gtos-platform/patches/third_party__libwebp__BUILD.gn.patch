@@ -1,0 +1,98 @@
+--- a/third_party/libwebp/BUILD.gn
++++ b/third_party/libwebp/BUILD.gn
+@@ -25,8 +25,10 @@ config("libwebp_config") {
+   defines = [
+     "WEBP_NEAR_LOSSLESS=0",
+     "WEBP_DISABLE_STATS",
+-    "WEBP_USE_THREAD",
+   ]
++  if (!is_gtos) {
++    defines += [ "WEBP_USE_THREAD" ]
++  }
+ 
+   # WEBP_REDUCE_SIZE is defined for non-desktop platforms only.
+   if (!is_chromeos && !is_win && !is_mac && !is_linux) {
+@@ -206,13 +208,15 @@ static_library("libwebp_dsp") {
+   public_configs = [ ":libwebp_public_config" ]
+   deps = [
+     ":libwebp_dec",
+-    ":libwebp_dsp_avx2",
+     ":libwebp_dsp_sse2",
+     ":libwebp_dsp_sse41",
+     ":libwebp_enc",
+     ":libwebp_utils",
+     ":libwebp_webp",
+   ]
++  if (!is_gtos) {
++    deps += [ ":libwebp_dsp_avx2" ]
++  }
+   if (use_dsp_neon) {
+     deps += [ ":libwebp_dsp_neon" ]
+   }
+@@ -224,38 +228,42 @@ static_library("libwebp_dsp") {
+     defines = [
+       "WEBP_HAVE_SSE2",
+       "WEBP_HAVE_SSE41",
+-      "WEBP_HAVE_AVX2",
+     ]
++    if (!is_gtos) {
++      defines += [ "WEBP_HAVE_AVX2" ]
++    }
+   }
+ }
+ 
+-static_library("libwebp_dsp_avx2") {
+-  visibility += allowed_visibility
++if (!is_gtos) {
++  static_library("libwebp_dsp_avx2") {
++    visibility += allowed_visibility
+ 
+-  sources = [
+-    "src/src/dsp/lossless_avx2.c",
+-    "src/src/dsp/lossless_enc_avx2.c",
+-  ]
+-  configs += [ ":libwebp_config" ]
+-  configs -= [ "//build/config/compiler:chromium_code" ]
+-  configs += [ "//build/config/compiler:no_chromium_code" ]
+-  if (set_opt_level) {
+-    configs -= [ "//build/config/compiler:default_optimization" ]
+-    configs += [ "//build/config/compiler:optimize_max" ]
+-  }
++    sources = [
++      "src/src/dsp/lossless_avx2.c",
++      "src/src/dsp/lossless_enc_avx2.c",
++    ]
++    configs += [ ":libwebp_config" ]
++    configs -= [ "//build/config/compiler:chromium_code" ]
++    configs += [ "//build/config/compiler:no_chromium_code" ]
++    if (set_opt_level) {
++      configs -= [ "//build/config/compiler:default_optimization" ]
++      configs += [ "//build/config/compiler:optimize_max" ]
++    }
+ 
+-  public_configs = [ ":libwebp_public_config" ]
+-  if (!is_msan) {
+-    if ((current_cpu == "x86" || current_cpu == "x64") &&
+-        (!is_win || is_clang)) {
+-      cflags = [ "-mavx2" ]
++    public_configs = [ ":libwebp_public_config" ]
++    if (!is_msan) {
++      if ((current_cpu == "x86" || current_cpu == "x64") &&
++          (!is_win || is_clang)) {
++        cflags = [ "-mavx2" ]
++      }
+     }
++    deps = [
++      ":libwebp_dsp_headers",
++      ":libwebp_utils",
++      ":libwebp_webp",
++    ]
+   }
+-  deps = [
+-    ":libwebp_dsp_headers",
+-    ":libwebp_utils",
+-    ":libwebp_webp",
+-  ]
+ }
+ 
+ static_library("libwebp_dsp_sse41") {

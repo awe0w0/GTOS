@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/num-traits-v0_2/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/num-traits-v0_2/src/lib.rs
+@@ -17,6 +17,7 @@
+ #![doc(html_root_url = "https://docs.rs/num-traits/0.2")]
+ #![deny(unconditional_recursion)]
+ #![no_std]
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ 
+ // Need to explicitly bring the crate in for inherent float methods
+ #[cfg(feature = "std")]

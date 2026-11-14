@@ -1,0 +1,12 @@
+--- a/third_party/angle/src/common/tls.h
++++ b/third_party/angle/src/common/tls.h
+@@ -40,6 +40,9 @@ namespace angle
+ #    endif
+ typedef DWORD TLSIndex;
+ #    define TLS_INVALID_INDEX (TLS_OUT_OF_INDEXES)
++#elif defined(ANGLE_PLATFORM_GTOS)
++using TLSIndex = void *;
++#    define TLS_INVALID_INDEX nullptr
+ #elif defined(ANGLE_PLATFORM_POSIX)
+ typedef pthread_key_t TLSIndex;
+ #    define TLS_INVALID_INDEX (static_cast<angle::TLSIndex>(-1))

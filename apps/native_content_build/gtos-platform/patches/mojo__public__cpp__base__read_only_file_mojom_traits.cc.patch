@@ -1,0 +1,72 @@
+--- a/mojo/public/cpp/base/read_only_file_mojom_traits.cc
++++ b/mojo/public/cpp/base/read_only_file_mojom_traits.cc
+@@ -7,6 +7,11 @@
+ #include "base/files/file.h"
+ #include "build/build_config.h"
+ 
++#if BUILDFLAG(IS_GTOS)
++#include <errno.h>
++#include <process/file_abi.h>
++#endif
++
+ #if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ #include <fcntl.h>
+ #include <sys/stat.h>
+@@ -27,6 +32,23 @@ namespace {
+ // the underlying file. False if we can tell that the file could be modified.
+ // On platforms where we cannot test the handle, always returns true.
+ bool IsReadOnlyFile(base::File& file) {
++#if BUILDFLAG(IS_GTOS)
++  if (!file.IsValid()) {
++    return false;
++  }
++  unsigned char address = 0;
++  const GtosFileTransferRequest request{
++      GTOS_FILE_ABI_VERSION, static_cast<unsigned>(file.GetPlatformFile()),
++      reinterpret_cast<unsigned>(&address), 0};
++  auto transfer = [&request](unsigned call) {
++    asm volatile("int $0x80" : "+a"(call) : "b"(&request), "c"(sizeof(request))
++                 : "memory", "cc");
++    return static_cast<int>(call);
++  };
++  // Empty transfers validate the handle and access mode without touching
++  // storage or changing the shared offset. The read also excludes directories.
++  return transfer(GTOS_SYS_FILE_READ) == 0 && transfer(GTOS_SYS_FILE_WRITE) == -EBADF;
++#else
+   bool is_readonly = true;
+ #if BUILDFLAG(IS_WIN)
+   std::optional<ACCESS_MASK> flags =
+@@ -44,6 +66,7 @@ bool IsReadOnlyFile(base::File& file) {
+       (fcntl(file.GetPlatformFile(), F_GETFL) & O_ACCMODE) == O_RDONLY;
+ #endif
+   return is_readonly;
++#endif
+ }
+ 
+ bool IsPhysicalFile(base::File& file) {
+@@ -51,6 +74,9 @@ bool IsPhysicalFile(base::File& file) {
+   // Verify if this is a real file (not a socket/pipe etc.).
+   DWORD type = GetFileType(file.GetPlatformFile());
+   return type == FILE_TYPE_DISK;
++#elif BUILDFLAG(IS_GTOS)
++  base::File::Info info;
++  return file.GetInfo(&info) && !info.is_directory;
+ #else
+   // This may block but in practice this is unlikely for already opened
+   // physical files.
+@@ -81,7 +107,15 @@ mojo::PlatformHandle StructTraits<mojo_base::mojom::ReadOnlyFileDataView,
+ bool StructTraits<mojo_base::mojom::ReadOnlyFileDataView, base::File>::Read(
+     mojo_base::mojom::ReadOnlyFileDataView data,
+     base::File* file) {
++#if BUILDFLAG(IS_GTOS)
++  base::File received(data.TakeFd().TakePlatformFile(), data.async());
++  if (!IsReadOnlyFile(received)) {
++    return false;
++  }
++  *file = std::move(received);
++#else
+   *file = base::File(data.TakeFd().TakePlatformFile(), data.async());
++#endif
+   return true;
+ }
+ 

@@ -1,0 +1,20 @@
+--- a/ui/gfx/geometry/linear_gradient.cc
++++ b/ui/gfx/geometry/linear_gradient.cc
+@@ -8,6 +8,7 @@
+ 
+ #include "base/check_op.h"
+ #include "base/containers/adapters.h"
++#include "base/containers/span.h"
+ #include "base/numerics/angle_conversions.h"
+ #include "base/strings/string_number_conversions.h"
+ #include "base/strings/stringprintf.h"
+@@ -44,7 +45,8 @@ void LinearGradient::AddStep(float fraction, uint8_t alpha) {
+ 
+ void LinearGradient::ReverseSteps() {
+   std::ranges::reverse(steps_);
+-  std::rotate(steps_.begin(), steps_.end() - step_count_, steps_.end());
++  const auto steps = base::span(steps_);
++  std::ranges::rotate(steps, steps.end() - step_count_);
+   for (size_t i = 0; i < step_count_; i++)
+     steps_[i].fraction = 1.f - steps_[i].fraction;
+ }

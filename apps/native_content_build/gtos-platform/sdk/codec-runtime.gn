@@ -14,6 +14,18 @@ source_set("codec_support") {
   deps = [ ":codec_qsort" ]
 }
 
+source_set("compiler_builtins") {
+  assert(is_gtos && current_cpu == "x86")
+  sources = [
+    "//third_party/compiler-rt/src/lib/builtins/atomic.c",
+    "//third_party/compiler-rt/src/lib/builtins/divdc3.c",
+    "//third_party/compiler-rt/src/lib/builtins/muldc3.c",
+    "//third_party/compiler-rt/src/lib/builtins/mulsc3.c",
+  ]
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [ "//build/config/compiler:no_chromium_code" ]
+}
+
 source_set("codec_qsort") {
   assert(is_gtos && current_cpu == "x86")
   sources = [ "//third_party/llvm-libc/src/src/stdlib/qsort.cpp" ]
@@ -124,8 +136,10 @@ source_set("native_file_input") {
 source_set("native_locale") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
+    "//third_party/llvm-libc/src/src/locale/locale.cpp",
     "//third_party/llvm-libc/src/src/locale/localeconv.cpp",
     "//third_party/llvm-libc/src/src/locale/setlocale.cpp",
+    "//third_party/llvm-libc/src/src/locale/uselocale.cpp",
   ]
   include_dirs = [ "//third_party/llvm-libc/src" ]
   defines = [

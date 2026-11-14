@@ -1,0 +1,15 @@
+--- a/content/shell/renderer/shell_content_renderer_client.cc
++++ b/content/shell/renderer/shell_content_renderer_client.cc
+@@ -404,10 +404,12 @@ void ShellContentRendererClient::PrepareErrorPageForHttpStatusError(
+ 
+ void ShellContentRendererClient::DidInitializeWorkerContextOnWorkerThread(
+     v8::Local<v8::Context> context) {
++#if !BUILDFLAG(IS_GTOS)
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+           switches::kExposeInternalsForTesting)) {
+     blink::WebTestingSupport::InjectInternalsObject(context);
+   }
++#endif
+ }
+ 
+ std::unique_ptr<blink::URLLoaderThrottleProvider>

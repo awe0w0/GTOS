@@ -1,0 +1,14 @@
+--- a/third_party/rust/crc32fast/v1/BUILD.gn
++++ b/third_party/rust/crc32fast/v1/BUILD.gn
+@@ -43,6 +43,11 @@ cargo_crate("lib") {
+     "nightly",
+     "std",
+   ]
++  if (is_gtos) {
++    # Use the crate's upstream core-only implementation.
++    features -= [ "std" ]
++  }
++
+   build_root =
+       "//third_party/rust/chromium_crates_io/vendor/crc32fast-v1/build.rs"
+   build_sources =

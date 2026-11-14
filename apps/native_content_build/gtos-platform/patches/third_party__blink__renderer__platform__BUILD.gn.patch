@@ -11,7 +11,17 @@
    allow_unsafe = true  # Needed for FFI that underpins the `cxx` crate.
    crate_root = "audio/rustfft_ffi.rs"
    sources = [ crate_root ]
-@@ -2042,9 +2046,11 @@ component("platform") {
+@@ -2024,7 +2028,8 @@ component("platform") {
+     deps += [ "//third_party/blink/renderer/platform/widget/compositing/android_webview" ]
+   }
+ 
+-  if (is_fuchsia) {
++  if (is_fuchsia || is_gtos) {
++    # Both platforms use the Skia font manager for character fallback.
+     sources += [ "fonts/fuchsia/font_cache_fuchsia.cc" ]
+   }
+ 
+@@ -2042,9 +2047,11 @@ component("platform") {
    }
  
    if (current_cpu == "x86" || current_cpu == "x64") {
@@ -25,7 +35,7 @@
    }
  
    if (current_cpu == "arm64" || current_cpu == "arm64e" ||
-@@ -2762,7 +2768,7 @@ group("blink_platform_unittests_data") {
+@@ -2762,7 +2769,7 @@ group("blink_platform_unittests_data") {
    ]
  }
  

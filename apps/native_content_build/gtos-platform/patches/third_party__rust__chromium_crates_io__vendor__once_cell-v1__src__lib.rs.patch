@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/once_cell-v1/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/once_cell-v1/src/lib.rs
+@@ -373,6 +373,7 @@
+ //!   your own mutex)
+ 
+ #![cfg_attr(not(feature = "std"), no_std)]
++#![cfg_attr(all(target_os = "gtos", feature = "std"), feature(restricted_std))]
+ 
+ #[cfg(feature = "alloc")]
+ extern crate alloc;

@@ -1,0 +1,33 @@
+--- a/net/third_party/quiche/src/quiche/common/quiche_socket_address.cc
++++ b/net/third_party/quiche/src/quiche/common/quiche_socket_address.cc
+@@ -4,6 +4,10 @@
+ 
+ #include "quiche/common/quiche_socket_address.h"
+ 
++#if defined(__GTOS__)
++#include <errno.h>
++#endif
++
+ #include <cstring>
+ #include <limits>
+ #include <string>
+@@ -100,6 +104,11 @@ std::string QuicheSocketAddress::ToString() const {
+ }
+ 
+ int QuicheSocketAddress::FromSocket(int fd) {
++#if defined(__GTOS__)
++  // Native file handles do not provide a transport endpoint.
++  errno = ENOSYS;
++  return -1;
++#else
+   sockaddr_storage addr;
+   socklen_t addr_len = sizeof(addr);
+   int result = getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &addr_len);
+@@ -111,6 +120,7 @@ int QuicheSocketAddress::FromSocket(int fd) {
+     return 0;
+   }
+   return -1;
++#endif
+ }
+ 
+ QuicheSocketAddress QuicheSocketAddress::Normalized() const {

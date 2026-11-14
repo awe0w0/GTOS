@@ -13,6 +13,11 @@
 
 namespace base::debug {
 
+bool EnableInProcessStackDumping() {
+  // The native kernel records faults and the faulting PC.
+  return false;
+}
+
 NOINLINE size_t CollectStackTrace(span<const void*> trace) {
   // Native GTOS has no unwind tables. The immediate return address does not
   // require walking a frame chain through unverified memory.

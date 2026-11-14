@@ -1,0 +1,13 @@
+--- a/third_party/snappy/linux/snappy-stubs-public.h
++++ b/third_party/snappy/linux/snappy-stubs-public.h
+@@ -38,7 +38,9 @@
+ 
+ #include <cstddef>
+ 
+-#if 1  // HAVE_SYS_UIO_H
++#if defined(__GTOS__)
++#include <llvm-libc-types/struct_iovec.h>
++#else
+ #include <sys/uio.h>
+ #endif  // HAVE_SYS_UIO_H
+ 

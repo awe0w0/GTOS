@@ -1,6 +1,26 @@
 --- a/ui/views/BUILD.gn
 +++ b/ui/views/BUILD.gn
-@@ -1067,6 +1067,20 @@ if (is_win || is_mac || is_linux || is_chromeos) {
+@@ -980,7 +980,7 @@ component("views") {
+           "//ui/base:ozone_buildflags",
+         ]
+       }
+-      if (is_linux || is_fuchsia) {
++      if (is_linux || is_fuchsia || is_gtos) {
+         public += [
+           "widget/desktop_aura/desktop_drag_drop_client_ozone.h",
+           "widget/desktop_aura/desktop_window_tree_host_platform.h",
+@@ -1037,7 +1037,9 @@ component("views") {
+     }
+   }
+ 
+-  if (is_fuchsia) {
++  if (is_gtos) {
++    sources += [ "controls/menu/menu_config_gtos.cc" ]
++  } else if (is_fuchsia) {
+     sources += [ "controls/menu/menu_config_fuchsia.cc" ]
+   }
+ 
+@@ -1067,6 +1069,20 @@ if (is_win || is_mac || is_linux || is_chromeos) {
    }
  }
  
@@ -21,7 +41,7 @@
  source_set("test_support") {
    testonly = true
    sources = [
-@@ -1268,6 +1282,16 @@ source_set("test_support") {
+@@ -1268,6 +1284,16 @@ source_set("test_support") {
      ]
    }
  

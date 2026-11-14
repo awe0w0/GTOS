@@ -1,0 +1,15 @@
+--- a/third_party/rust/byteorder_lite/v0_1/BUILD.gn
++++ b/third_party/rust/byteorder_lite/v0_1/BUILD.gn
+@@ -61,6 +61,12 @@ cargo_crate("lib") {
+   _configs_to_remove += []
+   _configs_to_add += []
+ 
++  if (is_gtos) {
++    # Keep the byte stream adapters on GTOS std.
++    _configs_to_remove += [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
++
+   # Applying config changes.
+   library_configs -= _configs_to_remove
+   library_configs += _configs_to_add

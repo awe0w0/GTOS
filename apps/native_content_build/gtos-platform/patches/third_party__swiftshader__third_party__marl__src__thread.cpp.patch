@@ -1,0 +1,33 @@
+--- a/third_party/swiftshader/third_party/marl/src/thread.cpp
++++ b/third_party/swiftshader/third_party/marl/src/thread.cpp
+@@ -31,6 +31,9 @@
+ #include <limits>   // std::numeric_limits
+ #include <vector>
+ #undef max
++#elif defined(__GTOS__)
++#include <thread>
++#include "tools/gtos_native_sdk/native-services.h"
+ #elif defined(__APPLE__)
+ #include <mach/thread_act.h>
+ #include <pthread.h>
+@@ -444,7 +447,7 @@ void Thread::setName(const char* fmt, ...) {
+   pthread_setname_np(name);
+ #elif defined(__FreeBSD__)
+   pthread_set_name_np(pthread_self(), name);
+-#elif !defined(__Fuchsia__) && !defined(__EMSCRIPTEN__)
++#elif !defined(__Fuchsia__) && !defined(__EMSCRIPTEN__) && !defined(__GTOS__)
+   pthread_setname_np(pthread_self(), name);
+ #endif
+ 
+@@ -452,7 +455,11 @@ void Thread::setName(const char* fmt, ...) {
+ }
+ 
+ unsigned int Thread::numLogicalCPUs() {
++#if defined(__GTOS__)
++  return gtos::native::CurrentProcessInfo().scheduler_cpu_count;
++#else
+   return static_cast<unsigned int>(sysconf(_SC_NPROCESSORS_ONLN));
++#endif
+ }
+ 
+ #endif  // OS

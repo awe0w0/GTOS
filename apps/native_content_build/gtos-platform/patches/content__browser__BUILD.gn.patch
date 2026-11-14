@@ -28,3 +28,28 @@
    } else if (is_posix) {
      sources += [
        "child_process_launcher_helper_posix.cc",
+@@ -2855,6 +2866,15 @@ source_set("browser") {
+     sources += [ "accessibility/browser_accessibility_state_impl_chromeos.cc" ]
+   }
+ 
++  if (is_gtos) {
++    sources += [
++      "media/capture/pip_screen_capture_coordinator.cc",
++      "media/captured_surface_control_permission_manager.cc",
++      "media/captured_surface_controller.cc",
++      "speech/tts_fuchsia.cc",
++    ]
++  }
++
+   # Desktop/Window/WebContents screen capture implementations, conditionally
+   # built depending on the available implementations for each platform.
+   if (enable_screen_capture) {
+@@ -3453,7 +3473,7 @@ source_set("browser") {
+   # NOTE: Fuchsia depends on this class, but probably shouldn't, as it doesn't
+   # support extensions.
+   if (is_win || is_apple || is_linux || is_chromeos || is_desktop_android ||
+-      is_fuchsia) {
++      is_fuchsia || is_gtos) {
+     sources += [
+       "service_worker/service_worker_usb_delegate_observer.cc",
+       "service_worker/service_worker_usb_delegate_observer.h",

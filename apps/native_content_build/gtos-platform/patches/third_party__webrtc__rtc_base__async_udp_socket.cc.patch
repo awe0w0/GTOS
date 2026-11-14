@@ -1,0 +1,19 @@
+--- a/third_party/webrtc/rtc_base/async_udp_socket.cc
++++ b/third_party/webrtc/rtc_base/async_udp_socket.cc
+@@ -34,8 +34,15 @@ absl_nullable std::unique_ptr<AsyncUDPSocket> AsyncUDPSocket::Create(
+     const Environment& env,
+     const SocketAddress& bind_address,
+     SocketFactory& factory) {
++#if defined(__GTOS__)
++  // Keep the datagram selector usable by an injected SocketFactory.
++  // The default GTOS SocketServer has no native datagram transport.
++  constexpr int kDatagramType = 2;
++#else
++  constexpr int kDatagramType = SOCK_DGRAM;
++#endif
+   std::unique_ptr<Socket> socket =
+-      factory.Create(bind_address.family(), SOCK_DGRAM);
++      factory.Create(bind_address.family(), kDatagramType);
+   if (socket == nullptr) {
+     return nullptr;
+   }

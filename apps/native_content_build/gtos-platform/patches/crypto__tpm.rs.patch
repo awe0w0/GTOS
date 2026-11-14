@@ -1,0 +1,56 @@
+--- a/crypto/tpm.rs
++++ b/crypto/tpm.rs
+@@ -2,6 +2,13 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#![cfg_attr(target_os = "gtos", no_std)]
++
++#[cfg(target_os = "gtos")]
++extern crate alloc;
++#[cfg(target_os = "gtos")]
++use alloc::vec::Vec;
++
+ pub use ffi::{
+     CreatePrimaryResponse, CreateResponse, ResponseStatus, TpmAlgHash, TpmAlgPublic,
+     TpmAlgSigScheme, TpmAlgSymmetric, TpmCc, TpmConstant, TpmEccCurve, TpmRh, TpmSt,
+@@ -61,8 +68,8 @@ pub enum TpmParseError {
+     WrongType,
+ }
+ 
+-impl std::fmt::Display for TpmParseError {
+-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++impl core::fmt::Display for TpmParseError {
++    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+         match self {
+             TpmParseError::BufferTooSmall => write!(f, "buffer too small"),
+             TpmParseError::TrailingBytes => write!(f, "trailing bytes in buffer"),
+@@ -74,7 +81,7 @@ impl std::fmt::Display for TpmParseError {
+     }
+ }
+ 
+-impl std::error::Error for TpmParseError {}
++impl core::error::Error for TpmParseError {}
+ 
+ /// Errors that can occur during TPM signature parsing.
+ #[derive(Debug)]
+@@ -89,8 +96,8 @@ pub enum TpmSignatureParseError {
+     UnsupportedSignatureAlgorithm,
+ }
+ 
+-impl std::fmt::Display for TpmSignatureParseError {
+-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++impl core::fmt::Display for TpmSignatureParseError {
++    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+         match self {
+             TpmSignatureParseError::BufferTooSmall => write!(f, "buffer too small"),
+             TpmSignatureParseError::TrailingBytes => write!(f, "trailing bytes in buffer"),
+@@ -101,7 +108,7 @@ impl std::fmt::Display for TpmSignatureParseError {
+     }
+ }
+ 
+-impl std::error::Error for TpmSignatureParseError {}
++impl core::error::Error for TpmSignatureParseError {}
+ 
+ /// CXX bridge for TPM FFI.
+ #[cxx::bridge(namespace = "crypto::tpm")]

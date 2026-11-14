@@ -1,0 +1,12 @@
+--- a/third_party/blink/renderer/platform/scheduler/common/thread.cc
++++ b/third_party/blink/renderer/platform/scheduler/common/thread.cc
+@@ -150,6 +150,9 @@ void Thread::RemoveTaskObserver(TaskObserver* task_observer) {
+ #if BUILDFLAG(IS_WIN)
+ static_assert(sizeof(blink::PlatformThreadId) >= sizeof(DWORD),
+               "size of platform thread id is too small");
++#elif BUILDFLAG(IS_GTOS)
++static_assert(sizeof(blink::PlatformThreadId) >= sizeof(uint32_t),
++              "size of platform thread id is too small");
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ static_assert(sizeof(blink::PlatformThreadId) >= sizeof(pid_t),
+               "size of platform thread id is too small");

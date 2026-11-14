@@ -1,0 +1,87 @@
+--- a/third_party/webrtc/rtc_base/network.cc
++++ b/third_party/webrtc/rtc_base/network.cc
+@@ -165,6 +165,7 @@ uint16_t ComputeNetworkCostByType(int type,
+   }
+ }
+ 
++#if defined(WEBRTC_POSIX) || defined(WEBRTC_WIN)
+ bool IsIgnoredIPv6(bool allow_mac_based_ipv6, const InterfaceAddress& ip) {
+   if (ip.family() != AF_INET6) {
+     return false;
+@@ -192,6 +193,7 @@ bool IsIgnoredIPv6(bool allow_mac_based_ipv6, const InterfaceAddress& ip) {
+ 
+   return false;
+ }
++#endif
+ 
+ // Note: consider changing to const Network* as arguments
+ // if/when considering other changes that should not trigger
+@@ -224,9 +226,11 @@ bool IpAddressAttributesEnabled(const FieldTrialsView* field_trials) {
+ 
+ // These addresses are used as the targets to find out the default local address
+ // on a multi-homed endpoint. They are actually DNS servers.
++#if !defined(__GTOS__)
+ const char kPublicIPv4Host[] = "8.8.8.8";
+ const char kPublicIPv6Host[] = "2001:4860:4860::8888";
+ const int kPublicPort = 53;  // DNS port.
++#endif
+ 
+ namespace webrtc_network_internal {
+ bool CompareNetworks(const std::unique_ptr<Network>& a,
+@@ -386,7 +390,7 @@ std::unique_ptr<Network> NetworkManagerBase::CreateNetwork(
+ std::vector<const Network*> NetworkManagerBase::GetAnyAddressNetworks() {
+   std::vector<const Network*> networks;
+   if (!ipv4_any_address_network_) {
+-    const IPAddress ipv4_any_address(INADDR_ANY);
++    const IPAddress ipv4_any_address = GetAnyIP(AF_INET);
+     ipv4_any_address_network_ =
+         CreateNetwork("any", "any", ipv4_any_address, 0, ADAPTER_TYPE_ANY);
+     ipv4_any_address_network_->set_default_local_address_provider(this);
+@@ -396,7 +400,7 @@ std::vector<const Network*> NetworkManagerBase::GetAnyAddressNetworks() {
+   networks.push_back(ipv4_any_address_network_.get());
+ 
+   if (!ipv6_any_address_network_) {
+-    const IPAddress ipv6_any_address(in6addr_any);
++    const IPAddress ipv6_any_address = GetAnyIP(AF_INET6);
+     ipv6_any_address_network_ =
+         CreateNetwork("any", "any", ipv6_any_address, 0, ADAPTER_TYPE_ANY);
+     ipv6_any_address_network_->set_default_local_address_provider(this);
+@@ -1074,6 +1078,10 @@ void BasicNetworkManager::StopNetworkMonitor() {
+ IPAddress BasicNetworkManager::QueryDefaultLocalAddress(int family) const {
+   RTC_DCHECK(family == AF_INET || family == AF_INET6);
+ 
++#if defined(__GTOS__)
++  // The native socket server has no datagram transport.
++  return IPAddress();
++#else
+   std::unique_ptr<Socket> socket(
+       socket_factory_->CreateSocket(family, SOCK_DGRAM));
+   if (!socket) {
+@@ -1093,8 +1101,27 @@ IPAddress BasicNetworkManager::QueryDefaultLocalAddress(int family) const {
+     return IPAddress();
+   }
+   return socket->GetLocalAddress().ipaddr();
++#endif
+ }
+ 
++#if defined(__GTOS__)
++bool BasicNetworkManager::CreateNetworks(
++    bool include_ignored,
++    std::vector<std::unique_ptr<Network>>* networks) const {
++  // The native network service only exposes loopback, which is ignored for ICE.
++  if (include_ignored) {
++    const auto address = GetLoopbackIP(AF_INET);
++    auto network = CreateNetwork("lo", "GTOS loopback", TruncateIP(address, 8),
++                                 8, ADAPTER_TYPE_LOOPBACK);
++    network->set_default_local_address_provider(this);
++    network->set_ignored(true);
++    network->AddIP(address);
++    networks->push_back(std::move(network));
++  }
++  return true;
++}
++#endif
++
+ void BasicNetworkManager::UpdateNetworksOnce() {
+   if (!start_count_)
+     return;

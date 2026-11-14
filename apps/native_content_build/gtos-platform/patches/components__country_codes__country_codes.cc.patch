@@ -1,0 +1,11 @@
+--- a/components/country_codes/country_codes.cc
++++ b/components/country_codes/country_codes.cc
+@@ -132,7 +132,7 @@ CountryId GetCurrentCountryID() {
+   return CountryId(base::i18n::GetAndroidDefaultCountryCode());
+ }
+ 
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ CountryId GetCurrentCountryID() {
+   const char* locale = setlocale(LC_MESSAGES, nullptr);

@@ -1,0 +1,40 @@
+--- a/media/capabilities/bucket_utility.cc
++++ b/media/capabilities/bucket_utility.cc
+@@ -71,14 +71,11 @@ gfx::Size GetSizeBucket(const gfx::Size& raw_size) {
+   auto height_bound = std::ranges::lower_bound(kSizeBuckets, raw_size.height());
+ 
+   // If no bucket is larger than the raw dimension, just use the last bucket.
+-  if (width_bound == kSizeBuckets.end()) {
+-    --width_bound;
+-  }
+-  if (height_bound == kSizeBuckets.end()) {
+-    --height_bound;
+-  }
+-
+-  return gfx::Size(*width_bound, *height_bound);
++  const int width = width_bound == kSizeBuckets.end()
++                        ? kSizeBuckets.back() : *width_bound;
++  const int height = height_bound == kSizeBuckets.end()
++                         ? kSizeBuckets.back() : *height_bound;
++  return gfx::Size(width, height);
+ }
+ 
+ int GetFpsBucket(double raw_fps) {
+@@ -90,7 +87,7 @@ int GetFpsBucket(double raw_fps) {
+ 
+   // If no bucket is larger than |rounded_fps|, just used the last bucket;
+   if (upper_bound == kFrameRateBuckets.end()) {
+-    return *(upper_bound - 1);
++    return kFrameRateBuckets.back();
+   }
+ 
+   // Return early if its the first bucket.
+@@ -99,7 +96,7 @@ int GetFpsBucket(double raw_fps) {
+   }
+ 
+   int higher_bucket = *upper_bound;
+-  int previous_bucket = *(upper_bound - 1);
++  int previous_bucket = *std::prev(upper_bound);
+   if (std::abs(previous_bucket - rounded_fps) <
+       std::abs(higher_bucket - rounded_fps)) {
+     return previous_bucket;

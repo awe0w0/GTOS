@@ -1,0 +1,10 @@
+--- a/third_party/rust/chromium_crates_io/vendor/byteorder-lite-v0_1/src/lib.rs
++++ b/third_party/rust/chromium_crates_io/vendor/byteorder-lite-v0_1/src/lib.rs
+@@ -69,6 +69,7 @@ The standard numeric types provide built-in methods like `to_le_bytes` and
+ #![forbid(unsafe_code)]
+ #![deny(missing_docs)]
+ #![cfg_attr(not(feature = "std"), no_std)]
++#![cfg_attr(target_os = "gtos", feature(restricted_std))]
+ // When testing under miri, we disable tests that take too long. But this
+ // provokes lots of dead code warnings. So we just squash them.
+ #![cfg_attr(miri, allow(dead_code, unused_macros))]

@@ -1,0 +1,29 @@
+--- a/media/base/video_frame_layout.cc
++++ b/media/base/video_frame_layout.cc
+@@ -10,6 +10,7 @@
+ #include <sstream>
+ 
+ #include "base/check_op.h"
++#include "base/containers/span.h"
+ #include "base/notreached.h"
+ #include "base/numerics/checked_math.h"
+ #include "base/numerics/safe_conversions.h"
+@@ -219,13 +220,11 @@ bool VideoFrameLayout::FitsInContiguousBufferOfSize(size_t data_size) const {
+   // We sort the plane indices by offset so that we can check for overlaps in
+   // the offset order.
+   std::array<size_t, VideoFrame::kMaxPlanes> sorted_plane_indices;
+-  std::iota(sorted_plane_indices.begin(),
+-            sorted_plane_indices.begin() + num_planes, 0);
+-  std::sort(sorted_plane_indices.begin(),
+-            sorted_plane_indices.begin() + num_planes,
+-            [this](size_t a, size_t b) {
+-              return planes_[a].offset < planes_[b].offset;
+-            });
++  auto indices = base::span(sorted_plane_indices).first(num_planes);
++  std::iota(indices.begin(), indices.end(), 0);
++  std::ranges::sort(indices, [this](size_t a, size_t b) {
++    return planes_[a].offset < planes_[b].offset;
++  });
+ 
+   for (size_t i = 0; i < num_planes; ++i) {
+     size_t plane_idx = sorted_plane_indices[i];

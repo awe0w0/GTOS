@@ -1,0 +1,28 @@
+--- a/third_party/icu/source/i18n/decContext.cpp
++++ b/third_party/icu/source/i18n/decContext.cpp
+@@ -24,6 +24,9 @@
+ 
+ #include <string.h>           /* for strcmp  */
+ #include <stdio.h>            /* for printf if DECCHECK  */
++#if defined(__GTOS__)
++#include <stdlib.h>           /* for fatal decimal traps */
++#endif
+ #include "decContext.h"       /* context and base types  */
+ #include "decNumberLocal.h"   /* decNumber local types, etc.  */
+ 
+@@ -204,7 +207,14 @@ U_CAPI decContext * U_EXPORT2 uprv_decContextSetRounding(decContext *context,
+ U_CAPI decContext *  U_EXPORT2 uprv_decContextSetStatus(decContext *context, uInt status) {
+   context->status|=status;
+ #if 0  /* ICU: Do not raise signals. */
+-  if (status & context->traps) raise(SIGFPE);
++  if (status & context->traps) {
++#if defined(__GTOS__)
++    // This profile has no process signal handlers. A requested trap is fatal.
++    abort();
++#else
++    raise(SIGFPE);
++#endif
++  }
+ #endif
+   return context;} /* decContextSetStatus  */
+ 

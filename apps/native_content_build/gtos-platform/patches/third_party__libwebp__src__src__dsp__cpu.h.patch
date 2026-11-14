@@ -1,0 +1,31 @@
+--- a/third_party/libwebp/src/src/dsp/cpu.h
++++ b/third_party/libwebp/src/src/dsp/cpu.h
+@@ -201,7 +201,27 @@ static WEBP_INLINE int _mm256_cvtsi256_si32(__m256i a) {
+ #endif
+ #endif
+ 
+-#if defined(WEBP_USE_THREAD)
++#if defined(__GTOS__)
++#include <process/abi.h>
++
++// Decoders use synchronous workers, but different native callers may still
++// initialize the same DSP table. Keep the upstream per-table exclusion.
++static WEBP_INLINE void WebPDspYield(void) {
++  unsigned call = GTOS_SYS_YIELD;
++  __asm__ volatile("int $0x80" : "+a"(call) : "b"(0U), "c"(0U) : "cc", "memory");
++}
++#define WEBP_DSP_INIT_VARS(func) \
++  static VP8CPUInfo func##_last_cpuinfo_used = (VP8CPUInfo)&func##_last_cpuinfo_used; \
++  static unsigned func##_lock
++#define WEBP_DSP_INIT(func) \
++  do { \
++    while (__atomic_exchange_n(&func##_lock, 1U, __ATOMIC_ACQUIRE)) \
++      WebPDspYield(); \
++    if (func##_last_cpuinfo_used != VP8GetCPUInfo) func(); \
++    func##_last_cpuinfo_used = VP8GetCPUInfo; \
++    __atomic_store_n(&func##_lock, 0U, __ATOMIC_RELEASE); \
++  } while (0)
++#elif defined(WEBP_USE_THREAD)
+ #if defined(_WIN32)
+ #include <windows.h>
+ 

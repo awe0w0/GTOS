@@ -1,0 +1,13 @@
+--- a/gpu/config/BUILD.gn
++++ b/gpu/config/BUILD.gn
+@@ -124,7 +124,9 @@ component("config") {
+     "webgpu_blocklist_impl.h",
+   ]
+ 
+-  if (is_fuchsia) {
++  if (is_gtos) {
++    sources += [ "gpu_info_collector_gtos.cc" ]
++  } else if (is_fuchsia) {
+     sources += [ "gpu_info_collector_fuchsia.cc" ]
+   }
+ 

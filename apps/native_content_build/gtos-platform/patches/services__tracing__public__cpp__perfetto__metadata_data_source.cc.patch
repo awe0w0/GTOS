@@ -1,0 +1,13 @@
+--- a/services/tracing/public/cpp/perfetto/metadata_data_source.cc
++++ b/services/tracing/public/cpp/perfetto/metadata_data_source.cc
+@@ -47,6 +47,10 @@ std::string_view GetClockString(base::TimeTicks::Clock clock) {
+   switch (clock) {
+     case base::TimeTicks::Clock::FUCHSIA_ZX_CLOCK_MONOTONIC:
+       return "FUCHSIA_ZX_CLOCK_MONOTONIC";
++#if BUILDFLAG(IS_GTOS)
++    case base::TimeTicks::Clock::GTOS_CLOCK_MONOTONIC:
++      return "GTOS_CLOCK_MONOTONIC";
++#endif
+     case base::TimeTicks::Clock::LINUX_CLOCK_MONOTONIC:
+       return "LINUX_CLOCK_MONOTONIC";
+     case base::TimeTicks::Clock::IOS_CF_ABSOLUTE_TIME_MINUS_KERN_BOOTTIME:

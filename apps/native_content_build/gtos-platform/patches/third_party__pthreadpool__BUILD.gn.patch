@@ -1,0 +1,40 @@
+--- a/third_party/pthreadpool/BUILD.gn
++++ b/third_party/pthreadpool/BUILD.gn
+@@ -10,6 +10,9 @@ config("pthreadpool_config") {
+     "src/include",
+     "src/src",
+   ]
++  if (is_gtos) {
++    include_dirs += [ "//build/config/gtos/runtime/ffmpeg" ]
++  }
+ 
+   # The platform-specific synchronizations are not needed for Chromium Jobs
+   # API integration.
+@@ -48,6 +51,9 @@ if (build_with_chromium) {
+       "//base",
+       "//third_party/fxdiv",
+     ]
++    if (is_gtos) {
++      deps += [ "//build/config/gtos/runtime:native_pthread" ]
++    }
+   }
+ 
+   test("pthreadpool_unittests") {
+@@ -71,6 +77,9 @@ config("pthreadpool_standalone_config") {
+     "src/include",
+     "src/src",
+   ]
++  if (is_gtos) {
++    include_dirs += [ "//build/config/gtos/runtime/ffmpeg" ]
++  }
+   defines = [ "PTHREADPOOL_USE_GCD=0" ]
+ }
+ 
+@@ -100,4 +109,7 @@ source_set("pthreadpool_standalone") {
+   public_configs = [ ":pthreadpool_standalone_config" ]
+ 
+   deps = [ "//third_party/fxdiv" ]
++  if (is_gtos) {
++    deps += [ "//build/config/gtos/runtime:native_pthread" ]
++  }
+ }

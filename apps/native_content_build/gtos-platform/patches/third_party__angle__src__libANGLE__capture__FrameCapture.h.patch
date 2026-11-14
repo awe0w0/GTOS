@@ -1,0 +1,18 @@
+--- a/third_party/angle/src/libANGLE/capture/FrameCapture.h
++++ b/third_party/angle/src/libANGLE/capture/FrameCapture.h
+@@ -1500,6 +1500,7 @@ struct FmtMultiLineString
+ 
+ std::ostream &operator<<(std::ostream &ostr, const FmtMultiLineString &fmt);
+ 
++#if !defined(__GTOS__) || ANGLE_CAPTURE_ENABLED
+ struct SaveFileHelper
+ {
+   public:
+@@ -1536,6 +1537,7 @@ struct SaveFileHelper
+     std::ofstream mOfs;
+     std::string mFilePath;
+ };
++#endif
+ 
+ constexpr size_t kFunctionSizeLimit = 5000;
+ 

@@ -1,0 +1,12 @@
+--- a/third_party/icu/source/i18n/decContext.h
++++ b/third_party/icu/source/i18n/decContext.h
+@@ -61,7 +61,9 @@
+ /* #include <stdint.h>   */         /* C99 standard integers           */
+   #endif
+   #include <stdio.h>               /* for printf, etc.                */
++  #if !defined(__GTOS__)
+   #include <signal.h>              /* for traps                       */
++  #endif
+ 
+   /* Extended flags setting -- set this to 0 to use only IEEE flags   */
+   #if !defined(DECEXTFLAG)

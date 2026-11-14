@@ -1,0 +1,52 @@
+--- a/third_party/angle/src/common/tls.cpp
++++ b/third_party/angle/src/common/tls.cpp
+@@ -10,6 +10,11 @@
+ 
+ #include "common/debug.h"
+ 
++#if defined(ANGLE_PLATFORM_GTOS)
++#    include <new>
++#    include "base/threading/thread_local_storage.h"
++#endif
++
+ #ifdef ANGLE_ENABLE_WINDOWS_UWP
+ #    include <map>
+ #    include <mutex>
+@@ -57,6 +62,8 @@ TLSIndex CreateTLSIndex(PthreadKeyDestructor destructor)
+     index = TlsAlloc();
+ #    endif
+ 
++#elif defined(ANGLE_PLATFORM_GTOS)
++    index = new (std::nothrow) base::ThreadLocalStorage::Slot(destructor);
+ #elif defined(ANGLE_PLATFORM_POSIX)
+     // Create pthread key
+     if ((pthread_key_create(&index, destructor)) != 0)
+@@ -94,6 +101,9 @@ bool DestroyTLSIndex(TLSIndex index)
+ #    else
+     return (TlsFree(index) == TRUE);
+ #    endif
++#elif defined(ANGLE_PLATFORM_GTOS)
++    delete static_cast<base::ThreadLocalStorage::Slot *>(index);
++    return true;
+ #elif defined(ANGLE_PLATFORM_POSIX)
+     return (pthread_key_delete(index) == 0);
+ #endif
+@@ -126,6 +136,9 @@ bool SetTLSValue(TLSIndex index, void *value)
+ #    else
+     return (TlsSetValue(index, value) == TRUE);
+ #    endif
++#elif defined(ANGLE_PLATFORM_GTOS)
++    static_cast<base::ThreadLocalStorage::Slot *>(index)->Set(value);
++    return true;
+ #elif defined(ANGLE_PLATFORM_POSIX)
+     return (pthread_setspecific(index, value) == 0);
+ #endif
+@@ -153,6 +166,8 @@ void *GetTLSValue(TLSIndex index)
+ #    else
+     return TlsGetValue(index);
+ #    endif
++#elif defined(ANGLE_PLATFORM_GTOS)
++    return static_cast<base::ThreadLocalStorage::Slot *>(index)->Get();
+ #elif defined(ANGLE_PLATFORM_POSIX)
+     return pthread_getspecific(index);
+ #endif

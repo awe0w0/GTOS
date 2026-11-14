@@ -1,0 +1,11 @@
+--- a/skia/ext/SkMemory_new_handler.cpp
++++ b/skia/ext/SkMemory_new_handler.cpp
+@@ -21,7 +21,7 @@
+ #include <windows.h>
+ #elif BUILDFLAG(IS_APPLE)
+ #include <malloc/malloc.h>
+-#else
++#elif !BUILDFLAG(IS_GTOS)
+ #include <malloc.h>
+ #endif
+ 

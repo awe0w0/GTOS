@@ -1,0 +1,13 @@
+--- a/ui/events/keycodes/dom/keycode_converter.cc
++++ b/ui/events/keycodes/dom/keycode_converter.cc
+@@ -37,7 +37,9 @@ namespace {
+ #elif BUILDFLAG(IS_ANDROID)
+ #define DOM_CODE(usb, evdev, xkb, win, mac, code, id) \
+   { usb, evdev, code }
+-#elif BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
++// The GTOS Ozone adapter derives DomCode from translated keyboard events.
++// Use the corresponding USB usage as the internal native key identifier.
+ #define DOM_CODE(usb, evdev, xkb, win, mac, code, id) \
+   { usb, usb, code }
+ #else

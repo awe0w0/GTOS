@@ -1,0 +1,47 @@
+--- a/third_party/icu/source/common/putil.cpp
++++ b/third_party/icu/source/common/putil.cpp
+@@ -305,7 +305,13 @@ uprv_getUTCtime()
+ U_CAPI UDate U_EXPORT2
+ uprv_getRawUTCtime()
+ {
+-#if U_PLATFORM_USES_ONLY_WIN32_API
++#if defined(__GTOS__)
++    struct timespec time = {};
++    if (clock_gettime(CLOCK_REALTIME, &time) != 0) {
++        return uprv_getNaN();
++    }
++    return (UDate)time.tv_sec * U_MILLIS_PER_SECOND + time.tv_nsec / 1000000;
++#elif U_PLATFORM_USES_ONLY_WIN32_API
+ 
+     FileTimeConversion winTime;
+     GetSystemTimeAsFileTime(&winTime.fileTime);
+@@ -641,7 +647,10 @@ uprv_tzset()
+ U_CAPI int32_t U_EXPORT2
+ uprv_timezone()
+ {
+-#ifdef U_TIMEZONE
++#if defined(__GTOS__)
++    // The native calendar is UTC and the platform has no local zone setting.
++    return 0;
++#elif defined(U_TIMEZONE)
+     return U_TIMEZONE;
+ #else
+     time_t t, t1, t2;
+@@ -1107,6 +1116,9 @@ U_CAPI const char* U_EXPORT2
+ uprv_tzname(int n)
+ {
+     (void)n; // Avoid unreferenced parameter warning.
++#if defined(__GTOS__)
++    return "UTC";
++#else
+     const char *tzid = nullptr;
+ #if U_PLATFORM_USES_ONLY_WIN32_API
+     tzid = uprv_detectWindowsTimeZone();
+@@ -1266,6 +1278,7 @@ uprv_tzname(int n)
+ #else
+     return "";
+ #endif
++#endif  // defined(__GTOS__)
+ }
+ 
+ /* Get and set the ICU data directory --------------------------------------- */

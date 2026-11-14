@@ -1,0 +1,15 @@
+--- a/third_party/rust/fdeflate/v0_3/BUILD.gn
++++ b/third_party/rust/fdeflate/v0_3/BUILD.gn
+@@ -63,6 +63,12 @@ cargo_crate("lib") {
+   _configs_to_remove += [ "//build/config/compiler:default_optimization" ]
+   _configs_to_add += [ "//build/config/compiler:optimize" ]
+ 
++  if (is_gtos) {
++    # Keep the encoder and decoder using the GTOS std I/O traits.
++    _configs_to_remove += [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
++
+   # Applying config changes.
+   library_configs -= _configs_to_remove
+   library_configs += _configs_to_add

@@ -1,0 +1,28 @@
+--- a/third_party/webrtc/rtc_base/socket.h
++++ b/third_party/webrtc/rtc_base/socket.h
+@@ -70,14 +70,24 @@
+ #define SOCKET_EACCES WSAEACCES
+ #endif  // WEBRTC_WIN
+ 
+-#if defined(WEBRTC_POSIX)
++#if defined(WEBRTC_POSIX) || defined(__GTOS__)
+ #define INVALID_SOCKET (-1)
+ #define SOCKET_ERROR (-1)
++#endif
++
++#if defined(WEBRTC_POSIX)
+ #define closesocket(s) close(s)
+ #endif  // WEBRTC_POSIX
+ 
+ namespace webrtc {
+ 
++#if defined(__GTOS__)
++// Selectors for the SocketFactory interface. The default native factory
++// does not provide physical sockets.
++inline constexpr int SOCK_STREAM = 1;
++inline constexpr int SOCK_DGRAM = 2;
++#endif
++
+ inline bool IsBlockingError(int e) {
+   return (e == EWOULDBLOCK) || (e == EAGAIN) || (e == EINPROGRESS);
+ }

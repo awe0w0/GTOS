@@ -1,0 +1,11 @@
+--- a/ui/base/idle/BUILD.gn
++++ b/ui/base/idle/BUILD.gn
+@@ -61,7 +61,7 @@ component("idle") {
+     deps += [ "//ui/gfx" ]
+   }
+ 
+-  if (is_fuchsia) {
++  if (is_fuchsia || is_gtos) {
+     sources += [ "idle_fuchsia.cc" ]
+   }
+ 

@@ -1,0 +1,11 @@
+--- a/components/download/internal/common/BUILD.gn
++++ b/components/download/internal/common/BUILD.gn
+@@ -119,7 +119,7 @@ source_set("internal") {
+     sources += [ "base_file_win.cc" ]
+   }
+ 
+-  if (is_posix || is_fuchsia) {
++  if (is_posix || is_fuchsia || is_gtos) {
+     sources += [ "base_file_posix.cc" ]
+   }
+ }

@@ -1,0 +1,42 @@
+--- a/third_party/blink/renderer/platform/wtf/text/text_codec_cjk.cc
++++ b/third_party/blink/renderer/platform/wtf/text/text_codec_cjk.cc
+@@ -291,13 +291,14 @@ Vector<uint8_t> EncodeShiftJis(StringView string,
+     }
+ 
+     auto range =
+-        FindInSortedPairs(EnsureJis0208EncodeIndexForEncode(), code_point);
++        FindInSortedPairs(base::span(EnsureJis0208EncodeIndexForEncode()),
++                          code_point);
+     if (range.first == range.second) {
+       AppendUnencodableReplacement(code_point, handling, result);
+       continue;
+     }
+ 
+-    DCHECK(range.first + 3 >= range.second);
++    DCHECK_LE(range.second - range.first, 3);
+     for (auto pair = range.first; pair < range.second; pair++) {
+       uint16_t pointer = pair->second;
+       if (pointer >= 8272 && pointer <= 8835)
+@@ -402,7 +403,7 @@ std::optional<UChar32> IndexGb18030RangesCodePoint(uint32_t pointer) {
+   if (pointer == 7457)
+     return 0xE7C7;
+ 
+-  const auto& gb18030_ranges = Gb18030Ranges();
++  const auto gb18030_ranges = base::span(Gb18030Ranges());
+   auto upper_bound =
+       std::upper_bound(gb18030_ranges.begin(), gb18030_ranges.end(),
+                        MakeFirstAdapter(pointer), CompareFirst{});
+@@ -416,10 +417,11 @@ std::optional<UChar32> IndexGb18030RangesCodePoint(uint32_t pointer) {
+ uint32_t Gb18030RangesPointer(UChar32 code_point) {
+   if (code_point == 0xE7C7)
+     return 7457;
++  const auto gb18030_ranges = base::span(Gb18030Ranges());
+   auto upper_bound =
+-      std::upper_bound(Gb18030Ranges().begin(), Gb18030Ranges().end(),
++      std::upper_bound(gb18030_ranges.begin(), gb18030_ranges.end(),
+                        MakeSecondAdapter(code_point), CompareSecond{});
+-  DCHECK(upper_bound != Gb18030Ranges().begin());
++  DCHECK(upper_bound != gb18030_ranges.begin());
+   uint32_t pointer_offset = (upper_bound - 1)->first;
+   UChar32 offset = (upper_bound - 1)->second;
+   return pointer_offset + code_point - offset;

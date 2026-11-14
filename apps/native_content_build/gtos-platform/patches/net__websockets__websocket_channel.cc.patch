@@ -1,0 +1,18 @@
+--- a/net/websockets/websocket_channel.cc
++++ b/net/websockets/websocket_channel.cc
+@@ -94,11 +94,12 @@ bool IsStrictlyValidCloseStatusCode(int code) {
+ 
+   DCHECK_GE(code, 0);
+   DCHECK_LT(code, 65536);
+-  const auto upper = std::ranges::upper_bound(kInvalidRanges, code);
+-  DCHECK(upper != kInvalidRanges.end());
++  const auto ranges = base::span(kInvalidRanges);
++  const auto upper = std::ranges::upper_bound(ranges, code);
++  DCHECK(upper != ranges.end());
+   DCHECK_GT(*upper, code);
+   DCHECK_LE(*(upper - 1), code);
+-  return ((upper - kInvalidRanges.begin()) % 2) == 0;
++  return ((upper - ranges.begin()) % 2) == 0;
+ }
+ 
+ // Sets |name| to the name of the frame type for the given |opcode|. Note that

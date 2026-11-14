@@ -1,0 +1,11 @@
+--- a/media/capture/video/fake_video_capture_device_factory.cc
++++ b/media/capture/video/fake_video_capture_device_factory.cc
+@@ -242,6 +242,8 @@ void FakeVideoCaptureDeviceFactory::GetDevicesInfo(
+         VideoCaptureApi::ANDROID_API2_LEGACY;
+ #elif BUILDFLAG(IS_FUCHSIA)
+         VideoCaptureApi::FUCHSIA_CAMERA3;
++#elif BUILDFLAG(IS_GTOS)
++        VideoCaptureApi::VIRTUAL_DEVICE;
+ #else
+ #error Unsupported platform
+ #endif

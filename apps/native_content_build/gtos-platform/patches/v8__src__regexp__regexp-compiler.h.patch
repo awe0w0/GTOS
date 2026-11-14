@@ -1,0 +1,11 @@
+--- a/v8/src/regexp/regexp-compiler.h
++++ b/v8/src/regexp/regexp-compiler.h
+@@ -429,7 +429,7 @@ class Trace {
+   void set_characters_preloaded(int count) { characters_preloaded_ = count; }
+   void set_bound_checked_up_to(int to) { bound_checked_up_to_ = to; }
+   void set_flush_budget(int to) {
+-    DCHECK(to <= UINT16_MAX);  // Flush-budget is 16 bit.
++    DCHECK(to >= 0 && to <= static_cast<int>(UINT16_MAX));
+     flush_budget_ = to;
+   }
+   void set_quick_check_performed(QuickCheckDetails* d) {

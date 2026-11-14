@@ -1,0 +1,11 @@
+--- a/third_party/angle/src/common/mathutil.h
++++ b/third_party/angle/src/common/mathutil.h
+@@ -1293,7 +1293,7 @@ inline unsigned long ScanReverse(uint64_t bits)
+ }
+ #endif  // defined(ANGLE_PLATFORM_WINDOWS)
+ 
+-#if defined(ANGLE_PLATFORM_POSIX)
++#if defined(ANGLE_PLATFORM_POSIX) || defined(ANGLE_PLATFORM_GTOS)
+ inline unsigned long ScanForward(uint32_t bits)
+ {
+     ASSERT(bits != 0u);

@@ -1,0 +1,13 @@
+--- a/ui/shell_dialogs/BUILD.gn
++++ b/ui/shell_dialogs/BUILD.gn
+@@ -140,7 +140,9 @@ component("shell_dialogs") {
+     ]
+   }
+ 
+-  if (is_fuchsia) {
++  if (is_gtos) {
++    sources += [ "select_file_dialog_gtos.cc" ]
++  } else if (is_fuchsia) {
+     sources += [ "select_file_dialog_fuchsia.cc" ]
+   }
+ }

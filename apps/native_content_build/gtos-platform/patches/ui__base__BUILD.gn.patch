@@ -1,0 +1,20 @@
+--- a/ui/base/BUILD.gn
++++ b/ui/base/BUILD.gn
+@@ -577,7 +577,7 @@ component("base") {
+     deps += [ "//ui/events" ]
+   }
+ 
+-  if (use_aura && (is_linux || is_chromeos)) {
++  if (use_aura && (is_linux || is_chromeos || is_gtos)) {
+     sources += [ "resource/resource_bundle_auralinux.cc" ]
+   }
+ 
+@@ -589,7 +589,7 @@ component("base") {
+     public_deps += [ "//ui/base/glib" ]
+   }
+ 
+-  if (is_chromeos || (use_aura && is_linux) || is_fuchsia) {
++  if (is_chromeos || (use_aura && is_linux) || is_fuchsia || is_gtos) {
+     sources += [
+       "dragdrop/os_exchange_data_provider_non_backed.cc",
+       "dragdrop/os_exchange_data_provider_non_backed.h",

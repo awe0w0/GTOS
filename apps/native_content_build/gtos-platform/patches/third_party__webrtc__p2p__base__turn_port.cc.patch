@@ -1,0 +1,20 @@
+--- a/third_party/webrtc/p2p/base/turn_port.cc
++++ b/third_party/webrtc/p2p/base/turn_port.cc
+@@ -69,6 +69,8 @@ const int STUN_ATTR_TURN_LOGGING_ID = 0xff05;
+ 
+ // TODO(juberti): Extract to turnmessage.h
+ static const int TURN_DEFAULT_PORT = 3478;
++// TURN REQUESTED-TRANSPORT encodes the IANA UDP protocol number.
++static constexpr uint32_t kTurnUdpTransport = 17;
+ static const int TURN_CHANNEL_NUMBER_START = 0x4000;
+ 
+ static constexpr TimeDelta kTurnPermissionTimeout = TimeDelta::Minutes(5);
+@@ -1375,7 +1377,7 @@ TurnAllocateRequest::TurnAllocateRequest(TurnPort* port)
+   RTC_DCHECK_EQ(message->type(), TURN_ALLOCATE_REQUEST);
+   auto transport_attr =
+       StunAttribute::CreateUInt32(STUN_ATTR_REQUESTED_TRANSPORT);
+-  transport_attr->SetValue(IPPROTO_UDP << 24);
++  transport_attr->SetValue(kTurnUdpTransport << 24);
+   message->AddAttribute(std::move(transport_attr));
+   port_->MaybeAddTurnLoggingId(message);
+   if (!port_->hash().empty()) {

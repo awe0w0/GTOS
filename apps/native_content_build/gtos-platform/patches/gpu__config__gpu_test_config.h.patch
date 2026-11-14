@@ -1,0 +1,10 @@
+--- a/gpu/config/gpu_test_config.h
++++ b/gpu/config/gpu_test_config.h
+@@ -50,6 +50,7 @@ class GPU_CONFIG_EXPORT GPUTestConfig {
+     kOsAndroid = 1 << 27,
+     kOsFuchsia = 1 << 28,
+     kOsIOS = 1 << 29,
++    kOsGtos = 1 << 30,
+     // If we run out of bits, please retire older OS versions, like WinXP,
+     // MacLion, etc., for which we no longer have bots.
+   };

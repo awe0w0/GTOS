@@ -1,0 +1,13 @@
+--- a/content/renderer/BUILD.gn
++++ b/content/renderer/BUILD.gn
+@@ -354,6 +354,10 @@ target(link_target_type, "renderer") {
+     deps += [ "//components/services/font/public/cpp" ]
+   }
+ 
++  if (is_gtos) {
++    sources += [ "renderer_main_platform_delegate_gtos.cc" ]
++  }
++
+   if (is_fuchsia) {
+     sources += [ "renderer_main_platform_delegate_fuchsia.cc" ]
+     public_deps += [ "//third_party/fuchsia-sdk/sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp" ]

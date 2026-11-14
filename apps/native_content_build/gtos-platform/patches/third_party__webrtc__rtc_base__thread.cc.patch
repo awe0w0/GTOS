@@ -1,0 +1,86 @@
+--- a/third_party/webrtc/rtc_base/thread.cc
++++ b/third_party/webrtc/rtc_base/thread.cc
+@@ -33,6 +33,10 @@
+ 
+ #if defined(WEBRTC_WIN)
+ #include <comdef.h>
++#elif defined(__GTOS__)
++#include <ctime>
++#include "rtc_base/platform_thread_types.h"
++#include "tools/gtos_native_sdk/native-thread.h"
+ #elif defined(WEBRTC_POSIX)
+ #include <pthread.h>
+ 
+@@ -205,7 +209,21 @@ Thread* Thread::Current() {
+   return ThreadManager::Instance()->CurrentThread();
+ }
+ 
+-#if defined(WEBRTC_POSIX)
++#if defined(__GTOS__)
++namespace {
++thread_local Thread* g_gtos_current_thread = nullptr;
++}
++
++ThreadManager::ThreadManager() = default;
++
++Thread* ThreadManager::CurrentThread() {
++  return g_gtos_current_thread;
++}
++
++void ThreadManager::SetCurrentThreadInternal(Thread* thread) {
++  g_gtos_current_thread = thread;
++}
++#elif defined(WEBRTC_POSIX)
+ ThreadManager::ThreadManager() {
+ #if defined(WEBRTC_MAC)
+   InitCocoaMultiThreading();
+@@ -632,6 +650,12 @@ bool Thread::Start() {
+   if (!thread_) {
+     return false;
+   }
++#elif defined(__GTOS__)
++  const int error = gtos::native::StartThread(0, PreRun, this, &thread_);
++  if (error != 0) {
++    RTC_LOG(LS_ERROR) << "Unable to create GTOS thread, error " << error;
++    return false;
++  }
+ #elif defined(WEBRTC_POSIX)
+   pthread_attr_t attr;
+   pthread_attr_init(&attr);
+@@ -663,7 +687,7 @@ void Thread::UnwrapCurrent() {
+     thread_ = nullptr;
+     thread_id_ = 0;
+   }
+-#elif defined(WEBRTC_POSIX)
++#elif defined(WEBRTC_POSIX) || defined(__GTOS__)
+   thread_ = 0;
+ #endif
+ }
+@@ -689,6 +713,9 @@ void Thread::Join() {
+   CloseHandle(thread_);
+   thread_ = nullptr;
+   thread_id_ = 0;
++#elif defined(__GTOS__)
++  RTC_CHECK_EQ(gtos::native::JoinThread(thread_), 0);
++  thread_ = 0;
+ #elif defined(WEBRTC_POSIX)
+   pthread_join(thread_, nullptr);
+   thread_ = 0;
+@@ -900,6 +927,8 @@ bool Thread::WrapCurrentWithThreadManager(
+     }
+     thread_id_ = GetCurrentThreadId();
+   }
++#elif defined(__GTOS__)
++  thread_ = CurrentThreadId();
+ #elif defined(WEBRTC_POSIX)
+   thread_ = pthread_self();
+ #endif
+@@ -911,7 +940,7 @@ bool Thread::WrapCurrentWithThreadManager(
+ bool Thread::IsRunning() {
+ #if defined(WEBRTC_WIN)
+   return thread_ != nullptr;
+-#elif defined(WEBRTC_POSIX)
++#elif defined(WEBRTC_POSIX) || defined(__GTOS__)
+   return thread_ != 0;
+ #endif
+ }

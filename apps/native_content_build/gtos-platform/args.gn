@@ -29,5 +29,13 @@ use_cups = false
 # adapter requires loading a shared library and publishing executable pages.
 dawn_use_swiftshader = false
 
-# Native GTOS thread contexts preserve SSE2 state.
+# ANGLE's Vulkan backend is unavailable on GTOS. Avoid packaging a dynamic
+# Vulkan loader alongside the native Ozone software compositor.
+angle_shared_libvulkan = false
+angle_enable_gl = false
+angle_has_frame_capture = false
+
+# The native FP context preserves x87 and SSE2 state. Use the portable
+# TFLite backend and the scalar/SSE2 WebRTC audio implementations.
+build_tflite_with_xnnpack = false
 rtc_enable_avx2 = false

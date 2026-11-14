@@ -60,6 +60,18 @@ entry's complete transitive dependencies while excluding unrelated targets.
 Use the same switches for subsequent `gn desc`/`check` operations. This does not
 load or validate the port's root BUILD gate, and does not remove a Content dep.
 
+For the native executable, select `//content/shell:content_shell` for both GN
+switches, pass `gtos_ozone=true`, and set `gtos_content_runtime_archive` to the
+verified GTOS runtime archive. Build `content_shell.elf` with Ninja. Use
+`is_debug=false`, `symbol_level=0`, `optimize_for_size=true`, and
+`dcheck_always_on=true` for the deployment build. Check the actual ELF load
+segments against the boot loader's image budget before packaging. The resource
+pack, ICU data and external V8 snapshot must come from that executable's build.
+
+The guarded `n339content` build linked the full IA32 executable. The packaging
+check in `cf02` measured 138,522 loaded pages in that debug build. The loader
+allows 65,408 image pages with the current stack and runtime reservations.
+
 ## Tests and evidence
 
 ```text

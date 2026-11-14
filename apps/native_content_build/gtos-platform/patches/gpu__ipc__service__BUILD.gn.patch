@@ -1,0 +1,11 @@
+--- a/gpu/ipc/service/BUILD.gn
++++ b/gpu/ipc/service/BUILD.gn
+@@ -154,7 +154,7 @@ component("service") {
+   if (use_ozone) {
+     deps += [ "//ui/ozone" ]
+   }
+-  if (is_fuchsia) {
++  if (is_fuchsia || is_gtos) {
+     sources += [ "image_transport_surface_fuchsia.cc" ]
+   }
+   if (enable_vulkan) {

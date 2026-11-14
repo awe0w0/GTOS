@@ -1,0 +1,14 @@
+--- a/third_party/libsrtp/BUILD.gn
++++ b/third_party/libsrtp/BUILD.gn
+@@ -46,7 +46,10 @@ config("libsrtp_config") {
+     "HAVE_UINT8_T",
+   ]
+ 
+-  if (is_posix || is_fuchsia) {
++  if (is_gtos) {
++    # The native SDK supplies network byte order conversions.
++    defines += [ "HAVE_NETINET_IN_H" ]
++  } else if (is_posix || is_fuchsia) {
+     defines += [
+       "HAVE_ARPA_INET_H",
+       "HAVE_NETINET_IN_H",

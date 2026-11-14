@@ -1,0 +1,22 @@
+--- a/third_party/rust/sfv/v0_15/wrapper/BUILD.gn
++++ b/third_party/rust/sfv/v0_15/wrapper/BUILD.gn
+@@ -7,9 +7,17 @@ import("//build/rust/rust_static_library.gni")
+ rust_static_library("wrapper") {
+   crate_root = "lib.rs"
+   allow_unsafe = true
+-  sources = [ crate_root ]
++  sources = [ "lib.rs" ]
+ 
+-  cxx_bindings = [ crate_root ]
++  # cxxbridge reads the shared source directly. The target crate root carries
++  # the attribute required by the GTOS Rust standard library.
++  cxx_bindings = [ "lib.rs" ]
++  if (is_gtos) {
++    crate_root = "lib_gtos.rs"
++    sources += [ crate_root ]
++    configs -= [ "//build/config/compiler:disallow_unstable_features" ]
++    rustflags = [ "-Zallow-features=restricted_std" ]
++  }
+ 
+   public_deps = [ ":wrapper_functions" ]
+   deps = [ "//third_party/rust/sfv/v0_15:lib" ]
