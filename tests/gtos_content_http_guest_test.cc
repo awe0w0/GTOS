@@ -178,6 +178,24 @@ private:
 };
 
 int Run() {
+#ifdef GTOS_HTTP_SEPARATE_FIXTURE
+    net::URLRequestContextBuilder builder;
+    builder.DisableHttpCache();
+    builder.SetSpdyAndQuicEnabled(false, false);
+    auto context = builder.Build();
+    const std::string origin = "http://localhost:18761";
+    PageRequest missing;
+    if (missing.Get(*context, GURL(origin + "/missing")) != net::OK ||
+        missing.code() != net::HTTP_NOT_FOUND || !missing.bytes().empty()) return 211;
+    PageRequest document;
+    if (document.Get(*context, GURL(origin + "/start")) != net::OK ||
+        document.code() != net::HTTP_OK || document.mime_type() != "text/html" ||
+        document.final_url() != GURL(origin + "/page?from=redirect") ||
+        document.bytes().find("<title>GTOS loopback HTTP test</title>") == std::string::npos ||
+        document.bytes().find("replaceChildren(marker)") == std::string::npos) return 212;
+    Say("GTOS CHROMIUM SEPARATE HTTP CLIENT PASS\n");
+    return 0;
+#else
     Say("GTOS CHROMIUM HTTP LISTEN BEGIN\n");
     PageServer server;
     const int listening = server.Listen();
@@ -235,6 +253,7 @@ int Run() {
         server.unexpected_requests() != 0) return 206;
     Say("GTOS CHROMIUM HTTP NONLOCAL REFUSED\n");
     return 37;
+#endif
 }
 
 }  // namespace

@@ -896,35 +896,45 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
 }
 
 static uint32_t contentShellId;
+static uint32_t contentHttpFixtureId;
 static uint32_t contentShellFreeBeforeLaunch;
 static bool contentShellEntered;
 
 static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
                               const memory::MultibootInfo *boot) {
-    if (!(boot->flags & (1u << 3)) || boot->moduleCount != 1)
+    const bool httpFixture = BootOption(boot, "content-http-fixture");
+    if (!(boot->flags & (1u << 3)) || boot->moduleCount != (httpFixture ? 2U : 1U))
         return false;
-    const auto &module = *(const memory::MultibootModule *)boot->modules;
+    const auto *modules = (const memory::MultibootModule *)boot->modules;
+    const auto &module = modules[0];
     if (module.end <= module.start)
         return false;
-    static const char launch[] =
-        "GTOS_CONTENT_ASSET_DIR=" GTOS_CONTENT_ASSET_DIRECTORY "\0"
-        "GTOS_CONTENT_ARG_COUNT=7\0"
-        "GTOS_CONTENT_ARG_01=--single-process\0"
-        "GTOS_CONTENT_ARG_02=--ozone-platform=gtos\0"
-        "GTOS_CONTENT_ARG_03=--disable-gpu\0"
-        "GTOS_CONTENT_ARG_04=--disable-background-networking\0"
-        "GTOS_CONTENT_ARG_05=--user-data-dir=" GTOS_CONTENT_ASSET_DIRECTORY "\0"
-        // The native VM currently grants data-page permissions only.
-        "GTOS_CONTENT_ARG_06=--js-flags=--jitless\0"
+    if (httpFixture && (modules[1].end <= modules[1].start || modules[1].end - modules[1].start > 65536))
+        return false;
+    // The native VM currently grants data-page permissions only.
+#define GTOS_CONTENT_LAUNCH_PARAMETERS \
+    "GTOS_CONTENT_ASSET_DIR=" GTOS_CONTENT_ASSET_DIRECTORY "\0" \
+    "GTOS_CONTENT_ARG_COUNT=7\0" \
+    "GTOS_CONTENT_ARG_01=--single-process\0" \
+    "GTOS_CONTENT_ARG_02=--ozone-platform=gtos\0" \
+    "GTOS_CONTENT_ARG_03=--disable-gpu\0" \
+    "GTOS_CONTENT_ARG_04=--disable-background-networking\0" \
+    "GTOS_CONTENT_ARG_05=--user-data-dir=" GTOS_CONTENT_ASSET_DIRECTORY "\0" \
+    "GTOS_CONTENT_ARG_06=--js-flags=--jitless\0"
+    static const char launch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
         "GTOS_CONTENT_ARG_07=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
+    static const char httpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
+        "GTOS_CONTENT_ARG_07=http://localhost:18761/start\0";
+#undef GTOS_CONTENT_LAUNCH_PARAMETERS
     const uint32_t runtimePages = 64 * 1024;
     const uint32_t stackPages = 128;
     const process::NativeElfLaunchProfile profile{
         memory::ProcessAddressSpace::MaximumContentCapacityPages - runtimePages - stackPages,
         stackPages, runtimePages};
     process::NativeEnvironment environment;
-    if (!environment.Assign(launch, sizeof(launch) - 1) ||
-        (BootOption(boot, "content-loopback") && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
+    if (!environment.Assign(httpFixture ? httpLaunch : launch,
+                            httpFixture ? sizeof(httpLaunch) - 1 : sizeof(launch) - 1) ||
+        ((httpFixture || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
         !paging.sealForSharedProcessors() || !nativeRuntime.AttachEvents(nativeEvents) ||
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
         !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))
@@ -933,6 +943,13 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
     if (!nativeRuntime.CreateContentElf((const uint8_t *)module.start, module.end - module.start,
                                         contentShellId, profile, environment))
         return false;
+    if (httpFixture && !nativeRuntime.CreateElf((const uint8_t *)modules[1].start,
+                                               modules[1].end - modules[1].start, contentHttpFixtureId)) {
+        nativeRuntime.RequestExit(contentShellId, 0xF001);
+        nativeRuntime.Reap();
+        contentShellId = 0;
+        return false;
+    }
     LogValue("CONTENT SHELL ADMITTED ", contentShellId);
     return true;
 }
@@ -949,6 +966,17 @@ static void ServiceContentShell() {
     }
     if (!status.live) {
         memory::InterruptGuard guard;
+        bool httpComplete = true;
+        if (contentHttpFixtureId) {
+            process::NativeStatus server = {};
+            const bool observed = nativeRuntime.Status(contentHttpFixtureId, server);
+            httpComplete = observed && !server.live && !server.faultVector &&
+                           !server.exitCode && server.observedCs == 0x23 &&
+                           server.observedCr3 == server.directory && server.directory != status.directory;
+            if (observed && server.live) nativeRuntime.RequestExit(contentHttpFixtureId, 0xF002);
+            printf(httpComplete ? "CONTENT HTTP FIXTURE CPL3 PASS\n" : "CONTENT HTTP FIXTURE CPL3 FAIL\n");
+            contentHttpFixtureId = 0;
+        }
         LogValue("CONTENT SHELL EXIT ", status.exitCode);
         if (status.faultVector) {
             LogValue("CONTENT SHELL FAULT VECTOR ", status.faultVector);
@@ -966,7 +994,7 @@ static void ServiceContentShell() {
         LogValue("CONTENT SHELL TASKS RETIRED ", counts.reaped);
         LogValue("CONTENT SHELL FREE BASELINE ", contentShellFreeBeforeLaunch);
         LogValue("CONTENT SHELL FREE AFTER REAP ", freeAfter);
-        const bool clean = reaped && reaped == slotsBefore && !slotsAfter &&
+        const bool clean = httpComplete && reaped && reaped == slotsBefore && !slotsAfter &&
                            counts.created == counts.reaped &&
                            freeAfter == contentShellFreeBeforeLaunch &&
                            nativeRuntime.Status(contentShellId, status) && status.reaped && !status.live;
