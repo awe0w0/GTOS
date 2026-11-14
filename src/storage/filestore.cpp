@@ -161,6 +161,19 @@ int32_t FileStore::Duplicate(uint32_t owner,uint32_t handle) {
     slot->owner=owner;slot->handle=nextHandle++;slot->resource=original->resource;
     slot->resource->references++;return slot->handle;
 }
+int32_t FileStore::ConfigureStream(uint32_t owner,uint32_t handle,uint32_t flags) {
+    InterruptGuard guard;
+    const uint32_t access=flags&ReadWrite;
+    if (!access||(flags&~(ReadWrite|Append))||((flags&Append)&&!(access&Write)))
+        return LFS_ERR_INVAL;
+    Resource* resource=Find(owner,handle,LFS_TYPE_REG);
+    if (!resource||(resource->mode&access)!=access) return LFS_ERR_BADF;
+    if (flags&Append) {
+        if (resource->locked) return LFS_ERR_INVAL;
+        resource->file.flags|=LFS_O_APPEND;
+    }
+    return 0;
+}
 namespace {
     template<typename Resource> void RefreshReaders(Resource* resources,uint32_t count,const Resource& writer) {
         const lfs_block_t invalid=(lfs_block_t)-1;

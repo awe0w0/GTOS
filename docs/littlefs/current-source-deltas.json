@@ -1,8 +1,9 @@
 {
   "lock_sha256": "23df71c001b5907284a0e35ecb072aa10ff21e343125ba6ce21f4965fe8cd342",
   "files": {
-    "include/storage/filestore.h": "6dfeb4232f9642da02fb377b06a1aea6981799e9d74ddc9412a359c7addbaf7a",
-    "src/storage/filestore.cpp": "36b95df17691fbbf73786a8bcc82da4d1921e83448e38010d477ea2e16704b3a",
+    "include/storage/filestore.h": "3951e42323b9a8451cbd7791ac420c4fc23259de4f1da8591323aca2e135dabc",
+    "src/storage/filestore.cpp": "d9f426e35b05ee013e21485a00d34518d87a0968bff91dc974e33767f358a581",
+    "tests/filestore_guest.cpp": "10da4773d1cda48ce1721f23ad25d404174bcfd807efac9f304d99a89b472300",
     "tools/build-filestore-probe.py": "6f8eeddd597508ec349e1d25215627d6568bfc1dd47ec8416b2320a60dd8974d"
   }
 }

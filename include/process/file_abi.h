@@ -23,6 +23,7 @@
 #define GTOS_SYS_FILE_REMOVE_TYPED 0x4760U
 #define GTOS_SYS_FILE_READ_AT 0x476aU
 #define GTOS_SYS_FILE_WRITE_AT 0x476bU
+#define GTOS_SYS_FILE_STREAM_MODE 0x476cU
 #define GTOS_FILE_PATH_LIMIT 512U
 #define GTOS_FILE_TRANSFER_LIMIT 4096U
 #define GTOS_FILE_READ 1U
@@ -48,6 +49,7 @@ typedef struct GtosFileTransferRequest { unsigned version,handle,buffer,bytes; }
 typedef struct GtosFilePositionedTransferRequest {
     unsigned version,handle,buffer,bytes,offset_low,offset_high;
 } GtosFilePositionedTransferRequest;
+typedef struct GtosFileStreamModeRequest { unsigned version,handle,flags; } GtosFileStreamModeRequest;
 typedef struct GtosFileSeekRequest { unsigned version,handle,offset_low,offset_high,whence; } GtosFileSeekRequest;
 typedef struct GtosFileControlRequest { unsigned version,handle; } GtosFileControlRequest;
 typedef struct GtosFileTruncateRequest { unsigned version,handle,bytes; } GtosFileTruncateRequest;
@@ -90,11 +92,16 @@ typedef struct GtosFileInfo { unsigned version,type,bytes;char name[256]; } Gtos
 // shared cursor unchanged on success, including EOF. WRITE_AT on an append
 // handle has ordinary WRITE semantics: the explicit offset is ignored and the
 // cursor advances from the actual end. A disk error may have partial effects.
+// STREAM_MODE verifies compatible access for a regular open handle without
+// changing its cursor or contents. The optional APPEND flag additionally
+// enables atomic append on that shared resource, including any duplicates.
+// Append requires write access and is unavailable on a locked handle.
 #if defined(__cplusplus)
 static_assert(sizeof(unsigned)==4,"File ABI unsigned");
 static_assert(sizeof(GtosFileOpenRequest)==16,"File open ABI");
 static_assert(sizeof(GtosFileTransferRequest)==16,"File transfer ABI");
 static_assert(sizeof(GtosFilePositionedTransferRequest)==24,"Positioned file transfer ABI");
+static_assert(sizeof(GtosFileStreamModeRequest)==12,"File stream mode ABI");
 static_assert(sizeof(GtosFileSeekRequest)==20,"File seek ABI");
 static_assert(sizeof(GtosFileControlRequest)==8,"File control ABI");
 static_assert(sizeof(GtosFileTruncateRequest)==12,"File truncate ABI");

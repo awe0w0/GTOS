@@ -86,6 +86,10 @@ int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t ope
         const int64_t offset=Offset(request.offset_low,request.offset_high);
         return store.Seek(owner,request.handle,offset,request.whence);
     }
+    case GTOS_SYS_FILE_STREAM_MODE: {
+        GtosFileStreamModeRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
+        return store.ConfigureStream(owner,request.handle,request.flags);
+    }
     case GTOS_SYS_FILE_CLOSE:
     case GTOS_SYS_FILE_SYNC:
     case GTOS_SYS_FILE_SIZE:

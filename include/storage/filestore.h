@@ -65,6 +65,7 @@ public:
     int32_t Open(uint32_t owner,const char* path,uint32_t flags);
     int32_t OpenDirectory(uint32_t owner,const char* path);
     int32_t Duplicate(uint32_t owner,uint32_t handle);
+    int32_t ConfigureStream(uint32_t owner,uint32_t handle,uint32_t flags);
     int32_t Close(uint32_t owner,uint32_t handle);
     ReclaimResult Reclaim(uint32_t owner);
     int32_t ReadFile(uint32_t owner,uint32_t handle,void* buffer,uint32_t size);

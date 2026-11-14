@@ -108,6 +108,37 @@ namespace {
         Require(files.ReadFile(7,d,copy,1)==LFS_ERR_BADF&&files.Close(7,d)==0,"directory typed handle");
         Require(files.OpenCount()==0,"all verification handles closed");
     }
+    void CheckStreamMode(FileStore& files) {
+        const uint32_t owner=11;
+        const int32_t file=files.Open(owner,"/stream-mode",FileStore::ReadWrite|FileStore::Create);
+        Require(file>0&&files.WriteFile(owner,file,"ABCD",4)==4,"stream source bytes");
+        const int32_t peer=files.Duplicate(owner,file);
+        Require(peer>0&&files.Seek(owner,file,1,0)==1,"stream duplicate with shared cursor");
+        Require(files.ConfigureStream(owner+1,file,FileStore::Write|FileStore::Append)==LFS_ERR_BADF
+                &&files.ConfigureStream(owner,file,FileStore::Read|FileStore::Append)==LFS_ERR_INVAL
+                &&files.ConfigureStream(owner,file,FileStore::Write|FileStore::Truncate)==LFS_ERR_INVAL,
+                "stream mode rejects foreign handles and destructive flags");
+        Require(files.ConfigureStream(owner,file,FileStore::Write)==0
+                &&files.Seek(owner,peer,0,1)==1&&files.WriteFile(owner,peer,"X",1)==1
+                &&files.Size(owner,file)==4,"write stream preserves contents and offset on adoption");
+        Require(files.ConfigureStream(owner,file,FileStore::Write|FileStore::Append)==0
+                &&files.Seek(owner,file,30,0)==30&&files.WriteFile(owner,peer,"Y",1)==1
+                &&files.Seek(owner,file,0,1)==5,"append applies to the shared resource at actual EOF");
+        Require(files.Seek(owner,peer,0,0)==0&&files.ReadFile(owner,file,copy,5)==5
+                &&Equal(copy,"AXCDY",5),"adopted stream persisted exact bytes");
+        Require(files.Close(owner,file)==0&&files.Close(owner,peer)==0,"both stream handles closed");
+        const int32_t locked=files.Open(owner,"/stream-mode",FileStore::ReadWrite|FileStore::Locked);
+        const int32_t reader=files.Open(owner,"/stream-mode",FileStore::Read);
+        const int32_t directory=files.OpenDirectory(owner,"/");
+        Require(locked>0&&reader>0&&directory>0
+                &&files.ConfigureStream(owner,locked,FileStore::Write|FileStore::Append)==LFS_ERR_INVAL
+                &&files.ConfigureStream(owner,reader,FileStore::Write)==LFS_ERR_BADF
+                &&files.ConfigureStream(owner,directory,FileStore::Read)==LFS_ERR_BADF,
+                "stream mode rejects a locked append, access mismatch and directory");
+        Require(files.Close(owner,locked)==0&&files.Close(owner,reader)==0
+                &&files.Close(owner,directory)==0&&files.Remove("/stream-mode")==0,
+                "stream checks release all handles and fixture");
+    }
     void WriteFixture(FileStore& files,ObservedDisk& disk) {
         const uint32_t before=disk.writes;
         Require(files.Mount(&disk,8,2048)==LFS_ERR_CORRUPT&&!files.Mounted(),"blank mount fails without formatting");
@@ -226,6 +257,7 @@ namespace {
         f=files.Open(11,"/after-full.bin",FileStore::Write|FileStore::Create);
         Require(f>0&&files.WriteFile(11,f,data,8193)==8193&&files.Close(11,f)==0&&files.Remove("/after-full.bin")==0,"space reused after exhaustion");
         Require(files.MakeDirectory("/empty")==0&&files.Remove("/empty")==0,"empty directory removal");
+        CheckStreamMode(files);
         Verify(files);GuardSectors(disk);
         Require(files.Unmount()==0,"writer unmount");
         Require(files.Mount(&disk,8,2048,true)==0,"same object readonly remount");
