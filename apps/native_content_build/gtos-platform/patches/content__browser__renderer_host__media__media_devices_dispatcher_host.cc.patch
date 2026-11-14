@@ -1,0 +1,22 @@
+--- a/content/browser/renderer_host/media/media_devices_dispatcher_host.cc
++++ b/content/browser/renderer_host/media/media_devices_dispatcher_host.cc
+@@ -313,7 +313,18 @@ void MediaDevicesDispatcherHost::SetCaptureHandleConfig(
+           render_frame_host_id_, std::move(config)));
+ }
+ 
+-#if BUILDFLAG(ENABLE_SCREEN_CAPTURE)
++#if BUILDFLAG(IS_GTOS) && !BUILDFLAG(ENABLE_SCREEN_CAPTURE)
++void MediaDevicesDispatcherHost::CloseFocusWindowOfOpportunity(
++    const std::string& label) {
++  // There is no active screen capture to focus.
++}
++
++void MediaDevicesDispatcherHost::ProduceSubCaptureTargetId(
++    media::mojom::SubCaptureTargetType type,
++    ProduceSubCaptureTargetIdCallback callback) {
++  std::move(callback).Run(std::string());
++}
++#elif BUILDFLAG(ENABLE_SCREEN_CAPTURE)
+ void MediaDevicesDispatcherHost::CloseFocusWindowOfOpportunity(
+     const std::string& label) {
+   media_stream_manager_->SetCapturedDisplaySurfaceFocus(

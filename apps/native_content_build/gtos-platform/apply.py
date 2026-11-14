@@ -14,6 +14,11 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'content/browser/renderer_host/media/media_devices_dispatcher_host.h': '0cf8a73547b83e001e7fbee152ae90573b6aa00005f331b353c7acb4b74e077f',
+    'content/browser/renderer_host/media/media_devices_dispatcher_host.cc': 'd413bc1069ee4862fd6838f1af605ed15762a637b9562f19e392db48773cbb57',
+    'content/browser/renderer_host/media/media_stream_dispatcher_host.h': '9046fc9cecba8740a3f11d7ece5690b46abcf346444cb5757f378daf6b6c94e3',
+    'content/browser/renderer_host/media/media_stream_dispatcher_host.cc': '52f8b7ecb4f38239188b7dddaa7cc0f88def33ed9a1df532de886b21d53a27d4',
+    'content/browser/renderer_host/media/media_stream_manager.cc': 'b483600aed476ec6d39adf41816057ddf529aa25394fd5cf82074cb864ce6d01',
     'third_party/zstd/BUILD.gn': 'f6368bcfc407be3a784fb23dec587ca84276dd42a2bb1518b1e3a484dd5ebf71',
     'content/browser/devtools/devtools_agent_host_impl.cc': '108ffb6c3660072d42ef10d1fa6a7d16edc623cbf083bde8d8f4a45c2e4602bc',
     'content/browser/download/save_package.cc': '18bb09b926997d73a7ee149f26927fcd0f7baa1a35113292dc25ba0c5ecf2d93',

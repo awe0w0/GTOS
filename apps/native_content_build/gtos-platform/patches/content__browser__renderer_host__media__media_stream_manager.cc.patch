@@ -1,0 +1,12 @@
+--- a/content/browser/renderer_host/media/media_stream_manager.cc
++++ b/content/browser/renderer_host/media/media_stream_manager.cc
+@@ -3255,7 +3255,8 @@ void MediaStreamManager::PanTiltZoomPermissionChecked(
+     return;
+   }
+ 
+-#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
++#if BUILDFLAG(ENABLE_SCREEN_CAPTURE) && !BUILDFLAG(IS_ANDROID) && \
++    !BUILDFLAG(IS_IOS)
+   // 1. Only the first call to SetCapturedDisplaySurfaceFocus() has an
+   //    effect, so a direct call to SetCapturedDisplaySurfaceFocus()
+   //    before the scheduled task is executed would render the scheduled
