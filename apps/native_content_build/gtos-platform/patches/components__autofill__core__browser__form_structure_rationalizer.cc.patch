@@ -1,0 +1,23 @@
+--- a/components/autofill/core/browser/form_structure_rationalizer.cc
++++ b/components/autofill/core/browser/form_structure_rationalizer.cc
+@@ -1023,15 +1023,14 @@ void FormStructureRationalizer::RationalizeRepeatedStreetAddressFields(
+     if (fields.size() != 2 && fields.size() != 3) {
+       continue;
+     }
+-    auto next_type = kAddressLineTypes.begin();
+-    for (AutofillField* field : fields) {
++    for (size_t i = 0; i < fields.size(); ++i) {
++      const FieldType type = kAddressLineTypes[i];
+       LOG_AF(log_manager)
+           << LoggingScope::kRationalization << LogMessage::kRationalization
+           << "RationalizeAddressLineFields ADDRESS_HOME_STREET_ADDRESS to "
+-          << FieldTypeToString(*next_type);
+-      field->SetTypeTo(AutofillType(*next_type),
+-                       AutofillPredictionSource::kRationalization);
+-      ++next_type;
++          << FieldTypeToString(type);
++      fields[i]->SetTypeTo(AutofillType(type),
++                           AutofillPredictionSource::kRationalization);
+     }
+   }
+ }

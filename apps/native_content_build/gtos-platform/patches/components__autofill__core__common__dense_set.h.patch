@@ -1,0 +1,15 @@
+--- a/components/autofill/core/common/dense_set.h
++++ b/components/autofill/core/common/dense_set.h
+@@ -579,9 +579,9 @@ class DenseSet {
+   template <typename InputIt, typename Proj = std::identity>
+     requires(std::input_iterator<InputIt>)
+   constexpr DenseSet(InputIt first, InputIt last, Proj proj = {}) {
+-    for (auto it = first; it != last; ++it) {
+-      insert(std::invoke(proj, *it));
+-    }
++    std::for_each(first, last, [this, &proj](auto&& value) {
++      insert(std::invoke(proj, std::forward<decltype(value)>(value)));
++    });
+   }
+ 
+   template <typename Range, typename Proj = std::identity>

@@ -1,0 +1,86 @@
+--- a/components/feature_engagement/public/feature_constants.cc
++++ b/components/feature_engagement/public/feature_constants.cc
+@@ -985,58 +985,66 @@ BASE_FEATURE(kIPHiOSActiveDaysTrackingFeature,
+ #endif  // BUILDFLAG(IS_IOS)
+ 
+ #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_LINUX) || \
+-    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
++    BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA) || \
++    BUILDFLAG(IS_GTOS)
++// These metadata flags accompany Autofill suggestions. GTOS Shell has no
++// in-product help UI for them.
++#if BUILDFLAG(IS_GTOS)
++constexpr auto kAutofillIphDefault = base::FEATURE_DISABLED_BY_DEFAULT;
++#else
++constexpr auto kAutofillIphDefault = base::FEATURE_ENABLED_BY_DEFAULT;
++#endif
+ BASE_FEATURE(kIPHAutofillAtMemoryFeature,
+              "IPH_AutofillAtMemory",
+              base::FEATURE_DISABLED_BY_DEFAULT);
+ BASE_FEATURE(kIPHAutofillBnplAffirmOrZipSuggestionFeature,
+              "IPH_AutofillBnplAffirmOrZipSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillBnplAffirmZipOrKlarnaSuggestionFeature,
+              "IPH_AutofillBnplAffirmZipOrKlarnaSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillCardInfoRetrievalSuggestionFeature,
+              "IPH_AutofillCardInfoRetrievalSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillCreditCardBenefitFeature,
+              "IPH_AutofillCreditCardBenefit",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillDisabledVirtualCardSuggestionFeature,
+              "IPH_AutofillDisabledVirtualCardSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillDownstreamCardAwarenessFeature,
+              "IPH_AutofillDownstreamCardAwareness",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillExternalAccountProfileSuggestionFeature,
+              "IPH_AutofillExternalAccountProfileSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillHomeWorkProfileSuggestionFeature,
+              "IPH_AutofillHomeWorkProfileSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillAccountNameEmailSuggestionFeature,
+              "IPH_AutofillAccountNameEmailSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillAiValuablesFeature,
+              "IPH_AutofillAiValuables",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillVirtualCardCVCSuggestionFeature,
+              "IPH_AutofillVirtualCardCVCSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillVirtualCardSuggestionFeature,
+              "IPH_AutofillVirtualCardSuggestion",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillEnableLoyaltyCardsFeature,
+              "IPH_AutofillEnableLoyaltyCards",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillOmniboxPaymentChipFeature,
+              "IPH_AutofillOmniboxPaymentChip",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ BASE_FEATURE(kIPHAutofillWalletDirectOffersFeature,
+              "IPH_AutofillWalletDirectOffers",
+-             base::FEATURE_ENABLED_BY_DEFAULT);
++             kAutofillIphDefault);
+ #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) ||
+         // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) ||
+-        // BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
++        // BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+ BASE_FEATURE(kIPHGrowthFramework,

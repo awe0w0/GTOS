@@ -14,6 +14,10 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/autofill/core/common/dense_set.h': '5a06e08bfd609cacb1a49720d1febb7131b60dfe619892d6c107aeeb9cea1a1f',
+    'components/autofill/core/browser/form_structure_rationalizer.cc': 'f61a3d7e3aced163f6a58832d5580dc7c2199037e233dd9c21791fd676aebe69',
+    'components/feature_engagement/public/feature_constants.h': '1ee7da5199e024e09af2ff79b92248367dc59cf4bbd727de88b12cc84e8918f5',
+    'components/feature_engagement/public/feature_constants.cc': '52993a8af7f811323dbf60e74c3bb316ec05aca2680893311c5b6d1a38ad1f5a',
     'base/feature.rs': 'c3213c03ef957a5b207a0eb7626ec420b442ad44fdfc0a7b2f598b2f383dfa1f',
     'third_party/rust/subtle/v2/BUILD.gn': '448f38faf397e5e80f1c6d4ecc66b6b176343ca71b9d40e9c5500adb0e056f4a',
     'components/autofill/core/browser/geo/country_data.h': 'f5552f9de42dd9fbeaa8ecc8975cfcbbbdb900d6051031bcfee97c0aeb7e7373',
