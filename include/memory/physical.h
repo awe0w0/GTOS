@@ -55,7 +55,11 @@ namespace gtos { namespace memory {
         bool bit(const uint32_t* bitmap, uint32_t frame) const;
         void set(uint32_t* bitmap, uint32_t frame, bool value);
         // The address-space walker already holds a BSP interrupt guard.
-        bool isAllocatedLocked(uint32_t address) const;
+        bool isAllocatedLocked(uint32_t address) const {
+            const uint32_t frame = address >> 12;
+            return ready && !(address & (PageSize - 1)) && frame < frameCount
+                && (allocated[frame >> 5] & (1u << (frame & 31)));
+        }
         PhysicalMemoryManager(const PhysicalMemoryManager&);
         PhysicalMemoryManager& operator=(const PhysicalMemoryManager&);
     public:

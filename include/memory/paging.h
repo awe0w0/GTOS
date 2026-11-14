@@ -43,6 +43,10 @@ namespace gtos { namespace memory {
         bool bootMappings(const MultibootInfo* info);
         bool ownsPagingFrame(uint32_t address) const;
         bool mappedBytes(uint32_t address, uint32_t length, bool writable) const;
+        uint32_t leafLocked(uint32_t address) const {
+            const uint32_t table = tables[address >> 22];
+            return directory && table ? ((const uint32_t*)table)[(address >> 12) & 1023] : 0;
+        }
         bool queryLocked(uint32_t address, PagingMapping& result) const;
         void invalidate(uint32_t virtualAddress);
         KernelPaging(const KernelPaging&);

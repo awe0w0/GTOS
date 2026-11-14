@@ -3,6 +3,7 @@
 using namespace gtos::memory;
 namespace {
     const uint32_t Present = 1, Writable = 2, User = 4, Accessed = 0x20, Dirty = 0x40;
+    const uint32_t CacheDisabled = 0x10;
     const uint32_t AddressMask = 0xFFFFF000u;
     const uint32_t KernelPdeFlags = Present | Writable | Accessed;
     const uint32_t KernelPteFlags = Present | Writable | 0x18 | Accessed | Dirty | 0x200;
@@ -101,21 +102,22 @@ bool ProcessAddressSpace::Context(bool allowOwnDirectory) const {
         return Fail(ProcessMemoryUnsafeContext);
     return true;
 }
+inline bool ProcessAddressSpace::KernelPageAlias(uint32_t page, bool writable) const {
+    const uint32_t mask = AddressMask | Present | User | CacheDisabled | (writable ? Writable : 0);
+    const uint32_t expected = page | Present | (writable ? Writable : 0);
+    return page && (kernel->leafLocked(page) & mask) == expected;
+}
 bool ProcessAddressSpace::KernelAlias(uint32_t address, uint32_t length, bool writable) const {
     if (!address || !length || length > AddressLimit - address) return false;
     const uint64_t end = (uint64_t)address + length;
-    for (uint64_t page = address & AddressMask; page < end; page += 4096) {
-        PagingMapping mapping;
-        if (!kernel->queryLocked((uint32_t)page, mapping) || mapping.physicalAddress != page
-            || mapping.userAccessible || mapping.cacheDisabled || (writable && !mapping.writable))
-            return false;
-    }
+    for (uint64_t page = address & AddressMask; page < end; page += 4096)
+        if (!KernelPageAlias((uint32_t)page, writable)) return false;
     return true;
 }
 bool ProcessAddressSpace::AllocateFrame(uint32_t& address) {
     address = 0;
     if (!frames->allocate(address)) return Fail(ProcessMemoryNoMemory);
-    if (!KernelAlias(address, 4096, true)) {
+    if (!KernelPageAlias(address, true)) {
         frames->free(address); address = 0;
         return Fail(ProcessMemoryBadAlias);
     }
@@ -168,7 +170,7 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
     // The shared mapper is trusted, but its raw structures must satisfy the
     // supervisor-only non-PAE contract before any PDE is borrowed.
     bool valid = allocator.isAllocatedLocked(kernelDirectory)
-        && KernelAlias(kernelDirectory, 4096, true)
+        && KernelPageAlias(kernelDirectory, true)
         && KernelAlias((uint32_t)this, sizeof(*this), true)
         && KernelAlias((uint32_t)&allocator, sizeof(allocator), true)
         && KernelAlias((uint32_t)&sharedKernel, sizeof(sharedKernel), true);
@@ -182,7 +184,7 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
         }
         const uint32_t table = pde & AddressMask;
         if (table == kernelDirectory || !allocator.isAllocatedLocked(table)
-            || !KernelAlias(table, 4096, true)) { valid = false; break; }
+            || !KernelPageAlias(table, true)) { valid = false; break; }
         for (uint32_t previous = 0; previous < di; ++previous)
             if ((source[previous] & AddressMask) == table) valid = false;
         const uint32_t* entries = (const uint32_t*)table;
@@ -274,8 +276,8 @@ bool ProcessAddressSpace::LayoutRoot() const {
     const PagingStatistics state = kernel->getStatistics();
     if (!state.prepared || !state.enabled || !state.sealedForSharing
         || state.directoryAddress != kernelDirectory) return Fail(ProcessMemoryBadTemplate);
-    if (!frames->isAllocatedLocked(directory) || !KernelAlias(directory, 4096, true)
-        || !KernelAlias(kernelDirectory, 4096, true)) return Fail(ProcessMemoryBadAlias);
+    if (!frames->isAllocatedLocked(directory) || !KernelPageAlias(directory, true)
+        || !KernelPageAlias(kernelDirectory, true)) return Fail(ProcessMemoryBadAlias);
     return true;
 }
 bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
@@ -290,7 +292,7 @@ bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
             continue;
         }
         if (di < UserBase >> 22 || di >= UserLimit >> 22 || shared[di]
-            || !frames->isAllocatedLocked(tables[di]) || !KernelAlias(tables[di], 4096, true)
+            || !frames->isAllocatedLocked(tables[di]) || !KernelPageAlias(tables[di], true)
             || (own[di] & ~Accessed) != (tables[di] | Present | Writable | User))
             return Fail(ProcessMemoryBadMapping);
         if (nonzeroLeaves) {
@@ -385,7 +387,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
         const uint32_t table = tables[page.address >> 22];
         if (!UserPage(page.address) || !table || !frames->isAllocatedLocked(page.frame)
             || IsMetadataFrame(page.frame)
-            || !KernelAlias(page.frame, 4096, true)
+            || !KernelPageAlias(page.frame, true)
             || (((uint32_t*)table)[(page.address >> 12) & 1023] & ~(Accessed | Dirty))
                 != (page.present ? PageEntry(page.frame, page.writable) : 0))
             return Fail(ProcessMemoryBadMapping);
@@ -884,7 +886,7 @@ bool ProcessAddressSpace::Range(uint32_t address, uint32_t length, bool writable
             // its supervisor alias before using the physical frame for a copy.
             const uint32_t table = tables[page.address >> 22];
             if (!table || !frames->isAllocatedLocked(page.frame) || IsMetadataFrame(page.frame)
-                || !KernelAlias(page.frame, 4096, true)
+                || !KernelPageAlias(page.frame, true)
                 || (((uint32_t*)table)[(page.address >> 12) & 1023] & ~(Accessed | Dirty))
                     != PageEntry(page.frame, page.writable)) {
                 contentCopyLayoutValid = false;

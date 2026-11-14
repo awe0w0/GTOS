@@ -302,10 +302,16 @@ namespace {
         uint32_t* shared = (uint32_t*)kernel.getStatistics().directoryAddress;
         const uint32_t data = physical(first, UserBase);
         uint32_t& dataAlias = ((uint32_t*)(shared[data >> 22] & ~4095u))[(data >> 12) & 1023];
-        const uint32_t aliasSaved = dataAlias; dataAlias = 0;
-        fill(output, 32, 0x17);
-        CHECK(!first.CopyFromUser(output, UserBase, 32)); CHECK(all(output, 32, 0x17));
-        CHECK(!first.Destroy()); CHECK(used() == count); dataAlias = aliasSaved;
+        const uint32_t aliasSaved = dataAlias;
+        const uint32_t badAliases[] = {0, aliasSaved & ~2u, aliasSaved | 4u,
+            aliasSaved | 0x10, (aliasSaved & 4095) | physical(second, UserBase)};
+        for (uint32_t invalidAlias : badAliases) {
+            dataAlias = invalidAlias;
+            fill(output, 32, 0x17);
+            CHECK(!first.CopyFromUser(output, UserBase, 32)); CHECK(all(output, 32, 0x17));
+            CHECK(!first.Destroy()); CHECK(used() == count);
+            dataAlias = aliasSaved;
+        }
         table(first, UserBase)[1] = original;
         CHECK(!first.Seal()); CHECK(!first.Destroy()); table(first, UserBase)[1] = 0;
         table(first, UserBase)[1] = 2;

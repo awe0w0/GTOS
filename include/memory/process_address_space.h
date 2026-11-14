@@ -62,6 +62,7 @@ namespace gtos { namespace memory {
         mutable ProcessMemoryError error;
         bool Fail(ProcessMemoryError value) const;
         bool Context(bool allowOwnDirectory) const;
+        bool KernelPageAlias(uint32_t page, bool writable) const;
         bool KernelAlias(uint32_t address, uint32_t length, bool writable) const;
         bool LayoutRoot() const;
         bool LayoutDirectories(uint32_t* nonzeroLeaves) const;

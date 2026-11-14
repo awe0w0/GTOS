@@ -155,9 +155,7 @@ bool KernelPaging::query(uint32_t address, PagingMapping& result) const {
 bool KernelPaging::queryLocked(uint32_t address, PagingMapping& result) const {
     result.physicalAddress = 0;
     result.writable = result.userAccessible = result.cacheDisabled = result.managed = false;
-    const uint32_t di = address >> 22;
-    if (!directory || !tables[di]) return false;
-    const uint32_t entry = ((const uint32_t*)tables[di])[(address >> 12) & 1023];
+    const uint32_t entry = leafLocked(address);
     if (!(entry & Present)) return false;
     result.physicalAddress = (entry & AddressMask) | (address & 4095);
     result.writable = (entry & Writable) != 0;

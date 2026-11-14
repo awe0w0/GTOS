@@ -287,10 +287,6 @@ bool PhysicalMemoryManager::isAllocated(uint32_t address) const {
     InterruptGuard guard;
     return isAllocatedLocked(address);
 }
-bool PhysicalMemoryManager::isAllocatedLocked(uint32_t address) const {
-    const uint32_t frame = address >> 12;
-    return ready && !(address & (PageSize - 1)) && frame < frameCount && bit(allocated, frame);
-}
 #ifdef GTOS_MEMORY_TEST
 bool PhysicalMemoryManager::gtos_host_seed(uint32_t addressable, uint32_t firstFree, uint32_t free) {
     clear();
