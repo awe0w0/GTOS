@@ -11,6 +11,7 @@
 
 #include "base/check_op.h"
 #include "base/location.h"
+#include "base/logging.h"
 #include "base/memory/raw_ptr.h"
 #include "base/threading/platform_thread_internal.h"
 #include "base/threading/scoped_blocking_call.h"
@@ -65,6 +66,8 @@ bool StartDelegate(size_t stack_size, PlatformThreadBase::Delegate* delegate,
   const int error =
       gtos::native::StartThread(stack_size, RunDelegate, params.get(), &id);
   if (error != 0) {
+    LOG(ERROR) << "Native thread creation returned " << error
+               << " for requested stack size " << stack_size;
     if (handle) {
       *handle = PlatformThreadHandle();
     }

@@ -1,0 +1,9 @@
+--- a/base/threading/thread.cc
++++ b/base/threading/thread.cc
+@@ -237,5 +237,5 @@
+                              options.message_pump_type);
+     if (!success) {
+-      DLOG(ERROR) << "failed to create thread";
++      DLOG(ERROR) << "failed to create thread " << thread_name();
+       return false;
+     }

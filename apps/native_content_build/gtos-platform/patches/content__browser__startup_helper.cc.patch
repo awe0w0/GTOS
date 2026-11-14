@@ -1,0 +1,26 @@
+--- a/content/browser/startup_helper.cc
++++ b/content/browser/startup_helper.cc
+@@ -55,6 +55,13 @@
+ constexpr size_t kThreadPoolMax = 8;
+ constexpr double kThreadPoolCoresMultiplier = 0.6;
+ constexpr int kThreadPoolOffset = 0;
++#elif BUILDFLAG(IS_GTOS)
++// The browser, renderer and compositor share one native process's slots.
++// Keep the pool sized for the BSP scheduler and leave capacity for them.
++constexpr size_t kThreadPoolDefaultMin = 6;
++constexpr size_t kThreadPoolMax = 8;
++constexpr double kThreadPoolCoresMultiplier = 0.6;
++constexpr int kThreadPoolOffset = 0;
+ #else
+ // Desktop config.
+ constexpr size_t kThreadPoolDefaultMin = 16;
+@@ -77,6 +84,9 @@
+   // param setting.
+   size_t min =
+       base::checked_cast<size_t>(std::max(kBrowserThreadPoolMin.Get(), 1));
++#if BUILDFLAG(IS_GTOS)
++  min = std::min(min, kThreadPoolMax);
++#endif
+   base::ThreadPoolInstance::InitParams thread_pool_init_params = {
+       base::RecommendedMaxNumberOfThreadsInThreadGroup(
+           min, kThreadPoolMax, kThreadPoolCoresMultiplier, kThreadPoolOffset)};

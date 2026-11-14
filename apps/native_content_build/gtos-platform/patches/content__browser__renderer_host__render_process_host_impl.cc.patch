@@ -1,0 +1,18 @@
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -1979,7 +1979,12 @@
+   // Find the renderer before creating the channel so if this fails early we
+   // return without creating the channel.
+-  base::FilePath renderer_path = ChildProcessHost::GetChildPath(flags);
+-  if (renderer_path.empty())
+-    return false;
++  base::FilePath renderer_path;
++  // GTOS starts the in-process renderer on a thread. Only the child-process
++  // launcher needs an executable path.
++  if (!BUILDFLAG(IS_GTOS) || !run_renderer_in_process()) {
++    renderer_path = ChildProcessHost::GetChildPath(flags);
++    if (renderer_path.empty())
++      return false;
++  }
+ 
+   is_initialized_ = true;
