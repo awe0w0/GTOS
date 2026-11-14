@@ -1,0 +1,43 @@
+--- a/content/browser/video_capture_service_impl.cc
++++ b/content/browser/video_capture_service_impl.cc
+@@ -15,6 +15,7 @@
+ #include "content/public/browser/video_capture_service.h"
+ #include "content/public/common/content_features.h"
+ #include "content/public/common/content_switches.h"
++#include "media/media_buildflags.h"
+ #include "mojo/public/cpp/bindings/receiver_set.h"
+ #include "mojo/public/cpp/bindings/remote.h"
+ #include "mojo/public/cpp/bindings/self_owned_receiver.h"
+@@ -27,7 +28,6 @@
+ #include "gpu/command_buffer/client/shared_image_interface.h"
+ #include "media/base/media_switches.h"
+ #include "media/capture/video/video_capture_gpu_channel_host.h"
+-#include "media/media_buildflags.h"
+ #endif
+ 
+ #if BUILDFLAG(IS_WIN)
+@@ -75,8 +75,12 @@ video_capture::mojom::VideoCaptureService* g_service_override = nullptr;
+ // implementation. This is fragile and drops subsequent receivers if called
+ // multiple times. These should be merged into a single unified manager object.
+ void BindInProcessInstance(
++#if BUILDFLAG(ENABLE_GPU_CHANNEL_MEDIA_CAPTURE)
+     mojo::PendingReceiver<video_capture::mojom::VideoCaptureService> receiver,
+     scoped_refptr<gpu::GpuChannelHost> gpu_channel_host) {
++#else
++    mojo::PendingReceiver<video_capture::mojom::VideoCaptureService> receiver) {
++#endif
+   static base::NoDestructor<video_capture::VideoCaptureServiceImpl> service(
+       std::move(receiver), GetUIThreadTaskRunner({}),
+       /*create_system_monitor=*/false);
+@@ -186,7 +190,11 @@ video_capture::mojom::VideoCaptureService& GetVideoCaptureService() {
+ #else
+       dedicated_task_runner->PostTask(
+           FROM_HERE,
++#if BUILDFLAG(ENABLE_GPU_CHANNEL_MEDIA_CAPTURE)
+           base::BindOnce(&BindInProcessInstance, std::move(receiver), nullptr));
++#else
++          base::BindOnce(&BindInProcessInstance, std::move(receiver)));
++#endif
+ #endif
+     } else {
+       // Launch in a utility service.

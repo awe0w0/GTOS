@@ -14,6 +14,8 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'content/browser/video_capture_service_impl.cc': 'fe26d1f908494795feef87e694af03247667e8fbf8ab6be174601f2239071d44',
+    'mojo/public/cpp/bindings/clone_traits.h': 'be74adae27302c13c1ae23f507bc1c92d89d501528ea3f4274251e5762d85060',
     'content/browser/renderer_host/media/media_devices_dispatcher_host.h': '0cf8a73547b83e001e7fbee152ae90573b6aa00005f331b353c7acb4b74e077f',
     'content/browser/renderer_host/media/media_devices_dispatcher_host.cc': 'd413bc1069ee4862fd6838f1af605ed15762a637b9562f19e392db48773cbb57',
     'content/browser/renderer_host/media/media_stream_dispatcher_host.h': '9046fc9cecba8740a3f11d7ece5690b46abcf346444cb5757f378daf6b6c94e3',

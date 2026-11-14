@@ -1,0 +1,11 @@
+--- a/mojo/public/cpp/bindings/clone_traits.h
++++ b/mojo/public/cpp/bindings/clone_traits.h
+@@ -58,7 +58,7 @@ struct CloneTraits<std::vector<T>> {
+     std::vector<T> result;
+     result.reserve(input.size());
+     for (const auto& element : input) {
+-      result.push_back(mojo::Clone(element));
++      result.push_back(mojo::Clone<T>(element));
+     }
+ 
+     return result;
