@@ -29,17 +29,23 @@ struct File {
   sqlite3_file base;
   unsigned handle;
   int lock;
+  int last_errno;
 };
 
 constinit std::atomic<unsigned> temp_id{0};
 thread_local int last_error;
 
 template <class Request>
-int Call(unsigned op, const Request& request) {
+int Call(unsigned op, const Request& request, File* file = nullptr) {
   asm volatile("int $0x80" : "+a"(op)
                : "b"(&request), "c"(sizeof(request)) : "memory", "cc");
   const int status = static_cast<int>(op);
-  last_error = status < 0 ? -status : 0;
+  if (status < 0) {
+    last_error = -status;
+    if (file) {
+      file->last_errno = last_error;
+    }
+  }
   return status;
 }
 
@@ -58,8 +64,9 @@ File& FromSqlite(sqlite3_file* file) {
   return *reinterpret_cast<File*>(file);
 }
 
-int Control(unsigned operation, unsigned handle) {
-  return Call(operation, GtosFileControlRequest{GTOS_FILE_ABI_VERSION, handle});
+int Control(unsigned operation, unsigned handle, File* file = nullptr) {
+  return Call(operation, GtosFileControlRequest{GTOS_FILE_ABI_VERSION, handle},
+              file);
 }
 
 int OpenPath(const char* name, unsigned flags) {
@@ -71,9 +78,10 @@ int OpenPath(const char* name, unsigned flags) {
 }
 
 int Close(sqlite3_file* file) {
-  const unsigned handle = FromSqlite(file).handle;
+  auto& state = FromSqlite(file);
   file->pMethods = nullptr;
-  return Control(GTOS_SYS_FILE_CLOSE, handle) ? SQLITE_IOERR_CLOSE : SQLITE_OK;
+  return Control(GTOS_SYS_FILE_CLOSE, state.handle, &state) ? SQLITE_IOERR_CLOSE
+                                                          : SQLITE_OK;
 }
 
 template <class Byte>
@@ -82,11 +90,12 @@ int Transfer(sqlite3_file* file, std::span<Byte> bytes, sqlite3_int64 offset,
   if (offset < 0 || offset > 0x7fffffff ||
       bytes.size() > static_cast<size_t>(0x7fffffff - offset))
     return failure;
+  auto& state = FromSqlite(file);
   while (!bytes.empty()) {
     const size_t chunk = std::min<size_t>(bytes.size(), GTOS_FILE_TRANSFER_LIMIT);
     const int count = Call(operation, GtosFilePositionedTransferRequest{
-        GTOS_FILE_ABI_VERSION, FromSqlite(file).handle, Address(bytes.data()),
-        static_cast<unsigned>(chunk), static_cast<unsigned>(offset), 0});
+        GTOS_FILE_ABI_VERSION, state.handle, Address(bytes.data()),
+        static_cast<unsigned>(chunk), static_cast<unsigned>(offset), 0}, &state);
     if (count < 0 || static_cast<size_t>(count) > chunk)
       return failure;
     bytes = bytes.subspan(static_cast<size_t>(count));
@@ -121,17 +130,24 @@ int Write(sqlite3_file* file, const void* data, int count, sqlite3_int64 offset)
 int Truncate(sqlite3_file* file, sqlite3_int64 size) {
   if (size < 0 || size > 0x7fffffff)
     return SQLITE_IOERR_TRUNCATE;
-  return Call(GTOS_SYS_FILE_TRUNCATE, GtosFileTruncateRequest{
-                  GTOS_FILE_ABI_VERSION, FromSqlite(file).handle, static_cast<unsigned>(size)})
-             ? SQLITE_IOERR_TRUNCATE : SQLITE_OK;
+  auto& state = FromSqlite(file);
+  return Call(GTOS_SYS_FILE_TRUNCATE,
+              GtosFileTruncateRequest{GTOS_FILE_ABI_VERSION, state.handle,
+                                      static_cast<unsigned>(size)},
+              &state)
+             ? SQLITE_IOERR_TRUNCATE
+             : SQLITE_OK;
 }
 
 int Sync(sqlite3_file* file, int) {
-  return Control(GTOS_SYS_FILE_SYNC, FromSqlite(file).handle) ? SQLITE_IOERR_FSYNC : SQLITE_OK;
+  auto& state = FromSqlite(file);
+  return Control(GTOS_SYS_FILE_SYNC, state.handle, &state) ? SQLITE_IOERR_FSYNC
+                                                         : SQLITE_OK;
 }
 
 int FileSize(sqlite3_file* file, sqlite3_int64* size) {
-  const int result = Control(GTOS_SYS_FILE_SIZE, FromSqlite(file).handle);
+  auto& state = FromSqlite(file);
+  const int result = Control(GTOS_SYS_FILE_SIZE, state.handle, &state);
   if (result < 0)
     return SQLITE_IOERR_FSTAT;
   *size = result;
@@ -157,10 +173,17 @@ int CheckReservedLock(sqlite3_file* file, int* result) {
 }
 
 int FileControl(sqlite3_file* file, int op, void* result) {
-  if (op != SQLITE_FCNTL_LOCKSTATE)
-    return SQLITE_NOTFOUND;
-  *static_cast<int*>(result) = FromSqlite(file).lock;
-  return SQLITE_OK;
+  const auto& state = FromSqlite(file);
+  switch (op) {
+    case SQLITE_FCNTL_LOCKSTATE:
+      *static_cast<int*>(result) = state.lock;
+      return SQLITE_OK;
+    case SQLITE_FCNTL_LAST_ERRNO:
+      *static_cast<int*>(result) = state.last_errno;
+      return SQLITE_OK;
+    default:
+      return SQLITE_NOTFOUND;
+  }
 }
 
 const sqlite3_io_methods kIo{
