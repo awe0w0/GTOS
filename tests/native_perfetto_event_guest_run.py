@@ -47,6 +47,7 @@ def judge(lines, code):
     else:
         problems.append('missing case/reap records')
     for text, count in {'PERFETTO EVENT GUEST BOOT': 1, 'PERFETTO EVENT GUEST PASS': 1,
+                        'NATIVE EVENT CAPACITY PASS': 1,
                         'PEVT CONSUMER BEGIN': 3, 'PEVT CONSUMER PASS': 1, 'PEVT REFUSAL': 1}.items():
         if lines.count(text) != count:
             problems.append('wrong line count ' + text)

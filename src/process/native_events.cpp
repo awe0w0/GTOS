@@ -3,9 +3,16 @@
 using namespace gtos;
 using namespace gtos::memory;
 using namespace gtos::process;
-NativeEvents::NativeEvents():nextId(1),statistics(),notify(0),notifyContext(0) {
-    for (uint32_t i=0;i<MaximumHandles;++i) handles[i]=Handle();
-    for (uint32_t i=0;i<MaximumObjects;++i) objects[i]=Object();
+NativeEvents::NativeEvents():handleLimit(MaximumHandles),objectLimit(MaximumObjects),nextId(1),
+    statistics(),notify(0),notifyContext(0) {
+    for (uint32_t i=0;i<ContentMaximumHandles;++i) handles[i]=Handle();
+    for (uint32_t i=0;i<ContentMaximumObjects;++i) objects[i]=Object();
+}
+bool NativeEvents::EnableContentProfile() {
+    InterruptGuard guard;
+    if (notify||nextId!=1||handleLimit!=MaximumHandles) return false;
+    handleLimit=ContentMaximumHandles;objectLimit=ContentMaximumObjects;
+    return true;
 }
 bool NativeEvents::SetNotifier(void (*callback)(void*),void* context) {
     InterruptGuard guard;
@@ -14,26 +21,29 @@ bool NativeEvents::SetNotifier(void (*callback)(void*),void* context) {
 }
 void NativeEvents::Notify() {if (notify) notify(notifyContext);}
 int NativeEvents::Find(uint32_t owner,uint32_t id) const {
-    if (owner&&id) for (uint32_t i=0;i<MaximumHandles;++i)
+    if (owner&&id) for (uint32_t i=0;i<handleLimit;++i)
         if (handles[i].id==id&&handles[i].owner==owner) return (int)i;
     return -1;
 }
 int NativeEvents::FreeHandle() const {
-    for (uint32_t i=0;i<MaximumHandles;++i) if (!handles[i].id) return (int)i;
+    for (uint32_t i=0;i<handleLimit;++i) if (!handles[i].id) return (int)i;
     return -1;
 }
 int NativeEvents::PlanCreate(uint32_t owner,uint32_t flags,uint32_t rights,int& handle,int& object) const {
     if (!owner||(flags&~3U)||!rights||(rights&~GTOS_EVENT_RIGHT_ALL)) return GTOS_EVENT_ERR_INVALID;
     if (!nextId||nextId>0x7fffffffU) return GTOS_EVENT_ERR_OVERFLOW;
     handle=FreeHandle();object=-1;
-    for (uint32_t i=0;i<MaximumObjects;++i) if (!objects[i].references) {object=(int)i;break;}
+    for (uint32_t i=0;i<objectLimit;++i) if (!objects[i].references) {object=(int)i;break;}
     return handle<0||object<0?GTOS_EVENT_ERR_LIMIT:0;
 }
 uint32_t NativeEvents::PublishCreate(uint32_t owner,uint32_t flags,uint32_t rights,int handle,int object) {
     Object& value=objects[object];value.references=1;
     value.manual=(flags&GTOS_EVENT_MANUAL_RESET)!=0;value.signalled=(flags&GTOS_EVENT_INITIAL_SIGNAL)!=0;
     Handle& alias=handles[handle];alias.id=nextId++;alias.owner=owner;alias.object=(uint32_t)object;alias.rights=rights;
-    ++statistics.handles;++statistics.objects;++statistics.created;return alias.id;
+    ++statistics.handles;++statistics.objects;++statistics.created;
+    if (statistics.handles>statistics.peakHandles) statistics.peakHandles=statistics.handles;
+    if (statistics.objects>statistics.peakObjects) statistics.peakObjects=statistics.objects;
+    return alias.id;
 }
 int32_t NativeEvents::CreateForOwner(uint32_t owner,uint32_t flags,uint32_t rights) {
     InterruptGuard guard;int handle,object;int result=PlanCreate(owner,flags,rights,handle,object);
@@ -49,7 +59,9 @@ int32_t NativeEvents::DuplicateForOwner(uint32_t owner,uint32_t id,uint32_t reci
     if (!nextId||nextId>0x7fffffffU) return GTOS_EVENT_ERR_OVERFLOW;
     int target=FreeHandle();if (target<0) return GTOS_EVENT_ERR_LIMIT;
     Handle& alias=handles[target];alias.id=nextId++;alias.owner=recipient;alias.object=source.object;alias.rights=rights;
-    ++objects[source.object].references;++statistics.handles;++statistics.duplicated;return (int32_t)alias.id;
+    ++objects[source.object].references;++statistics.handles;++statistics.duplicated;
+    if (statistics.handles>statistics.peakHandles) statistics.peakHandles=statistics.handles;
+    return (int32_t)alias.id;
 }
 void NativeEvents::Drop(uint32_t index) {
     Object& value=objects[handles[index].object];
@@ -90,7 +102,7 @@ int32_t NativeEvents::Select(uint32_t owner,const uint32_t* values,uint32_t coun
 void NativeEvents::ReclaimOwner(uint32_t owner) {
     InterruptGuard guard;if (!owner) return;
     ++statistics.reclaims;
-    for (uint32_t i=0;i<MaximumHandles;++i) if (handles[i].id&&handles[i].owner==owner) {Drop(i);++statistics.released;}
+    for (uint32_t i=0;i<handleLimit;++i) if (handles[i].id&&handles[i].owner==owner) {Drop(i);++statistics.released;}
     Notify();
 }
 NativeEventStatistics NativeEvents::Statistics() const {InterruptGuard guard;return statistics;}

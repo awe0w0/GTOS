@@ -16,6 +16,39 @@ namespace {
     void EventRequire(bool value, const char* reason) {
         if (!value) { printf((char*)"PEVT FAILED "); printf((char*)reason); printf((char*)"\n"); EventFinish(false); }
     }
+    void EventCapacity(NativeEvents& events, uint32_t objects, uint32_t handles) {
+        const uint32_t owner = 101, peer = 102;
+        const int32_t first = events.CreateForOwner(owner, GTOS_EVENT_MANUAL_RESET);
+        EventRequire(first > 0, "first owned event");
+        for (uint32_t i = 1; i < objects; ++i)
+            EventRequire(events.CreateForOwner(owner, 0) > 0, "bounded event capacity");
+        EventRequire(events.CreateForOwner(peer, 0) == GTOS_EVENT_ERR_LIMIT,
+            "object limit");
+        const int32_t alias = events.DuplicateForOwner(owner, first, peer, GTOS_EVENT_RIGHT_WAIT);
+        EventRequire(alias > 0 && events.Set(peer, alias) == GTOS_EVENT_ERR_PERMISSION,
+            "peer alias signal restriction");
+        for (uint32_t i = objects + 1; i < handles; ++i)
+            EventRequire(events.DuplicateForOwner(owner, first, owner, 0) > 0,
+                "bounded handle capacity");
+        EventRequire(events.DuplicateForOwner(owner, first, owner, 0) == GTOS_EVENT_ERR_LIMIT,
+            "handle limit");
+        const auto full = events.Statistics();
+        EventRequire(full.objects == objects && full.handles == handles &&
+            full.peakObjects == objects && full.peakHandles == handles, "bounded event statistics");
+        EventRequire(events.Set(owner, first) == 0, "owner can signal the shared event");
+        events.ReclaimOwner(owner);
+        const auto survivor = events.Statistics();
+        uint32_t peerHandle = static_cast<uint32_t>(alias);
+        EventRequire(survivor.handles == 1 && survivor.objects == 1 &&
+            survivor.released == handles - 1 && events.Select(peer, &peerHandle, 1) == 0,
+            "reclaim preserves active peer alias");
+        EventRequire(events.Close(peer, alias) == 0 && events.CreateForOwner(peer, 0) > alias,
+            "capacity reused without recycling the handle identity");
+        events.ReclaimOwner(peer);
+        const auto empty = events.Statistics();
+        EventRequire(!empty.handles && !empty.objects && !events.EnableContentProfile(),
+            "event storage restored; profile frozen after use");
+    }
 }
 
 extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
@@ -31,6 +64,12 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         (uint32_t)&kernel_readonly_start, (uint32_t)&kernel_readonly_end,
         (const MultibootInfo*)multiboot, 0, 0};
     EventRequire(paging.prepareIdentity(frames, config), "identity");
+    NativeEvents ordinaryEvents, contentEvents;
+    EventCapacity(ordinaryEvents, NativeEvents::MaximumObjects, NativeEvents::MaximumHandles);
+    EventRequire(contentEvents.EnableContentProfile() && !contentEvents.EnableContentProfile(),
+        "one Content profile selection");
+    EventCapacity(contentEvents, NativeEvents::ContentMaximumObjects, NativeEvents::ContentMaximumHandles);
+    printf((char*)"NATIVE EVENT CAPACITY PASS\n");
     NativeEvents events;
     NativeRuntime runtime;
     EventRequire(runtime.AttachEvents(events), "explicit native event endpoint");

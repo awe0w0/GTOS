@@ -4,15 +4,18 @@
 namespace gtos { struct NativeEventFixture; namespace process {
 struct NativeEventStatistics {
     uint32_t handles,objects,created,duplicated,closed,signals,reclaims,released;
+    uint32_t peakHandles,peakObjects;
 };
 // Bounded BSP event service. Never allocates user/physical pages or heap memory.
 class NativeEvents:public NativeEventEndpoint {
     friend struct ::gtos::NativeEventFixture;
 public:
     static const uint32_t MaximumHandles=64,MaximumObjects=32;
+    static const uint32_t ContentMaximumHandles=512,ContentMaximumObjects=256;
 private:
-    struct Object { uint32_t references;bool manual,signalled; } objects[MaximumObjects];
-    struct Handle { uint32_t id,owner,object,rights; } handles[MaximumHandles];
+    struct Object { uint32_t references;bool manual,signalled; } objects[ContentMaximumObjects];
+    struct Handle { uint32_t id,owner,object,rights; } handles[ContentMaximumHandles];
+    uint32_t handleLimit,objectLimit;
     uint32_t nextId;
     NativeEventStatistics statistics;
     void (*notify)(void*);
@@ -27,6 +30,8 @@ private:
     NativeEvents& operator=(const NativeEvents&);
 public:
     NativeEvents();
+    // Kernel launch profile, selected before attachment or allocation.
+    bool EnableContentProfile();
     virtual bool SetNotifier(void (*callback)(void*),void* context);
     virtual int32_t Call(uint32_t owner,memory::ProcessAddressSpace& space,
         uint32_t operation,uint32_t request,uint32_t bytes);

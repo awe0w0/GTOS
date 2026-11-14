@@ -963,7 +963,8 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
     if (!environment.Assign(httpFixture ? httpLaunch : launch,
                             httpFixture ? sizeof(httpLaunch) - 1 : sizeof(launch) - 1) ||
         ((httpFixture || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
-        !paging.sealForSharedProcessors() || !nativeRuntime.AttachEvents(nativeEvents) ||
+        !paging.sealForSharedProcessors() || !nativeEvents.EnableContentProfile() ||
+        !nativeRuntime.AttachEvents(nativeEvents) ||
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
         !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))
         return false;
@@ -1030,6 +1031,7 @@ static void ServiceContentShell() {
         const uint32_t reaped = nativeRuntime.Reap();
         const uint32_t slotsAfter = nativeRuntime.OccupiedSlots();
         const process::NativeStatistics counts = nativeRuntime.Statistics();
+        const process::NativeEventStatistics events = nativeEvents.Statistics();
         const uint32_t freeAfter = frames.getStatistics().freeFrames;
         LogValue("CONTENT SHELL REAP ", reaped);
         LogValue("CONTENT SHELL SLOTS BEFORE REAP ", slotsBefore);
@@ -1038,7 +1040,12 @@ static void ServiceContentShell() {
         LogValue("CONTENT SHELL TASKS RETIRED ", counts.reaped);
         LogValue("CONTENT SHELL FREE BASELINE ", contentShellFreeBeforeLaunch);
         LogValue("CONTENT SHELL FREE AFTER REAP ", freeAfter);
+        LogValue("CONTENT EVENT PEAK OBJECTS ", events.peakObjects);
+        LogValue("CONTENT EVENT PEAK HANDLES ", events.peakHandles);
+        LogValue("CONTENT EVENT OBJECTS AFTER REAP ", events.objects);
+        LogValue("CONTENT EVENT HANDLES AFTER REAP ", events.handles);
         const bool clean = httpComplete && reaped && reaped == slotsBefore && !slotsAfter &&
+                           !events.objects && !events.handles &&
                            counts.created == counts.reaped &&
                            freeAfter == contentShellFreeBeforeLaunch &&
                            nativeRuntime.Status(contentShellId, status) && status.reaped && !status.live;
