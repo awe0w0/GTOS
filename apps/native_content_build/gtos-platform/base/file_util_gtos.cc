@@ -5,12 +5,14 @@
 #include "base/files/file_util.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <process/file_abi.h>
 #include <unistd.h>
 
+#include "base/files/drive_info.h"
 #include "base/files/file_enumerator.h"
 #include "base/rand_util.h"
 #include "base/strings/strcat.h"
@@ -80,6 +82,30 @@ bool DirectoryExists(const FilePath& path) {
   return stat(path.value().c_str(), &info) == 0 && S_ISDIR(info.st_mode);
 }
 
+bool PathIsReadable(const FilePath& path) {
+  return DirectoryExists(path) ||
+         File(path, File::FLAG_OPEN | File::FLAG_READ).IsValid();
+}
+
+bool PathIsWritable(const FilePath& path) {
+  ScopedBlockingCall blocking(FROM_HERE, BlockingType::MAY_BLOCK);
+  // Opening a file without truncation checks the store's write policy.
+  // Directories have no equivalent permission query.
+  const int fd = open(path.value().c_str(), O_WRONLY);
+  return fd >= 0 && close(fd) == 0;
+}
+
+bool IsLink(const FilePath&) {
+  return false;
+}
+
+std::optional<DriveInfo> GetFileDriveInfo(const FilePath& path) {
+  if (!PathExists(path)) {
+    return std::nullopt;
+  }
+  return DriveInfo();
+}
+
 int GetMaximumPathComponentLength(const FilePath& path) {
   if (!DirectoryExists(path)) {
     return -1;
@@ -128,6 +154,40 @@ FilePath MakeAbsoluteFilePath(const FilePath& input) {
   const bool exists =
       input.EndsWithSeparator() ? DirectoryExists(path) : PathExists(path);
   return exists ? path : FilePath();
+}
+
+bool NormalizeFilePath(const FilePath& path, FilePath* real_path) {
+  FilePath normalized = MakeAbsoluteFilePath(path);
+  if (normalized.empty()) {
+    return false;
+  }
+  *real_path = std::move(normalized);
+  return true;
+}
+
+bool SetCurrentDirectory(const FilePath& path) {
+  return MakeAbsoluteFilePath(path) == FilePath("/");
+}
+
+bool CopyFile(const FilePath& from_path, const FilePath& to_path) {
+  if (from_path.ReferencesParent() || to_path.ReferencesParent()) {
+    return false;
+  }
+  const FilePath source = MakeAbsoluteFilePath(from_path);
+  if (source.empty() || source == MakeAbsoluteFilePath(to_path)) {
+    return false;
+  }
+  File input(source, File::FLAG_OPEN | File::FLAG_READ);
+  if (!input.IsValid()) {
+    return false;
+  }
+  File output(to_path, File::FLAG_CREATE_ALWAYS | File::FLAG_WRITE);
+  return output.IsValid() && CopyFileContents(input, output) && output.Flush();
+}
+
+bool PreReadFile(const FilePath&, bool, bool, int64_t) {
+  // Reading into a temporary buffer does not populate a file-page cache.
+  return false;
 }
 
 FilePath GetHomeDir() {
@@ -212,6 +272,19 @@ FILE* OpenFile(const FilePath& path, cstring_view mode) {
   return fopen(path.value().c_str(), mode.c_str());
 }
 
+FILE* FileToFILE(File file, const char* mode) {
+  ScopedBlockingCall blocking(FROM_HERE, BlockingType::MAY_BLOCK);
+  FILE* stream = fdopen(file.GetPlatformFile(), mode);
+  if (stream) {
+    file.TakePlatformFile();
+  } else {
+    const int error = errno;
+    file.Close();
+    errno = error;
+  }
+  return stream;
+}
+
 std::optional<uint64_t> ReadFile(const FilePath& path, span<char> buffer) {
   File file(path, File::FLAG_OPEN | File::FLAG_READ);
   return file.ReadAtCurrentPos(as_writable_byte_span(buffer));
@@ -234,6 +307,32 @@ bool GetTempDir(FilePath* path) {
   }
   *path = candidate;
   return true;
+}
+
+bool CreateTemporaryDirInDir(const FilePath& directory,
+                            FilePath::StringViewType prefix,
+                            FilePath* path) {
+  ScopedBlockingCall blocking(FROM_HERE, BlockingType::MAY_BLOCK);
+  if (!ValidTemporaryPrefix(prefix) || !DirectoryExists(directory)) {
+    return false;
+  }
+  for (unsigned attempt = 0; attempt < 64; ++attempt) {
+    FilePath candidate = TemporaryName(directory, prefix);
+    if (mkdir(candidate.value().c_str(), 0700) == 0) {
+      *path = std::move(candidate);
+      return true;
+    }
+    if (errno != EEXIST) {
+      return false;
+    }
+  }
+  return false;
+}
+
+bool CreateNewTempDirectory(FilePath::StringViewType prefix, FilePath* path) {
+  FilePath directory;
+  return GetTempDir(&directory) &&
+         CreateTemporaryDirInDir(directory, prefix, path);
 }
 
 FilePath FormatTemporaryFileName(FilePath::StringViewType identifier,

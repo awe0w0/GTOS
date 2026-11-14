@@ -1,0 +1,108 @@
+--- a/build/config/gtos/runtime/platform_file.cpp
++++ b/build/config/gtos/runtime/platform_file.cpp
+@@ -211,19 +211,8 @@ LLVM_LIBC_VARIABLE(::FILE *, stdin) = reinterpret_cast<::FILE *>(&StdIn);
+ LLVM_LIBC_VARIABLE(::FILE *, stdout) = reinterpret_cast<::FILE *>(&StdOut);
+ LLVM_LIBC_VARIABLE(::FILE *, stderr) = reinterpret_cast<::FILE *>(&StdErr);
+ namespace {
+-ErrorOr<File *> openfile_impl(const char *path, const char *mode_string,
+-                             bool temporary) {
+-  FileMode mode(mode_string);
+-  auto flags = open_flags(mode);
+-  if (!flags.has_value()) return Error(flags.error());
+-  if (temporary) {
+-    if (!mode.is_write() || !mode.is_update()) return Error(EINVAL);
+-    flags = GTOS_FILE_READ_WRITE | GTOS_FILE_CREATE | GTOS_FILE_EXCLUSIVE |
+-            GTOS_FILE_TEMPORARY;
+-  }
+-  auto length = path_bytes(path);
+-  if (!length.has_value()) return Error(length.error());
+-  // Allocate before opening so OOM cannot create or truncate a disk file.
++template <class Acquire>
++ErrorOr<File *> make_stream(FileMode mode, Acquire acquire) {
+   AllocChecker buffer_check;
+   uint8_t *buffer = new (buffer_check) uint8_t[File::DEFAULT_BUFFER_SIZE];
+   if (!buffer_check) return Error(ENOMEM);
+@@ -233,9 +222,7 @@ ErrorOr<File *> openfile_impl(const char *path, const char *mode_string,
+     delete[] buffer;
+     return Error(ENOMEM);
+   }
+-  GtosFileOpenRequest request = {GTOS_FILE_ABI_VERSION,
+-      reinterpret_cast<unsigned>(path), length.value(), flags.value()};
+-  int result = call(GTOS_SYS_FILE_OPEN, &request, sizeof(request));
++  int result = acquire();
+   if (result < 0) {
+     delete[] buffer;
+     delete file;
+@@ -245,6 +232,38 @@ ErrorOr<File *> openfile_impl(const char *path, const char *mode_string,
+   File::add_file(file);
+   return static_cast<File *>(file);
+ }
++
++ErrorOr<File *> openfile_impl(const char *path, const char *mode_string,
++                             bool temporary) {
++  FileMode mode(mode_string);
++  auto flags = open_flags(mode);
++  if (!flags.has_value()) return Error(flags.error());
++  if (temporary) {
++    if (!mode.is_write() || !mode.is_update()) return Error(EINVAL);
++    flags = GTOS_FILE_READ_WRITE | GTOS_FILE_CREATE | GTOS_FILE_EXCLUSIVE |
++            GTOS_FILE_TEMPORARY;
++  }
++  auto length = path_bytes(path);
++  if (!length.has_value()) return Error(length.error());
++  // Allocate before opening so OOM cannot create or truncate a disk file.
++  return make_stream(mode, [&] {
++    GtosFileOpenRequest request = {GTOS_FILE_ABI_VERSION,
++        reinterpret_cast<unsigned>(path), length.value(), flags.value()};
++    return call(GTOS_SYS_FILE_OPEN, &request, sizeof(request));
++  });
++}
++
++bool valid_descriptor_mode(const char *mode) {
++  if (!mode || (*mode != 'r' && *mode != 'w' && *mode != 'a')) return false;
++  bool binary = false;
++  bool update = false;
++  for (++mode; *mode; ++mode) {
++    if (*mode == 'b' && !binary) binary = true;
++    else if (*mode == '+' && !update) update = true;
++    else return false;
++  }
++  return true;
++}
+ unsigned temporary_sequence;
+ ErrorOr<File *> opentemporaryfile() {
+   const unsigned process = v8::base::gtos::CurrentProcessInfo().process_id;
+@@ -271,6 +290,33 @@ ErrorOr<File *> opentemporaryfile() {
+ ErrorOr<File *> openfile(const char *path, const char *mode_string) {
+   return openfile_impl(path, mode_string, false);
+ }
++::FILE *fdopen(int fd, const char *mode_string);
++LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode_string)) {
++  if (fd <= 0) {
++    libc_errno = EBADF;
++    return nullptr;
++  }
++  if (!valid_descriptor_mode(mode_string)) {
++    libc_errno = EINVAL;
++    return nullptr;
++  }
++  const FileMode mode(mode_string);
++  unsigned flags = mode.is_update() ? GTOS_FILE_READ_WRITE :
++                   mode.write_allowed() ? GTOS_FILE_WRITE : GTOS_FILE_READ;
++  if (mode.is_append()) flags |= GTOS_FILE_APPEND;
++  auto stream = make_stream(mode, [&] {
++    const GtosFileStreamModeRequest request = {
++        GTOS_FILE_ABI_VERSION, static_cast<unsigned>(fd), flags};
++    const int result = call(GTOS_SYS_FILE_STREAM_MODE, &request, sizeof(request));
++    return result < 0 ? result : fd;
++  });
++  if (!stream.has_value()) {
++    libc_errno = stream.error();
++    return nullptr;
++  }
++  return reinterpret_cast<::FILE *>(stream.value());
++}
++
+ ::FILE *tmpfile();
+ LLVM_LIBC_FUNCTION(::FILE *, tmpfile, ()) {
+   auto result = opentemporaryfile();

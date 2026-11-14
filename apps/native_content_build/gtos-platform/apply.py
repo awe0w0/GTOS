@@ -594,6 +594,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'build/config/gtos/runtime/platform_file.cpp': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp',
     'net/base/platform_mime_util_gtos.cc': 'net/platform_mime_util_gtos.cc',
     'net/dns/address_sorter_gtos.cc': 'net/address_sorter_gtos.cc',
     'net/dns/dns_config_service_gtos.cc': 'net/dns_config_service_gtos.cc',
@@ -792,6 +793,7 @@ ADDITIONS = {
 
 # Patch private copies of the qualified platform sources.
 PATCHED_ADDITIONS = {
+    'build/config/gtos/runtime/platform_file.cpp',
     'third_party/boringssl/src/crypto/thread_gtos.cc',
     'build/config/gtos/runtime/directory.cpp',
     'third_party/abseil-cpp/absl/base/internal/gtos-low-level-pages.cc',
@@ -807,6 +809,7 @@ PATCHED_ADDITIONS = {
 
 # These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
+    'build/config/gtos/runtime/platform_file.cpp': 'ea166301180799dcac8e599d167fe743820e3afb4ad1d7d7e5dc9ec9336ed86b',
     'build/config/gtos/runtime/directory.cpp': 'bdc65bf6eeb758adf8bd1d541dce9a8cd49508d9b545e40d7b6bad2a08bc7aae',
     'build/config/gtos/include/llvm-libc-macros/fnmatch-macros.h': 'beaf82fb2c84c3135286d48a40814d266456716543d7971d603e5b0d2c3b6a23',
     'third_party/libxslt/gtos/config.h': '5a00bcd7d287f424eeed0341af302d8493301700bbe8c6fed21a4ed859cbd2c0',

@@ -11,13 +11,17 @@
 #include <system_error>
 
 #include <common/version.h>
+#include <fcntl.h>
 #include <fnmatch.h>
 #include <process/native_window_adapter.h>
 #include <process/native_window_frame.h>
 #include <stdio.h>
 #include <storage/content_volume_layout.h>
+#include <unistd.h>
 
 #include "base/containers/span.h"
+#include "base/cpu.h"
+#include "base/files/drive_info.h"
 #include "base/files/file.h"
 #include "base/files/file_enumerator.h"
 #include "base/files/file_path.h"
@@ -208,7 +212,101 @@ int CheckSystemInfoAndTime() {
         base::ProcessMetrics::CreateProcessMetrics(base::kNullProcessHandle)
                 ->GetCumulativeCPUUsage().has_value())
         return 195;
+    if (base::SysInfo::CPUModelName() != base::CPU().cpu_brand() ||
+        metrics->GetMemoryInfo().has_value() || base::GetMaxFds() != 64)
+        return 217;
     return 0;
+}
+
+int CheckFileStreams(const base::FilePath& directory) {
+    const auto path = directory.AppendASCII("stream.txt");
+    if (!base::WriteFile(path, "ABCD")) return 224;
+    base::File file(path, base::File::FLAG_OPEN | base::File::FLAG_READ |
+                              base::File::FLAG_WRITE);
+    if (!file.IsValid() || file.Seek(base::File::FROM_BEGIN, 1) != 1) return 224;
+    const int descriptor = file.GetPlatformFile();
+    const int peer = dup(descriptor);
+    if (peer <= 0) return 224;
+    FILE* output = base::FileToFILE(std::move(file), "wb");
+    if (!output || fileno(output) != descriptor || fputc('X', output) != 'X' ||
+        fflush(output) != 0 || lseek(peer, 0, SEEK_CUR) != 2 ||
+        fclose(output) != 0 || lseek(peer, 0, SEEK_END) != 4)
+        return 225;
+    errno = 0;
+    if (lseek(descriptor, 0, SEEK_CUR) != -1 || errno != EBADF) return 226;
+    FILE* append = fdopen(peer, "a+");
+    if (!append || fseek(append, 99, SEEK_SET) != 0 ||
+        fputc('Y', append) != 'Y' || fflush(append) != 0 ||
+        lseek(peer, 0, SEEK_CUR) != 5 || fseek(append, 1, SEEK_SET) != 0 ||
+        fgetc(append) != 'X' || fclose(append) != 0)
+        return 227;
+    base::File reader(path, base::File::FLAG_OPEN | base::File::FLAG_READ);
+    const int read_handle = reader.GetPlatformFile();
+    if (!reader.IsValid()) return 228;
+    errno = 0;
+    if (fdopen(read_handle, "a") || errno != EBADF ||
+        lseek(read_handle, 0, SEEK_CUR) != 0)
+        return 228;
+    errno = 0;
+    if (fdopen(read_handle, "a?+") || errno != EINVAL ||
+        lseek(read_handle, 0, SEEK_CUR) != 0)
+        return 229;
+    errno = 0;
+    FILE* denied = base::FileToFILE(std::move(reader), "a");
+    if (denied) {
+        fclose(denied);
+        return 230;
+    }
+    if (errno != EBADF) return 232;
+    if (lseek(read_handle, 0, SEEK_CUR) != -1 || errno != EBADF) return 233;
+    std::string contents;
+    if (!base::ReadFileToString(path, &contents) || contents != "AXCDY" ||
+        !base::DeleteFile(path))
+        return 231;
+    return 0;
+}
+
+int CheckFileServices(const base::FilePath& directory,
+                      const base::FilePath& source) {
+    const auto target = directory.AppendASCII("copied.txt");
+    base::FilePath normalized;
+    if (!base::PathIsReadable(directory) || !base::PathIsWritable(source) ||
+        !base::PathIsReadable(source) || base::PathIsReadable(target) ||
+        base::PathIsWritable(target) || base::IsLink(source) ||
+        !base::GetFileDriveInfo(source) || base::GetFileDriveInfo(target) ||
+        !base::NormalizeFilePath(directory.AppendASCII("./data.txt"), &normalized) ||
+        normalized != source || base::NormalizeFilePath(target, &normalized) ||
+        normalized != source)
+        return 218;
+    if (base::CopyFile(source, source) || base::CopyFile(target, source) ||
+        !base::CopyFile(source, target) || !base::ContentsEqual(source, target))
+        return 219;
+    base::FilePath first, second, rejected;
+    if (!base::CreateTemporaryDirInDir(directory, "copy", &first) ||
+        !base::CreateTemporaryDirInDir(directory, "copy", &second) ||
+        first == second || first.DirName() != directory ||
+        second.DirName() != directory || !base::DirectoryExists(first) ||
+        !base::DirectoryExists(second) ||
+        base::CreateTemporaryDirInDir(directory, "../bad", &rejected) ||
+        !rejected.empty() || base::SetCurrentDirectory(directory) ||
+        !base::SetCurrentDirectory(base::FilePath("/")))
+        return 221;
+    const auto numbers = directory.AppendASCII("numbers");
+    {
+        base::ScopedFILE output(fopen(numbers.value().c_str(), "w"));
+        if (!output || fputs("GTOS -42 2a", output.get()) < 0 ||
+            fflush(output.get()) != 0)
+            return 222;
+    }
+    base::ScopedFILE input(fopen(numbers.value().c_str(), "r"));
+    std::array<char, 5> text{};
+    int value = 0;
+    unsigned hex = 0;
+    if (!input || fscanf(input.get(), "%4s %d %x", text.data(), &value, &hex) != 3 ||
+        std::string_view(text.data(), 4) != "GTOS" || value != -42 || hex != 42 ||
+        fscanf(input.get(), "%d", &value) != EOF)
+        return 223;
+    return CheckFileStreams(directory);
 }
 
 int CheckDirectoryAndTemporaryFiles() {
@@ -240,6 +338,7 @@ int CheckDirectoryAndTemporaryFiles() {
     const auto metadata = entries.GetInfo();
     if (metadata.GetSize() != 16 || !metadata.GetLastModifiedTime().is_null()) return 204;
     if (!entries.Next().empty()) return 205;
+    if (const int status = CheckFileServices(nested, item)) return status;
 
     base::FilePath first, second, stream_path, rejected;
     auto first_file = base::CreateAndOpenTemporaryFileInDir(nested, &first, 0, "prefs");
