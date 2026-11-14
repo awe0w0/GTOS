@@ -80,6 +80,13 @@ bool DirectoryExists(const FilePath& path) {
   return stat(path.value().c_str(), &info) == 0 && S_ISDIR(info.st_mode);
 }
 
+int GetMaximumPathComponentLength(const FilePath& path) {
+  if (!DirectoryExists(path)) {
+    return -1;
+  }
+  return sizeof(GtosFileInfo::name) - 1;
+}
+
 bool GetCurrentDirectory(FilePath* path) {
   // Native paths are relative to the mounted volume root. There is no chdir.
   const FilePath root("/");

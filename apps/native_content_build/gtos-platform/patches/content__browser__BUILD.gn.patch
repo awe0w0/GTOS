@@ -15,12 +15,16 @@
    }
  }
  
-@@ -2627,6 +2632,8 @@ source_set("browser") {
+@@ -2627,6 +2632,12 @@ source_set("browser") {
        "//third_party/fuchsia-sdk/sdk/pkg/zx",
        "//ui/accessibility",
      ]
 +  } else if (is_gtos) {
 +    sources += [ "child_process_launcher_helper_gtos.cc" ]
++    sources -= [
++      "devtools/devtools_pipe_handler.cc",
++      "devtools/devtools_pipe_handler.h",
++    ]
    } else if (is_posix) {
      sources += [
        "child_process_launcher_helper_posix.cc",

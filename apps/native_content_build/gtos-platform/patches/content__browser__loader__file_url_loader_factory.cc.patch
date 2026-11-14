@@ -1,0 +1,11 @@
+--- a/content/browser/loader/file_url_loader_factory.cc
++++ b/content/browser/loader/file_url_loader_factory.cc
+@@ -278,7 +278,7 @@ class FileURLDirectoryLoader
+         filename.value() != base::FilePath::kParentDirectory) {
+ #if BUILDFLAG(IS_WIN)
+       std::string raw_bytes;  // Empty on Windows means UTF-8 encoded name.
+-#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
++#elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA) || BUILDFLAG(IS_GTOS)
+       const std::string& raw_bytes = filename.value();
+ #endif
+       pending_data_.append(net::GetDirectoryListingEntry(

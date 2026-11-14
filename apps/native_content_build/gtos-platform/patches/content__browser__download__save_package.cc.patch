@@ -1,0 +1,39 @@
+--- a/content/browser/download/save_package.cc
++++ b/content/browser/download/save_package.cc
+@@ -68,6 +68,8 @@
+ 
+ #if BUILDFLAG(IS_MAC)
+ #include "base/mac/mac_util.h"
++#elif BUILDFLAG(IS_GTOS)
++#include <process/file_abi.h>
+ #endif
+ 
+ namespace content {
+@@ -94,6 +96,9 @@ const int32_t kMaxFileOrdinalNumber = 9999;
+ const uint32_t kMaxFilePathLength = MAX_PATH - 1;
+ // Maximum component length for NTFS/FAT32 compatibility.
+ const uint32_t kMaxComponentLength = 255;
++#elif BUILDFLAG(IS_GTOS)
++const uint32_t kMaxFilePathLength = GTOS_FILE_PATH_LIMIT - 1;
++const uint32_t kMaxComponentLength = sizeof(GtosFileInfo::name) - 1;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+ const uint32_t kMaxFilePathLength = PATH_MAX - 1;
+ #endif
+@@ -424,6 +429,8 @@ uint32_t SavePackage::ComputeMaxPathLengthForDirectory(
+ #if BUILDFLAG(IS_WIN)
+     // NTFS/FAT32 compatible.
+     max_component_length = kMaxComponentLength;
++#elif BUILDFLAG(IS_GTOS)
++    max_component_length = kMaxComponentLength;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+     // Standard POSIX limit.
+     max_component_length = NAME_MAX;
+@@ -439,7 +446,7 @@ uint32_t SavePackage::GetMaxPathLengthForDirectory() const {
+   // Use platform defaults to avoid blocking I/O during save operations.
+   uint32_t max_component_length;
+ 
+-#if BUILDFLAG(IS_WIN)
++#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_GTOS)
+   max_component_length = kMaxComponentLength;
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   max_component_length = NAME_MAX;
