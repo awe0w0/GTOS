@@ -42,6 +42,8 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     const auto* boot = static_cast<const MultibootInfo*>(multiboot);
     ExitRequire((boot->flags & 8) && boot->moduleCount == 2, "two supplied ELFs");
     const auto* modules = reinterpret_cast<const MultibootModule*>(boot->modules);
+    const bool content = (boot->flags & 4) &&
+        Contains(reinterpret_cast<const char*>(boot->commandLine), "case=content");
 
     interrupts.Activate();
     for (uint32_t mode = 0; mode < 2; ++mode) {
@@ -50,7 +52,10 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         const uint32_t bytes = module.end - module.start;
         for (uint32_t i = 0; i < bytes; ++i) exitElf[i] = ((const uint8_t*)module.start)[i];
         uint32_t id;
-        ExitRequire(runtime.CreateElf(exitElf, bytes, id), "ELF admission");
+        const NativeEnvironment environment;
+        const NativeElfLaunchProfile profile{Elf32MaximumPages, 2, 1024};
+        ExitRequire(content ? runtime.CreateContentElf(exitElf, bytes, id, profile, environment)
+                            : runtime.CreateElf(exitElf, bytes, id), "ELF admission");
         const NativeStatus status = WaitStopped(runtime, tasks, id);
         unsigned stage = 0;
         ExitRequire(runtime.ReadMemory(id, 0x40020000U, &stage, sizeof(stage)) && stage == 2, "consumer stage");

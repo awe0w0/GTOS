@@ -1137,6 +1137,11 @@ CPUState* NativeRuntime::HandleFault(CPUState* cpu, uint32_t address) {
     ++statistics.faulted;
     printf("\nNATIVE USER FAULT id="); printfHex32(slot->status.id);
     printf(" vector="); printfHex32(cpu->vector); printf("\n");
+    if (slot->process->content) {
+        printf("CONTENT SHELL FAULT TASK "); printfHex32(slot->status.id);
+        printf(" PROCESS "); printfHex32(slot->process->status.id);
+        printf(" PC "); printfHex32(cpu->eip); printf("\n");
+    }
     return Stop(*slot, cpu, 0x80000000U | cpu->vector);
 }
 uint32_t NativeRuntime::Reap() {
