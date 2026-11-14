@@ -1,0 +1,11 @@
+--- a/gpu/config/gpu_control_list.cc
++++ b/gpu/config/gpu_control_list.cc
+@@ -837,6 +837,8 @@ GpuControlList::OsType GpuControlList::GetOsType() {
+   return kOsAndroid;
+ #elif BUILDFLAG(IS_FUCHSIA)
+   return kOsFuchsia;
++#elif BUILDFLAG(IS_GTOS)
++  return kOsGtos;
+ #elif BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_OPENBSD)
+   return kOsLinux;
+ #elif BUILDFLAG(IS_MAC)

@@ -1,0 +1,12 @@
+--- a/gpu/config/gpu_control_list.h
++++ b/gpu/config/gpu_control_list.h
+@@ -34,7 +34,8 @@ class GPU_CONFIG_EXPORT GpuControlList {
+     kOsAndroid,
+     kOsFuchsia,
+     kOsIOS,
+-    kOsAny
++    kOsAny,
++    kOsGtos
+   };
+ 
+   enum OsFilter {

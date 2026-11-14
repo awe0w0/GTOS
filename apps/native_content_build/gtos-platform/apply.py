@@ -31,6 +31,8 @@ INPUTS = {
     'services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics.cc': 'bba4951df19712f08c3f82de1e008b594959e007341d66fb4f7608814a302dd3',
     'ui/base/idle/BUILD.gn': '6915bffcd4ae82fac8aa963e43dbdb3119353bfbd919d33d6babe96bc2682d96',
     'gpu/config/BUILD.gn': 'a4e840f4ff5892fe61d35b8ba5639384bcbe0ccf92b957f329646dd380e36f5c',
+    'gpu/config/gpu_control_list.cc': 'de694e9c529e4c8e908ff868c371776815ce4264a43aaf623a7933b643d79167',
+    'gpu/config/gpu_control_list.h': '486d7214632bdbe8a2e5dfed5d1ab047e5c5b8bf39c32995f1cdfdbf9e304acb',
     'gpu/ipc/service/BUILD.gn': '9e8d85e5a96e7541da02cf1981b7138a529823931d7185708004be2205fe5fda',
     'v8/src/objects/js-duration-format.cc': '05e9f174a75d6475511caeae5380135ff559fe19fdc6dc94bff671f9f0cfbe96',
     'ui/gfx/BUILD.gn': '87ecfc028a6d4026903fa0cfc15a368c73eaf5040296020297ce83ccbe41c9b7',
