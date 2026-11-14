@@ -123,6 +123,10 @@ namespace gtos { namespace process {
                                  uint32_t imagePageLimit, uint32_t stackPages, uint32_t runtimePages,
                                  const NativeEnvironment* environment = 0,
                                  ElfLaunchKind kind = OrdinaryElf);
+        bool LoadElf(const Elf32LoadPlan&, const uint8_t* memoryImage, uint32_t& id,
+                     uint32_t stackPages, uint32_t runtimePages, const NativeEnvironment*,
+                     ElfLaunchKind, Elf32ReadAt read = 0, void* source = 0,
+                     bool (*close)(void*) = 0);
         NativeRuntime(const NativeRuntime&);
         NativeRuntime& operator=(const NativeRuntime&);
     public:
@@ -160,6 +164,11 @@ namespace gtos { namespace process {
         // Trusted Content boot path with an independently bounded resident budget.
         bool CreateContentElf(const uint8_t* image, uint32_t bytes, uint32_t& id,
                               const NativeElfLaunchProfile& profile, const NativeEnvironment& environment);
+        // Kernel-selected stable file. Close is called once even on failure and
+        // must succeed before a loaded process becomes runnable.
+        bool CreateContentElfFile(Elf32ReadAt read, bool (*close)(void*), void* source,
+                                  uint32_t bytes, uint32_t& id, const NativeElfLaunchProfile&,
+                                  const NativeEnvironment&);
         // Boot/desktop context only, never from a trap or on a victim stack.
         uint32_t Reap();
         bool RequestExit(uint32_t id, uint32_t code);

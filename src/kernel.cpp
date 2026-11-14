@@ -350,6 +350,7 @@ static process::NativeSharedMemory nativeSharedMemory(frames);
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
 static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
+static storage::FileStore *contentVolume;
 static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writable) {
     if (!disk.ConfigureWaitClock(DiskWaitTicks, 500U) || !disk.Identify() ||
         disk.SectorCount() <= GTOS_CONTENT_VOLUME_FIRST_SECTOR) return false;
@@ -365,7 +366,10 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writabl
     if (volume->store.Mount(&disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
                             disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable) == 0 &&
         volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
-        info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) return true;
+        info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) {
+        contentVolume = &volume->store;
+        return true;
+    }
     if (volume->store.Mounted()) volume->store.Unmount();
     delete volume;
     return false;
@@ -900,16 +904,39 @@ static uint32_t contentHttpFixtureId;
 static uint32_t contentShellFreeBeforeLaunch;
 static bool contentShellEntered;
 
+namespace {
+struct ContentBootFile {
+    // This handle is closed before the boot path admits any native process.
+    static const uint32_t Owner = 0xFFFFFFFFU;
+    storage::FileStore &store;
+    uint32_t handle;
+    uint32_t offset;
+    static bool Read(void *context, uint32_t offset, void *buffer, uint32_t bytes) {
+        auto &file = *static_cast<ContentBootFile *>(context);
+        if (offset != file.offset &&
+            file.store.Seek(Owner, file.handle, offset, 0) != (int32_t)offset) return false;
+        if (file.store.ReadFile(Owner, file.handle, buffer, bytes) != (int32_t)bytes) return false;
+        file.offset = offset + bytes;
+        return true;
+    }
+    static bool Close(void *context) {
+        auto &file = *static_cast<ContentBootFile *>(context);
+        return file.store.Close(Owner, file.handle) == 0;
+    }
+};
+}
 static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
                               const memory::MultibootInfo *boot) {
     const bool httpFixture = BootOption(boot, "content-http-fixture");
-    if (!(boot->flags & (1u << 3)) || boot->moduleCount != (httpFixture ? 2U : 1U))
+    const bool fileImage = BootOption(boot, "content-image-file");
+    const uint32_t count = fileImage ? (httpFixture ? 1U : 0U) : (httpFixture ? 2U : 1U);
+    const uint32_t moduleCount = boot->flags & (1u << 3) ? boot->moduleCount : 0;
+    if (moduleCount != count || (count && !boot->modules))
         return false;
     const auto *modules = (const memory::MultibootModule *)boot->modules;
-    const auto &module = modules[0];
-    if (module.end <= module.start)
-        return false;
-    if (httpFixture && (modules[1].end <= modules[1].start || modules[1].end - modules[1].start > 65536))
+    const auto *fixture = httpFixture ? &modules[fileImage ? 0 : 1] : nullptr;
+    if ((!fileImage && modules[0].end <= modules[0].start) ||
+        (fixture && (fixture->end <= fixture->start || fixture->end - fixture->start > 65536)))
         return false;
     // The native VM currently grants data-page permissions only.
 #define GTOS_CONTENT_LAUNCH_PARAMETERS \
@@ -928,9 +955,10 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
 #undef GTOS_CONTENT_LAUNCH_PARAMETERS
     const uint32_t runtimePages = 64 * 1024;
     const uint32_t stackPages = 128;
+    const uint32_t capacity = fileImage ? memory::ProcessAddressSpace::MaximumContentFileCapacityPages
+                                       : memory::ProcessAddressSpace::MaximumContentCapacityPages;
     const process::NativeElfLaunchProfile profile{
-        memory::ProcessAddressSpace::MaximumContentCapacityPages - runtimePages - stackPages,
-        stackPages, runtimePages};
+        capacity - runtimePages - stackPages, stackPages, runtimePages};
     process::NativeEnvironment environment;
     if (!environment.Assign(httpFixture ? httpLaunch : launch,
                             httpFixture ? sizeof(httpLaunch) - 1 : sizeof(launch) - 1) ||
@@ -940,11 +968,27 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))
         return false;
     contentShellFreeBeforeLaunch = frames.getStatistics().freeFrames;
-    if (!nativeRuntime.CreateContentElf((const uint8_t *)module.start, module.end - module.start,
-                                        contentShellId, profile, environment))
-        return false;
-    if (httpFixture && !nativeRuntime.CreateElf((const uint8_t *)modules[1].start,
-                                               modules[1].end - modules[1].start, contentHttpFixtureId)) {
+    if (fileImage) {
+        if (!contentVolume) return false;
+        const uint32_t handles = contentVolume->OpenCount();
+        const int32_t handle = contentVolume->Open(ContentBootFile::Owner,
+            GTOS_CONTENT_ASSET_DIRECTORY "/content_shell.elf", storage::FileStore::Read);
+        if (handle <= 0) return false;
+        ContentBootFile source{*contentVolume, (uint32_t)handle, 0};
+        const int32_t bytes = contentVolume->Size(ContentBootFile::Owner, source.handle);
+        const bool admitted = nativeRuntime.CreateContentElfFile(ContentBootFile::Read,
+            ContentBootFile::Close, &source, bytes > 0 ? (uint32_t)bytes : 0,
+            contentShellId, profile, environment);
+        LogValue("CONTENT IMAGE FILE OPEN BEFORE ", handles);
+        LogValue("CONTENT IMAGE FILE OPEN AFTER ", contentVolume->OpenCount());
+        LogValue("CONTENT IMAGE FILE FREE BEFORE ", contentShellFreeBeforeLaunch);
+        LogValue("CONTENT IMAGE FILE FREE AFTER ", frames.getStatistics().freeFrames);
+        if (!admitted) return false;
+        LogValue("CONTENT IMAGE FILE LOADED BYTES ", (uint32_t)bytes);
+    } else if (!nativeRuntime.CreateContentElf((const uint8_t *)modules[0].start,
+                   modules[0].end - modules[0].start, contentShellId, profile, environment)) return false;
+    if (fixture && !nativeRuntime.CreateElf((const uint8_t *)fixture->start,
+                                            fixture->end - fixture->start, contentHttpFixtureId)) {
         nativeRuntime.RequestExit(contentShellId, 0xF001);
         nativeRuntime.Reap();
         contentShellId = 0;

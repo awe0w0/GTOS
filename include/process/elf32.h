@@ -12,6 +12,7 @@ namespace gtos { namespace process {
     // Kernel-selected large-image profile; the ordinary entry stays at 256.
     static const uint32_t Elf32MaximumLargePages = 4096;
     static const uint32_t Elf32MaximumContentPages = 128 * 1024;
+    static const uint32_t Elf32MaximumContentFilePages = 160 * 1024;
     static const uint32_t Elf32MaximumProgramHeaders = 64;
     static const uint32_t Elf32MaximumSectionHeaders = 256;
     enum Elf32SegmentFlags { Elf32Execute = 1, Elf32Write = 2, Elf32Read = 4 };
@@ -26,7 +27,7 @@ namespace gtos { namespace process {
         Elf32ExecutableStack, Elf32BadStackHeader, Elf32BadSegmentSize,
         Elf32BadSegmentFlags, Elf32WritableExecutable, Elf32BadAlignment,
         Elf32BadVirtualRange, Elf32SegmentLimit, Elf32PageLimit,
-        Elf32PageOverlap, Elf32NoLoadSegments, Elf32BadEntry
+        Elf32PageOverlap, Elf32NoLoadSegments, Elf32BadEntry, Elf32ReadFailed
     };
     struct Elf32LoadSegment {
         uint32_t fileOffset, fileSize, memorySize, virtualAddress, flags;
@@ -47,6 +48,11 @@ namespace gtos { namespace process {
                        Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit);
     bool ValidateContentElf32(const uint8_t* image, uint32_t imageSize,
                               Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit);
+    // The kernel reader returns true only after filling the requested range.
+    // The backing file must stay stable through validation and loading.
+    typedef bool (*Elf32ReadAt)(void* source, uint32_t offset, void* buffer, uint32_t bytes);
+    bool ValidateContentElf32File(Elf32ReadAt read, void* source, uint32_t imageSize,
+                                  Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit);
     const char* Elf32ErrorName(Elf32Error error);
 } }
 #endif

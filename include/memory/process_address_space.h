@@ -1,7 +1,8 @@
 #ifndef __GTOS__MEMORY__PROCESS_ADDRESS_SPACE_H
 #define __GTOS__MEMORY__PROCESS_ADDRESS_SPACE_H
 #include <memory/paging.h>
-namespace gtos { namespace process { class NativeSharedMemory; } }
+#include <process/elf32.h>
+namespace gtos { namespace process { class NativeRuntime; class NativeSharedMemory; } }
 namespace gtos { namespace memory {
     enum ProcessMemoryError : uint32_t {
         ProcessMemoryOk, ProcessMemoryBadState, ProcessMemoryBadRange,
@@ -32,11 +33,19 @@ namespace gtos { namespace memory {
         static const uint32_t MaximumCapacityPages = 4096 + 2 + MaximumPages;
         // The kernel selects this budget only for a trusted Content launch.
         static const uint32_t MaximumContentCapacityPages = 128 * 1024;
+        static const uint32_t MaximumContentFileCapacityPages = 224 * 1024;
         static const uint32_t DynamicBase = 0x80000000u;
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
     private:
+        friend class gtos::process::NativeRuntime;
         friend class gtos::process::NativeSharedMemory;
+        // Bounded kernel-only admission from storage. The slot stays unrunnable
+        // until every segment is loaded and the reader has closed its source.
+        bool LoadImageRange(uint32_t address, uint32_t fileOffset, uint32_t bytes,
+                            process::Elf32ReadAt read, void* source);
+        bool PrepareContentFile(KernelPaging&, PhysicalMemoryManager&,
+                                uint32_t capacityPages, uint32_t dynamicEnd);
         struct Page { uint32_t address, frame, region; bool writable, present; };
         static_assert(sizeof(Page) == 16, "ownership record wire-independent size");
         struct Region { uint32_t base, bytes, handle, sharedFrames; };

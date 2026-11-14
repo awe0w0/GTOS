@@ -69,8 +69,18 @@ segments against the boot loader's image budget before packaging. The resource
 pack, ICU data and external V8 snapshot must come from that executable's build.
 
 The guarded `n339content` build linked the full IA32 executable. The packaging
-check in `cf02` measured 138,522 loaded pages in that debug build. The loader
-allows 65,408 image pages with the current stack and runtime reservations.
+check in `cf02` measured 138,522 loaded pages in that debug build. The GRUB
+module path allows 65,408 image pages with the current stack and runtime
+reservations.
+
+The explicit `content-image-file` boot option loads `/content/content_shell.elf`
+from the LittleFS Content volume. Use the ELF32 image with debug sections
+stripped. This path supports up to 163,712 image pages with the same stack
+and runtime reservations. It reads the validated load segments into their
+mapped pages and closes the file before the scheduler can run the process.
+The ordinary native demo and Content GRUB-module paths keep their existing
+limits. The `cgf20` and `cgf21` guarded tests exercised successful ATA loading
+and rejection of an invalid ELF header, including frame and handle recovery.
 
 ## Tests and evidence
 

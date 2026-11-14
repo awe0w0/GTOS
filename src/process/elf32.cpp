@@ -27,10 +27,17 @@ namespace {
                ((alignment & (alignment - 1)) == 0 &&
                 (address & (alignment - 1)) == (offset & (alignment - 1)));
     }
-    bool Sections(const uint8_t* image, uint32_t imageSize, Elf32Error& error) {
-        uint32_t offset = Read32(image + 32);
-        uint32_t count = Read16(image + 48), entrySize = Read16(image + 46);
-        uint32_t strings = Read16(image + 50);
+    bool ReadImage(void* source, uint32_t offset, void* buffer, uint32_t bytes) {
+        const uint8_t* input = static_cast<const uint8_t*>(source) + offset;
+        uint8_t* output = static_cast<uint8_t*>(buffer);
+        for (uint32_t i = 0; i < bytes; ++i) output[i] = input[i];
+        return true;
+    }
+    bool Sections(const uint8_t* header, Elf32ReadAt read, void* source,
+                  uint32_t imageSize, Elf32Error& error) {
+        uint32_t offset = Read32(header + 32);
+        uint32_t count = Read16(header + 48), entrySize = Read16(header + 46);
+        uint32_t strings = Read16(header + 50);
         if (!count) {
             // Extended numbering is deliberately unsupported; zero count means
             // the table is absent, not that section zero supplies another count.
@@ -42,8 +49,11 @@ namespace {
         if (offset < HeaderSize || entrySize != SectionHeaderSize ||
             (strings && strings >= count) || !FileRange(offset, count * entrySize, imageSize))
             return Fail(Elf32BadSectionTable, error);
+        uint32_t stringType = 0;
         for (uint32_t i = 0; i < count; ++i) {
-            const uint8_t* section = image + offset + i * entrySize;
+            uint8_t section[SectionHeaderSize];
+            if (!read(source, offset + i * entrySize, section, sizeof(section)))
+                return Fail(Elf32ReadFailed, error);
             uint32_t type = Read32(section + 4), flags = Read32(section + 8);
             if (!i) {
                 // Canonical null section, including no extended phnum/shnum.
@@ -56,24 +66,26 @@ namespace {
                 return Fail(Elf32UnsupportedRelocation, error); // Android packed relocations too.
             if (type == 6 || type == 11) return Fail(Elf32UnsupportedDynamic, error); // DYNAMIC/DYNSYM
             if (flags & 0x400u) return Fail(Elf32UnsupportedTls, error); // SHF_TLS
+            if (i == strings) stringType = type;
             // NOBITS occupies no file bytes, even when sh_size describes BSS.
             if (type != 8 && !FileRange(Read32(section + 16), Read32(section + 20), imageSize))
                 return Fail(Elf32BadFileRange, error);
         }
-        if (strings && Read32(image + offset + strings * entrySize + 4) != 3)
-            return Fail(Elf32BadSectionTable, error); // shstrndx must identify STRTAB.
+        if (strings && stringType != 3) return Fail(Elf32BadSectionTable, error);
         return true;
     }
 }
 
-static bool ValidateElf32WithLimit(const uint8_t* image, uint32_t imageSize,
+static bool ValidateElf32WithLimit(Elf32ReadAt read, void* source, uint32_t imageSize,
                                   Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit,
                                   uint32_t maximumPages) {
     Clear(output);
     error = Elf32Ok;
     if (!pageLimit || pageLimit > maximumPages) return Fail(Elf32PageLimit, error);
-    if (!image) return Fail(Elf32NullImage, error);
+    if (!read) return Fail(Elf32NullImage, error);
     if (imageSize < HeaderSize) return Fail(Elf32TruncatedHeader, error);
+    uint8_t image[HeaderSize];
+    if (!read(source, 0, image, sizeof(image))) return Fail(Elf32ReadFailed, error);
     if (image[0] != 0x7F || image[1] != 'E' || image[2] != 'L' || image[3] != 'F')
         return Fail(Elf32BadMagic, error);
     if (image[4] != 1) return Fail(Elf32UnsupportedClass, error);
@@ -89,14 +101,16 @@ static bool ValidateElf32WithLimit(const uint8_t* image, uint32_t imageSize,
     if (!phCount || Read16(image + 42) != ProgramHeaderSize || phOffset < HeaderSize ||
         !FileRange(phOffset, phCount * ProgramHeaderSize, imageSize))
         return Fail(Elf32BadProgramTable, error);
-    if (!Sections(image, imageSize, error)) return false;
+    if (!Sections(image, read, source, imageSize, error)) return false;
 
     Elf32LoadPlan plan;
     Clear(plan);
     plan.entry = Read32(image + 24);
     bool executableEntry = false;
     for (uint32_t i = 0; i < phCount; ++i) {
-        const uint8_t* header = image + phOffset + i * ProgramHeaderSize;
+        uint8_t header[ProgramHeaderSize];
+        if (!read(source, phOffset + i * ProgramHeaderSize, header, sizeof(header)))
+            return Fail(Elf32ReadFailed, error);
         uint32_t type = Read32(header);
         if (!type) continue; // PT_NULL fields have no meaning.
         if (type == 2) return Fail(Elf32UnsupportedDynamic, error);
@@ -157,12 +171,20 @@ static bool ValidateElf32WithLimit(const uint8_t* image, uint32_t imageSize,
 
 bool ValidateElf32(const uint8_t* image, uint32_t imageSize,
                    Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
-    return ValidateElf32WithLimit(image, imageSize, output, error, pageLimit, Elf32MaximumLargePages);
+    return ValidateElf32WithLimit(image ? ReadImage : 0, const_cast<uint8_t*>(image),
+                                  imageSize, output, error, pageLimit, Elf32MaximumLargePages);
 }
 
 bool ValidateContentElf32(const uint8_t* image, uint32_t imageSize,
                           Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
-    return ValidateElf32WithLimit(image, imageSize, output, error, pageLimit, Elf32MaximumContentPages);
+    return ValidateElf32WithLimit(image ? ReadImage : 0, const_cast<uint8_t*>(image),
+                                  imageSize, output, error, pageLimit, Elf32MaximumContentPages);
+}
+
+bool ValidateContentElf32File(Elf32ReadAt read, void* source, uint32_t imageSize,
+                              Elf32LoadPlan& output, Elf32Error& error, uint32_t pageLimit) {
+    return ValidateElf32WithLimit(read, source, imageSize, output, error, pageLimit,
+                                  Elf32MaximumContentFilePages);
 }
 
 bool ValidateElf32(const uint8_t* image, uint32_t imageSize, Elf32LoadPlan& output) {
@@ -211,6 +233,7 @@ const char* Elf32ErrorName(Elf32Error error) {
     case Elf32PageOverlap: return "load segments share a page";
     case Elf32NoLoadSegments: return "no load segments";
     case Elf32BadEntry: return "entry is not file-backed executable code";
+    case Elf32ReadFailed: return "could not read ELF headers";
     }
     return "unknown ELF error";
 }

@@ -139,6 +139,10 @@ bool ProcessAddressSpace::PrepareContent(KernelPaging& sharedKernel, PhysicalMem
                                          uint32_t capacityPages, uint32_t dynamicEnd) {
     return PrepareWithLimit(sharedKernel, allocator, capacityPages, dynamicEnd, MaximumContentCapacityPages);
 }
+bool ProcessAddressSpace::PrepareContentFile(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
+                                             uint32_t capacityPages, uint32_t dynamicEnd) {
+    return PrepareWithLimit(sharedKernel, allocator, capacityPages, dynamicEnd, MaximumContentFileCapacityPages);
+}
 uint32_t ProcessAddressSpace::MetadataFrameCount(uint32_t capacityPages) {
     uint32_t bytes = capacityPages * sizeof(Page);
     if (capacityPages > MaximumCapacityPages) bytes += 2 * IndexSlots(capacityPages) * sizeof(uint32_t);
@@ -257,7 +261,7 @@ bool ProcessAddressSpace::SharesFrame(const Page& page) const {
     return index >= 0 && regions[index].sharedFrames;
 }
 bool ProcessAddressSpace::MetadataLayout() const {
-    if (pageLimit < MaximumPages || pageLimit > MaximumContentCapacityPages) return false;
+    if (pageLimit < MaximumPages || pageLimit > MaximumContentFileCapacityPages) return false;
     if (!metadataBase)
         return pages == inlinePages && !metadataPages && pageLimit == MaximumPages;
     if (pages != (Page*)metadataBase || (metadataBase & 4095) || pageLimit == MaximumPages
@@ -954,6 +958,22 @@ bool ProcessAddressSpace::CopyToUser(uint32_t destination, const void* source, u
         destination += chunk; input += chunk; length -= chunk;
     }
     error = ProcessMemoryOk;
+    return true;
+}
+bool ProcessAddressSpace::LoadImageRange(uint32_t address, uint32_t fileOffset, uint32_t bytes,
+                                         process::Elf32ReadAt read, void* source) {
+    InterruptGuard guard;
+    if (!read || !Mutable() || !Range(address, bytes, true)) return false;
+    while (bytes) {
+        const uint32_t offset = address & 4095;
+        const uint32_t chunk = bytes < 4096 - offset ? bytes : 4096 - offset;
+        const int index = IndexedLayoutPage(address & AddressMask);
+        void* output = (void*)(pages[index].frame + offset);
+        if (!read(source, fileOffset, output, chunk)) return false;
+        address += chunk;
+        fileOffset += chunk;
+        bytes -= chunk;
+    }
     return true;
 }
 bool ProcessAddressSpace::CopyFromUser(void* destination, uint32_t source, uint32_t length) const {

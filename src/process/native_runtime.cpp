@@ -339,6 +339,48 @@ bool NativeRuntime::CreateContentElf(const uint8_t* image, uint32_t bytes, uint3
     return CreateElfWithBudget(image, bytes, id, profile.imagePageLimit,
         profile.stackPages, profile.runtimePages, &environment, ContentElf);
 }
+namespace {
+    class ContentElfReader {
+        Elf32ReadAt read;
+        bool (*close)(void*);
+        void* source;
+    public:
+        ContentElfReader(Elf32ReadAt operation, bool (*finish)(void*), void* context)
+            : read(operation), close(finish), source(context) {}
+        ~ContentElfReader() { Close(this); }
+        static bool Read(void* context, uint32_t offset, void* buffer, uint32_t bytes) {
+            auto& file = *static_cast<ContentElfReader*>(context);
+            return file.read(file.source, offset, buffer, bytes);
+        }
+        static bool Close(void* context) {
+            auto& file = *static_cast<ContentElfReader*>(context);
+            auto finish = file.close;
+            file.close = 0;
+            return !finish || finish(file.source);
+        }
+    };
+}
+bool NativeRuntime::CreateContentElfFile(Elf32ReadAt read, bool (*close)(void*), void* source,
+                                         uint32_t bytes, uint32_t& id,
+                                         const NativeElfLaunchProfile& profile,
+                                         const NativeEnvironment& environment) {
+    InterruptGuard guard;
+    ContentElfReader reader(read, close, source);
+    const uint32_t maximumCapacity = ProcessAddressSpace::MaximumContentFileCapacityPages;
+    id = 0;
+    if (!read || !close || !bytes || bytes > Elf32MaximumContentFilePages * Elf32PageSize
+        || !SafeKernelContext() || !nextId || profile.stackPages < 2 || profile.stackPages > 128
+        || !profile.runtimePages || profile.runtimePages > maximumCapacity ||
+        profile.imagePageLimit > maximumCapacity - profile.runtimePages ||
+        profile.stackPages > maximumCapacity - profile.runtimePages - profile.imagePageLimit)
+        return false;
+    Elf32LoadPlan plan;
+    Elf32Error validation;
+    if (!ValidateContentElf32File(ContentElfReader::Read, &reader, bytes, plan, validation,
+                                  profile.imagePageLimit)) return false;
+    return LoadElf(plan, 0, id, profile.stackPages, profile.runtimePages, &environment,
+                   ContentElf, ContentElfReader::Read, &reader, ContentElfReader::Close);
+}
 bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, uint32_t& id,
                                         uint32_t imagePageLimit, uint32_t stackPages,
                                         uint32_t runtimePages, const NativeEnvironment* environment,
@@ -356,10 +398,17 @@ bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, ui
     const bool valid = content ? ValidateContentElf32(image, bytes, plan, validation, imagePageLimit)
                                : ValidateElf32(image, bytes, plan, validation, imagePageLimit);
     if (!valid) return false;
+    return LoadElf(plan, image, id, stackPages, runtimePages, environment, kind);
+}
+bool NativeRuntime::LoadElf(const Elf32LoadPlan& plan, const uint8_t* image, uint32_t& id,
+                            uint32_t stackPages, uint32_t runtimePages,
+                            const NativeEnvironment* environment, ElfLaunchKind kind,
+                            Elf32ReadAt read, void* source, bool (*close)(void*)) {
+    const bool content = kind == ContentElf;
     const uint32_t capacity = runtimePages ? plan.pageCount + stackPages + runtimePages
                                           : ProcessAddressSpace::MaximumPages;
-    const uint32_t maximumCapacity = content ? ProcessAddressSpace::MaximumContentCapacityPages
-                                             : ProcessAddressSpace::MaximumCapacityPages;
+    const uint32_t maximumCapacity = read ? ProcessAddressSpace::MaximumContentFileCapacityPages :
+        content ? ProcessAddressSpace::MaximumContentCapacityPages : ProcessAddressSpace::MaximumCapacityPages;
     if (capacity < ProcessAddressSpace::MaximumPages || capacity > maximumCapacity
         || plan.pageCount > capacity - stackPages)
         return false;
@@ -373,8 +422,9 @@ bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, ui
     }
     uint32_t index; Slot* target = FreeSlot(index);
     if (!target) return false;
-    const bool prepared = content ? target->space.PrepareContent(*paging, *frames, capacity, reservedBegin)
-                                  : target->space.Prepare(*paging, *frames, capacity, reservedBegin);
+    const bool prepared = read ? target->space.PrepareContentFile(*paging, *frames, capacity, reservedBegin) :
+        content ? target->space.PrepareContent(*paging, *frames, capacity, reservedBegin)
+                : target->space.Prepare(*paging, *frames, capacity, reservedBegin);
     if (!prepared) return false;
     Slot& slot = *target;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
@@ -382,12 +432,16 @@ bool NativeRuntime::CreateElfWithBudget(const uint8_t* image, uint32_t bytes, ui
         const uint32_t begin = segment.virtualAddress & ~4095U;
         const uint32_t end = (segment.virtualAddress + segment.memorySize + 4095) & ~4095U;
         if (!slot.space.MapNewRange(begin, end - begin, true)) goto rollback;
-        if (segment.fileSize && !slot.space.CopyToUser(segment.virtualAddress,
-                image + segment.fileOffset, segment.fileSize)) goto rollback;
+        if (segment.fileSize) {
+            const bool loaded = read ? slot.space.LoadImageRange(segment.virtualAddress,
+                segment.fileOffset, segment.fileSize, read, source) :
+                slot.space.CopyToUser(segment.virtualAddress, image + segment.fileOffset, segment.fileSize);
+            if (!loaded) goto rollback;
+        }
         if (!(segment.flags & Elf32Write) && !slot.space.ProtectRange(begin, end - begin, false))
             goto rollback;
     }
-    if (Admit(slot, index, plan.entry, id, stackPages, environment)) {
+    if ((!close || close(source)) && Admit(slot, index, plan.entry, id, stackPages, environment)) {
         slot.content = content;
         slot.codeCount = slot.dataCount = 0;
         for (uint32_t i = 0; i < plan.segmentCount; ++i) {

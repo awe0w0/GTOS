@@ -339,9 +339,53 @@ namespace {
         for (uint32_t i = sizeof(elf32Fixture); i; --i) buffer[i] = buffer[i - 1];
         CHECK(ValidateElf32(buffer + 1, sizeof(elf32Fixture), plan, error));
     }
+    struct ReadFixture {
+        uint32_t size, failOffset, calls;
+    };
+    bool readFixture(void* context, uint32_t offset, void* output, uint32_t bytes) {
+        ReadFixture& reader = *static_cast<ReadFixture*>(context);
+        ++reader.calls;
+        CHECK(bytes <= 52 && offset <= reader.size && bytes <= reader.size - offset);
+        if (offset > reader.size || bytes > reader.size - offset || offset == reader.failOffset)
+            return false;
+        uint8_t* destination = static_cast<uint8_t*>(output);
+        for (uint32_t i = 0; i < bytes; ++i) destination[i] = buffer[offset + i];
+        return true;
+    }
+    void fileReader() {
+        build(2);
+        sections();
+        ReadFixture reader{ImageSize, 0xffffffffU, 0};
+        Elf32LoadPlan plan, ordinary;
+        Elf32Error error;
+        CHECK(ValidateElf32(buffer, ImageSize, ordinary));
+        CHECK(ValidateContentElf32File(readFixture, &reader, ImageSize, plan, error, 8));
+        CHECK(error == Elf32Ok && reader.calls == 5 && equal(&plan, &ordinary, sizeof(plan)));
+        const uint32_t failedReads[] = {0, SectionTable, SectionTable + 40, 52, 84};
+        for (uint32_t offset : failedReads) {
+            reader.failOffset = offset;
+            CHECK(!ValidateContentElf32File(readFixture, &reader, ImageSize, plan, error, 8));
+            CHECK(error == Elf32ReadFailed && zero(&plan, sizeof(plan)));
+        }
+        reader.failOffset = 0xffffffffU;
+        reader.calls = 0;
+        CHECK(!ValidateContentElf32File(readFixture, &reader, 51, plan, error, 8));
+        CHECK(error == Elf32TruncatedHeader && !reader.calls && zero(&plan, sizeof(plan)));
+        build();
+        load(0, Elf32UserBase, Payload, 16, 138522u * Elf32PageSize);
+        CHECK(!ValidateContentElf32(buffer, ImageSize, plan, error, Elf32MaximumContentPages));
+        CHECK(error == Elf32PageLimit && zero(&plan, sizeof(plan)));
+        CHECK(!ValidateContentElf32File(readFixture, &reader, ImageSize, plan, error, 138521));
+        CHECK(error == Elf32PageLimit && zero(&plan, sizeof(plan)));
+        CHECK(ValidateContentElf32File(readFixture, &reader, ImageSize, plan, error, 138522));
+        CHECK(error == Elf32Ok && plan.pageCount == 138522);
+        sections(9);
+        CHECK(!ValidateContentElf32File(readFixture, &reader, ImageSize, plan, error, 138522));
+        CHECK(error == Elf32UnsupportedRelocation && zero(&plan, sizeof(plan)));
+    }
 }
 extern "C" int Elf32TestMain() {
-    headers(); segments(); auxiliaryHeaders(); sectionHeaders(); fuzz(); realFixture();
+    headers(); segments(); auxiliaryHeaders(); sectionHeaders(); fuzz(); realFixture(); fileReader();
     print("ELF32 tests: "); number(checks); print(" checks, "); number(failures); print(" failures\n");
     return failures ? 1 : 0;
 }
