@@ -896,6 +896,7 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
 }
 
 static uint32_t contentShellId;
+static uint32_t contentShellFreeBeforeLaunch;
 static bool contentShellEntered;
 
 static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
@@ -928,6 +929,7 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
         !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))
         return false;
+    contentShellFreeBeforeLaunch = frames.getStatistics().freeFrames;
     if (!nativeRuntime.CreateContentElf((const uint8_t *)module.start, module.end - module.start,
                                         contentShellId, profile, environment))
         return false;
@@ -946,12 +948,29 @@ static void ServiceContentShell() {
         LogValue("CONTENT SHELL CPL3 ", contentShellId);
     }
     if (!status.live) {
+        memory::InterruptGuard guard;
         LogValue("CONTENT SHELL EXIT ", status.exitCode);
         if (status.faultVector) {
             LogValue("CONTENT SHELL FAULT VECTOR ", status.faultVector);
             LogValue("CONTENT SHELL FAULT ADDRESS ", status.faultAddress);
         }
-        LogValue("CONTENT SHELL REAP ", nativeRuntime.Reap());
+        const uint32_t slotsBefore = nativeRuntime.OccupiedSlots();
+        const uint32_t reaped = nativeRuntime.Reap();
+        const uint32_t slotsAfter = nativeRuntime.OccupiedSlots();
+        const process::NativeStatistics counts = nativeRuntime.Statistics();
+        const uint32_t freeAfter = frames.getStatistics().freeFrames;
+        LogValue("CONTENT SHELL REAP ", reaped);
+        LogValue("CONTENT SHELL SLOTS BEFORE REAP ", slotsBefore);
+        LogValue("CONTENT SHELL SLOTS AFTER REAP ", slotsAfter);
+        LogValue("CONTENT SHELL TASKS CREATED ", counts.created);
+        LogValue("CONTENT SHELL TASKS RETIRED ", counts.reaped);
+        LogValue("CONTENT SHELL FREE BASELINE ", contentShellFreeBeforeLaunch);
+        LogValue("CONTENT SHELL FREE AFTER REAP ", freeAfter);
+        const bool clean = reaped && reaped == slotsBefore && !slotsAfter &&
+                           counts.created == counts.reaped &&
+                           freeAfter == contentShellFreeBeforeLaunch &&
+                           nativeRuntime.Status(contentShellId, status) && status.reaped && !status.live;
+        printf(clean ? "CONTENT SHELL CLEANUP PASS\n" : "CONTENT SHELL CLEANUP FAIL\n");
         contentShellId = 0;
     }
 }
