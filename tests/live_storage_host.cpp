@@ -132,6 +132,13 @@ uint16_t Port16Bit::Read() {
     if(word==61) return 0;
     return word>=27 && word<47?0x2020:0;
 }
+void Port16Bit::ReadWords(uint8_t* destination, uint32_t count) {
+    for(uint32_t i=0;i<count;++i) {
+        const uint16_t word=Read();
+        *destination++=(uint8_t)word;
+        *destination++=(uint8_t)(word>>8);
+    }
+}
 } }
 static void AtaContract() {
     using namespace gtos::drivers;
