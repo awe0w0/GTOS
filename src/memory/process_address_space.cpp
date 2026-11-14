@@ -784,7 +784,16 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
 void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes,
                                             bool releaseFrames) {
     contentCopyLayoutValid = false;
+    if (!bytes) return;
     const uint32_t end = base + bytes;
+    const uint32_t firstTable = base >> 22, lastTable = (end - 1) >> 22;
+    // Count ownership even for nonpresent pages and pages from other
+    // reservations. Only the last owner may release an empty table.
+    uint16_t owned[(DynamicLimit - DynamicBase + 0x3FFFFFu) >> 22] = {};
+    for (uint32_t i = 0; i < pageCount; ++i) {
+        const uint32_t di = pages[i].address >> 22;
+        if (di >= firstTable && di <= lastTable) ++owned[di - firstTable];
+    }
     uint32_t index = 0;
     while (index < pageCount) {
         const Page& page = pages[index];
@@ -795,15 +804,13 @@ void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint
         pages[index] = pages[--pageCount];
         pages[pageCount].address = pages[pageCount].frame = pages[pageCount].region = 0;
         pages[pageCount].writable = pages[pageCount].present = false;
-        bool occupied = false;
-        for (uint32_t i = 0; i < pageCount; ++i)
-            if (pages[i].address >> 22 == di) occupied = true;
-        if (!occupied) ((uint32_t*)directory)[di] = 0;
+        const bool empty = --owned[di - firstTable] == 0;
+        if (empty) ((uint32_t*)directory)[di] = 0;
         // Flush both leaf and paging-structure caches before either data or
         // the last owned table can be freed and reused by another reservation.
         InvalidatePage(address);
         if (releaseFrames) { ClearPage(frame); frames->free(frame); }
-        if (!occupied) {
+        if (empty) {
             ClearPage(table); frames->free(table); tables[di] = 0;
         }
     }

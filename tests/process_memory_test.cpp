@@ -910,12 +910,43 @@ namespace {
         CHECK(first.Destroy());
         CHECK(used() == baseline);
     }
+    void partialTableRelease() {
+        const uint32_t seam = ProcessAddressSpace::DynamicBase + (1u << 22);
+        CHECK(first.Prepare(kernel, frames));
+        CHECK(first.Seal());
+        uint32_t base, handle, neighbor, neighborHandle;
+        CHECK(first.Reserve(4 * 4096, 4096, seam - 8192, base, handle));
+        CHECK(first.Reserve(4096, 4096, seam + 8192, neighbor, neighborHandle));
+        CHECK(first.SetPermissions(handle, 0, 4 * 4096, ProcessMemoryReadWrite));
+        CHECK(first.SetPermissions(neighborHandle, 0, 4096, ProcessMemoryReadWrite));
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryNone));
+        CHECK(first.SetPermissions(neighborHandle, 0, 4096, ProcessMemoryNone));
+        const uint32_t lowTable = (uint32_t)table(first, base);
+        const uint32_t highTable = (uint32_t)table(first, seam);
+        const uint32_t committed = used();
+        gtos_process_memory_test_cr3 = first.DirectoryAddress();
+        gtos_process_memory_test_invalidations = 0;
+        CHECK(first.Decommit(handle, 4096, 8192));
+        CHECK(gtos_process_memory_test_invalidations == 2);
+        CHECK(used() == committed - 2 && frames.isAllocated(lowTable) && frames.isAllocated(highTable));
+        CHECK(first.Release(handle));
+        CHECK(gtos_process_memory_test_invalidations == 4);
+        CHECK(used() == committed - 5 && !frames.isAllocated(lowTable) && frames.isAllocated(highTable));
+        CHECK(first.SetPermissions(neighborHandle, 0, 4096, ProcessMemoryReadWrite));
+        CHECK(used() == committed - 5 && first.ValidateUserRange(neighbor, 4096, true));
+        CHECK(first.Release(neighborHandle));
+        CHECK(gtos_process_memory_test_invalidations == 6);
+        CHECK(!frames.isAllocated(highTable));
+        gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
+        CHECK(first.Destroy());
+        CHECK(used() == baseline);
+    }
     void dynamicVirtualMemory() {
         dynamicRegionsAndPermissions(); dynamicQuotaAndOwnership(); dynamicInvalidationsAndContext();
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
         protectRangeSeam();
         indexedOwnership();
-        contentCopies(); contentIndexSizing();
+        contentCopies(); contentIndexSizing(); partialTableRelease();
     }
 }
 extern "C" int processMemoryTests() {
