@@ -1,0 +1,35 @@
+--- a/components/services/storage/indexed_db/scopes/varint_coding.cc
++++ b/components/services/storage/indexed_db/scopes/varint_coding.cc
+@@ -31,15 +31,16 @@ void EncodeVarInt(int64_t from, std::string* into) {
+ }
+ 
+ bool DecodeVarInt(std::string_view* from, int64_t* into) {
+-  std::string_view::const_iterator it = from->begin();
++  size_t consumed = 0;
++  unsigned char c;
+   int shift = 0;
+   uint64_t ret = 0;
+   do {
+     // Shifting 64 or more bits is undefined behavior.
+-    if (it == from->end() || shift >= 64)
++    if (consumed == from->size() || shift >= 64)
+       return false;
+ 
+-    unsigned char c = *it;
++    c = (*from)[consumed++];
+ 
+     if ((shift != 0) && (c == 0)) {
+       // On the first iteration, the entire byte can be 0, which represents the
+@@ -59,10 +60,10 @@ bool DecodeVarInt(std::string_view* from, int64_t* into) {
+ 
+     ret |= shifted;
+     shift += 7;
+-  } while (*it++ & 0x80);
++  } while (c & 0x80);
+ 
+   *into = static_cast<int64_t>(ret);
+-  from->remove_prefix(it - from->begin());
++  from->remove_prefix(consumed);
+   return true;
+ }
+ 

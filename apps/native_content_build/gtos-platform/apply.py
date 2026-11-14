@@ -14,6 +14,9 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'components/services/filesystem/util.cc': 'f4ee6abf67092ac202513e81304cb2032ce5b72d0cb2e2a8946f1ce2a488b04b',
+    'components/services/storage/indexed_db/scopes/varint_coding.cc': 'caf061d160b255c29b04fd2fe9fac75c487aa4554dd032656a2e5c401cbab8c1',
+    'content/browser/indexed_db/indexed_db_leveldb_coding.cc': '8301d98989bdd2a6589b6b1218720256d027d9270b7a0f458b3ea5440982526b',
     'components/autofill/core/common/dense_set.h': '5a06e08bfd609cacb1a49720d1febb7131b60dfe619892d6c107aeeb9cea1a1f',
     'components/autofill/core/browser/form_structure_rationalizer.cc': 'f61a3d7e3aced163f6a58832d5580dc7c2199037e233dd9c21791fd676aebe69',
     'components/feature_engagement/public/feature_constants.h': '1ee7da5199e024e09af2ff79b92248367dc59cf4bbd727de88b12cc84e8918f5',

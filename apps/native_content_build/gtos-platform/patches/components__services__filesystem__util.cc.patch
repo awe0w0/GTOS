@@ -1,0 +1,17 @@
+--- a/components/services/filesystem/util.cc
++++ b/components/services/filesystem/util.cc
+@@ -101,6 +101,14 @@ base::File::Error ValidatePath(const std::string& raw_path,
+   base::FilePath::StringType path = base::UTF8ToWide(raw_path);
+ #elif BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+   base::FilePath::StringType path = raw_path;
++#elif BUILDFLAG(IS_GTOS)
++  if (raw_path.find('\0') != std::string::npos) {
++    return base::File::Error::FILE_ERROR_INVALID_OPERATION;
++  }
++  const base::FilePath path(raw_path);
++  if (path.IsAbsolute() || path.ReferencesParent()) {
++    return base::File::Error::FILE_ERROR_ACCESS_DENIED;
++  }
+ #endif
+ 
+   // TODO(erg): This isn't really what we want. FilePath::AppendRelativePath()
