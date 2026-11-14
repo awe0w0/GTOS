@@ -898,6 +898,36 @@ namespace {
         CHECK(second.Destroy());
         CHECK(used() == baseline);
     }
+    void contentRegionCapacity() {
+        const uint32_t limit = ProcessAddressSpace::MaximumContentRegions;
+        CHECK(first.PrepareContent(kernel, frames, ProcessAddressSpace::MaximumPages,
+                                   ProcessAddressSpace::DynamicLimit));
+        CHECK(first.CapacityRegions() == limit && first.Seal());
+        const uint32_t empty = used();
+        uint32_t handles[ProcessAddressSpace::MaximumContentRegions];
+        uint32_t base = 0;
+        for (uint32_t i = 0; i < limit; ++i) {
+            CHECK(first.Reserve(4096, 4096, 0, base, handles[i]));
+            CHECK(base == ProcessAddressSpace::DynamicBase + i * 4096);
+        }
+        CHECK(used() == empty);
+        const uint32_t last = base;
+        uint32_t extra = 0;
+        CHECK(!first.Reserve(4096, 4096, 0, base, extra));
+        CHECK(first.GetLastError() == ProcessMemoryRegionLimit && base == last && extra == 0);
+        CHECK(first.SetPermissions(handles[limit - 1], 0, 4096, ProcessMemoryReadWrite));
+        fill(input, 32, 0x96);
+        CHECK(first.CopyToUser(last, input, 32));
+        CHECK(first.CopyFromUser(output, last, 32) && all(output, 32, 0x96));
+        CHECK(first.Release(handles[0]));
+        CHECK(first.Reserve(4096, 4096, 0, base, extra));
+        CHECK(base == ProcessAddressSpace::DynamicBase && extra == handles[limit - 1] + 1);
+        CHECK(first.Destroy() && used() == baseline);
+        CHECK(first.Prepare(kernel, frames));
+        CHECK(first.CapacityRegions() == ProcessAddressSpace::MaximumRegions && first.Seal());
+        CHECK(first.Reserve(4096, 4096, 0, base, extra) && base == ProcessAddressSpace::DynamicBase);
+        CHECK(first.Destroy() && used() == baseline);
+    }
     void contentIndexSizing() {
         // The capacity places both index arrays. The number of live pages can
         // be much smaller and must remain indexed across removal and reseal.
@@ -958,7 +988,7 @@ namespace {
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
         protectRangeSeam();
         indexedOwnership();
-        contentCopies(); contentIndexSizing(); partialTableRelease();
+        contentCopies(); contentRegionCapacity(); contentIndexSizing(); partialTableRelease();
     }
 }
 extern "C" int processMemoryTests() {

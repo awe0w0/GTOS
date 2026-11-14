@@ -895,7 +895,7 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
             GTOS_VM_PAGE_BYTES, slot->space.CapacityPages(),
-            ProcessAddressSpace::MaximumRegions, threadsEnabled ? slotCount : 1, 1};
+            slot->space.CapacityRegions(), threadsEnabled ? slotCount : 1, 1};
         // The request was consumed before any write. IF is clear on BSP, so
         // full output validation also covers aliases and mixed-page failures.
         cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))

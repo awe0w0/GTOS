@@ -37,6 +37,7 @@ namespace gtos { namespace memory {
         static const uint32_t DynamicBase = 0x80000000u;
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
+        static const uint32_t MaximumContentRegions = 128;
     private:
         friend class gtos::process::NativeRuntime;
         friend class gtos::process::NativeSharedMemory;
@@ -58,7 +59,9 @@ namespace gtos { namespace memory {
         Page inlinePages[MaximumPages];
         Page* pages; // Authoritative ownership, never inferred from PTEs.
         uint32_t pageLimit, metadataBase, metadataPages, dynamicLimit;
-        Region regions[MaximumRegions];
+        Region inlineRegions[MaximumRegions];
+        Region* regions;
+        uint32_t regionLimit;
         // A readable range can contain at most MaximumPages consecutive pages,
         // hence at most two new tables. Transaction scratch never uses the stack.
         PendingPage pendingPages[MaximumPages];
@@ -81,8 +84,10 @@ namespace gtos { namespace memory {
         bool Mutable() const;
         bool RuntimeMutable() const;
         bool PrepareWithLimit(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
-                              uint32_t capacityPages, uint32_t dynamicEnd, uint32_t maximumPages);
-        static uint32_t MetadataFrameCount(uint32_t capacityPages);
+                              uint32_t capacityPages, uint32_t dynamicEnd,
+                              uint32_t maximumPages, uint32_t maximumRegions);
+        static uint32_t PageMetadataBytes(uint32_t capacityPages);
+        static uint32_t MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions);
         bool IsMetadataFrame(uint32_t address) const;
         uint32_t* LayoutIndex(bool byFrame) const;
         // Valid after Layout succeeds and until a mapping mutation. Normal
@@ -158,6 +163,7 @@ namespace gtos { namespace memory {
         // The capacity is assigned once at admission. Use a checked copy
         // when reporting it to the process.
         uint32_t CapacityPages() const { return pageLimit; }
+        uint32_t CapacityRegions() const { return regionLimit; }
         // Full-range validation precedes all copying. Kernel buffers must be
         // mapped trusted supervisor buffers, disjoint from all owned
         // frames and all paging structures. A valid zero-length user address

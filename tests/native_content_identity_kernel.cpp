@@ -42,7 +42,7 @@ static const unsigned ExpectedChecks = 16;
 static const char* const CheckDescription = "cookie and DNS wire parsing";
 #elif defined(GTOS_CONTENT_CAPACITY_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT CAPACITY"
-static const unsigned ExpectedChecks = 8;
+static const unsigned ExpectedChecks = 136;
 static const char* const CheckDescription = "Content image and resource resident budget";
 #elif defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT SKIA SEMAPHORE"
