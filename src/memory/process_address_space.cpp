@@ -591,7 +591,8 @@ bool ProcessAddressSpace::Reserve(uint32_t bytes, uint32_t alignment, uint32_t h
         candidate = ((uint64_t)conflict + alignment - 1) & ~((uint64_t)alignment - 1);
     }
     if (candidate > dynamicLimit - bytes) return Fail(ProcessMemoryConflict);
-    contentCopyLayoutValid = false;
+    // ConflictEnd proved the reservation is disjoint from all owned pages.
+    // Publishing it leaves the checked address and frame indexes intact.
     Region& region = regions[slot];
     region.base = (uint32_t)candidate; region.bytes = bytes;
     region.handle = nextRegionHandle++;
@@ -639,6 +640,7 @@ bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, b
         }
         pendingTables[pendingTableCount++] = {di, table};
     }
+    contentCopyLayoutValid = false;
     for (uint32_t i = 0; i < pendingTableCount; ++i) {
         const PendingTable& pending = pendingTables[i];
         tables[pending.index] = pending.frame;
@@ -695,7 +697,6 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
         && protection != ProcessMemoryReadWrite) return Fail(ProcessMemoryPermission);
     uint32_t base;
     if (!RegionRange(handle, offset, bytes, base)) return false;
-    contentCopyLayoutValid = false;
     const uint32_t end = base + bytes;
     if (protection != ProcessMemoryNone) {
         // Every page will be resident afterwards; reject oversized sparse
@@ -724,6 +725,7 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
         }
         // No fallible operation follows. Publish only after all allocation,
         // alias validation, and zeroing succeeds, including across PDE edges.
+        if (pendingPageCount) contentCopyLayoutValid = false;
         for (uint32_t i = 0; i < pendingTableCount; ++i) {
             const PendingTable& pending = pendingTables[i];
             tables[pending.index] = pending.frame;
@@ -769,7 +771,6 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
         if (pages[index].region) return Fail(ProcessMemoryPermission);
     }
     // Layout and every page were checked. No fallible operation follows.
-    contentCopyLayoutValid = false;
     for (uint32_t i = 0; i < pageCount; ++i) {
         Page& page = pages[i];
         if (page.address < address || page.address >= end || !page.writable) continue;
@@ -783,7 +784,6 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
 }
 void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint32_t bytes,
                                             bool releaseFrames) {
-    contentCopyLayoutValid = false;
     if (!bytes) return;
     const uint32_t end = base + bytes;
     const uint32_t firstTable = base >> 22, lastTable = (end - 1) >> 22;
@@ -798,6 +798,7 @@ void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint
     while (index < pageCount) {
         const Page& page = pages[index];
         if (page.region != handle || page.address < base || page.address >= end) { ++index; continue; }
+        contentCopyLayoutValid = false;
         const uint32_t address = page.address, frame = page.frame, di = address >> 22;
         const uint32_t table = tables[di];
         ((uint32_t*)table)[(address >> 12) & 1023] = 0;
@@ -927,9 +928,9 @@ bool ProcessAddressSpace::ValidateUserRange(uint32_t address, uint32_t length, b
     if (!prepared) return Fail(ProcessMemoryBadState);
     if (!Context(true)) return false;
     if (sealed && contentCopyLayoutValid) {
-        // The root and directories still match the sealed supervisor
-        // template. Mapping mutations run Layout(true) and invalidate this
-        // private index before changing ownership or permissions.
+        // Mapping changes run Layout(true). The private index survives only
+        // changes that preserve addresses, frames and their record positions.
+        // Range rechecks the current permissions and leaf before each copy.
         if (!LayoutRoot() || !LayoutDirectories(nullptr)) {
             contentCopyLayoutValid = false;
             return false;

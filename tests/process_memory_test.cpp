@@ -874,9 +874,21 @@ namespace {
         CHECK(first.CopyFromUser(output, UserBase + 4096 - 32, 64) && all(output, 64, 0x42));
 
         uint32_t base, handle;
+        const uint32_t beforeReservation = used();
         CHECK(first.Reserve(8192, 4096, 0, base, handle));
+        CHECK(used() == beforeReservation);
+        CHECK(first.CopyFromUser(output, UserBase, 64));
+        CHECK(!first.ValidateUserRange(base, 1, false));
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryNone));
+        CHECK(used() == beforeReservation && !first.ValidateUserRange(base, 1, false));
         CHECK(first.SetPermissions(handle, 0, 8192, ProcessMemoryReadWrite));
         CHECK(first.CopyToUser(base + 4096, input, 32));
+        const uint32_t resident = used();
+        CHECK(first.SetPermissions(handle, 4096, 4096, ProcessMemoryNone));
+        CHECK(used() == resident && !first.ValidateUserRange(base + 4096, 1, false));
+        CHECK(first.SetPermissions(handle, 4096, 4096, ProcessMemoryRead));
+        CHECK(used() == resident && !first.CopyToUser(base + 4096, input, 32));
+        CHECK(first.CopyFromUser(output, base + 4096, 32) && all(output, 32, 0x42));
         CHECK(first.Decommit(handle, 0, 4096)); // Swaps the surviving ownership record.
         CHECK(!first.ValidateUserRange(base, 1, false));
         CHECK(first.CopyFromUser(output, base + 4096, 32) && all(output, 32, 0x42));
