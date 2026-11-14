@@ -46,7 +46,7 @@ component = {
     'wait': ('native_wait_record', 'native_wait_gtos.cc', 'wait.cpp', 'native_perfetto_wait_kernel.cpp', 'PerfettoWaitUnusedBaseline', 3),
     'exit': ('native_exit_record', None, 'exit.cpp', 'native_content_exit_kernel.cpp', 'ContentExitUnusedBaseline', 3),
     'partition': ('native_memory_record', None, 'partition_pages.cpp',
-                  'native_partition_pages_kernel.cpp', 'PartitionPagesUnusedBaseline', 2),
+                  'native_partition_pages_kernel.cpp', 'PartitionPagesUnusedBaseline', 3),
     'boringssl': ('native_memory_record', None, 'boringssl.cpp',
                   'native_content_boringssl_kernel.cpp', 'ContentBoringSslUnusedBaseline', 3),
     'base_identity': ('native_memory_record', None, 'base_identity.cpp',

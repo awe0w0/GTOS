@@ -12,6 +12,8 @@
 
 #include "partition_alloc/internal/page_allocator_internal.h"
 #include "partition_alloc/page_allocator.h"
+#include "partition_alloc/partition_alloc_base/logging.h"
+#include "partition_alloc/partition_alloc_base/strings/cstring_builder.h"
 #include "partition_alloc/partition_alloc_check.h"
 #include "partition_alloc/partition_lock.h"
 
@@ -31,11 +33,22 @@ struct Reservation {
   unsigned handle;
 };
 
-// The kernel owns the actual reservations and limits them to 32 per process.
-// Keep the address-to-handle index allocation-free and serialize lookups with
-// release, so an operation cannot act on a handle after its entry is reused.
+// The kernel enforces the per-process limit. Leave room for the Content
+// profile's 128 reservations in the allocation-free address-to-handle index.
+// Serialize lookups with release so a recycled entry cannot be used by mistake.
 Lock g_vm_lock;
-Reservation g_reservations[32] PA_GUARDED_BY(g_vm_lock);
+Reservation g_reservations[128] PA_GUARDED_BY(g_vm_lock);
+
+void ReportAllocationFailure(const char* phase, int status, size_t length,
+                             PageTag tag) {
+  if (tag != PageTag::kV8)
+    return;
+  // Page allocation failure can make allocating a log string impossible.
+  base::strings::CStringBuilder message;
+  message << "GTOS V8 page allocation " << phase << " failed: status="
+          << status << " bytes=" << length;
+  PA_RAW_LOG(ERROR, message.c_str());
+}
 
 template <typename Request>
 int VmCall(unsigned operation, const Request& request) {
@@ -94,11 +107,13 @@ std::atomic<int32_t> s_allocPageErrorCode{0};
 uintptr_t SystemAllocPagesInternal(uintptr_t hint,
                                    size_t length,
                                    PageAccessibilityConfiguration access,
-                                   PageTag,
+                                   PageTag tag,
                                    int file_descriptor) {
   const int protection = VmProtection(access);
   if (protection < 0 || file_descriptor != -1) {
-    s_allocPageErrorCode = protection < 0 ? -protection : ENOTSUP;
+    const int status = protection < 0 ? protection : -ENOTSUP;
+    s_allocPageErrorCode = -status;
+    ReportAllocationFailure("protection", status, length, tag);
     return 0;
   }
 
@@ -115,6 +130,8 @@ uintptr_t SystemAllocPagesInternal(uintptr_t hint,
     int status = VmCall(GTOS_SYS_VM_RESERVE, request);
     if (status != 0) {
       s_allocPageErrorCode = -status;
+      if (!hint)
+        ReportAllocationFailure("reserve", status, length, tag);
       return 0;
     }
     PA_CHECK(result.version == GTOS_VM_ABI_VERSION && result.handle &&
@@ -130,6 +147,7 @@ uintptr_t SystemAllocPagesInternal(uintptr_t hint,
       if (status != 0) {
         PA_CHECK(VmRelease(result.handle) == 0);
         s_allocPageErrorCode = -status;
+        ReportAllocationFailure("commit", status, length, tag);
         return 0;
       }
     }
@@ -137,6 +155,7 @@ uintptr_t SystemAllocPagesInternal(uintptr_t hint,
     return result.base;
   }
   s_allocPageErrorCode = -GTOS_VM_ERR_LIMIT;
+  ReportAllocationFailure("index", GTOS_VM_ERR_LIMIT, length, tag);
   return 0;
 }
 

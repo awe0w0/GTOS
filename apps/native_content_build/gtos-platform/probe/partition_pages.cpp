@@ -1,6 +1,7 @@
 #include "memory_record.h"
 
 #include <process/abi.h>
+#include <process/info_abi.h>
 #include <process/vm_abi.h>
 
 #include "partition_alloc/internal/page_allocator_internal.h"
@@ -42,6 +43,55 @@ void Write(const char* text, size_t size) {
   unsigned call = GTOS_SYS_WRITE;
   asm volatile("int $0x80" : "+a"(call) : "b"(text), "c"(size) : "memory", "cc");
 }
+
+bool ReservationCapacity(unsigned expected) {
+  GtosProcessInfoResult info{};
+  const GtosProcessInfoRequest request{GTOS_PROCESS_INFO_ABI_VERSION, 0,
+                                       reinterpret_cast<unsigned>(&info), sizeof(info)};
+  unsigned call = GTOS_SYS_PROCESS_INFO;
+  asm volatile("int $0x80" : "+a"(call) : "b"(&request), "c"(sizeof(request)) : "memory", "cc");
+  if (!Check(call == 0 && info.version == GTOS_PROCESS_INFO_ABI_VERSION &&
+             info.maximum_regions == expected))
+    return false;
+  constexpr Access read_write(Access::kReadWrite);
+  uintptr_t reservations[128]{};
+  unsigned used = 0;
+  bool zeroed = true;
+  for (; used < expected; ++used) {
+    const uintptr_t address = pa::AllocPages(kPage, kPage, read_write, kTag);
+    if (!address)
+      break;
+    reservations[used] = address;
+    zeroed &= Zero(address);
+    *reinterpret_cast<volatile unsigned char*>(address) = static_cast<unsigned char>(used + 1);
+  }
+  native_memory_record.base = used;
+  if (!Check(used == expected)) {
+    while (used)
+      pa::FreePages(reservations[--used], kPage);
+    return false;
+  }
+  Check(zeroed);
+  bool distinct = true;
+  for (unsigned i = 0; i < used; ++i)
+    distinct &= *reinterpret_cast<const volatile unsigned char*>(reservations[i]) == i + 1;
+  Check(distinct);
+  const uintptr_t excess = pa::AllocPages(kPage, kPage, read_write, kTag);
+  Check(excess == 0 && pa::GetAllocPageErrorCode() == -GTOS_VM_ERR_LIMIT);
+  if (excess)
+    pa::FreePages(excess, kPage);
+  Check(pa::GetTotalMappedSize() == used * kPage);
+  pa::FreePages(reservations[0], kPage);
+  constexpr size_t chunk_size = 64 * kPage;
+  const uintptr_t chunk = pa::AllocPages(chunk_size, chunk_size, read_write, kTag);
+  if (Check(chunk && (chunk & (chunk_size - 1)) == 0)) {
+    Check(Zero(chunk) && Zero(chunk + chunk_size - kPage));
+    pa::FreePages(chunk, chunk_size);
+  }
+  for (unsigned i = 1; i < used; ++i)
+    pa::FreePages(reservations[i], kPage);
+  return Check(pa::GetTotalMappedSize() == 0);
+}
 }  // namespace
 
 extern "C" int NativeEntry() {
@@ -63,6 +113,12 @@ extern "C" int NativeEntry() {
     native_memory_record.stage = 1;
     *reinterpret_cast<volatile unsigned char*>(address) = 1;
     return 3;
+  }
+  if constexpr (GTOS_PARTITION_GUEST_MODE == 2) {
+    if (!ReservationCapacity(128))
+      return 1;
+    native_memory_record.stage = 2;
+    return native_memory_record.failures ? 1 : 0;
   }
 
   Check(pa::GetTotalMappedSize() == 0);
@@ -120,6 +176,8 @@ extern "C" int NativeEntry() {
   }
   Check(pa::GetTotalMappedSize() == 0);
   Check(Ticks::Now() >= before);
+  if (!ReservationCapacity(32))
+    return 9;
 #if defined(GTOS_PARTITION_GUEST_WRONG_EXPECTATION)
   Check(pa::GetTotalMappedSize() == kPage);
 #endif
