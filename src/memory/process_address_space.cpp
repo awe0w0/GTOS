@@ -372,10 +372,13 @@ bool ProcessAddressSpace::Layout(bool complete) const {
             }
         } else {
             if (!page.present) return Fail(ProcessMemoryBadMapping);
-            for (uint32_t ri = 0; ri < MaximumRegions; ++ri)
-                if (regions[ri].handle && page.address >= regions[ri].base
-                    && page.address < regions[ri].base + regions[ri].bytes)
-                    return Fail(ProcessMemoryBadMapping);
+            // Every validated reservation lies in the dynamic address range.
+            if (page.address >= DynamicBase && page.address < dynamicLimit) {
+                for (uint32_t ri = 0; ri < MaximumRegions; ++ri)
+                    if (regions[ri].handle && page.address >= regions[ri].base
+                        && page.address < regions[ri].base + regions[ri].bytes)
+                        return Fail(ProcessMemoryBadMapping);
+            }
         }
         if (!page.present && page.writable) return Fail(ProcessMemoryBadMapping);
         const uint32_t table = tables[page.address >> 22];

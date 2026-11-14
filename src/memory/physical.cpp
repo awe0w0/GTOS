@@ -212,6 +212,24 @@ bool PhysicalMemoryManager::allocateContiguous(uint32_t pages, uint32_t& address
         ++failures;
         return false;
     }
+    if (pages == 1 && alignmentPages == 1) {
+        const uint32_t wholeWords = limit / 32;
+        const uint32_t tail = limit % 32;
+        const uint32_t words = wholeWords + (tail != 0);
+        for (uint32_t word = 0; word < words; ++word) {
+            uint32_t available = eligible[word] & ~allocated[word];
+            if (word == wholeWords) available &= (1U << tail) - 1;
+            if (!available) continue;
+            const uint32_t bit = __builtin_ctz(available);
+            allocated[word] |= 1U << bit;
+            --freeCount;
+            ++allocatedCount;
+            address = (word * 32 + bit) << 12;
+            return true;
+        }
+        ++failures;
+        return false;
+    }
     uint32_t candidate = 0;
     while (candidate <= limit - pages) {
         candidate = (candidate + alignmentPages - 1) & ~(alignmentPages - 1);
