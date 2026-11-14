@@ -9,7 +9,7 @@ static const unsigned ExpectedChecks = 33;
 static const char* const CheckDescription = "native CPU topology, ANGLE strings and Dawn sleep";
 #elif defined(GTOS_CONTENT_V8_PLATFORM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT V8 PLATFORM"
-static const unsigned ExpectedChecks = 42;
+static const unsigned ExpectedChecks = 43;
 static const char* const CheckDescription = "V8 native pages, TLS, clocks and concurrent once";
 #elif defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT FFMPEG WEBM"
@@ -131,8 +131,11 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
         frames.getStatistics().freeFrames == baseline, "failed admissions leave no allocated frames");
     const NativeElfLaunchProfile profile{9000, 32, 12288};
     Need(runtime.CreateContentElf(image, bytes, id, profile, environment), "Content ELF admission");
+#elif defined(GTOS_CONTENT_V8_PLATFORM_PROBE)
+    const NativeEnvironment environment;
+    const NativeElfLaunchProfile profile{1024, 32, 1024};
+    Need(runtime.CreateContentElf(image, bytes, id, profile, environment), "Content ELF admission");
 #elif defined(GTOS_CONTENT_VP9_PROBE) || defined(GTOS_CONTENT_FFMPEG_WEBM_PROBE) || \
-    defined(GTOS_CONTENT_V8_PLATFORM_PROBE) || \
     defined(GTOS_CONTENT_PLATFORM_LIBRARIES_PROBE) || \
     defined(GTOS_CONTENT_WEBRTC_THREAD_PROBE) || \
     defined(GTOS_CONTENT_SKIA_SEMAPHORE_PROBE) || defined(GTOS_CONTENT_EXPAT_PROBE) || \

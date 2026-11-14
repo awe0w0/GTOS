@@ -37,6 +37,7 @@ using Permission = v8::PageAllocator::Permission;
 void TestPages(const GtosProcessInfoResult& process) {
   PageAllocator allocator;
   const size_t page = process.page_bytes;
+  Check(process.maximum_regions == 128);
   Check(OS::GetCurrentProcessId() == static_cast<int>(process.process_id));
   Check(v8::base::Stack::GetCommittedStackLimit() == process.stack_begin);
   Check(allocator.AllocatePageSize() == page && allocator.CommitPageSize() == page);

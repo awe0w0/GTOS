@@ -49,7 +49,7 @@
  int NativeCall(unsigned call, const void* request, unsigned bytes) {
    asm volatile("int $0x80"
                 : "+a"(call)
-@@ -57,24 +49,9 @@ int NativeCall(unsigned call, const void* request, unsigned bytes) {
+@@ -57,24 +49,8 @@ int NativeCall(unsigned call, const void* request, unsigned bytes) {
  }
  
  GtosProcessInfoResult CurrentProcessInfo() {
@@ -72,12 +72,11 @@
 -  }
 -  if (owner_process != 0 && owner_process != result.process_id) {
 +  const auto result = gtos::native::CurrentProcessInfo();
-+  if (result.maximum_regions > kMaximumRegions ||
-+      (owner_process != 0 && owner_process != result.process_id)) {
++  if (owner_process != 0 && owner_process != result.process_id) {
      ContractFailure();
    }
    owner_process = result.process_id;
-@@ -144,20 +121,22 @@ bool ReleaseRegion(Region* region) {
+@@ -144,30 +120,35 @@ bool ReleaseRegion(Region* region) {
  }  // namespace
  
  size_t GtosLowLevelPageSize() {
@@ -102,7 +101,12 @@
      return nullptr;
    }
    Region* slot = nullptr;
-@@ -167,7 +146,10 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+-  for (unsigned i = 0; i < info.maximum_regions; ++i) {
++  for (Region& region : regions) {
+-    if (regions[i].handle == 0) {
+-      slot = &regions[i];
++    if (region.handle == 0) {
++      slot = &region;
        break;
      }
    }
@@ -114,7 +118,7 @@
  
    GtosVmReserveResult result = {};
    GtosVmReserveRequest reserve = {
-@@ -176,7 +158,10 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+@@ -176,7 +154,10 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
        static_cast<unsigned>(reinterpret_cast<uintptr_t>(&result))};
    int status = NativeCall(GTOS_SYS_VM_RESERVE, &reserve, sizeof(reserve));
    if (status > 0) ContractFailure();
@@ -126,7 +130,7 @@
    const Region candidate = {result.handle, result.base, result.length};
    if (result.version != GTOS_VM_ABI_VERSION ||
        result.page_size != GTOS_VM_PAGE_BYTES || result.length != size ||
-@@ -191,12 +176,20 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+@@ -191,12 +175,20 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
    }
    *slot = candidate;
  
@@ -152,7 +156,7 @@
      if (!ReleaseRegion(slot)) ContractFailure();
      Validate(info);
      return nullptr;
-@@ -206,7 +199,7 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
+@@ -206,7 +198,7 @@ void* GtosLowLevelMapPages(size_t size, size_t alignment) {
  }
  
  bool GtosLowLevelUnmapPages(void* address, size_t size) {
@@ -161,3 +165,10 @@
    const GtosProcessInfoResult info = CurrentProcessInfo();
    Validate(info);
    const uintptr_t base = reinterpret_cast<uintptr_t>(address);
+@@ -225,5 +217,5 @@ bool GtosLowLevelUnmapPages(void* address, size_t size) {
+     unsigned index = kMaximumRegions;
+-    for (unsigned i = 0; i < info.maximum_regions; ++i) {
++    for (unsigned i = 0; i < kMaximumRegions; ++i) {
+       if (regions[i].handle != 0 && regions[i].base == cursor) {
+         index = i;
+         break;

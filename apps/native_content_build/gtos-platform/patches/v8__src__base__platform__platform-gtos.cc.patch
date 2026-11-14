@@ -104,14 +104,24 @@
    // Reproducible optional placement hints, not entropy or qualified ASLR.
    mmap_seed ^= mmap_seed << 13;
    mmap_seed ^= mmap_seed >> 17;
-@@ -257,6 +266,7 @@ void* OS::Allocate(void* hint, size_t size, size_t alignment,
+@@ -255,13 +264,13 @@ void* OS::Allocate(void* hint, size_t size, size_t alignment,
+       alignment < GTOS_VM_PAGE_BYTES || (alignment & (alignment - 1)) != 0) {
+     return nullptr;
    }
    const GtosProcessInfoResult info = gtos::CurrentProcessInfo();
-   if (info.maximum_regions > 32) gtos::UnsupportedService();
+-  if (info.maximum_regions > 32) gtos::UnsupportedService();
 +  StateGuard guard(region_lock);
    Region* slot = nullptr;
-   for (uint32_t i = 0; i < info.maximum_regions; ++i) {
-     if (regions[i].handle == 0) {
+-  for (uint32_t i = 0; i < info.maximum_regions; ++i) {
+-    if (regions[i].handle == 0) {
+-      slot = &regions[i];
++  for (Region& region : regions) {
++    if (region.handle == 0) {
++      slot = &region;
+       break;
+     }
+   }
+   if (slot == nullptr) return nullptr;
 @@ -287,7 +297,7 @@ void* OS::Allocate(void* hint, size_t size, size_t alignment,
    *slot = {result.handle, result.base, result.length};
    void* address = reinterpret_cast<void*>(result.base);
