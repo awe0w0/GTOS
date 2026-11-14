@@ -150,6 +150,9 @@ bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const Pagin
 }
 bool KernelPaging::query(uint32_t address, PagingMapping& result) const {
     InterruptGuard guard;
+    return queryLocked(address, result);
+}
+bool KernelPaging::queryLocked(uint32_t address, PagingMapping& result) const {
     result.physicalAddress = 0;
     result.writable = result.userAccessible = result.cacheDisabled = result.managed = false;
     const uint32_t di = address >> 22;

@@ -63,7 +63,7 @@ namespace gtos { namespace memory {
         bool Context(bool allowOwnDirectory) const;
         bool KernelAlias(uint32_t address, uint32_t length, bool writable) const;
         bool LayoutRoot() const;
-        bool LayoutDirectories(bool complete) const;
+        bool LayoutDirectories(uint32_t* nonzeroLeaves) const;
         bool Layout(bool complete) const;
         bool Range(uint32_t address, uint32_t length, bool writable) const;
         bool Buffer(uint32_t address, uint32_t length, bool writable) const;

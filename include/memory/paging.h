@@ -30,6 +30,7 @@ namespace gtos { namespace memory {
     // Interrupt masking is NOT an SMP lock. Share with APs only after sealing;
     // the allocator remains BSP-only and mapped frames must stay alive.
     class KernelPaging {
+        friend class ProcessAddressSpace;
         PhysicalMemoryManager* frames;
         uint32_t directory;
         uint32_t tables[1024];
@@ -42,6 +43,7 @@ namespace gtos { namespace memory {
         bool bootMappings(const MultibootInfo* info);
         bool ownsPagingFrame(uint32_t address) const;
         bool mappedBytes(uint32_t address, uint32_t length, bool writable) const;
+        bool queryLocked(uint32_t address, PagingMapping& result) const;
         void invalidate(uint32_t virtualAddress);
         KernelPaging(const KernelPaging&);
         KernelPaging& operator=(const KernelPaging&);

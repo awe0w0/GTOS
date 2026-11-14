@@ -27,11 +27,13 @@ namespace gtos { namespace memory {
         PhysicalMemoryNoUsableRam,
         PhysicalMemoryAlreadyInUse
     };
+    class ProcessAddressSpace;
     class PhysicalMemoryManager {
     public:
         static const uint32_t PageSize = 4096;
         static const uint32_t MaximumFrames = 1048576;
     private:
+        friend class ProcessAddressSpace;
         // Separate eligibility and ownership prevent freeing firmware/kernel pages.
         LowBootstrapPool bootstrap;
         uint32_t eligible[MaximumFrames / 32];
@@ -52,6 +54,8 @@ namespace gtos { namespace memory {
         bool reserveString(uint32_t address);
         bool bit(const uint32_t* bitmap, uint32_t frame) const;
         void set(uint32_t* bitmap, uint32_t frame, bool value);
+        // The address-space walker already holds a BSP interrupt guard.
+        bool isAllocatedLocked(uint32_t address) const;
         PhysicalMemoryManager(const PhysicalMemoryManager&);
         PhysicalMemoryManager& operator=(const PhysicalMemoryManager&);
     public:

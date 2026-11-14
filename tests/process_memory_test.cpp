@@ -835,6 +835,19 @@ namespace {
         CHECK(second.CopyToUser(UserBase, input, 32)); // Ordinary scratch index can be reused.
         CHECK(first.CopyFromUser(output, UserBase + 4096 - 32, 64) && all(output, 64, 0x42));
 
+        uint32_t& stray = table(first, UserBase)[2];
+        const uint32_t firstLeaf = entry(first, UserBase);
+        const uint32_t count = used();
+        stray = 0x20; // A nonpresent nonzero entry is still unowned.
+        CHECK(!first.SetDataReadOnly(UserBase, 4096));
+        CHECK(entry(first, UserBase) == firstLeaf && used() == count);
+        stray = firstLeaf;
+        entry(first, UserBase) = 0; // An extra leaf cannot replace an absent owned one.
+        CHECK(!first.SetDataReadOnly(UserBase, 4096));
+        CHECK(entry(first, UserBase) == 0 && used() == count);
+        stray = 0;
+        entry(first, UserBase) = firstLeaf;
+
         uint32_t& leaf = entry(first, UserBase + 4096);
         const uint32_t savedLeaf = leaf;
         leaf = (leaf & 4095) | physical(second, UserBase);
