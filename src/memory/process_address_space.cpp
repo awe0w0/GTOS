@@ -22,7 +22,8 @@ namespace {
         return slots;
     }
     uint32_t LayoutHash(uint32_t address, uint32_t slots) {
-        return ((address >> 12) * 2654435761U) & (slots - 1);
+        const uint32_t hash = (address >> 12) * 2654435761U;
+        return (hash ^ (hash >> 16)) & (slots - 1);
     }
 #ifdef GTOS_PROCESS_MEMORY_TEST
     // The host harness substitutes hardware registers only, never mapping policy.
@@ -80,7 +81,7 @@ namespace {
 ProcessAddressSpace::ProcessAddressSpace() : kernel(0), frames(0), directory(0),
     kernelDirectory(0), pageCount(0), pages(inlinePages), pageLimit(MaximumPages),
     metadataBase(0), metadataPages(0), dynamicLimit(DynamicLimit), pendingPageCount(0), pendingTableCount(0),
-    prepared(false), sealed(false), contentCopyLayoutValid(false), error(ProcessMemoryOk) {
+    prepared(false), sealed(false), contentCopyLayoutValid(false), layoutSlots(0), error(ProcessMemoryOk) {
     for (uint32_t i = 0; i < 1024; ++i) tables[i] = 0;
     for (uint32_t i = 0; i < MaximumPages; ++i) {
         pages[i].address = pages[i].frame = pages[i].region = 0;
@@ -225,13 +226,14 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
         return false;
     }
     for (uint32_t i = 0; i < 1024; ++i) ((uint32_t*)directory)[i] = source[i];
-    dynamicLimit = dynamicEnd; prepared = true; contentCopyLayoutValid = false;
+    dynamicLimit = dynamicEnd; prepared = true; contentCopyLayoutValid = false; layoutSlots = 0;
     error = ProcessMemoryOk;
     return true;
 }
 int ProcessAddressSpace::IndexedLayoutPage(uint32_t key, bool byFrame) const {
     const uint32_t* entries = LayoutIndex(byFrame);
-    const uint32_t slots = IndexSlots(pageLimit);
+    const uint32_t slots = layoutSlots;
+    if (!slots) return -1;
     uint32_t slot = LayoutHash(key, slots);
     for (uint32_t count = 0; count < slots; ++count) {
         const uint32_t record = entries[slot];
@@ -300,6 +302,7 @@ bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
 }
 bool ProcessAddressSpace::Layout(bool complete) const {
     contentCopyLayoutValid = false;
+    layoutSlots = 0;
     if (!prepared || !kernel || !frames || pageCount > pageLimit
         || (dynamicLimit & 4095) || dynamicLimit <= DynamicBase || dynamicLimit > DynamicLimit
         || pendingPageCount || pendingTableCount)
@@ -324,7 +327,9 @@ bool ProcessAddressSpace::Layout(bool complete) const {
     }
     if (!LayoutRoot()) return false;
     if (!MetadataLayout()) return Fail(ProcessMemoryBadAlias);
-    const uint32_t slots = IndexSlots(pageLimit);
+    // The two arrays remain sized and placed by capacity. Each check only
+    // initializes enough slots for its current ownership records.
+    const uint32_t slots = IndexSlots(pageCount);
     uint32_t* layoutAddresses = LayoutIndex(false);
     uint32_t* layoutFrames = LayoutIndex(true);
     for (uint32_t i = 0; i < slots; ++i) layoutAddresses[i] = layoutFrames[i] = 0;
@@ -392,6 +397,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
     for (uint32_t i = 0; i < MaximumRegions; ++i)
         if (regions[i].sharedFrames && sharedCounts[i] != regions[i].bytes / 4096)
             return Fail(ProcessMemoryBadMapping);
+    layoutSlots = slots;
     contentCopyLayoutValid = pageLimit > MaximumCapacityPages;
     return true;
 }
@@ -977,7 +983,7 @@ bool ProcessAddressSpace::Destroy() {
     }
     for (uint32_t i = 0; i < MaximumRegions; ++i)
         regions[i] = {};
-    directory = kernelDirectory = pageCount = 0; dynamicLimit = DynamicLimit;
+    directory = kernelDirectory = pageCount = layoutSlots = 0; dynamicLimit = DynamicLimit;
     kernel = 0; frames = 0; prepared = sealed = false;
     error = ProcessMemoryOk;
     return true;

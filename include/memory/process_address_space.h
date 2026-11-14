@@ -58,6 +58,7 @@ namespace gtos { namespace memory {
         bool prepared, sealed;
         // Only large spaces own persistent indexes in supervisor memory.
         mutable bool contentCopyLayoutValid;
+        mutable uint32_t layoutSlots;
         mutable ProcessMemoryError error;
         bool Fail(ProcessMemoryError value) const;
         bool Context(bool allowOwnDirectory) const;

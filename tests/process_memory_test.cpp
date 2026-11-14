@@ -880,12 +880,36 @@ namespace {
         CHECK(second.Destroy());
         CHECK(used() == baseline);
     }
+    void contentIndexSizing() {
+        // The capacity places both index arrays. The number of live pages can
+        // be much smaller and must remain indexed across removal and reseal.
+        CHECK(first.PrepareContent(kernel, frames, 16385, ProcessAddressSpace::DynamicLimit));
+        const uint32_t length = 96 * 4096;
+        CHECK(first.MapNewRange(UserBase, length, true));
+        CHECK(first.UnmapPage(UserBase + 4096));
+        CHECK(first.MapNewPage(UserBase + 4096, true));
+        CHECK(first.Seal());
+        fill(input, 128, 0x63);
+        CHECK(first.CopyToUser(UserBase + length - 4096 - 64, input, 128));
+        CHECK(first.CopyFromUser(output, UserBase + length - 4096 - 64, 128));
+        CHECK(all(output, 128, 0x63));
+        uint32_t base, handle;
+        CHECK(first.Reserve(2 * 4096, 4096, 0, base, handle));
+        CHECK(first.SetPermissions(handle, 0, 2 * 4096, ProcessMemoryReadWrite));
+        CHECK(first.CopyToUser(base + 4096 - 64, input, 128));
+        CHECK(first.Decommit(handle, 0, 4096));
+        CHECK(!first.ValidateUserRange(base, 1, false));
+        CHECK(first.CopyFromUser(output, base + 4096, 64) && all(output, 64, 0x63));
+        CHECK(first.Release(handle));
+        CHECK(first.Destroy());
+        CHECK(used() == baseline);
+    }
     void dynamicVirtualMemory() {
         dynamicRegionsAndPermissions(); dynamicQuotaAndOwnership(); dynamicInvalidationsAndContext();
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
         protectRangeSeam();
         indexedOwnership();
-        contentCopies();
+        contentCopies(); contentIndexSizing();
     }
 }
 extern "C" int processMemoryTests() {
