@@ -836,14 +836,10 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosProcessInfoResult), true)) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
         }
-        ProcessMemoryStatistics memory;
-        if (!slot->space.QueryStatistics(memory)) {
-            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
-        }
         const GtosProcessInfoResult result = {GTOS_PROCESS_INFO_ABI_VERSION,
             slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
-            GTOS_VM_PAGE_BYTES, memory.capacityPages,
+            GTOS_VM_PAGE_BYTES, slot->space.CapacityPages(),
             ProcessAddressSpace::MaximumRegions, threadsEnabled ? slotCount : 1, 1};
         // The request was consumed before any write. IF is clear on BSP, so
         // full output validation also covers aliases and mixed-page failures.

@@ -146,6 +146,9 @@ namespace gtos { namespace memory {
         // Read-only query also permits kernel CR3. No output on failure.
         bool QueryRegion(uint32_t handle, ProcessMemoryRegionInfo& info) const;
         bool QueryStatistics(ProcessMemoryStatistics& info) const;
+        // The capacity is assigned once at admission. Use a checked copy
+        // when reporting it to the process.
+        uint32_t CapacityPages() const { return pageLimit; }
         // Full-range validation precedes all copying. Kernel buffers must be
         // mapped trusted supervisor buffers, disjoint from all owned
         // frames and all paging structures. A valid zero-length user address
