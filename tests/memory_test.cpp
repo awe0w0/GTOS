@@ -209,6 +209,22 @@ static void physicalTests() {
     CHECK(frames.getStatistics().freeFrames == 0);
     CHECK(frames.freeContiguous(0x200000, 512));
 
+    // Pass two bitmap words, then constrain one request to the allocated
+    // portion of the current word. The next request can still use its tail.
+    for (uint32_t i = 0; i < 65; ++i)
+        CHECK(frames.allocate(address) && address == 0x200000 + i * 4096);
+    CHECK(!frames.allocateContiguous(1, address, 1, 0x240FFF) && address == 0);
+    CHECK(frames.allocate(address) && address == 0x241000);
+    CHECK(frames.allocateContiguous(2, address, 4) && address == 0x244000);
+    CHECK(frames.freeContiguous(0x21F000, 2));
+    CHECK(frames.allocateContiguous(2, address) && address == 0x21F000);
+    CHECK(frames.free(0x200000));
+    CHECK(frames.reserveRegion(0x200000, 1));
+    CHECK(frames.allocate(address) && address == 0x242000);
+    CHECK(frames.freeContiguous(0x201000, 66));
+    CHECK(frames.freeContiguous(0x244000, 2));
+    CHECK(frames.getStatistics().freeFrames == 511);
+
     // Partial available pages are excluded; partial reserved pages are excluded too.
     length = appendMap(0, 0x200001, 0x4FFF, 1);
     length = appendMap(length, 0x202FFF, 2, 2);

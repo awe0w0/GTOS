@@ -26,7 +26,7 @@ namespace {
     }
 }
 PhysicalMemoryManager::PhysicalMemoryManager()
-    : frameCount(0), freeCount(0), allocatedCount(0), failures(0), ready(false),
+    : firstFreeWord(0), frameCount(0), freeCount(0), allocatedCount(0), failures(0), ready(false),
       mapUsed(false), error(PhysicalMemoryNoMap) {}
 void PhysicalMemoryManager::clear() {
     bootstrap.clear();
@@ -34,7 +34,7 @@ void PhysicalMemoryManager::clear() {
         eligible[i] = 0;
         allocated[i] = 0;
     }
-    frameCount = freeCount = allocatedCount = failures = 0;
+    firstFreeWord = frameCount = freeCount = allocatedCount = failures = 0;
     ready = mapUsed = false;
 }
 bool PhysicalMemoryManager::fail(PhysicalMemoryError reason) {
@@ -216,10 +216,15 @@ bool PhysicalMemoryManager::allocateContiguous(uint32_t pages, uint32_t& address
         const uint32_t wholeWords = limit / 32;
         const uint32_t tail = limit % 32;
         const uint32_t words = wholeWords + (tail != 0);
-        for (uint32_t word = 0; word < words; ++word) {
+        for (uint32_t word = firstFreeWord; word < words; ++word) {
             uint32_t available = eligible[word] & ~allocated[word];
+            if (!available) {
+                firstFreeWord = word + 1;
+                continue;
+            }
             if (word == wholeWords) available &= (1U << tail) - 1;
-            if (!available) continue;
+            // Frames above this request's ceiling may still be free.
+            if (!available) break;
             const uint32_t bit = __builtin_ctz(available);
             allocated[word] |= 1U << bit;
             --freeCount;
@@ -230,7 +235,7 @@ bool PhysicalMemoryManager::allocateContiguous(uint32_t pages, uint32_t& address
         ++failures;
         return false;
     }
-    uint32_t candidate = 0;
+    uint32_t candidate = firstFreeWord * 32;
     while (candidate <= limit - pages) {
         candidate = (candidate + alignmentPages - 1) & ~(alignmentPages - 1);
         if (candidate > limit - pages) break;
@@ -257,6 +262,7 @@ bool PhysicalMemoryManager::freeContiguous(uint32_t address, uint32_t pages) {
     for (uint32_t i = 0; i < pages; ++i)
         if (!bit(eligible, start + i) || !bit(allocated, start + i)) return false;
     for (uint32_t i = 0; i < pages; ++i) set(allocated, start + i, false);
+    if (start / 32 < firstFreeWord) firstFreeWord = start / 32;
     freeCount += pages;
     allocatedCount -= pages;
     return true;

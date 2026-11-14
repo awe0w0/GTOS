@@ -38,6 +38,8 @@ namespace gtos { namespace memory {
         LowBootstrapPool bootstrap;
         uint32_t eligible[MaximumFrames / 32];
         uint32_t allocated[MaximumFrames / 32];
+        // Words below this bound contain no free eligible frames.
+        uint32_t firstFreeWord;
         uint32_t frameCount;
         uint32_t freeCount;
         uint32_t allocatedCount;
