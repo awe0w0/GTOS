@@ -888,16 +888,13 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (request.flags || request.result_bytes != GTOS_PROCESS_INFO_RESULT_BYTES) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;
         }
-        if (!slot->space.ValidateUserRange(request.result_va, sizeof(GtosProcessInfoResult), true)) {
-            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
-        }
         const GtosProcessInfoResult result = {GTOS_PROCESS_INFO_ABI_VERSION,
             slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
             GTOS_VM_PAGE_BYTES, slot->space.CapacityPages(),
             slot->space.CapacityRegions(), threadsEnabled ? slotCount : 1, 1};
-        // The request was consumed before any write. IF is clear on BSP, so
-        // full output validation also covers aliases and mixed-page failures.
+        // The request was consumed before any write. CopyToUser validates the
+        // entire output before writing, including aliases and mixed-page ranges.
         cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
             ? 0 : (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS;
         break;
