@@ -148,9 +148,28 @@ python arch/riscv32/esp32p4/tests/verify_hardware.py --port COM7 \
 实板需要装上 J4 旋钮。旋钮按压仍按应用逻辑保存当前设置。已烧录 C6 后，可加上 `--radio`，
 切到无线页验证 P4 到 C6 的 SDIO 响应、扫描结束和 BLE 广播状态。实际无线信号和连接由独立设备测量。
 
+裸板只从 J1 供电时，可用固定在 TP2 的串口转接器做插向和设置留存检查。拔插 J1 或按 SW5 时，
+保持 TP2 的信号线和地线连接。插向检查从同一电源确认两种插向的 CC 档位和 BQ25601 Power Good。
+电源声明档位已知时，可加 `--expect-current` 指定期望档位。固件用 500、1500、3000 mA 表示默认、中档和高档。
+设置检查会写入 NVS。先用 J4 旋钮保存另一页，按 SW5 复位后核对启动日志和页码，最后存回验收前的页码及亮度。
+
+~~~sh
+python arch/riscv32/esp32p4/tests/verify_hardware.py --port COM7 \
+    --elf out/a3-diagnostic/gtos-a3.elf --usb-c --settings --output out/a3-bench-usb-settings
+~~~
+
 每次指定新输出目录。`console.log` 保留串口字节，`report.json` 记录读取来源、采样和检查结果。
 ESP-EMU 启动实板诊断镜像后，可用 `--tcp 5567` 重跑并标记虚拟来源。基础检查覆盖
 驱动状态和关闭屏幕及充电的固件报告。显示出图、背光电流和真实电源切换仍需外部测量。
+
+以下命令使用虚拟 I²C 和 GPIO 信号重放上述流程。脚本还验证同一插向复位及保存后跳过复位均无法通过。
+
+~~~sh
+p=arch/riscv32/esp32p4
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_bench_workflow.py" --emulator /path/to/esp-emu \
+    --build out/a3-diagnostic --parts /path/to/esp-emu-1.0.0-examples --output out/a3-bench-replay
+~~~
 
 ### C6 首次烧录
 

@@ -23,6 +23,16 @@ def available_port():
         return listener.getsockname()[1]
 
 
+def control_command(port, command):
+    with socket.create_connection(("127.0.0.1", port), 3) as control:
+        control.sendall((command + "\n").encode())
+        with control.makefile("rb") as response:
+            result = response.readline()
+    if not result.startswith(b"ok"):
+        raise RuntimeError(f"{command}: {result!r}")
+    return result
+
+
 class Guest:
     def __init__(self, args, flash, board, log, save=False, extra=(), elf_name="gtos-a3.elf"):
         self.log = log
@@ -119,13 +129,7 @@ class Guest:
         return offset
 
     def part(self, command):
-        with socket.create_connection(("127.0.0.1", self.port), 3) as control:
-            control.sendall((command + "\n").encode())
-            with control.makefile("rb") as response:
-                result = response.readline()
-        if not result.startswith(b"ok"):
-            raise RuntimeError(f"{command}: {result!r}")
-        return result
+        return control_command(self.port, command)
 
     def click(self, name):
         offset = self.offset()

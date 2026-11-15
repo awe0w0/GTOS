@@ -2,6 +2,7 @@
 """Capture the A3 diagnostic firmware's UART/USB status and exercise the bench controls."""
 
 import argparse
+from collections import deque
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -11,6 +12,10 @@ import time
 
 
 PREFIX = b"GTOS_A3_PROBE "
+BOOT = b"GTOS_A3_CORE PASS "
+SAVE = b"GTOS_A3_SETTINGS SAVE "
+LOAD = b"GTOS_A3_SETTINGS LOAD "
+CC_CURRENT_MA = (500, 1500, 3000)
 FIELDS = set("v sim panel charging_profile rev psram flash elf page light awake input keys encoder "
              "imu accel gyro cc sink flipped advertised bq pg charge faults radio sdio scan aps ble client".split())
 
@@ -45,6 +50,11 @@ class Bench:
         self.port = port
         self.trace = trace
         self.pending = bytearray()
+        self.events = deque(maxlen=16)
+        self.event_count = 0
+
+    def event_after(self, count, prefix):
+        return next((line for index, line in self.events if index > count and line.startswith(prefix)), None)
 
     def query(self, deadline):
         next_send = 0.0
@@ -59,22 +69,32 @@ class Bench:
             self.pending.extend(chunk)
             sample = None
             while (end := self.pending.find(b"\n")) != -1:
-                sample = parse_probe(self.pending[:end]) or sample
+                line = bytes(self.pending[:end]).rstrip(b"\r")
                 del self.pending[:end + 1]
+                if line.startswith((BOOT, SAVE, LOAD)):
+                    # A probe preceding an event cannot establish the state after it.
+                    sample = None
+                    self.event_count += 1
+                    self.events.append((self.event_count, line))
+                else:
+                    sample = parse_probe(line) or sample
             if len(self.pending) > 2048:
                 self.pending.clear()
             if sample is not None:
                 return sample
-        raise RuntimeError("No complete A3 probe reply within the deadline")
+        raise TimeoutError("No complete A3 probe reply within the deadline")
 
     def observe(self, prompt, seconds, condition):
         print(prompt, flush=True)
         deadline = time.monotonic() + seconds
-        while time.monotonic() < deadline:
-            sample = self.query(deadline)
-            if condition(sample):
-                return sample
-            time.sleep(0.12)
+        try:
+            while time.monotonic() < deadline:
+                sample = self.query(deadline)
+                if condition(sample):
+                    return sample
+                time.sleep(0.12)
+        except TimeoutError as error:
+            raise RuntimeError(f"Timed out waiting for {prompt}") from error
         raise RuntimeError(f"Timed out waiting for {prompt}")
 
 
@@ -122,6 +142,70 @@ def exercise(bench, seconds, report):
                                       any(abs(rate) >= 15000 for rate in state["gyro"]))
 
 
+def verify_usb_c(bench, seconds, report, expected_current):
+    results = report.setdefault("usb_c", {})
+
+    def input_good(state):
+        return (state["cc"] == state["bq"] == state["charge"] == 0
+                and state["sink"] == state["pg"] == 1 and state["flipped"] in (0, 1)
+                and state["advertised"] in CC_CURRENT_MA)
+
+    prompt = "Keep the USB-C supply connected to J1"
+    if expected_current is not None:
+        prompt += f" at the expected {expected_current} mA CC setting"
+    first = bench.observe(prompt, seconds, lambda state: input_good(state)
+                          and (expected_current is None or state["advertised"] == expected_current))
+    results["first"] = first
+    results["expected_ma"] = first["advertised"]
+    if first["elf"] != report["initial"]["elf"]:
+        raise RuntimeError("The running firmware changed before the USB-C check")
+    mark = bench.event_count
+    second = bench.observe(
+        "Unplug J1, flip its plug and reconnect the same supply. Leave TP2 attached.",
+        seconds, lambda state: input_good(state) and state["flipped"] != first["flipped"]
+        and state["advertised"] == first["advertised"] and bench.event_after(mark, BOOT) is not None,
+    )
+    results["reversed"] = second
+    if second["elf"] != first["elf"]:
+        raise RuntimeError("The running firmware changed after flipping J1")
+
+
+def save_settings(bench, seconds, page, brightness, direction):
+    state = bench.observe(f"Select page {page} with {direction}, then release the button", seconds,
+                          lambda sample: sample["page"] == page and sample["keys"] == 0)
+    if state["light"] != brightness:
+        raise RuntimeError("The brightness changed during the settings test")
+    mark = bench.event_count
+    bench.observe("Press and release the knob to save the page", seconds,
+                  lambda sample: sample["keys"] == 0 and bench.event_after(mark, SAVE) is not None)
+    expected = SAVE + f"result=0 page={page} light={brightness}".encode("ascii")
+    saved = bench.event_after(mark, SAVE)
+    if saved != expected:
+        raise RuntimeError(f"Could not save page {page}: {saved!r}")
+    return saved.decode("ascii")
+
+
+def verify_settings(bench, seconds, report):
+    initial = bench.observe("Release the buttons and knob before checking settings", seconds,
+                            lambda sample: sample["keys"] == 0)
+    if initial["elf"] != report["initial"]["elf"]:
+        raise RuntimeError("The running firmware changed before the settings check")
+    page, brightness = (initial["page"] + 1) % 3, initial["light"]
+    results = report.setdefault("settings", {})
+    results["initial"] = initial
+    results["saved"] = save_settings(bench, seconds, page, brightness, "NEXT")
+    mark = bench.event_count
+    state = bench.observe("Press RESET (SW5), leaving the TP2 adapter connected", seconds,
+                          lambda sample: bench.event_after(mark, BOOT) is not None)
+    loaded = bench.event_after(mark, LOAD)
+    results["after_reset"] = state
+    results["loaded"] = loaded.decode("ascii") if loaded else None
+    if (loaded != LOAD + f"page={page} light={brightness}".encode("ascii")
+            or (state["page"], state["light"], state["elf"]) != (page, brightness, initial["elf"])):
+        raise RuntimeError("The rebooted A3 did not load the saved settings")
+    results["restored"] = save_settings(bench, seconds, initial["page"], brightness, "BACK")
+
+
 def open_port(args):
     try:
         import serial
@@ -153,8 +237,12 @@ def run(args):
         with (args.output / "console.log").open("xb", buffering=0) as trace, open_port(args) as port:
             bench = Bench(port, trace)
             check_base(bench.query(time.monotonic() + args.step_seconds), report)
+            if args.usb_c:
+                verify_usb_c(bench, args.step_seconds, report, args.expect_current)
             if args.exercise:
                 exercise(bench, args.step_seconds, report)
+            if args.settings:
+                verify_settings(bench, args.step_seconds, report)
             if args.radio:
                 report["radio"] = bench.observe("Use the buttons to select RADIO", args.step_seconds,
                     lambda state: state["page"] == 2 and all(state[name] == 1 for name in ("radio", "sdio", "scan", "ble")))
@@ -178,11 +266,16 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--elf", type=Path, help="Verify the reported digest against this firmware ELF")
     parser.add_argument("--exercise", action="store_true", help="Exercise the keys, encoder and motion sensor")
+    parser.add_argument("--usb-c", action="store_true", help="Flip the J1 plug and check both orientations via TP2")
+    parser.add_argument("--expect-current", type=int, choices=CC_CURRENT_MA, help="Expected advertised mA with --usb-c")
+    parser.add_argument("--settings", action="store_true", help="Save a page and verify it after a P4 reset via TP2")
     parser.add_argument("--radio", action="store_true", help="Check the C6 response, scan completion and BLE advertising")
     parser.add_argument("--step-seconds", type=int, default=30)
     args = parser.parse_args()
     if args.step_seconds < 1 or (args.tcp is not None and not 1 <= args.tcp <= 65535):
         parser.error("use a positive step timeout and a valid TCP port")
+    if args.expect_current is not None and not args.usb_c:
+        parser.error("--expect-current requires --usb-c")
     try:
         return run(args)
     except OSError as error:
