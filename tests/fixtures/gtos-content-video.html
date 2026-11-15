@@ -5,13 +5,15 @@
 <style>
   html, body { margin: 0; background: #202020; }
   #play, video { display: block; width: 320px; margin: 0; border: 0; padding: 0; }
-  #play { height: 48px; background: #a52bc7; color: white; }
+  #play { height: 48px; background: #202020; color: white; }
+  #play[data-phase="ready"] { background: #a52bc7; }
+  #play[data-phase="loading"] { background: #354a95; }
   #play[data-phase="first"] { background: #12a86d; }
   #play[data-phase="paused"] { background: #f4af22; color: black; }
   #play[data-phase="failed"] { background: #b01818; }
   video { height: 240px; background: black; }
 </style>
-<button id="play" type="button">Play VP9</button>
+<button id="play" type="button" disabled>Play VP9</button>
 <video id="video" src="bear-vp9.webm" muted playsinline loop preload="none"></video>
 <script>
   "use strict";
@@ -55,6 +57,7 @@
     if (!event.isTrusted) return;
     if (phase === "ready") {
       phase = "playing";
+      play.dataset.phase = "loading";
       play.textContent = "Playing VP9";
       video.play().catch(() => {
         if (phase === "playing") fail("Video play failed");
@@ -70,4 +73,6 @@
       play.textContent = "Paused VP9 (" + progress() + ")";
     }
   });
+  play.disabled = false;
+  play.dataset.phase = "ready";
 </script>
