@@ -122,6 +122,7 @@ if (gtos_content_mojo_test) {
       "//build/config/gtos/runtime:ffmpeg_support",
       "//build/config/gtos/runtime:native_environment",
       "//mojo/core/embedder",
+      "//mojo/public/cpp/bindings",
       "//mojo/public/cpp/platform",
       "//mojo/public/cpp/system",
       "//third_party/boringssl",

@@ -1,0 +1,13 @@
+--- a/mojo/public/cpp/bindings/direct_receiver.cc
++++ b/mojo/public/cpp/bindings/direct_receiver.cc
+@@ -367,5 +367,9 @@
+ bool IsDirectReceiverSupported() {
+-#if BUILDFLAG(IS_APPLE) && !BUILDFLAG(MOJO_USE_APPLE_CHANNEL)
++#if BUILDFLAG(IS_GTOS)
++  // A DirectReceiver connects an additional ipcz node over a platform
++  // channel. The GTOS driver supports regular in-process message pipes.
++  return false;
++#elif BUILDFLAG(IS_APPLE) && !BUILDFLAG(MOJO_USE_APPLE_CHANNEL)
+   // Connecting a node hands over ipcz' node link memory as a Mach handle, but
+   // ChannelPosix can only carry file descriptors. Affects tvOS only.
+   return false;

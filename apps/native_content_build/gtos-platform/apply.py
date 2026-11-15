@@ -61,6 +61,7 @@ INPUTS = {
     'services/cert_verifier/cert_verifier_creation.cc': '21f22f157b7bcf337553c77783fe50aedcded0ec8f5a25d4da205ec54a89a962',
     'services/cert_verifier/cert_verifier_service_factory.cc': '876893c412de6ea00bad098201fb1b94b19fc426cabb250eaeb7a858ccb9510c',
     'mojo/public/cpp/bindings/clone_traits.h': 'be74adae27302c13c1ae23f507bc1c92d89d501528ea3f4274251e5762d85060',
+    'mojo/public/cpp/bindings/direct_receiver.cc': 'cc648e45406a9a13a829fb740aaa5e27dcfeb2f5f29e694e0886e47948632f4d',
     'content/browser/video_capture_service_impl.cc': 'fe26d1f908494795feef87e694af03247667e8fbf8ab6be174601f2239071d44',
     'content/browser/renderer_host/media/media_devices_dispatcher_host.h': '0cf8a73547b83e001e7fbee152ae90573b6aa00005f331b353c7acb4b74e077f',
     'content/browser/renderer_host/media/media_devices_dispatcher_host.cc': 'd413bc1069ee4862fd6838f1af605ed15762a637b9562f19e392db48773cbb57',

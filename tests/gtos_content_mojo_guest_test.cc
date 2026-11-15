@@ -16,9 +16,11 @@
 #include "base/at_exit.h"
 #include "base/files/file.h"
 #include "base/files/file_path.h"
+#include "base/memory/raw_ptr.h"
 #include "base/task/single_thread_task_executor.h"
 #include "base/threading/platform_thread.h"
 #include "mojo/core/embedder/embedder.h"
+#include "mojo/public/cpp/bindings/direct_receiver.h"
 #include "mojo/public/cpp/platform/platform_channel.h"
 #include "mojo/public/cpp/platform/platform_channel_endpoint.h"
 #include "mojo/public/cpp/system/message_pipe.h"
@@ -44,6 +46,15 @@ IpczResult UnexpectedTransportActivity(IpczHandle, const void*, size_t,
 }
 
 int CheckTransport() {
+  if (!mojo::IsAsyncIOSupported()) {
+    return 254;
+  }
+  if (mojo::IsDirectReceiverSupported()) {
+    Say("GTOS MOJO DIRECT RECEIVER UNEXPECTED\n");
+    return 253;
+  }
+  Say("GTOS MOJO DIRECT RECEIVER UNAVAILABLE\n");
+
   mojo::PlatformChannel channel;
   if (channel.local_endpoint().is_valid() ||
       channel.remote_endpoint().is_valid() ||
@@ -85,8 +96,8 @@ int CheckTransport() {
 }
 
 struct CryptoJob {
-  bssl::StaticMutex* lock;
-  const std::atomic<bool>* release;
+  raw_ptr<bssl::StaticMutex> lock = nullptr;
+  raw_ptr<const std::atomic<bool>> release = nullptr;
   int reason;
   std::atomic<bool> ready{false};
   std::atomic<bool> isolated{false};
@@ -202,7 +213,7 @@ int CheckLocalPipe() {
 
 extern "C" int GtosContentShellMain(int, const char**) {
   base::AtExitManager at_exit;
-  base::SingleThreadTaskExecutor executor;
+  base::SingleThreadTaskExecutor executor(base::MessagePumpType::IO);
   mojo::core::Configuration config;
   config.is_broker_process = true;
   mojo::core::Init(config);
