@@ -1,0 +1,73 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GTOS Content VP9 playback test</title>
+<style>
+  html, body { margin: 0; background: #202020; }
+  #play, video { display: block; width: 320px; margin: 0; border: 0; padding: 0; }
+  #play { height: 48px; background: #a52bc7; color: white; }
+  #play[data-phase="first"] { background: #12a86d; }
+  #play[data-phase="paused"] { background: #f4af22; color: black; }
+  #play[data-phase="failed"] { background: #b01818; }
+  video { height: 240px; background: black; }
+</style>
+<button id="play" type="button">Play VP9</button>
+<video id="video" src="bear-vp9.webm" muted playsinline loop preload="none"></video>
+<script>
+  "use strict";
+  const play = document.getElementById("play");
+  const video = document.getElementById("video");
+  let phase = "ready";
+
+  function fail(message) {
+    phase = "failed";
+    video.pause();
+    play.dataset.phase = "failed";
+    play.textContent = message;
+  }
+
+  function progress() {
+    const frames = video.getVideoPlaybackQuality().totalVideoFrames;
+    return video.currentTime.toFixed(3) + " s, " + frames + " decoded frames";
+  }
+
+  function observePlayback() {
+    if (phase !== "playing" || video.paused ||
+        video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (video.getVideoPlaybackQuality().totalVideoFrames < 1) return;
+    if (video.videoWidth !== 320 || video.videoHeight !== 240 ||
+        !Number.isFinite(video.currentTime)) {
+      fail("Unexpected video frame");
+      return;
+    }
+    play.dataset.phase = "first";
+    play.textContent = "Pause VP9 (" + progress() + ")";
+  }
+
+  video.addEventListener("error", () => fail("Video load failed"));
+  video.addEventListener("loadeddata", observePlayback);
+  video.addEventListener("playing", observePlayback);
+  video.addEventListener("timeupdate", observePlayback);
+  video.addEventListener("ended", () => {
+    if (phase === "playing") fail("Looping video stopped");
+  });
+  play.addEventListener("click", event => {
+    if (!event.isTrusted) return;
+    if (phase === "ready") {
+      phase = "playing";
+      play.textContent = "Playing VP9";
+      video.play().catch(() => {
+        if (phase === "playing") fail("Video play failed");
+      });
+    } else if (phase === "playing" && play.dataset.phase === "first") {
+      phase = "paused";
+      video.pause();
+      if (!video.paused || video.getVideoPlaybackQuality().totalVideoFrames < 5) {
+        fail("Decoded playback could not be paused");
+        return;
+      }
+      play.dataset.phase = "paused";
+      play.textContent = "Paused VP9 (" + progress() + ")";
+    }
+  });
+</script>
