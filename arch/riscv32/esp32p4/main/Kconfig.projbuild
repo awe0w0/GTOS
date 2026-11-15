@@ -6,4 +6,20 @@ menu "GTOS Desktop Bar A3"
             Selects the ESP-EMU framebuffer sink and simulated charger limits.
             For physical boards select n to keep the panel and charging gated
             until validated settings are available.
+
+    config GTOS_A3_WIFI_SSID
+        string "Desktop Orbit Wi-Fi network"
+        default "A3-LAB" if GTOS_A3_SIMULATION
+        default ""
+        help
+            Leave empty for scan-only operation. A configured station hosts the
+            read-only Desktop Orbit status endpoint on its local IPv4 network.
+
+    config GTOS_A3_WIFI_PASSWORD
+        string "Desktop Orbit Wi-Fi passphrase"
+        default "orbit-lab-test" if GTOS_A3_SIMULATION
+        default ""
+        help
+            WPA2 passphrase for the configured demo network. This setting is
+            included in the firmware image.
 endmenu

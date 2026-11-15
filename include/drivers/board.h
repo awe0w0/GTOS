@@ -60,6 +60,19 @@ typedef struct {
     char first_network[33];
 } GtosBoardRadio;
 
+enum GtosBoardWifiState {
+    GTOS_BOARD_WIFI_IDLE,
+    GTOS_BOARD_WIFI_JOINING,
+    GTOS_BOARD_WIFI_ONLINE,
+    GTOS_BOARD_WIFI_FAILED,
+};
+
+typedef struct {
+    enum GtosBoardWifiState state;
+    char ipv4[16]; // Set after DHCP assigns a station address.
+    unsigned disconnect_reason; // Zero if failure did not come from the radio.
+} GtosBoardWifi;
+
 // Board services are owned by the application task. Drivers publish results
 // into the provided output buffer only when returning GTOS_BOARD_OK.
 int gtos_board_read_motion(GtosBoardMotion* motion);
@@ -69,6 +82,9 @@ int gtos_board_read_usb(GtosBoardUsb* usb);
 int gtos_board_set_charge(bool enabled);
 int gtos_board_start_radio(void);
 int gtos_board_read_radio(GtosBoardRadio* radio);
+// Start a WPA2-capable station join after the radio scan. Credentials stay in RAM.
+int gtos_board_connect_wifi(const char* ssid, const char* password);
+int gtos_board_read_wifi(GtosBoardWifi* wifi);
 
 // RGB565, row-major. The board reports the dimensions of its visible surface.
 void gtos_board_display_size(unsigned* width, unsigned* height);

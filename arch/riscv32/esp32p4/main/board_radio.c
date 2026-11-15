@@ -5,6 +5,7 @@
 #include "esp_hosted.h"
 #include "esp_hosted_bt_host_stack.h"
 #include "esp_netif.h"
+#include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,6 +18,8 @@
 
 static portMUX_TYPE radio_lock = portMUX_INITIALIZER_UNLOCKED;
 static GtosBoardRadio radio_status;
+static GtosBoardWifi wifi_status;
+static int64_t wifi_join_deadline;
 static bool started;
 
 // The Q1 transistor inverts the A3 P4-side reset output relative to C6 EN.
@@ -45,10 +48,38 @@ static bool power_on(void) {
     return true;
 }
 
+static void wifi_event(void* unused, esp_event_base_t base, int32_t id, void* data) {
+    (void)unused;
+    if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
+        const ip_event_got_ip_t* event = data;
+        GtosBoardWifi online = {.state = GTOS_BOARD_WIFI_ONLINE};
+        snprintf(online.ipv4, sizeof(online.ipv4), IPSTR, IP2STR(&event->ip_info.ip));
+        portENTER_CRITICAL(&radio_lock);
+        const bool connected = wifi_status.state == GTOS_BOARD_WIFI_JOINING
+            || wifi_status.state == GTOS_BOARD_WIFI_ONLINE;
+        if (connected) wifi_status = online;
+        portEXIT_CRITICAL(&radio_lock);
+        if (connected) printf("GTOS_A3_RADIO WIFI ONLINE ip=%s\n", online.ipv4);
+    } else if ((base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED)
+               || (base == IP_EVENT && id == IP_EVENT_STA_LOST_IP)) {
+        const unsigned reason = base == WIFI_EVENT ? ((wifi_event_sta_disconnected_t*)data)->reason : 0;
+        portENTER_CRITICAL(&radio_lock);
+        const bool was_active = wifi_status.state == GTOS_BOARD_WIFI_JOINING
+            || wifi_status.state == GTOS_BOARD_WIFI_ONLINE;
+        if (was_active)
+            wifi_status = (GtosBoardWifi){.state = GTOS_BOARD_WIFI_FAILED, .disconnect_reason = reason};
+        portEXIT_CRITICAL(&radio_lock);
+        if (was_active) printf("GTOS_A3_RADIO WIFI OFFLINE reason=%u\n", reason);
+    }
+}
+
 static void scan(void) {
     const wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
     if (esp_netif_init() != ESP_OK || esp_event_loop_create_default() != ESP_OK
-        || esp_wifi_init(&config) != ESP_OK || esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK
+        || !esp_netif_create_default_wifi_sta() || esp_wifi_init(&config) != ESP_OK
+        || esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, wifi_event, NULL) != ESP_OK
+        || esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, wifi_event, NULL) != ESP_OK
+        || esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK
         || esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK || esp_wifi_start() != ESP_OK
         || esp_wifi_scan_start(NULL, true) != ESP_OK) {
         puts("GTOS_A3_RADIO WIFI FAIL");
@@ -161,5 +192,49 @@ int gtos_board_read_radio(GtosBoardRadio* radio) {
     portENTER_CRITICAL(&radio_lock);
     *radio = radio_status;
     portEXIT_CRITICAL(&radio_lock);
+    return GTOS_BOARD_OK;
+}
+
+int gtos_board_connect_wifi(const char* ssid, const char* password) {
+    wifi_config_t config = {};
+    const size_t ssid_length = ssid ? strnlen(ssid, sizeof(config.sta.ssid) + 1) : 0;
+    const size_t password_length = password ? strnlen(password, sizeof(config.sta.password)) : 0;
+    if (!ssid_length || ssid_length > sizeof(config.sta.ssid)
+        || password_length < 8 || password_length == sizeof(config.sta.password))
+        return GTOS_BOARD_INVALID;
+    memcpy(config.sta.ssid, ssid, ssid_length);
+    memcpy(config.sta.password, password, password_length);
+    config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
+    const int64_t deadline = esp_timer_get_time() + 20 * 1000000;
+    portENTER_CRITICAL(&radio_lock);
+    const bool ready = radio_status.scan_complete && wifi_status.state != GTOS_BOARD_WIFI_JOINING
+        && wifi_status.state != GTOS_BOARD_WIFI_ONLINE;
+    if (ready) {
+        wifi_status = (GtosBoardWifi){.state = GTOS_BOARD_WIFI_JOINING};
+        wifi_join_deadline = deadline;
+    }
+    portEXIT_CRITICAL(&radio_lock);
+    if (!ready) return GTOS_BOARD_NOT_READY;
+    if (esp_wifi_set_config(WIFI_IF_STA, &config) == ESP_OK && esp_wifi_connect() == ESP_OK)
+        return GTOS_BOARD_OK;
+    portENTER_CRITICAL(&radio_lock);
+    wifi_status = (GtosBoardWifi){.state = GTOS_BOARD_WIFI_FAILED};
+    portEXIT_CRITICAL(&radio_lock);
+    return GTOS_BOARD_IO;
+}
+
+int gtos_board_read_wifi(GtosBoardWifi* wifi) {
+    if (!wifi) return GTOS_BOARD_INVALID;
+    const int64_t now = esp_timer_get_time();
+    portENTER_CRITICAL(&radio_lock);
+    const bool expired = wifi_status.state == GTOS_BOARD_WIFI_JOINING && now >= wifi_join_deadline;
+    if (expired) wifi_status = (GtosBoardWifi){.state = GTOS_BOARD_WIFI_FAILED};
+    *wifi = wifi_status;
+    portEXIT_CRITICAL(&radio_lock);
+    if (expired) {
+        esp_wifi_disconnect();
+        puts("GTOS_A3_RADIO WIFI OFFLINE timeout");
+    }
     return GTOS_BOARD_OK;
 }

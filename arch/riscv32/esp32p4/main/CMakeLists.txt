@@ -5,7 +5,7 @@ set(third_party "${CMAKE_CURRENT_SOURCE_DIR}/../third_party")
 idf_component_register(
     SRCS "boot.c" "kernel.cpp" "board_i2c.c" "board_input.c" "board_storage.c" "board_display.c"
          "board_radio.c" "board_panel.c"
-         "${dashboard}/dashboard.c" "${dashboard}/font.cpp"
+         "${dashboard}/dashboard.c" "${dashboard}/status.c" "${dashboard}/font.cpp"
          "${third_party}/lsm6ds3tr-c/lsm6ds3tr-c_reg.c"
          "${third_party}/bq25601/bq25601.c"
          "${third_party}/st7703/esp_lcd_st7703.c"
@@ -17,7 +17,7 @@ idf_component_register(
                       "${third_party}/lsm6ds3tr-c" "${third_party}/bq25601" "${third_party}/st7703"
     PRIV_REQUIRES esp_psram heap esp_timer nvs_flash esp_driver_gpio esp_driver_i2c
                   esp_driver_ledc esp_driver_pcnt esp_driver_uart esp_driver_usb_serial_jtag
-                  esp_event esp_netif esp_wifi bt esp_lcd esp_driver_ppa
+                  esp_event esp_netif esp_wifi esp_http_server bt esp_lcd esp_driver_ppa
 )
 target_compile_definitions(${COMPONENT_LIB} PRIVATE GTOS_EXTERNAL_NEW_DELETE)
 target_link_options(${COMPONENT_LIB} INTERFACE "LINKER:--wrap=eh_host_port_reset_slave")

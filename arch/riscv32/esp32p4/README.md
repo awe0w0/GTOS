@@ -63,6 +63,15 @@ nc 127.0.0.1 5567
 UART 使用 5567，另开终端连接 5566 可操作虚拟器件。发送
 *part next input press* 和 *part next input release after 180* 模拟按键，
 *part encoder input cw* 转动旋钮。端口可以用 A3_UART_PORT 和 A3_CONTROL_PORT 覆盖。
+打开 RADIO 页并等待取得地址后，状态接口可从宿主机读取。
+
+~~~sh
+curl -fsS http://127.0.0.1:18080/status
+~~~
+
+`A3_HTTP_PORT` 可以覆盖宿主机端口。脚本仅在回环地址转发到虚拟 C6，使用
+[ESP-EMU 的 hostfwd](https://github.com/espressif/esp-emulator/blob/v1.0.0/docs/guides/NETWORKING.md#host--guest-via-hostfwd-qemu-compatible-syntax)。
+对 UART 发送 `q` 会结束两颗虚拟芯片的运行。
 
 ## Desktop Orbit
 
@@ -70,7 +79,10 @@ UART 使用 5567，另开终端连接 5566 可操作虚拟器件。发送
 WAKE 控制屏幕休眠，旋钮调亮度，按下旋钮用 NVS 保存当前页面和亮度。电源页显示
 TUSB320LAI 检测到的方向和电流档位，以及 BQ25601 限流和充电状态。无线页向 C6
 供电，经四位 SDIO 查询固件版本、发起 Wi-Fi 扫描并发出 GTOS Orbit BLE 广播。
-该 BLE 示例使用非连接式广播。
+虚拟板随后加入 `A3-LAB` 的 WPA2 网络。P4 取得 DHCP 地址后，`GET /status`
+返回姿态、编码器、亮度、USB-C 和充电状态。无线测试从宿主机经 C6 Wi-Fi 和 SDIO
+读取数据，操作旋钮、切换充电后再检查响应，并验证接入点缺失时的失败与重试。
+该 BLE 示例使用非连接式广播。在无线页通过 UART 发送 `w` 可重试加入网络。
 
 虚拟板在 [sim/a3.json](sim/a3.json) 接入按键、旋钮和三个 I²C 寄存器模型。板级驱动
 执行真实的 ESP32-P4 I²C、GPIO、PCNT、LEDC 和 Flash 操作。面板显示由 RGB565
@@ -95,6 +107,10 @@ TUSB320LAI 检测到的方向和电流档位，以及 BQ25601 限流和充电状
 SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.defaults.hardware' \
     make a3-riscv A3_BUILD_DIR=out/a3-diagnostic
 ~~~
+
+实板默认扫描附近网络。在 `GTOS Desktop Bar A3` 的 ESP-IDF 配置菜单填写
+SSID 和 WPA2 口令，可以让 Desktop Orbit 加入指定网络并在 8080 端口提供只读状态。
+菜单中的口令会编入镜像。通过 Board API 传给运行中驱动的口令使用 RAM 存储。
 
 面板接入使用 [ST7703 组件](third_party/README.md) 和 ESP-IDF 双 lane DSI。
 实板诊断配置在 GPIO 上保持 VCI、背光和充电关闭。取得 HC‑700BI3002 的确认版

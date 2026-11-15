@@ -53,6 +53,7 @@ void app_main(void) {
 #ifdef CONFIG_GTOS_A3_SIMULATION
         if (command == 'q') {
             gtos_board_set_charge(false);
+            gtos_dashboard_stop_status();
             puts("GTOS_A3_VM_STOP");
             heap_caps_free(pixels);
             return;

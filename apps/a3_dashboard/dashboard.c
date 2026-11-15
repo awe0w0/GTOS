@@ -1,6 +1,7 @@
 #include "dashboard.h"
 #include <drivers/board.h>
 #include <stdio.h>
+#include "sdkconfig.h"
 
 extern const unsigned char* gtos_dashboard_glyph(char character);
 
@@ -13,7 +14,7 @@ enum {
 static struct {
     uint16_t* pixels;
     unsigned width, height, page, brightness;
-    bool awake, redraw;
+    bool awake, redraw, wifi_requested;
     int32_t encoder;
     uint32_t last_poll;
     int motion_result, charger_result, usb_result;
@@ -21,6 +22,7 @@ static struct {
     GtosBoardCharger charger;
     GtosBoardUsb usb;
     GtosBoardRadio radio;
+    GtosBoardWifi wifi;
 } dashboard;
 
 static int limit(int64_t value, int minimum, int maximum) {
@@ -123,6 +125,13 @@ static void wireless(void) {
         text(52, 152, 4, dashboard.radio.powered ? "WAITING FOR SDIO" : "C6 POWER OFF", Amber);
     } else if (!dashboard.radio.scan_complete) {
         text(52, 152, 4, "SCANNING", Amber);
+    } else if (dashboard.wifi.state == GTOS_BOARD_WIFI_ONLINE) {
+        text(52, 152, 4, "WIFI CONNECTED", Mint);
+        text(52, 206, 2, dashboard.wifi.ipv4, White);
+    } else if (dashboard.wifi.state == GTOS_BOARD_WIFI_JOINING) {
+        text(52, 152, 4, "JOINING WIFI", Amber);
+    } else if (dashboard.wifi.state == GTOS_BOARD_WIFI_FAILED) {
+        text(52, 152, 4, "WIFI JOIN FAILED", Amber);
     } else {
         char value[32];
         snprintf(value, sizeof(value), "%u ACCESS POINTS", dashboard.radio.nearby_access_points);
@@ -160,6 +169,34 @@ static void sample(void) {
     dashboard.charger_result = gtos_board_read_charger(&dashboard.charger);
     dashboard.usb_result = gtos_board_read_usb(&dashboard.usb);
     gtos_board_read_radio(&dashboard.radio);
+    gtos_board_read_wifi(&dashboard.wifi);
+    if (!CONFIG_GTOS_A3_WIFI_SSID[0]) return;
+    if (dashboard.page == Radio && dashboard.radio.scan_complete && !dashboard.wifi_requested) {
+        dashboard.wifi_requested = true;
+        if (dashboard.wifi.state == GTOS_BOARD_WIFI_IDLE || dashboard.wifi.state == GTOS_BOARD_WIFI_FAILED) {
+            const int result = gtos_board_connect_wifi(CONFIG_GTOS_A3_WIFI_SSID, CONFIG_GTOS_A3_WIFI_PASSWORD);
+            printf("GTOS_A3_ORBIT WIFI JOIN result=%d\n", result);
+            gtos_board_read_wifi(&dashboard.wifi);
+        }
+    }
+
+    char status[GtosDashboardStatusBytes];
+    const bool online = dashboard.wifi.state == GTOS_BOARD_WIFI_ONLINE;
+    const int count = snprintf(status, sizeof(status),
+             "{\"page\":%u,\"brightness\":%u,\"awake\":%u,\"encoder\":%ld,"
+             "\"imu_result\":%d,\"accel_mg\":[%ld,%ld,%ld],\"gyro_mdps\":[%ld,%ld,%ld],"
+             "\"usb_result\":%d,\"usb_attached\":%u,\"advertised_ma\":%u,"
+             "\"charger_result\":%d,\"charging\":%u,\"charge_faults\":%u,"
+             "\"sdio_ready\":%u,\"wifi_online\":%u,\"ble_advertising\":%u}\n",
+             dashboard.page, dashboard.brightness, dashboard.awake, (long)dashboard.encoder,
+             dashboard.motion_result, (long)dashboard.motion.acceleration_mg[0],
+             (long)dashboard.motion.acceleration_mg[1], (long)dashboard.motion.acceleration_mg[2],
+             (long)dashboard.motion.angular_rate_mdps[0], (long)dashboard.motion.angular_rate_mdps[1],
+             (long)dashboard.motion.angular_rate_mdps[2], dashboard.usb_result,
+             dashboard.usb.sink_attached, dashboard.usb.advertised_ma, dashboard.charger_result,
+             dashboard.charger.charge_enabled, dashboard.charger.faults, dashboard.radio.sdio_ready,
+             online, dashboard.radio.ble_advertising);
+    if (count >= 0 && (size_t)count < sizeof(status)) gtos_dashboard_publish_status(status, online);
 }
 
 static void report(void) {
@@ -175,9 +212,10 @@ static void report(void) {
            dashboard.charger_result, dashboard.charger.input_good, dashboard.charger.charge_enabled,
            dashboard.charger.input_limit_ma, dashboard.charger.faults);
     if (dashboard.page == Radio) {
-        printf("GTOS_A3_WIRELESS powered=%u sdio=%u wifi=%u ble=%u\n",
+        printf("GTOS_A3_WIRELESS powered=%u sdio=%u wifi=%u ble=%u station=%u ip=%s\n",
                dashboard.radio.powered, dashboard.radio.sdio_ready,
-               dashboard.radio.scan_complete, dashboard.radio.ble_advertising);
+               dashboard.radio.scan_complete, dashboard.radio.ble_advertising,
+               (unsigned)dashboard.wifi.state, dashboard.wifi.ipv4);
     }
 }
 
@@ -237,6 +275,10 @@ void gtos_dashboard_tick(uint32_t milliseconds, int command) {
     }
     if (command == 'c') {
         printf("GTOS_A3_CHARGE result=%d\n", gtos_board_set_charge(!dashboard.charger.charge_enabled));
+        changed = true;
+    }
+    if (command == 'w' && dashboard.page == Radio) {
+        dashboard.wifi_requested = false;
         changed = true;
     }
     if (changed || command == 's' || milliseconds - dashboard.last_poll >= 120) {
