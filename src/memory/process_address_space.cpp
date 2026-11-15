@@ -88,11 +88,11 @@ ProcessAddressSpace::ProcessAddressSpace() : kernel(0), frames(0), directory(0),
     for (uint32_t i = 0; i < MaximumPages; ++i) {
         pages[i].address = pages[i].frame = pages[i].region = 0;
         pages[i].writable = pages[i].present = false;
-        pendingPages[i].address = pendingPages[i].frame = 0;
+        inlinePendingPages[i] = {};
     }
     for (uint32_t i = 0; i < MaximumRegions; ++i)
         inlineRegions[i] = {};
-    for (uint32_t i = 0; i < 2; ++i) pendingTables[i].index = pendingTables[i].frame = 0;
+    for (uint32_t i = 0; i < 2; ++i) inlinePendingTables[i] = {};
 }
 bool ProcessAddressSpace::Fail(ProcessMemoryError value) const { error = value; return false; }
 bool ProcessAddressSpace::Context(bool allowOwnDirectory) const {
@@ -154,8 +154,25 @@ uint32_t ProcessAddressSpace::PageMetadataBytes(uint32_t capacityPages) {
 }
 uint32_t ProcessAddressSpace::MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions) {
     uint32_t bytes = PageMetadataBytes(capacityPages);
-    if (maximumRegions > MaximumRegions) bytes += maximumRegions * sizeof(Region);
+    if (maximumRegions > MaximumRegions) {
+        const uint32_t pages = ContentCommitCapacity(capacityPages);
+        // Include the initial partial page table for an unaligned interval.
+        const uint32_t tables = 1 + (pages + 1022) / 1024;
+        bytes += maximumRegions * sizeof(Region) + pages * sizeof(PendingPage)
+            + tables * sizeof(PendingTable);
+    }
     return (bytes + 4095) / 4096;
+}
+uint32_t ProcessAddressSpace::ContentCommitCapacity(uint32_t capacityPages) {
+    return capacityPages < MaximumContentCommitPages ? capacityPages : MaximumContentCommitPages;
+}
+ProcessAddressSpace::PendingPage* ProcessAddressSpace::PendingPages() {
+    return regionLimit == MaximumRegions ? inlinePendingPages
+        : reinterpret_cast<PendingPage*>(regions + regionLimit);
+}
+ProcessAddressSpace::PendingTable* ProcessAddressSpace::PendingTables() {
+    return regionLimit == MaximumRegions ? inlinePendingTables
+        : reinterpret_cast<PendingTable*>(PendingPages() + ContentCommitCapacity(pageLimit));
 }
 bool ProcessAddressSpace::IsMetadataFrame(uint32_t address) const {
     return metadataBase && address >= metadataBase && address - metadataBase < metadataPages * 4096;
@@ -664,6 +681,7 @@ bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, b
     uint32_t base, handle;
     if (!Reserve(bytes, 4096, 0, base, handle)) return false;
     Region& region = regions[FindRegion(handle)];
+    PendingTable* pendingTables = PendingTables();
     for (uint32_t di = base >> 22; di <= (base + bytes - 1) >> 22; ++di) {
         if (tables[di]) continue;
         uint32_t table;
@@ -714,6 +732,8 @@ void ProcessAddressSpace::InvalidatePage(uint32_t address) const {
 #endif
 }
 void ProcessAddressSpace::RollbackPending() {
+    PendingPage* pendingPages = PendingPages();
+    PendingTable* pendingTables = PendingTables();
     for (uint32_t i = 0; i < pendingPageCount; ++i) {
         ClearPage(pendingPages[i].frame); frames->free(pendingPages[i].frame);
         pendingPages[i].address = pendingPages[i].frame = 0;
@@ -736,7 +756,10 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
     if (protection != ProcessMemoryNone) {
         // Every page will be resident afterwards; reject oversized sparse
         // commits before walking or allocating their otherwise empty range.
-        if (bytes / 4096 > MaximumPages) return Fail(ProcessMemoryLimit);
+        const uint32_t limit = regionLimit == MaximumRegions ? MaximumPages : ContentCommitCapacity(pageLimit);
+        if (bytes / 4096 > limit) return Fail(ProcessMemoryLimit);
+        PendingPage* pendingPages = PendingPages();
+        PendingTable* pendingTables = PendingTables();
         uint32_t missing = 0;
         for (uint32_t address = base; address < end; address += 4096)
             if (IndexedLayoutPage(address) < 0) ++missing;

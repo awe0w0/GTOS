@@ -954,6 +954,48 @@ namespace {
         CHECK(first.Destroy());
         CHECK(used() == baseline);
     }
+    void contentLargeCommit() {
+        const uint32_t pages = 1300, bytes = pages * 4096;
+        const uint32_t hint = 0x813FF000u; // Commit crosses two page-table boundaries.
+        uint32_t base = 0, handle = 0;
+        CHECK(first.Prepare(kernel, frames, 2048) && first.Seal());
+        CHECK(first.Reserve(bytes, 4096, hint, base, handle));
+        const uint32_t ordinary = used();
+        CHECK(!first.SetPermissions(handle, 0, bytes, ProcessMemoryReadWrite));
+        CHECK(first.GetLastError() == ProcessMemoryLimit && used() == ordinary);
+        CHECK(first.Destroy() && used() == baseline);
+
+        CHECK(first.PrepareContent(kernel, frames, 2048, ProcessAddressSpace::DynamicLimit));
+        CHECK(first.Seal() && first.Reserve(bytes, 4096, hint, base, handle));
+        CHECK(first.SetPermissions(handle, 0, 4096, ProcessMemoryRead));
+        const uint32_t saved = physical(first, base);
+        fill((uint8_t*)saved, 4096, 0x6B);
+        const uint32_t hash = processHash(first);
+        uint32_t held = 0, frame = 0;
+        while (frames.getStatistics().freeFrames > 1040 && frames.allocate(frame))
+            retained[held++] = frame;
+        const uint32_t exhausted = used();
+        gtos_process_memory_test_cr3 = first.DirectoryAddress();
+        gtos_process_memory_test_invalidations = 0;
+        CHECK(!first.SetPermissions(handle, 0, bytes, ProcessMemoryReadWrite));
+        CHECK(first.GetLastError() == ProcessMemoryNoMemory);
+        CHECK(processHash(first) == hash && used() == exhausted);
+        CHECK(!gtos_process_memory_test_invalidations);
+        CHECK(region(first, handle).residentPages == 1);
+        CHECK(physical(first, base) == saved && all((uint8_t*)saved, 4096, 0x6B));
+        CHECK(!first.ValidateUserRange(base, 1, true));
+        while (held) CHECK(frames.free(retained[--held]));
+
+        CHECK(first.SetPermissions(handle, 0, bytes, ProcessMemoryReadWrite));
+        CHECK(region(first, handle).residentPages == pages);
+        CHECK(gtos_process_memory_test_invalidations == pages);
+        CHECK(physical(first, base) == saved && all((uint8_t*)saved, 4096, 0x6B));
+        CHECK(all((uint8_t*)physical(first, base + bytes - 4096), 4096, 0));
+        CHECK(first.ValidateUserRange(base, bytes, true));
+        CHECK(first.Release(handle));
+        gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
+        CHECK(first.Destroy() && used() == baseline);
+    }
     void partialTableRelease() {
         const uint32_t seam = ProcessAddressSpace::DynamicBase + (1u << 22);
         CHECK(first.Prepare(kernel, frames));
@@ -990,7 +1032,7 @@ namespace {
         dynamicAllocationRollback(false); dynamicAllocationRollback(true); dynamicAllocationRollback(false, true);
         protectRangeSeam();
         indexedOwnership();
-        contentCopies(); contentRegionCapacity(); contentIndexSizing(); partialTableRelease();
+        contentCopies(); contentRegionCapacity(); contentIndexSizing(); contentLargeCommit(); partialTableRelease();
     }
 }
 extern "C" int processMemoryTests() {

@@ -1150,6 +1150,13 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             ? slot->space.Decommit(request.handle, request.offset, request.length)
             : slot->space.Discard(request.handle, request.offset, request.length);
         cpu->eax = ok ? 0 : (uint32_t)VmError(slot->space.GetLastError());
+        if (slot->content && call == GTOS_SYS_VM_SET_PERMISSIONS && request.protection &&
+            (!ok || request.length > ProcessAddressSpace::MaximumPages * GTOS_VM_PAGE_BYTES)) {
+            printf((char*)"CONTENT VM COMMIT BYTES "); printfHex32(request.length);
+            printf((char*)" RESULT "); printfHex32(cpu->eax);
+            printf((char*)" FREE "); printfHex32(frames->getStatistics().freeFrames);
+            printf((char*)"\n");
+        }
         break;
     }
     case GTOS_SYS_VM_RELEASE:

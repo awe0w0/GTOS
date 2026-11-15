@@ -54,6 +54,7 @@ namespace gtos { namespace memory {
         struct Region { uint32_t base, bytes, handle, sharedFrames; };
         struct PendingPage { uint32_t address, frame; };
         struct PendingTable { uint32_t index, frame; };
+        static const uint32_t MaximumContentCommitPages = 16 * 1024;
         KernelPaging* kernel;
         PhysicalMemoryManager* frames;
         uint32_t directory, kernelDirectory, pageCount;
@@ -64,10 +65,10 @@ namespace gtos { namespace memory {
         Region inlineRegions[MaximumRegions];
         Region* regions;
         uint32_t regionLimit;
-        // A readable range can contain at most MaximumPages consecutive pages,
-        // hence at most two new tables. Transaction scratch never uses the stack.
-        PendingPage pendingPages[MaximumPages];
-        PendingTable pendingTables[2];
+        // Ordinary processes need at most two new tables per transaction.
+        // Content keeps its larger transaction scratch in supervisor metadata.
+        PendingPage inlinePendingPages[MaximumPages];
+        PendingTable inlinePendingTables[2];
         uint32_t pendingPageCount, pendingTableCount;
         bool prepared, sealed;
         // Only large spaces own persistent indexes in supervisor memory.
@@ -90,6 +91,9 @@ namespace gtos { namespace memory {
                               uint32_t maximumPages, uint32_t maximumRegions);
         static uint32_t PageMetadataBytes(uint32_t capacityPages);
         static uint32_t MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions);
+        static uint32_t ContentCommitCapacity(uint32_t capacityPages);
+        PendingPage* PendingPages();
+        PendingTable* PendingTables();
         bool IsMetadataFrame(uint32_t address) const;
         uint32_t* LayoutIndex(bool byFrame) const;
         // Valid after Layout succeeds and until a mapping mutation. Normal

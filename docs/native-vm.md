@@ -1,8 +1,10 @@
 # Native IA32 data-page VM, ABI v1
 
 显式完整 V8 配置的总容量、根栈及每进程动态上界见
-[原生脚本运行模块](../apps/native_v8_launch/README.md)。普通入口和本ABI单次256页
-事务上限保留；完整 V8 的成功不等同于浏览器、视频或 HTML5 验收。
+[原生脚本运行模块](../apps/native_v8_launch/README.md)。普通入口单次提交上限为 256 页。
+内核直接启动的 Chromium Content 进程最多可保留 1024 个区域，单次提交上限为 64 MiB，
+并受实际进程容量及可用物理页约束。大块事务使用该进程的内核元数据，失败时回收本次
+分配的页和页表。
 
 This additive interface lets a real CPL3 process reserve virtual data regions
 and change their resident pages at runtime. It retains the original sealed ELF,
@@ -41,8 +43,8 @@ kernel snapshot. No user PID, CR3, frame address or retained pointer is accepted
 Regions occupy `[0x80000000,0xBFFFC000)`, excluding the static user stack and its
 guards. Reserve detects existing static pages and other reservations. A nonzero
 hint is exact; callers wanting an advisory hint may retry with zero. Length is a
-positive 4096-byte multiple; alignment is a power of two at least 4096. There are
-32 region slots per process. Handles are positive global monotonic IDs and never
+positive 4096-byte multiple; alignment is a power of two at least 4096. Ordinary
+processes have 32 region slots. Handles are positive global monotonic IDs and never
 reused after release, fault, cancellation or reap. Reserving 16MiB consumes no
 physical frame. Static ELF and stack pages still count toward the 256 total.
 
