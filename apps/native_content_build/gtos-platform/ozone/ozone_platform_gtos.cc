@@ -165,9 +165,19 @@ class GtosWindow : public StubWindow {
   }
   void Hide() override {
     visible_ = false;
-    delegate()->OnActivationChanged(false);
+    const auto weak = weak_factory_.GetWeakPtr();
+    LoseCapture();
+    if (weak && !released_) {
+      delegate()->OnActivationChanged(false);
+    }
   }
   bool IsVisible() const override { return visible_ && window_.valid(); }
+
+  // GTOS delivers the active native window's pointer stream. Views uses this
+  // capture state to release its Aura target when a toolbar press ends.
+  void SetCapture() override { captured_ = IsVisible(); }
+  void ReleaseCapture() override { captured_ = false; }
+  bool HasCapture() const override { return captured_; }
 
   void Close() override {
     if (ReleaseWindow()) {
@@ -187,6 +197,7 @@ class GtosWindow : public StubWindow {
       return false;
     }
     released_ = true;
+    ReleaseCapture();
     if (window_.valid()) {
       CHECK_EQ(window_.Close(), 0);
     }
@@ -254,6 +265,16 @@ class GtosWindow : public StubWindow {
       DispatchPointer({GTOS_INPUT_POINTER_UP, 1,
                        desktop_->cursor.x(), desktop_->cursor.y()});
     }
+    if (weak && !released_) {
+      LoseCapture();
+    }
+  }
+
+  void LoseCapture() {
+    if (captured_) {
+      ReleaseCapture();
+      delegate()->OnLostCapture();
+    }
   }
 
   void PollInput() {
@@ -300,6 +321,7 @@ class GtosWindow : public StubWindow {
   std::array<unsigned, 256> keys_{};
   base::RepeatingTimer input_;
   bool pointer_down_ = false;
+  bool captured_ = false;
   bool visible_ = false;
   bool released_ = false;
   base::WeakPtrFactory<GtosWindow> weak_factory_{this};
