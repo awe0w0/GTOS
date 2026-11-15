@@ -7,12 +7,13 @@
 #include "sdkconfig.h"
 #include <string.h>
 
-enum { BusTimeoutMs = 50, WatchdogFault = 0x80 };
+enum { BusTimeoutMs = 50, WatchdogFault = 0x80, InputLimitMinimumMa = 100 };
 enum { CcCurrent = 0x08, CcAttach = 0x09, CcIrq = 0x10, CcConfigMask = 0x07 };
 static i2c_master_dev_handle_t imu, bq, cc;
 static bool imu_ready, bq_ready, cc_ready, bq_io_failure, charge_gpio_ready, charge_permitted;
 static bool cc_irq_ready;
 static A3ChargeProfile active_charge;
+static uint16_t input_ceiling_ma;
 #ifndef CONFIG_GTOS_A3_SIMULATION
 static bool charger_pg_ready;
 #endif
@@ -20,6 +21,10 @@ static bool charger_pg_ready;
 #if defined(CONFIG_GTOS_A3_SIMULATION) && defined(GTOS_A3_CHARGE_PROFILE)
 #error GTOS_A3_CHARGE_PROFILE requires sdkconfig.defaults.hardware
 #endif
+
+static A3ChargeProfile charge_profile(void);
+static bool valid_charge_profile(const A3ChargeProfile* profile);
+static int disable_charge(void);
 
 static bool read_registers(i2c_master_dev_handle_t device, uint8_t reg,
                            uint8_t* bytes, size_t count) {
@@ -136,6 +141,8 @@ void a3_i2c_init(void) {
     imu_ready = attach(bus, A3_IMU_ADDRESS, &imu) && init_imu();
     bq_ready = attach(bus, BQ25601_I2C_ADDRESS, &bq) && init_charger();
     cc_ready = attach(bus, A3_USB_CC_ADDRESS, &cc);
+    const A3ChargeProfile profile = charge_profile();
+    if (bq_ready && valid_charge_profile(&profile)) input_ceiling_ma = profile.input_limit_ma;
 }
 
 int gtos_board_read_motion(GtosBoardMotion* motion) {
@@ -222,28 +229,50 @@ static uint16_t available_charge_input(const GtosBoardUsb* usb) {
     return usb->advertised_ma;
 }
 
-int gtos_board_read_usb(GtosBoardUsb* usb) {
-    if (!usb) return GTOS_BOARD_INVALID;
+static int read_usb_snapshot(GtosBoardUsb* usb) {
     uint8_t status[CcAttach + 1] = {0};
     const int read_result = read_cc_status(status);
-    const bool sink = read_result == GTOS_BOARD_OK && (status[CcAttach] >> 6) == 2;
+    if (read_result != GTOS_BOARD_OK) return read_result;
+    const bool sink = (status[CcAttach] >> 6) == 2;
     const uint16_t usb_current_ma[] = {500, 1500, 500, 3000};
-    const GtosBoardUsb snapshot = {
+    *usb = (GtosBoardUsb){
         .sink_attached = sink, .flipped = sink && (status[CcAttach] & 0x20),
         .advertised_ma = sink ? usb_current_ma[(status[CcCurrent] >> 4) & 3] : 0,
     };
-    const uint16_t available = available_charge_input(&snapshot);
-    if (charge_permitted && available < active_charge.input_limit_ma) {
-        const int result = gtos_board_set_charge(false);
-        if (result != GTOS_BOARD_OK) return result;
-        // IINDPM limits the system path as well as charging. Follow a known
-        // lower source capability even after dropping the charge gate.
-        if (available) {
-            bq_io_failure = false;
-            if (BQ25601_set_input_current_limit_mA(available) != available || bq_io_failure)
-                return GTOS_BOARD_IO;
-        }
+    return GTOS_BOARD_OK;
+}
+
+static int enforce_input_ceiling(uint16_t available) {
+    if (!input_ceiling_ma) return GTOS_BOARD_OK;
+    const uint16_t safe_ceiling = available ? available : InputLimitMinimumMa;
+    if (safe_ceiling < input_ceiling_ma) input_ceiling_ma = safe_ceiling;
+
+    int stopped = GTOS_BOARD_OK;
+    if (charge_permitted && available < active_charge.input_limit_ma) stopped = disable_charge();
+    // Source detection can change REG00 while the charge gate is low.
+    bq_io_failure = false;
+    BQ25601_read_register(BQ25601_REG00);
+    if (bq_io_failure) {
+        if (charge_permitted) disable_charge();
+        return GTOS_BOARD_IO;
     }
+    const uint16_t actual = BQ25601_get_input_current_limit_mA();
+    if (charge_permitted && stopped == GTOS_BOARD_OK && actual != active_charge.input_limit_ma)
+        stopped = disable_charge();
+    if (actual > input_ceiling_ma) {
+        bq_io_failure = false;
+        if (BQ25601_set_input_current_limit_mA(input_ceiling_ma) != input_ceiling_ma || bq_io_failure)
+            return GTOS_BOARD_IO;
+    }
+    return stopped;
+}
+
+int gtos_board_read_usb(GtosBoardUsb* usb) {
+    if (!usb) return GTOS_BOARD_INVALID;
+    GtosBoardUsb snapshot = {0};
+    const int read_result = read_usb_snapshot(&snapshot);
+    const int limited = enforce_input_ceiling(available_charge_input(&snapshot));
+    if (limited != GTOS_BOARD_OK) return limited;
     if (read_result != GTOS_BOARD_OK) return read_result;
     *usb = snapshot;
     return GTOS_BOARD_OK;
@@ -251,13 +280,11 @@ int gtos_board_read_usb(GtosBoardUsb* usb) {
 
 void a3_i2c_poll(uint32_t milliseconds) {
     static uint32_t last_check;
-    if (!charge_permitted) return;
-    if (!power_good_pin()) {
-        gtos_board_set_charge(false);
-        return;
-    }
+    if (!input_ceiling_ma) return;
+    const bool lost_power = charge_permitted && !power_good_pin();
+    if (lost_power) disable_charge();
     const bool cc_changed = cc_irq_ready && gpio_get_level(A3_PIN_CC_INT_N) == 0;
-    if (!cc_changed && milliseconds - last_check < 100) return;
+    if (!lost_power && !cc_changed && milliseconds - last_check < 100) return;
     last_check = milliseconds;
     GtosBoardUsb usb;
     gtos_board_read_usb(&usb);
@@ -281,7 +308,8 @@ static A3ChargeProfile charge_profile(void) {
 }
 
 static bool valid_charge_profile(const A3ChargeProfile* profile) {
-    return profile->input_limit_ma >= 100 && profile->input_limit_ma <= 3200 && profile->input_limit_ma % 100 == 0
+    return profile->input_limit_ma >= InputLimitMinimumMa && profile->input_limit_ma <= 3200
+        && profile->input_limit_ma % 100 == 0
         && profile->fast_charge_ma >= 60 && profile->fast_charge_ma <= 3000 && profile->fast_charge_ma % 60 == 0
         && profile->precharge_ma >= 60 && profile->precharge_ma <= 780 && profile->precharge_ma % 60 == 0
         && profile->termination_ma >= 60 && profile->termination_ma <= 780 && profile->termination_ma % 60 == 0
@@ -325,7 +353,7 @@ static int program_charge(A3ChargeProfile* profile) {
         || !BQ25601_get_charge_enabled() || !charge_settings_match(profile))
         return GTOS_BOARD_IO;
     GtosBoardUsb usb;
-    if (gtos_board_read_usb(&usb) != GTOS_BOARD_OK) return GTOS_BOARD_IO;
+    if (read_usb_snapshot(&usb) != GTOS_BOARD_OK) return GTOS_BOARD_IO;
     if (faults || !power_good_pin() || !BQ25601_power_good()
         || available_charge_input(&usb) < profile->input_limit_ma)
         return GTOS_BOARD_NOT_READY;
@@ -347,9 +375,15 @@ int gtos_board_set_charge(bool enabled) {
 
     result = program_charge(&profile);
     if (result != GTOS_BOARD_OK) {
-        disable_charge();
-        return result;
+        // A failure after REG00 was written must not leave the attempted increase in effect.
+        if (charger.input_limit_ma < input_ceiling_ma) input_ceiling_ma = charger.input_limit_ma;
+        const int stopped = disable_charge();
+        GtosBoardUsb source = {0};
+        read_usb_snapshot(&source);
+        const int limited = enforce_input_ceiling(available_charge_input(&source));
+        return stopped == GTOS_BOARD_OK && limited == GTOS_BOARD_OK ? result : GTOS_BOARD_IO;
     }
+    input_ceiling_ma = profile.input_limit_ma;
     active_charge = profile;
     charge_permitted = true;
     return GTOS_BOARD_OK;

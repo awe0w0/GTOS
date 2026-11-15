@@ -15,11 +15,13 @@ PG_N = 9
 
 
 class ChargerDevices(Devices):
-    def __init__(self, port, output):
+    def __init__(self, port, output, initial_limit):
         super().__init__(port, output, drive_pins=(PG_N, CC_IRQ_N))
         registers = self.registers[CHARGER]
+        registers[0] = initial_limit // 100 - 1
         registers[0x01:0x08] = bytes((0x1A, 0xA2, 0x22, 0x58, 0x9F, 0xE6, 0x4C))
         self.default_mode = True
+        self.ignore_input_limit = False
         self.ignore_voltage = False
         self.current_on_cc_ack = None
 
@@ -33,6 +35,7 @@ class ChargerDevices(Devices):
         if operation[2] != CHARGER:
             return super().transfer(request)
         registers = self.registers[CHARGER]
+        input_limit = registers[0]
         voltage = registers[4]
         if data == b"\x09" and self.default_mode:
             registers[9] |= 0x80
@@ -43,6 +46,8 @@ class ChargerDevices(Devices):
             registers[9] &= ~0x80
         if len(data) == 2 and data[0] == 4 and self.ignore_voltage:
             registers[4] = voltage
+        if len(data) == 2 and data[0] == 0 and self.ignore_input_limit:
+            registers[0] = input_limit
         return reply
 
     def set_voltage(self, code):
@@ -57,6 +62,12 @@ class ChargerDevices(Devices):
             self.stimuli.append((self.clock, "cc-identity", valid))
             return self.clock
 
+    def source_sets_input_limit(self, limit_ma):
+        with self.lock:
+            registers = self.registers[CHARGER]
+            registers[0] = (registers[0] & 0xe0) | (limit_ma // 100 - 1)
+            self.stimuli.append((self.clock, "source-iindpm", limit_ma))
+
     def cc_change_during_ack(self, mode):
         with self.lock:
             self.registers[CC][0x09] |= 0x15  # Pending interrupt and existing RW settings.
@@ -65,7 +76,7 @@ class ChargerDevices(Devices):
 
 
 @contextmanager
-def start(args, build, output):
+def start(args, build, output, initial_limit=200):
     target = argparse.Namespace(emulator=args.emulator, build=build, parts=args.parts, output=output)
     out, board = prepare_board(target)
     data = json.loads(board.read_text())
@@ -74,7 +85,7 @@ def start(args, build, output):
     port = available_port()
     with Guest(target, build / "gtos-a3-flash.bin", board, out / "charge.log",
                extra=("--cosim-tcp", f"127.0.0.1:{port}")) as vm:
-        with ChargerDevices(port, out / "signals.json") as bus:
+        with ChargerDevices(port, out / "signals.json", initial_limit) as bus:
             start_offset = vm.offset()
             vm.part("reset")
             vm.find("GTOS_A3_CORE PASS psram=16777216 checks=0", start_offset)
@@ -115,6 +126,18 @@ def enabled(vm, bus, input_ma):
           "60 mA termination, REG04=0x50 (4176 mV nominal), 5-hour timer")
 
 
+def check_idle_limit(bus, limit_ma, reason):
+    code = limit_ma // 100 - 1
+    bus.wait(lambda: bus.registers[CHARGER][0] & 0x1f == code, reason)
+    with bus.lock:
+        if bus.registers[CHARGER][1] & 0x10 or not bus.gpio:
+            raise RuntimeError(f"Unexpected charge state after {reason}")
+        gate = next((level for _, pin, level in reversed(bus.gpio) if pin == CHARGE_ENABLE), None)
+        if gate != 0:
+            raise RuntimeError(f"GPIO28 was not low after {reason}")
+    print(f"{reason}: idle IINDPM {limit_ma} mA")
+
+
 def run(args):
     args.output.mkdir(parents=True, exist_ok=False)
     with start(args, args.diagnostic, args.output / "no-profile") as (vm, bus):
@@ -122,6 +145,9 @@ def run(args):
         bus.usb(attached=True, power_good=True, current_mode=3)
         vm.find("advertised=3000 bq=0 pg=1 charge=0", vm.send("s"))
         denied(vm, bus, "missing pack configuration", -11)
+
+    with start(args, args.build, args.output / "retained-register", initial_limit=2400) as (vm, bus):
+        check_idle_limit(bus, 1500, "P4 boot with a retained 2400 mA charger setting on 1.5 A USB")
 
     with start(args, args.build, args.output / "configured") as (vm, bus):
         bus.drive(PG_N, 1)
@@ -131,7 +157,7 @@ def run(args):
 
         bus.drive(PG_N, 0)
         bus.usb(attached=True, power_good=True)
-        vm.find("advertised=500 bq=0 pg=1 charge=0", vm.send("s"))
+        vm.find("advertised=500 bq=0 pg=1 charge=0 limit=100", vm.send("s"))
         denied(vm, bus, "unallocated Default USB Power", -11)
 
         bus.usb(attached=True, power_good=True, current_mode=3)
@@ -139,10 +165,13 @@ def run(args):
         vm.find("cc=-19", vm.send("s"))
         denied(vm, bus, "an unexpected CC controller advertising 3 A", -5)
         bus.set_cc_identity(True)
-        vm.find("advertised=3000 bq=0 pg=1 charge=0 limit=200 faults=128", vm.send("s"))
+        vm.find("advertised=3000 bq=0 pg=1 charge=0 limit=100 faults=128", vm.send("s"))
         with bus.lock:
             bus.ignore_voltage = True
         denied(vm, bus, "failed VREG write readback", -5)
+        check_idle_limit(bus, 100, "rollback of a failed setup after writing higher IINDPM")
+        if not any(address == hex(CHARGER) and sent == "0011" for _, address, sent, _ in bus.i2c):
+            raise RuntimeError("The rollback case did not reach the attempted 1800 mA write")
         with bus.lock:
             bus.ignore_voltage = False
         enabled(vm, bus, 1800)
@@ -182,8 +211,11 @@ def run(args):
         with bus.lock:
             if bus.registers[CC][0x09] & 0x17 != 5 or bus.current_on_cc_ack is not None:
                 raise RuntimeError("CC acknowledgement did not preserve the writable bits or clear the latch")
-            cc_reads = [(sent, result) for stamp, address, sent, result in bus.i2c
-                        if notified <= stamp <= stopped and address == hex(CC)]
+            cc_transfers = [(stamp, sent, result) for stamp, address, sent, result in bus.i2c
+                            if stamp <= stopped and address == hex(CC)]
+        first = next((index for index, transfer in enumerate(cc_transfers) if transfer[0] >= notified), len(cc_transfers))
+        # The pointer write may already have finished when the pending status is injected.
+        cc_reads = [(sent, result) for _, sent, result in cc_transfers[max(0, first - 1):]]
         expected = [("00", ""), ("", "30323342535554003095"), ("0915", ""),
                     ("00", ""), ("", "30323342535554001085")]
         if not any(cc_reads[offset:offset + len(expected)] == expected for offset in range(len(cc_reads))):
@@ -195,6 +227,30 @@ def run(args):
         bus.usb(attached=True, power_good=True, current_mode=3)
         enabled(vm, bus, 1800)
         bus.charge_cut(bus.set_voltage(0x0B), "unexpected VREG change while charging")
+
+        enabled(vm, bus, 1800)
+        before = bus.now()
+        vm.find("GTOS_A3_CHARGE result=0", vm.send("c"))
+        bus.charge_cut(before, "manual charge disable")
+        check_idle_limit(bus, 1800, "manual stop with the same USB source")
+        bus.usb(attached=True, power_good=True, current_mode=1)
+        check_idle_limit(bus, 1500, "USB capability drop while charging is off")
+        bus.usb(attached=True, power_good=True, current_mode=3)
+        bus.source_sets_input_limit(2400)
+        check_idle_limit(bus, 1500, "source detection tried to restore 2400 mA while idle")
+
+        with bus.lock:
+            bus.ignore_input_limit = True
+        bus.usb(attached=True, power_good=True)
+        vm.find("cc=-5", vm.send("s"))
+        check_idle_limit(bus, 1500, "failed fallback write reported an I/O error")
+        with bus.lock:
+            bus.ignore_input_limit = False
+        check_idle_limit(bus, 100, "successful retry of the conservative fallback")
+        bus.usb(attached=True, power_good=True, current_mode=3)
+        bus.source_sets_input_limit(2400)
+        check_idle_limit(bus, 100, "higher source capability without explicit enable")
+        enabled(vm, bus, 1800)
     print("A3 hardware charging path passed with synthetic electrical parameters:", args.output)
 
 

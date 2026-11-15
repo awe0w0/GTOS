@@ -187,8 +187,8 @@ static void publish_ble_status(void) {
 
 static void sample(void) {
     dashboard.motion_result = gtos_board_read_motion(&dashboard.motion);
-    dashboard.charger_result = gtos_board_read_charger(&dashboard.charger);
     dashboard.usb_result = gtos_board_read_usb(&dashboard.usb);
+    dashboard.charger_result = gtos_board_read_charger(&dashboard.charger);
     gtos_board_read_radio(&dashboard.radio);
     gtos_board_read_wifi(&dashboard.wifi);
     dashboard.ble_connected = gtos_board_ble_connected();
