@@ -73,6 +73,10 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
     constexpr uint32_t mtu = 1500;
     auto* memory = MemoryManager::activeMemoryManager;
     if (!memory || !arp || (size && !data) || size > mtu - sizeof(InternetProtocolV4Message)) return;
+    const uint32_t sourceIP = backend->GetIPAddress();
+    const uint32_t route = (dstIP_BE & subnetMask) == (sourceIP & subnetMask) ? dstIP_BE : gatewayIP;
+    uint64_t destinationMAC = 0;
+    if (!arp->Resolve(route, destinationMAC)) return;
     //构建ipv4表头
     //创建一个缓冲区，内容为ipv4表头加上调用ip::send函数时传来的data参数
     uint8_t* buffer = (uint8_t*)memory->malloc(sizeof(InternetProtocolV4Message) + size);
@@ -88,7 +92,7 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
     message->protocol = protocol;
 
     message->dstIP = dstIP_BE;
-    message->srcIP = backend->GetIPAddress();
+    message->srcIP = sourceIP;
 
     message->checksum = 0;
     message->checksum = Checksum(message, sizeof(InternetProtocolV4Message));
@@ -97,13 +101,7 @@ void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t
     uint8_t* databuffer = buffer + sizeof(InternetProtocolV4Message); 
     for (uint32_t i = 0; i < size; ++i) databuffer[i] = data[i];
 
-    uint32_t route = dstIP_BE;
-
-    //与上子网掩码检测是否同一子网
-    //如果不是就转交给网关路由器，由网关路由器路由
-    if ((dstIP_BE & subnetMask) != (message->srcIP & subnetMask)) route = gatewayIP;
-
-    backend->Send(arp->Resolve(route), this->etherType_BE, buffer, sizeof(InternetProtocolV4Message) + size);
+    backend->Send(destinationMAC, this->etherType_BE, buffer, sizeof(InternetProtocolV4Message) + size);
 
     memory->free(buffer);
 }

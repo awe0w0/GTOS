@@ -7,8 +7,8 @@ for optimization in 0 2; do
     "${CXX:-g++}" -m32 -O"$optimization" -std=c++11 -Iinclude -Wall -Wextra -Werror -Wno-unused-parameter \
         -ffreestanding -fno-pie -no-pie -nostdlib -static -fno-stack-protector -fno-exceptions -fno-rtti \
         -ffunction-sections -fdata-sections -Wl,--gc-sections -fsanitize=undefined -fsanitize-undefined-trap-on-error \
-        tests/net_ipv4_test.cpp src/net/ipv4.cpp src/net/etherframe.cpp src/drivers/driver.cpp \
-        src/hardwarecommunication/port.cpp -o "$work/net-ipv4"
+        -DGTOS_MEMORY_TEST tests/net_ipv4_test.cpp src/net/arp.cpp src/net/ipv4.cpp src/net/etherframe.cpp \
+        src/drivers/driver.cpp src/hardwarecommunication/port.cpp src/memorymanagement.cpp -o "$work/net-ipv4"
     echo "IPv4 receive -O$optimization"
     if [ -n "${GTOS_QEMU_I386:-}" ]; then
         "$GTOS_QEMU_I386" "$work/net-ipv4"

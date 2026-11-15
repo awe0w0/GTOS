@@ -20,18 +20,22 @@ namespace gtos {
         } __attribute__((packed));
 
         class AddressResolutionProtocol : public EtherFrameHandler {
-            uint32_t IPcache[128];
-            uint64_t MACcache[128];
-            int numCacheEntries;
+            enum { CacheSize = 128 };
+            struct Neighbor {
+                uint32_t ip;
+                uint64_t mac;
+            };
+            Neighbor neighbors[CacheSize];
+            uint32_t nextNeighbor;
+            Neighbor* Find(uint32_t ip);
+            void RequestMACAddress(uint32_t ip);
         public:
             AddressResolutionProtocol(EtherFrameProvider* backend);
             ~AddressResolutionProtocol();
 
-            bool OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size);
-
-            void RequestMACAddress(uint32_t IP_BE);
-            uint64_t GetMACFromCache(uint32_t IP_BE);
-            uint64_t Resolve(uint32_t IP_BE);
+            bool OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size) override;
+            // An unresolved address triggers one request. The caller may retry later.
+            bool Resolve(uint32_t ip, uint64_t& mac);
         };
     }
 }

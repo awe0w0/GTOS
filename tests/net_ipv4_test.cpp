@@ -5,6 +5,10 @@ using namespace gtos::drivers;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::net;
 
+static uint8_t sentFrame[1514];
+static unsigned transmitted;
+static int sentBytes;
+
 InterruptHandler::InterruptHandler(InterruptsManager* manager, uint8_t number)
     : interruptNumber(number), interruptManager(manager) {}
 InterruptHandler::~InterruptHandler() {}
@@ -19,6 +23,12 @@ int amd_am79c973::Reset() { return 0; }
 uint32_t amd_am79c973::HandlerInterrupt(uint32_t esp) { return esp; }
 uint32_t amd_am79c973::GetIPAddress() { return 0x020200C0U; }
 uint64_t amd_am79c973::GetMACAddress() { return 0x060504030202ULL; }
+void amd_am79c973::Send(uint8_t* frame, int size) {
+    ++transmitted;
+    sentBytes = size;
+    if (size <= (int)sizeof(sentFrame))
+        for (int i = 0; i < size; ++i) sentFrame[i] = frame[i];
+}
 
 RawDataHandler::RawDataHandler(amd_am79c973* device) : backend(device) {}
 RawDataHandler::~RawDataHandler() {}
@@ -99,12 +109,65 @@ namespace {
         for (uint32_t i = 0; i < sizeof(frame.bytes); ++i) unchanged &= frame.bytes[i] == before.bytes[i];
         Check(unchanged, "discard preserves input frame");
     }
+
+    void CheckArp(EtherFrameProvider& ethernet, AddressResolutionProtocol& arp,
+                  InternetProtocolProvider& ipv4) {
+        const uint64_t peerMAC = 0x0B0A09080702ULL;
+        const uint8_t reply[] = {
+            2, 2, 3, 4, 5, 6, 2, 7, 8, 9, 10, 11, 0x08, 0x06,
+            0, 1, 0x08, 0, 6, 4, 0, 2,
+            2, 7, 8, 9, 10, 11, 192, 0, 2, 1,
+            2, 2, 3, 4, 5, 6, 192, 0, 2, 2,
+        };
+        uint8_t frame[sizeof(reply)];
+        for (unsigned i = 0; i < sizeof(reply); ++i) frame[i] = reply[i];
+        Check(!ethernet.OnRawDataReceived(frame, sizeof(frame)), "unsolicited ARP does not transmit");
+        uint64_t mac = 0;
+        Check(!arp.Resolve(sourceAddress, mac) && !mac && transmitted == 1,
+              "unresolved ARP sends once and returns without changing the output MAC");
+        Check(sentBytes == (int)sizeof(reply) && sentFrame[0] == 0xFF && sentFrame[5] == 0xFF &&
+              sentFrame[12] == 0x08 && sentFrame[13] == 0x06 && sentFrame[21] == 1 &&
+              sentFrame[32] == 0 && sentFrame[37] == 0 && sentFrame[41] == 1,
+              "wire request is a broadcast with an unfilled target hardware address");
+
+        frame[32] ^= 2;
+        Check(!ethernet.OnRawDataReceived(frame, sizeof(frame)) && !arp.Resolve(sourceAddress, mac) &&
+              !mac && transmitted == 2, "reply addressed to another hardware address cannot resolve");
+        frame[32] ^= 2;
+        Check(!ethernet.OnRawDataReceived(frame, sizeof(frame) - 1) && !arp.Resolve(sourceAddress, mac) &&
+              transmitted == 3, "truncated reply cannot resolve");
+        Check(!ethernet.OnRawDataReceived(frame, sizeof(frame)) && arp.Resolve(sourceAddress, mac) &&
+              mac == peerMAC && transmitted == 3, "valid solicited reply resolves the pending unicast address");
+        frame[23] ^= 1;
+        Check(!ethernet.OnRawDataReceived(frame, sizeof(frame)) && arp.Resolve(sourceAddress, mac) &&
+              mac == peerMAC && transmitted == 3, "duplicate reply cannot replace a resolved mapping");
+        Check(!arp.Resolve(0, mac) && !arp.Resolve(0x01E0U, mac) && transmitted == 3,
+              "unspecified and multicast addresses produce no ARP traffic");
+
+        uint8_t data = 0x5A;
+        ipv4.Send(0x030200C0U, 17, &data, 1);
+        Check(transmitted == 4 && sentFrame[13] == 0x06,
+              "IPv4 waits for a neighbor before transmitting data");
+        ipv4.Send(sourceAddress, 17, &data, 1);
+        Check(transmitted == 5 && sentBytes == 35 && sentFrame[1] == 7 && sentFrame[13] == 0 &&
+              sentFrame[34] == data && WireChecksum(sentFrame + ethernetBytes, 20) == 0,
+              "IPv4 sends a valid frame once the route resolves");
+
+        frame[23] ^= 1;
+        frame[21] = 1;
+        Check(ethernet.OnRawDataReceived(frame, sizeof(frame)) && frame[21] == 2 && frame[1] == 7 &&
+              frame[23] == 2 && frame[31] == 2 && frame[41] == 1,
+              "a request for the local address produces an ARP reply");
+    }
 }
 
 extern "C" int NetIpv4TestMain() {
     amd_am79c973 device(nullptr, nullptr);
     EtherFrameProvider ethernet(&device);
-    InternetProtocolProvider ipv4(&ethernet, nullptr, 0, 0);
+    alignas(16) uint8_t heap[4096];
+    gtos::MemoryManager memory(reinterpret_cast<size_t>(heap), sizeof(heap));
+    AddressResolutionProtocol arp(&ethernet);
+    InternetProtocolProvider ipv4(&ethernet, &arp, 0, 0x00FFFFFFU);
     Receiver receiver(&ipv4);
     Frame padded;
     Check(!ethernet.OnRawDataReceived(padded.bytes, sizeof(padded.bytes)) && receiver.calls == 1,
@@ -148,7 +211,8 @@ extern "C" int NetIpv4TestMain() {
     const uint8_t oddUnaligned[] = {0, 0x80, 0x10, 0xFE};
     Check(InternetProtocolProvider::Checksum(oddUnaligned + 1, 3) == 0xEE81U,
           "unsigned odd byte at an unaligned address");
-    if (!failures) Print("PASS IPv4 ingress bounds, checksum, fragments, demultiplexing and reply\n");
+    CheckArp(ethernet, arp, ipv4);
+    if (!failures) Print("PASS IPv4 ingress bounds, checksum, fragments, replies and bounded ARP resolution\n");
     return failures ? 1 : 0;
 }
 

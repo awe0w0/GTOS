@@ -1,93 +1,82 @@
 #include <net/arp.h>
+#include <memory/criticalsection.h>
 
 using namespace gtos;
 using namespace gtos::net;
-using namespace gtos::drivers;
+using gtos::memory::InterruptGuard;
 
-void printf(char*);
-void printfHex16(uint16_t);
-void printfHex(uint8_t);
+namespace {
+    constexpr uint64_t BroadcastMAC = 0xFFFFFFFFFFFFULL;
+    constexpr uint16_t Request = 0x0100, Reply = 0x0200;
+
+    bool UnicastIPv4(uint32_t ip) {
+        return ip && ip != 0xFFFFFFFFU && (ip & 0xF0U) != 0xE0U;
+    }
+}
 
 AddressResolutionProtocol::AddressResolutionProtocol(EtherFrameProvider* backend)
-: EtherFrameHandler(backend, 0x806) {
-    // backend->SetHandlers(this, 0x0806);
-    numCacheEntries = 0;
+    : EtherFrameHandler(backend, 0x0806), neighbors{}, nextNeighbor(0) {}
+
+AddressResolutionProtocol::~AddressResolutionProtocol() {}
+
+AddressResolutionProtocol::Neighbor* AddressResolutionProtocol::Find(uint32_t ip) {
+    for (auto& neighbor : neighbors)
+        if (neighbor.ip == ip) return &neighbor;
+    return 0;
 }
 
-AddressResolutionProtocol::~AddressResolutionProtocol() {
-
-}
-
-bool AddressResolutionProtocol::OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size) {
-    if (size < sizeof(AddressResolutionProtocolMessage)) return false;
-    // printf("!!!!!!!!!!!!!!!!!!");
-
-    //接受到的数据去除表头后为arpMessage
-    AddressResolutionProtocolMessage* arp = (AddressResolutionProtocolMessage*)etherframePayload;
-    // printf("!!!!!!!!!!!!!!!!!!");
-    // printfHex16(arp->hardwareType);
-    // printf("\n");
-    // printf("\n");
-    // for(int i = 0; i < (size>64?64:size); i++){
-    //     printfHex(((uint8_t*)etherframePayload)[i]);
-    //     printf(" ");
-    // }
-    if (arp->hardwareType == 0x0100) {
-        if (arp->protocol == 0x0008 //ipv4协议
-        && arp->hardwareAddressSize == 6 && arp->protocolAddressSize == 4 
-        && arp->dstIP == backend->GetIPAddress()) {
-            switch (arp->command) {
-                case 0x0100: // request
-                    arp->command = 0x0200;
-                    arp->dstIP = arp->srcIP;
-                    arp->dstMAC = arp->srcMAC;
-                    arp->srcIP = backend->GetIPAddress();
-                    arp->srcMAC = backend->GetMACAddress();
-                    
-                    return true;
-                    break;
-                case 0x0200: //response
-                    if (numCacheEntries < 128) {
-                        IPcache[numCacheEntries] = arp->srcIP;
-                        MACcache[numCacheEntries] = arp->srcMAC;
-                        numCacheEntries++;
-                    }
-                    
-                    break;
-            }
-        }
+bool AddressResolutionProtocol::OnEtherFrameReceived(uint8_t* payload, uint32_t size) {
+    if (!payload || size < sizeof(AddressResolutionProtocolMessage)) return false;
+    auto& arp = *reinterpret_cast<AddressResolutionProtocolMessage*>(payload);
+    const uint32_t localIP = backend->GetIPAddress();
+    const uint64_t localMAC = backend->GetMACAddress();
+    if (!localIP || arp.dstIP != localIP || arp.hardwareType != 0x0100 ||
+        arp.protocol != 0x0008 || arp.hardwareAddressSize != 6 ||
+        arp.protocolAddressSize != 4 || !arp.srcMAC || (arp.srcMAC & 1U))
+        return false;
+    if (arp.command == Request && (!arp.srcIP || UnicastIPv4(arp.srcIP))) {
+        arp.command = Reply;
+        arp.dstIP = arp.srcIP;
+        arp.dstMAC = arp.srcMAC;
+        arp.srcIP = localIP;
+        arp.srcMAC = localMAC;
+        return true;
+    }
+    if (arp.command == Reply && arp.dstMAC == localMAC && UnicastIPv4(arp.srcIP)) {
+        InterruptGuard guard;
+        Neighbor* neighbor = Find(arp.srcIP);
+        if (neighbor && !neighbor->mac) neighbor->mac = arp.srcMAC;
     }
     return false;
 }
 
-//arp广播获取其他设备MAC地址
-void AddressResolutionProtocol::RequestMACAddress(uint32_t IP_BE) {
-    AddressResolutionProtocolMessage arp;
-    arp.hardwareType = 0x0100; // ethernet
-    arp.protocol = 0x0008; //ipv4
-    arp.hardwareAddressSize = 6; // mac
-    arp.protocolAddressSize = 4; // ipv4
-    arp.command = 0x0100; //request
-
+void AddressResolutionProtocol::RequestMACAddress(uint32_t ip) {
+    AddressResolutionProtocolMessage arp = {};
+    arp.hardwareType = 0x0100;
+    arp.protocol = 0x0008;
+    arp.hardwareAddressSize = 6;
+    arp.protocolAddressSize = 4;
+    arp.command = Request;
     arp.srcMAC = backend->GetMACAddress();
     arp.srcIP = backend->GetIPAddress();
-    arp.dstMAC = 0xFFFFFFFFFFFF; // broadcast
-    arp.dstIP = IP_BE;
-
-    this->Send(arp.dstMAC, (uint8_t*)&arp, sizeof(AddressResolutionProtocolMessage));
+    arp.dstIP = ip;
+    Send(BroadcastMAC, reinterpret_cast<uint8_t*>(&arp), sizeof(arp));
 }
 
-uint64_t AddressResolutionProtocol::GetMACFromCache(uint32_t IP_BE) {
-    for (int i = 0;i < numCacheEntries;i++) if (IPcache[i] == IP_BE) return MACcache[i];
-    return 0xFFFFFFFFFFFF;
-}
-
-uint64_t AddressResolutionProtocol::Resolve(uint32_t IP_BE) {
-    uint64_t result = GetMACFromCache(IP_BE);
-    if (result == 0xFFFFFFFFFFFF) RequestMACAddress(IP_BE);
-
-    while (result == 0xFFFFFFFFFFFF) //possible infinite loop
-        result = GetMACFromCache(IP_BE);
-
-    return result;
+bool AddressResolutionProtocol::Resolve(uint32_t ip, uint64_t& mac) {
+    const uint32_t localIP = backend->GetIPAddress();
+    if (!UnicastIPv4(ip) || !localIP || ip == localIP) return false;
+    {
+        InterruptGuard guard;
+        Neighbor* neighbor = Find(ip);
+        if (!neighbor) {
+            neighbors[nextNeighbor] = {ip, 0};
+            nextNeighbor = (nextNeighbor + 1) % CacheSize;
+        } else if (neighbor->mac) {
+            mac = neighbor->mac;
+            return true;
+        }
+    }
+    RequestMACAddress(ip);
+    return false;
 }
