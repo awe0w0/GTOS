@@ -905,6 +905,7 @@ ADDITIONS = {
     'build/config/gtos/include/process/shared_memory_abi.h': '../../../include/process/shared_memory_abi.h',
     'base/threading/thread_local_storage_gtos.cc': 'base/thread_local_storage_gtos.cc',
     'build/config/gtos/include/process/thread_slot_abi.h': '../../../include/process/thread_slot_abi.h',
+    'build/config/gtos/include/process/tcp_abi.h': '../../../include/process/tcp_abi.h',
     'build/config/gtos/include/process/identity_abi.h': '../../../include/process/identity_abi.h',
     'build/config/gtos/include/process/thread_abi.h': '../../../include/process/thread_abi.h',
     'base/synchronization/waitable_event_gtos.cc': 'base/waitable_event_gtos.cc',

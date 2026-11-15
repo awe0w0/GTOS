@@ -145,9 +145,17 @@ int TcpClient::Open(uint32_t remoteIP, uint16_t remotePort, uint16_t localPort, 
 }
 
 int TcpClient::Status(int handle) const {
+    unsigned readable;
+    bool endOfStream;
+    return Describe(handle, readable, endOfStream);
+}
+
+int TcpClient::Describe(int handle, unsigned& readable, bool& endOfStream) const {
     memory::InterruptGuard guard;
     const auto* connection = Find(handle);
     if (!connection) return Invalid;
+    readable = connection->received;
+    endOfStream = connection->peerFinished && !connection->received;
     if (connection->phase == Failed) return connection->error;
     return connection->phase == Established ? 0 : Again;
 }

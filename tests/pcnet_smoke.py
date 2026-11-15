@@ -56,7 +56,7 @@ def build(output, probe):
     grub = os.environ.get('GTOS_GRUB_MKRESCUE', 'grub-mkrescue')
     identity = {'probe': probe}
     sources = SOURCES if probe == 'pcnet' else SOURCES[:-1] + (
-        'src/net/tcp_client.cpp', 'tests/tcp_client_smoke.cpp')
+        'src/net/tcp_client.cpp', 'src/process/native_tcp.cpp', 'tests/tcp_client_smoke.cpp')
     for level in LEVELS:
         work = output / level
         work.mkdir()
@@ -186,7 +186,7 @@ def exercise_tcp(publication, output, identity):
                         child.kill()
         if guest.read_text().splitlines() != [
                 'AMD am79c973', 'TCP CONNECTED AFTER ARP', 'TCP HTTP RESPONSE VERIFIED',
-                'PCNET TCP HTTP PASS', 'PCNET GUEST PASS']:
+                'TCP NATIVE ENDPOINT PASS', 'PCNET TCP HTTP PASS', 'PCNET GUEST PASS']:
             raise RuntimeError(f'Unexpected TCP guest transcript: {guest}')
         print('PCNET TCP', level, 'PASS', file_identity(guest))
         no_peer = output / (level + '-no-peer.guest.log')

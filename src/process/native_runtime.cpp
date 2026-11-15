@@ -112,7 +112,8 @@ namespace {
 NativeRuntime* NativeRuntime::active = 0;
 NativeRuntime::NativeRuntime() : slots(defaultSlots), slotCount(MaximumProcesses),
     paging(0), frames(0), scheduler(0), gdt(0),
-    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), loopback(0), events(0), sharedMemory(0) {
+    stacksPrepared(false), enabled(false), threadsEnabled(false), nextId(1), files(0), loopback(0),
+    tcp(0), events(0), sharedMemory(0) {
     Zero(&statistics, sizeof(statistics));
     for (uint32_t i = 0; i < MaximumProcesses; ++i) {
         Zero(&slots[i].status, sizeof(NativeStatus));
@@ -130,6 +131,13 @@ bool NativeRuntime::AttachLoopback(NativeLoopbackEndpoint& endpoint) {
     InterruptGuard guard;
     if (enabled || loopback) return false;
     loopback = &endpoint;
+    return true;
+}
+
+bool NativeRuntime::AttachTcp(NativeTcpEndpoint& endpoint) {
+    InterruptGuard guard;
+    if (enabled || tcp) return false;
+    tcp = &endpoint;
     return true;
 }
 
@@ -698,6 +706,16 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             sizeof(GtosEnvironmentReadResult)) ? 0 : (uint32_t)GTOS_ENVIRONMENT_ERR_BAD_ADDRESS;
         break;
     }
+    case GTOS_SYS_TCP_CONNECT:
+    case GTOS_SYS_TCP_INFO:
+    case GTOS_SYS_TCP_READ:
+    case GTOS_SYS_TCP_WRITE:
+    case GTOS_SYS_TCP_SHUTDOWN_WRITE:
+    case GTOS_SYS_TCP_CLOSE:
+        cpu->eax = tcp ? (uint32_t)tcp->Call(
+            slot->status.id, slot->space, cpu->eax, cpu->ebx, cpu->ecx)
+            : (uint32_t)GTOS_TCP_ERR_UNAVAILABLE;
+        break;
     case GTOS_SYS_LOOPBACK_OPEN:
     case GTOS_SYS_LOOPBACK_BIND:
     case GTOS_SYS_LOOPBACK_LISTEN:
@@ -1224,6 +1242,7 @@ uint32_t NativeRuntime::Reap() {
         NativeWindows::Instance().ReclaimOwner(process.status.id);
         if (files) files->ReclaimOwner(process.status.id);
         if (loopback) loopback->ReclaimOwner(process.status.id);
+        if (tcp) tcp->ReclaimOwner(process.status.id);
         if (events) events->ReclaimOwner(process.status.id);
         if (!process.space.Destroy()) continue;
         if (sharedMemory) sharedMemory->ReclaimOwner(process.status.id);

@@ -81,6 +81,7 @@ namespace gtos {
                 ~amd_am79c973();
                 
                 void Activate();
+                bool IsActive() const { return active; }
                 int Reset();
                 uint32_t HandlerInterrupt(uint32_t esp);
 

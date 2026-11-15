@@ -2,6 +2,9 @@
 #include "pcnet_smoke.cpp"
 #undef NativeProcessSmoke
 #include <net/tcp_client.h>
+#include <process/native_tcp.h>
+
+extern "C" uint8_t kernel_start, kernel_end, kernel_readonly_start, kernel_readonly_end;
 
 namespace {
     const uint32_t LocalIP = 0x0f02000a;
@@ -33,9 +36,87 @@ namespace {
         client.Poll(timer.milliseconds);
         asm volatile("hlt");
     }
+
+    constexpr unsigned Owner = 1, OtherOwner = 2;
+    constexpr unsigned RequestAddress = memory::ProcessAddressSpace::UserBase;
+    constexpr unsigned ResultAddress = RequestAddress + 4096;
+
+    template<class Request>
+    int Invoke(process::NativeTcp& endpoint, unsigned owner, memory::ProcessAddressSpace& space,
+               unsigned operation, const Request& request) {
+        Require(space.CopyToUser(RequestAddress, &request, sizeof(request)), "TCP ABI request copy");
+        return endpoint.Call(owner, space, operation, RequestAddress, sizeof(request));
+    }
+
+    void CheckNativeEndpoint(void* boot, unsigned magic, TcpClient& client) {
+        static memory::PhysicalMemoryManager frames;
+        static memory::KernelPaging paging;
+        static memory::ProcessAddressSpace first, second;
+        Require(frames.initialize(boot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end),
+                "TCP ABI frame allocator");
+        const memory::PagingConfig config = {(uint32_t)&kernel_start, (uint32_t)&kernel_end,
+            (uint32_t)&kernel_readonly_start, (uint32_t)&kernel_readonly_end,
+            static_cast<const memory::MultibootInfo*>(boot), 0, 0};
+        {
+            memory::InterruptGuard interrupts;
+            Require(paging.prepareIdentity(frames, config), "TCP ABI prepare paging");
+            Require(paging.enable(), "TCP ABI enable paging with interrupts disabled");
+            Require(paging.sealForSharedProcessors(), "TCP ABI seal shared paging");
+        }
+        const auto baseline = frames.getStatistics().freeFrames;
+        memory::ProcessAddressSpace* spaces[] = {&first, &second};
+        for (auto* space : spaces) {
+            Require(space->Prepare(paging, frames) && space->MapNewRange(RequestAddress, 8192, true) &&
+                    space->Seal(), "TCP ABI separate address spaces");
+        }
+        TaskManager scheduler;
+        process::NativeTcp endpoint(client, scheduler, LocalIP, FixtureIP, 8080, 17);
+        GtosTcpConnectRequest connect{GTOS_TCP_ABI_VERSION, FixtureIP, 8081, 0};
+        Require(Invoke(endpoint, Owner, first, GTOS_SYS_TCP_CONNECT, connect) == GTOS_TCP_ERR_DENIED &&
+                !endpoint.ActiveSockets(), "TCP ABI denies unlisted port");
+        connect = {GTOS_TCP_ABI_VERSION, FixtureIP + (1U << 24), 8080, 0};
+        Require(Invoke(endpoint, Owner, first, GTOS_SYS_TCP_CONNECT, connect) == GTOS_TCP_ERR_DENIED,
+                "TCP ABI denies unlisted address");
+        connect = {GTOS_TCP_ABI_VERSION, FixtureIP, 8080, 1};
+        Require(Invoke(endpoint, Owner, first, GTOS_SYS_TCP_CONNECT, connect) == GTOS_TCP_ERR_INVALID &&
+                endpoint.Call(Owner, first, GTOS_SYS_TCP_CONNECT, 0, sizeof(connect)) == GTOS_TCP_ERR_BAD_ADDRESS &&
+                endpoint.Call(Owner, first, GTOS_SYS_TCP_CONNECT, RequestAddress, sizeof(connect) - 1) ==
+                    GTOS_TCP_ERR_INVALID, "TCP ABI bounds connect arguments");
+        connect.flags = 0;
+        const int handle = Invoke(endpoint, Owner, first, GTOS_SYS_TCP_CONNECT, connect);
+        Require(handle > 0 && endpoint.ActiveSockets() == 1 && endpoint.OpenedSockets() == 1,
+                "TCP ABI opens exact allowed endpoint");
+        GtosTcpInfoRequest query{GTOS_TCP_ABI_VERSION, static_cast<unsigned>(handle), ResultAddress};
+        GtosTcpInfo info{};
+        Require(Invoke(endpoint, Owner, first, GTOS_SYS_TCP_INFO, query) == 0 &&
+                first.CopyFromUser(&info, ResultAddress, sizeof(info)) &&
+                info.version == GTOS_TCP_ABI_VERSION && info.local_ipv4 == LocalIP &&
+                info.peer_ipv4 == FixtureIP && info.local_port == 49152 && info.peer_port == 8080,
+                "TCP ABI returns exact endpoints");
+        const GtosTcpControlRequest close{GTOS_TCP_ABI_VERSION, static_cast<unsigned>(handle)};
+        Require(Invoke(endpoint, OtherOwner, second, GTOS_SYS_TCP_INFO, query) == GTOS_TCP_ERR_BAD_HANDLE &&
+                Invoke(endpoint, OtherOwner, second, GTOS_SYS_TCP_CLOSE, close) == GTOS_TCP_ERR_BAD_HANDLE,
+                "TCP ABI refuses access and close from a second owner");
+        query.result_va = ResultAddress + 4092;
+        GtosTcpTransferRequest transfer{GTOS_TCP_ABI_VERSION, static_cast<unsigned>(handle),
+            ResultAddress + 4092, 8};
+        Require(Invoke(endpoint, Owner, first, GTOS_SYS_TCP_INFO, query) == GTOS_TCP_ERR_BAD_ADDRESS &&
+                Invoke(endpoint, Owner, first, GTOS_SYS_TCP_READ, transfer) == GTOS_TCP_ERR_BAD_ADDRESS &&
+                Invoke(endpoint, Owner, first, GTOS_SYS_TCP_WRITE, transfer) == GTOS_TCP_ERR_BAD_ADDRESS,
+                "TCP ABI rejects transfers across an unmapped page");
+        endpoint.ReclaimOwner(OtherOwner);
+        Require(endpoint.ActiveSockets() == 1, "TCP ABI preserves another owner's handle");
+        endpoint.ReclaimOwner(Owner);
+        Require(!endpoint.ActiveSockets() &&
+                Invoke(endpoint, Owner, first, GTOS_SYS_TCP_CLOSE, close) == GTOS_TCP_ERR_BAD_HANDLE,
+                "TCP ABI reclaims only the stopped owner's handle");
+        Require(first.Destroy() && second.Destroy() && frames.getStatistics().freeFrames == baseline,
+                "TCP ABI address-space teardown restores baseline");
+        printf((char*)"TCP NATIVE ENDPOINT PASS\n");
+    }
 }
 
-extern "C" void NativeProcessSmoke(void*, unsigned magic) {
+extern "C" void NativeProcessSmoke(void* boot, unsigned magic) {
     Require(magic == 0x2badb002, "TCP Multiboot");
     GlobalDescriptorTable gdt;
     InterruptsManager interrupts(0x20, &gdt, nullptr);
@@ -117,6 +198,7 @@ extern "C" void NativeProcessSmoke(void*, unsigned magic) {
     Require(client.Write(handle, request, 1) == TcpClient::Closed, "TCP cannot write after shutdown");
     Require(client.Close(handle) && !client.Close(handle) && client.Status(handle) == TcpClient::Invalid,
             "TCP released its own handle once");
+    CheckNativeEndpoint(boot, magic, client);
     printf((char*)"PCNET TCP HTTP PASS\n");
     Finish(true);
 }

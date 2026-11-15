@@ -24,6 +24,7 @@ public:
     explicit TcpClient(InternetProtocolProvider& ip);
     int Open(uint32_t remoteIP, uint16_t remotePort, uint16_t localPort, uint32_t initialSequence);
     int Status(int handle) const;
+    int Describe(int handle, unsigned& readable, bool& endOfStream) const;
     int Write(int handle, const uint8_t* data, unsigned bytes);
     int Read(int handle, uint8_t* data, unsigned bytes);
     int ShutdownWrite(int handle);

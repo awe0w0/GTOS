@@ -27,7 +27,8 @@ class IOBuffer;
 class IPEndPoint;
 class SocketTag;
 
-// Stream sockets on this platform use the GTOS IPv4 loopback endpoint.
+// Local sockets use the loopback endpoint. Other IPv4 connections use the
+// TCP endpoint when the current boot profile supplies it.
 class NET_EXPORT TCPSocketGtos final {
  public:
   static std::unique_ptr<TCPSocketGtos> Create(
@@ -95,20 +96,26 @@ class NET_EXPORT TCPSocketGtos final {
   SocketDescriptor ReleaseSocketDescriptorForTesting() { return kInvalidSocket; }
 
  private:
+  struct SocketInfo;
   TCPSocketGtos(std::unique_ptr<SocketPerformanceWatcher> watcher,
                 NetLogWithSource net_log);
+  int GetSocketInfo(SocketInfo& info) const;
   int TryAccept(std::unique_ptr<TCPSocketGtos>* socket, IPEndPoint* address);
   int TryTransfer(bool reading, IOBuffer* buffer, int length);
   void Arm(base::OneShotTimer& timer, void (TCPSocketGtos::*method)());
   int ReadInternal(IOBuffer* buffer, int length, CompletionOnceCallback callback,
                    bool readiness_only);
   void CompleteAccept();
+  void CompleteConnect();
   void CompleteRead();
   void CompleteWrite();
 
   std::unique_ptr<SocketPerformanceWatcher> watcher_;
   NetLogWithSource net_log_;
   int handle_ = 0;
+  bool physical_ = false;
+  bool loopback_in_use_ = false;
+  CompletionOnceCallback connect_callback_;
   struct AcceptOperation {
     raw_ptr<std::unique_ptr<TCPSocketGtos>> result = nullptr;
     raw_ptr<IPEndPoint> address = nullptr;
@@ -120,7 +127,7 @@ class NET_EXPORT TCPSocketGtos final {
     CompletionOnceCallback callback;
   } read_, write_;
   bool readiness_only_ = false;
-  base::OneShotTimer accept_timer_, read_timer_, write_timer_;
+  base::OneShotTimer accept_timer_, connect_timer_, read_timer_, write_timer_;
 };
 
 }  // namespace net

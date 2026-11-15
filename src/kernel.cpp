@@ -17,6 +17,7 @@
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/ata.h>
+#include <drivers/amd_am79c973.h>
 #include <storage/settings.h>
 #include <storage/liveblockdevice.h>
 #include <storage/content_volume_layout.h>
@@ -32,6 +33,7 @@
 #include <process/native_events.h>
 #include <process/native_files.h>
 #include <process/native_loopback.h>
+#include <process/native_tcp.h>
 #include <process/native_shared_memory.h>
 #include <process/native_surface.h>
 #include <process/native_windows.h>
@@ -911,6 +913,71 @@ static uint32_t contentShellFreeBeforeLaunch;
 static bool contentShellEntered;
 
 namespace {
+const uint32_t ContentTcpLocal = 0x0f02000a; // 10.0.2.15
+const uint32_t ContentTcpPeer = 0x6402000a; // 10.0.2.100
+const uint16_t ContentTcpPeerPort = 8080;
+
+struct ContentTcpNetwork {
+    net::EtherFrameProvider link;
+    net::AddressResolutionProtocol arp;
+    net::InternetProtocolProvider ip;
+    net::TcpClient client;
+    process::NativeTcp endpoint;
+
+    ContentTcpNetwork(amd_am79c973& adapter, TaskManager& tasks, uint32_t sequence)
+        : link(&adapter), arp(&link), ip(&link, &arp, 0, 0x00ffffff),
+          client(ip), endpoint(client, tasks, ContentTcpLocal, ContentTcpPeer,
+                               ContentTcpPeerPort, sequence) {}
+};
+
+ContentTcpNetwork* contentTcp;
+
+bool StartContentTcp(TaskManager& tasks, InterruptsManager& interrupts, const CpuInfo& cpu) {
+    if (!cpu.cpuidAvailable || !(cpu.featureEcx & (1U << 30))) return false;
+    uint32_t seed = 0;
+    uint8_t ready = 0;
+    for (unsigned attempt = 0; attempt < 8 && !ready; ++attempt)
+        asm volatile("rdrand %0; setc %1" : "=&r"(seed), "=qm"(ready) : : "cc");
+    if (!ready) return false;
+
+    auto* heap = MemoryManager::activeMemoryManager;
+    if (!heap) return false;
+    PeripheralComponentInterconnectController pci;
+    for (unsigned slot = 0; slot < 32; ++slot) {
+        auto device = pci.GetDeviceDescriptor(0, slot, 0);
+        if (device.vendor_id != 0x1022 || device.device_id != 0x2000) continue;
+        device.interrupt &= 0xff;
+        // The fixture uses a free slave PIC line alongside the PS/2 drivers.
+        if (device.interrupt != 10 && device.interrupt != 11) continue;
+        const auto bar = pci.GetBaseAddressRegister(0, slot, 0, 0);
+        if (bar.type != InputOutput || !bar.address) continue;
+        device.portBase = reinterpret_cast<uint32_t>(bar.address);
+        void* storage = heap->malloc(sizeof(ContentTcpNetwork));
+        if (!storage) return false;
+        auto* adapter = static_cast<amd_am79c973*>(pci.GetDriver(device, &interrupts));
+        if (!adapter) {
+            heap->free(storage);
+            return false;
+        }
+        adapter->SetIPAddress(ContentTcpLocal);
+        auto* network = new (storage) ContentTcpNetwork(*adapter, tasks, seed);
+        adapter->Activate();
+        if (!adapter->IsActive() || !nativeRuntime.AttachTcp(network->endpoint)) {
+            network->~ContentTcpNetwork();
+            adapter->~amd_am79c973();
+            heap->free(adapter);
+            heap->free(storage);
+            return false;
+        }
+        Port8Bit mask(0xa1);
+        mask.Write(mask.Read() & ~(1U << (device.interrupt - 8)));
+        contentTcp = network;
+        printf("CONTENT TCP FIXTURE READY\n");
+        return true;
+    }
+    return false;
+}
+
 struct ContentBootFile {
     // This handle is closed before the boot path admits any native process.
     static const uint32_t Owner = 0xFFFFFFFFU;
@@ -932,12 +999,14 @@ struct ContentBootFile {
 };
 }
 static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
+                              InterruptsManager& interrupts, const CpuInfo& cpu,
                               const memory::MultibootInfo *boot) {
     const bool httpFixture = BootOption(boot, "content-http-fixture");
+    const bool tcpFixture = BootOption(boot, "content-tcp-fixture");
     const bool fileImage = BootOption(boot, "content-image-file");
     const uint32_t count = fileImage ? (httpFixture ? 1U : 0U) : (httpFixture ? 2U : 1U);
     const uint32_t moduleCount = boot->flags & (1u << 3) ? boot->moduleCount : 0;
-    if (moduleCount != count || (count && !boot->modules))
+    if (moduleCount != count || (count && !boot->modules) || (httpFixture && tcpFixture))
         return false;
     const auto *modules = (const memory::MultibootModule *)boot->modules;
     const auto *fixture = httpFixture ? &modules[fileImage ? 0 : 1] : nullptr;
@@ -958,6 +1027,8 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         "GTOS_CONTENT_ARG_07=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
     static const char httpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
         "GTOS_CONTENT_ARG_07=http://localhost:18761/start\0";
+    static const char tcpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
+        "GTOS_CONTENT_ARG_07=http://10.0.2.100:8080/start\0";
 #undef GTOS_CONTENT_LAUNCH_PARAMETERS
     const uint32_t runtimePages = 64 * 1024;
     const uint32_t stackPages = 128;
@@ -966,9 +1037,11 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
     const process::NativeElfLaunchProfile profile{
         capacity - runtimePages - stackPages, stackPages, runtimePages};
     process::NativeEnvironment environment;
-    if (!environment.Assign(httpFixture ? httpLaunch : launch,
-                            httpFixture ? sizeof(httpLaunch) - 1 : sizeof(launch) - 1) ||
-        ((httpFixture || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
+    const char* launchArguments = tcpFixture ? tcpLaunch : httpFixture ? httpLaunch : launch;
+    const size_t launchBytes = tcpFixture ? sizeof(tcpLaunch) : httpFixture ? sizeof(httpLaunch) : sizeof(launch);
+    if (!environment.Assign(launchArguments, launchBytes - 1) ||
+        ((httpFixture || tcpFixture || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
+        (tcpFixture && !StartContentTcp(tasks, interrupts, cpu)) ||
         !paging.sealForSharedProcessors() || !nativeEvents.EnableContentProfile() ||
         !nativeRuntime.AttachEvents(nativeEvents) ||
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
@@ -1036,6 +1109,11 @@ static void ServiceContentShell() {
         const uint32_t slotsBefore = nativeRuntime.OccupiedSlots();
         const uint32_t reaped = nativeRuntime.Reap();
         const uint32_t slotsAfter = nativeRuntime.OccupiedSlots();
+        const unsigned tcpAfter = contentTcp ? contentTcp->endpoint.ActiveSockets() : 0;
+        if (contentTcp) {
+            LogValue("CONTENT TCP OPENED ", contentTcp->endpoint.OpenedSockets());
+            LogValue("CONTENT TCP HANDLES AFTER REAP ", tcpAfter);
+        }
         const process::NativeStatistics counts = nativeRuntime.Statistics();
         const process::NativeEventStatistics events = nativeEvents.Statistics();
         const uint32_t freeAfter = frames.getStatistics().freeFrames;
@@ -1051,7 +1129,7 @@ static void ServiceContentShell() {
         LogValue("CONTENT EVENT OBJECTS AFTER REAP ", events.objects);
         LogValue("CONTENT EVENT HANDLES AFTER REAP ", events.handles);
         const bool clean = httpComplete && reaped && reaped == slotsBefore && !slotsAfter &&
-                           !events.objects && !events.handles &&
+                           !events.objects && !events.handles && !tcpAfter &&
                            counts.created == counts.reaped &&
                            freeAfter == contentShellFreeBeforeLaunch &&
                            nativeRuntime.Status(contentShellId, status) && status.reaped && !status.live;
@@ -3101,7 +3179,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     tasks.AddTask(&yielder);
     if (contentBoot) {
         if (!nativeStacksPrepared || !contentAssetsReady || !modern ||
-            !largeWindowBacking || !StartContentShell(tasks, gdt, mbi))
+            !largeWindowBacking || !StartContentShell(tasks, gdt, interrupts, cpu.GetInfo(), mbi))
             printf("CONTENT SHELL LIMITED\n");
     } else {
         nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);

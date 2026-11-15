@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <process/loopback_abi.h>
+#include <process/tcp_abi.h>
 
 #include "base/check.h"
 #include "base/functional/bind.h"
@@ -63,12 +64,35 @@ int MapResult(int result) {
   }
 }
 
-int ReadInfo(unsigned handle, GtosLoopbackInfo& info) {
-  return MapResult(Option(GTOS_SYS_LOOPBACK_INFO, handle,
-                          reinterpret_cast<unsigned>(&info)));
+int MapTcpResult(int result) {
+  switch (result) {
+    case GTOS_TCP_ERR_DENIED:
+      return ERR_ACCESS_DENIED;
+    case GTOS_TCP_ERR_UNAVAILABLE:
+      return ERR_ADDRESS_UNREACHABLE;
+    case GTOS_TCP_ERR_RESET:
+      return ERR_CONNECTION_RESET;
+    case GTOS_TCP_ERR_TIMEOUT:
+      return ERR_CONNECTION_TIMED_OUT;
+    default:
+      // The stream ABI shares the other error values with loopback.
+      return MapResult(result);
+  }
+}
+
+IPAddress FromWireAddress(unsigned address) {
+  return IPAddress(address & 0xff, (address >> 8) & 0xff,
+                   (address >> 16) & 0xff, address >> 24);
 }
 
 }  // namespace
+
+struct TCPSocketGtos::SocketInfo {
+  IPEndPoint local;
+  IPEndPoint peer;
+  bool readable;
+  bool eof;
+};
 
 std::unique_ptr<TCPSocketGtos> TCPSocketGtos::Create(
     std::unique_ptr<SocketPerformanceWatcher> watcher,
@@ -113,31 +137,66 @@ int TCPSocketGtos::Bind(const IPEndPoint& address) {
   if (!IsValid()) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
-  if (address.address() != IPAddress::IPv4Localhost()) {
+  if (physical_ || address.address() != IPAddress::IPv4Localhost()) {
     return ERR_ADDRESS_UNREACHABLE;
   }
-  return MapResult(Option(GTOS_SYS_LOOPBACK_BIND, handle_, address.port()));
+  const int result =
+      MapResult(Option(GTOS_SYS_LOOPBACK_BIND, handle_, address.port()));
+  if (result == OK) {
+    loopback_in_use_ = true;
+  }
+  return result;
 }
 
 int TCPSocketGtos::Listen(int backlog) {
   if (!IsValid()) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
-  if (backlog <= 0) {
+  if (physical_ || backlog <= 0) {
     return ERR_INVALID_ARGUMENT;
   }
   return MapResult(Option(GTOS_SYS_LOOPBACK_LISTEN, handle_, backlog));
 }
 
 int TCPSocketGtos::Connect(const IPEndPoint& address,
-                           CompletionOnceCallback) {
+                           CompletionOnceCallback callback) {
   if (!IsValid()) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
-  if (address.address() != IPAddress::IPv4Localhost()) {
+  if (physical_) {
+    return ERR_INVALID_ARGUMENT;
+  }
+  if (address.address() == IPAddress::IPv4Localhost()) {
+    const int result =
+        MapResult(Option(GTOS_SYS_LOOPBACK_CONNECT, handle_, address.port()));
+    if (result == OK) {
+      loopback_in_use_ = true;
+    }
+    return result;
+  }
+  if (loopback_in_use_ || !address.address().IsIPv4()) {
     return ERR_ADDRESS_UNREACHABLE;
   }
-  return MapResult(Option(GTOS_SYS_LOOPBACK_CONNECT, handle_, address.port()));
+  const auto& bytes = address.address().bytes();
+  const unsigned peer = unsigned{bytes[0]} | (unsigned{bytes[1]} << 8) |
+                        (unsigned{bytes[2]} << 16) | (unsigned{bytes[3]} << 24);
+  const int handle =
+      Call(GTOS_SYS_TCP_CONNECT,
+           GtosTcpConnectRequest{GTOS_TCP_ABI_VERSION, peer, address.port(), 0});
+  if (handle <= 0) {
+    return handle ? MapTcpResult(handle) : ERR_UNEXPECTED;
+  }
+  Control(GTOS_SYS_LOOPBACK_CLOSE, handle_);
+  handle_ = handle;
+  physical_ = true;
+  SocketInfo info;
+  const int result = GetSocketInfo(info);
+  if (result == ERR_IO_PENDING) {
+    CHECK(callback);
+    connect_callback_ = std::move(callback);
+    Arm(connect_timer_, &TCPSocketGtos::CompleteConnect);
+  }
+  return result;
 }
 
 int TCPSocketGtos::TryAccept(std::unique_ptr<TCPSocketGtos>* socket,
@@ -148,6 +207,7 @@ int TCPSocketGtos::TryAccept(std::unique_ptr<TCPSocketGtos>* socket,
   }
   auto accepted = Create(nullptr, net_log_);
   accepted->handle_ = result;
+  accepted->loopback_in_use_ = true;
   if (address) {
     const int error = accepted->GetPeerAddress(address);
     if (error != OK) {
@@ -163,7 +223,7 @@ int TCPSocketGtos::Accept(std::unique_ptr<TCPSocketGtos>* socket,
                            CompletionOnceCallback callback) {
   CHECK(!accept_.callback);
   CHECK(socket);
-  if (!IsValid()) {
+  if (!IsValid() || physical_) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
   const int result = TryAccept(socket, address);
@@ -181,6 +241,12 @@ int TCPSocketGtos::TryTransfer(bool reading, IOBuffer* buffer, int length) {
   }
   if (!buffer || length <= 0) {
     return ERR_INVALID_ARGUMENT;
+  }
+  if (physical_) {
+    return MapTcpResult(Call(reading ? GTOS_SYS_TCP_READ : GTOS_SYS_TCP_WRITE,
+        GtosTcpTransferRequest{GTOS_TCP_ABI_VERSION,
+          static_cast<unsigned>(handle_), reinterpret_cast<unsigned>(buffer->data()),
+          std::min(static_cast<unsigned>(length), GTOS_TCP_TRANSFER_LIMIT)}));
   }
   return MapResult(Call(reading ? GTOS_SYS_LOOPBACK_READ : GTOS_SYS_LOOPBACK_WRITE,
       GtosLoopbackTransferRequest{GTOS_LOOPBACK_ABI_VERSION,
@@ -241,7 +307,7 @@ int TCPSocketGtos::Write(IOBuffer* buffer, int length,
 
 void TCPSocketGtos::Arm(base::OneShotTimer& timer,
                        void (TCPSocketGtos::*method)()) {
-  // The GTOS IO pump has a task timer, while loopback readiness is an ABI query.
+  // The GTOS IO pump has a task timer for polling stream readiness.
   timer.Start(FROM_HERE, base::Milliseconds(10), this, method);
 }
 
@@ -256,13 +322,23 @@ void TCPSocketGtos::CompleteAccept() {
   std::move(callback).Run(result);
 }
 
+void TCPSocketGtos::CompleteConnect() {
+  SocketInfo info;
+  const int result = GetSocketInfo(info);
+  if (result == ERR_IO_PENDING) {
+    Arm(connect_timer_, &TCPSocketGtos::CompleteConnect);
+    return;
+  }
+  auto callback = std::move(connect_callback_);
+  std::move(callback).Run(result);
+}
+
 void TCPSocketGtos::CompleteRead() {
   int result;
   if (readiness_only_) {
-    GtosLoopbackInfo info{};
-    result = ReadInfo(handle_, info);
-    if (result == OK && !(info.ready & (GTOS_LOOPBACK_READABLE |
-                                        GTOS_LOOPBACK_END_OF_STREAM))) {
+    SocketInfo info;
+    result = GetSocketInfo(info);
+    if (result == OK && !info.readable && !info.eof) {
       result = ERR_IO_PENDING;
     }
   } else {
@@ -289,49 +365,78 @@ void TCPSocketGtos::CompleteWrite() {
   std::move(callback).Run(result);
 }
 
-int TCPSocketGtos::GetLocalAddress(IPEndPoint* address) const {
+int TCPSocketGtos::GetSocketInfo(SocketInfo& info) const {
   if (!IsValid()) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
-  GtosLoopbackInfo info{};
-  const int result = ReadInfo(handle_, info);
+  if (physical_) {
+    GtosTcpInfo wire{};
+    const int result = MapTcpResult(Call(
+        GTOS_SYS_TCP_INFO, GtosTcpInfoRequest{GTOS_TCP_ABI_VERSION,
+            static_cast<unsigned>(handle_), reinterpret_cast<unsigned>(&wire)}));
+    if (result != OK) {
+      return result;
+    }
+    if (wire.version != GTOS_TCP_ABI_VERSION) {
+      return ERR_UNEXPECTED;
+    }
+    if (wire.status != OK) {
+      return MapTcpResult(wire.status);
+    }
+    info = {IPEndPoint(FromWireAddress(wire.local_ipv4), wire.local_port),
+            IPEndPoint(FromWireAddress(wire.peer_ipv4), wire.peer_port),
+            wire.readable != 0, (wire.flags & GTOS_TCP_END_OF_STREAM) != 0};
+    return OK;
+  }
+  GtosLoopbackInfo wire{};
+  const int result = MapResult(Option(GTOS_SYS_LOOPBACK_INFO, handle_,
+                                     reinterpret_cast<unsigned>(&wire)));
   if (result != OK) {
     return result;
   }
-  if (!info.local_port) {
+  info = {IPEndPoint(IPAddress::IPv4Localhost(), wire.local_port),
+          IPEndPoint(IPAddress::IPv4Localhost(), wire.peer_port),
+          (wire.ready & GTOS_LOOPBACK_READABLE) != 0,
+          (wire.ready & GTOS_LOOPBACK_END_OF_STREAM) != 0};
+  return OK;
+}
+
+int TCPSocketGtos::GetLocalAddress(IPEndPoint* address) const {
+  SocketInfo info;
+  const int result = GetSocketInfo(info);
+  if (result != OK) {
+    return result;
+  }
+  if (!info.local.port()) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
-  *address = IPEndPoint(IPAddress::IPv4Localhost(), info.local_port);
+  *address = info.local;
   return OK;
 }
 
 int TCPSocketGtos::GetPeerAddress(IPEndPoint* address) const {
-  if (!IsValid()) {
-    return ERR_SOCKET_NOT_CONNECTED;
-  }
-  GtosLoopbackInfo info{};
-  const int result = ReadInfo(handle_, info);
+  SocketInfo info;
+  const int result = GetSocketInfo(info);
   if (result != OK) {
     return result;
   }
-  if (!info.peer_port) {
+  if (!info.peer.port()) {
     return ERR_SOCKET_NOT_CONNECTED;
   }
-  *address = IPEndPoint(IPAddress::IPv4Localhost(), info.peer_port);
+  *address = info.peer;
   return OK;
 }
 
 bool TCPSocketGtos::IsConnected() const {
-  GtosLoopbackInfo info{};
-  return IsValid() && ReadInfo(handle_, info) == OK && info.peer_port &&
-         (!(info.ready & GTOS_LOOPBACK_END_OF_STREAM) ||
-          (info.ready & GTOS_LOOPBACK_READABLE));
+  SocketInfo info;
+  return GetSocketInfo(info) == OK && info.peer.port() &&
+         (!info.eof || info.readable);
 }
 
 bool TCPSocketGtos::IsConnectedAndIdle() const {
-  GtosLoopbackInfo info{};
-  return IsValid() && ReadInfo(handle_, info) == OK && info.peer_port &&
-         !(info.ready & (GTOS_LOOPBACK_READABLE | GTOS_LOOPBACK_END_OF_STREAM));
+  SocketInfo info;
+  return GetSocketInfo(info) == OK && info.peer.port() &&
+         !info.readable && !info.eof;
 }
 
 int TCPSocketGtos::SetDefaultOptionsForServer() {
@@ -340,21 +445,33 @@ int TCPSocketGtos::SetDefaultOptionsForServer() {
 
 void TCPSocketGtos::Close() {
   accept_timer_.Stop();
+  connect_timer_.Stop();
   read_timer_.Stop();
   write_timer_.Stop();
   accept_ = {};
+  connect_callback_.Reset();
   read_ = {};
   write_ = {};
   readiness_only_ = false;
   if (IsValid()) {
-    Control(GTOS_SYS_LOOPBACK_CLOSE, handle_);
+    if (physical_) {
+      Call(GTOS_SYS_TCP_CLOSE,
+           GtosTcpControlRequest{GTOS_TCP_ABI_VERSION,
+                                 static_cast<unsigned>(handle_)});
+    } else {
+      Control(GTOS_SYS_LOOPBACK_CLOSE, handle_);
+    }
     handle_ = 0;
   }
+  physical_ = false;
+  loopback_in_use_ = false;
 }
 
 void TCPSocketGtos::DetachFromThread() {
-  CHECK(!accept_.callback && !read_.callback && !write_.callback);
+  CHECK(!accept_.callback && !connect_callback_ && !read_.callback &&
+        !write_.callback);
   accept_timer_.Stop();
+  connect_timer_.Stop();
   read_timer_.Stop();
   write_timer_.Stop();
 }
