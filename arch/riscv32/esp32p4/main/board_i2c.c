@@ -113,16 +113,23 @@ int gtos_board_read_motion(GtosBoardMotion* motion) {
 int gtos_board_read_charger(GtosBoardCharger* charger) {
     if (!charger) return GTOS_BOARD_INVALID;
     if (!bq_ready) return GTOS_BOARD_MISSING;
-    uint8_t faults;
+    uint8_t faults = 0;
     bq_io_failure = false;
     BQ25601_read_register(BQ25601_REG00);
     BQ25601_read_register(BQ25601_REG01);
     BQ25601_read_register(BQ25601_REG08);
-    if (bq_io_failure || !read_registers(bq, BQ25601_REG09, &faults, 1))
-        return GTOS_BOARD_IO;
+    const bool read_ok = !bq_io_failure && read_registers(bq, BQ25601_REG09, &faults, 1);
+    const bool input_good = BQ25601_power_good();
+    const bool charge_configured = BQ25601_get_charge_enabled();
+    // Checking here also catches a latched fault consumed by an application's read.
+    if (charge_permitted && (!read_ok || !input_good || faults || !charge_configured)) {
+        const int result = gtos_board_set_charge(false);
+        if (result != GTOS_BOARD_OK) return result;
+    }
+    if (!read_ok) return GTOS_BOARD_IO;
     *charger = (GtosBoardCharger){
-        .input_good = BQ25601_power_good(),
-        .charge_enabled = charge_permitted && BQ25601_get_charge_enabled(),
+        .input_good = input_good,
+        .charge_enabled = charge_permitted && charge_configured,
         .charge_state = BQ25601_charge_status(),
         .faults = faults, .input_limit_ma = BQ25601_get_input_current_limit_mA(),
     };
@@ -133,14 +140,31 @@ int gtos_board_read_usb(GtosBoardUsb* usb) {
     if (!usb) return GTOS_BOARD_INVALID;
     if (!cc_ready) return GTOS_BOARD_MISSING;
     uint8_t status[2];
-    if (!read_registers(cc, 0x08, status, sizeof(status))) return GTOS_BOARD_IO;
-    const bool sink = (status[1] >> 6) == 2;
+    const bool read_ok = read_registers(cc, 0x08, status, sizeof(status));
+    const bool sink = read_ok && (status[1] >> 6) == 2;
+    if (charge_permitted && !sink) {
+        const int result = gtos_board_set_charge(false);
+        if (result != GTOS_BOARD_OK) return result;
+    }
+    if (!read_ok) return GTOS_BOARD_IO;
     const uint16_t usb_current_ma[] = {500, 1500, 500, 3000};
     *usb = (GtosBoardUsb){
         .sink_attached = sink, .flipped = sink && (status[1] & 0x20),
         .advertised_ma = sink ? usb_current_ma[(status[0] >> 4) & 3] : 0,
     };
     return GTOS_BOARD_OK;
+}
+
+void a3_i2c_poll(uint32_t milliseconds) {
+    static uint32_t last_check;
+    if (!charge_permitted || milliseconds - last_check < 100) return;
+    last_check = milliseconds;
+    GtosBoardUsb usb;
+    gtos_board_read_usb(&usb);
+    if (charge_permitted) {
+        GtosBoardCharger charger;
+        gtos_board_read_charger(&charger);
+    }
 }
 
 int gtos_board_set_charge(bool enabled) {

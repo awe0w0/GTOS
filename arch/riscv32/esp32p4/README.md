@@ -22,6 +22,10 @@ python3 arch/riscv32/esp32p4/tests/verify_core.py \
 python3 arch/riscv32/esp32p4/tests/verify_board.py \
     --emulator /path/to/esp-emu --build out/a3-riscv \
     --parts /path/to/esp-emu-1.0.0-examples --output out/a3-board-test
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 arch/riscv32/esp32p4/tests/verify_live_board.py \
+    --emulator /path/to/esp-emu --build out/a3-riscv \
+    --parts /path/to/esp-emu-1.0.0-examples --output out/a3-live-test
 python3 arch/riscv32/esp32p4/tests/verify_radio.py \
     --emulator /path/to/esp-emu --build out/a3-riscv --c6 out/a3-riscv-c6 \
     --parts /path/to/esp-emu-1.0.0-examples --output out/a3-radio-test
@@ -40,6 +44,13 @@ esp-emu --chip esp32p4 --psram-size 16M \
 
 Core 检查嵌套中断状态、GTOS 启动日志、损坏的 GTAPP 拒绝路径、现有 Catch 输入和
 PSRAM 回收。它做两次冷启动，并检查 8 MiB PSRAM 的容量拒绝。
+
+实时外设用例从同版 [ESP-EMU 源码](https://github.com/espressif/esp-emulator/tree/v1.0.0/tools)
+加载 `cosim_tcp.py`，用外部 I²C 模型替换固定寄存器数据。它验证 IMU 改变后星盘重绘，
+观察 VCI、复位顺序和 GPIO26 上的 1 kHz / 60% 及 65% PWM。充电用例检查限流、
+充电电流和稳压设定先于 GPIO28 拉高，并验证拔线、充电故障、Power Good 丢失、
+CC 总线无应答及退出时切断充电。重新插线后需要显式启用。
+`signals.json` 保存事务、引脚边沿和故障注入时的虚拟机时间。
 
 手动启动双机时指定一个新目录。脚本以副本作为 P4 的 Flash，并将 C6 串口记录在该目录。
 
@@ -78,8 +89,12 @@ TUSB320LAI 检测到的方向和电流档位，以及 BQ25601 限流和充电状
 | 调试 | P4 USB D−/D+ 24/25、UART TX/RX 37/38。C6 UART TX/RX 16/17 |
 
 引脚来自 A3 硬件设计交接。当前 SDIO 时钟取 20 MHz，需在样板复核。
-独立构建实板诊断配置时，在 ESP-IDF 默认配置列表末尾追加
-*sdkconfig.defaults.hardware*，使用独立的构建目录和 SDKCONFIG。
+使用独立的构建目录构建实板诊断镜像。
+
+~~~sh
+SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.defaults.hardware' \
+    make a3-riscv A3_BUILD_DIR=out/a3-diagnostic
+~~~
 
 面板接入使用 [ST7703 组件](third_party/README.md) 和 ESP-IDF 双 lane DSI。
 实板诊断配置在 GPIO 上保持 VCI、背光和充电关闭。取得 HC‑700BI3002 的确认版

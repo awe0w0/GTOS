@@ -30,6 +30,7 @@ enum {
 };
 
 void a3_i2c_init(void);
+void a3_i2c_poll(uint32_t milliseconds);
 void a3_input_init(void);
 void a3_storage_init(void);
 void a3_display_init(void);

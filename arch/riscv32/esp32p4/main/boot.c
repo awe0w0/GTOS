@@ -52,12 +52,15 @@ void app_main(void) {
         }
 #ifdef CONFIG_GTOS_A3_SIMULATION
         if (command == 'q') {
+            gtos_board_set_charge(false);
             puts("GTOS_A3_VM_STOP");
             heap_caps_free(pixels);
             return;
         }
 #endif
-        gtos_dashboard_tick((uint32_t)(esp_timer_get_time() / 1000), command);
+        const uint32_t milliseconds = (uint32_t)(esp_timer_get_time() / 1000);
+        a3_i2c_poll(milliseconds);
+        gtos_dashboard_tick(milliseconds, command);
         if (command == 'f') a3_display_dump();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
