@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import socket
 import subprocess
 import sys
 
@@ -42,7 +43,7 @@ def file_identity(path):
     return dict(size=path.stat().st_size, sha256=hashlib.sha256(path.read_bytes()).hexdigest())
 
 
-def build(output):
+def build(output, probe):
     output.mkdir()
     kernel_flags = (REPO / 'tools/kernel-cxxflags').read_text().split()
     common = ['-m32', '-std=c++11', '-ffreestanding', '-nostdlib', '-nostdinc',
@@ -53,12 +54,14 @@ def build(output):
               '-Iinclude', *kernel_flags]
     cxx = os.environ.get('CXX', 'g++')
     grub = os.environ.get('GTOS_GRUB_MKRESCUE', 'grub-mkrescue')
-    identity = {}
+    identity = {'probe': probe}
+    sources = SOURCES if probe == 'pcnet' else SOURCES[:-1] + (
+        'src/net/tcp_client.cpp', 'tests/tcp_client_smoke.cpp')
     for level in LEVELS:
         work = output / level
         work.mkdir()
         objects = []
-        for source in SOURCES + ASSEMBLY:
+        for source in sources + ASSEMBLY:
             stem = Path(source).name
             obj = work / (stem + '.o')
             command = ['as', '--32', source] if source in ASSEMBLY else [
@@ -86,15 +89,25 @@ def build(output):
     manifest.chmod(0o444)
 
 
-def exercise(publication, output):
+def verified_iso(publication, identity, level):
+    iso = publication / (level + '.iso')
+    if iso.is_symlink() or iso.stat().st_mode & 0o222 or file_identity(iso) != identity[iso.name]:
+        raise RuntimeError(f'PCnet ISO identity changed: {iso}')
+    return iso
+
+
+def exercise(publication, output, probe):
     output.mkdir()
     identity = json.loads((publication / 'identity.json').read_text())
+    if identity.get('probe', 'pcnet') != probe:
+        raise RuntimeError('PCnet test publication has a different probe')
+    if probe == 'tcp':
+        exercise_tcp(publication, output, identity)
+        return
     qemu = os.environ.get('GTOS_QEMU_SYSTEM_I386', 'qemu-system-i386')
     data = os.environ.get('GTOS_QEMU_DATA_DIR')
     for level in LEVELS:
-        iso = publication / (level + '.iso')
-        if iso.is_symlink() or iso.stat().st_mode & 0o222 or file_identity(iso) != identity[iso.name]:
-            raise RuntimeError(f'PCnet ISO identity changed: {iso}')
+        iso = verified_iso(publication, identity, level)
         for connected in (True, False):
             case = level + ('-connected' if connected else '-disconnected')
             guest = output / (case + '.guest.log')
@@ -121,8 +134,76 @@ def exercise(publication, output):
             print('PCNET', case, 'PASS', file_identity(guest))
 
 
+def exercise_tcp(publication, output, identity):
+    qemu = os.environ.get('GTOS_QEMU_SYSTEM_I386', 'qemu-system-i386')
+    data = os.environ.get('GTOS_QEMU_DATA_DIR')
+    from tcp_http_peer import request, response
+    for level in LEVELS:
+        iso = verified_iso(publication, identity, level)
+        transcript = output / (level + '.http-request.raw')
+        address = output / (level + '.sock')
+        guest = output / (level + '.guest.log')
+        # The only forwarded endpoint is a Unix socket inside this stage.
+        isolated = 'user,id=fixture,restrict=on,ipv6=off'
+        network = f'{isolated},guestfwd=tcp:10.0.2.100:8080-unix:{address}'
+        capture = f'filter-dump,id=wire,netdev=fixture,file={output / (level + ".pcap")}'
+        command = [qemu, '-machine', 'pc', '-accel', 'tcg', '-cpu', 'max',
+                   '-m', '32', '-smp', '1', '-boot', 'd', '-cdrom', iso,
+                   '-nic', 'none', '-netdev', network,
+                   '-device', 'pcnet,addr=0x05,netdev=fixture,romfile=',
+                   '-object', capture,
+                   '-display', 'none', '-serial', 'none', '-monitor', 'none',
+                   '-debugcon', f'file:{guest}', '-device', 'isa-debug-exit,iobase=0xf4,iosize=4',
+                   '-no-reboot']
+        if data:
+            command.extend(['-L', data])
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener, \
+                (output / (level + '.qemu.log')).open('xb') as log:
+            listener.bind(str(address))
+            listener.listen(1)
+            listener.settimeout(25)
+            with subprocess.Popen(command, cwd=REPO, stdout=log, stderr=subprocess.STDOUT) as child:
+                try:
+                    connection, _ = listener.accept()
+                    with connection:
+                        connection.settimeout(25)
+                        received = bytearray()
+                        while len(received) < len(request):
+                            part = connection.recv(len(request) - len(received))
+                            if not part:
+                                raise RuntimeError('TCP fixture closed during its HTTP request')
+                            received.extend(part)
+                        with transcript.open('xb') as trace:
+                            trace.write(received)
+                        if received != request:
+                            raise RuntimeError('TCP peer received different request bytes')
+                        connection.sendall(response)
+                        result = child.wait(timeout=45)
+                    if result != 33:
+                        raise RuntimeError(f'TCP guest returned {result}: {guest}')
+                finally:
+                    if child.poll() is None:
+                        child.kill()
+        if guest.read_text().splitlines() != [
+                'AMD am79c973', 'TCP CONNECTED AFTER ARP', 'TCP HTTP RESPONSE VERIFIED',
+                'PCNET TCP HTTP PASS', 'PCNET GUEST PASS']:
+            raise RuntimeError(f'Unexpected TCP guest transcript: {guest}')
+        print('PCNET TCP', level, 'PASS', file_identity(guest))
+        no_peer = output / (level + '-no-peer.guest.log')
+        refusal = command.copy()
+        refusal[command.index(network)] = isolated
+        refusal[command.index(capture)] = f'filter-dump,id=wire,netdev=fixture,file={output / (level + "-no-peer.pcap")}'
+        refusal[command.index(f'file:{guest}')] = f'file:{no_peer}'
+        run_command(refusal, output / (level + '-no-peer.qemu.log'), expected=65, timeout=60)
+        if no_peer.read_text().splitlines() != [
+                'AMD am79c973', 'TCP CONNECT ERROR ffffff92', 'PCNET GUEST FAIL']:
+            raise RuntimeError(f'Expected TCP connect timeout without a forwarding rule: {no_peer}')
+        print('PCNET TCP', level, 'NO PEER PASS', file_identity(no_peer))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--probe', choices=('pcnet', 'tcp'), default='pcnet')
     modes = parser.add_subparsers(dest='mode', required=True)
     modes.add_parser('build').add_argument('output', type=Path)
     run = modes.add_parser('run')
@@ -130,6 +211,6 @@ if __name__ == '__main__':
     run.add_argument('output', type=Path)
     args = parser.parse_args()
     if args.mode == 'build':
-        build(args.output.resolve())
+        build(args.output.resolve(), args.probe)
     else:
-        exercise(args.publication.resolve(), args.output.resolve())
+        exercise(args.publication.resolve(), args.output.resolve(), args.probe)
