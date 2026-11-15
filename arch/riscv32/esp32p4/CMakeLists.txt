@@ -4,6 +4,8 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 idf_build_set_property(MINIMAL_BUILD ON)
 project(gtos-a3)
 
+include(cmake/hosted_sdio_cleanup.cmake)
+
 if(GTOS_A3_PANEL_PROFILE)
     include(cmake/dsi_timeouts.cmake)
 endif()

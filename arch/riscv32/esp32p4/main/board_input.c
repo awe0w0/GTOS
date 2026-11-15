@@ -2,6 +2,8 @@
 #include "driver/gpio.h"
 #include "driver/pulse_cnt.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static pcnt_unit_handle_t counter;
 static bool buttons_ready;
@@ -60,6 +62,12 @@ void a3_input_init(void) {
     };
     buttons_ready = gpio_config(&config) == ESP_OK;
     if (buttons_ready) init_encoder();
+}
+
+bool a3_wake_held_at_boot(void) {
+    if (!buttons_ready || gpio_get_level(A3_PIN_WAKE)) return false;
+    vTaskDelay(pdMS_TO_TICKS(20) + 1);
+    return gpio_get_level(A3_PIN_WAKE) == 0;
 }
 
 int gtos_board_read_input(GtosBoardInput* input) {

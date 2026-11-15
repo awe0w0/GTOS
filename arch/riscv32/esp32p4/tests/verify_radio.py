@@ -39,7 +39,7 @@ def expect_status(port, target, expected):
         raise RuntimeError(f"Expected {expected} from the running Orbit application: {target}")
 
 
-def boot(args, out, board, network, hci_port=None, check_guest=None):
+def boot(args, out, board, network, hci_port=None, check_guest=None, start_radio=None, host_extra=()):
     log = out / "c6.log"
     port = available_port()
     with tempfile.TemporaryDirectory(prefix="gtos-a3-sdio-") as directory:
@@ -66,9 +66,9 @@ def boot(args, out, board, network, hci_port=None, check_guest=None):
             host = ["--hosted", f"bridge:host:{bridge}", "--hosted-reset-gpio", "6",
                     "--hosted-reset-active-high", "--net", "user,restrict=on"]
             flash = args.build / "gtos-a3-flash.bin"
-            with Guest(args, flash, board, out / "p4-radio.log", extra=host) as vm:
+            with Guest(args, flash, board, out / "p4-radio.log", extra=[*host, *host_extra]) as vm:
                 vm.find("GTOS_A3_READY console=1")
-                offset = vm.click("back")
+                offset = start_radio(vm) if start_radio else vm.click("back")
                 vm.find("page=2 light=60 awake=1", offset)
                 vm.find("GTOS_A3_RADIO SDIO PASS C6 firmware RPC", offset, timeout=25)
                 vm.find(f"ssid={network}", offset, timeout=30)

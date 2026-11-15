@@ -82,7 +82,7 @@ TUSB320LAI 检测到的方向和电流档位，以及 BQ25601 限流和充电状
 虚拟板随后加入 `A3-LAB` 的 WPA2 网络。P4 取得 DHCP 地址后，`GET /status`
 返回姿态、编码器、亮度、USB-C 和充电状态。无线测试从宿主机经 C6 Wi-Fi 和 SDIO
 读取数据，操作旋钮、切换充电后再检查响应，并验证接入点缺失时的失败与重试。
-在无线页通过 UART 发送 `w` 可重试加入网络。
+在无线页通过串口发送 `w` 可重试加入网络。SDIO 握手失败时，同一命令会重新上电并重试握手。
 
 `GTOS Orbit` 也接受一台 BLE 客户端，断开后恢复广播。只读 GATT 服务使用
 `01d084ac-5c80-448a-aca7-8fd0072e67d4`，状态特征使用
@@ -151,6 +151,39 @@ python arch/riscv32/esp32p4/tests/verify_hardware.py --port COM7 \
 每次指定新输出目录。`console.log` 保留串口字节，`report.json` 记录读取来源、采样和检查结果。
 ESP-EMU 启动实板诊断镜像后，可用 `--tcp 5567` 重跑并标记虚拟来源。基础检查覆盖
 驱动状态和关闭屏幕及充电的固件报告。显示出图、背光电流和真实电源切换仍需外部测量。
+
+### C6 首次烧录
+
+按住 WAKE 并复位 P4，在 J1 USB Serial/JTAG 或 TP2 UART0 看到
+`GTOS_A3_C6_SERVICE RESET_HELD` 后松开 WAKE。此时 P4 保持 `3V3_RF` 供电、C6 复位有效，
+并等待串口指令。先从 TP1 核对 `3V3_RF`，用 3.3 V UART 转接器连接交叉的 TXD/RXD 和共地。
+
+将 TP1 `BOOT_N` 接地时，在 **P4 的串口**发送 `r`，等 `GTOS_A3_C6_SERVICE RESET_RELEASED` 后松开。
+C6 进入下载模式要求复位释放时 GPIO9 为低且 GPIO8 为高。随后在 **TP1 的串口**用 `esptool` 写入
+合并镜像。将 `COM8` 换成转接器对应端口。[Espressif C6 启动模式](https://docs.espressif.com/projects/esptool/en/latest/esp32c6/advanced-topics/boot-mode-selection.html)
+
+~~~sh
+python -m esptool --chip esp32c6 --port COM8 --before no-reset --after no-reset \
+    --no-stub write-flash 0x0 out/a3-riscv-c6/gtos-a3-c6-flash.bin
+~~~
+
+确认烧录验证完成并松开 `BOOT_N` 后，在 P4 串口发送 `x`。P4 会断开维修模式下的 C6 供电并启动桌面应用。
+切到无线页即可从 SPI Flash 启动 C6，并检查 SDIO、Wi-Fi 和 BLE。无线链路失败后，在无线页发送 `w` 重试。
+
+ESP-EMU 验证 P4 的电源与复位 GPIO 顺序，并用 esptool 向处于 ROM 下载模式的空白虚拟 C6 写入同一镜像。
+用例验证缺少 C6 时连续两次枚举失败都能退出并关断无线电源，再用写好的 Flash 启动 C6，注入一次
+SDIO 握手失败后按 `w` 验证连网。A3 构建在 ESP-Hosted 3.1.0 的 SDIO 清理路径中检查卡就绪状态，
+让仍在等待启动的发送任务退出，并释放失败枚举留下的 DMA 缓冲。
+实板仍需测量 TP1 电平和下载绑带，并从实体串口完成烧录。[ESP-EMU 1.0.0 下载模式](https://github.com/espressif/esp-emulator/blob/v1.0.0/docs/guides/CLI.md)
+
+~~~sh
+p=arch/riscv32/esp32p4
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_c6_service.py" --emulator /path/to/esp-emu \
+    --build out/a3-riscv --diagnostic out/a3-diagnostic --c6 out/a3-riscv-c6 \
+    --parts /path/to/esp-emu-1.0.0-examples --gdb /path/to/riscv32-esp-elf-gdb \
+    --output out/a3-c6-service-test
+~~~
 
 实板默认扫描附近网络。在 `GTOS Desktop Bar A3` 的 ESP-IDF 配置菜单填写
 SSID 和 WPA2 口令，可以让 Desktop Orbit 加入指定网络并在 8080 端口提供只读状态。

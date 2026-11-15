@@ -321,6 +321,9 @@ void gtos_dashboard_tick(uint32_t milliseconds, int command) {
         changed = true;
     }
     if (command == 'w' && dashboard.page == Radio) {
+        GtosBoardRadio radio;
+        if (gtos_board_read_radio(&radio) == GTOS_BOARD_OK && radio.link_failed)
+            gtos_board_start_radio();
         dashboard.wifi_requested = false;
         changed = true;
     }

@@ -28,29 +28,31 @@ static size_t ble_snapshot_size;
 static bool started, ble_connected;
 
 // The Q1 transistor inverts the A3 P4-side reset output relative to C6 EN.
-eh_host_port_err_t __wrap_eh_host_port_reset_slave(void) {
-    if (gpio_set_level(A3_PIN_C6_RESET_ASSERT, 1) != ESP_OK) return EH_HOST_PORT_ERR;
+bool a3_c6_reset(void) {
+    if (gpio_set_level(A3_PIN_C6_RESET_ASSERT, 1) != ESP_OK) return false;
     vTaskDelay(pdMS_TO_TICKS(20) + 1);
-    if (gpio_set_level(A3_PIN_C6_RESET_ASSERT, 0) != ESP_OK) return EH_HOST_PORT_ERR;
+    if (gpio_set_level(A3_PIN_C6_RESET_ASSERT, 0) != ESP_OK) return false;
     vTaskDelay(pdMS_TO_TICKS(250));
-    return EH_HOST_PORT_OK;
+    return true;
 }
 
-static bool power_on(void) {
+eh_host_port_err_t __wrap_eh_host_port_reset_slave(void) {
+    return a3_c6_reset() ? EH_HOST_PORT_OK : EH_HOST_PORT_ERR;
+}
+
+bool a3_c6_power_hold_reset(void) {
     const unsigned rf = A3_PIN_RF_ON, reset = A3_PIN_C6_RESET_ASSERT;
     const gpio_config_t outputs = {
         .pin_bit_mask = (1ULL << rf) | (1ULL << reset), .mode = GPIO_MODE_OUTPUT,
     };
-    if (gpio_set_level(rf, 0) != ESP_OK || gpio_set_level(reset, 1) != ESP_OK
-        || gpio_config(&outputs) != ESP_OK || gpio_set_level(rf, 1) != ESP_OK)
-        return false;
-    vTaskDelay(pdMS_TO_TICKS(20));
-    if (gpio_set_level(reset, 0) != ESP_OK) {
-        gpio_set_level(rf, 0);
-        return false;
-    }
-    vTaskDelay(pdMS_TO_TICKS(250));
-    return true;
+    return gpio_set_level(rf, 0) == ESP_OK && gpio_set_level(reset, 1) == ESP_OK
+        && gpio_config(&outputs) == ESP_OK && gpio_set_level(rf, 1) == ESP_OK;
+}
+
+bool a3_c6_power_off(void) {
+    const bool reset = gpio_set_level(A3_PIN_C6_RESET_ASSERT, 1) == ESP_OK;
+    const bool off = gpio_set_level(A3_PIN_RF_ON, 0) == ESP_OK;
+    return reset && off;
 }
 
 static void wifi_event(void* unused, esp_event_base_t base, int32_t id, void* data) {
@@ -199,7 +201,7 @@ static void start_ble(void) {
 
 static void radio_task(void* unused) {
     (void)unused;
-    bool powered = power_on();
+    const bool powered = a3_c6_power_hold_reset() && a3_c6_reset();
     portENTER_CRITICAL(&radio_lock);
     radio_status.powered = powered;
     portEXIT_CRITICAL(&radio_lock);
@@ -215,8 +217,7 @@ static void radio_task(void* unused) {
         start_ble();
     } else {
         if (initialized) esp_hosted_deinit();
-        gpio_set_level(A3_PIN_C6_RESET_ASSERT, 1);
-        gpio_set_level(A3_PIN_RF_ON, 0);
+        a3_c6_power_off();
         portENTER_CRITICAL(&radio_lock);
         radio_status.powered = false;
         radio_status.link_failed = true;

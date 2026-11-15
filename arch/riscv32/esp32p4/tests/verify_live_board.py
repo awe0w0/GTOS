@@ -26,9 +26,10 @@ def number(tag, value):
 
 
 class Devices:
-    def __init__(self, port, output, drive_pins=()):
+    def __init__(self, port, output, drive_pins=(), watch_pins=()):
         self.port, self.output = port, output
         self.drive_pins = drive_pins
+        self.watch_pins = watch_pins
         self.lock = threading.Lock()
         self.send_lock = threading.Lock()
         self.closing = threading.Event()
@@ -88,7 +89,7 @@ class Devices:
         self.socket = connect(self.port)
         try:
             inputs = sum(1 << pin for pin in self.drive_pins)
-            watch = sum(1 << pin for pin in (VCI, PWM, RESET, CHARGE_ENABLE)) | inputs
+            watch = sum(1 << pin for pin in set((VCI, PWM, RESET, CHARGE_ENABLE) + self.watch_pins)) | inputs
             claims = [gpio_claim(inputs, watch)]
             claims += [ld(2, number(1, address) + number(2, 8) + number(3, 7))
                        for address in self.registers]

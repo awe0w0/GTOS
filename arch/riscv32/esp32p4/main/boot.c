@@ -15,6 +15,45 @@
 
 unsigned gtos_riscv_boot(void* arena, unsigned bytes);
 
+static int read_command(bool console, bool usb, bool* from_usb) {
+    uint8_t byte;
+    *from_usb = false;
+    if (console && uart_read_bytes(UART_NUM_0, &byte, 1, 0) == 1) return byte;
+    if (usb && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1) {
+        *from_usb = true;
+        return byte;
+    }
+    return -1;
+}
+
+static bool c6_service(bool console, bool usb) {
+    if (!console && !usb) {
+        puts("GTOS_A3_C6_SERVICE FAIL console");
+        return false;
+    }
+    if (!a3_c6_power_hold_reset()) {
+        a3_c6_power_off();
+        puts("GTOS_A3_C6_SERVICE FAIL power");
+        return false;
+    }
+    puts("GTOS_A3_C6_SERVICE RESET_HELD r=reset x=exit");
+    for (;;) {
+        bool from_usb;
+        const int command = read_command(console, usb, &from_usb);
+        if (command == 'r') {
+            puts(a3_c6_reset() ? "GTOS_A3_C6_SERVICE RESET_RELEASED" : "GTOS_A3_C6_SERVICE FAIL reset");
+        } else if (command == 'x') {
+            if (a3_c6_power_off()) {
+                puts("GTOS_A3_C6_SERVICE EXIT");
+                return true;
+            }
+            puts("GTOS_A3_C6_SERVICE FAIL power off");
+        }
+        a3_i2c_poll((uint32_t)(esp_timer_get_time() / 1000));
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
 static void report_probe(bool usb, unsigned revision, unsigned psram, uint32_t flash, const char* elf) {
 #ifdef CONFIG_GTOS_A3_SIMULATION
     const unsigned simulation = 1;
@@ -73,29 +112,27 @@ void app_main(void) {
 
     a3_i2c_init();
     a3_input_init();
-    a3_storage_init();
     a3_display_init();
+    const bool console = uart_driver_install(UART_NUM_0, 256, 0, 0, NULL, 0) == ESP_OK;
+    usb_serial_jtag_driver_config_t usb_config = {
+        .tx_buffer_size = 512, .rx_buffer_size = 256,
+    };
+    const bool usb = usb_serial_jtag_driver_install(&usb_config) == ESP_OK;
+    if (a3_wake_held_at_boot() && !c6_service(console, usb)) return;
+
+    a3_storage_init();
     uint16_t* pixels = heap_caps_malloc(A3_WIDTH * A3_HEIGHT * sizeof(*pixels),
                                        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!pixels) {
         puts("GTOS_A3_DASHBOARD FAIL no framebuffer");
         return;
     }
-    const bool console = uart_driver_install(UART_NUM_0, 256, 0, 0, NULL, 0) == ESP_OK;
-    usb_serial_jtag_driver_config_t usb_config = {
-        .tx_buffer_size = 512, .rx_buffer_size = 256,
-    };
-    const bool usb = usb_serial_jtag_driver_install(&usb_config) == ESP_OK;
     gtos_dashboard_start(pixels);
     printf("GTOS_A3_READY console=%u usb=%u\n", console, usb);
     for (;;) {
-        uint8_t byte;
-        int command = console && uart_read_bytes(UART_NUM_0, &byte, 1, 0) == 1 ? byte : -1;
-        const bool usb_command = command < 0 && usb && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1;
-        if (usb_command) {
-            command = byte;
-            if (command == 's') puts("GTOS_A3_USB STATUS REQUEST");
-        }
+        bool usb_command;
+        const int command = read_command(console, usb, &usb_command);
+        if (usb_command && command == 's') puts("GTOS_A3_USB STATUS REQUEST");
 #ifdef CONFIG_GTOS_A3_SIMULATION
         if (command == 'q') {
             gtos_board_set_charge(false);
