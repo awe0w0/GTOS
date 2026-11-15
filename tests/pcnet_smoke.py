@@ -21,6 +21,7 @@ SOURCES = (
     'src/process/native_fp.cpp', 'src/process/resources.cpp', 'src/process/elf32.cpp',
     'src/memory/process_address_space.cpp', 'src/memory/paging.cpp',
     'src/memory/physical.cpp', 'src/memory/bootstrap.cpp',
+    'src/net/etherframe.cpp', 'src/net/arp.cpp', 'src/net/ipv4.cpp', 'src/net/icmp.cpp',
     'apps/native_process_info_probe/memory.cc',
     'tests/i386_pure_virtual_runtime.cpp', 'tests/pcnet_smoke.cpp',
 )
@@ -48,7 +49,8 @@ def build(output):
               '-fno-builtin', '-fno-exceptions', '-fno-rtti', '-fno-pie',
               '-fno-stack-protector', '-fno-use-cxa-atexit', '-fno-threadsafe-statics',
               '-fno-asynchronous-unwind-tables', '-ffunction-sections', '-fdata-sections',
-              '-Wall', '-Wextra', '-Werror', '-Wno-write-strings', '-Iinclude', *kernel_flags]
+              '-Wall', '-Wextra', '-Werror', '-Wno-write-strings', '-Wno-unused-parameter',
+              '-Iinclude', *kernel_flags]
     cxx = os.environ.get('CXX', 'g++')
     grub = os.environ.get('GTOS_GRUB_MKRESCUE', 'grub-mkrescue')
     identity = {}
@@ -110,7 +112,9 @@ def exercise(publication, output):
                 command.extend(['-L', data])
             run_command(command, output / (case + '.qemu.log'), 33 if connected else 65, timeout=60)
             lines = guest.read_text().splitlines()
-            expected = (['PCNET FRAME COUNTS left=00000020 right=00000020', 'PCNET GUEST PASS']
+            expected = (['PCNET FRAME COUNTS left=00000020 right=00000020',
+                         'ping response from c0.00.02.02', 'ping response from c0.00.02.02',
+                         'PCNET IPV4 ICMP PASS', 'PCNET GUEST PASS']
                         if connected else ['PCnet frame count', 'PCNET GUEST FAIL'])
             if lines != ['AMD am79c973', 'AMD am79c973', *expected]:
                 raise RuntimeError(f'Unexpected PCnet guest transcript: {guest}')

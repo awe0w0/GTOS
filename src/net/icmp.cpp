@@ -18,13 +18,15 @@ InternetControlMessageProtocol::~InternetControlMessageProtocol()
 void printf(char*);
 void printfHex(uint8_t);
 
-bool InternetControlMessageProtocol::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t dstIP_BE,
+bool InternetControlMessageProtocol::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t,
                                             uint8_t* internetprotocolPayload, uint32_t size)
 {
-    if(size < sizeof(InternetControlMessageProtocolMessage))
+    if (!internetprotocolPayload || size < sizeof(InternetControlMessageProtocolMessage)
+        || InternetProtocolProvider::Checksum(internetprotocolPayload, size))
         return false;
     
     InternetControlMessageProtocolMessage* msg = (InternetControlMessageProtocolMessage*)internetprotocolPayload;
+    if (msg->code) return false;
 
     switch(msg->type)
     {
@@ -39,8 +41,7 @@ bool InternetControlMessageProtocol::OnInternetProtocolReceived(uint32_t srcIP_B
     case 8:
         msg->type = 0;
         msg->checksum = 0;
-        msg->checksum = InternetProtocolProvider::Checksum((uint16_t*)&msg,
-            sizeof(InternetControlMessageProtocolMessage));
+        msg->checksum = InternetProtocolProvider::Checksum(msg, size);
         return true;
         break;
     }
@@ -55,8 +56,7 @@ void InternetControlMessageProtocol::RequestEchoReply(uint32_t ip_be)
     icmp.code = 0;
     icmp.data = 0x3713; // 1337
     icmp.checksum = 0;
-    icmp.checksum = InternetProtocolProvider::Checksum((uint16_t*)&icmp,
-        sizeof(InternetControlMessageProtocolMessage));
+    icmp.checksum = InternetProtocolProvider::Checksum(&icmp, sizeof(icmp));
     
     InternetProtocolHandler::Send(ip_be, (uint8_t*)&icmp, sizeof(InternetControlMessageProtocolMessage));
 }

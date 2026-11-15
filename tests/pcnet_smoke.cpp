@@ -2,10 +2,12 @@
 #include <gdt.h>
 #include <memory/criticalsection.h>
 #include <memorymanagement.h>
+#include <net/icmp.h>
 
 using namespace gtos;
 using namespace gtos::drivers;
 using namespace gtos::hardwarecommunication;
+using namespace gtos::net;
 
 void printf(char* message) {
     Port8Bit port(0xe9);
@@ -27,6 +29,9 @@ namespace {
     const unsigned BurstSize = 8;
     const unsigned FrameSizes[BurstSize] = {42, 60, 257, 1514, 64, 680, 1300, 1492};
     alignas(16) uint8_t driverMemory[128 * 1024];
+    const uint32_t LeftIP = 0x010200c0;
+    const uint32_t RightIP = 0x020200c0;
+    const uint8_t ExtendedEcho[] = {0x34, 0x12, 0x00, 0x01, 0xaa, 0x00, 0xdd, 0x77, 0x96};
 
     void Finish(bool pass) __attribute__((noreturn));
     void Finish(bool pass) {
@@ -133,6 +138,80 @@ namespace {
         Require(receiver.received == expected, "PCnet frame count");
         Require(receiver.errors == 0, "PCnet receive length, payload or padding");
     }
+
+    class EchoReceiver : public InternetControlMessageProtocol {
+    public:
+        volatile unsigned replies;
+
+        explicit EchoReceiver(InternetProtocolProvider& ip)
+        : InternetControlMessageProtocol(&ip), replies(0) {}
+
+        bool OnInternetProtocolReceived(uint32_t source, uint32_t destination,
+                                        uint8_t* data, uint32_t size) {
+            Require(source == RightIP && destination == LeftIP, "ICMP source and destination");
+            Require(replies < 2 && size == (replies ? sizeof(ExtendedEcho) + 4 : 8),
+                    "ICMP reply size and count");
+            Require(data[0] == 0 && data[1] == 0 && !InternetProtocolProvider::Checksum(data, size),
+                    "ICMP reply type and checksum");
+            const uint8_t simple[] = {0x13, 0x37, 0, 0};
+            const uint8_t* expected = replies ? ExtendedEcho : simple;
+            for (unsigned i = 4; i < size; ++i)
+                Require(data[i] == expected[i - 4], "ICMP echoed identifier, sequence and payload");
+            ++replies;
+            return InternetControlMessageProtocol::OnInternetProtocolReceived(source, destination, data, size);
+        }
+    };
+
+    class EchoServer : public InternetControlMessageProtocol {
+    public:
+        volatile unsigned requests;
+        volatile unsigned badChecksum;
+
+        explicit EchoServer(InternetProtocolProvider& ip)
+        : InternetControlMessageProtocol(&ip), requests(0), badChecksum(0) {}
+
+        bool OnInternetProtocolReceived(uint32_t source, uint32_t destination,
+                                        uint8_t* data, uint32_t size) {
+            ++requests;
+            if (InternetProtocolProvider::Checksum(data, size)) ++badChecksum;
+            return InternetControlMessageProtocol::OnInternetProtocolReceived(source, destination, data, size);
+        }
+    };
+
+    void VerifyIpv4(amd_am79c973& left, amd_am79c973& right) {
+        left.SetIPAddress(LeftIP);
+        right.SetIPAddress(RightIP);
+        EtherFrameProvider leftLink(&left), rightLink(&right);
+        AddressResolutionProtocol leftArp(&leftLink), rightArp(&rightLink);
+        InternetProtocolProvider leftIp(&leftLink, &leftArp, 0, 0x00ffffff),
+                                 rightIp(&rightLink, &rightArp, 0, 0x00ffffff);
+        EchoReceiver client(leftIp);
+        EchoServer server(rightIp);
+        uint64_t mac = 0;
+        Require(!leftArp.Resolve(RightIP, mac), "ARP starts with a cold neighbor");
+        for (unsigned attempt = 0; attempt < 64 && !mac; ++attempt) {
+            for (unsigned i = 0; i < 1024; ++i) asm volatile("pause");
+            leftArp.Resolve(RightIP, mac);
+        }
+        Require(mac == right.GetMACAddress(), "ARP learned the peer over Ethernet");
+        client.RequestEchoReply(RightIP);
+        for (unsigned i = 0; i < 1000000 && client.replies < 1; ++i) asm volatile("pause");
+        Require(client.replies == 1, "ICMP fixed-size probe reply");
+
+        uint8_t packet[4 + sizeof(ExtendedEcho)] = {8, 0, 0, 0};
+        for (unsigned i = 0; i < sizeof(ExtendedEcho); ++i) packet[i + 4] = ExtendedEcho[i];
+        const uint16_t checksum = InternetProtocolProvider::Checksum(packet, sizeof(packet));
+        packet[2] = static_cast<uint8_t>(checksum);
+        packet[3] = static_cast<uint8_t>(checksum >> 8);
+        packet[sizeof(packet) - 1] ^= 1;
+        leftIp.Send(RightIP, 1, packet, sizeof(packet));
+        packet[sizeof(packet) - 1] ^= 1;
+        leftIp.Send(RightIP, 1, packet, sizeof(packet));
+        for (unsigned i = 0; i < 1000000 && client.replies < 2; ++i) asm volatile("pause");
+        Require(client.replies == 2, "ICMP validated odd payload and discarded invalid checksum");
+        Require(server.requests == 3 && server.badChecksum == 1, "ICMP receiver saw the three wire requests");
+        printf((char*)"PCNET IPV4 ICMP PASS\n");
+    }
 }
 
 extern "C" void NativeProcessSmoke(void*, unsigned magic) {
@@ -158,8 +237,6 @@ extern "C" void NativeProcessSmoke(void*, unsigned magic) {
     auto& right = *static_cast<amd_am79c973*>(rightDriver);
     Require(left.GetMACAddress() == 0x010000000002ULL, "PCnet left MAC");
     Require(right.GetMACAddress() == 0x020000000002ULL, "PCnet right MAC");
-    Receiver leftReceive(left, right.GetMACAddress());
-    Receiver rightReceive(right, left.GetMACAddress());
     left.SetIPAddress(0x0100010a);
     left.Activate();
     right.Activate();
@@ -172,28 +249,33 @@ extern "C" void NativeProcessSmoke(void*, unsigned magic) {
     Unmask(rightDescriptor.interrupt);
     interrupts.Activate();
 
-    uint8_t invalid[1515] = {};
-    left.Send(nullptr, 60);
-    left.Send(invalid, -1);
-    left.Send(invalid, 13);
-    left.Send(invalid, sizeof(invalid));
-    for (unsigned start = 0; start < 4 * BurstSize; start += BurstSize) {
-        SendBurst(left, right.GetMACAddress(), start);
-        WaitFor(rightReceive, start + BurstSize);
-        SendBurst(right, left.GetMACAddress(), start);
-        WaitFor(leftReceive, start + BurstSize);
-        if (start == BurstSize) {
-            memory::InterruptGuard guard;
-            left.Activate();
-            right.Activate();
-            interrupts.Load(&leftIrq, leftVector);
-            Require(left.GetIPAddress() == 0x0100010a, "PCnet IP state survives hardware reinitialization");
+    {
+        Receiver leftReceive(left, right.GetMACAddress());
+        Receiver rightReceive(right, left.GetMACAddress());
+        uint8_t invalid[1515] = {};
+        left.Send(nullptr, 60);
+        left.Send(invalid, -1);
+        left.Send(invalid, 13);
+        left.Send(invalid, sizeof(invalid));
+        for (unsigned start = 0; start < 4 * BurstSize; start += BurstSize) {
+            SendBurst(left, right.GetMACAddress(), start);
+            WaitFor(rightReceive, start + BurstSize);
+            SendBurst(right, left.GetMACAddress(), start);
+            WaitFor(leftReceive, start + BurstSize);
+            if (start == BurstSize) {
+                memory::InterruptGuard guard;
+                left.Activate();
+                right.Activate();
+                interrupts.Load(&leftIrq, leftVector);
+                Require(left.GetIPAddress() == 0x0100010a, "PCnet IP state survives hardware reinitialization");
+            }
         }
+        printf((char*)"PCNET FRAME COUNTS left=");
+        printfHex32(leftReceive.received);
+        printf((char*)" right=");
+        printfHex32(rightReceive.received);
+        printf((char*)"\n");
     }
-    printf((char*)"PCNET FRAME COUNTS left=");
-    printfHex32(leftReceive.received);
-    printf((char*)" right=");
-    printfHex32(rightReceive.received);
-    printf((char*)"\n");
+    VerifyIpv4(left, right);
     Finish(true);
 }
