@@ -1,0 +1,18 @@
+--- a/v8/tools/gtos_isolate_diagnostic/runtime/thread-core.cc
++++ b/v8/tools/gtos_isolate_diagnostic/runtime/thread-core.cc
+@@ -1,5 +1,6 @@
+ #include <__external_threading>
+ #include <errno.h>
++#include <process/identity_abi.h>
+ #include <stdint.h>
+ 
+ #include "src/base/platform/gtos-clock-bridge.h"
+@@ -10,7 +11,7 @@
+ // only its owning thread can inspect or change the protected depth.
+ namespace {
+ uint32_t CurrentOwner() {
+-  return v8::base::gtos::CurrentProcessInfo().thread_id;
++  return gtos::native::CurrentProcessIdentity().thread_id;
+ }
+ 
+ template <class Mutex>

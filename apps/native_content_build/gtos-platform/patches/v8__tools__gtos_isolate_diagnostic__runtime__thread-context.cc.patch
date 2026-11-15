@@ -1,6 +1,8 @@
 --- a/v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc
 +++ b/v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc
-@@ -2,7 +2,7 @@
+@@ -1,8 +1,9 @@
+ #include "thread-context.h"
++#include <process/identity_abi.h>
  #include "src/base/platform/gtos-native-services.h"
  namespace v8 { namespace base { namespace gtos {
  namespace {
@@ -9,7 +11,7 @@
  uint32_t context_lock;
  class ContextGuard {
   public:
-@@ -20,25 +20,7 @@ class ContextGuard {
+@@ -20,28 +21,10 @@
  };
  }
  GtosProcessInfoResult CurrentNativeThreadInfo() {
@@ -35,4 +37,17 @@
 +  return CurrentProcessInfo();
  }
  NativeThreadState& CurrentNativeThreadState() {
-   const uint32_t id = CurrentNativeThreadInfo().thread_id;
+-  const uint32_t id = CurrentNativeThreadInfo().thread_id;
++  const uint32_t id = ::gtos::native::CurrentProcessIdentity().thread_id;
+   ContextGuard guard;
+   NativeThreadState* vacant = nullptr;
+   for (auto& state : states) {
+@@ -53,7 +36,7 @@
+   return *vacant;
+ }
+ void ReleaseNativeThreadState(NativeThreadState& state) {
+-  const uint32_t id = CurrentNativeThreadInfo().thread_id;
++  const uint32_t id = ::gtos::native::CurrentProcessIdentity().thread_id;
+   ContextGuard guard;
+   bool registered = false;
+   for (auto& candidate : states) if (&candidate == &state) registered = true;

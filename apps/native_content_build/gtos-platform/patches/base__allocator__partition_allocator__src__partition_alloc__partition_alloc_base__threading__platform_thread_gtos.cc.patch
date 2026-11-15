@@ -1,0 +1,19 @@
+--- a/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc
++++ b/base/allocator/partition_allocator/src/partition_alloc/partition_alloc_base/threading/platform_thread_gtos.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "partition_alloc/partition_alloc_base/threading/platform_thread.h"
+ 
++#include <process/identity_abi.h>
+ #include <time.h>
+ 
+ #include "tools/gtos_native_sdk/native-services.h"
+@@ -17,7 +18,7 @@
+ // Query the kernel directly: allocator thread identification cannot allocate
+ // memory or initialize compiler TLS while an allocator lock is held.
+ PlatformThreadId PlatformThread::CurrentId() {
+-  return gtos::native::CurrentProcessInfo().thread_id;
++  return gtos::native::CurrentProcessIdentity().thread_id;
+ }
+ 
+ PlatformThreadRef PlatformThread::CurrentRef() {
