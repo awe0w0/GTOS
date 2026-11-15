@@ -8,8 +8,10 @@
 #include <string.h>
 
 enum { BusTimeoutMs = 50, WatchdogFault = 0x80 };
+enum { CcCurrent = 0x08, CcAttach = 0x09, CcIrq = 0x10, CcConfigMask = 0x07 };
 static i2c_master_dev_handle_t imu, bq, cc;
 static bool imu_ready, bq_ready, cc_ready, bq_io_failure, charge_gpio_ready, charge_permitted;
+static bool cc_irq_ready;
 static A3ChargeProfile active_charge;
 #ifndef CONFIG_GTOS_A3_SIMULATION
 static bool charger_pg_ready;
@@ -30,6 +32,27 @@ static bool write_registers(i2c_master_dev_handle_t device, uint8_t reg,
     if (count > sizeof(message) - 1) return false;
     memcpy(message + 1, bytes, count);
     return i2c_master_transmit(device, message, count + 1, BusTimeoutMs) == ESP_OK;
+}
+
+static int read_cc_registers(uint8_t* registers) {
+    // TI lists DEVICE_ID in descending address order. Reads from 0x00 are ascending.
+    static const uint8_t signature[CcCurrent] = "023BSUT";
+    const uint8_t first = 0;
+    // TUSB320 sets the read sub-address with a write terminated by STOP.
+    if (i2c_master_transmit(cc, &first, 1, BusTimeoutMs) != ESP_OK
+        || i2c_master_receive(cc, registers, CcAttach + 1, BusTimeoutMs) != ESP_OK)
+        return GTOS_BOARD_IO;
+    return memcmp(registers, signature, sizeof(signature)) == 0 ? GTOS_BOARD_OK : GTOS_BOARD_MISSING;
+}
+
+static int read_cc_status(uint8_t* registers) {
+    if (!cc_ready) return GTOS_BOARD_MISSING;
+    const int result = read_cc_registers(registers);
+    if (result != GTOS_BOARD_OK || !(registers[CcAttach] & CcIrq)) return result;
+    const uint8_t ack = (registers[CcAttach] & CcConfigMask) | CcIrq;
+    if (!write_registers(cc, CcAttach, &ack, 1)) return GTOS_BOARD_IO;
+    // Use a fresh sample if the port changed again just before the latch was cleared.
+    return read_cc_registers(registers);
 }
 
 static int32_t imu_read(void* bus, uint8_t reg, uint8_t* bytes, uint16_t count) {
@@ -99,6 +122,11 @@ void a3_i2c_init(void) {
     };
     charger_pg_ready = gpio_config(&pg) == ESP_OK;
 #endif
+    const gpio_config_t cc_irq = {
+        .pin_bit_mask = 1ULL << A3_PIN_CC_INT_N, .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+    };
+    cc_irq_ready = gpio_config(&cc_irq) == ESP_OK;
     i2c_master_bus_config_t config = {
         .i2c_port = I2C_NUM_0, .sda_io_num = A3_PIN_SDA, .scl_io_num = A3_PIN_SCL,
         .clk_source = I2C_CLK_SRC_DEFAULT, .glitch_ignore_cnt = 7,
@@ -196,14 +224,13 @@ static uint16_t available_charge_input(const GtosBoardUsb* usb) {
 
 int gtos_board_read_usb(GtosBoardUsb* usb) {
     if (!usb) return GTOS_BOARD_INVALID;
-    if (!cc_ready) return GTOS_BOARD_MISSING;
-    uint8_t status[2] = {0};
-    const bool read_ok = read_registers(cc, 0x08, status, sizeof(status));
-    const bool sink = read_ok && (status[1] >> 6) == 2;
+    uint8_t status[CcAttach + 1] = {0};
+    const int read_result = read_cc_status(status);
+    const bool sink = read_result == GTOS_BOARD_OK && (status[CcAttach] >> 6) == 2;
     const uint16_t usb_current_ma[] = {500, 1500, 500, 3000};
     const GtosBoardUsb snapshot = {
-        .sink_attached = sink, .flipped = sink && (status[1] & 0x20),
-        .advertised_ma = sink ? usb_current_ma[(status[0] >> 4) & 3] : 0,
+        .sink_attached = sink, .flipped = sink && (status[CcAttach] & 0x20),
+        .advertised_ma = sink ? usb_current_ma[(status[CcCurrent] >> 4) & 3] : 0,
     };
     const uint16_t available = available_charge_input(&snapshot);
     if (charge_permitted && available < active_charge.input_limit_ma) {
@@ -217,7 +244,7 @@ int gtos_board_read_usb(GtosBoardUsb* usb) {
                 return GTOS_BOARD_IO;
         }
     }
-    if (!read_ok) return GTOS_BOARD_IO;
+    if (read_result != GTOS_BOARD_OK) return read_result;
     *usb = snapshot;
     return GTOS_BOARD_OK;
 }
@@ -229,7 +256,8 @@ void a3_i2c_poll(uint32_t milliseconds) {
         gtos_board_set_charge(false);
         return;
     }
-    if (milliseconds - last_check < 100) return;
+    const bool cc_changed = cc_irq_ready && gpio_get_level(A3_PIN_CC_INT_N) == 0;
+    if (!cc_changed && milliseconds - last_check < 100) return;
     last_check = milliseconds;
     GtosBoardUsb usb;
     gtos_board_read_usb(&usb);

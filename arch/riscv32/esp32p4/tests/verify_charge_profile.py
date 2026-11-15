@@ -8,7 +8,7 @@ from pathlib import Path
 
 from cosim_tcp import decode
 from verify_board import Guest, available_port, prepare_board
-from verify_live_board import CHARGER, CHARGE_ENABLE, Devices
+from verify_live_board import CC, CC_IRQ_N, CHARGER, CHARGE_ENABLE, Devices, MS
 
 
 PG_N = 9
@@ -16,17 +16,22 @@ PG_N = 9
 
 class ChargerDevices(Devices):
     def __init__(self, port, output):
-        super().__init__(port, output, drive_pins=(PG_N,))
+        super().__init__(port, output, drive_pins=(PG_N, CC_IRQ_N))
         registers = self.registers[CHARGER]
         registers[0x01:0x08] = bytes((0x1A, 0xA2, 0x22, 0x58, 0x9F, 0xE6, 0x4C))
         self.default_mode = True
         self.ignore_voltage = False
+        self.current_on_cc_ack = None
 
     def transfer(self, request):
         operation = decode(request[2])
+        data = operation.get(3, b"")
+        if operation[2] == CC and data == b"\x09\x15" and self.current_on_cc_ack is not None:
+            self.registers[CC][0x08] = self.current_on_cc_ack << 4
+            self.stimuli.append((self.clock, "cc-current-on-ack", self.current_on_cc_ack))
+            self.current_on_cc_ack = None
         if operation[2] != CHARGER:
             return super().transfer(request)
-        data = operation.get(3, b"")
         registers = self.registers[CHARGER]
         voltage = registers[4]
         if data == b"\x09" and self.default_mode:
@@ -46,6 +51,18 @@ class ChargerDevices(Devices):
             self.stimuli.append((self.clock, "vreg-drift", code))
             return self.clock
 
+    def set_cc_identity(self, valid):
+        with self.lock:
+            self.registers[CC][1:3] = b"\x32\x33" if valid else b"\x33\x32"
+            self.stimuli.append((self.clock, "cc-identity", valid))
+            return self.clock
+
+    def cc_change_during_ack(self, mode):
+        with self.lock:
+            self.registers[CC][0x09] |= 0x15  # Pending interrupt and existing RW settings.
+            self.current_on_cc_ack = mode
+        return self.drive(CC_IRQ_N, 0)
+
 
 @contextmanager
 def start(args, build, output):
@@ -64,6 +81,7 @@ def start(args, build, output):
             vm.find("GTOS_A3_READY console=1", start_offset)
             vm.find("page=0 light=60 awake=0", start_offset)
             bus.edge(CHARGE_ENABLE, 0, 0)
+            bus.drive(CC_IRQ_N, 1)
             yield vm, bus
 
 
@@ -117,6 +135,10 @@ def run(args):
         denied(vm, bus, "unallocated Default USB Power", -11)
 
         bus.usb(attached=True, power_good=True, current_mode=3)
+        bus.set_cc_identity(False)
+        vm.find("cc=-19", vm.send("s"))
+        denied(vm, bus, "an unexpected CC controller advertising 3 A", -5)
+        bus.set_cc_identity(True)
         vm.find("advertised=3000 bq=0 pg=1 charge=0 limit=200 faults=128", vm.send("s"))
         with bus.lock:
             bus.ignore_voltage = True
@@ -133,6 +155,43 @@ def run(args):
         vm.find("advertised=1500 bq=0 pg=0 charge=0", vm.send("s"))
 
         bus.drive(PG_N, 0)
+        bus.usb(attached=True, power_good=True, current_mode=3)
+        enabled(vm, bus, 1800)
+        bus.charge_cut(bus.set_cc_identity(False), "TUSB320LAI signature loss with stale 3 A status")
+        vm.find("cc=-19", vm.send("s"))
+        bus.set_cc_identity(True)
+        enabled(vm, bus, 1800)
+
+        asserted = bus.drive(CC_IRQ_N, 0)
+
+        def cc_samples():
+            stamps = [stamp for stamp, address, sent, data in bus.i2c
+                      if stamp > asserted and address == hex(CC) and not sent and len(data) == 20]
+            return stamps[:3] if len(stamps) >= 3 else None
+
+        samples = bus.wait(cc_samples, "three TUSB320 samples after GPIO4 went low")
+        if samples[-1] - asserted > 80 * MS:
+            raise RuntimeError("CC IRQ level did not bypass the 100 ms polling interval")
+        print(f"GPIO4 low produced three CC reads in {(samples[-1] - asserted) / MS:.1f} ms")
+        bus.drive(CC_IRQ_N, 1)
+
+        notified = bus.cc_change_during_ack(1)
+        bus.charge_cut(notified, "CC interrupt and capability change during acknowledgement")
+        stopped = bus.edge(CHARGE_ENABLE, 0, notified)
+        vm.find("advertised=1500 bq=0 pg=1 charge=0 limit=1500", vm.send("s"))
+        with bus.lock:
+            if bus.registers[CC][0x09] & 0x17 != 5 or bus.current_on_cc_ack is not None:
+                raise RuntimeError("CC acknowledgement did not preserve the writable bits or clear the latch")
+            cc_reads = [(sent, result) for stamp, address, sent, result in bus.i2c
+                        if notified <= stamp <= stopped and address == hex(CC)]
+        expected = [("00", ""), ("", "30323342535554003095"), ("0915", ""),
+                    ("00", ""), ("", "30323342535554001085")]
+        if not any(cc_reads[offset:offset + len(expected)] == expected for offset in range(len(cc_reads))):
+            raise RuntimeError(f"Missing TUSB320 STOP-separated identity and IRQ read-back sequence: {cc_reads}")
+        if (stopped - notified) / MS > 100:
+            raise RuntimeError("GPIO4 assertion did not lead to prompt charge disable")
+        bus.drive(CC_IRQ_N, 1)
+
         bus.usb(attached=True, power_good=True, current_mode=3)
         enabled(vm, bus, 1800)
         bus.charge_cut(bus.set_voltage(0x0B), "unexpected VREG change while charging")

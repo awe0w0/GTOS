@@ -17,7 +17,7 @@ from verify_board import Guest, available_port, prepare_board
 
 
 CC, IMU, CHARGER = 0x47, 0x6A, 0x6B
-VCI, PWM, RESET, CHARGE_ENABLE = 10, 26, 27, 28
+VCI, PWM, RESET, CHARGE_ENABLE, CC_IRQ_N = 10, 26, 27, 28, 4
 MS = 1_000_000
 
 
@@ -39,6 +39,7 @@ class Devices:
         self.stimuli = []
         self.registers = {address: bytearray(256) for address in (CC, IMU, CHARGER)}
         self.pointer = dict.fromkeys(self.registers, 0)
+        self.registers[CC][:8] = bytes.fromhex("30 32 33 42 53 55 54 00")
         self.registers[IMU][0x0F] = 0x6A
         self.registers[CHARGER][0x00] = 0x01
         self.registers[CHARGER][0x0B] = 0x11
@@ -135,7 +136,11 @@ class Devices:
         index = self.pointer[address]
         if len(written) > 1:
             payload = written[1:]
-            regs[index:index + len(payload)] = payload
+            if address == CC and index == 0x09 and len(payload) == 1:
+                interrupt = (regs[index] & 0x10) & ~payload[0]
+                regs[index] = (regs[index] & 0xe0) | interrupt | (payload[0] & 7)
+            else:
+                regs[index:index + len(payload)] = payload
             index += len(payload)
         if address == IMU:
             regs[0x1E] = bool(regs[0x10] & 0xF0) | (bool(regs[0x11] & 0xF0) << 1)
