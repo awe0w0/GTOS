@@ -1,4 +1,5 @@
 import asyncio
+import errno
 from pathlib import Path
 import socket
 import sys
@@ -36,6 +37,28 @@ class ConnectRequestTest(unittest.TestCase):
 
 
 class ConnectProxyTest(unittest.IsolatedAsyncioTestCase):
+    async def test_half_close_after_disconnection_keeps_transferred_data(self):
+        for code in (errno.ENOTCONN, errno.EIO):
+            with self.subTest(errno=code):
+                source = asyncio.StreamReader()
+                source.feed_data(b'data')
+                source.feed_eof()
+                destination = mock.create_autospec(asyncio.StreamWriter, instance=True)
+                destination.can_write_eof.return_value = True
+                destination.is_closing.return_value = False
+                destination.write_eof.side_effect = OSError(code, 'shutdown')
+                totals = [0, 0]
+                transfer = proxy.tunnel(source, destination, asyncio.Event(), totals, 1)
+                if code == errno.ENOTCONN:
+                    await transfer
+                else:
+                    with self.assertRaises(OSError) as failure:
+                        await transfer
+                    self.assertEqual(failure.exception.errno, code)
+                destination.write.assert_called_once_with(b'data')
+                destination.drain.assert_awaited_once()
+                self.assertEqual(totals, [0, 4])
+
     async def test_private_dns_answer_never_connects(self):
         loop = asyncio.get_running_loop()
         addresses = [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('127.0.0.1', 443)),

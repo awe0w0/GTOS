@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import errno
 import ipaddress
 import os
 import re
@@ -68,8 +69,14 @@ async def tunnel(source, destination, activity, totals, direction):
     while True:
         block = await source.read(65536)
         if not block:
-            if destination.can_write_eof():
-                destination.write_eof()
+            if destination.can_write_eof() and not destination.is_closing():
+                try:
+                    destination.write_eof()
+                except OSError as error:
+                    # A disconnected peer has already closed its write side.
+                    # Do not cancel the other direction at this EOF.
+                    if error.errno != errno.ENOTCONN:
+                        raise
             return
         totals[direction] += len(block)
         activity.set()
