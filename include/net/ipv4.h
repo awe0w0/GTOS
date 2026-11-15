@@ -15,7 +15,7 @@ namespace gtos {
             uint16_t totalLength;
 
             uint16_t ident;
-            uint16_t flagsAndOffset: 13;
+            uint16_t flagsAndOffset;
             
             uint8_t timeToLive;
             uint8_t protocol;
@@ -24,6 +24,7 @@ namespace gtos {
             uint32_t srcIP;
             uint32_t dstIP;
         }__attribute__((packed));
+        static_assert(sizeof(InternetProtocolV4Message) == 20, "IPv4 fixed header size");
 
         class InternetProtocolProvider;
 
@@ -44,7 +45,7 @@ namespace gtos {
         class InternetProtocolProvider : public EtherFrameHandler {
             friend class InternetProtocolHandler;
         protected:
-            InternetProtocolHandler* handlers[255];
+            InternetProtocolHandler* handlers[256];
             AddressResolutionProtocol* arp;
             uint32_t gatewayIP;
             uint32_t subnetMask;
@@ -55,7 +56,7 @@ namespace gtos {
 
             virtual bool OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size);
             void Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t* buffer, uint32_t size);
-            static uint16_t Checksum(uint16_t* data, uint32_t lengthInBytes);
+            static uint16_t Checksum(const void* data, uint32_t lengthInBytes);
         };
     }
 }

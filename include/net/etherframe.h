@@ -36,7 +36,7 @@ namespace gtos {
         class EtherFrameProvider : public RawDataHandler {
         friend class EtherFrameHandler;
         protected:
-            EtherFrameHandler* handlers[65535];
+            EtherFrameHandler* handlers[65536];
         public:
             EtherFrameProvider(amd_am79c973* backend);
             ~EtherFrameProvider();

@@ -133,6 +133,7 @@ during_run ./tests/keymap_test.sh
 during_run ./tests/cpu_test.sh
 during_run ./tests/cpu_startup_test.sh
 during_run ./tests/cpu_work_queue_test.sh
+during_run ./tests/net_ipv4_test.sh
 (
     export GTOS_CPU_MEMORY_WORK=${GTOS_CPU_MEMORY_WORK:-$suite_build/cpu-memory-objects}
     export GTOS_CPU_MEMORY_RUN_LOG=${GTOS_CPU_MEMORY_RUN_LOG:-${suite_run:-}/cpu-memory.log}

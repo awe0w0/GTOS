@@ -35,9 +35,7 @@ uint32_t EtherFrameHandler::GetIPAddress() {
 }
 EtherFrameProvider::EtherFrameProvider(amd_am79c973* backend) 
 : RawDataHandler(backend) {
-    for (uint32_t i = 0;i < 65535;i++) {
-        handlers[i] = 0;
-    }
+    for (auto& handler : handlers) handler = 0;
 
 }
 
@@ -48,7 +46,7 @@ EtherFrameProvider::~EtherFrameProvider() {
 //处理接收数据函数
 bool EtherFrameProvider::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
     //printf("\n");
-    if (size < sizeof(EtherFrameHeader)) return false;
+    if (!buffer || size < sizeof(EtherFrameHeader)) return false;
 
     EtherFrameHeader* frame = (EtherFrameHeader*)buffer;
     // for (int i = 0;i < size;i++) {
@@ -77,10 +75,11 @@ bool EtherFrameProvider::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
 }
 
 void EtherFrameProvider::Send(uint64_t dstMAC_BE, uint16_t etherType_BE, uint8_t* buffer, uint32_t size) {
-
-
+    auto* memory = MemoryManager::activeMemoryManager;
+    if (!memory || (size && !buffer) || size > 1500) return;
     //将buffer复制到etherbuffer，加上帧头
-    uint8_t* etherbuffer = (uint8_t*)MemoryManager::activeMemoryManager->malloc(sizeof(EtherFrameHeader) + size);
+    uint8_t* etherbuffer = (uint8_t*)memory->malloc(sizeof(EtherFrameHeader) + size);
+    if (!etherbuffer) return;
     EtherFrameHeader* frame = (EtherFrameHeader*)etherbuffer;
 
     //加上帧头
@@ -95,7 +94,7 @@ void EtherFrameProvider::Send(uint64_t dstMAC_BE, uint16_t etherType_BE, uint8_t
 		}
     backend->Send(etherbuffer, size + sizeof(EtherFrameHeader));
 
-    MemoryManager::activeMemoryManager->free(etherbuffer);
+    memory->free(etherbuffer);
 }
 
 uint32_t EtherFrameProvider::GetIPAddress() {
