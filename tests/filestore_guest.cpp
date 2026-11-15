@@ -10,6 +10,7 @@ namespace {
     uint8_t data[9000],copy[9000],sector[512];
     char longPath[513];
     uint32_t handles[FileStore::MaximumHandles];
+    FileStore::AllocationLookahead allocation;
     void Print(const char* text) { while (*text) asm volatile("outb %0,$0xe9" : : "a"(*text++)); }
     void Hex(uint32_t value) {
         for (int shift=28;shift>=0;shift-=4) {
@@ -271,6 +272,22 @@ namespace {
         CheckStreamMode(files);
         Verify(files);GuardSectors(disk);
         Require(files.Unmount()==0,"writer unmount");
+        for (uint32_t i=0;i<sizeof(allocation.bytes);i++) allocation.bytes[i]=0xA5;
+        Require(files.Mount(&disk,8,2048,false,&allocation)==0,"mount with a supplied allocation bitmap");
+        Require(files.Mount(&disk,8,2048)==FileStore::Busy,"active bitmap mount cannot be replaced");
+        f=files.Open(11,"/allocation-map",FileStore::Write|FileStore::Create);
+        Require(f>0&&files.WriteFile(11,f,data,8193)==8193&&files.Close(11,f)==0,
+                "allocate and commit through a supplied bitmap");
+        f=files.Open(11,"/allocation-map",FileStore::Read);
+        Require(f>0&&files.ReadFile(11,f,copy,8193)==8193&&Equal(data,copy,8193)&&files.Close(11,f)==0,
+                "read the exact committed bytes of the allocated file");
+        constexpr uint32_t used=2048/FileStore::SectorsPerBlock/8;
+        bool consumed=false,untouched=true;
+        for (uint32_t i=0;i<used;i++) consumed=consumed||allocation.bytes[i]!=0xA5;
+        for (uint32_t i=used;i<sizeof(allocation.bytes);i++)
+            untouched=untouched&&allocation.bytes[i]==0xA5;
+        Require(consumed&&untouched,"allocation uses only the bytes required by this volume");
+        Require(files.Remove("/allocation-map")==0&&files.Unmount()==0,"remove file and release bitmap mount");
         Require(files.Mount(&disk,8,2048,true)==0,"same object readonly remount");
         f=files.Open(11,"/browser/session.bin",FileStore::Read);
         Require(f>0&&(uint32_t)f>stale&&files.Close(11,stale)==LFS_ERR_BADF,"remount does not resurrect previous handle");

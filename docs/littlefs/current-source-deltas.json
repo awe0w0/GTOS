@@ -1,9 +1,9 @@
 {
   "lock_sha256": "23df71c001b5907284a0e35ecb072aa10ff21e343125ba6ce21f4965fe8cd342",
   "files": {
-    "include/storage/filestore.h": "3951e42323b9a8451cbd7791ac420c4fc23259de4f1da8591323aca2e135dabc",
-    "src/storage/filestore.cpp": "d9f426e35b05ee013e21485a00d34518d87a0968bff91dc974e33767f358a581",
-    "tests/filestore_guest.cpp": "8f93fe5ee008e8087cb1bf832c8a245f13e7f74bb83bd0f155c0649d18907485",
+    "include/storage/filestore.h": "29cd417f3205ce4b6ca20be8f62a0cf81b018d30d920228ede3223a4e535d818",
+    "src/storage/filestore.cpp": "ec1a7d7bb750404cac16b2681b376612b5d5d264ea5d0f48518f53e4d0a61300",
+    "tests/filestore_guest.cpp": "476a8db18e09643c88330ea4676159498eec5c631333e7ac1f5cbe780c356b32",
     "tools/build-filestore-probe.py": "6f8eeddd597508ec349e1d25215627d6568bfc1dd47ec8416b2320a60dd8974d",
     "Makefile": "afbf866aebd5e58dabf100f89edf8c789c3fbf10f892a81917c1066597b6f7e2",
     "include/hardwarecommunication/port.h": "024c651b7b87423b2add17ee7624596727d6ade3ee2cd4aa40088b15504c25ea",

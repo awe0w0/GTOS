@@ -57,9 +57,15 @@ int32_t FileStore::Format(BlockDevice* device,uint32_t first,uint32_t sectors) {
     int32_t error=Configure(device,first,sectors,false);if (error) return error;
     return lfs_format(&filesystem,&config);
 }
-int32_t FileStore::Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect) {
+int32_t FileStore::Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect,
+                         AllocationLookahead* allocation) {
     InterruptGuard guard;if (mounted) return Busy;
     int32_t error=Configure(device,first,sectors,protect);if (error) return error;
+    if (allocation) {
+        const uint32_t needed=(config.block_count+7)/8;
+        config.lookahead_size=needed<sizeof(allocation->bytes)?needed:sizeof(allocation->bytes);
+        config.lookahead_buffer=allocation->bytes;
+    }
     error=lfs_mount(&filesystem,&config);mounted=error==0;return error;
 }
 uint32_t FileStore::OpenCount() const {

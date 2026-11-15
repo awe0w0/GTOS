@@ -20,6 +20,7 @@ public:
     enum OpenFlag { Read=1, Write=2, ReadWrite=3, Create=0x100, Exclusive=0x200, Truncate=0x400, Append=0x800, Temporary=0x1000, Locked=0x2000 };
     struct Info { uint32_t type,size;char name[256]; };
     struct ReclaimResult { uint32_t released;int32_t error; };
+    struct AllocationLookahead { uint8_t bytes[32*1024]; };
 private:
     friend struct FileStoreDescriptorFixture;
     struct Resource {
@@ -58,7 +59,10 @@ public:
     FileStore();
     // Never formats implicitly. Format is an explicit destructive operation.
     int32_t Format(BlockDevice* device,uint32_t first,uint32_t sectors);
-    int32_t Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect=false);
+    // An optional allocation bitmap belongs exclusively to this mount and
+    // must outlive it. A full bitmap avoids another traversal per small window.
+    int32_t Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect=false,
+                  AllocationLookahead* allocation=nullptr);
     int32_t Unmount();
     bool Mounted() const { return mounted; }
     uint32_t OpenCount() const;

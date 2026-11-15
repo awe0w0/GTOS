@@ -361,6 +361,7 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writabl
         storage::BlockHeaderCache disk;
         storage::FileStore store;
         process::NativeFiles files{store};
+        storage::FileStore::AllocationLookahead allocation;
 
         explicit Volume(storage::BlockDevice& source):disk(source) {}
     };
@@ -368,7 +369,8 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writabl
     if (!volume) return false;
     storage::FileStore::Info info;
     if (volume->store.Mount(&volume->disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
-                            disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable) == 0 &&
+                            disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable,
+                            writable ? &volume->allocation : nullptr) == 0 &&
         volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
         info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) {
         contentVolume = &volume->store;
