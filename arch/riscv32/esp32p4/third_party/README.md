@@ -7,7 +7,8 @@
 | st7703 | [Espressif ESP LCD ST7703 1.0.4](https://components.espressif.com/components/espressif/esp_lcd_st7703/versions/1.0.4) | Apache-2.0 |
 
 Each directory carries the upstream license. The ST7703 source uses the
-ESP-IDF 6.1 structure member for RGB element order.
+ESP-IDF 6.1 structure member for RGB element order and keeps its context
+until the underlying DPI panel confirms deletion.
 The BQ25601 adapter uses charger control and status fields shared with the
 BQ25601D, checks the A3 part number against the
 [BQ25601 datasheet](https://www.ti.com/lit/ds/symlink/bq25601.pdf), and tracks

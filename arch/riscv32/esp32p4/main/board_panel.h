@@ -14,10 +14,11 @@ typedef struct {
     uint16_t power_on_ms;
     uint16_t reset_release_ms;
     uint32_t backlight_pwm_hz;
-    uint8_t backlight_max_percent;
+    uint8_t backlight_max_percent; // Zero parks the backlight pin low without PWM.
     bool init_in_command_mode;
     bool portrait_clockwise;
     bool use_graphics_acceleration;
+    uint16_t power_off_ms; // Optional hold time after VCI falls.
 } A3PanelProfile;
 
 extern const A3PanelProfile gtos_a3_panel_profile;

@@ -7,6 +7,7 @@
 #include "esp_ldo_regulator.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <math.h>
 #include <string.h>
 
 enum { FrameBytes = A3_WIDTH * A3_HEIGHT * sizeof(uint16_t) };
@@ -18,7 +19,7 @@ static esp_lcd_panel_handle_t panel;
 static uint16_t* staging;
 static ppa_client_handle_t rotation;
 static SemaphoreHandle_t transfer_done;
-static bool transfer_pending;
+static bool transfer_pending, dma2d_enabled;
 static const A3PanelProfile* active;
 
 const A3PanelProfile* a3_panel_profile(void) {
@@ -27,12 +28,15 @@ const A3PanelProfile* a3_panel_profile(void) {
     const unsigned w = profile->timing.h_size, h = profile->timing.v_size;
     if (!((w == A3_WIDTH && h == A3_HEIGHT) || (w == A3_HEIGHT && h == A3_WIDTH))
         || !profile->commands || !profile->command_count
-        || !(profile->pixel_clock_mhz > 0) || !(profile->lane_rate_mbps > 0)
+        || !(profile->pixel_clock_mhz > 0) || !isfinite(profile->pixel_clock_mhz)
+        || !(profile->lane_rate_mbps > 0) || !isfinite(profile->lane_rate_mbps)
         || !profile->power_on_ms || !profile->reset_release_ms
-        || !profile->backlight_pwm_hz || !profile->backlight_max_percent
+        || (profile->backlight_max_percent && !profile->backlight_pwm_hz)
         || profile->backlight_max_percent > 100
         || (profile->wire_format != LCD_COLOR_FMT_RGB565
             && profile->wire_format != LCD_COLOR_FMT_RGB888)) return NULL;
+    for (uint16_t i = 0; i < profile->command_count; ++i)
+        if (profile->commands[i].data_bytes && !profile->commands[i].data) return NULL;
     return profile;
 #else
     return NULL;
@@ -48,21 +52,26 @@ static bool retire_transfer(TickType_t wait) {
 
 bool a3_panel_stop(void) {
     if (!retire_transfer(pdMS_TO_TICKS(500))) return false;
+    if (dma2d_enabled) {
+        if (esp_lcd_dpi_panel_disable_dma2d(panel) != ESP_OK) return false;
+        dma2d_enabled = false;
+    }
     if (panel) {
         if (active) esp_lcd_panel_disp_on_off(panel, false);
-        esp_lcd_panel_del(panel);
+        active = NULL;
+        if (esp_lcd_panel_del(panel) != ESP_OK) return false;
         panel = NULL;
     }
     if (io) {
-        esp_lcd_panel_io_del(io);
+        if (esp_lcd_panel_io_del(io) != ESP_OK) return false;
         io = NULL;
     }
     if (bus) {
-        esp_lcd_del_dsi_bus(bus);
+        if (esp_lcd_del_dsi_bus(bus) != ESP_OK) return false;
         bus = NULL;
     }
     if (phy) {
-        esp_ldo_release_channel(phy);
+        if (esp_ldo_release_channel(phy) != ESP_OK) return false;
         phy = NULL;
     }
     if (transfer_done) {
@@ -70,7 +79,7 @@ bool a3_panel_stop(void) {
         transfer_done = NULL;
     }
     if (rotation) {
-        ppa_unregister_client(rotation);
+        if (ppa_unregister_client(rotation) != ESP_OK) return false;
         rotation = NULL;
     }
     heap_caps_free(staging);
@@ -95,13 +104,15 @@ static bool enable_acceleration(bool portrait) {
     }
     transfer_done = xSemaphoreCreateBinary();
     const esp_lcd_dpi_panel_event_callbacks_t callbacks = {.on_color_trans_done = frame_copied};
-    return transfer_done
-        && esp_lcd_dpi_panel_register_event_callbacks(panel, &callbacks, transfer_done) == ESP_OK
-        && esp_lcd_dpi_panel_enable_dma2d(panel) == ESP_OK;
+    if (!transfer_done
+        || esp_lcd_dpi_panel_register_event_callbacks(panel, &callbacks, transfer_done) != ESP_OK
+        || esp_lcd_dpi_panel_enable_dma2d(panel) != ESP_OK) return false;
+    dma2d_enabled = true;
+    return true;
 }
 
 bool a3_panel_start(const A3PanelProfile* profile) {
-    if (!profile || active) return false;
+    if (!profile || panel || io || bus || phy || rotation || transfer_done || staging) return false;
     const bool portrait = profile->timing.h_size == A3_HEIGHT;
     if (portrait || profile->use_graphics_acceleration) {
         staging = heap_caps_aligned_alloc(128, FrameBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);

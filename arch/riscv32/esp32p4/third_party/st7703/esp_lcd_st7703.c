@@ -164,11 +164,11 @@ static esp_err_t panel_st7703_del(esp_lcd_panel_t *panel)
 {
     st7703_panel_t *st7703 = (st7703_panel_t *)panel->user_data;
 
+    // Keep the ST7703 state alive when the underlying panel rejects deletion.
+    ESP_RETURN_ON_ERROR(st7703->del(panel), TAG, "delete MIPI DPI panel failed");
     if (st7703->reset_gpio_num >= 0) {
         gpio_reset_pin(st7703->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    st7703->del(panel);
     ESP_LOGD(TAG, "del st7703 panel @%p", st7703);
     free(st7703);
 

@@ -136,13 +136,34 @@ SSID 和 WPA2 口令，可以让 Desktop Orbit 加入指定网络并在 8080 端
 菜单中的口令会编入镜像。通过 Board API 传给运行中驱动的口令使用 RAM 存储。
 
 面板接入使用 [ST7703 组件](third_party/README.md) 和 ESP-IDF 双 lane DSI。
-实板诊断配置在 GPIO 上保持 VCI、背光和充电关闭。取得 HC‑700BI3002 的确认版
+默认实板诊断镜像保持 VCI、背光和充电关闭。取得 HC‑700BI3002 的确认版
 初始化表、电气和 DPI 时序以及背光与首板装配数据后，可通过 CMake 变量
 GTOS_A3_PANEL_PROFILE 指向定义 *gtos_a3_panel_profile* 的 C 文件。
 配置字段位于 [board_panel.h](main/board_panel.h)。该路径使用 P4 LDO3 的
 2.5 V D‑PHY 供电，按面板的实际扫描方向提交 1424 × 280 的应用画面。
-实板面板配置可以启用 PPA 旋转和 DMA2D 帧复制。虚拟机验证覆盖到 RGB565 帧缓冲，
-面板时序、硬件图形加速和背光电流仍需实板测量。
+首次检查 VCI、复位和 DSI 时，把 `backlight_max_percent` 设为 0。固件保持 GPIO26
+为低电平，并继续初始化面板和提交画面。此时允许 `backlight_pwm_hz` 为 0。
+确认背光装配和额定电流后，由实板配置提供已确认的 PWM 频率和亮度上限。
+
+关屏先置暗并等待挂起的复制完成，然后依次禁用 DMA2D、释放面板和 DSI 总线，再拉复位
+和关闭 VCI。`power_off_ms` 可按面板时序设定再次上电前的断电时间。
+关屏遇到暂时性错误时可重试，清理期间暂停提交新帧。
+[ESP-IDF 6.1 DSI 接口](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html)
+
+普通仿真覆盖 RGB565 帧缓冲和背光 PWM。另一个 ESP-EMU 用例编译实际板级显示和
+ST7703 驱动，在 DSI、DMA2D、PPA 入口注入响应和错误，并从虚拟 GPIO 采样 VCI、
+复位和背光。ESP-EMU 1.0.0 的原生 DSI 探针停在 D-PHY PLL 锁定等待。屏幕出图、
+链路时序、硬件图形加速和背光电流需在实板测量。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-panel-test"
+idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    merge-bin -o "$build/gtos-a3-panel-test-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu \
+    --build "$build" --output out/a3-panel-test-run
+~~~
 
 ### 充电配置
 

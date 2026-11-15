@@ -21,7 +21,7 @@ def available_port():
 
 
 class Guest:
-    def __init__(self, args, flash, board, log, save=False, extra=()):
+    def __init__(self, args, flash, board, log, save=False, extra=(), elf_name="gtos-a3.elf"):
         self.log = log
         self.emulator_log = log.with_name(log.stem + "-emulator.log")
         self.received = bytearray()
@@ -32,7 +32,7 @@ class Guest:
             uart_port = available_port()
         command = [
             str(args.emulator.resolve()), "--chip", "esp32p4", "--psram-size", "16M",
-            "--firmware", str(flash), "--elf", str(args.build / "gtos-a3.elf"),
+            "--firmware", str(flash), "--elf", str(args.build / elf_name),
             "--cosim-board", str(board), "--control-tcp", f"127.0.0.1:{self.port}",
             "--uart-tcp", f"127.0.0.1:{uart_port}", "--timeout", "90s",
         ]
