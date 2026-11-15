@@ -10,11 +10,23 @@
 #include <storage/settings.h>
 namespace gtos {
 namespace gui {
+static_assert(drivers::KeyShift == GTOS_INPUT_MODIFIER_SHIFT &&
+              drivers::KeyControl == GTOS_INPUT_MODIFIER_CONTROL &&
+              drivers::KeyAlt == GTOS_INPUT_MODIFIER_ALT &&
+              drivers::KeyCapsLock == GTOS_INPUT_MODIFIER_CAPS_LOCK,
+              "Keyboard and native window modifier bits must agree");
+static_assert(drivers::KeyF5 == GTOS_INPUT_KEY_F5 &&
+              drivers::KeyHome == GTOS_INPUT_KEY_HOME &&
+              drivers::KeyEnd == GTOS_INPUT_KEY_END &&
+              drivers::KeyPageUp == GTOS_INPUT_KEY_PAGE_UP &&
+              drivers::KeyPageDown == GTOS_INPUT_KEY_PAGE_DOWN,
+              "Keyboard and native window key codes must agree");
+
 class ModernDesktop : public drivers::KeyboardEventHandler,
                       public drivers::MouseEventHandler,
                       public apps::Host {
     struct Input {
-        uint8_t type, code;
+        uint8_t type, code, modifiers;
         int16_t x, y;
     };
     struct Theme {
@@ -42,7 +54,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void DrawNativeSlot(const ModernRect &r, uint32_t slot);
     ModernRect NativeContentRect(const ModernRect &r, const NativeWindowView &view) const;
     int32_t NativeSlotFor(uint32_t handle) const;
-    bool RouteKeyNative(uint8_t code, bool down);
+    bool RouteKeyNative(uint8_t code, bool down, uint8_t modifiers);
     ModernRect imageTraceBounds;
     uint32_t imageSeenGeneration, imageTraceGeneration;
     int32_t imageX, imageY, imageScale, imageTraceX, imageTraceY, imageTraceScale;
@@ -62,6 +74,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     Input events[128];
     volatile uint32_t eventRead, eventWrite;
     volatile bool overflow;
+    volatile uint8_t keyboardModifiers;
     volatile int32_t mouseX, mouseY;
     bool keys[256], leftDown, needsDraw, lightTheme, launcher, confirmRemove, bootLogView;
     int32_t dragKind, dragX, dragY, dragWidth, dragHeight;
@@ -86,7 +99,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void DrawComposition();
     void Queue(uint8_t type, uint8_t code);
     void CancelCapture();
-    void Key(uint8_t code, bool down);
+    void Key(uint8_t code, bool down, uint8_t modifiers);
     void Pointer(const Input &input);
     void Open(ModernWindowKind kind);
     void Close(ModernWindowKind kind);
@@ -124,6 +137,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);
     virtual void OnKeyUp(char c);
+    void OnKeyModifiers(uint8_t modifiers) override;
     virtual void OnMouseMove(int8_t x, int8_t y);
     virtual void OnMouseDown(uint8_t button);
     virtual void OnMouseUp(uint8_t button);

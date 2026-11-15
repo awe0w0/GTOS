@@ -1217,6 +1217,11 @@ CPUState* NativeRuntime::HandleFault(CPUState* cpu, uint32_t address) {
         printf("CONTENT SHELL FAULT TASK "); printfHex32(slot->status.id);
         printf(" PROCESS "); printfHex32(slot->process->status.id);
         printf(" PC "); printfHex32(cpu->eip); printf("\n");
+        printf("CONTENT SHELL FAULT ADDRESS "); printfHex32(address);
+        printf(" SP "); printfHex32(cpu->esp);
+        printf(" STACK "); printfHex32(slot->userStackBegin);
+        printf(" "); printfHex32(slot->userStackEnd);
+        printf(" ERROR "); printfHex32(cpu->error); printf("\n");
     }
     return Stop(*slot, cpu, 0x80000000U | cpu->vector);
 }

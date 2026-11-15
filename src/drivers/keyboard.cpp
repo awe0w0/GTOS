@@ -34,11 +34,17 @@ void KeyboardDriver::Activate() {
 uint32_t KeyboardDriver::HandlerInterrupt(uint32_t esp) {
     uint8_t key;
     bool down;
-    if (keymap.Feed(dataport.Read(), key, down) && handler) {
-        if (down)
-            handler->OnKeyDown((char)key);
-        else
-            handler->OnKeyUp((char)key);
+    const uint8_t before = keymap.Modifiers();
+    const bool translated = keymap.Feed(dataport.Read(), key, down);
+    if (!handler)
+        return esp;
+    const uint8_t modifiers = keymap.Modifiers();
+    if (before != modifiers) {
+        handler->OnKeyModifiers(modifiers);
     }
+    if (translated && down)
+        handler->OnKeyDown((char)key);
+    else if (translated)
+        handler->OnKeyUp((char)key);
     return esp;
 }

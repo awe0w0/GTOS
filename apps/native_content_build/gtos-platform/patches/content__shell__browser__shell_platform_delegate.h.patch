@@ -1,0 +1,12 @@
+--- a/content/shell/browser/shell_platform_delegate.h
++++ b/content/shell/browser/shell_platform_delegate.h
+@@ -65,6 +65,9 @@
+ 
+   // Links the WebContents into the newly created window.
+   virtual void SetContents(Shell* shell);
++#if BUILDFLAG(IS_GTOS)
++  void SetTabContents(Shell* shell, bool foreground);
++#endif
+ 
+   // Resize the web contents in the shell window to the given size.
+   virtual void ResizeWebContent(Shell* shell, const gfx::Size& content_size);

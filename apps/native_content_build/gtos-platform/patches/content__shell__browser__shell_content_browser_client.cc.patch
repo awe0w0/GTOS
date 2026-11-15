@@ -14,7 +14,18 @@
  #include "content/shell/common/shell_controller.test-mojom.h"
  #include "content/shell/common/shell_paths.h"
  #include "content/shell/common/shell_switches.h"
-@@ -102,6 +100,11 @@
+@@ -82,7 +80,10 @@
+ #include "net/dns/public/dns_over_https_config.h"
+ #include "net/dns/public/insecure_dns_mode.h"
+ #include "net/dns/public/secure_dns_mode.h"
++#include "net/proxy_resolution/proxy_config.h"
++#include "net/proxy_resolution/proxy_config_with_annotation.h"
+ #include "net/ssl/client_cert_identity.h"
++#include "net/traffic_annotation/network_traffic_annotation.h"
+ #include "services/device/public/cpp/geolocation/location_system_permission_status.h"
+ #include "services/network/public/cpp/features.h"
+ #include "services/network/public/cpp/network_service_buildflags.h"
+@@ -102,6 +103,11 @@
  #include "url/url_canon.h"
  #include "url/url_constants.h"
  
@@ -26,7 +37,7 @@
  #if BUILDFLAG(IS_ANDROID)
  #include "base/android/apk_assets.h"
  #include "base/android/path_utils.h"
-@@ -198,6 +201,7 @@ class ShellControllerImpl : public mojom::ShellController {
+@@ -198,6 +204,7 @@
    void ShutDown() override { Shell::Shutdown(); }
  };
  
@@ -34,7 +45,7 @@
  void BindRustTestServiceReceiver(
      RenderFrameHost* render_frame_host,
      mojo::PendingReceiver<content::rust_test::mojom::RustTestService>
-@@ -206,6 +210,7 @@ void BindRustTestServiceReceiver(
+@@ -206,6 +213,7 @@
        receiver.PassPipe());
    content::rust_test::BindRustTestService(std::move(pipe));
  }
@@ -42,7 +53,7 @@
  
  void BindNetworkHintsHandler(
      content::RenderFrameHost* frame_host,
-@@ -353,7 +358,11 @@ blink::UserAgentMetadata GetShellUserAgentMetadata() {
+@@ -353,7 +361,11 @@
    metadata.brand_full_version_list.emplace_back("content_shell",
                                                  CONTENT_SHELL_VERSION);
    metadata.full_version = CONTENT_SHELL_VERSION;
@@ -54,7 +65,7 @@
    metadata.architecture = embedder_support::GetCpuArchitecture();
    metadata.model = embedder_support::BuildModelInfo();
  
-@@ -637,8 +646,10 @@ void ShellContentBrowserClient::RegisterBrowserInterfaceBindersForFrame(
+@@ -637,8 +649,10 @@
        ->GetBinders()
        .ExposeInterfacesToRenderFrame(map);
    map->Add<network_hints::mojom::NetworkHintsHandler>(&BindNetworkHintsHandler);
@@ -65,3 +76,35 @@
  #if BUILDFLAG(IS_WIN)
    map->Add<media::mojom::MediaFoundationPreferences>(
        &BindMediaFoundationPreferences);
+@@ -871,6 +885,31 @@
+   context_params->user_agent = GetUserAgent();
+   context_params->accept_language = GetAcceptLangs(context);
+   context_params->enable_zstd = true;
++#if BUILDFLAG(IS_GTOS)
++  const std::string proxy_server =
++      base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
++          "proxy-server");
++  if (!proxy_server.empty()) {
++    net::ProxyConfig proxy_config;
++    proxy_config.proxy_rules().ParseFromString(proxy_server);
++    context_params->initial_proxy_config.emplace(
++        proxy_config,
++        net::DefineNetworkTrafficAnnotation("gtos_shell_https_proxy", R"(
++          semantics {
++            sender: "GTOS Chromium browser"
++            description: "Connects to the configured HTTPS proxy for browsing."
++            trigger: "A GTOS session with an explicit proxy navigates the web."
++            data: "Destination host and the tunneled browser traffic."
++            destination: OTHER
++            destination_other: "The configured proxy server."
++          }
++          policy {
++            cookies_allowed: NO
++            setting: "Requires an explicit proxy in the GTOS launch profile."
++            policy_exception_justification: "No Chrome enterprise policy in Content Shell."
++          })"));
++  }
++#endif
+   auto exempt_header =
+       base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
+           "cors_exempt_header_list");

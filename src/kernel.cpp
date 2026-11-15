@@ -194,16 +194,19 @@ class BootDiagnosticKeyboard : public KeyboardEventHandler {
     BootDiagnosticKeyboard(KeyboardEventHandler* next, bool hold)
         : target(next), waiting(hold), consumeRelease(false), resumeKey(0) {}
     bool Waiting() const { return waiting; }
-    void OnKeyDown(char key) {
+    void OnKeyDown(char key) override {
         if (waiting) {
             resumeKey = key; consumeRelease = true; waiting = false; return;
         }
         if (consumeRelease && key == resumeKey) return; // Typematic repeats.
         if (target) target->OnKeyDown(key);
     }
-    void OnKeyUp(char key) {
+    void OnKeyUp(char key) override {
         if (consumeRelease && key == resumeKey) { consumeRelease = false; return; }
         if (!waiting && target) target->OnKeyUp(key);
+    }
+    void OnKeyModifiers(uint8_t modifiers) override {
+        if (target) target->OnKeyModifiers(modifiers);
     }
 };
 }
@@ -1003,10 +1006,13 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
                               const memory::MultibootInfo *boot) {
     const bool httpFixture = BootOption(boot, "content-http-fixture");
     const bool tcpFixture = BootOption(boot, "content-tcp-fixture");
+    const bool webProxy = BootOption(boot, "content-web-proxy");
+    const bool useTcp = tcpFixture || webProxy;
     const bool fileImage = BootOption(boot, "content-image-file");
     const uint32_t count = fileImage ? (httpFixture ? 1U : 0U) : (httpFixture ? 2U : 1U);
     const uint32_t moduleCount = boot->flags & (1u << 3) ? boot->moduleCount : 0;
-    if (moduleCount != count || (count && !boot->modules) || (httpFixture && tcpFixture))
+    if (moduleCount != count || (count && !boot->modules) ||
+        (httpFixture && useTcp) || (tcpFixture && webProxy))
         return false;
     const auto *modules = (const memory::MultibootModule *)boot->modules;
     const auto *fixture = httpFixture ? &modules[fileImage ? 0 : 1] : nullptr;
@@ -1014,21 +1020,24 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         (fixture && (fixture->end <= fixture->start || fixture->end - fixture->start > 65536)))
         return false;
     // The native VM currently grants data-page permissions only.
-#define GTOS_CONTENT_LAUNCH_PARAMETERS \
+#define GTOS_CONTENT_LAUNCH_PARAMETERS(argc) \
     "GTOS_CONTENT_ASSET_DIR=" GTOS_CONTENT_ASSET_DIRECTORY "\0" \
-    "GTOS_CONTENT_ARG_COUNT=7\0" \
+    "GTOS_CONTENT_ARG_COUNT=" #argc "\0" \
     "GTOS_CONTENT_ARG_01=--single-process\0" \
     "GTOS_CONTENT_ARG_02=--ozone-platform=gtos\0" \
     "GTOS_CONTENT_ARG_03=--disable-gpu\0" \
     "GTOS_CONTENT_ARG_04=--disable-background-networking\0" \
     "GTOS_CONTENT_ARG_05=--user-data-dir=" GTOS_CONTENT_ASSET_DIRECTORY "\0" \
     "GTOS_CONTENT_ARG_06=--js-flags=--jitless\0"
-    static const char launch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
+    static const char launch[] = GTOS_CONTENT_LAUNCH_PARAMETERS(7)
         "GTOS_CONTENT_ARG_07=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
-    static const char httpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
+    static const char httpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS(7)
         "GTOS_CONTENT_ARG_07=http://localhost:18761/start\0";
-    static const char tcpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS
+    static const char tcpLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS(7)
         "GTOS_CONTENT_ARG_07=http://10.0.2.100:8080/start\0";
+    static const char proxyLaunch[] = GTOS_CONTENT_LAUNCH_PARAMETERS(8)
+        "GTOS_CONTENT_ARG_07=--proxy-server=http://10.0.2.100:8080\0"
+        "GTOS_CONTENT_ARG_08=file://" GTOS_CONTENT_ASSET_DIRECTORY "/index.html\0";
 #undef GTOS_CONTENT_LAUNCH_PARAMETERS
     const uint32_t runtimePages = 64 * 1024;
     const uint32_t stackPages = 128;
@@ -1037,11 +1046,13 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
     const process::NativeElfLaunchProfile profile{
         capacity - runtimePages - stackPages, stackPages, runtimePages};
     process::NativeEnvironment environment;
-    const char* launchArguments = tcpFixture ? tcpLaunch : httpFixture ? httpLaunch : launch;
-    const size_t launchBytes = tcpFixture ? sizeof(tcpLaunch) : httpFixture ? sizeof(httpLaunch) : sizeof(launch);
+    const char* launchArguments = webProxy ? proxyLaunch
+                                : tcpFixture ? tcpLaunch : httpFixture ? httpLaunch : launch;
+    const size_t launchBytes = webProxy ? sizeof(proxyLaunch)
+                             : tcpFixture ? sizeof(tcpLaunch) : httpFixture ? sizeof(httpLaunch) : sizeof(launch);
     if (!environment.Assign(launchArguments, launchBytes - 1) ||
-        ((httpFixture || tcpFixture || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
-        (tcpFixture && !StartContentTcp(tasks, interrupts, cpu)) ||
+        ((httpFixture || useTcp || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
+        (useTcp && !StartContentTcp(tasks, interrupts, cpu)) ||
         !paging.sealForSharedProcessors() || !nativeEvents.EnableContentProfile() ||
         !nativeRuntime.AttachEvents(nativeEvents) ||
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||

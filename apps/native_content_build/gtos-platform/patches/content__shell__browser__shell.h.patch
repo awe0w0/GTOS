@@ -1,0 +1,22 @@
+--- a/content/shell/browser/shell.h
++++ b/content/shell/browser/shell.h
+@@ -76,7 +76,8 @@
+       BrowserContext* browser_context,
+       const GURL& url,
+       const scoped_refptr<SiteInstance>& site_instance,
+-      const gfx::Size& initial_size);
++      const gfx::Size& initial_size,
++      bool foreground = true);
+ 
+   // Returns the Shell object corresponding to the given WebContents.
+   static Shell* FromWebContents(WebContents* web_contents);
+@@ -214,7 +215,8 @@
+   // Helper to create a new Shell given a newly created WebContents.
+   static Shell* CreateShell(std::unique_ptr<WebContents> web_contents,
+                             const gfx::Size& initial_size,
+-                            bool should_set_delegate);
++                            bool should_set_delegate,
++                            bool foreground = true);
+ 
+   // Adjust the size when Blink sends 0 for width and/or height.
+   // This happens when Blink requests a default-sized window.

@@ -16,6 +16,7 @@ class KeyboardEventHandler {
 
     virtual void OnKeyDown(char);
     virtual void OnKeyUp(char);
+    virtual void OnKeyModifiers(uint8_t) {}
 };
 
 class KeyboardDriver : public gtos::hardwarecommunication::InterruptHandler, public Driver {

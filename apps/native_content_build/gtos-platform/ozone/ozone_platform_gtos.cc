@@ -73,6 +73,8 @@ KeyboardCode DesktopKeyCode(unsigned character) {
       return VKEY_RETURN;
     case '\b':
       return VKEY_BACK;
+    case 27:
+      return VKEY_ESCAPE;
     case '-':
     case '_':
       return VKEY_OEM_MINUS;
@@ -134,9 +136,26 @@ KeyboardCode DesktopKeyCode(unsigned character) {
       return VKEY_UP;
     case 0x84:
       return VKEY_DOWN;
+    case GTOS_INPUT_KEY_F5:
+      return VKEY_F5;
+    case GTOS_INPUT_KEY_HOME:
+      return VKEY_HOME;
+    case GTOS_INPUT_KEY_END:
+      return VKEY_END;
+    case GTOS_INPUT_KEY_PAGE_UP:
+      return VKEY_PRIOR;
+    case GTOS_INPUT_KEY_PAGE_DOWN:
+      return VKEY_NEXT;
     default:
       return VKEY_UNKNOWN;
   }
+}
+
+int DesktopModifiers(unsigned modifiers) {
+  return (modifiers & GTOS_INPUT_MODIFIER_SHIFT ? EF_SHIFT_DOWN : 0) |
+         (modifiers & GTOS_INPUT_MODIFIER_CONTROL ? EF_CONTROL_DOWN : 0) |
+         (modifiers & GTOS_INPUT_MODIFIER_ALT ? EF_ALT_DOWN : 0) |
+         (modifiers & GTOS_INPUT_MODIFIER_CAPS_LOCK ? EF_CAPS_LOCK_ON : 0);
 }
 
 class GtosWindow : public StubWindow {
@@ -205,16 +224,20 @@ class GtosWindow : public StubWindow {
     return true;
   }
 
-  void DispatchKey(unsigned character, bool down) {
+  void DispatchKey(unsigned character, bool down, unsigned modifiers = 0) {
     const KeyboardCode key_code = DesktopKeyCode(character);
     if (key_code == VKEY_UNKNOWN) {
       return;
     }
     const DomCode code = UsLayoutKeyboardCodeToDomCode(key_code);
     constexpr std::string_view kShifted = "~!@#$%^&*()_+{}|:\"<>?";
-    const bool shifted = (character >= 'A' && character <= 'Z') ||
-                         (character < 128 && kShifted.contains(static_cast<char>(character)));
-    int flags = shifted ? EF_SHIFT_DOWN : EF_NONE;
+    int flags = DesktopModifiers(modifiers);
+    // Older desktop builds only sent the translated character.
+    if (!modifiers &&
+        ((character >= 'A' && character <= 'Z') ||
+         (character < 128 && kShifted.contains(static_cast<char>(character))))) {
+      flags |= EF_SHIFT_DOWN;
+    }
     DomKey key;
     KeyboardCode layout_code;
     if (!DomCodeToUsLayoutDomKey(code, flags, &key, &layout_code)) {
@@ -246,8 +269,10 @@ class GtosWindow : public StubWindow {
       changed = EF_LEFT_MOUSE_BUTTON;
     }
     const int buttons = pointer_down_ ? EF_LEFT_MOUSE_BUTTON : EF_NONE;
+    const int modifiers =
+        DesktopModifiers(input.code >> GTOS_INPUT_POINTER_MODIFIER_SHIFT);
     MouseEvent event(type, location, location, base::TimeTicks::Now(),
-                     buttons | changed, changed);
+                     buttons | changed | modifiers, changed);
     delegate()->DispatchEvent(&event);
   }
 
@@ -299,7 +324,7 @@ class GtosWindow : public StubWindow {
         case GTOS_INPUT_KEY_DOWN:
         case GTOS_INPUT_KEY_UP:
           if (visible_) {
-            DispatchKey(event.code, event.type == GTOS_INPUT_KEY_DOWN);
+            DispatchKey(event.code, event.type == GTOS_INPUT_KEY_DOWN, event.x);
           }
           break;
         case GTOS_INPUT_POINTER_DOWN:

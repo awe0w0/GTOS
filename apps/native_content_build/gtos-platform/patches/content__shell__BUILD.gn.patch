@@ -106,7 +106,7 @@
      deps += [
        "//components/crash/content/browser",
        "//components/crash/core/app",
-@@ -455,10 +469,14 @@ static_library("content_shell_lib") {
+@@ -455,24 +469,38 @@ static_library("content_shell_lib") {
    if (use_aura) {
      deps += [
        "//ui/aura",
@@ -122,7 +122,15 @@
  
      if (shell_use_toolkit_views) {
        sources += [
-@@ -469,10 +487,16 @@ static_library("content_shell_lib") {
+-        "browser/shell_platform_delegate_views.cc",
+         "browser/shell_web_contents_view_delegate_views.cc",
+       ]
++      if (is_gtos) {
++        sources += [ "browser/shell_platform_delegate_gtos.cc" ]
++      } else {
++        sources += [ "browser/shell_platform_delegate_views.cc" ]
++      }
+       public_deps += [ "//ui/base/mojom:ui_base_types" ]
        deps += [
          "//ui/color:color_headers",
          "//ui/resources",
@@ -141,7 +149,7 @@
      } else {
        sources += [
          "browser/shell_platform_delegate_aura.cc",
-@@ -759,6 +783,25 @@ if (is_android) {
+@@ -759,6 +787,25 @@ if (is_android) {
  
      sources = [ "app/shell_main.cc" ]
  
@@ -167,7 +175,7 @@
      if (is_win) {
        sources += [ "app/shell.rc" ]
      }
-@@ -766,14 +809,25 @@ if (is_android) {
+@@ -766,14 +813,25 @@ if (is_android) {
      defines = []
 +    if (is_gtos && gtos_content_runtime_archive != "") {
 +      defines += [ "GTOS_CONTENT_PARTITION_HEAP" ]

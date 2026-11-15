@@ -1,0 +1,79 @@
+--- a/content/shell/browser/shell.cc
++++ b/content/shell/browser/shell.cc
+@@ -111,7 +111,8 @@
+ 
+ Shell* Shell::CreateShell(std::unique_ptr<WebContents> web_contents,
+                           const gfx::Size& initial_size,
+-                          bool should_set_delegate) {
++                          bool should_set_delegate,
++                          [[maybe_unused]] bool foreground) {
+   WebContents* raw_web_contents = web_contents.get();
+   Shell* shell = new Shell(std::move(web_contents), should_set_delegate);
+   g_platform->CreatePlatformWindow(shell, initial_size);
+@@ -131,7 +132,11 @@
+             switches::kForceWebRtcIPHandlingPolicy));
+   }
+ 
++#if BUILDFLAG(IS_GTOS)
++  g_platform->SetTabContents(shell, foreground);
++#else
+   g_platform->SetContents(shell);
++#endif
+   g_platform->DidCreateOrAttachWebContents(shell, raw_web_contents);
+   // If the RenderFrame was created during WebContents construction (as happens
+   // for windows opened from the renderer) then the Shell won't hear about the
+@@ -224,8 +229,12 @@
+ Shell* Shell::CreateNewWindow(BrowserContext* browser_context,
+                               const GURL& url,
+                               const scoped_refptr<SiteInstance>& site_instance,
+-                              const gfx::Size& initial_size) {
++                              const gfx::Size& initial_size,
++                              bool foreground) {
+   WebContents::CreateParams create_params(browser_context, site_instance);
++#if BUILDFLAG(IS_GTOS)
++  create_params.initially_hidden = !foreground;
++#endif
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+           switches::kForcePresentationReceiverForTesting)) {
+     create_params.starting_sandbox_flags = kPresentationReceiverSandboxFlags;
+@@ -234,7 +243,7 @@
+       WebContents::Create(create_params);
+   Shell* shell =
+       CreateShell(std::move(web_contents), AdjustWindowSize(initial_size),
+-                  true /* should_set_delegate */);
++                  /*should_set_delegate=*/true, foreground);
+ 
+   if (!url.is_empty())
+     shell->LoadURL(url);
+@@ -331,7 +340,8 @@
+   WebContents* result = new_contents.get();
+   CreateShell(
+       std::move(new_contents), AdjustWindowSize(window_features.bounds.size()),
+-      !delay_popup_contents_delegate_for_testing_ /* should_set_delegate */);
++      !delay_popup_contents_delegate_for_testing_,
++      disposition != WindowOpenDisposition::NEW_BACKGROUND_TAB);
+   return result;
+ }
+ 
+@@ -442,16 +452,17 @@
+     // (i.e. they will have a toolbar and other things described here).
+     case WindowOpenDisposition::NEW_POPUP:
+     case WindowOpenDisposition::NEW_WINDOW:
+-    // content_shell doesn't really support tabs, but some web tests use
+-    // middle click (which translates into kNavigationPolicyNewBackgroundTab),
+-    // so we treat the cases below just like a NEW_WINDOW disposition.
++    // GTOS routes these dispositions to the shared browser window.
++    // Other Content Shell platforms present them as separate windows.
+     case WindowOpenDisposition::NEW_BACKGROUND_TAB:
+     case WindowOpenDisposition::NEW_FOREGROUND_TAB: {
+       Shell* new_window =
+           Shell::CreateNewWindow(source->GetBrowserContext(),
+                                  GURL(),  // Don't load anything just yet.
+                                  params.source_site_instance,
+-                                 gfx::Size());  // Use default size.
++                                 gfx::Size(),
++                                 params.disposition !=
++                                     WindowOpenDisposition::NEW_BACKGROUND_TAB);
+       target = new_window->web_contents();
+       break;
+     }

@@ -28,6 +28,10 @@
 namespace base {
 namespace {
 
+// Blink intrinsic layout can exhaust the SDK's 64 KiB worker default.
+// Leave space for the two guard pages within GTOS's 64-page stack region.
+constexpr size_t kChromiumThreadStackBytes = 240 * 1024;
+
 struct ThreadParams {
   raw_ptr<PlatformThreadBase::Delegate> delegate;
   ThreadType type;
@@ -61,6 +65,9 @@ void* RunDelegate(void* argument) {
 bool StartDelegate(size_t stack_size, PlatformThreadBase::Delegate* delegate,
                    ThreadType type, PlatformThreadHandle* handle) {
   CHECK(delegate);
+  if (!stack_size) {
+    stack_size = kChromiumThreadStackBytes;
+  }
   auto params = std::make_unique<ThreadParams>(delegate, type, handle != nullptr);
   uint32_t id = 0;
   const int error =
@@ -152,7 +159,7 @@ ThreadType PlatformThreadBase::GetCurrentEffectiveThreadTypeForTest() {
 }
 
 size_t PlatformThreadBase::GetDefaultThreadStackSize() {
-  return gtos::native::kDefaultThreadStackBytes;
+  return kChromiumThreadStackBytes;
 }
 
 internal::PlatformPriorityOverride internal::SetThreadTypeOverride(

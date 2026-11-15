@@ -33,19 +33,22 @@ struct Reservation {
   unsigned handle;
 };
 
-// The kernel enforces the per-process limit. Leave room for the Content
-// profile's 128 reservations in the allocation-free address-to-handle index.
-// Serialize lookups with release so a recycled entry cannot be used by mistake.
+// Match the Content profile's kernel limit in the allocation-free index.
+// Serialize lookups with release so a recycled handle cannot be used.
 Lock g_vm_lock;
-Reservation g_reservations[128] PA_GUARDED_BY(g_vm_lock);
+Reservation g_reservations[GTOS_VM_CONTENT_REGION_LIMIT] PA_GUARDED_BY(g_vm_lock);
 
 void ReportAllocationFailure(const char* phase, int status, size_t length,
                              PageTag tag) {
-  if (tag != PageTag::kV8)
+  if (tag != PageTag::kV8 && status != GTOS_VM_ERR_LIMIT &&
+      status != GTOS_VM_ERR_NO_MEMORY) {
     return;
+  }
   // Page allocation failure can make allocating a log string impossible.
   base::strings::CStringBuilder message;
-  message << "GTOS V8 page allocation " << phase << " failed: status="
+  message << (tag == PageTag::kV8 ? "GTOS V8 page allocation "
+                                 : "GTOS PartitionAlloc page allocation ")
+          << phase << " failed: status="
           << status << " bytes=" << length;
   PA_RAW_LOG(ERROR, message.c_str());
 }

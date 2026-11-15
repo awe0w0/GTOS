@@ -104,7 +104,20 @@ typedef struct GtosWindowInfoResponse {
     unsigned frame_generation, progress, total, queue_depth, dropped;
 } GtosWindowInfoResponse;
 
-// One fixed-width input record. x/y are signed client-content relative.
+// Keyboard modifiers occupy x for a key event, and the high bits of code for
+// a pointer event. Older senders report zero modifiers.
+#define GTOS_INPUT_MODIFIER_SHIFT 0x01u
+#define GTOS_INPUT_MODIFIER_CONTROL 0x02u
+#define GTOS_INPUT_MODIFIER_ALT 0x04u
+#define GTOS_INPUT_MODIFIER_CAPS_LOCK 0x08u
+#define GTOS_INPUT_POINTER_MODIFIER_SHIFT 8u
+#define GTOS_INPUT_KEY_F5 0x85u
+#define GTOS_INPUT_KEY_HOME 0x86u
+#define GTOS_INPUT_KEY_END 0x87u
+#define GTOS_INPUT_KEY_PAGE_UP 0x88u
+#define GTOS_INPUT_KEY_PAGE_DOWN 0x89u
+
+// One fixed-width input record. Pointer x/y are signed client-content relative.
 typedef struct GtosInputEvent {
     unsigned type, code;
     int x, y;

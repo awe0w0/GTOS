@@ -541,6 +541,9 @@ INPUTS = {
     'third_party/libaom/source/libaom/aom_ports/aom_once.h': '085b60d0cb6c1e9058ba7dce15099f51c69ec2ea1deb8c70237890242ae6f601',
     'third_party/libvpx/BUILD.gn': '3f0f12f30428d469aaf0bc0a3df02b9c713058867ce1b0e97ba8cbae640d25b5',
     'third_party/libvpx/source/libvpx/vpx_ports/vpx_once.h': '483f46db1243752050eea0fd7868a6ce577276f3ed0df626848c03d7b3fc3de4',
+    'content/shell/browser/shell.cc': 'e8a4d99c960935f82d7f8936f915b5aa66caa1666b158071871c7afeedd52024',
+    'content/shell/browser/shell.h': '769100e788d397f2abeff6bdd1164f529ef5de8cfcf47b03fafac64abc020472',
+    'content/shell/browser/shell_platform_delegate.h': 'd24b0980697406f5a6715249ba1a2087a0ca6828a458d0aa138b41584c28cf9d',
     'content/shell/BUILD.gn': '8b952574b939aa81d0dba0113206efa708b3f1c3718ef874aadc2a7b2a4eb13e',
     'content/shell/app/shell_main.cc': 'b14da473f368a9a7bdd64e698573f67ef43fa791ee3e58e70eef98e71a4b66af',
     'net/socket/socket_descriptor.h': '586aa449a4980f398878279392c32d7cc80c1768e55a7faa19682578b3de4686',
@@ -756,6 +759,7 @@ INPUTS = {
 }
 
 ADDITIONS = {
+    'content/shell/browser/shell_platform_delegate_gtos.cc': 'browser/shell_platform_delegate_gtos.cc',
     'build/config/gtos/runtime/platform_file.cpp': '../../native_v8_integration/overlay/tools/gtos_isolate_diagnostic/native-c-file/platform_file.cpp',
     'base/sync_socket_gtos.cc': 'base/sync_socket_gtos.cc',
     'gpu/config/gpu_info_collector_gtos.cc': 'ui/gpu_info_collector_gtos.cc',
@@ -942,7 +946,7 @@ ADDITIONS = {
     'build/config/gtos/include/process/cpu_clock_abi.h': 'sdk/process/cpu_clock_abi.h',
     'build/config/gtos/include/process/clock_abi.h': 'sdk/process/clock_abi.h',
     'third_party/perfetto/src/base/paged_memory_gtos.cc': 'perfetto/paged_memory_gtos.cc',
-    'build/config/gtos/include/process/vm_abi.h': 'sdk/process/vm_abi.h',
+    'build/config/gtos/include/process/vm_abi.h': '../../../include/process/vm_abi.h',
     'build/config/gtos/include/time.h': 'sdk/time.h',
     'build/config/gtos/include/sys/time.h': 'sdk/sys/time.h',
     'build/config/gtos/include/unistd.h': 'sdk/unistd.h',

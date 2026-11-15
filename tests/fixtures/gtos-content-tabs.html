@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tab navigation</title>
+<style>
+  body { margin: 0; color: white; padding: 24px; font: 18px sans-serif; }
+  h1 { margin: 0 0 16px; }
+  a, button { display: inline-block; padding: 12px; color: black; background: white; }
+  #article { background: #f3d86b; }
+  #mark { background: #ecb8a2; }
+</style>
+<h1></h1>
+<a id="article" href="?page=article">Open article</a>
+<button id="mark" type="button">Change this tab</button>
+<script>
+  const pages = {
+    home: ["Home", "#2756ac", "#287b91"],
+    article: ["Article", "#b5366d", "#a14ca3"],
+    other: ["Other", "#238650", "#3a6131"],
+  };
+  const page = pages[new URL(location.href).searchParams.get("page")] || pages.home;
+  document.title = page[0];
+  document.querySelector("h1").textContent = page[0];
+  document.body.style.background = page[1];
+  document.querySelector("#mark").addEventListener("click", event => {
+    if (event.isTrusted) document.body.style.background = page[2];
+  });
+</script>

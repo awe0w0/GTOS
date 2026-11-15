@@ -129,6 +129,7 @@ during_run ./tests/suite_wiring_test.sh
 during_run ./tests/rust_target_spec_test.sh
 staged_unit ./tests/skia_alpha_probe_test.sh
 during_run python3 -m unittest discover -s tests -p 'browser_artifact_test.py'
+during_run python3 -m unittest discover -s tests -p 'gtos_content_https_proxy_test.py'
 during_run ./tests/keymap_test.sh
 during_run ./tests/cpu_test.sh
 during_run ./tests/cpu_startup_test.sh

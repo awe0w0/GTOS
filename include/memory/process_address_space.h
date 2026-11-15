@@ -2,6 +2,7 @@
 #define __GTOS__MEMORY__PROCESS_ADDRESS_SPACE_H
 #include <memory/paging.h>
 #include <process/elf32.h>
+#include <process/vm_abi.h>
 namespace gtos { namespace process { class NativeRuntime; class NativeSharedMemory; } }
 namespace gtos { namespace memory {
     enum ProcessMemoryError : uint32_t {
@@ -38,7 +39,7 @@ namespace gtos { namespace memory {
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
         // Browser heaps, stacks and video buffers reserve independent ranges.
-        static const uint32_t MaximumContentRegions = 1024;
+        static const uint32_t MaximumContentRegions = GTOS_VM_CONTENT_REGION_LIMIT;
     private:
         friend class gtos::process::NativeRuntime;
         friend class gtos::process::NativeSharedMemory;

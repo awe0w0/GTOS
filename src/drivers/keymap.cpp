@@ -1,10 +1,17 @@
 #include <drivers/keymap.h>
 using namespace gtos::drivers;
 Set1Keymap::Set1Keymap()
-    : extended(false), leftShift(false), rightShift(false), capsLock(false), capsDown(false),
-      pauseBytes(0) {
+    : extended(false), leftShift(false), rightShift(false), leftControl(false),
+      rightControl(false), leftAlt(false), rightAlt(false), capsLock(false),
+      capsDown(false), pauseBytes(0) {
     for (uint32_t i = 0; i < 256; ++i)
         pressed[i] = 0;
+}
+uint8_t Set1Keymap::Modifiers() const {
+    return (leftShift || rightShift ? KeyShift : 0) |
+           (leftControl || rightControl ? KeyControl : 0) |
+           (leftAlt || rightAlt ? KeyAlt : 0) |
+           (capsLock ? KeyCapsLock : 0);
 }
 bool Set1Keymap::Feed(uint8_t raw, uint8_t &key, bool &down) {
     key = 0;
@@ -39,6 +46,14 @@ bool Set1Keymap::Feed(uint8_t raw, uint8_t &key, bool &down) {
         rightShift = !release;
         return false;
     }
+    if (scan == 0x1D) {
+        (wasExtended ? rightControl : leftControl) = !release;
+        return false;
+    }
+    if (scan == 0x38) {
+        (wasExtended ? rightAlt : leftAlt) = !release;
+        return false;
+    }
     if (scan == 0x3A && !wasExtended) {
         if (!release && !capsDown)
             capsLock = !capsLock;
@@ -67,6 +82,16 @@ bool Set1Keymap::Feed(uint8_t raw, uint8_t &key, bool &down) {
         key = 0x81;
     else if (scan == 0x4D)
         key = 0x82;
+    else if (scan == 0x3F && !wasExtended)
+        key = KeyF5;
+    else if (wasExtended && scan == 0x47)
+        key = KeyHome;
+    else if (wasExtended && scan == 0x4F)
+        key = KeyEnd;
+    else if (wasExtended && scan == 0x49)
+        key = KeyPageUp;
+    else if (wasExtended && scan == 0x51)
+        key = KeyPageDown;
     else if (!wasExtended && scan < sizeof(normal) - 1) {
         key = (leftShift || rightShift) ? shifted[scan] : normal[scan];
         if (capsLock && key >= 'a' && key <= 'z')

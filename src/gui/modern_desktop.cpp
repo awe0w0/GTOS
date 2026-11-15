@@ -57,7 +57,8 @@ ModernDesktop::ModernDesktop(gtos::drivers::Framebuffer *f, gtos::storage::AppSt
       store(s), vm(this), preferences(settings),
       locale(gtos::i18n::English), pinyinInput(false), preferencesPersisted(false),
       settingsConfirmed(false), bundledGame(false), liveSession(live), installer(0), installerSize(0), eventRead(0),
-      eventWrite(0), overflow(false), mouseX(f->Width() - 30), mouseY(16), leftDown(false),
+      eventWrite(0), overflow(false), keyboardModifiers(0),
+      mouseX(f->Width() - 30), mouseY(16), leftDown(false),
       needsDraw(true), lightTheme(false), launcher(false), confirmRemove(false), bootLogView(false),
       dragKind(-1),
       dragX(0), dragY(0), dragWidth(0), dragHeight(0), resizing(false), selected(0), lastFrame(0),
@@ -195,6 +196,7 @@ void ModernDesktop::Queue(uint8_t t, uint8_t c) {
     }
     events[eventWrite].type = t;
     events[eventWrite].code = c;
+    events[eventWrite].modifiers = keyboardModifiers;
     events[eventWrite].x = mouseX;
     events[eventWrite].y = mouseY;
     asm volatile("" ::: "memory");
@@ -205,6 +207,9 @@ void ModernDesktop::OnKeyDown(char c) {
 }
 void ModernDesktop::OnKeyUp(char c) {
     Queue(2, (uint8_t)c);
+}
+void ModernDesktop::OnKeyModifiers(uint8_t modifiers) {
+    keyboardModifiers = modifiers;
 }
 void ModernDesktop::OnMouseDown(uint8_t b) {
     if (b == 1)
@@ -447,7 +452,7 @@ static int32_t NativeCoordinate(int32_t offset, uint32_t pixels, int32_t extent,
     const int32_t mapped = offset * (int32_t)pixels / extent;
     return offset < 0 && !mapped ? -1 : mapped;
 }
-bool ModernDesktop::RouteKeyNative(uint8_t code, bool down) {
+bool ModernDesktop::RouteKeyNative(uint8_t code, bool down, uint8_t modifiers) {
     if (!windowProvider) return false;
     // A key is routed only to the focus that is current right now; a focus change
     // since the last event is handled first so the old window can be reset.
@@ -456,16 +461,16 @@ bool ModernDesktop::RouteKeyNative(uint8_t code, bool down) {
     if (focused < (int32_t)ModernNative0 || focused >= (int32_t)ModernWindowCount) return false;
     uint32_t slot = (uint32_t)(focused - (int32_t)ModernNative0);
     if (!windowHandles[slot]) return false;
-    // Escape closes either kind of window. The browser owns ordinary text keys.
-    if (code == 27 ||
-        (!windowViews[slot].large &&
-         (code == '`' || code == '5' || code == 'l' || code == 'b' || code == 'h' ||
-          (code >= '1' && code <= '4'))))
+    // The browser receives Escape for page and toolbar actions. Keep desktop
+    // shortcuts reserved when a small native window has focus.
+    const bool large = windowViews[slot].large;
+    if (!large && (code == 27 || code == '`' || code == '5' || code == 'l' ||
+                   code == 'b' || code == 'h' || (code >= '1' && code <= '4')))
         return false;
     GtosInputEvent event;
     event.type = down ? GTOS_INPUT_KEY_DOWN : GTOS_INPUT_KEY_UP;
     event.code = code;
-    event.x = 0;
+    event.x = large ? modifiers : 0;
     event.y = 0;
     // A key never establishes a capture; a reset still invalidates any existing
     // one, and the event itself is already queued.
@@ -609,13 +614,13 @@ void ModernDesktop::LauncherActivate(uint8_t item) {
         Launch();
     }
 }
-void ModernDesktop::Key(uint8_t k, bool down) {
+void ModernDesktop::Key(uint8_t k, bool down, uint8_t modifiers) {
     const int32_t focused = wm.Focused();
     const bool browserFocus = !launcher && !confirmRemove &&
         focused >= (int32_t)ModernNative0 && focused < (int32_t)ModernWindowCount &&
         windowViews[focused - (int32_t)ModernNative0].large;
-    if (browserFocus && k != 27) {
-        RouteKeyNative(k, down);
+    if (browserFocus) {
+        RouteKeyNative(k, down, modifiers);
         return;
     }
     if (k >= 'A' && k <= 'Z')
@@ -625,7 +630,7 @@ void ModernDesktop::Key(uint8_t k, bool down) {
     if (!down) {
         // A release must reach the focused native window even though every other
         // desktop path below is press-only.
-        RouteKeyNative(k, false);
+        RouteKeyNative(k, false, modifiers);
         return;
     }
     needsDraw = true;
@@ -755,7 +760,7 @@ void ModernDesktop::Key(uint8_t k, bool down) {
     }
     // Keys go to the focused window. A native window receives everything the
     // desktop has not reserved; the reserved set keeps its meaning above.
-    if (RouteKeyNative(k, down)) return;
+    if (RouteKeyNative(k, down, modifiers)) return;
     if (k == 27 && wm.Focused() >= 0) {
         Close((ModernWindowKind)wm.Focused());
         return;
@@ -825,11 +830,12 @@ void ModernDesktop::Pointer(const Input &e) {
                 const uint32_t captured = windowCapture;
                 GtosInputEvent event;
                 event.type = e.type == 4 ? GTOS_INPUT_POINTER_UP : GTOS_INPUT_POINTER_MOVE;
-                // Only down/up carry the button number; a move carries none.
-                event.code = e.type == 4 ? 1 : 0;
                 const ModernRect r = wm.Window((ModernWindowKind)(ModernNative0 + slot)).bounds;
                 const ModernRect content = NativeContentRect(r, windowViews[slot]);
                 const auto& view = windowViews[slot];
+                event.code = e.type == 4 ? 1 : 0;
+                if (view.large)
+                    event.code |= (unsigned)e.modifiers << GTOS_INPUT_POINTER_MODIFIER_SHIFT;
                 event.x = NativeCoordinate(x - content.x, view.width, content.w, view.large);
                 event.y = NativeCoordinate(y - content.y, view.height, content.h, view.large);
                 // A reset or a refusal drops the capture; the event itself stays
@@ -877,7 +883,8 @@ void ModernDesktop::Pointer(const Input &e) {
                     const auto& view = windowViews[slot];
                     GtosInputEvent event;
                     event.type = GTOS_INPUT_POINTER_MOVE;
-                    event.code = 0;
+                    event.code = view.large
+                        ? (unsigned)e.modifiers << GTOS_INPUT_POINTER_MODIFIER_SHIFT : 0;
                     event.x = NativeCoordinate(x - content.x, view.width, content.w, view.large);
                     event.y = NativeCoordinate(y - content.y, view.height, content.h, view.large);
                     // Hover never creates a capture, but a reset still invalidates
@@ -997,6 +1004,8 @@ void ModernDesktop::Pointer(const Input &e) {
             GtosInputEvent event;
             event.type = GTOS_INPUT_POINTER_DOWN;
             event.code = 1;
+            if (view.large)
+                event.code |= (unsigned)e.modifiers << GTOS_INPUT_POINTER_MODIFIER_SHIFT;
             event.x = NativeCoordinate(x - content.x, view.width, content.w, view.large);
             event.y = NativeCoordinate(y - content.y, view.height, content.h, view.large);
             // A reset clears the old capture first; this down is already queued,
@@ -1134,7 +1143,7 @@ void ModernDesktop::Update(const SystemSnapshot &s) {
         asm volatile("push %0; popf" ::"r"(flags) : "memory", "cc");
 #endif
         if (e.type <= 2)
-            Key(e.code, e.type == 1);
+            Key(e.code, e.type == 1, e.modifiers);
         else
             Pointer(e);
     }
