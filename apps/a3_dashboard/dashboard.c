@@ -14,7 +14,7 @@ enum {
 static struct {
     uint16_t* pixels;
     unsigned width, height, page, brightness;
-    bool awake, redraw, wifi_requested;
+    bool awake, redraw, wifi_requested, ble_connected;
     int32_t encoder;
     uint32_t last_poll;
     int motion_result, charger_result, usb_result;
@@ -138,9 +138,9 @@ static void wireless(void) {
         text(52, 152, 4, value, White);
         text(52, 206, 2, dashboard.radio.first_network, Mint);
     }
-    text(752, 152, 4, dashboard.radio.ble_advertising ? "GTOS ORBIT" : "INACTIVE",
-         dashboard.radio.ble_advertising ? Mint : Muted);
-    if (dashboard.radio.ble_advertising) text(752, 206, 2, "ADVERTISING", Blue);
+    const bool ble_ready = dashboard.radio.ble_advertising || dashboard.ble_connected;
+    text(752, 152, 4, ble_ready ? "GTOS ORBIT" : "INACTIVE", ble_ready ? Mint : Muted);
+    if (ble_ready) text(752, 206, 2, dashboard.ble_connected ? "CLIENT CONNECTED" : "ADVERTISING", Blue);
 }
 
 static void select_page(unsigned page) {
@@ -164,12 +164,35 @@ static void render(void) {
     gtos_board_present(dashboard.pixels, (size_t)dashboard.width * dashboard.height);
 }
 
+static void store_u16(uint8_t* dest, uint16_t value) {
+    dest[0] = (uint8_t)value;
+    dest[1] = (uint8_t)(value >> 8);
+}
+
+static void publish_ble_status(void) {
+    // One fixed-length read at the default ATT MTU. All multibyte fields are little endian.
+    const uint8_t flags = (dashboard.awake ? 1 : 0) | (dashboard.motion_result == GTOS_BOARD_OK ? 2 : 0)
+        | (dashboard.usb_result == GTOS_BOARD_OK && dashboard.usb.sink_attached ? 4 : 0)
+        | (dashboard.charger_result == GTOS_BOARD_OK && dashboard.charger.charge_enabled ? 8 : 0);
+    uint8_t value[19] = {1, dashboard.page, dashboard.brightness, flags};
+    for (unsigned axis = 0; axis < 3; ++axis)
+        store_u16(value + 4 + axis * 2, (uint16_t)dashboard.motion.acceleration_mg[axis]);
+    store_u16(value + 10, (uint16_t)(dashboard.motion.angular_rate_mdps[2] / 1000));
+    store_u16(value + 12, dashboard.usb_result == GTOS_BOARD_OK ? dashboard.usb.advertised_ma : 0);
+    value[14] = dashboard.charger_result == GTOS_BOARD_OK ? dashboard.charger.faults : 0;
+    const uint32_t steps = (uint32_t)dashboard.encoder;
+    for (unsigned byte = 0; byte < 4; ++byte) value[15 + byte] = (uint8_t)(steps >> (byte * 8));
+    gtos_board_publish_ble_status(value, sizeof(value));
+}
+
 static void sample(void) {
     dashboard.motion_result = gtos_board_read_motion(&dashboard.motion);
     dashboard.charger_result = gtos_board_read_charger(&dashboard.charger);
     dashboard.usb_result = gtos_board_read_usb(&dashboard.usb);
     gtos_board_read_radio(&dashboard.radio);
     gtos_board_read_wifi(&dashboard.wifi);
+    dashboard.ble_connected = gtos_board_ble_connected();
+    publish_ble_status();
     if (!CONFIG_GTOS_A3_WIFI_SSID[0]) return;
     if (dashboard.page == Radio && dashboard.radio.scan_complete && !dashboard.wifi_requested) {
         dashboard.wifi_requested = true;
@@ -212,10 +235,10 @@ static void report(void) {
            dashboard.charger_result, dashboard.charger.input_good, dashboard.charger.charge_enabled,
            dashboard.charger.input_limit_ma, dashboard.charger.faults);
     if (dashboard.page == Radio) {
-        printf("GTOS_A3_WIRELESS powered=%u sdio=%u wifi=%u ble=%u station=%u ip=%s\n",
+        printf("GTOS_A3_WIRELESS powered=%u sdio=%u wifi=%u ble=%u station=%u ip=%s client=%u\n",
                dashboard.radio.powered, dashboard.radio.sdio_ready,
                dashboard.radio.scan_complete, dashboard.radio.ble_advertising,
-               (unsigned)dashboard.wifi.state, dashboard.wifi.ipv4);
+               (unsigned)dashboard.wifi.state, dashboard.wifi.ipv4, dashboard.ble_connected);
     }
 }
 

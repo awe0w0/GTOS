@@ -39,7 +39,7 @@ def expect_status(port, target, expected):
         raise RuntimeError(f"Expected {expected} from the running Orbit application: {target}")
 
 
-def boot(args, out, board, network):
+def boot(args, out, board, network, hci_port=None, check_guest=None):
     log = out / "c6.log"
     port = available_port()
     with tempfile.TemporaryDirectory(prefix="gtos-a3-sdio-") as directory:
@@ -53,6 +53,8 @@ def boot(args, out, board, network):
             "--wifi-ssid", network, "--wifi-password", "orbit-lab-test",
             "--wifi-auth", "wpa2-psk", "--timeout", "90s",
         ]
+        if hci_port is not None:
+            slave += ["--ble-hci", f"tcp:127.0.0.1:{hci_port}"]
         with log.open("xb") as uart:
             process = subprocess.Popen(slave, stdin=subprocess.DEVNULL, stdout=uart, stderr=subprocess.STDOUT)
         try:
@@ -98,6 +100,8 @@ def boot(args, out, board, network):
                     vm.find("GTOS_A3_RADIO WIFI OFFLINE", retry, timeout=26)
                     if b"GTOS_A3_ORBIT HTTP READY" in vm.uart_bytes():
                         raise RuntimeError("Orbit advertised HTTP readiness without a station address")
+                if check_guest is not None:
+                    check_guest(vm)
                 vm.finish()
         finally:
             if process.poll() is None:
@@ -107,7 +111,7 @@ def boot(args, out, board, network):
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
-    if b"LE_Set_Advertising_Enable = 1" not in log.read_bytes():
+    if hci_port is None and b"LE_Set_Advertising_Enable = 1" not in log.read_bytes():
         raise RuntimeError(f"C6 virtual controller did not enable advertising. See {log}")
 
 

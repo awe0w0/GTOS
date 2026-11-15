@@ -82,7 +82,30 @@ TUSB320LAI 检测到的方向和电流档位，以及 BQ25601 限流和充电状
 虚拟板随后加入 `A3-LAB` 的 WPA2 网络。P4 取得 DHCP 地址后，`GET /status`
 返回姿态、编码器、亮度、USB-C 和充电状态。无线测试从宿主机经 C6 Wi-Fi 和 SDIO
 读取数据，操作旋钮、切换充电后再检查响应，并验证接入点缺失时的失败与重试。
-该 BLE 示例使用非连接式广播。在无线页通过 UART 发送 `w` 可重试加入网络。
+在无线页通过 UART 发送 `w` 可重试加入网络。
+
+`GTOS Orbit` 也接受一台 BLE 客户端，断开后恢复广播。只读 GATT 服务使用
+`01d084ac-5c80-448a-aca7-8fd0072e67d4`，状态特征使用
+`9c7c1669-67bc-493f-a1de-6ecf993ad223`。状态每次读取为 19 字节。
+
+| 偏移 | 类型 | 值 |
+| --- | --- | --- |
+| 0–3 | 4 × uint8 | 格式版本 1、页码、亮度百分比、状态位 |
+| 4–9 | 3 × int16 | XYZ 加速度，mg |
+| 10–11 | int16 | Z 角速度，度/秒，向零取整 |
+| 12–13 | uint16 | USB-C 声明的电流，mA |
+| 14 | uint8 | BQ25601 故障位 |
+| 15–18 | int32 | 启动后的旋钮步数，顺时针增加 |
+
+多字节值使用小端序。状态位 0、1、2、3 分别为屏幕唤醒、IMU 数据有效、USB-C 已连接、
+充电使能。BLE 用例用独立客户端验证发现、连接、读数、拒绝写入和断开后重播。运行时
+使用 Python 3.12，并在测试虚拟环境安装 [Bumble 0.0.236](https://pypi.org/project/bumble/0.0.236/)。
+
+~~~sh
+python3 arch/riscv32/esp32p4/tests/verify_ble.py \
+    --emulator /path/to/esp-emu --build out/a3-riscv --c6 out/a3-riscv-c6 \
+    --parts /path/to/esp-emu-1.0.0-examples --output out/a3-ble-test
+~~~
 
 虚拟板在 [sim/a3.json](sim/a3.json) 接入按键、旋钮和三个 I²C 寄存器模型。板级驱动
 执行真实的 ESP32-P4 I²C、GPIO、PCNT、LEDC 和 Flash 操作。面板显示由 RGB565

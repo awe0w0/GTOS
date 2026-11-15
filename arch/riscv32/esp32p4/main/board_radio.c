@@ -13,6 +13,9 @@
 #include "host/util/util.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
+#include "os/os_mbuf.h"
+#include "services/gap/ble_svc_gap.h"
+#include "services/gatt/ble_svc_gatt.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -20,7 +23,9 @@ static portMUX_TYPE radio_lock = portMUX_INITIALIZER_UNLOCKED;
 static GtosBoardRadio radio_status;
 static GtosBoardWifi wifi_status;
 static int64_t wifi_join_deadline;
-static bool started;
+static uint8_t ble_snapshot[GTOS_BOARD_BLE_STATUS_MAX];
+static size_t ble_snapshot_size;
+static bool started, ble_connected;
 
 // The Q1 transistor inverts the A3 P4-side reset output relative to C6 EN.
 eh_host_port_err_t __wrap_eh_host_port_reset_slave(void) {
@@ -101,6 +106,51 @@ static void scan(void) {
     printf("GTOS_A3_RADIO WIFI PASS count=%u ssid=%.*s\n", count, 32, (const char*)first.ssid);
 }
 
+static int read_gatt_status(uint16_t connection, uint16_t attribute,
+                            struct ble_gatt_access_ctxt* context, void* unused) {
+    (void)connection;
+    (void)attribute;
+    (void)unused;
+    uint8_t snapshot[GTOS_BOARD_BLE_STATUS_MAX];
+    portENTER_CRITICAL(&radio_lock);
+    const size_t size = ble_snapshot_size;
+    memcpy(snapshot, ble_snapshot, size);
+    portEXIT_CRITICAL(&radio_lock);
+    if (!size) return BLE_ATT_ERR_UNLIKELY;
+    return os_mbuf_append(context->om, snapshot, size) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+static const ble_uuid128_t status_service = BLE_UUID128_INIT(
+    0xd4, 0x67, 0x2e, 0x07, 0xd0, 0x8f, 0xa7, 0xac, 0x8a, 0x44, 0x80, 0x5c, 0xac, 0x84, 0xd0, 0x01);
+static const ble_uuid128_t status_value = BLE_UUID128_INIT(
+    0x23, 0xd2, 0x3a, 0x99, 0xcf, 0x6e, 0xde, 0xa1, 0x3f, 0x49, 0xbc, 0x67, 0x69, 0x16, 0x7c, 0x9c);
+static const struct ble_gatt_svc_def services[] = {
+    {
+        .type = BLE_GATT_SVC_TYPE_PRIMARY, .uuid = &status_service.u,
+        .characteristics = (const struct ble_gatt_chr_def[]) {
+            {.uuid = &status_value.u, .access_cb = read_gatt_status, .flags = BLE_GATT_CHR_F_READ},
+            {0},
+        },
+    },
+    {0},
+};
+
+static void advertise(void);
+
+static int gap_event(struct ble_gap_event* event, void* unused) {
+    (void)unused;
+    if (event->type == BLE_GAP_EVENT_CONNECT || event->type == BLE_GAP_EVENT_DISCONNECT) {
+        const bool connected = event->type == BLE_GAP_EVENT_CONNECT && event->connect.status == 0;
+        portENTER_CRITICAL(&radio_lock);
+        ble_connected = connected;
+        radio_status.ble_advertising = false;
+        portEXIT_CRITICAL(&radio_lock);
+        if (connected) puts("GTOS_A3_RADIO BLE CLIENT connected");
+        else advertise();
+    }
+    return 0;
+}
+
 static void advertise(void) {
     const char name[] = "GTOS Orbit";
     struct ble_hs_adv_fields fields = {};
@@ -109,16 +159,17 @@ static void advertise(void) {
     fields.name_len = sizeof(name) - 1;
     fields.name_is_complete = 1;
     const struct ble_gap_adv_params params = {
-        .conn_mode = BLE_GAP_CONN_MODE_NON, .disc_mode = BLE_GAP_DISC_MODE_GEN,
+        .conn_mode = BLE_GAP_CONN_MODE_UND, .disc_mode = BLE_GAP_DISC_MODE_GEN,
     };
     uint8_t address_type;
     if (ble_hs_util_ensure_addr(0) || ble_hs_id_infer_auto(0, &address_type)
         || ble_gap_adv_set_fields(&fields)
-        || ble_gap_adv_start(address_type, NULL, BLE_HS_FOREVER, &params, NULL, NULL)) {
+        || ble_gap_adv_start(address_type, NULL, BLE_HS_FOREVER, &params, gap_event, NULL)) {
         puts("GTOS_A3_RADIO BLE FAIL advertising");
         return;
     }
     portENTER_CRITICAL(&radio_lock);
+    ble_connected = false;
     radio_status.ble_advertising = true;
     portEXIT_CRITICAL(&radio_lock);
     puts("GTOS_A3_RADIO BLE PASS advertising");
@@ -134,6 +185,12 @@ static void start_ble(void) {
     esp_hosted_bt_host_stack_cfg_t config = ESP_HOSTED_BT_HOST_STACK_CONFIG_DEFAULT();
     if (esp_hosted_bt_host_stack_setup(&config) != ESP_OK || nimble_port_init() != ESP_OK) {
         puts("GTOS_A3_RADIO BLE FAIL initialization");
+        return;
+    }
+    ble_svc_gap_init();
+    ble_svc_gatt_init();
+    if (ble_gatts_count_cfg(services) || ble_gatts_add_svcs(services)) {
+        puts("GTOS_A3_RADIO BLE FAIL status service");
         return;
     }
     ble_hs_cfg.sync_cb = advertise;
@@ -237,4 +294,20 @@ int gtos_board_read_wifi(GtosBoardWifi* wifi) {
         puts("GTOS_A3_RADIO WIFI OFFLINE timeout");
     }
     return GTOS_BOARD_OK;
+}
+
+int gtos_board_publish_ble_status(const void* data, size_t size) {
+    if (!data || !size || size > sizeof(ble_snapshot)) return GTOS_BOARD_INVALID;
+    portENTER_CRITICAL(&radio_lock);
+    memcpy(ble_snapshot, data, size);
+    ble_snapshot_size = size;
+    portEXIT_CRITICAL(&radio_lock);
+    return GTOS_BOARD_OK;
+}
+
+bool gtos_board_ble_connected(void) {
+    portENTER_CRITICAL(&radio_lock);
+    const bool connected = ble_connected;
+    portEXIT_CRITICAL(&radio_lock);
+    return connected;
 }

@@ -86,6 +86,11 @@ int gtos_board_read_radio(GtosBoardRadio* radio);
 int gtos_board_connect_wifi(const char* ssid, const char* password);
 int gtos_board_read_wifi(GtosBoardWifi* wifi);
 
+// Publish one read-only ATT value that fits in a single default-MTU response.
+enum { GTOS_BOARD_BLE_STATUS_MAX = 20 };
+int gtos_board_publish_ble_status(const void* data, size_t size);
+bool gtos_board_ble_connected(void);
+
 // RGB565, row-major. The board reports the dimensions of its visible surface.
 void gtos_board_display_size(unsigned* width, unsigned* height);
 int gtos_board_set_display(bool awake);
