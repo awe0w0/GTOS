@@ -23,13 +23,14 @@ FAULT_LOG = {
 
 def retry_with_fault(vm, gdb, image, port, fault, log):
     ready = "GTOS_A3_DSI_WAKE_READY"
-    # Use the allocation for portrait rotation as scratch registers during the wait.
+    # The awake command runs before rendering. Use the existing app framebuffer
+    # as scratch registers during that command, before the next redraw.
     # Restore the real host pointer before the driver's hardware cleanup.
     commands = [
         "set pagination off", f"target remote 127.0.0.1:{port}",
         "tbreak mipi_dsi_hal_configure_phy_pll", f'printf "{ready}\\n"', "continue",
         "set $context = (mipi_dsi_hal_context_t *)$a0", "finish",
-        "set $physical_host = $context->host", "set $fixture_host = (dsi_host_dev_t *)staging",
+        "set $physical_host = $context->host", "set $fixture_host = (dsi_host_dev_t *)dashboard.pixels",
         "set $fixture_host->phy_status.val = 0", "set $context->host = $fixture_host",
     ]
     if fault == "lanes":

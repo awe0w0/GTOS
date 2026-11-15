@@ -13,11 +13,14 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#ifdef GTOS_A3_TEST_REAL_PPA
+#include "soc/dma2d_struct.h"
+#endif
 #include <assert.h>
 #include <stdio.h>
 
 enum { Pixels = A3_WIDTH * A3_HEIGHT };
-static enum { NoFailure, InitCommand, DisableDma, DeleteDpi, Draw } failure;
+static enum { NoFailure, InitCommand, DisableDma, DeleteDpi, Draw, SubmitRotation } failure;
 static bool phy_open, bus_open, io_open, dpi_open, dpi_active, dma_enabled, ppa_open;
 static bool id_read;
 static volatile bool copy_pending;
@@ -32,7 +35,20 @@ static esp_lcd_dpi_panel_vsync_cb_t vsync_done;
 static volatile unsigned events, event_limit;
 #endif
 static void* copy_context;
-static char phy_token, bus_token, ppa_token;
+static char phy_token, bus_token;
+static const uint16_t* caller_frame;
+#ifdef GTOS_A3_TEST_REAL_PPA
+// The SDK test can supply only the DMA2D reset handshake with GDB.
+static volatile dma2d_dev_t reset_registers;
+static volatile bool real_ppa_go;
+#else
+static char ppa_token;
+static esp_timer_handle_t rotation_timer;
+static ppa_event_callback_t rotation_done;
+static ppa_srm_oper_config_t rotation_job;
+static volatile bool ppa_pending;
+static bool hold_rotation;
+#endif
 static bool test_started;
 
 esp_err_t __real_esp_ldo_acquire_channel(const esp_ldo_channel_config_t* config,
@@ -131,6 +147,8 @@ static esp_err_t delete_dpi(esp_lcd_panel_t* handle) {
     }
     if (dpi_active) assert(commands[command_count - 1] == LCD_CMD_DISPOFF);
     dpi_open = dpi_active = false;
+    copy_done = NULL;
+    copy_context = NULL;
 #ifdef GTOS_A3_TEST_BACKLIGHT
     vsync_done = NULL;
 #endif
@@ -146,12 +164,14 @@ static esp_err_t draw_dpi(esp_lcd_panel_t* handle, int x0, int y0, int x1, int y
         failure = NoFailure;
         return ESP_ERR_INVALID_STATE;
     }
+    const uint16_t* rotated = pixels;
+    assert(rotated[0] == caller_frame[Pixels - A3_WIDTH] && rotated[A3_HEIGHT - 1] == caller_frame[0]);
+    assert(rotated[Pixels - A3_HEIGHT] == caller_frame[Pixels - 1] && rotated[Pixels - 1] == caller_frame[A3_WIDTH - 1]);
+#ifndef GTOS_A3_TEST_REAL_PPA
+    if (ppa_pending) assert(!dma_enabled && pixels != rotation_job.out.buffer);
+#endif
     if (dma_enabled) copy_pending = true;
-    else {
-        const uint16_t* rotated = pixels;
-        assert(rotated[0] == 0x001f && rotated[A3_HEIGHT - 1] == 0xf800);
-        assert(rotated[Pixels - A3_HEIGHT] == 0xffff && rotated[Pixels - 1] == 0x07e0);
-    }
+    else if (copy_done) assert(!copy_done(&dpi, NULL, copy_context));
     ++frames;
     return ESP_OK;
 }
@@ -195,43 +215,152 @@ esp_err_t __wrap_esp_lcd_dpi_panel_disable_dma2d(esp_lcd_panel_handle_t handle) 
         return ESP_ERR_INVALID_STATE;
     }
     dma_enabled = false;
-    copy_done = NULL;
-    copy_context = NULL;
     return ESP_OK;
 }
 
+#ifdef GTOS_A3_TEST_REAL_PPA
+esp_err_t __real_ppa_register_client(const ppa_client_config_t* config, ppa_client_handle_t* handle);
+esp_err_t __real_ppa_unregister_client(ppa_client_handle_t handle);
+esp_err_t __real_ppa_client_register_event_callbacks(ppa_client_handle_t handle, const ppa_event_callbacks_t* callbacks);
+esp_err_t __real_ppa_do_scale_rotate_mirror(ppa_client_handle_t handle, const ppa_srm_oper_config_t* config);
+#else
+static void complete_rotation(void* unused) {
+    (void)unused;
+    assert(ppa_pending && rotation_done);
+    const uint16_t* source = rotation_job.in.buffer;
+    uint16_t* result = rotation_job.out.buffer;
+    result[0] = source[Pixels - A3_WIDTH];
+    result[A3_HEIGHT - 1] = source[0];
+    result[Pixels - A3_HEIGHT] = source[Pixels - 1];
+    result[Pixels - 1] = source[A3_WIDTH - 1];
+    ppa_pending = false;
+    if (rotation_done((ppa_client_handle_t)&ppa_token, NULL, rotation_job.user_data))
+        esp_timer_isr_dispatch_need_yield();
+}
+#endif
+
 esp_err_t __wrap_ppa_register_client(const ppa_client_config_t* config, ppa_client_handle_t* handle) {
-    assert(!ppa_open && dpi_active && config->oper_type == PPA_OPERATION_SRM);
+#ifdef GTOS_A3_TEST_REAL_PPA
+    return __real_ppa_register_client(config, handle);
+#else
+    assert(!ppa_open && dpi_active && config->oper_type == PPA_OPERATION_SRM && config->max_pending_trans_num == 1);
+    const esp_timer_create_args_t timer = {.callback = complete_rotation, .dispatch_method = ESP_TIMER_ISR};
+    assert(esp_timer_create(&timer, &rotation_timer) == ESP_OK);
     ppa_open = true;
     *handle = (ppa_client_handle_t)&ppa_token;
     return ESP_OK;
+#endif
 }
 
 esp_err_t __wrap_ppa_unregister_client(ppa_client_handle_t handle) {
-    assert(ppa_open && !dpi_open && handle == (ppa_client_handle_t)&ppa_token);
+#ifdef GTOS_A3_TEST_REAL_PPA
+    return __real_ppa_unregister_client(handle);
+#else
+    assert(ppa_open && !ppa_pending && !dpi_open && handle == (ppa_client_handle_t)&ppa_token);
+    assert(esp_timer_delete(rotation_timer) == ESP_OK);
+    rotation_timer = NULL;
+    rotation_done = NULL;
     ppa_open = false;
     return ESP_OK;
+#endif
+}
+
+esp_err_t __wrap_ppa_client_register_event_callbacks(ppa_client_handle_t handle, const ppa_event_callbacks_t* callbacks) {
+#ifdef GTOS_A3_TEST_REAL_PPA
+    return __real_ppa_client_register_event_callbacks(handle, callbacks);
+#else
+    assert(ppa_open && handle == (ppa_client_handle_t)&ppa_token && callbacks->on_trans_done);
+    rotation_done = callbacks->on_trans_done;
+    return ESP_OK;
+#endif
 }
 
 esp_err_t __wrap_ppa_do_scale_rotate_mirror(ppa_client_handle_t handle, const ppa_srm_oper_config_t* config) {
-    assert(ppa_open && handle == (ppa_client_handle_t)&ppa_token && !copy_pending);
+#ifdef GTOS_A3_TEST_REAL_PPA
+    puts("GTOS_A3_PANEL_TEST SDK_PPA_SUBMIT");
+    const esp_err_t result = __real_ppa_do_scale_rotate_mirror(handle, config);
+    printf("GTOS_A3_PANEL_TEST SDK_PPA_RETURN result=%ld\n", (long)result);
+    return result;
+#else
+    assert(ppa_open && handle == (ppa_client_handle_t)&ppa_token && !copy_pending && !ppa_pending);
+    assert(config->in.buffer != caller_frame && config->out.buffer != config->in.buffer);
     assert(config->in.pic_w == A3_WIDTH && config->in.pic_h == A3_HEIGHT);
     assert(config->out.pic_w == A3_HEIGHT && config->out.pic_h == A3_WIDTH);
-    assert(config->mode == PPA_TRANS_MODE_BLOCKING && config->rotation_angle == PPA_SRM_ROTATION_ANGLE_270);
+    assert(config->mode == PPA_TRANS_MODE_NON_BLOCKING && config->rotation_angle == PPA_SRM_ROTATION_ANGLE_270);
+    if (failure == SubmitRotation) {
+        failure = NoFailure;
+        return ESP_FAIL;
+    }
+    rotation_job = *config;
+    ppa_pending = true;
+    if (!hold_rotation) assert(esp_timer_start_once(rotation_timer, 1000) == ESP_OK);
     return ESP_OK;
+#endif
 }
 
+#ifndef GTOS_A3_TEST_REAL_PPA
 static void complete_copy(void* unused) {
     (void)unused;
     assert(copy_pending && copy_done);
     copy_pending = false;
     if (copy_done(&dpi, NULL, copy_context)) esp_timer_isr_dispatch_need_yield();
 }
+#endif
 
 static void assert_closed(void) {
     assert(!phy_open && !bus_open && !io_open && !dpi_open && !dma_enabled && !ppa_open);
     assert(!copy_pending);
 }
+
+#ifdef GTOS_A3_TEST_PPA_RECOVERY
+static void finish_copy(void) {
+    const esp_timer_create_args_t config = {.callback = complete_copy, .dispatch_method = ESP_TIMER_ISR};
+    esp_timer_handle_t timer;
+    assert(esp_timer_create(&config, &timer) == ESP_OK);
+    assert(esp_timer_start_once(timer, 1000) == ESP_OK);
+    vTaskDelay(pdMS_TO_TICKS(20) + 1);
+    assert(!copy_pending && esp_timer_delete(timer) == ESP_OK);
+}
+
+static void check_ppa_recovery(uint16_t* pixels) {
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && dma_enabled && copy_pending && frames == 1);
+    finish_copy();
+
+    hold_rotation = true;
+    const TickType_t started = xTaskGetTickCount();
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK);
+    const TickType_t elapsed = xTaskGetTickCount() - started;
+    assert(elapsed >= pdMS_TO_TICKS(100) && elapsed < pdMS_TO_TICKS(250));
+    assert(ppa_pending && !dma_enabled && !copy_pending && frames == 2);
+    const uint16_t* pending_input = rotation_job.in.buffer;
+    const void* pending_output = rotation_job.out.buffer;
+    pixels[0] = 0xffe0;
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && frames == 3);
+    assert(pending_input[0] == 0xf800);
+    puts("GTOS_A3_PANEL_TEST PPA_TIMEOUT_CPU_COPY PASS");
+
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert(!phy_open && !bus_open && !io_open && !dpi_open && ppa_open && ppa_pending);
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && frames == 4 && !dma_enabled);
+    assert(rotation_job.out.buffer == pending_output && pending_input[0] == 0xf800);
+    assert(esp_timer_start_once(rotation_timer, 1000) == ESP_OK);
+    vTaskDelay(pdMS_TO_TICKS(20) + 1);
+    assert(!ppa_pending && frames == 4);
+    hold_rotation = false;
+    pixels[0] = 0x1234;
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && dma_enabled && copy_pending && frames == 5);
+    finish_copy();
+
+    failure = SubmitRotation;
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && frames == 6 && failure == NoFailure);
+    assert(!ppa_pending && !dma_enabled && !copy_pending);
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert_closed();
+    puts("GTOS_A3_PANEL_TEST PPA_LATE_COMPLETION_RECOVERY PASS");
+}
+#endif
 
 #ifdef GTOS_A3_TEST_BACKLIGHT
 static void emit_vsync(void* unused) {
@@ -377,11 +506,30 @@ void app_main(void) {
     pixels[A3_WIDTH - 1] = 0x07e0;
     pixels[Pixels - A3_WIDTH] = 0x001f;
     pixels[Pixels - 1] = 0xffff;
+    caller_frame = pixels;
     test_started = true;
     a3_display_init();
     assert(gtos_board_set_brightness(100) == GTOS_BOARD_OK);
 
-#ifdef GTOS_A3_TEST_BACKLIGHT
+#if defined(GTOS_A3_TEST_REAL_PPA)
+    for (unsigned i = 0; i < sizeof(reset_registers.out_channel) / sizeof(reset_registers.out_channel[0]); ++i)
+        reset_registers.out_channel[i].out_state.out_reset_avail_chn = 1;
+    for (unsigned i = 0; i < sizeof(reset_registers.in_channel) / sizeof(reset_registers.in_channel[0]); ++i)
+        reset_registers.in_channel[i].in_state.in_reset_avail_chn = 1;
+    puts("GTOS_A3_PANEL_TEST SDK_PPA_WAIT");
+    while (!real_ppa_go) vTaskDelay(1);
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    const int result = gtos_board_present(pixels, Pixels);
+    printf("GTOS_A3_PANEL_TEST PRESENT_RETURN result=%d\n", result);
+    assert(result == GTOS_BOARD_OK && !dma_enabled && !copy_pending && frames == 1);
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert_closed();
+    heap_caps_free(pixels);
+    puts("GTOS_A3_PANEL_TEST SDK_PPA_TIMEOUT_FALLBACK PASS");
+    return;
+#elif defined(GTOS_A3_TEST_PPA_RECOVERY)
+    check_ppa_recovery(pixels);
+#elif defined(GTOS_A3_TEST_BACKLIGHT)
     check_backlight(pixels);
 #else
     failure = InitCommand;

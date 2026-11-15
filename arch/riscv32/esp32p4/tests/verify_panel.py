@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+import subprocess
 
 from verify_board import Guest, available_port
 from verify_live_board import Devices, MS, PWM, RESET, VCI
@@ -54,41 +55,100 @@ def verify_first_frame(bus, output):
                                   "pwm_percent": 75, "vci_cycles_ns": cycles}, indent=2) + "\n")
 
 
+def check_sdk_timeout(args, vm, port, offset):
+    vm.find("GTOS_A3_PANEL_TEST SDK_PPA_WAIT", offset)
+    # Redirect the DMA2D register block to the fixture's idle channels. Do not
+    # synthesize EOF, an interrupt, or pixels written by the PPA.
+    commands = [
+        f"target remote 127.0.0.1:{port}",
+        "tbreak *dma2d_hal_tx_reset_channel",
+        "set variable real_ppa_go = 1",
+        "continue",
+        "set $dma = (dma2d_hal_context_t *)$a0",
+        'printf "GTOS_A3_DMA2D_TX channel=%u\\n", $a1',
+        "set variable $dma->dev = &reset_registers",
+        "tbreak *dma2d_hal_rx_reset_channel",
+        "continue",
+        "set $dma = (dma2d_hal_context_t *)$a0",
+        'printf "GTOS_A3_DMA2D_RX channel=%u\\n", $a1',
+        "set variable $dma->dev = &reset_registers",
+        "detach",
+    ]
+    command = [str(args.ppa_sdk_gdb), "-nx", "-q", "-batch", str(args.build / "gtos-a3-panel-test.elf")]
+    for item in commands:
+        command.extend(("-ex", item))
+    with (args.output / "dma2d-gdb.log").open("xb") as log:
+        subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=20, check=True)
+    vm.find("GTOS_A3_PANEL_TEST SDK_PPA_RETURN result=0", offset)
+    vm.find("PPA rotation timed out", offset)
+    vm.find("GTOS_A3_PANEL_TEST SDK_PPA_TIMEOUT_FALLBACK PASS", offset)
+
+
 def run(args):
     args.output.mkdir(parents=True, exist_ok=False)
     profile = args.output / "gpio-board.json"
     profile.write_text('{"parts": {}}\n')
     port = available_port()
     flash = args.build / "gtos-a3-panel-test-flash.bin"
+    extra = ["--cosim-tcp", f"127.0.0.1:{port}"]
+    if args.ppa_sdk_gdb:
+        debug = available_port()
+        while debug == port:
+            debug = available_port()
+        extra.extend(("--gdb", str(debug)))
     with Guest(args, flash, profile, args.output / "panel.log", elf_name="gtos-a3-panel-test.elf",
-               extra=("--cosim-tcp", f"127.0.0.1:{port}")) as vm:
+               extra=extra) as vm:
         with Devices(port, args.output / "signals.json",
                      watch_pins=(SCANOUT_MARKER,) if args.backlight else ()) as bus:
             offset = vm.offset()
             vm.part("reset")
             vm.find("GTOS_A3_PANEL_TEST DBI_PACKETS PASS", offset)
-            if args.backlight:
+            if args.ppa_sdk_gdb:
+                check_sdk_timeout(args, vm, debug, offset)
+                count = 1
+            elif args.backlight:
                 vm.find("GTOS_A3_PANEL_TEST BEFORE_FRAME duty=0", offset)
                 vm.find("GTOS_A3_PANEL_TEST DRAW_AND_COPY_FAILURE_DARK PASS", offset)
                 vm.find("GTOS_A3_PANEL_TEST INCOMPLETE_SCANOUT_DARK PASS", offset)
                 vm.find("GTOS_A3_PANEL_TEST FIRST_FRAME_BACKLIGHT PASS", offset)
                 count = 2
+            elif args.ppa_recovery:
+                vm.find("GTOS_A3_PANEL_TEST PPA_TIMEOUT_CPU_COPY PASS", offset)
+                vm.find("GTOS_A3_PANEL_TEST PPA_LATE_COMPLETION_RECOVERY PASS", offset)
+                count = 2
             else:
                 vm.find("GTOS_A3_PANEL_TEST INIT_ROLLBACK PASS", offset)
                 vm.find("GTOS_A3_PANEL_TEST DMA_AND_DELETE_RETRY PASS", offset)
                 count = 3
-            vm.find("GTOS_A3_PANEL_TEST PASS", offset)
+            if not args.ppa_sdk_gdb:
+                vm.find("GTOS_A3_PANEL_TEST PASS", offset)
             bus.wait(lambda: sum(pin == VCI and level == 1 for _, pin, level in bus.gpio) >= count,
                      f"{count} VCI assertions")
             with bus.lock:
                 last_on = max(time for time, pin, level in bus.gpio if pin == VCI and level == 1)
             bus.edge(VCI, 0, last_on)
-            if args.backlight:
+            if args.ppa_sdk_gdb:
+                cycles = display_cycles(bus, 1)
+                (args.output / "sdk-ppa.json").write_text(json.dumps({
+                    "dma2d_registers": "fixture", "sdk_submission_returned": True,
+                    "ppa_irq_withheld": True, "software_copy": True, "vci_cycles_ns": cycles,
+                }, indent=2) + "\n")
+            elif args.backlight:
                 verify_first_frame(bus, args.output / "first-frame.json")
+            elif args.ppa_recovery:
+                cycles = display_cycles(bus, 2)
+                (args.output / "ppa-recovery.json").write_text(json.dumps({
+                    "vci_cycles_ns": cycles, "software_copy_while_pending": True,
+                    "late_completion_and_reenable": True,
+                }, indent=2) + "\n")
             else:
                 verify_power(bus, args.output / "power-sequence.json")
-    if args.backlight:
+    if args.ppa_sdk_gdb:
+        print("A3 ESP-IDF PPA submission with injected DMA2D readiness and no completion passed:", args.output)
+    elif args.backlight:
         print("A3 first frame and PWM sequencing, rejection, and restart passed:", args.output)
+    elif args.ppa_recovery:
+        print("A3 PPA timeout, software rotation, power cycling, and late completion passed:", args.output)
     else:
         print("A3 DBI packets, dark startup, ST7703 init rollback, DMA retirement and restart passed:", args.output)
 
@@ -98,7 +158,10 @@ def main():
     parser.add_argument("--emulator", type=Path, required=True)
     parser.add_argument("--build", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--backlight", action="store_true", help="Run the GTOS_A3_TEST_BACKLIGHT fixture")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--backlight", action="store_true", help="Run the GTOS_A3_TEST_BACKLIGHT fixture")
+    mode.add_argument("--ppa-recovery", action="store_true", help="Run the GTOS_A3_TEST_PPA_RECOVERY fixture")
+    mode.add_argument("--ppa-sdk-gdb", type=Path, help="Run GTOS_A3_TEST_REAL_PPA with GDB at the DMA2D registers")
     run(parser.parse_args())
 
 

@@ -264,6 +264,12 @@ VSYNC 通知，再等两个新 VSYNC，让完整刷新能发生在两次通知�
 关屏遇到暂时性错误时可重试，清理期间暂停提交新帧。
 [ESP-IDF 6.1 DSI 接口](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html)
 
+启用加速的竖向面板通过 PPA 非阻塞旋转。驱动只提交一个作业，使用独立的 PSRAM 输入快照和输出缓冲，
+提交成功后最多等待约 100 ms。提交被拒绝或完成通知超时后，当前画面改用 CPU 旋转和复制，
+绕开 PPA 与显示共用的 DMA2D 队列。关屏仍可释放面板、拉复位并关 VCI。尚未完成的 PPA
+作业保留自己的缓冲，迟到的旧帧会丢弃，之后的新帧可以重新使用加速。
+[ESP-IDF PPA 回调与非阻塞模式](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-reference/peripherals/ppa.html)
+
 普通仿真覆盖 RGB565 帧缓冲和背光 PWM。另一个 ESP-EMU 用例编译实际板级显示和
 ST7703 驱动，在 DSI、DMA2D、PPA 入口注入响应和错误，并从虚拟 GPIO 采样 VCI、
 复位和背光。该用例也用内存映射的 DSI 寄存器运行实际 DBI 驱动，检验短包、长包、
@@ -291,6 +297,33 @@ idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
 PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
     python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu --backlight \
     --build "$build" --output out/a3-panel-backlight-test-run
+~~~
+
+PPA 生命周期用例注入提交拒绝、丢失完成通知和迟到完成，检查 CPU 输出、DMA2D 重新启用和
+两次开关屏的 VCI 时序。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-panel-ppa-recovery"
+idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    -D GTOS_A3_TEST_PPA_RECOVERY=ON merge-bin -o "$build/gtos-a3-panel-test-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu --ppa-recovery \
+    --build "$build" --output out/a3-panel-ppa-recovery-run
+~~~
+
+ESP-EMU v1.0.0 下，直接调用 ESP-IDF 6.1 PPA 会在 DMA2D 的复位就绪等待中触发看门狗。
+真实 SDK 用例用 GDB 注入 DMA2D 空闲和复位就绪，验证非阻塞提交返回以及缺少 PPA 完成通知时的
+CPU 降级和关屏。PPA 硬件像素输出与完成中断仍需实板验证。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-panel-ppa-sdk"
+idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    -D GTOS_A3_TEST_REAL_PPA=ON merge-bin -o "$build/gtos-a3-panel-test-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu \
+    --ppa-sdk-gdb /path/to/riscv32-esp-elf-gdb --build "$build" --output out/a3-panel-ppa-sdk-run
 ~~~
 
 使用 `GTOS_A3_PANEL_PROFILE` 时，A3 在构建目录生成两份 ESP-IDF v6.1 DSI 驱动。

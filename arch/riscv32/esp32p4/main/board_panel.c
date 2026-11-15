@@ -6,19 +6,26 @@
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_ldo_regulator.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <math.h>
 #include <string.h>
 
-enum { FrameBytes = A3_WIDTH * A3_HEIGHT * sizeof(uint16_t) };
+enum { FrameBytes = A3_WIDTH * A3_HEIGHT * sizeof(uint16_t), RotationWaitMs = 100 };
 
 static esp_ldo_channel_handle_t phy;
 static esp_lcd_dsi_bus_handle_t bus;
 static esp_lcd_panel_io_handle_t io;
 static esp_lcd_panel_handle_t panel;
 static uint16_t* staging;
-static ppa_client_handle_t rotation;
+static struct {
+    ppa_client_handle_t client;
+    uint16_t* input;
+    uint16_t* output;
+    SemaphoreHandle_t done;
+    bool pending;
+} rotation;
 static SemaphoreHandle_t transfer_done, vsync;
 static bool transfer_pending, dma2d_enabled;
 static const A3PanelProfile* active;
@@ -51,12 +58,38 @@ static bool retire_transfer(TickType_t wait) {
     return true;
 }
 
+static bool retire_rotation(TickType_t wait) {
+    if (!rotation.pending) return true;
+    if (xSemaphoreTake(rotation.done, wait) != pdTRUE) return false;
+    rotation.pending = false;
+    return true;
+}
+
+static void release_idle_rotation(void) {
+    // PPA may still access its own buffers after the display has powered down.
+    if (!retire_rotation(0)) return;
+    if (rotation.client && ppa_unregister_client(rotation.client) != ESP_OK) return;
+    if (rotation.done) vSemaphoreDelete(rotation.done);
+    heap_caps_free(rotation.input);
+    heap_caps_free(rotation.output);
+    memset(&rotation, 0, sizeof(rotation));
+}
+
+static bool enable_dma2d(void) {
+    if (dma2d_enabled) return true;
+    dma2d_enabled = esp_lcd_dpi_panel_enable_dma2d(panel) == ESP_OK;
+    return dma2d_enabled;
+}
+
+static bool disable_dma2d(void) {
+    if (!dma2d_enabled) return true;
+    if (esp_lcd_dpi_panel_disable_dma2d(panel) != ESP_OK) return false;
+    dma2d_enabled = false;
+    return true;
+}
+
 bool a3_panel_stop(void) {
-    if (!retire_transfer(pdMS_TO_TICKS(500))) return false;
-    if (dma2d_enabled) {
-        if (esp_lcd_dpi_panel_disable_dma2d(panel) != ESP_OK) return false;
-        dma2d_enabled = false;
-    }
+    if (!retire_transfer(pdMS_TO_TICKS(500)) || !disable_dma2d()) return false;
     if (panel) {
         if (active) esp_lcd_panel_disp_on_off(panel, false);
         active = NULL;
@@ -83,10 +116,7 @@ bool a3_panel_stop(void) {
         vSemaphoreDelete(vsync);
         vsync = NULL;
     }
-    if (rotation) {
-        if (ppa_unregister_client(rotation) != ESP_OK) return false;
-        rotation = NULL;
-    }
+    release_idle_rotation();
     heap_caps_free(staging);
     staging = NULL;
     active = NULL;
@@ -97,6 +127,8 @@ static bool IRAM_ATTR frame_copied(esp_lcd_panel_handle_t display, esp_lcd_dpi_p
                                    void* semaphore) {
     (void)display;
     (void)event;
+    // Without the DMA draw hook, ESP-IDF calls this from the synchronous CPU copy.
+    if (!dma2d_enabled) return false;
     BaseType_t wake = pdFALSE;
     xSemaphoreGiveFromISR(semaphore, &wake);
     return wake == pdTRUE;
@@ -112,12 +144,39 @@ static bool IRAM_ATTR frame_sync(esp_lcd_panel_handle_t display, esp_lcd_dpi_pan
     return wake == pdTRUE;
 }
 
+static bool IRAM_ATTR frame_rotated(ppa_client_handle_t client, ppa_event_data_t* event, void* semaphore) {
+    (void)client;
+    (void)event;
+    BaseType_t wake = pdFALSE;
+    xSemaphoreGiveFromISR(semaphore, &wake);
+    return wake == pdTRUE;
+}
+
+static uint16_t* allocate_frame(void) {
+    return heap_caps_aligned_alloc(128, FrameBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+}
+
+static bool reserve_staging(void) {
+    if (!staging) staging = allocate_frame();
+    return staging != NULL;
+}
+
+static bool configure_rotation(void) {
+    if (rotation.client) return rotation.done != NULL;
+    rotation.input = allocate_frame();
+    rotation.output = allocate_frame();
+    const ppa_client_config_t config = {.oper_type = PPA_OPERATION_SRM, .max_pending_trans_num = 1};
+    const ppa_event_callbacks_t callbacks = {.on_trans_done = frame_rotated};
+    if (!rotation.input || !rotation.output
+        || ppa_register_client(&config, &rotation.client) != ESP_OK
+        || ppa_client_register_event_callbacks(rotation.client, &callbacks) != ESP_OK) return false;
+    rotation.done = xSemaphoreCreateBinary();
+    return rotation.done != NULL;
+}
+
 static bool configure_frame_events(const A3PanelProfile* profile, bool portrait) {
     const bool accelerate = profile->use_graphics_acceleration;
-    if (accelerate && portrait) {
-        const ppa_client_config_t ppa = {.oper_type = PPA_OPERATION_SRM};
-        if (ppa_register_client(&ppa, &rotation) != ESP_OK) return false;
-    }
+    if (accelerate && portrait && !configure_rotation()) return false;
     if (accelerate) {
         transfer_done = xSemaphoreCreateBinary();
         if (!transfer_done) return false;
@@ -132,20 +191,16 @@ static bool configure_frame_events(const A3PanelProfile* profile, bool portrait)
     };
     if ((transfer_done || vsync)
         && esp_lcd_dpi_panel_register_event_callbacks(panel, &callbacks, transfer_done) != ESP_OK) return false;
-    if (accelerate) {
-        if (esp_lcd_dpi_panel_enable_dma2d(panel) != ESP_OK) return false;
-        dma2d_enabled = true;
-    }
-    return true;
+    // Portrait drawing may need to bypass the DMA2D pool when PPA is still pending.
+    return !accelerate || portrait || enable_dma2d();
 }
 
 bool a3_panel_start(const A3PanelProfile* profile) {
-    if (!profile || panel || io || bus || phy || rotation || transfer_done || vsync || staging) return false;
+    if (!profile || panel || io || bus || phy || transfer_done || vsync || staging) return false;
+    release_idle_rotation();
     const bool portrait = profile->timing.h_size == A3_HEIGHT;
-    if (portrait || profile->use_graphics_acceleration) {
-        staging = heap_caps_aligned_alloc(128, FrameBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-        if (!staging) return false;
-    }
+    const bool needs_staging = portrait ? !profile->use_graphics_acceleration : profile->use_graphics_acceleration;
+    if (needs_staging && !reserve_staging()) return false;
     const esp_ldo_channel_config_t ldo = {.chan_id = 3, .voltage_mv = 2500};
     const esp_lcd_dsi_bus_config_t dsi = {
         .bus_id = 0, .num_data_lanes = 2, .lane_bit_rate_mbps = profile->lane_rate_mbps,
@@ -183,19 +238,27 @@ bool a3_panel_start(const A3PanelProfile* profile) {
     return true;
 }
 
-static bool rotate_frame(const uint16_t* pixels) {
-    if (rotation) {
-        const ppa_srm_oper_config_t operation = {
-            .in = {.buffer = pixels, .pic_w = A3_WIDTH, .pic_h = A3_HEIGHT,
-                   .block_w = A3_WIDTH, .block_h = A3_HEIGHT, .srm_cm = PPA_SRM_COLOR_MODE_RGB565},
-            .out = {.buffer = staging, .buffer_size = FrameBytes, .pic_w = A3_HEIGHT,
-                    .pic_h = A3_WIDTH, .srm_cm = PPA_SRM_COLOR_MODE_RGB565},
-            .rotation_angle = active->portrait_clockwise
-                ? PPA_SRM_ROTATION_ANGLE_270 : PPA_SRM_ROTATION_ANGLE_90,
-            .scale_x = 1, .scale_y = 1, .mode = PPA_TRANS_MODE_BLOCKING,
-        };
-        return ppa_do_scale_rotate_mirror(rotation, &operation) == ESP_OK;
-    }
+static bool rotate_with_ppa(const uint16_t* pixels) {
+    if (!retire_rotation(0)) return false;
+    // The caller may redraw or release pixels even if this PPA transaction times out.
+    memcpy(rotation.input, pixels, FrameBytes);
+    const ppa_srm_oper_config_t operation = {
+        .in = {.buffer = rotation.input, .pic_w = A3_WIDTH, .pic_h = A3_HEIGHT,
+               .block_w = A3_WIDTH, .block_h = A3_HEIGHT, .srm_cm = PPA_SRM_COLOR_MODE_RGB565},
+        .out = {.buffer = rotation.output, .buffer_size = FrameBytes, .pic_w = A3_HEIGHT,
+                .pic_h = A3_WIDTH, .srm_cm = PPA_SRM_COLOR_MODE_RGB565},
+        .rotation_angle = active->portrait_clockwise
+            ? PPA_SRM_ROTATION_ANGLE_270 : PPA_SRM_ROTATION_ANGLE_90,
+        .scale_x = 1, .scale_y = 1, .mode = PPA_TRANS_MODE_NON_BLOCKING, .user_data = rotation.done,
+    };
+    if (ppa_do_scale_rotate_mirror(rotation.client, &operation) != ESP_OK) return false;
+    rotation.pending = true;
+    if (retire_rotation(pdMS_TO_TICKS(RotationWaitMs) + 1)) return true;
+    ESP_LOGW("a3_panel", "PPA rotation timed out");
+    return false;
+}
+
+static void rotate_frame(const uint16_t* pixels) {
     for (unsigned y = 0; y < A3_HEIGHT; ++y) {
         for (unsigned x = 0; x < A3_WIDTH; ++x) {
             size_t destination = active->portrait_clockwise
@@ -203,22 +266,27 @@ static bool rotate_frame(const uint16_t* pixels) {
             staging[destination] = pixels[y * A3_WIDTH + x];
         }
     }
-    return true;
 }
 
 bool a3_panel_present(const uint16_t* pixels) {
     if (!active || !retire_transfer(0)) return false;
     if (active->timing.h_size == A3_HEIGHT) {
-        if (!rotate_frame(pixels)) return false;
-        pixels = staging;
+        if (active->use_graphics_acceleration && rotate_with_ppa(pixels)) {
+            if (!enable_dma2d()) return false;
+            pixels = rotation.output;
+        } else {
+            if (!disable_dma2d() || !reserve_staging()) return false;
+            rotate_frame(pixels);
+            pixels = staging;
+        }
     } else if (staging) {
         memcpy(staging, pixels, FrameBytes);
         pixels = staging;
     }
     if (esp_lcd_panel_draw_bitmap(panel, 0, 0, active->timing.h_size, active->timing.v_size,
                                   pixels) != ESP_OK) return false;
-    // An asynchronous DMA2D operation owns staging until its callback.
-    transfer_pending = transfer_done != NULL;
+    // An asynchronous DMA2D operation owns the submitted buffer until its callback.
+    transfer_pending = dma2d_enabled;
     return true;
 }
 
