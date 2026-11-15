@@ -143,6 +143,7 @@ HeapStatistics MemoryManager::getStatistics() const {
     }
     return result;
 }
+#ifndef GTOS_EXTERNAL_NEW_DELETE
 void* operator new(unsigned size) noexcept {
     return MemoryManager::activeMemoryManager ? MemoryManager::activeMemoryManager->malloc(size) : 0;
 }
@@ -154,3 +155,4 @@ void operator delete(void* ptr) noexcept {
 void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
 void operator delete(void* ptr, unsigned) noexcept { ::operator delete(ptr); }
 void operator delete[](void* ptr, unsigned) noexcept { ::operator delete(ptr); }
+#endif

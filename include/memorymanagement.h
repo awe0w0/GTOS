@@ -50,6 +50,7 @@ namespace gtos {
     };
 }
 
+#ifndef GTOS_EXTERNAL_NEW_DELETE
 void* operator new(unsigned size) noexcept;
 void* operator new[](unsigned size) noexcept;
 void* operator new(unsigned size, void* ptr) noexcept;
@@ -58,5 +59,6 @@ void operator delete(void* ptr) noexcept;
 void operator delete[](void* ptr) noexcept;
 void operator delete(void* ptr, unsigned size) noexcept;
 void operator delete[](void* ptr, unsigned size) noexcept;
+#endif
 
 #endif

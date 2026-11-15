@@ -1,37 +1,18 @@
 #include <multitasking.h>
+#include <memory/criticalsection.h>
 
 using namespace gtos;
 
 namespace {
-    uint32_t DisableInterrupts() {
-#ifdef GTOS_CPU_TEST
-        return 0x202;
-#else
-        uint32_t flags;
-        asm volatile("pushfl; popl %0; cli" : "=r"(flags) : : "memory");
-        return flags;
-#endif
-    }
-    void RestoreInterrupts(uint32_t flags) {
-#ifndef GTOS_CPU_TEST
-        // Restore only IF; do not expose compiler arithmetic flags to popfl.
-        if (flags & 0x200) asm volatile("sti" : : : "memory");
-#else
-        (void)flags;
-#endif
-    }
+    using namespace gtos::hardwarecommunication::cpu;
+    using gtos::memory::InterruptGuard;
+
     void WaitForInterrupt() {
 #ifndef GTOS_CPU_TEST
         // STI's interrupt shadow closes the interrupt-before-HLT race.
         asm volatile("sti; hlt; cli" : : : "memory");
 #endif
     }
-    class InterruptGuard {
-        uint32_t flags;
-    public:
-        InterruptGuard() : flags(DisableInterrupts()) {}
-        ~InterruptGuard() { RestoreInterrupts(flags); }
-    };
     bool ClockBootstrapProcessor() {
 #ifdef GTOS_CPU_TEST
         return true;
@@ -152,29 +133,29 @@ bool TaskManager::SetAffinity(Task* task, uint32_t cpuMask) {
 }
 bool TaskManager::SleepCurrent(uint32_t durationTicks) {
     if (!durationTicks) return YieldCurrent();
-    uint32_t flags = DisableInterrupts();
+    InterruptState state = MaskInterrupts();
     Task* task = CurrentTask();
-    if (!(flags & 0x200) || !task || !SleepTask(task, durationTicks)) {
-        RestoreInterrupts(flags);
+    if (state != InterruptsUnmasked || !task || !SleepTask(task, durationTicks)) {
+        RestoreInterrupts(state);
         return false;
     }
     while (task->state == TaskSleeping) WaitForInterrupt();
-    RestoreInterrupts(flags);
+    RestoreInterrupts(state);
     return true;
 }
 bool TaskManager::YieldCurrent() {
-    uint32_t flags = DisableInterrupts();
+    InterruptState state = MaskInterrupts();
     Task* task = CurrentTask();
-    if (!(flags & 0x200)) { RestoreInterrupts(flags); return false; }
+    if (state != InterruptsUnmasked) { RestoreInterrupts(state); return false; }
     uint32_t before = task ? task->statistics.dispatches : ticks;
     if (task) ++task->statistics.yields;
     do { WaitForInterrupt(); }
     while (task ? task->statistics.dispatches == before : ticks == before);
-    RestoreInterrupts(flags);
+    RestoreInterrupts(state);
     return true;
 }
 void TaskManager::ExitCurrent() {
-    DisableInterrupts();
+    MaskInterrupts();
     Task* task = CurrentTask();
     if (task) task->state = TaskTerminated;
     for (;;) WaitForInterrupt();
