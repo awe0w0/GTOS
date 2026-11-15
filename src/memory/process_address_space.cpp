@@ -327,7 +327,7 @@ bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
     }
     return true;
 }
-bool ProcessAddressSpace::Layout(bool complete) const {
+bool ProcessAddressSpace::Layout(bool complete, bool* unreservedDynamicPages) const {
     contentCopyLayoutValid = false;
     layoutSlots = 0;
     if (!prepared || !kernel || !frames || pageCount > pageLimit
@@ -385,6 +385,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
     uint32_t nonzeroLeaves = 0, presentPages = 0;
     if (!LayoutDirectories(complete ? &nonzeroLeaves : nullptr)) return false;
     uint16_t sharedCounts[MaximumContentRegions] = {};
+    bool hasUnreservedDynamicPages = false;
     for (uint32_t i = 0; i < pageCount; ++i) {
         const Page& page = pages[i];
         if (page.region) {
@@ -402,6 +403,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
             if (!page.present) return Fail(ProcessMemoryBadMapping);
             // Every validated reservation lies in the dynamic address range.
             if (page.address >= DynamicBase && page.address < dynamicLimit) {
+                hasUnreservedDynamicPages = true;
                 for (uint32_t ri = 0; ri < regionLimit; ++ri)
                     if (regions[ri].handle && page.address >= regions[ri].base
                         && page.address < regions[ri].base + regions[ri].bytes)
@@ -426,6 +428,7 @@ bool ProcessAddressSpace::Layout(bool complete) const {
             return Fail(ProcessMemoryBadMapping);
     layoutSlots = slots;
     contentCopyLayoutValid = pageLimit > MaximumCapacityPages;
+    if (unreservedDynamicPages) *unreservedDynamicPages = hasUnreservedDynamicPages;
     return true;
 }
 bool ProcessAddressSpace::Mutable() const {
@@ -434,13 +437,13 @@ bool ProcessAddressSpace::Mutable() const {
     if (sealed) return Fail(ProcessMemorySealed);
     return Layout(true);
 }
-bool ProcessAddressSpace::RuntimeMutable() const {
+bool ProcessAddressSpace::RuntimeMutable(bool* unreservedDynamicPages) const {
     if (!prepared || !sealed) return Fail(ProcessMemoryBadState);
     if (!Context(true)) return false;
 #ifndef GTOS_PROCESS_MEMORY_TEST
     if (CurrentDirectory() != directory) return Fail(ProcessMemoryUnsafeContext);
 #endif
-    return Layout(true);
+    return Layout(true, unreservedDynamicPages);
 }
 bool ProcessAddressSpace::MapOwnedPage(uint32_t address, bool writable) {
     const uint32_t di = address >> 22, ti = (address >> 12) & 1023;
@@ -580,24 +583,31 @@ bool ProcessAddressSpace::RegionRange(uint32_t handle, uint32_t offset, uint32_t
     base = region.base + offset;
     return true;
 }
-uint32_t ProcessAddressSpace::ConflictEnd(uint32_t base, uint32_t bytes) const {
+uint32_t ProcessAddressSpace::ConflictEnd(uint32_t base, uint32_t bytes,
+                                          bool unreservedDynamicPages) const {
     uint32_t end = 0;
     for (uint32_t i = 0; i < regionLimit; ++i) {
         const Region& region = regions[i];
         if (region.handle && base < region.base + region.bytes && region.base < base + bytes
             && region.base + region.bytes > end) end = region.base + region.bytes;
     }
-    for (uint32_t i = 0; i < pageCount; ++i) {
-        const Page& page = pages[i];
-        if (base < page.address + 4096 && page.address < base + bytes
-            && page.address + 4096 > end) end = page.address + 4096;
+    // The validated regions already cover their resident pages. Check image
+    // pages separately only when the image has mappings in the dynamic arena.
+    if (unreservedDynamicPages) {
+        for (uint32_t i = 0; i < pageCount; ++i) {
+            const Page& page = pages[i];
+            if (!page.region && base < page.address + 4096
+                && page.address < base + bytes && page.address + 4096 > end)
+                end = page.address + 4096;
+        }
     }
     return end;
 }
 bool ProcessAddressSpace::Reserve(uint32_t bytes, uint32_t alignment, uint32_t hint,
                                   uint32_t& outBase, uint32_t& outHandle) {
     InterruptGuard guard;
-    if (!RuntimeMutable()) return false;
+    bool unreservedDynamicPages = false;
+    if (!RuntimeMutable(&unreservedDynamicPages)) return false;
     if (!bytes || (bytes & 4095) || bytes > dynamicLimit - DynamicBase
         || alignment < 4096 || (alignment & (alignment - 1))) return Fail(ProcessMemoryBadRange);
     if (hint && ((hint & (alignment - 1)) || hint < DynamicBase || hint >= dynamicLimit
@@ -610,7 +620,7 @@ bool ProcessAddressSpace::Reserve(uint32_t bytes, uint32_t alignment, uint32_t h
     uint64_t candidate = hint ? hint
         : ((uint64_t)DynamicBase + alignment - 1) & ~((uint64_t)alignment - 1);
     while (candidate <= dynamicLimit - bytes) {
-        const uint32_t conflict = ConflictEnd((uint32_t)candidate, bytes);
+        const uint32_t conflict = ConflictEnd((uint32_t)candidate, bytes, unreservedDynamicPages);
         if (!conflict) break;
         if (hint) return Fail(ProcessMemoryConflict);
         candidate = ((uint64_t)conflict + alignment - 1) & ~((uint64_t)alignment - 1);

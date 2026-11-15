@@ -37,7 +37,8 @@ namespace gtos { namespace memory {
         static const uint32_t DynamicBase = 0x80000000u;
         static const uint32_t DynamicLimit = 0xBFFFC000u; // Stack and guards excluded.
         static const uint32_t MaximumRegions = 32;
-        static const uint32_t MaximumContentRegions = 128;
+        // Browser heaps, stacks and video buffers reserve independent ranges.
+        static const uint32_t MaximumContentRegions = 1024;
     private:
         friend class gtos::process::NativeRuntime;
         friend class gtos::process::NativeSharedMemory;
@@ -78,11 +79,11 @@ namespace gtos { namespace memory {
         bool KernelAlias(uint32_t address, uint32_t length, bool writable) const;
         bool LayoutRoot() const;
         bool LayoutDirectories(uint32_t* nonzeroLeaves) const;
-        bool Layout(bool complete) const;
+        bool Layout(bool complete, bool* unreservedDynamicPages = nullptr) const;
         bool Range(uint32_t address, uint32_t length, bool writable) const;
         bool Buffer(uint32_t address, uint32_t length, bool writable) const;
         bool Mutable() const;
-        bool RuntimeMutable() const;
+        bool RuntimeMutable(bool* unreservedDynamicPages = nullptr) const;
         bool PrepareWithLimit(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,
                               uint32_t capacityPages, uint32_t dynamicEnd,
                               uint32_t maximumPages, uint32_t maximumRegions);
@@ -96,7 +97,7 @@ namespace gtos { namespace memory {
         int FindRegion(uint32_t handle) const;
         bool SharesFrame(const Page& page) const;
         bool RegionRange(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t& base) const;
-        uint32_t ConflictEnd(uint32_t base, uint32_t bytes) const;
+        uint32_t ConflictEnd(uint32_t base, uint32_t bytes, bool unreservedDynamicPages) const;
         bool AllocateFrame(uint32_t& address);
         bool MetadataLayout() const;
         bool MapOwnedPage(uint32_t address, bool writable);

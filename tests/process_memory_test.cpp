@@ -907,8 +907,10 @@ namespace {
         uint32_t handles[ProcessAddressSpace::MaximumContentRegions];
         uint32_t base = 0;
         for (uint32_t i = 0; i < limit; ++i) {
-            CHECK(first.Reserve(4096, 4096, 0, base, handles[i]));
-            CHECK(base == ProcessAddressSpace::DynamicBase + i * 4096);
+            const uint32_t expected = ProcessAddressSpace::DynamicBase + i * 4096;
+            const uint32_t hint = i + 1 == limit ? 0 : expected;
+            CHECK(first.Reserve(4096, 4096, hint, base, handles[i]));
+            CHECK(base == expected);
         }
         CHECK(used() == empty);
         const uint32_t last = base;
