@@ -2,9 +2,11 @@
 """Capture the A3 diagnostic firmware's UART/USB status and exercise the bench controls."""
 
 import argparse
+import asyncio
 from collections import deque
 from datetime import datetime, timezone
 import hashlib
+from ipaddress import IPv4Address
 import json
 from pathlib import Path
 import sys
@@ -243,9 +245,21 @@ def run(args):
                 exercise(bench, args.step_seconds, report)
             if args.settings:
                 verify_settings(bench, args.step_seconds, report)
-            if args.radio:
+            if args.radio or args.wifi or args.ble:
+                radio_fields = ["radio", "sdio"]
+                if args.radio or args.wifi:
+                    radio_fields.append("scan")
+                if args.radio or args.ble:
+                    radio_fields.append("ble")
                 report["radio"] = bench.observe("Use the buttons to select RADIO", args.step_seconds,
-                    lambda state: state["page"] == 2 and all(state[name] == 1 for name in ("radio", "sdio", "scan", "ble")))
+                    lambda state: state["page"] == 2 and all(state[name] == 1 for name in radio_fields))
+            if args.wifi or args.ble:
+                from orbit_status import verify_ble, verify_wifi
+
+                if args.wifi:
+                    asyncio.run(verify_wifi(bench, args.step_seconds, report.setdefault("wifi", {}), str(args.wifi)))
+                if args.ble:
+                    asyncio.run(verify_ble(bench, args.step_seconds, report.setdefault("ble", {}), args.ble))
         report["result"] = "passed"
     except (OSError, RuntimeError, KeyboardInterrupt) as error:
         report["error"] = str(error) or "Interrupted"
@@ -270,6 +284,8 @@ def main():
     parser.add_argument("--expect-current", type=int, choices=CC_CURRENT_MA, help="Expected advertised mA with --usb-c")
     parser.add_argument("--settings", action="store_true", help="Save a page and verify it after a P4 reset via TP2")
     parser.add_argument("--radio", action="store_true", help="Check the C6 response, scan completion and BLE advertising")
+    parser.add_argument("--wifi", type=IPv4Address, help="Read Orbit HTTP status at the A3 station IPv4 address")
+    parser.add_argument("--ble", help="Read Orbit GATT status at the selected BLE address or platform identifier")
     parser.add_argument("--step-seconds", type=int, default=30)
     args = parser.parse_args()
     if args.step_seconds < 1 or (args.tcp is not None and not 1 <= args.tcp <= 65535):

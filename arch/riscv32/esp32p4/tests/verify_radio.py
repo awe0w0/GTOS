@@ -2,35 +2,29 @@
 """Boot ESP32-P4 and ESP32-C6 together and test the GTOS radio page."""
 
 import argparse
-from http.client import HTTPConnection, HTTPException
-import json
+from contextlib import contextmanager
+from http.client import HTTPException
 from pathlib import Path
 import subprocess
 import tempfile
 import time
 
 from verify_board import Guest, available_port, prepare_board
+from orbit_status import read_http_status
 
 
 def read_status(port, target):
     deadline = time.monotonic() + 8
     while True:
-        connection = HTTPConnection("127.0.0.1", port, timeout=2)
         try:
-            connection.request("GET", "/status")
-            response = connection.getresponse()
-            if response.status != 200 or response.getheader("Content-Type") != "application/json":
-                raise RuntimeError(f"Unexpected Orbit HTTP response: {response.status} {response.headers}")
-            body = response.read()
+            body, status = read_http_status("127.0.0.1", port, timeout=2)
             break
         except (OSError, HTTPException) as error:
             if time.monotonic() >= deadline:
                 raise RuntimeError("No P4 response via the C6 WLAN and SDIO data path") from error
             time.sleep(0.05)
-        finally:
-            connection.close()
     target.write_bytes(body)
-    return json.loads(body)
+    return status
 
 
 def expect_status(port, target, expected):
@@ -39,7 +33,8 @@ def expect_status(port, target, expected):
         raise RuntimeError(f"Expected {expected} from the running Orbit application: {target}")
 
 
-def boot(args, out, board, network, hci_port=None, check_guest=None, start_radio=None, host_extra=()):
+@contextmanager
+def linked_guests(args, out, board, network, hci_port=None, host_extra=()):
     log = out / "c6.log"
     port = available_port()
     with tempfile.TemporaryDirectory(prefix="gtos-a3-sdio-") as directory:
@@ -68,41 +63,7 @@ def boot(args, out, board, network, hci_port=None, check_guest=None, start_radio
             flash = args.build / "gtos-a3-flash.bin"
             with Guest(args, flash, board, out / "p4-radio.log", extra=[*host, *host_extra]) as vm:
                 vm.find("GTOS_A3_READY console=1")
-                offset = start_radio(vm) if start_radio else vm.click("back")
-                vm.find("page=2 light=60 awake=1", offset)
-                vm.find("GTOS_A3_RADIO SDIO PASS C6 firmware RPC", offset, timeout=25)
-                vm.find(f"ssid={network}", offset, timeout=30)
-                vm.find("GTOS_A3_RADIO BLE PASS advertising", offset, timeout=30)
-                if network == "A3-LAB":
-                    vm.find("GTOS_A3_RADIO WIFI ONLINE ip=", offset, timeout=26)
-                    vm.find("GTOS_A3_ORBIT HTTP READY port=8080", offset)
-                    vm.find("GTOS_A3_WIRELESS powered=1 sdio=1 wifi=1 ble=1 station=2 ip=", vm.send("s"))
-                    expect_status(port, out / "status.json", {
-                        "page": 2, "brightness": 60, "encoder": 0, "awake": 1,
-                        "imu_result": 0, "accel_mg": [73, -24, 999], "gyro_mdps": [875, -875, 0],
-                        "usb_result": 0, "usb_attached": 1, "advertised_ma": 1500,
-                        "charger_result": 0, "charging": 0,
-                        "sdio_ready": 1, "wifi_online": 1, "ble_advertising": 1,
-                    })
-                    vm.frame(out / "radio.png", 614)
-                    offset = vm.offset()
-                    vm.part("part encoder input cw")
-                    vm.find("page=2 light=65 awake=1 encoder=1", offset)
-                    expect_status(port, out / "status-after-knob.json", {"brightness": 65, "encoder": 1})
-                    vm.find("GTOS_A3_CHARGE result=0", vm.send("c"))
-                    vm.find("bq=0 pg=1 charge=1", vm.send("s"))
-                    expect_status(port, out / "status-charging.json", {"charging": 1})
-                else:
-                    vm.find("GTOS_A3_RADIO WIFI OFFLINE", offset, timeout=26)
-                    vm.find("GTOS_A3_WIRELESS powered=1 sdio=1 wifi=1 ble=1 station=3 ip=", vm.send("s"))
-                    retry = vm.send("w")
-                    vm.find("GTOS_A3_ORBIT WIFI JOIN result=0", retry)
-                    vm.find("GTOS_A3_RADIO WIFI OFFLINE", retry, timeout=26)
-                    if b"GTOS_A3_ORBIT HTTP READY" in vm.uart_bytes():
-                        raise RuntimeError("Orbit advertised HTTP readiness without a station address")
-                if check_guest is not None:
-                    check_guest(vm)
-                vm.finish()
+                yield vm, port
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -113,6 +74,45 @@ def boot(args, out, board, network, hci_port=None, check_guest=None, start_radio
                     process.wait()
     if hci_port is None and b"LE_Set_Advertising_Enable = 1" not in log.read_bytes():
         raise RuntimeError(f"C6 virtual controller did not enable advertising. See {log}")
+
+
+def boot(args, out, board, network, hci_port=None, check_guest=None, start_radio=None, host_extra=()):
+    with linked_guests(args, out, board, network, hci_port, host_extra) as (vm, port):
+        offset = start_radio(vm) if start_radio else vm.click("back")
+        vm.find("page=2 light=60 awake=1", offset)
+        vm.find("GTOS_A3_RADIO SDIO PASS C6 firmware RPC", offset, timeout=25)
+        vm.find(f"ssid={network}", offset, timeout=30)
+        vm.find("GTOS_A3_RADIO BLE PASS advertising", offset, timeout=30)
+        if network == "A3-LAB":
+            vm.find("GTOS_A3_RADIO WIFI ONLINE ip=", offset, timeout=26)
+            vm.find("GTOS_A3_ORBIT HTTP READY port=8080", offset)
+            vm.find("GTOS_A3_WIRELESS powered=1 sdio=1 wifi=1 ble=1 station=2 ip=", vm.send("s"))
+            expect_status(port, out / "status.json", {
+                "page": 2, "brightness": 60, "encoder": 0, "awake": 1,
+                "imu_result": 0, "accel_mg": [73, -24, 999], "gyro_mdps": [875, -875, 0],
+                "usb_result": 0, "usb_attached": 1, "advertised_ma": 1500,
+                "charger_result": 0, "charging": 0,
+                "sdio_ready": 1, "wifi_online": 1, "ble_advertising": 1,
+            })
+            vm.frame(out / "radio.png", 614)
+            offset = vm.offset()
+            vm.part("part encoder input cw")
+            vm.find("page=2 light=65 awake=1 encoder=1", offset)
+            expect_status(port, out / "status-after-knob.json", {"brightness": 65, "encoder": 1})
+            vm.find("GTOS_A3_CHARGE result=0", vm.send("c"))
+            vm.find("bq=0 pg=1 charge=1", vm.send("s"))
+            expect_status(port, out / "status-charging.json", {"charging": 1})
+        else:
+            vm.find("GTOS_A3_RADIO WIFI OFFLINE", offset, timeout=26)
+            vm.find("GTOS_A3_WIRELESS powered=1 sdio=1 wifi=1 ble=1 station=3 ip=", vm.send("s"))
+            retry = vm.send("w")
+            vm.find("GTOS_A3_ORBIT WIFI JOIN result=0", retry)
+            vm.find("GTOS_A3_RADIO WIFI OFFLINE", retry, timeout=26)
+            if b"GTOS_A3_ORBIT HTTP READY" in vm.uart_bytes():
+                raise RuntimeError("Orbit advertised HTTP readiness without a station address")
+        if check_guest is not None:
+            check_guest(vm)
+        vm.finish()
 
 
 def run(args):

@@ -3,9 +3,9 @@
 
 import argparse
 import asyncio
+from contextlib import asynccontextmanager
 import json
 from pathlib import Path
-from struct import Struct
 
 from bumble.att import ATT_Error, ErrorCode
 from bumble.controller import Controller
@@ -16,40 +16,53 @@ from bumble.host import Host
 from bumble.link import LocalLink
 from bumble.transport import open_transport
 
+from orbit_status import SERVICE_UUID, STATUS_UUID, decode_gatt
 from verify_board import available_port, prepare_board
 from verify_radio import boot
 
 
-SERVICE = UUID("01d084ac-5c80-448a-aca7-8fd0072e67d4")
-VALUE = UUID("9c7c1669-67bc-493f-a1de-6ecf993ad223")
-STATUS = Struct("<BBBBhhhhHBi")
+SERVICE = UUID(SERVICE_UUID)
+VALUE = UUID(STATUS_UUID)
 
 
 async def read_status(characteristic, file):
     data = await characteristic.read_value(no_long_read=True)
-    if len(data) != STATUS.size:
-        raise RuntimeError(f"Unexpected {len(data)}-byte Orbit status")
-    version, page, brightness, flags, x, y, z, gyro, current, faults, steps = STATUS.unpack(data)
-    status = dict(version=version, page=page, brightness=brightness, flags=flags, acceleration_mg=[x, y, z],
-                  gyro_z_dps=gyro, advertised_ma=current, charger_faults=faults, encoder=steps)
+    status = decode_gatt(data)
     file.write_text(json.dumps(status) + "\n")
     return status
 
 
-async def exercise(receiver, advertisements, vm, out):
+@asynccontextmanager
+async def connect_to_orbit(receiver, advertisements):
     first = await asyncio.wait_for(advertisements.get(), 8)
     await receiver.stop_scanning()
-    mark = vm.offset()
     connection = await receiver.connect(first.address, timeout=8)
     try:
-        await asyncio.to_thread(vm.find, "GTOS_A3_RADIO BLE CLIENT connected", mark)
-        await asyncio.to_thread(vm.find, "station=3 ip= client=1", vm.send("s"))
         peer = Peer(connection)
         services = await peer.discover_services([SERVICE])
         characteristics = await services[0].discover_characteristics([VALUE]) if services else []
         if len(characteristics) != 1:
             raise RuntimeError("Orbit status characteristic not discovered")
-        characteristic = characteristics[0]
+        yield first, characteristics[0]
+    finally:
+        await connection.disconnect()
+
+
+async def resumed_advertisement(receiver, advertisements):
+    while not advertisements.empty():
+        advertisements.get_nowait()
+    await receiver.start_scanning(legacy=True, active=False)
+    try:
+        return await asyncio.wait_for(advertisements.get(), 8)
+    finally:
+        await receiver.stop_scanning()
+
+
+async def exercise(receiver, advertisements, vm, out):
+    mark = vm.offset()
+    async with connect_to_orbit(receiver, advertisements) as (first, characteristic):
+        await asyncio.to_thread(vm.find, "GTOS_A3_RADIO BLE CLIENT connected", mark)
+        await asyncio.to_thread(vm.find, "station=3 ip= client=1", vm.send("s"))
         before = await read_status(characteristic, out / "ble-status.json")
         expected = dict(version=1, page=2, brightness=60, flags=7, acceleration_mg=[73, -24, 999],
                         gyro_z_dps=0, advertised_ma=1500, charger_faults=0, encoder=0)
@@ -71,17 +84,9 @@ async def exercise(receiver, advertisements, vm, out):
                 raise
         else:
             raise RuntimeError("Orbit allowed a write to its read-only status characteristic")
-    finally:
         mark = vm.offset()
-        await connection.disconnect()
     await asyncio.to_thread(vm.find, "GTOS_A3_RADIO BLE PASS advertising", mark)
-    while not advertisements.empty():
-        advertisements.get_nowait()
-    await receiver.start_scanning(legacy=True, active=False)
-    try:
-        resumed = await asyncio.wait_for(advertisements.get(), 8)
-    finally:
-        await receiver.stop_scanning()
+    resumed = await resumed_advertisement(receiver, advertisements)
     if resumed.address != first.address:
         raise RuntimeError("A different device appeared after disconnect")
     (out / "ble-received.json").write_text(json.dumps(dict(
@@ -90,9 +95,8 @@ async def exercise(receiver, advertisements, vm, out):
     )) + "\n")
 
 
-async def run(args):
-    out, board = prepare_board(args)
-    port = available_port()
+@asynccontextmanager
+async def virtual_central(port):
     local_link = LocalLink()
     async with await open_transport(f"tcp-server:127.0.0.1:{port}") as transport:
         address = "02:00:00:00:00:C6"
@@ -113,6 +117,13 @@ async def run(args):
         receiver.on("advertisement", observe)
         await receiver.power_on()
         await receiver.start_scanning(legacy=True, active=False)
+        yield receiver, advertisements
+
+
+async def run(args):
+    out, board = prepare_board(args)
+    port = available_port()
+    async with virtual_central(port) as (receiver, advertisements):
         loop = asyncio.get_running_loop()
 
         def check(vm):

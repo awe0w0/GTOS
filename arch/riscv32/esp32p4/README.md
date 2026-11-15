@@ -208,6 +208,39 @@ PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
 SSID 和 WPA2 口令，可以让 Desktop Orbit 加入指定网络并在 8080 端口提供只读状态。
 菜单中的口令会编入镜像。通过 Board API 传给运行中驱动的口令使用 RAM 存储。
 
+### 无线数据验收
+
+已给 P4 写入诊断固件并烧录 C6 后，把 TP2 接到运行验收工具的电脑。电脑和 A3
+需在可互访的网络里才能检查 Wi-Fi。在无线页发送串口命令 `s`，从输出的 `ip=` 获取 A3 地址，
+然后关闭串口监视器，腾出端口给验收工具。
+BLE 检查需要电脑的蓝牙适配器和 Python 的 `bleak`。用 BLE 扫描工具找到 `GTOS Orbit`
+的地址或操作系统显示的设备标识，退出扫描工具的连接后将该标识传给验收脚本。[Bleak 客户端](https://bleak.readthedocs.io/en/stable/api/client.html)
+
+~~~sh
+python arch/riscv32/esp32p4/tests/verify_hardware.py --port COM7 \
+    --elf out/a3-diagnostic/gtos-a3.elf --wifi 192.0.2.15 --ble 02:00:00:00:00:C6 \
+    --output out/a3-bench-wireless
+~~~
+
+将示例地址换为实板地址。两个选项也可单独执行。每条链路各提示一次顺时针转动 J4 旋钮。
+工具读取 HTTP `/status` 或只读 GATT 特征值，把变化前后的编码器、页码、USB 档位和充电状态与串口采样核对。
+BLE 检查还会确认断开连接后能重新扫描到同一设备。`report.json` 保留串口和无线读数。
+
+以下回归用原生诊断配置编译 P4，用 ESP-EMU 的虚拟 AP 和独立 Bumble 客户端访问同一台虚拟 A3。
+测试覆盖旋钮动态读数、旧 HTTP 响应的拒绝以及 BLE 连接期间的 HTTP 读取。
+
+~~~sh
+p=arch/riscv32/esp32p4
+mkdir -p out
+lab="$PWD/out/a3-wireless-lab.defaults"
+printf '%s\n' 'CONFIG_GTOS_A3_WIFI_SSID="A3-LAB"' 'CONFIG_GTOS_A3_WIFI_PASSWORD="orbit-lab-test"' >"$lab"
+SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.hardware;$lab" \
+    make a3-riscv A3_BUILD_DIR=out/a3-wireless-lab
+python3 "$p/tests/verify_wireless_bench.py" --emulator /path/to/esp-emu \
+    --build out/a3-wireless-lab --c6 out/a3-riscv-c6 --parts /path/to/esp-emu-1.0.0-examples \
+    --output out/a3-wireless-bench-replay
+~~~
+
 ### 面板配置
 
 面板接入使用 [ST7703 组件](third_party/README.md) 和 ESP-IDF 双 lane DSI。
