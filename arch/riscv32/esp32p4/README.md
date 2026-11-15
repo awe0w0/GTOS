@@ -316,6 +316,8 @@ A3 的 4.2 V 电池体系接受 3856–4200 mV 的标称恒压上限，软件向
 [TUSB320LAI 数据手册 §7.4 至 §7.5](https://www.ti.com/lit/ds/symlink/tusb320lai.pdf)
 充电参数和 CHG_CONFIG 均经回读后才拉高 GPIO28。软件保留充电安全计时器并关闭 I²C 看门狗。
 掉电、故障、档位低于已设限流、寄存器回读变化或总线错误时撤销充电使能。
+独立的 FreeRTOS 任务在显示启动和销毁期间继续运行电源监测。该任务与应用通过互斥锁串行执行
+CC 和 BQ25601 的多步读写。监测任务创建失败时，充电请求返回未就绪，GPIO28 保持低电平。
 
 有有效充电配置的固件在停充后继续检查 BQ25601 的整板输入限流。档位下降时收紧 IINDPM，
 USB 默认档、断开或状态无效时回落到芯片的 100 mA 标称最小档。能力恢复后，需要显式启用充电
@@ -340,4 +342,24 @@ PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
 cc -std=c11 -I"$p/third_party/bq25601" "$p/tests/bq25601_voltage_test.c" \
     "$p/third_party/bq25601/bq25601.c" -o out/bq25601-voltage-test
 out/bq25601-voltage-test
+~~~
+
+显示、充电和无线的组合回归使用本目录的合成面板和电池参数。它在 C6 Wi-Fi 在线且应用进入
+显示 D-PHY 等待时，分别注入 GPIO9 Power Good 失效、CC 降档和 BQ25601 故障位。
+回归要求每次的 GPIO28 关断先于显示 VCI 回滚，随后通过 HTTP 检查充电和无线状态。
+下面复用“无线数据验收”生成的 `out/a3-wireless-lab.defaults`。测量时间来自 ESP-EMU。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-combined-fixture"
+lab="$PWD/out/a3-wireless-lab.defaults"
+SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.hardware;$lab" \
+    idf.py -C "$p" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    -D "GTOS_A3_PANEL_PROFILE=$PWD/$p/tests/panel/profile.c" \
+    -D "GTOS_A3_CHARGE_PROFILE=$PWD/$p/tests/charge_profile_fixture.c" \
+    merge-bin -o "$build/gtos-a3-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_combined_power.py" --emulator /path/to/esp-emu \
+    --build "$build" --c6 out/a3-riscv-c6 --parts /path/to/esp-emu-1.0.0-examples \
+    --output out/a3-combined-power-test
 ~~~

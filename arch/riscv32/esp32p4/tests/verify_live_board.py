@@ -152,6 +152,9 @@ class Devices:
         self.i2c.append((self.clock, hex(address), written.hex(), read.hex()))
         return ld(8, reply + number(2, 1) + ld(3, read))
 
+    def gpio_changed(self, pin, level):
+        pass
+
     def serve(self):
         try:
             while True:
@@ -159,15 +162,19 @@ class Devices:
                 if data is None:
                     return
                 message = decode(data)
+                changed = None
                 with self.lock:
                     self.clock = max(self.clock, message.get(1, 0))
                     if 3 in message:
                         event = decode(message[3])
                         pin, level = event.get(1, 0), event.get(2, 0)
+                        changed = (pin, level)
                         self.gpio.append((self.clock, pin, level))
                         if pin == CHARGE_ENABLE and level:
                             self.charge_starts.append((self.clock, self.registers[CHARGER][:8].hex()))
                     reply = self.transfer(decode(message[7])) if 7 in message else None
+                if changed:
+                    self.gpio_changed(*changed)
                 if reply is not None:
                     with self.send_lock:
                         send(self.socket, reply)

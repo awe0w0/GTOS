@@ -3,6 +3,11 @@
 #include "bq25601.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "lsm6ds3tr-c_reg.h"
 #include "sdkconfig.h"
 #include <string.h>
@@ -11,7 +16,9 @@ enum { BusTimeoutMs = 50, WatchdogFault = 0x80, InputLimitMinimumMa = 100 };
 enum { CcCurrent = 0x08, CcAttach = 0x09, CcIrq = 0x10, CcConfigMask = 0x07 };
 static i2c_master_dev_handle_t imu, bq, cc;
 static bool imu_ready, bq_ready, cc_ready, bq_io_failure, charge_gpio_ready, charge_permitted;
-static bool cc_irq_ready;
+static bool cc_irq_ready, power_guard_ready;
+static StaticSemaphore_t power_mutex_storage;
+static SemaphoreHandle_t power_mutex;
 static A3ChargeProfile active_charge;
 static uint16_t input_ceiling_ma;
 #ifndef CONFIG_GTOS_A3_SIMULATION
@@ -25,6 +32,7 @@ static bool charger_pg_ready;
 static A3ChargeProfile charge_profile(void);
 static bool valid_charge_profile(const A3ChargeProfile* profile);
 static int disable_charge(void);
+static void power_guard(void* unused);
 
 static bool read_registers(i2c_master_dev_handle_t device, uint8_t reg,
                            uint8_t* bytes, size_t count) {
@@ -118,6 +126,7 @@ static bool attach(i2c_master_bus_handle_t bus, int address, i2c_master_dev_hand
 }
 
 void a3_i2c_init(void) {
+    power_mutex = xSemaphoreCreateMutexStatic(&power_mutex_storage);
     charge_gpio_ready = gpio_set_level(A3_PIN_CHARGE_EN, 0) == ESP_OK
         && gpio_set_direction(A3_PIN_CHARGE_EN, GPIO_MODE_OUTPUT) == ESP_OK;
 #ifndef CONFIG_GTOS_A3_SIMULATION
@@ -142,7 +151,11 @@ void a3_i2c_init(void) {
     bq_ready = attach(bus, BQ25601_I2C_ADDRESS, &bq) && init_charger();
     cc_ready = attach(bus, A3_USB_CC_ADDRESS, &cc);
     const A3ChargeProfile profile = charge_profile();
-    if (bq_ready && valid_charge_profile(&profile)) input_ceiling_ma = profile.input_limit_ma;
+    if (power_mutex && bq_ready && valid_charge_profile(&profile)) {
+        input_ceiling_ma = profile.input_limit_ma;
+        power_guard_ready = xTaskCreate(power_guard, "gtos-a3-power", 4096, NULL, 5, NULL) == pdPASS;
+        if (!power_guard_ready) ESP_LOGE("a3_power", "Could not start the charging safety monitor");
+    }
 }
 
 int gtos_board_read_motion(GtosBoardMotion* motion) {
@@ -197,8 +210,8 @@ static bool charge_settings_match(const A3ChargeProfile* profile) {
         && !BQ25601_get_x2_slow_safety_timer();
 }
 
-int gtos_board_read_charger(GtosBoardCharger* charger) {
-    if (!charger) return GTOS_BOARD_INVALID;
+// The power mutex serializes whole register sequences and the BQ25601 cache.
+static int read_charger_locked(GtosBoardCharger* charger) {
     if (!bq_ready) return GTOS_BOARD_MISSING;
     uint8_t faults = 0;
     const bool read_ok = read_charger_registers(charge_permitted, &faults);
@@ -207,7 +220,7 @@ int gtos_board_read_charger(GtosBoardCharger* charger) {
     // Checking here also catches a latched fault consumed by an application's read.
     if (charge_permitted && (!read_ok || !input_good || faults || !charge_configured
                              || !charge_settings_match(&active_charge))) {
-        const int result = gtos_board_set_charge(false);
+        const int result = disable_charge();
         if (result != GTOS_BOARD_OK) return result;
     }
     if (!read_ok) return GTOS_BOARD_IO;
@@ -267,8 +280,7 @@ static int enforce_input_ceiling(uint16_t available) {
     return stopped;
 }
 
-int gtos_board_read_usb(GtosBoardUsb* usb) {
-    if (!usb) return GTOS_BOARD_INVALID;
+static int read_usb_locked(GtosBoardUsb* usb) {
     GtosBoardUsb snapshot = {0};
     const int read_result = read_usb_snapshot(&snapshot);
     const int limited = enforce_input_ceiling(available_charge_input(&snapshot));
@@ -278,7 +290,7 @@ int gtos_board_read_usb(GtosBoardUsb* usb) {
     return GTOS_BOARD_OK;
 }
 
-void a3_i2c_poll(uint32_t milliseconds) {
+static void poll_power(uint32_t milliseconds) {
     static uint32_t last_check;
     if (!input_ceiling_ma) return;
     const bool lost_power = charge_permitted && !power_good_pin();
@@ -287,10 +299,20 @@ void a3_i2c_poll(uint32_t milliseconds) {
     if (!lost_power && !cc_changed && milliseconds - last_check < 100) return;
     last_check = milliseconds;
     GtosBoardUsb usb;
-    gtos_board_read_usb(&usb);
+    read_usb_locked(&usb);
     if (charge_permitted) {
         GtosBoardCharger charger;
-        gtos_board_read_charger(&charger);
+        read_charger_locked(&charger);
+    }
+}
+
+static void power_guard(void* unused) {
+    (void)unused;
+    for (;;) {
+        xSemaphoreTake(power_mutex, portMAX_DELAY);
+        poll_power((uint32_t)(esp_timer_get_time() / 1000));
+        xSemaphoreGive(power_mutex);
+        vTaskDelay(1);
     }
 }
 
@@ -360,15 +382,15 @@ static int program_charge(A3ChargeProfile* profile) {
     return gpio_set_level(A3_PIN_CHARGE_EN, 1) == ESP_OK ? GTOS_BOARD_OK : GTOS_BOARD_IO;
 }
 
-int gtos_board_set_charge(bool enabled) {
+static int set_charge_locked(bool enabled) {
     int result = disable_charge();
     if (!enabled || result != GTOS_BOARD_OK) return result;
 
     A3ChargeProfile profile = charge_profile();
-    if (!valid_charge_profile(&profile)) return GTOS_BOARD_NOT_READY;
+    if (!power_guard_ready || !valid_charge_profile(&profile)) return GTOS_BOARD_NOT_READY;
     GtosBoardUsb usb;
     GtosBoardCharger charger;
-    if (gtos_board_read_usb(&usb) || gtos_board_read_charger(&charger)) return GTOS_BOARD_IO;
+    if (read_usb_locked(&usb) || read_charger_locked(&charger)) return GTOS_BOARD_IO;
     const uint16_t available = available_charge_input(&usb);
     if (!available || !charger.input_good || (charger.faults & ~WatchdogFault)) return GTOS_BOARD_NOT_READY;
     if (available < profile.input_limit_ma) profile.input_limit_ma = available;
@@ -387,4 +409,30 @@ int gtos_board_set_charge(bool enabled) {
     active_charge = profile;
     charge_permitted = true;
     return GTOS_BOARD_OK;
+}
+
+int gtos_board_read_charger(GtosBoardCharger* charger) {
+    if (!charger) return GTOS_BOARD_INVALID;
+    if (!power_mutex) return GTOS_BOARD_MISSING;
+    xSemaphoreTake(power_mutex, portMAX_DELAY);
+    const int result = read_charger_locked(charger);
+    xSemaphoreGive(power_mutex);
+    return result;
+}
+
+int gtos_board_read_usb(GtosBoardUsb* usb) {
+    if (!usb) return GTOS_BOARD_INVALID;
+    if (!power_mutex) return GTOS_BOARD_MISSING;
+    xSemaphoreTake(power_mutex, portMAX_DELAY);
+    const int result = read_usb_locked(usb);
+    xSemaphoreGive(power_mutex);
+    return result;
+}
+
+int gtos_board_set_charge(bool enabled) {
+    if (!power_mutex) return GTOS_BOARD_MISSING;
+    xSemaphoreTake(power_mutex, portMAX_DELAY);
+    const int result = set_charge_locked(enabled);
+    xSemaphoreGive(power_mutex);
+    return result;
 }

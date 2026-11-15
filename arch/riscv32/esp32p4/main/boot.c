@@ -49,7 +49,6 @@ static bool c6_service(bool console, bool usb) {
             }
             puts("GTOS_A3_C6_SERVICE FAIL power off");
         }
-        a3_i2c_poll((uint32_t)(esp_timer_get_time() / 1000));
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
@@ -143,7 +142,6 @@ void app_main(void) {
         }
 #endif
         const uint32_t milliseconds = (uint32_t)(esp_timer_get_time() / 1000);
-        a3_i2c_poll(milliseconds);
         gtos_dashboard_tick(milliseconds, command);
         if (command == 'i') report_probe(usb_command, chip.revision, psram_bytes, flash_bytes, elf);
         if (command == 'f') a3_display_dump();
