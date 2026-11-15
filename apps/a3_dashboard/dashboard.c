@@ -16,8 +16,8 @@ static struct {
     unsigned width, height, page, brightness;
     bool awake, redraw, wifi_requested, ble_connected;
     int32_t encoder;
-    uint32_t last_poll;
-    int motion_result, charger_result, usb_result;
+    uint32_t last_poll, buttons;
+    int input_result, motion_result, charger_result, usb_result;
     GtosBoardMotion motion;
     GtosBoardCharger charger;
     GtosBoardUsb usb;
@@ -242,6 +242,22 @@ static void report(void) {
     }
 }
 
+int gtos_dashboard_probe(char* buffer, size_t size) {
+    return snprintf(buffer, size, " page=%u light=%u awake=%u input=%d keys=%lu encoder=%ld"
+                    " imu=%d accel=%ld,%ld,%ld gyro=%ld,%ld,%ld cc=%d sink=%u flipped=%u advertised=%u"
+                    " bq=%d pg=%u charge=%u faults=%u radio=%u sdio=%u scan=%u aps=%u ble=%u client=%u\n",
+                    dashboard.page, dashboard.brightness, dashboard.awake, dashboard.input_result,
+                    (unsigned long)dashboard.buttons, (long)dashboard.encoder, dashboard.motion_result,
+                    (long)dashboard.motion.acceleration_mg[0], (long)dashboard.motion.acceleration_mg[1],
+                    (long)dashboard.motion.acceleration_mg[2], (long)dashboard.motion.angular_rate_mdps[0],
+                    (long)dashboard.motion.angular_rate_mdps[1], (long)dashboard.motion.angular_rate_mdps[2],
+                    dashboard.usb_result, dashboard.usb.sink_attached, dashboard.usb.flipped, dashboard.usb.advertised_ma,
+                    dashboard.charger_result, dashboard.charger.input_good, dashboard.charger.charge_enabled,
+                    dashboard.charger.faults, dashboard.radio.powered, dashboard.radio.sdio_ready,
+                    dashboard.radio.scan_complete, dashboard.radio.nearby_access_points,
+                    dashboard.radio.ble_advertising, dashboard.ble_connected);
+}
+
 void gtos_dashboard_start(uint16_t* pixels) {
     dashboard.pixels = pixels;
     gtos_board_display_size(&dashboard.width, &dashboard.height);
@@ -271,7 +287,9 @@ static void save(void) {
 void gtos_dashboard_tick(uint32_t milliseconds, int command) {
     bool changed = false;
     GtosBoardInput input;
-    if (gtos_board_read_input(&input) == GTOS_BOARD_OK) {
+    dashboard.input_result = gtos_board_read_input(&input);
+    if (dashboard.input_result == GTOS_BOARD_OK) {
+        dashboard.buttons = input.buttons;
         if (input.encoder_steps != dashboard.encoder) {
             const int64_t delta = (int64_t)input.encoder_steps - dashboard.encoder;
             const int value = (int)dashboard.brightness + limit(delta, -20, 20) * 5;
@@ -295,6 +313,8 @@ void gtos_dashboard_tick(uint32_t milliseconds, int command) {
             changed = true;
         }
         if (input.pressed & GTOS_BOARD_KNOB) save();
+    } else {
+        dashboard.buttons = 0;
     }
     if (command == 'c') {
         printf("GTOS_A3_CHARGE result=%d\n", gtos_board_set_charge(!dashboard.charger.charge_enabled));

@@ -2,6 +2,7 @@
 """Exercise the GTOS dashboard with ESP-EMU's ESP32-P4 and external board devices."""
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -12,6 +13,8 @@ import subprocess
 import threading
 import time
 import zlib
+
+from verify_hardware import parse_probe
 
 
 def available_port():
@@ -194,19 +197,20 @@ def prepare_board(args):
     return out, board
 
 
-def usb_console(args, flash, board, log):
-    marker = "GTOS_A3_USB STATUS REQUEST"
+def usb_console(args, flash, board, log, query, marker):
     command = [
         str(args.emulator.resolve()), "--chip", "esp32p4", "--psram-size", "16M",
         "--firmware", str(flash), "--elf", str(args.build / "gtos-a3.elf"),
         "--cosim-board", str(board), "--console", "usb-jtag",
-        "--inject", "s", "--inject-on", "GTOS_A3_READY console=1 usb=1",
+        "--inject", query, "--inject-on", "GTOS_A3_READY console=1 usb=1",
         "--timeout", "20s", "--exit-on", marker,
     ]
     with log.open("xb") as uart:
         subprocess.run(command, stdout=uart, stderr=subprocess.STDOUT, check=True, timeout=30)
-    if marker.encode() not in log.read_bytes():
-        raise RuntimeError(f"USB Serial/JTAG status request did not arrive. See {log}")
+    data = log.read_bytes()
+    if marker.encode() not in data:
+        raise RuntimeError(f"USB Serial/JTAG did not complete query {query!r}. See {log}")
+    return data
 
 
 def run(args):
@@ -261,7 +265,16 @@ def run(args):
         vm.find("cc=0 sink=0 flipped=0 advertised=0")
         vm.find("GTOS_A3_CHARGE result=-11", vm.send("c"))
         vm.finish()
-    usb_console(args, original, board, out / "usb-serial.log")
+    usb_console(args, original, board, out / "usb-serial.log", "s", "GTOS_A3_USB STATUS REQUEST")
+    probe_log = out / "usb-probe.log"
+    data = usb_console(args, original, board, probe_log, "i", " client=0")
+    probe = next((state for line in data.splitlines() if (state := parse_probe(line))), None)
+    expected = {"v": 1, "sim": 1, "panel": 0, "charging_profile": 0, "rev": 301,
+                "psram": 16777216, "flash": 16777216, "awake": 1, "input": 0, "keys": 0,
+                "imu": 0, "accel": [73, -24, 999], "cc": 0, "bq": 0, "charge": 0,
+                "elf": hashlib.sha256((args.build / "gtos-a3.elf").read_bytes()).hexdigest()}
+    if probe is None or any(probe[key] != value for key, value in expected.items()):
+        raise RuntimeError(f"Incomplete or unexpected USB diagnostic reply. See {probe_log}")
     print("A3 device, input, rendering, charging, USB and cold-reboot checks passed:", out)
 
 

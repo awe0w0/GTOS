@@ -3,6 +3,9 @@
 #include "dashboard.h"
 #include "driver/uart.h"
 #include "driver/usb_serial_jtag.h"
+#include "esp_app_desc.h"
+#include "esp_chip_info.h"
+#include "esp_flash.h"
 #include "esp_heap_caps.h"
 #include "esp_psram.h"
 #include "esp_timer.h"
@@ -11,6 +14,34 @@
 #include "sdkconfig.h"
 
 unsigned gtos_riscv_boot(void* arena, unsigned bytes);
+
+static void report_probe(bool usb, unsigned revision, unsigned psram, uint32_t flash, const char* elf) {
+#ifdef CONFIG_GTOS_A3_SIMULATION
+    const unsigned simulation = 1;
+#else
+    const unsigned simulation = 0;
+#endif
+#ifdef GTOS_A3_PANEL_PROFILE
+    const unsigned panel_profile = 1;
+#else
+    const unsigned panel_profile = 0;
+#endif
+#ifdef GTOS_A3_CHARGE_PROFILE
+    const unsigned charge_profile = 1;
+#else
+    const unsigned charge_profile = 0;
+#endif
+    char response[480];
+    const int prefix = snprintf(response, sizeof(response),
+        "GTOS_A3_PROBE v=1 sim=%u panel=%u charging_profile=%u rev=%u psram=%u flash=%lu elf=%s",
+        simulation, panel_profile, charge_profile, revision, psram, (unsigned long)flash, elf);
+    if (prefix < 0 || (size_t)prefix >= sizeof(response)) return;
+    const size_t space = sizeof(response) - prefix;
+    const int length = gtos_dashboard_probe(response + prefix, space);
+    if (length < 0 || (size_t)length >= space) return;
+    if (usb) usb_serial_jtag_write_bytes(response, prefix + length, pdMS_TO_TICKS(30) + 1);
+    else uart_write_bytes(UART_NUM_0, response, prefix + length);
+}
 
 void app_main(void) {
     const unsigned psram_bytes = esp_psram_get_size();
@@ -26,6 +57,20 @@ void app_main(void) {
     heap_caps_free(arena);
     if (failed) return;
 
+    esp_chip_info_t chip;
+    esp_chip_info(&chip);
+    uint32_t flash_bytes = 0;
+    if (esp_flash_get_physical_size(NULL, &flash_bytes) != ESP_OK) flash_bytes = 0;
+    const esp_app_desc_t* app = esp_app_get_description();
+    const char hex[] = "0123456789abcdef";
+    char elf[sizeof(app->app_elf_sha256) * 2 + 1];
+    for (size_t i = 0; i < sizeof(app->app_elf_sha256); ++i) {
+        const uint8_t byte = app->app_elf_sha256[i];
+        elf[i * 2] = hex[byte >> 4];
+        elf[i * 2 + 1] = hex[byte & 15];
+    }
+    elf[sizeof(elf) - 1] = '\0';
+
     a3_i2c_init();
     a3_input_init();
     a3_storage_init();
@@ -38,7 +83,7 @@ void app_main(void) {
     }
     const bool console = uart_driver_install(UART_NUM_0, 256, 0, 0, NULL, 0) == ESP_OK;
     usb_serial_jtag_driver_config_t usb_config = {
-        .tx_buffer_size = 256, .rx_buffer_size = 256,
+        .tx_buffer_size = 512, .rx_buffer_size = 256,
     };
     const bool usb = usb_serial_jtag_driver_install(&usb_config) == ESP_OK;
     gtos_dashboard_start(pixels);
@@ -46,7 +91,8 @@ void app_main(void) {
     for (;;) {
         uint8_t byte;
         int command = console && uart_read_bytes(UART_NUM_0, &byte, 1, 0) == 1 ? byte : -1;
-        if (command < 0 && usb && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1) {
+        const bool usb_command = command < 0 && usb && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1;
+        if (usb_command) {
             command = byte;
             if (command == 's') puts("GTOS_A3_USB STATUS REQUEST");
         }
@@ -62,6 +108,7 @@ void app_main(void) {
         const uint32_t milliseconds = (uint32_t)(esp_timer_get_time() / 1000);
         a3_i2c_poll(milliseconds);
         gtos_dashboard_tick(milliseconds, command);
+        if (command == 'i') report_probe(usb_command, chip.revision, psram_bytes, flash_bytes, elf);
         if (command == 'f') a3_display_dump();
         vTaskDelay(pdMS_TO_TICKS(10));
     }

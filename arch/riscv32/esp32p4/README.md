@@ -131,9 +131,32 @@ SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.defaults.hardware' \
     make a3-riscv A3_BUILD_DIR=out/a3-diagnostic
 ~~~
 
+### 裸板检查
+
+运行实板诊断镜像后，用装有 `pyserial` 的 Python 通过 J1 的 USB Serial/JTAG
+或 TP2 的 115200 波特 UART0 查询。将 `COM7` 换成实际端口。工具发送只读的 `i`，
+固件从收到命令的接口返回镜像 ELF 的 SHA-256、P4 芯片修订号、PSRAM 和 Flash 容量、
+按键位与外设状态。传入对应的 `--elf` 文件可校验当前运行的镜像身份。
+[ESP-IDF USB Serial/JTAG 指南](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-guides/usb-serial-jtag-console.html)
+
+~~~sh
+python arch/riscv32/esp32p4/tests/verify_hardware.py --port COM7 \
+    --elf out/a3-diagnostic/gtos-a3.elf --output out/a3-bench
+~~~
+
+加入 `--exercise` 可跟随提示验证 WAKE、NEXT、BACK、旋钮按压、双向计数及倾斜和旋转读数变化。
+实板需要装上 J4 旋钮。旋钮按压仍按应用逻辑保存当前设置。已烧录 C6 后，可加上 `--radio`，
+切到无线页验证 P4 到 C6 的 SDIO 响应、扫描结束和 BLE 广播状态。实际无线信号和连接由独立设备测量。
+
+每次指定新输出目录。`console.log` 保留串口字节，`report.json` 记录读取来源、采样和检查结果。
+ESP-EMU 启动实板诊断镜像后，可用 `--tcp 5567` 重跑并标记虚拟来源。基础检查覆盖
+驱动状态和关闭屏幕及充电的固件报告。显示出图、背光电流和真实电源切换仍需外部测量。
+
 实板默认扫描附近网络。在 `GTOS Desktop Bar A3` 的 ESP-IDF 配置菜单填写
 SSID 和 WPA2 口令，可以让 Desktop Orbit 加入指定网络并在 8080 端口提供只读状态。
 菜单中的口令会编入镜像。通过 Board API 传给运行中驱动的口令使用 RAM 存储。
+
+### 面板配置
 
 面板接入使用 [ST7703 组件](third_party/README.md) 和 ESP-IDF 双 lane DSI。
 默认实板诊断镜像保持 VCI、背光和充电关闭。取得 HC‑700BI3002 的确认版
