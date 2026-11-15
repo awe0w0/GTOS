@@ -24,27 +24,30 @@ namespace gtos {
         };
 
         class amd_am79c973 : public Driver , public hardwarecommunication::InterruptHandler {
-            //初始化
+            static const unsigned RingOrder = 3;
+            static const unsigned RingSize = 1U << RingOrder;
+            static const unsigned BufferBytes = 2048;
+
             struct InitializationBlock {
                 uint16_t mode;
-                unsigned reserved1 : 4;
-                unsigned numSendBuffers : 4;
-                unsigned reserved2 : 4;
-                unsigned numRecvBuffers : 4;
-                uint64_t physicalAddress : 48;
-                uint16_t reserved3;
-                uint64_t logicalAddress;
+                uint8_t recvRingLength;
+                uint8_t sendRingLength;
+                uint8_t physicalAddress[6];
+                uint16_t reserved;
+                uint32_t multicastFilter[2];
                 uint32_t recvBufferDescrAddress;
                 uint32_t sendBufferDescrAddress;
-            } __attribute__((packed));
+            };
+            static_assert(sizeof(InitializationBlock) == 28, "PCnet style 2 init block");
             
             //缓冲区指针
             struct BufferDescriptor {
                 uint32_t address;
-                uint32_t flags;
-                uint32_t flags2;
+                volatile uint32_t flags;
+                volatile uint32_t flags2;
                 uint32_t avail;
-            } __attribute__((packed));
+            };
+            static_assert(sizeof(BufferDescriptor) == 16, "PCnet style 2 descriptor");
 
             hardwarecommunication::Port16Bit MACAddress0Port;
             hardwarecommunication::Port16Bit MACAddress2Port;
@@ -57,16 +60,21 @@ namespace gtos {
             InitializationBlock initBlock;
 
             BufferDescriptor* sendBufferDescr;
-            uint8_t sendBufferDescrMemory[2048 + 15];
-            uint8_t sendBuffers[2 * 1024 + 15][8];
+            uint8_t sendBufferDescrMemory[RingSize * sizeof(BufferDescriptor) + 15];
+            uint8_t sendBuffers[RingSize][BufferBytes + 15];
             uint8_t currentSendBuffer;
 
             BufferDescriptor* recvBufferDescr;
-            uint8_t recvBufferDescrMemory[2048 + 15];
-            uint8_t recvBuffers[2 * 1024 + 15][8];
+            uint8_t recvBufferDescrMemory[RingSize * sizeof(BufferDescriptor) + 15];
+            uint8_t recvBuffers[RingSize][BufferBytes + 15];
             uint8_t currentRecvBuffer;
 
+            uint32_t ipAddress;
             RawDataHandler* handler;
+            bool active;
+
+            uint16_t ReadRegister(uint16_t index);
+            void WriteRegister(uint16_t index, uint16_t value);
 
             public:
                 amd_am79c973(hardwarecommunication::PeripheralComponentInterconnectDeviceDescriptor* dev, hardwarecommunication::InterruptsManager* interrupts);

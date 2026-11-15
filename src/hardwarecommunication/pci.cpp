@@ -116,7 +116,7 @@ PeripheralComponentInterconnectDeviceDescriptor PeripheralComponentInterconnectC
 }
 
 BaseAddressRegister PeripheralComponentInterconnectController::GetBaseAddressRegister(uint16_t bus, uint16_t device, uint16_t function, uint16_t bar) {
-    BaseAddressRegister result;
+    BaseAddressRegister result = {};
 
     uint32_t headertype = Read(bus, device, function, 0x0E) & 0x7F;
     int maxBARS = 6 - (4 * headertype);
@@ -124,7 +124,6 @@ BaseAddressRegister PeripheralComponentInterconnectController::GetBaseAddressReg
 
     uint32_t bar_value = Read(bus, device, function, 0x10 + 4 * bar);
     result.type = (bar_value & 0x1) ? InputOutput : MemoryMapping;
-    uint32_t temp;
 
     if (result.type == MemoryMapping) {
         result.prefetchable = ((bar_value >> 3) & 0x1) == 0x1;
@@ -149,16 +148,20 @@ Driver* PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
     switch (dev.vendor_id) {
         case 0x1022 : //amd
             switch (dev.device_id) {
-                case 0x2000: //am79c973
-                    printf("AMD am79c973");
+                case 0x2000: { //am79c973
+                    dev.interrupt &= 0xffU;
+                    if (!dev.portBase || dev.portBase > 0xffe0U
+                        || dev.interrupt < 3 || dev.interrupt >= 16
+                        || !MemoryManager::activeMemoryManager) return 0;
+                    driver = (Driver*)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
+                    if (!driver) return 0;
                     // Enable I/O decoding and DMA bus mastering for the PCnet adapter.
                     Write(dev.bus, dev.device, dev.function, 0x04,
                           (Read(dev.bus, dev.device, dev.function, 0x04) & 0xFFFF) | 0x05);
-                    driver = (Driver*)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
-                    if (driver != 0) 
-                        new (driver)amd_am79c973(&dev, interrupts);
+                    new (driver)amd_am79c973(&dev, interrupts);
+                    printf("AMD am79c973\n");
                     return driver;
-                    break;
+                }
             }
         break;
         case 0x8086: //intel

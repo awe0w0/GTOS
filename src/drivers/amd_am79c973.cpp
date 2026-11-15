@@ -1,13 +1,37 @@
 #include <drivers/amd_am79c973.h>
+#include <memory/criticalsection.h>
 
 using namespace gtos;
 using namespace gtos::drivers;
 using namespace gtos::hardwarecommunication;
 
-void printf(char*);
-void printfHex(uint8_t);
-void printfHex16(uint16_t);
-void printfHex32(uint32_t);
+namespace {
+    const uint32_t OwnedByDevice = 0x80000000U;
+    const uint32_t DescriptorError = 0x40000000U;
+    const uint32_t WholeFrame = 0x03000000U;
+    const unsigned EthernetHeaderBytes = 14;
+    const unsigned MinimumFrameBytes = 60;
+    const unsigned MaximumFrameBytes = 1514;
+    const unsigned FcsBytes = 4;
+    const uint16_t Initialize = 0x0001U;
+    const uint16_t Start = 0x0002U;
+    const uint16_t Stop = 0x0004U;
+    const uint16_t Transmit = 0x0008U;
+    const uint16_t InterruptEnable = 0x0040U;
+    const uint16_t InterruptPending = 0x0080U;
+    const uint16_t Initialized = 0x0100U;
+    const uint16_t ReceiveInterrupt = 0x0400U;
+    const uint16_t InterruptReasons = 0x7f00U;
+    const uint16_t DeviceError = 0x8000U;
+
+    uint32_t DmaAddress(uint8_t* memory) {
+        return (reinterpret_cast<uint32_t>(memory) + 15U) & ~15U;
+    }
+
+    uint32_t EncodedLength(unsigned bytes) {
+        return 0xf000U | ((0U - bytes) & 0xfffU);
+    }
+}
 
 RawDataHandler::RawDataHandler(amd_am79c973* backend) {
     this->backend = backend;
@@ -18,12 +42,12 @@ RawDataHandler::~RawDataHandler() {
     backend->SetHandler(0);
 }
 
-bool RawDataHandler::OnRawDataReceived(uint8_t* buffer, uint32_t size) {
+bool RawDataHandler::OnRawDataReceived(uint8_t*, uint32_t) {
     return false;
 }
 
 void RawDataHandler::Send(uint8_t* buffer, uint32_t size) {
-    backend->Send(buffer, size);
+    if (size <= MaximumFrameBytes) backend->Send(buffer, size);
 }
 
 amd_am79c973::amd_am79c973(PeripheralComponentInterconnectDeviceDescriptor* dev, InterruptsManager* interrupts)
@@ -35,194 +59,163 @@ MACAddress4Port(dev->portBase + 0x04),
 registerDataPort(dev->portBase + 0x10),
 registerAddressPort(dev->portBase + 0x12),
 resetPort(dev->portBase + 0x14),
-busControlRegisterDataPort(dev->portBase + 0x16)
+busControlRegisterDataPort(dev->portBase + 0x16),
+initBlock(),
+sendBufferDescr(reinterpret_cast<BufferDescriptor*>(DmaAddress(sendBufferDescrMemory))),
+currentSendBuffer(0),
+recvBufferDescr(reinterpret_cast<BufferDescriptor*>(DmaAddress(recvBufferDescrMemory))),
+currentRecvBuffer(0),
+ipAddress(0),
+handler(0),
+active(false)
 {
-    this->handler = 0;
-    currentSendBuffer = 0;
-    currentRecvBuffer = 0;
-
-    uint64_t MAC0 = MACAddress0Port.Read() % 256;
-    uint64_t MAC1 = MACAddress0Port.Read() / 256;
-    uint64_t MAC2 = MACAddress2Port.Read() % 256;
-    uint64_t MAC3 = MACAddress2Port.Read() / 256;
-    uint64_t MAC4 = MACAddress4Port.Read() % 256;
-    uint64_t MAC5 = MACAddress4Port.Read() / 256;
-
-    uint64_t MAC =  MAC5 << 40
-                  | MAC4 << 32
-                  | MAC3 << 24
-                  | MAC2 << 16
-                  | MAC1 << 8
-                  | MAC0;
-
-    //32bit mode
-    registerAddressPort.Write(20);
-    busControlRegisterDataPort.Write(0x102);
-
-    //Stop reset
-    registerAddressPort.Write(0);
-    registerDataPort.Write(0x04);
-
-    //initBlock
-    initBlock.mode = 0x0000; //promiscucous mode = false
-    initBlock.reserved1 = 0;
-    initBlock.numSendBuffers = 3;
-    initBlock.reserved2 = 0;
-    initBlock.numRecvBuffers = 3;
-    initBlock.physicalAddress = MAC;
-    initBlock.reserved3 = 0;
-    initBlock.logicalAddress = 0;
-
-    //对地址进行收发
-    sendBufferDescr = (BufferDescriptor*)((((uint32_t)&sendBufferDescrMemory[0]) + 15) & ~((uint32_t)0xF));
-    initBlock.sendBufferDescrAddress = (uint32_t)sendBufferDescr;
-    recvBufferDescr = (BufferDescriptor*)((((uint32_t)&recvBufferDescrMemory[0]) + 15) & ~((uint32_t)0xF));
-    initBlock.recvBufferDescrAddress = (uint32_t)recvBufferDescr;
-
-    //初始化收发缓存指针
-    for (uint8_t i = 0;i < 8;i++) {
-        sendBufferDescr[i].address = (((uint32_t)&sendBuffers[i]) + 15) & ~(uint32_t)0xF;
-        sendBufferDescr[i].flags = 0x7FF
-                                 | 0XF000;
-        sendBufferDescr[i].flags2 = 0;
-        sendBufferDescr[i].avail = 0;
-
-        recvBufferDescr[i].address = (((uint32_t)&recvBuffers[i]) + 15) & ~(uint32_t)0xF;
-        recvBufferDescr[i].flags = 0xF7FF
-                                 | 0X80000000;
-        recvBufferDescr[i].flags2 = 0;
-        sendBufferDescr[i].avail = 0;
+    const uint16_t words[] = {MACAddress0Port.Read(), MACAddress2Port.Read(), MACAddress4Port.Read()};
+    for (unsigned i = 0; i < 3; ++i) {
+        initBlock.physicalAddress[i * 2] = static_cast<uint8_t>(words[i]);
+        initBlock.physicalAddress[i * 2 + 1] = static_cast<uint8_t>(words[i] >> 8);
     }
-
-    registerAddressPort.Write(1);
-    registerDataPort.Write( (uint32_t)(&initBlock) & 0xFFFF  );
-    registerAddressPort.Write(2);
-    registerDataPort.Write(((uint32_t)(&initBlock) >> 16) & 0xFFFF);
+    initBlock.sendRingLength = RingOrder << 4;
+    initBlock.recvRingLength = RingOrder << 4;
+    initBlock.sendBufferDescrAddress = reinterpret_cast<uint32_t>(sendBufferDescr);
+    initBlock.recvBufferDescrAddress = reinterpret_cast<uint32_t>(recvBufferDescr);
 }
 
 amd_am79c973::~amd_am79c973() {
+    memory::InterruptGuard guard;
+    if (active) WriteRegister(0, Stop);
+}
 
+uint16_t amd_am79c973::ReadRegister(uint16_t index) {
+    registerAddressPort.Write(index);
+    return registerDataPort.Read();
+}
+
+void amd_am79c973::WriteRegister(uint16_t index, uint16_t value) {
+    registerAddressPort.Write(index);
+    registerDataPort.Write(value);
 }
 
 void amd_am79c973::Activate() {
-    interruptManager->Load(this, interruptNumber);
-    //enable interrupts
-    registerAddressPort.Write(0);
-    registerDataPort.Write(0x41);
-    
-    registerAddressPort.Write(4);
-    uint32_t temp = registerDataPort.Read();
-    registerAddressPort.Write(4);
-    registerDataPort.Write(temp | 0xC00);
-    //start
-    registerAddressPort.Write(0);
-    registerDataPort.Write(0x42);
+    memory::InterruptGuard guard;
+    Reset();
+    currentSendBuffer = currentRecvBuffer = 0;
+
+    // Style 2 uses 32-bit bus addresses and sixteen-byte descriptors.
+    registerAddressPort.Write(20);
+    busControlRegisterDataPort.Write(0x0102);
+    // Keep the FCS in receive buffers. MCNT then always includes four FCS bytes.
+    WriteRegister(4, ReadRegister(4) & ~0x0800U);
+
+    for (unsigned i = 0; i < RingSize; ++i) {
+        sendBufferDescr[i].address = DmaAddress(sendBuffers[i]);
+        sendBufferDescr[i].flags = EncodedLength(BufferBytes);
+        sendBufferDescr[i].flags2 = 0;
+        sendBufferDescr[i].avail = 0;
+        recvBufferDescr[i].address = DmaAddress(recvBuffers[i]);
+        recvBufferDescr[i].flags2 = 0;
+        recvBufferDescr[i].avail = 0;
+        recvBufferDescr[i].flags = OwnedByDevice | EncodedLength(BufferBytes);
+    }
+
+    const uint32_t address = reinterpret_cast<uint32_t>(&initBlock);
+    WriteRegister(1, static_cast<uint16_t>(address));
+    WriteRegister(2, static_cast<uint16_t>(address >> 16));
+    asm volatile("" : : : "memory");
+    WriteRegister(0, Initialize);
+    for (unsigned attempt = 0; attempt < 10000; ++attempt) {
+        const uint16_t status = ReadRegister(0);
+        if (status & DeviceError) break;
+        if (status & Initialized) {
+            interruptManager->Load(this, interruptNumber);
+            active = true;
+            WriteRegister(0, Initialized | InterruptEnable | Start);
+            return;
+        }
+    }
+    WriteRegister(0, Stop);
 }
 
 int amd_am79c973::Reset() {
+    memory::InterruptGuard guard;
+    active = false;
     resetPort.Read();
-    resetPort.Write(0);
     return 10;
 }
 
-
-
 uint32_t amd_am79c973::HandlerInterrupt(uint32_t esp) {
-    printf("INTERRUPT FROM AMD am79c973\n");
+    if (!active) return esp;
+    const uint16_t status = ReadRegister(0);
+    if (!(status & InterruptPending)) return esp;
 
-    registerAddressPort.Write(0);
-    uint32_t temp = registerDataPort.Read();
-
-    if((temp & 0x8000) == 0x8000) printf("AMD am79c973 Error\n");
-    if((temp & 0x2000) == 0x2000) printf("AMD am79c973 Collision Error\n");
-    if((temp & 0x1000) == 0x1000) printf("AMD am79c973 Missed Frame\n");
-    if((temp & 0x0800) == 0x0800) printf("AMD am79c973 Memory Error\n");
-    if((temp & 0x0400) == 0x0400) Receive();
-    if((temp & 0x0200) == 0x0200) printf("AMD am79c973 DATA SENT\n");
-
-    // acknowledge
-    registerAddressPort.Write(0);
-    registerDataPort.Write(temp);
-
-    if((temp & 0x0100) == 0x0100) // initialization done
-        printf("AMD am79c973 INIT DONE");
+    // Acknowledge only observed events and preserve interrupt delivery.
+    WriteRegister(0, (status & InterruptReasons) | InterruptEnable);
+    if (status & ReceiveInterrupt) Receive();
     return esp;
 }
 
-//从传来的缓冲区参数逐字发送数据
 void amd_am79c973::Send(uint8_t* buffer, int size) {
-    int sendDescriptor = currentSendBuffer;
-    currentSendBuffer = (currentSendBuffer + 1) % 8;
+    if (!buffer || size < static_cast<int>(EthernetHeaderBytes)
+        || size > static_cast<int>(MaximumFrameBytes)) return;
+    memory::InterruptGuard guard;
+    if (!active) return;
 
-    //MTU最大值
-    if (size > 1518) size = 1518;
+    BufferDescriptor& descriptor = sendBufferDescr[currentSendBuffer];
+    if (descriptor.flags & OwnedByDevice) return;
+    asm volatile("" : : : "memory");
 
-    //往待发送区写入数据
-    for (uint8_t *src = buffer + size - 1,
-    * dst = (uint8_t*)(sendBufferDescr[sendDescriptor].address + size - 1);
-    src >= buffer; src--, dst--)
-        *dst = *src;
+    uint8_t* output = reinterpret_cast<uint8_t*>(descriptor.address);
+    const unsigned bytes = static_cast<unsigned>(size);
+    const unsigned frameBytes = bytes < MinimumFrameBytes ? MinimumFrameBytes : bytes;
+    for (unsigned i = 0; i < bytes; ++i) output[i] = buffer[i];
+    for (unsigned i = bytes; i < frameBytes; ++i) output[i] = 0;
 
-    printf("Sending: ");
-    for (int i = 0;i < size;i++) {
-        printfHex(buffer[i]);
-        printf(" ");
-    }
-    sendBufferDescr[sendDescriptor].avail = 0;
-    sendBufferDescr[sendDescriptor].flags2 = 0;
-    sendBufferDescr[sendDescriptor].flags = 0x8300F000
-                                            | ((uint16_t)((-size) & 0xFFF));
-    
-    registerAddressPort.Write(0);
-    registerDataPort.Write(0x48);
+    descriptor.avail = 0;
+    descriptor.flags2 = 0;
+    asm volatile("" : : : "memory");
+    descriptor.flags = OwnedByDevice | WholeFrame | EncodedLength(frameBytes);
+    currentSendBuffer = (currentSendBuffer + 1) % RingSize;
+    WriteRegister(0, InterruptEnable | Transmit);
 }
 
-
 void amd_am79c973::Receive() {
-    printf("AMD am79c973 DATA RECEVED\n");
-    //循环删除当前的接收缓冲区
-    for (; (recvBufferDescr[currentRecvBuffer].flags & 0x80000000) == 0;
-        currentRecvBuffer = (currentRecvBuffer + 1) % 8)
-    {
-        if (!(recvBufferDescr[currentRecvBuffer].flags & 0x40000000)
-        && (recvBufferDescr[currentRecvBuffer].flags & 0x03000000) == 0x03000000)
-        {
-            uint32_t size = recvBufferDescr[currentRecvBuffer].flags & 0xFFF;
-            if (size > 64) size -= 4;
-            uint8_t* buffer = (uint8_t*)(recvBufferDescr[currentRecvBuffer].address);
-            // buffer[6] = 0x0008;
-            //printfHex32((uint32_t)buffer);
-            size = 64;
-            for (int i = 0;i < ((size > 64) ? 64 : size);i++) {
-                printfHex(buffer[i]);
-                printf(" ");
-            }
-            if (handler != 0) 
-                if (handler->OnRawDataReceived(buffer, size)) 
-                    Send((uint8_t*)buffer, size);
-                // else printf("!!!!!!!!!!!!!!!!!!!!!");
-            
-
-
+    memory::InterruptGuard guard;
+    if (!active) return;
+    for (unsigned i = 0; i < RingSize; ++i) {
+        BufferDescriptor& descriptor = recvBufferDescr[currentRecvBuffer];
+        const uint32_t status = descriptor.flags;
+        if (status & OwnedByDevice) break;
+        asm volatile("" : : : "memory");
+        const unsigned bytesWithFcs = descriptor.flags2 & 0xfffU;
+        if (handler && !(status & DescriptorError) && (status & WholeFrame) == WholeFrame
+            && bytesWithFcs >= EthernetHeaderBytes + FcsBytes
+            && bytesWithFcs <= MaximumFrameBytes + FcsBytes) {
+            uint8_t* buffer = reinterpret_cast<uint8_t*>(descriptor.address);
+            const unsigned bytes = bytesWithFcs - FcsBytes;
+            if (handler->OnRawDataReceived(buffer, bytes)) Send(buffer, bytes);
         }
-
-        recvBufferDescr[currentRecvBuffer].flags2 = 0;
-        recvBufferDescr[currentRecvBuffer].flags = 0x8000F7FF;
+        descriptor.flags2 = 0;
+        descriptor.avail = 0;
+        asm volatile("" : : : "memory");
+        descriptor.flags = OwnedByDevice | EncodedLength(BufferBytes);
+        currentRecvBuffer = (currentRecvBuffer + 1) % RingSize;
     }
 }
 
 void amd_am79c973::SetHandler(RawDataHandler* handler) {
+    memory::InterruptGuard guard;
     this->handler = handler;
 }
 
 uint64_t amd_am79c973::GetMACAddress() {
-    return initBlock.physicalAddress;
+    uint64_t result = 0;
+    for (int i = 5; i >= 0; --i) result = (result << 8) | initBlock.physicalAddress[i];
+    return result;
 }
 
 void amd_am79c973::SetIPAddress(uint32_t ip) {
-    initBlock.logicalAddress = ip;
+    ipAddress = ip;
 }
 
 uint32_t amd_am79c973::GetIPAddress() {
-    return initBlock.logicalAddress;
+    return ipAddress;
 }
