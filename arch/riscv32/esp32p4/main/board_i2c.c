@@ -1,4 +1,5 @@
 #include "board_a3.h"
+#include "board_charge.h"
 #include "bq25601.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -6,9 +7,17 @@
 #include "sdkconfig.h"
 #include <string.h>
 
-enum { BusTimeoutMs = 50 };
+enum { BusTimeoutMs = 50, WatchdogFault = 0x80 };
 static i2c_master_dev_handle_t imu, bq, cc;
 static bool imu_ready, bq_ready, cc_ready, bq_io_failure, charge_gpio_ready, charge_permitted;
+static A3ChargeProfile active_charge;
+#ifndef CONFIG_GTOS_A3_SIMULATION
+static bool charger_pg_ready;
+#endif
+
+#if defined(CONFIG_GTOS_A3_SIMULATION) && defined(GTOS_A3_CHARGE_PROFILE)
+#error GTOS_A3_CHARGE_PROFILE requires sdkconfig.defaults.hardware
+#endif
 
 static bool read_registers(i2c_master_dev_handle_t device, uint8_t reg,
                            uint8_t* bytes, size_t count) {
@@ -67,7 +76,8 @@ static bool init_charger(void) {
     };
     bq_io_failure = false;
     BQ25601_init(&context);
-    return !bq_io_failure;
+    BQ25601_set_charge_enabled(false);
+    return !bq_io_failure && !BQ25601_get_charge_enabled();
 }
 
 static bool attach(i2c_master_bus_handle_t bus, int address, i2c_master_dev_handle_t* device) {
@@ -82,6 +92,13 @@ static bool attach(i2c_master_bus_handle_t bus, int address, i2c_master_dev_hand
 void a3_i2c_init(void) {
     charge_gpio_ready = gpio_set_level(A3_PIN_CHARGE_EN, 0) == ESP_OK
         && gpio_set_direction(A3_PIN_CHARGE_EN, GPIO_MODE_OUTPUT) == ESP_OK;
+#ifndef CONFIG_GTOS_A3_SIMULATION
+    const gpio_config_t pg = {
+        .pin_bit_mask = 1ULL << A3_PIN_CHARGER_PG_N, .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+    };
+    charger_pg_ready = gpio_config(&pg) == ESP_OK;
+#endif
     i2c_master_bus_config_t config = {
         .i2c_port = I2C_NUM_0, .sda_io_num = A3_PIN_SDA, .scl_io_num = A3_PIN_SCL,
         .clk_source = I2C_CLK_SRC_DEFAULT, .glitch_ignore_cnt = 7,
@@ -110,19 +127,51 @@ int gtos_board_read_motion(GtosBoardMotion* motion) {
     return GTOS_BOARD_OK;
 }
 
+static bool power_good_pin(void) {
+#ifdef CONFIG_GTOS_A3_SIMULATION
+    return true;
+#else
+    return charger_pg_ready && gpio_get_level(A3_PIN_CHARGER_PG_N) == 0;
+#endif
+}
+
+static charge_time_enum safety_timer(const A3ChargeProfile* profile) {
+    return profile->safety_timer_hours == 5 ? CHG_TIMER_5_HRS : CHG_TIMER_10_HRS;
+}
+
+static bool read_charger_registers(bool settings, uint8_t* faults) {
+    bq_io_failure = false;
+    const uint8_t last = settings ? BQ25601_REG05 : BQ25601_REG01;
+    for (uint8_t reg = BQ25601_REG00; reg <= last && !bq_io_failure; ++reg)
+        BQ25601_read_register(reg);
+    if (settings) BQ25601_read_register(BQ25601_REG07);
+    BQ25601_read_register(BQ25601_REG08);
+    return !bq_io_failure && read_registers(bq, BQ25601_REG09, faults, 1);
+}
+
+static bool charge_settings_match(const A3ChargeProfile* profile) {
+    return !BQ25601_get_otg_enabled() && BQ25601_get_input_current_limit_mA() == profile->input_limit_ma
+        && BQ25601_get_fast_charge_current_mA() == profile->fast_charge_ma
+        && BQ25601_get_pre_charge_current_mA() == profile->precharge_ma
+        && BQ25601_get_charge_termination_current_mA() == profile->termination_ma
+        && BQ25601_get_vreg_mV() == profile->regulation_mv
+        && BQ25601_get_watchdog_time() == WATCHDOG_DISABLED
+        && BQ25601_get_topoff_timer() == TOPOFF_TIMER_DISABLED
+        && BQ25601_get_enable_termination() && BQ25601_get_enable_timer()
+        && BQ25601_get_charge_timer() == safety_timer(profile)
+        && !BQ25601_get_x2_slow_safety_timer();
+}
+
 int gtos_board_read_charger(GtosBoardCharger* charger) {
     if (!charger) return GTOS_BOARD_INVALID;
     if (!bq_ready) return GTOS_BOARD_MISSING;
     uint8_t faults = 0;
-    bq_io_failure = false;
-    BQ25601_read_register(BQ25601_REG00);
-    BQ25601_read_register(BQ25601_REG01);
-    BQ25601_read_register(BQ25601_REG08);
-    const bool read_ok = !bq_io_failure && read_registers(bq, BQ25601_REG09, &faults, 1);
-    const bool input_good = BQ25601_power_good();
+    const bool read_ok = read_charger_registers(charge_permitted, &faults);
+    const bool input_good = power_good_pin() && BQ25601_power_good();
     const bool charge_configured = BQ25601_get_charge_enabled();
     // Checking here also catches a latched fault consumed by an application's read.
-    if (charge_permitted && (!read_ok || !input_good || faults || !charge_configured)) {
+    if (charge_permitted && (!read_ok || !input_good || faults || !charge_configured
+                             || !charge_settings_match(&active_charge))) {
         const int result = gtos_board_set_charge(false);
         if (result != GTOS_BOARD_OK) return result;
     }
@@ -136,28 +185,51 @@ int gtos_board_read_charger(GtosBoardCharger* charger) {
     return GTOS_BOARD_OK;
 }
 
+static uint16_t available_charge_input(const GtosBoardUsb* usb) {
+    if (!usb->sink_attached) return 0;
+#ifndef CONFIG_GTOS_A3_SIMULATION
+    // CC's Default USB Power mode does not report this device's USB allocation.
+    if (usb->advertised_ma < 1500) return 0;
+#endif
+    return usb->advertised_ma;
+}
+
 int gtos_board_read_usb(GtosBoardUsb* usb) {
     if (!usb) return GTOS_BOARD_INVALID;
     if (!cc_ready) return GTOS_BOARD_MISSING;
-    uint8_t status[2];
+    uint8_t status[2] = {0};
     const bool read_ok = read_registers(cc, 0x08, status, sizeof(status));
     const bool sink = read_ok && (status[1] >> 6) == 2;
-    if (charge_permitted && !sink) {
-        const int result = gtos_board_set_charge(false);
-        if (result != GTOS_BOARD_OK) return result;
-    }
-    if (!read_ok) return GTOS_BOARD_IO;
     const uint16_t usb_current_ma[] = {500, 1500, 500, 3000};
-    *usb = (GtosBoardUsb){
+    const GtosBoardUsb snapshot = {
         .sink_attached = sink, .flipped = sink && (status[1] & 0x20),
         .advertised_ma = sink ? usb_current_ma[(status[0] >> 4) & 3] : 0,
     };
+    const uint16_t available = available_charge_input(&snapshot);
+    if (charge_permitted && available < active_charge.input_limit_ma) {
+        const int result = gtos_board_set_charge(false);
+        if (result != GTOS_BOARD_OK) return result;
+        // IINDPM limits the system path as well as charging. Follow a known
+        // lower source capability even after dropping the charge gate.
+        if (available) {
+            bq_io_failure = false;
+            if (BQ25601_set_input_current_limit_mA(available) != available || bq_io_failure)
+                return GTOS_BOARD_IO;
+        }
+    }
+    if (!read_ok) return GTOS_BOARD_IO;
+    *usb = snapshot;
     return GTOS_BOARD_OK;
 }
 
 void a3_i2c_poll(uint32_t milliseconds) {
     static uint32_t last_check;
-    if (!charge_permitted || milliseconds - last_check < 100) return;
+    if (!charge_permitted) return;
+    if (!power_good_pin()) {
+        gtos_board_set_charge(false);
+        return;
+    }
+    if (milliseconds - last_check < 100) return;
     last_check = milliseconds;
     GtosBoardUsb usb;
     gtos_board_read_usb(&usb);
@@ -167,32 +239,90 @@ void a3_i2c_poll(uint32_t milliseconds) {
     }
 }
 
-int gtos_board_set_charge(bool enabled) {
+static A3ChargeProfile charge_profile(void) {
+#ifdef CONFIG_GTOS_A3_SIMULATION
+    return (A3ChargeProfile){
+        .input_limit_ma = 500, .fast_charge_ma = 240, .regulation_mv = 4176,
+        .precharge_ma = 60, .termination_ma = 60, .safety_timer_hours = 5,
+    };
+#elif defined(GTOS_A3_CHARGE_PROFILE)
+    return gtos_a3_charge_profile;
+#else
+    return (A3ChargeProfile){0};
+#endif
+}
+
+static bool valid_charge_profile(const A3ChargeProfile* profile) {
+    return profile->input_limit_ma >= 100 && profile->input_limit_ma <= 3200 && profile->input_limit_ma % 100 == 0
+        && profile->fast_charge_ma >= 60 && profile->fast_charge_ma <= 3000 && profile->fast_charge_ma % 60 == 0
+        && profile->precharge_ma >= 60 && profile->precharge_ma <= 780 && profile->precharge_ma % 60 == 0
+        && profile->termination_ma >= 60 && profile->termination_ma <= 780 && profile->termination_ma % 60 == 0
+        && profile->precharge_ma <= profile->fast_charge_ma && profile->termination_ma <= profile->fast_charge_ma
+        && profile->regulation_mv >= 3856 && profile->regulation_mv <= 4200
+        && (profile->safety_timer_hours == 5 || profile->safety_timer_hours == 10);
+}
+
+static int disable_charge(void) {
     if (!charge_gpio_ready || !bq_ready) return GTOS_BOARD_MISSING;
     if (gpio_set_level(A3_PIN_CHARGE_EN, 0) != ESP_OK) return GTOS_BOARD_IO;
     charge_permitted = false;
-#ifndef CONFIG_GTOS_A3_SIMULATION
-    if (enabled) return GTOS_BOARD_NOT_READY;
-#endif
-    if (enabled) {
-        GtosBoardUsb usb;
-        GtosBoardCharger charger;
-        if (gtos_board_read_usb(&usb) || gtos_board_read_charger(&charger)) return GTOS_BOARD_IO;
-        if (!usb.sink_attached || !charger.input_good || charger.faults) return GTOS_BOARD_NOT_READY;
-        // The virtual board uses 500 mA input, 240 mA charge and 4.167 V CV.
-        bq_io_failure = false;
-        const unsigned input = BQ25601_set_input_current_limit_mA(500);
-        const unsigned current = BQ25601_set_fast_charge_current_mA(240);
-        const unsigned voltage = BQ25601_set_vreg_mV(4167);
-        if (bq_io_failure || input != 500 || current != 240 || voltage != 4167
-            || BQ25601_get_vreg_mV() != voltage)
-            return GTOS_BOARD_IO;
-    }
     bq_io_failure = false;
-    BQ25601_set_charge_enabled(enabled);
+    BQ25601_set_charge_enabled(false);
     BQ25601_read_register(BQ25601_REG01);
-    if (bq_io_failure || BQ25601_get_charge_enabled() != enabled) return GTOS_BOARD_IO;
-    if (enabled && gpio_set_level(A3_PIN_CHARGE_EN, 1) != ESP_OK) return GTOS_BOARD_IO;
-    charge_permitted = enabled;
+    return !bq_io_failure && !BQ25601_get_charge_enabled() ? GTOS_BOARD_OK : GTOS_BOARD_IO;
+}
+
+static int program_charge(A3ChargeProfile* profile) {
+    // Enter host mode and keep the programmed limits from reverting on an I2C
+    // watchdog timeout. The separate charge safety timer stays enabled.
+    bq_io_failure = false;
+    BQ25601_set_watchdog_reset(WD_RST_RESET);
+    BQ25601_set_watchdog_time(WATCHDOG_DISABLED);
+    BQ25601_set_otg_enabled(false);
+    BQ25601_set_input_current_limit_mA(profile->input_limit_ma);
+    BQ25601_set_fast_charge_current_mA(profile->fast_charge_ma);
+    BQ25601_set_pre_charge_current_mA(profile->precharge_ma);
+    BQ25601_set_charge_termination_current_mA(profile->termination_ma);
+    profile->regulation_mv = BQ25601_set_vreg_mV(profile->regulation_mv);
+    BQ25601_set_topoff_timer(TOPOFF_TIMER_DISABLED);
+    BQ25601_set_enable_termination(true);
+    BQ25601_set_enable_timer(true);
+    BQ25601_set_charge_timer(safety_timer(profile));
+    BQ25601_set_x2_slow_safety_timer(false);
+    if (bq_io_failure || !profile->regulation_mv || !charge_settings_match(profile)) return GTOS_BOARD_IO;
+
+    BQ25601_set_charge_enabled(true);
+    uint8_t faults = 0;
+    if (bq_io_failure || !read_charger_registers(true, &faults)
+        || !BQ25601_get_charge_enabled() || !charge_settings_match(profile))
+        return GTOS_BOARD_IO;
+    GtosBoardUsb usb;
+    if (gtos_board_read_usb(&usb) != GTOS_BOARD_OK) return GTOS_BOARD_IO;
+    if (faults || !power_good_pin() || !BQ25601_power_good()
+        || available_charge_input(&usb) < profile->input_limit_ma)
+        return GTOS_BOARD_NOT_READY;
+    return gpio_set_level(A3_PIN_CHARGE_EN, 1) == ESP_OK ? GTOS_BOARD_OK : GTOS_BOARD_IO;
+}
+
+int gtos_board_set_charge(bool enabled) {
+    int result = disable_charge();
+    if (!enabled || result != GTOS_BOARD_OK) return result;
+
+    A3ChargeProfile profile = charge_profile();
+    if (!valid_charge_profile(&profile)) return GTOS_BOARD_NOT_READY;
+    GtosBoardUsb usb;
+    GtosBoardCharger charger;
+    if (gtos_board_read_usb(&usb) || gtos_board_read_charger(&charger)) return GTOS_BOARD_IO;
+    const uint16_t available = available_charge_input(&usb);
+    if (!available || !charger.input_good || (charger.faults & ~WatchdogFault)) return GTOS_BOARD_NOT_READY;
+    if (available < profile.input_limit_ma) profile.input_limit_ma = available;
+
+    result = program_charge(&profile);
+    if (result != GTOS_BOARD_OK) {
+        disable_charge();
+        return result;
+    }
+    active_charge = profile;
+    charge_permitted = true;
     return GTOS_BOARD_OK;
 }

@@ -119,7 +119,7 @@ python3 arch/riscv32/esp32p4/tests/verify_ble.py \
 | --- | --- |
 | I²C | P4 SDA 7、SCL 8，外部上拉。LSM6DS3TR-C 0x6A、BQ25601 0x6B、TUSB320LAI 0x47，均为 7 位地址 |
 | 操作 | WAKE 2、NEXT 11、BACK 12，旋钮 A/B/SW 20/21/22，按下为低电平 |
-| 控制 | P4 的 C6 电源 5、C6 复位 6、VCI 10、LCD 复位 27、充电使能 28 均高有效，背光 PWM 26 |
+| 控制 | P4 的 C6 电源 5、C6 复位 6、VCI 10、LCD 复位 27、充电使能 28 均高有效，背光 PWM 26，BQ25601 电源良好 9 低有效 |
 | SDIO | Slot 1 四位。D0/D1/D2/D3/CLK/CMD 在 P4 上为 14/15/16/17/18/19，在 C6 上为 20/21/22/23/19/18 |
 | 调试 | P4 USB D−/D+ 24/25、UART TX/RX 37/38。C6 UART TX/RX 16/17 |
 
@@ -143,5 +143,40 @@ GTOS_A3_PANEL_PROFILE 指向定义 *gtos_a3_panel_profile* 的 C 文件。
 2.5 V D‑PHY 供电，按面板的实际扫描方向提交 1424 × 280 的应用画面。
 实板面板配置可以启用 PPA 旋转和 DMA2D 帧复制。虚拟机验证覆盖到 RGB565 帧缓冲，
 面板时序、硬件图形加速和背光电流仍需实板测量。
-同一实板配置将充电保持关闭，待电芯规格、USB 枚举与输入限流一并确认。
-TPS63802、TLV62569 和电池温升由样板电测验收。
+
+### 充电配置
+
+单独通过 CMake 变量 `GTOS_A3_CHARGE_PROFILE` 指向定义
+`gtos_a3_charge_profile` 的 C 文件，字段见 [board_charge.h](main/board_charge.h)。
+构建使用实板的默认配置和新的输出目录。配置文件给出整板输入限流、快充、预充、
+终止电流、标称恒压上限和 5 或 10 小时的 BQ25601 安全计时档位。
+输入电流以 100 mA 为档，快充、预充和终止电流以 60 mA 为档。
+A3 的 4.2 V 电池体系接受 3856–4200 mV 的标称恒压上限，软件向下选取寄存器档位。
+具体档位应依据实际电池、芯片精度和整板输入能力选定。[BQ25601 数据手册](https://www.ti.com/lit/ds/symlink/bq25601.pdf)
+
+配置通过校验、GPIO9 和寄存器均报告 Power Good、TUSB320LAI 报告 1.5 A 或 3 A
+后，可通过板级 API 或 UART `c` 手动启用充电。输入限流取配置和检测到的档位中较低者。
+充电参数和 CHG_CONFIG 均经回读后才拉高 GPIO28。软件维持快充和预充安全计时，关闭会令限值
+回落到出厂设置的 I²C 看门狗。掉电、故障、档位低于已设限流、寄存器回读变化或总线错误
+时撤销充电使能。检测到仍有明确的较低供电档位时同时收紧输入限流。USB 默认档缺少
+已分配电流信息，实板充电保持关闭。
+TPS63802、TLV62569、SYS 供电切换、实际电流电压和电池温升由样板电测验收。
+
+以下命令在 ESP-EMU 验证启用实板充电路径的合成配置，同时检查默认诊断镜像的拒绝路径。
+`charge_profile_fixture.c` 中的数据仅用于寄存器测试。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-charge-fixture"
+SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.defaults.hardware' \
+    idf.py -C "$p" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    -D "GTOS_A3_CHARGE_PROFILE=$PWD/$p/tests/charge_profile_fixture.c" \
+    merge-bin -o "$build/gtos-a3-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_charge_profile.py" --emulator /path/to/esp-emu \
+    --parts /path/to/esp-emu-1.0.0-examples --build "$build" \
+    --diagnostic out/a3-diagnostic --output out/a3-charge-test
+cc -std=c11 -I"$p/third_party/bq25601" "$p/tests/bq25601_voltage_test.c" \
+    "$p/third_party/bq25601/bq25601.c" -o out/bq25601-voltage-test
+out/bq25601-voltage-test
+~~~

@@ -348,19 +348,13 @@ uint16_t BQ25601_set_charge_termination_current_mA(uint16_t current_mA)
 
 uint16_t BQ25601_get_vreg_mV_from_reg(uint8_t reg_value)
 {
-    uint16_t mV = 3847;
-
-    if (reg_value & 0x80) mV += 512;
-    if (reg_value & 0x40) mV += 256;
-    if (reg_value & 0x20) mV += 128;
-    if (reg_value & 0x10) mV += 64;
-    if (reg_value & 0x08) mV += 32;
-
-    // From datasheet: "Special Value: (01111): 4.343 V"
-    if ((reg_value >> 3) == 0x0F)
-        mV = 4343;
-
-    return mV;
+    uint8_t vreg = reg_value >> 3;
+    // BQ25601 REG04, including its special code and upper clamp.
+    if (vreg == 0x0F)
+        return 4352;
+    if (vreg > 0x18)
+        vreg = 0x18;
+    return 3856 + 32 * vreg;
 }
 
 uint16_t BQ25601_get_vreg_mV()
@@ -371,14 +365,13 @@ uint16_t BQ25601_get_vreg_mV()
 
 uint16_t BQ25601_set_vreg_mV(uint16_t vreg_mV)
 {
-    if (vreg_mV < 3847 || vreg_mV > 4615)
+    if (vreg_mV < 3856 || vreg_mV > 4624)
         return 0;
 
-    uint16_t offset = vreg_mV - 3847;
-    uint16_t vreg = offset >> 5;
-    uint8_t reg_value = vreg << 3;
-    
-    uint16_t set_to = BQ25601_get_vreg_mV_from_reg(reg_value);;
+    uint16_t vreg = (vreg_mV - 3856) / 32;
+    if (vreg == 0x0F && vreg_mV < 4352)
+        --vreg;
+    const uint8_t reg_value = vreg << 3;
 
     BQ25601_read_register(BQ25601_REG04);
     uint8_t new_reg04 = _register[BQ25601_REG04] & 0x07;
@@ -386,7 +379,7 @@ uint16_t BQ25601_set_vreg_mV(uint16_t vreg_mV)
 
     BQ25601_set_register(BQ25601_REG04, new_reg04);
     BQ25601_read_register(BQ25601_REG04);
-    return set_to;
+    return BQ25601_get_vreg_mV_from_reg(reg_value);
 }
 
 topoff_timer_enum BQ25601_get_topoff_timer()

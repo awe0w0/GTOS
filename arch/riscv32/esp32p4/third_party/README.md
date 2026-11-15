@@ -11,6 +11,8 @@ ESP-IDF 6.1 structure member for RGB element order.
 The BQ25601 adapter uses charger control and status fields shared with the
 BQ25601D, checks the A3 part number against the
 [BQ25601 datasheet](https://www.ti.com/lit/ds/symlink/bq25601.pdf), and tracks
-I²C errors before trusting the upstream cache. The TUSB320LAI status adapter is
+I²C errors before trusting the upstream cache. The vendored voltage conversion
+uses the BQ25601 REG04 table, including the special code and maximum clamp.
+The TUSB320LAI status adapter is
 based on the [Texas Instruments datasheet](https://www.ti.com/lit/ds/symlink/tusb320lai.pdf)
 and uses ESP-IDF's I²C driver.

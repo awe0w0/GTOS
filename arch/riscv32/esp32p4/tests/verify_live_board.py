@@ -11,7 +11,7 @@ import threading
 import time
 
 # ESP-EMU v1.0.0 tools/cosim_tcp.py, supplied through PYTHONPATH.
-from cosim_tcp import accepted, connect, decode, field, gpio_claim, ld, recv, send, varint
+from cosim_tcp import accepted, connect, decode, field, gpio_claim, gpio_drive, ld, recv, send, varint
 
 from verify_board import Guest, available_port, prepare_board
 
@@ -26,9 +26,11 @@ def number(tag, value):
 
 
 class Devices:
-    def __init__(self, port, output):
+    def __init__(self, port, output, drive_pins=()):
         self.port, self.output = port, output
+        self.drive_pins = drive_pins
         self.lock = threading.Lock()
+        self.send_lock = threading.Lock()
         self.closing = threading.Event()
         self.clock = 0
         self.error = None
@@ -71,11 +73,22 @@ class Devices:
             self.stimuli.append((self.clock, "i2c-online", hex(address), online))
             return self.clock
 
+    def drive(self, pin, level):
+        if pin not in self.drive_pins:
+            raise ValueError(f"GPIO{pin} was not claimed as a test input")
+        with self.lock:
+            stamp = self.clock
+            self.stimuli.append((stamp, "gpio-drive", pin, level))
+        with self.send_lock:
+            send(self.socket, gpio_drive(0, pin, level))
+        return stamp
+
     def __enter__(self):
         self.socket = connect(self.port)
         try:
-            watch = sum(1 << pin for pin in (VCI, PWM, RESET, CHARGE_ENABLE))
-            claims = [gpio_claim(0, watch)]
+            inputs = sum(1 << pin for pin in self.drive_pins)
+            watch = sum(1 << pin for pin in (VCI, PWM, RESET, CHARGE_ENABLE)) | inputs
+            claims = [gpio_claim(inputs, watch)]
             claims += [ld(2, number(1, address) + number(2, 8) + number(3, 7))
                        for address in self.registers]
             register = number(1, 1) + ld(2, b"a3-live-devices")
@@ -147,10 +160,11 @@ class Devices:
                         pin, level = event.get(1, 0), event.get(2, 0)
                         self.gpio.append((self.clock, pin, level))
                         if pin == CHARGE_ENABLE and level:
-                            self.charge_starts.append((self.clock, self.registers[CHARGER][:5].hex()))
+                            self.charge_starts.append((self.clock, self.registers[CHARGER][:8].hex()))
                     reply = self.transfer(decode(message[7])) if 7 in message else None
                 if reply is not None:
-                    send(self.socket, reply)
+                    with self.send_lock:
+                        send(self.socket, reply)
         except Exception as error:
             if not self.closing.is_set():
                 self.error = error
