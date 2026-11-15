@@ -152,8 +152,7 @@ GTOS_A3_PANEL_PROFILE 指向定义 *gtos_a3_panel_profile* 的 C 文件。
 
 普通仿真覆盖 RGB565 帧缓冲和背光 PWM。另一个 ESP-EMU 用例编译实际板级显示和
 ST7703 驱动，在 DSI、DMA2D、PPA 入口注入响应和错误，并从虚拟 GPIO 采样 VCI、
-复位和背光。ESP-EMU 1.0.0 的原生 DSI 探针停在 D-PHY PLL 锁定等待。屏幕出图、
-链路时序、硬件图形加速和背光电流需在实板测量。
+复位和背光。屏幕出图、链路时序、硬件图形加速和背光电流需在实板测量。
 
 ~~~sh
 p=arch/riscv32/esp32p4
@@ -163,6 +162,27 @@ idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
 PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
     python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu \
     --build "$build" --output out/a3-panel-test-run
+~~~
+
+使用 `GTOS_A3_PANEL_PROFILE` 时，A3 在构建目录生成一份 ESP-IDF v6.1 DSI 总线驱动，
+给 PLL 锁定和数据通道空闲共用 250 ms 的等待预算。超时后按顺序关闭 PHY、释放总线
+和 LDO3、拉复位并关 VCI。GTOS 保持可操作，可通过 WAKE 重试。
+[ESP-IDF v6.1 DSI 初始化源码](https://github.com/espressif/esp-idf/blob/v6.1/components/esp_lcd/dsi/esp_lcd_mipi_dsi_bus.c)
+
+原生超时用例在 ESP-EMU 使用合成面板配置运行同一驱动，检查 GPIO 时序、启动恢复和
+按键重试。传入 `--gdb /path/to/riscv32-esp-elf-gdb` 可在重试时注入迟到的 PLL 锁定，
+验证数据通道等待沿用剩余时间。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-dsi-timeout-firmware"
+SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.defaults.hardware' \
+    idf.py -C "$p" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    -D "GTOS_A3_PANEL_PROFILE=$PWD/$p/tests/panel/profile.c" \
+    merge-bin -o "$build/gtos-a3-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_dsi_timeout.py" --emulator /path/to/esp-emu \
+    --parts /path/to/esp-emu-1.0.0-examples --build "$build" --output out/a3-dsi-timeout-run
 ~~~
 
 ### 充电配置

@@ -9,20 +9,26 @@ from verify_board import Guest, available_port
 from verify_live_board import Devices, MS, PWM, RESET, VCI
 
 
-def verify_power(bus, output):
+def display_cycles(bus, count):
     with bus.lock:
         signals = list(bus.gpio)
     rails = [(time, pin, level) for time, pin, level in signals if pin in (VCI, RESET)]
-    first_on = next(index for index, (_, pin, level) in enumerate(rails) if (pin, level) == (VCI, 1))
+    first_on = next((index for index, (_, pin, level) in enumerate(rails) if (pin, level) == (VCI, 1)), None)
+    if first_on is None:
+        raise RuntimeError("VCI did not turn on")
     cycles = rails[first_on:]
     sequence = [(VCI, 1), (RESET, 0), (RESET, 1), (VCI, 0)]
-    if [(pin, level) for _, pin, level in cycles] != sequence * 3:
+    if [(pin, level) for _, pin, level in cycles] != sequence * count:
         raise RuntimeError(f"Unexpected VCI/reset sequence: {cycles}")
     if any(pin == PWM and level and time >= cycles[0][0] for time, pin, level in signals):
         raise RuntimeError("Diagnostic backlight rose while the panel was powered")
     if not any(pin == PWM and not level for _, pin, level in signals):
         raise RuntimeError("The GPIO trace did not show the backlight parked low")
+    return cycles
 
+
+def verify_power(bus, output):
+    cycles = display_cycles(bus, 3)
     setup = [(cycles[index + 1][0] - cycles[index][0]) / MS for index in (0, 4, 8)]
     dwell = [(cycles[index + 1][0] - cycles[index][0]) / MS for index in (3, 7)]
     if any(delay < 20 for delay in setup) or any(delay < 50 for delay in dwell):
