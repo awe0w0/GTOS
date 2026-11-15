@@ -29,9 +29,13 @@ all: GTOS.iso
 
 A3_IDF ?= idf.py
 A3_BUILD_DIR ?= out/a3-riscv
-.PHONY: a3-riscv
+A3_C6_BUILD_DIR ?= out/a3-riscv-c6
+.PHONY: a3-riscv a3-riscv-c6
 a3-riscv:
 	$(A3_IDF) -C arch/riscv32/esp32p4 -B "$(abspath $(A3_BUILD_DIR))" -D "SDKCONFIG=$(abspath $(A3_BUILD_DIR))/sdkconfig" merge-bin -o "$(abspath $(A3_BUILD_DIR))/gtos-a3-flash.bin"
+
+a3-riscv-c6:
+	$(A3_IDF) -C arch/riscv32/esp32c6 -B "$(abspath $(A3_C6_BUILD_DIR))" -D "SDKCONFIG=$(abspath $(A3_C6_BUILD_DIR))/sdkconfig" merge-bin -o "$(abspath $(A3_C6_BUILD_DIR))/gtos-a3-c6-flash.bin"
 
 $(KERNEL_OBJDIR)/%.o: src/%.cpp tools/kernel-cxxflags Makefile
 	mkdir -p $(@D)

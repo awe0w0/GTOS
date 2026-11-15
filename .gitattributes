@@ -4,6 +4,7 @@ include/storage/littlefs/lfs_util.h -text -whitespace
 src/storage/littlefs/lfs.c -text -whitespace
 src/storage/littlefs/lfs_util.c -text -whitespace
 docs/littlefs/LICENSE.md -text -whitespace
+arch/riscv32/esp32p4/third_party/** -text -whitespace
 # Keep the qualified manifest's CRLF bytes and validate other whitespace normally.
 apps/native_scanf/input-manifest.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Keep the offline DUP source lock and recorded evidence bytes exact.

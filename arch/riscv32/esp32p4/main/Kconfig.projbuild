@@ -1,0 +1,9 @@
+menu "GTOS Desktop Bar A3"
+    config GTOS_A3_SIMULATION
+        bool "Use the virtual display and charging profile"
+        default y
+        help
+            Selects the ESP-EMU framebuffer sink and simulated charger limits.
+            For physical boards select n to keep the panel and charging gated
+            until validated settings are available.
+endmenu
