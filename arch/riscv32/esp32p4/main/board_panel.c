@@ -7,6 +7,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_ldo_regulator.h"
 #include "esp_log.h"
+#include "esp_private/dma2d.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <math.h>
@@ -18,6 +19,7 @@ static esp_ldo_channel_handle_t phy;
 static esp_lcd_dsi_bus_handle_t bus;
 static esp_lcd_panel_io_handle_t io;
 static esp_lcd_panel_handle_t panel;
+static dma2d_pool_handle_t graphics_pool;
 static uint16_t* staging;
 static struct {
     ppa_client_handle_t client;
@@ -117,6 +119,10 @@ bool a3_panel_stop(void) {
         vsync = NULL;
     }
     release_idle_rotation();
+    if (graphics_pool) {
+        if (dma2d_release_pool(graphics_pool) != ESP_OK) return false;
+        graphics_pool = NULL;
+    }
     heap_caps_free(staging);
     staging = NULL;
     active = NULL;
@@ -175,7 +181,17 @@ static bool configure_rotation(void) {
 }
 
 static bool configure_frame_events(const A3PanelProfile* profile, bool portrait) {
-    const bool accelerate = profile->use_graphics_acceleration;
+    if (profile->use_graphics_acceleration) {
+        const dma2d_pool_config_t config = {.pool_id = 0};
+        dma2d_pool_handle_t pool;
+        // Keep the qualified pool alive through PPA registration and DPI copy setup.
+        const esp_err_t result = dma2d_acquire_pool(&config, &pool);
+        if (result == ESP_OK) graphics_pool = pool;
+        else ESP_LOGW("a3_panel", "DMA2D pool unavailable (%s), using CPU frames", esp_err_to_name(result));
+    }
+    const bool accelerate = graphics_pool != NULL;
+    const bool needs_staging = portrait ? !accelerate : accelerate;
+    if (needs_staging && !reserve_staging()) return false;
     if (accelerate && portrait && !configure_rotation()) return false;
     if (accelerate) {
         transfer_done = xSemaphoreCreateBinary();
@@ -196,11 +212,9 @@ static bool configure_frame_events(const A3PanelProfile* profile, bool portrait)
 }
 
 bool a3_panel_start(const A3PanelProfile* profile) {
-    if (!profile || panel || io || bus || phy || transfer_done || vsync || staging) return false;
+    if (!profile || panel || io || bus || phy || graphics_pool || transfer_done || vsync || staging) return false;
     release_idle_rotation();
     const bool portrait = profile->timing.h_size == A3_HEIGHT;
-    const bool needs_staging = portrait ? !profile->use_graphics_acceleration : profile->use_graphics_acceleration;
-    if (needs_staging && !reserve_staging()) return false;
     const esp_ldo_channel_config_t ldo = {.chan_id = 3, .voltage_mv = 2500};
     const esp_lcd_dsi_bus_config_t dsi = {
         .bus_id = 0, .num_data_lanes = 2, .lane_bit_rate_mbps = profile->lane_rate_mbps,
@@ -271,7 +285,7 @@ static void rotate_frame(const uint16_t* pixels) {
 bool a3_panel_present(const uint16_t* pixels) {
     if (!active || !retire_transfer(0)) return false;
     if (active->timing.h_size == A3_HEIGHT) {
-        if (active->use_graphics_acceleration && rotate_with_ppa(pixels)) {
+        if (graphics_pool && rotate_with_ppa(pixels)) {
             if (!enable_dma2d()) return false;
             pixels = rotation.output;
         } else {

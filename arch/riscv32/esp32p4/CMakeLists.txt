@@ -8,4 +8,5 @@ include(cmake/hosted_sdio_cleanup.cmake)
 
 if(GTOS_A3_PANEL_PROFILE)
     include(cmake/dsi_timeouts.cmake)
+    include(cmake/dma2d_readiness.cmake)
 endif()

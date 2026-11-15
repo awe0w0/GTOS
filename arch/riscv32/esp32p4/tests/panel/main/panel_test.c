@@ -13,9 +13,8 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#ifdef GTOS_A3_TEST_REAL_PPA
-#include "soc/dma2d_struct.h"
-#endif
+#include "hal/dma2d_hal.h"
+#include "hal/dma2d_ll.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -37,11 +36,12 @@ static volatile unsigned events, event_limit;
 static void* copy_context;
 static char phy_token, bus_token;
 static const uint16_t* caller_frame;
-#ifdef GTOS_A3_TEST_REAL_PPA
-// The SDK test can supply only the DMA2D reset handshake with GDB.
-static volatile dma2d_dev_t reset_registers;
-static volatile bool real_ppa_go;
-#else
+// No transfer completion or DMA2D-generated pixels are injected into these registers.
+static dma2d_dev_t reset_registers;
+#ifdef GTOS_A3_TEST_DMA2D_UNAVAILABLE
+static bool reject_rx, landscape;
+#endif
+#ifndef GTOS_A3_TEST_REAL_PPA
 static char ppa_token;
 static esp_timer_handle_t rotation_timer;
 static ppa_event_callback_t rotation_done;
@@ -57,6 +57,22 @@ esp_err_t __real_esp_ldo_release_channel(esp_ldo_channel_handle_t handle);
 esp_err_t __real_esp_lcd_new_panel_io_dbi(esp_lcd_dsi_bus_handle_t bus,
                                         const esp_lcd_dbi_io_config_t* config,
                                         esp_lcd_panel_io_handle_t* io);
+void __real_dma2d_hal_init(dma2d_hal_context_t* hal, int group_id);
+
+void __wrap_dma2d_hal_init(dma2d_hal_context_t* hal, int group_id) {
+    __real_dma2d_hal_init(hal, group_id);
+#ifdef GTOS_A3_TEST_DMA2D_UNAVAILABLE
+    if (!reject_rx) return;
+#endif
+    for (unsigned i = 0; i < DMA2D_LL_GET(TX_CHANS_PER_INST); ++i)
+        reset_registers.out_channel[i].out_state.out_reset_avail_chn = 1;
+    for (unsigned i = 0; i < DMA2D_LL_GET(RX_CHANS_PER_INST); ++i)
+        reset_registers.in_channel[i].in_state.in_reset_avail_chn = 1;
+#ifdef GTOS_A3_TEST_DMA2D_UNAVAILABLE
+    reset_registers.in_channel[0].in_state.in_reset_avail_chn = 0;
+#endif
+    hal->dev = &reset_registers;
+}
 
 esp_err_t __wrap_esp_ldo_acquire_channel(const esp_ldo_channel_config_t* config,
                                         esp_ldo_channel_handle_t* handle) {
@@ -159,6 +175,14 @@ static esp_err_t delete_dpi(esp_lcd_panel_t* handle) {
 static esp_err_t draw_dpi(esp_lcd_panel_t* handle, int x0, int y0, int x1, int y1, const void* pixels) {
     assert(handle == &dpi && dpi_active && !copy_pending);
     assert(commands[command_count - 1] == LCD_CMD_DISPON);
+#ifdef GTOS_A3_TEST_DMA2D_UNAVAILABLE
+    if (landscape) {
+        assert(x0 == 0 && y0 == 0 && x1 == A3_WIDTH && y1 == A3_HEIGHT);
+        assert(pixels == caller_frame && !dma_enabled && !copy_done);
+        ++frames;
+        return ESP_OK;
+    }
+#endif
     assert(x0 == 0 && y0 == 0 && x1 == A3_HEIGHT && y1 == A3_WIDTH);
     if (failure == Draw) {
         failure = NoFailure;
@@ -180,7 +204,12 @@ esp_err_t __wrap_esp_lcd_new_panel_dpi(esp_lcd_dsi_bus_handle_t handle,
                                      const esp_lcd_dpi_panel_config_t* config,
                                      esp_lcd_panel_handle_t* panel) {
     assert(bus_open && io_open && !dpi_open && handle == (esp_lcd_dsi_bus_handle_t)&bus_token);
-    assert(config->video_timing.h_size == A3_HEIGHT && config->video_timing.v_size == A3_WIDTH);
+#ifdef GTOS_A3_TEST_DMA2D_UNAVAILABLE
+    if (landscape)
+        assert(config->video_timing.h_size == A3_WIDTH && config->video_timing.v_size == A3_HEIGHT);
+    else
+#endif
+        assert(config->video_timing.h_size == A3_HEIGHT && config->video_timing.v_size == A3_WIDTH);
     assert(config->in_color_format == LCD_COLOR_FMT_RGB565 && config->out_color_format == LCD_COLOR_FMT_RGB888);
     dpi = (esp_lcd_panel_t){.init = start_dpi, .del = delete_dpi, .draw_bitmap = draw_dpi};
     dpi_open = true;
@@ -298,7 +327,7 @@ esp_err_t __wrap_ppa_do_scale_rotate_mirror(ppa_client_handle_t handle, const pp
 #endif
 }
 
-#ifndef GTOS_A3_TEST_REAL_PPA
+#if !defined(GTOS_A3_TEST_REAL_PPA) && !defined(GTOS_A3_TEST_DMA2D_UNAVAILABLE)
 static void complete_copy(void* unused) {
     (void)unused;
     assert(copy_pending && copy_done);
@@ -311,6 +340,41 @@ static void assert_closed(void) {
     assert(!phy_open && !bus_open && !io_open && !dpi_open && !dma_enabled && !ppa_open);
     assert(!copy_pending);
 }
+
+#ifdef GTOS_A3_TEST_DMA2D_UNAVAILABLE
+static void check_dma2d_unavailable(uint16_t* pixels) {
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && frames == 1);
+    assert(!ppa_open && !dma_enabled && !copy_done && !dma2d_ll_is_bus_clock_enabled(0));
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert_closed();
+    puts("GTOS_A3_PANEL_TEST DMA2D_MMIO_FALLBACK PASS");
+
+    reject_rx = true;
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && frames == 2);
+    assert(!ppa_open && !dma_enabled && !copy_done && !dma2d_ll_is_bus_clock_enabled(0));
+    assert(!reset_registers.rst_conf.clk_en);
+    for (unsigned i = 0; i < DMA2D_LL_GET(TX_CHANS_PER_INST); ++i)
+        assert(!reset_registers.out_channel[i].out_conf0.out_cmd_disable_chn);
+    for (unsigned i = 0; i < DMA2D_LL_GET(RX_CHANS_PER_INST); ++i)
+        assert(!reset_registers.in_channel[i].in_conf0.in_cmd_disable_chn);
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert_closed();
+    puts("GTOS_A3_PANEL_TEST DMA2D_RX_FALLBACK PASS");
+
+    A3PanelProfile profile = gtos_a3_panel_profile;
+    profile.timing.h_size = A3_WIDTH;
+    profile.timing.v_size = A3_HEIGHT;
+    landscape = true;
+    reject_rx = false;
+    assert(a3_panel_start(&profile));
+    assert(a3_panel_present(pixels) && frames == 3);
+    assert(a3_panel_stop());
+    assert_closed();
+    puts("GTOS_A3_PANEL_TEST DMA2D_LANDSCAPE_FALLBACK PASS");
+}
+#endif
 
 #ifdef GTOS_A3_TEST_PPA_RECOVERY
 static void finish_copy(void) {
@@ -512,12 +576,6 @@ void app_main(void) {
     assert(gtos_board_set_brightness(100) == GTOS_BOARD_OK);
 
 #if defined(GTOS_A3_TEST_REAL_PPA)
-    for (unsigned i = 0; i < sizeof(reset_registers.out_channel) / sizeof(reset_registers.out_channel[0]); ++i)
-        reset_registers.out_channel[i].out_state.out_reset_avail_chn = 1;
-    for (unsigned i = 0; i < sizeof(reset_registers.in_channel) / sizeof(reset_registers.in_channel[0]); ++i)
-        reset_registers.in_channel[i].in_state.in_reset_avail_chn = 1;
-    puts("GTOS_A3_PANEL_TEST SDK_PPA_WAIT");
-    while (!real_ppa_go) vTaskDelay(1);
     assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
     const int result = gtos_board_present(pixels, Pixels);
     printf("GTOS_A3_PANEL_TEST PRESENT_RETURN result=%d\n", result);
@@ -527,6 +585,8 @@ void app_main(void) {
     heap_caps_free(pixels);
     puts("GTOS_A3_PANEL_TEST SDK_PPA_TIMEOUT_FALLBACK PASS");
     return;
+#elif defined(GTOS_A3_TEST_DMA2D_UNAVAILABLE)
+    check_dma2d_unavailable(pixels);
 #elif defined(GTOS_A3_TEST_PPA_RECOVERY)
     check_ppa_recovery(pixels);
 #elif defined(GTOS_A3_TEST_BACKLIGHT)

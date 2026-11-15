@@ -17,7 +17,7 @@ idf_component_register(
                       "${third_party}/lsm6ds3tr-c" "${third_party}/bq25601" "${third_party}/st7703"
     PRIV_REQUIRES esp_app_format esp_psram spi_flash esp_hw_support heap esp_timer nvs_flash esp_driver_gpio esp_driver_i2c
                   esp_driver_ledc esp_driver_pcnt esp_driver_uart esp_driver_usb_serial_jtag
-                  esp_event esp_netif esp_wifi esp_http_server bt esp_lcd esp_driver_ppa
+                  esp_event esp_netif esp_wifi esp_http_server bt esp_lcd esp_driver_dma esp_driver_ppa
 )
 target_compile_definitions(${COMPONENT_LIB} PRIVATE GTOS_EXTERNAL_NEW_DELETE)
 target_link_options(${COMPONENT_LIB} INTERFACE "LINKER:--wrap=eh_host_port_reset_slave")
