@@ -7,6 +7,7 @@
 #include <process/vm_abi.h>
 #include <process/readonly_abi.h>
 #include <process/clock_abi.h>
+#include <process/identity_abi.h>
 #include <process/info_abi.h>
 #include <process/file_abi.h>
 #include <process/shared_memory_abi.h>
@@ -874,6 +875,11 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             ? 0 : (uint32_t)GTOS_REALTIME_ERR_BAD_ADDRESS;
         break;
     }
+    case GTOS_SYS_PROCESS_IDENTITY:
+        cpu->eax = 0;
+        cpu->ebx = slot->status.id;
+        cpu->edx = thread->status.id;
+        break;
     case GTOS_SYS_PROCESS_INFO: {
         if (cpu->ecx != GTOS_PROCESS_INFO_REQUEST_BYTES) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;

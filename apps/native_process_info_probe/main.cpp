@@ -1,5 +1,6 @@
 #include "record.h"
 #include <process/abi.h>
+#include <process/identity_abi.h>
 #include <process/vm_abi.h>
 extern "C" {
 __attribute__((section(".data.process_info_record"),used))
@@ -55,6 +56,11 @@ static void Sample() {
     GtosProcessInfoResult value={};
     GtosProcessInfoRequest request=Request(reinterpret_cast<unsigned>(&value));
     Query(reinterpret_cast<unsigned>(&request),sizeof(request),0);Metadata(value);
+    unsigned operation=GTOS_SYS_PROCESS_IDENTITY, process=0xffffffffU, thread=0xffffffffU, canary=0x3fffffffU;
+    asm volatile("int $0x80" : "+a"(operation), "+b"(process), "+d"(thread), "+c"(canary) : : "cc");
+    Require(operation==0 && process==value.process_id && thread==value.thread_id && canary==0x3fffffffU,13);
+    const auto identity=gtos::native::CurrentProcessIdentity();
+    Require(identity.process_id==value.process_id && identity.thread_id==value.thread_id,14);
     if(!native_process_info_record.first.version)Copy(&native_process_info_record.first,&value,sizeof(value));
     Copy(&native_process_info_record.last,&value,sizeof(value));
 }
