@@ -6,8 +6,9 @@ idf_component_register(
     SRCS "panel_test.c" "../profile.c" "${a3}/main/board_display.c"
          "${a3}/main/board_panel.c" "${st7703}/esp_lcd_st7703.c"
     PRIV_INCLUDE_DIRS "${a3}/main" "${gtos_root}/include" "${st7703}"
+                      "$ENV{IDF_PATH}/components/esp_lcd/dsi"
     PRIV_REQUIRES esp_psram heap esp_timer esp_driver_gpio esp_driver_ledc esp_hw_support
-                  esp_lcd esp_driver_ppa
+                  esp_lcd esp_driver_ppa esp_pm
 )
 target_compile_definitions(${COMPONENT_LIB} PRIVATE GTOS_A3_PANEL_PROFILE
     ESP_LCD_ST7703_VER_MAJOR=1 ESP_LCD_ST7703_VER_MINOR=0 ESP_LCD_ST7703_VER_PATCH=4)

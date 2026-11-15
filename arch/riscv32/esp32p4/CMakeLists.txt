@@ -5,5 +5,5 @@ idf_build_set_property(MINIMAL_BUILD ON)
 project(gtos-a3)
 
 if(GTOS_A3_PANEL_PROFILE)
-    include(cmake/dsi_phy_timeout.cmake)
+    include(cmake/dsi_timeouts.cmake)
 endif()

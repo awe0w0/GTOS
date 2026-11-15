@@ -4,7 +4,9 @@
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_commands.h"
 #include "esp_lcd_panel_interface.h"
+#include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_io_interface.h"
+#include "mipi_dsi_priv.h"
 #include "esp_ldo_regulator.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -29,6 +31,9 @@ static bool test_started;
 esp_err_t __real_esp_ldo_acquire_channel(const esp_ldo_channel_config_t* config,
                                         esp_ldo_channel_handle_t* handle);
 esp_err_t __real_esp_ldo_release_channel(esp_ldo_channel_handle_t handle);
+esp_err_t __real_esp_lcd_new_panel_io_dbi(esp_lcd_dsi_bus_handle_t bus,
+                                        const esp_lcd_dbi_io_config_t* config,
+                                        esp_lcd_panel_io_handle_t* io);
 
 esp_err_t __wrap_esp_ldo_acquire_channel(const esp_ldo_channel_config_t* config,
                                         esp_ldo_channel_handle_t* handle) {
@@ -208,7 +213,39 @@ static void assert_closed(void) {
     assert(!copy_pending);
 }
 
+static void check_dbi_packets(void) {
+    static dsi_host_dev_t host;
+    struct esp_lcd_dsi_bus_t test_bus = {.hal.host = &host};
+    const esp_lcd_dbi_io_config_t config = {.virtual_channel = 1, .lcd_cmd_bits = 8, .lcd_param_bits = 8};
+    esp_lcd_panel_io_handle_t handle;
+    assert(__real_esp_lcd_new_panel_io_dbi(&test_bus, &config, &handle) == ESP_OK);
+
+    const uint8_t data[] = {0x11, 0x22, 0x33, 0x44, 0x55};
+    assert(esp_lcd_panel_io_tx_param(handle, LCD_CMD_DISPON, NULL, 0) == ESP_OK);
+    assert(host.gen_hdr.val == 0x002945);
+    assert(esp_lcd_panel_io_tx_param(handle, LCD_CMD_MADCTL, data, 1) == ESP_OK);
+    assert(host.gen_hdr.val == 0x113655);
+    assert(esp_lcd_panel_io_tx_param(handle, 0xb9, data, 2) == ESP_OK);
+    assert(host.gen_hdr.val == 0x000379 && host.gen_pld_data.val == 0x002211b9);
+    assert(esp_lcd_panel_io_tx_param(handle, 0xb9, data, sizeof(data)) == ESP_OK);
+    assert(host.gen_hdr.val == 0x000679 && host.gen_pld_data.val == 0x00005544);
+
+    host.cmd_pkt_status.gen_pld_w_full = 1;
+    int64_t started = esp_timer_get_time();
+    assert(esp_lcd_panel_io_tx_param(handle, 0xb9, data, 2) == ESP_ERR_TIMEOUT);
+    int64_t elapsed = esp_timer_get_time() - started;
+    assert(elapsed >= 100000 && elapsed < 150000);
+    assert(host.gen_hdr.val == 0x000679 && host.gen_pld_data.val == 0x00005544);
+    assert(esp_lcd_panel_io_tx_param(handle, 0xb9, data, UINT16_MAX) == ESP_ERR_INVALID_ARG);
+    uint8_t response[3] = {0, 0, 0};
+    assert(esp_lcd_panel_io_rx_param(handle, 0x04, response, sizeof(response)) == ESP_ERR_INVALID_RESPONSE);
+    assert(host.gen_hdr.val == 0x000679 && response[0] == 0 && response[1] == 0 && response[2] == 0);
+    assert(esp_lcd_panel_io_del(handle) == ESP_OK);
+    puts("GTOS_A3_PANEL_TEST DBI_PACKETS PASS");
+}
+
 void app_main(void) {
+    check_dbi_packets();
     uint16_t* pixels = heap_caps_calloc(Pixels, sizeof(*pixels), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     assert(pixels);
     const size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);

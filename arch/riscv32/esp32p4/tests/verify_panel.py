@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the real A3 panel lifecycle with an injected DSI transport in ESP-EMU."""
+"""Check A3 DBI packets and the panel lifecycle with injected hardware in ESP-EMU."""
 
 import argparse
 import json
@@ -50,6 +50,7 @@ def run(args):
         with Devices(port, args.output / "signals.json") as bus:
             offset = vm.offset()
             vm.part("reset")
+            vm.find("GTOS_A3_PANEL_TEST DBI_PACKETS PASS", offset)
             vm.find("GTOS_A3_PANEL_TEST INIT_ROLLBACK PASS", offset)
             vm.find("GTOS_A3_PANEL_TEST DMA_AND_DELETE_RETRY PASS", offset)
             vm.find("GTOS_A3_PANEL_TEST PASS", offset)
@@ -59,7 +60,7 @@ def run(args):
                 last_on = max(time for time, pin, level in bus.gpio if pin == VCI and level == 1)
             bus.edge(VCI, 0, last_on)
             verify_power(bus, args.output / "power-sequence.json")
-    print("A3 dark startup, ST7703 init rollback, DMA retirement, deletion retry and restart passed:", args.output)
+    print("A3 DBI packets, dark startup, ST7703 init rollback, DMA retirement and restart passed:", args.output)
 
 
 def main():
