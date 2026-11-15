@@ -21,6 +21,7 @@
 #include <storage/liveblockdevice.h>
 #include <storage/content_volume_layout.h>
 #include <storage/filestore.h>
+#include <storage/blockheadercache.h>
 #include <drivers/vga.h>
 #include <drivers/framebuffer.h>
 #include <gui/shell.h>
@@ -357,13 +358,16 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writabl
 
     // Both the mounted store and its endpoint must live through every Reap.
     struct Volume {
+        storage::BlockHeaderCache disk;
         storage::FileStore store;
         process::NativeFiles files{store};
+
+        explicit Volume(storage::BlockDevice& source):disk(source) {}
     };
-    Volume *volume = new Volume;
+    Volume *volume = new Volume(disk);
     if (!volume) return false;
     storage::FileStore::Info info;
-    if (volume->store.Mount(&disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
+    if (volume->store.Mount(&volume->disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
                             disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable) == 0 &&
         volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
         info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) {

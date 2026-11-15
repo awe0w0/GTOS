@@ -5,11 +5,12 @@ kernel_flags=$(cat tools/kernel-cxxflags)
 build=$(mktemp -d "${TMPDIR:-/tmp}/gtos-storage.XXXXXX")
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 compile() {
-    "${CXX:-g++}" $kernel_flags "$1" -std=c++11 -O2 -Iinclude -fno-exceptions -fno-rtti \
+    "${CXX:-g++}" $kernel_flags "$1" -std=c++11 -O2 -Iinclude -Iinclude/storage/littlefs-sdk \
+        -fno-exceptions -fno-rtti \
         -fno-builtin -fno-stack-protector -fno-pie -no-pie -nostdlib -static \
         -Wall -Wextra -Werror -Wl,-e,_start \
         tests/storage_test.cpp tests/storage_runtime.cpp \
-        src/storage/appstore.cpp src/apps/package.cpp -o "$2"
+        src/storage/appstore.cpp src/apps/package.cpp src/storage/littlefs_port.cpp -o "$2"
 }
 compile -m32 "$build/test32"
 if command -v qemu-i386 >/dev/null 2>&1; then

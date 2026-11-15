@@ -1,5 +1,6 @@
 // Tests the kernel's actual C++ store implementation against a fault-injecting disk.
 #include <storage/appstore.h>
+#include <storage/blockheadercache.h>
 extern "C" int puts(const char*);
 using namespace gtos::storage;
 using namespace gtos::apps;
@@ -11,11 +12,11 @@ static bool Equal(const uint8_t* a,const uint8_t* b,uint32_t n) { for(uint32_t i
 class MemoryDisk:public BlockDevice {
 public:
     uint8_t data[AppStore::TotalSectors][512];
-    int writes, reads, failAt; bool tear, available, failFlush;
-    MemoryDisk():writes(0),reads(0),failAt(-1),tear(false),available(true),failFlush(false) { Zero((uint8_t*)data,sizeof(data)); }
+    int writes, reads, failAt; bool tear, available, failFlush, failRead;
+    MemoryDisk():writes(0),reads(0),failAt(-1),tear(false),available(true),failFlush(false),failRead(false) { Zero((uint8_t*)data,sizeof(data)); }
     bool Identify() { return available; }
     uint32_t SectorCount()const { return AppStore::TotalSectors; }
-    bool ReadSector(uint32_t sector,uint8_t* out) { reads++; if(sector>=AppStore::TotalSectors)return false;Copy(out,data[sector],512);return true; }
+    bool ReadSector(uint32_t sector,uint8_t* out) { reads++; if(failRead||sector>=AppStore::TotalSectors)return false;Copy(out,data[sector],512);return true; }
     bool WriteSector(uint32_t sector,const uint8_t* in) {
         if(sector>=AppStore::TotalSectors)return false;
         if(writes++==failAt) { if(tear)Copy(data[sector],in,100);return false; }
@@ -32,6 +33,47 @@ public:
         for(uint32_t i=1;i<=2;i++){Copy(data[i],dir,8);Write32(data[i]+508,CRC32(data[i],508));}
     }
 };
+static void CheckBlockHeaderCache() {
+    MemoryDisk disk;
+    const uint32_t sector=FileStore::SectorsPerBlock;
+    uint8_t input[512],output[512];
+    for (uint32_t i=0;i<sizeof(input);i++) input[i]=(uint8_t)(i*3+37);
+    BlockHeaderCache cache(disk);
+    Check(cache.SectorCount()==disk.SectorCount()&&cache.Identify(),"cache delegates geometry and identify");
+    Check(cache.WriteSector(sector,input),"cache delegates block header write");
+    int reads=disk.reads;
+    Check(cache.ReadSector(sector,output)&&Equal(input,output,sizeof(input))&&disk.reads==reads+1,
+          "cold block header reads the whole sector");
+    Zero(output,sizeof(output));
+    Check(cache.ReadSector(sector,output)&&Equal(input,output,sizeof(input))&&disk.reads==reads+1,
+          "repeated block header returns bytes without another disk read");
+    Check(cache.ReadSector(sector+1,output)&&cache.ReadSector(sector+1,output)&&disk.reads==reads+3,
+          "sequential block data bypasses the header cache");
+    Check(!cache.ReadSector(sector,0)&&disk.reads==reads+3,"null destination rejected on a cache hit");
+
+    input[0]^=1;
+    Check(cache.WriteSector(sector,input)&&cache.ReadSector(sector,output)&&
+          Equal(input,output,sizeof(input))&&disk.reads==reads+4,"a write invalidates the old block header");
+    input[0]^=1;
+    input[400]^=1;
+    disk.failAt=disk.writes;
+    disk.tear=true;
+    Check(!cache.WriteSector(sector,input),"torn block header write is reported");
+    disk.failRead=true;
+    Check(!cache.ReadSector(sector,output)&&disk.reads==reads+5,"failed reads propagate after a torn write");
+    disk.failRead=false;
+    Check(cache.ReadSector(sector,output)&&disk.reads==reads+6&&
+          output[0]==input[0]&&output[400]!=input[400],"retry after a failed read sees the torn sector");
+
+    disk.available=false;
+    Check(!cache.Identify(),"failed identify is reported");
+    disk.available=true;
+    Copy(disk.data[sector],input,sizeof(input));
+    Check(cache.Identify()&&cache.ReadSector(sector,output)&&
+          Equal(input,output,sizeof(input))&&disk.reads==reads+7,"identify discards previously cached bytes");
+    disk.failFlush=true;
+    Check(!cache.Flush(),"cache forwards device flush failure");
+}
 static void Package(uint8_t* p,char id) {
     Zero(p,136);
     const uint8_t magic[8]={'G','T','A','P','P','0','1',0};Copy(p,magic,8);
@@ -40,6 +82,7 @@ static void Package(uint8_t* p,char id) {
 }
 int main() {
     MemoryDisk disk; uint8_t p[136],readback[8192];uint32_t length;
+    CheckBlockHeaderCache();
     AppStore blank(&disk);Check(!blank.Mount()&&blank.Status()==AppStore::NotFormatted,"unformatted disk refused");
     Package(p,'a');Check(!blank.Install(p,136)&&disk.writes==0,"unformatted disk never written");
     disk.Format();AppStore store(&disk);Check(store.Mount()&&store.Count()==0,"format mounts empty");
@@ -77,5 +120,5 @@ int main() {
     disk.Format();Write32(disk.data[0]+32,0xFFFFFFFFU);Write32(disk.data[0]+508,CRC32(disk.data[0],508));
     AppStore malicious(&disk);Check(!malicious.Mount(),"unsupported superblock geometry rejected despite checksum");
     disk.Format();disk.available=false;AppStore absent(&disk);Check(!absent.Mount()&&absent.Status()==AppStore::NoDisk,"missing disk reported");
-    if(failures){puts("FAIL storage C++ tests");return 1;}puts("PASS storage C++ tests: validation, capacity, COW, 34 torn installs, remount, corruption");return 0;
+    if(failures){puts("FAIL storage C++ tests");return 1;}puts("PASS storage C++ tests: block headers, validation, capacity, COW, 34 torn installs, remount, corruption");return 0;
 }
