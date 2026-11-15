@@ -11,7 +11,7 @@ class NativeEvents:public NativeEventEndpoint {
     friend struct ::gtos::NativeEventFixture;
 public:
     static const uint32_t MaximumHandles=64,MaximumObjects=32;
-    static const uint32_t ContentMaximumHandles=512,ContentMaximumObjects=256;
+    static const uint32_t ContentMaximumHandles=2048,ContentMaximumObjects=1024;
 private:
     struct Object { uint32_t references;bool manual,signalled; } objects[ContentMaximumObjects];
     struct Handle { uint32_t id,owner,object,rights; } handles[ContentMaximumHandles];
