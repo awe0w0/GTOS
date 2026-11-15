@@ -12,13 +12,12 @@
 enum { PixelCount = A3_WIDTH * A3_HEIGHT, MaxDuty = 1023 };
 #ifdef CONFIG_GTOS_A3_SIMULATION
 static uint16_t* frame;
-static bool has_frame;
 #else
 #include "board_panel.h"
 static const A3PanelProfile* physical;
 #endif
 static enum { DisplayOff, DisplayOn, DisplayStopping } state;
-static bool ready;
+static bool ready, has_frame;
 static unsigned ceiling = 100, power_on_ms = 20, reset_release_ms = 20, power_off_ms;
 static int64_t next_power_on_us;
 static unsigned brightness = 60;
@@ -76,9 +75,8 @@ void gtos_board_display_size(unsigned* width, unsigned* height) {
 static bool power_down(void) {
     state = DisplayStopping;
     const bool dark = backlight(0);
-#ifdef CONFIG_GTOS_A3_SIMULATION
     has_frame = false;
-#else
+#ifndef CONFIG_GTOS_A3_SIMULATION
     if (!a3_panel_stop()) return false;
 #endif
     const bool reset = gpio_set_level(A3_PIN_LCD_RESET_ASSERT, 1) == ESP_OK;
@@ -99,9 +97,10 @@ static bool power_up(void) {
     if (gpio_set_level(A3_PIN_LCD_RESET_ASSERT, 0) != ESP_OK) return false;
     vTaskDelay(pdMS_TO_TICKS(reset_release_ms) + 1);
 #ifndef CONFIG_GTOS_A3_SIMULATION
-    if (!a3_panel_start(physical)) return false;
+    return a3_panel_start(physical);
+#else
+    return true;
 #endif
-    return backlight(brightness);
 }
 
 int gtos_board_set_display(bool enabled) {
@@ -120,7 +119,7 @@ int gtos_board_set_display(bool enabled) {
 int gtos_board_set_brightness(unsigned percent) {
     if (percent > 100) return GTOS_BOARD_INVALID;
     if (!ready) return GTOS_BOARD_MISSING;
-    if (state == DisplayOn && !backlight(percent)) return GTOS_BOARD_IO;
+    if (state == DisplayOn && has_frame && !backlight(percent)) return GTOS_BOARD_IO;
     brightness = percent;
     return GTOS_BOARD_OK;
 }
@@ -131,11 +130,13 @@ int gtos_board_present(const uint16_t* pixels, size_t count) {
     if (state != DisplayOn) return GTOS_BOARD_NOT_READY;
 #ifdef CONFIG_GTOS_A3_SIMULATION
     memcpy(frame, pixels, count * sizeof(*frame));
+#else
+    if (!a3_panel_present(pixels)) return GTOS_BOARD_IO;
+    if (!has_frame && ceiling && !a3_panel_wait_first_frame()) return GTOS_BOARD_IO;
+#endif
+    if (!has_frame && !backlight(brightness)) return GTOS_BOARD_IO;
     has_frame = true;
     return GTOS_BOARD_OK;
-#else
-    return a3_panel_present(pixels) ? GTOS_BOARD_OK : GTOS_BOARD_IO;
-#endif
 }
 
 void a3_display_dump(void) {

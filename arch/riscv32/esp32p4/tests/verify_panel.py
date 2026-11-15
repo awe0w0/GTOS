@@ -9,7 +9,10 @@ from verify_board import Guest, available_port
 from verify_live_board import Devices, MS, PWM, RESET, VCI
 
 
-def display_cycles(bus, count):
+SCANOUT_MARKER = 30  # GPIO used only by the synthetic backlight fixture.
+
+
+def display_cycles(bus, count, *, dark=True):
     with bus.lock:
         signals = list(bus.gpio)
     rails = [(time, pin, level) for time, pin, level in signals if pin in (VCI, RESET)]
@@ -20,7 +23,7 @@ def display_cycles(bus, count):
     sequence = [(VCI, 1), (RESET, 0), (RESET, 1), (VCI, 0)]
     if [(pin, level) for _, pin, level in cycles] != sequence * count:
         raise RuntimeError(f"Unexpected VCI/reset sequence: {cycles}")
-    if any(pin == PWM and level and time >= cycles[0][0] for time, pin, level in signals):
+    if dark and any(pin == PWM and level and time >= cycles[0][0] for time, pin, level in signals):
         raise RuntimeError("Diagnostic backlight rose while the panel was powered")
     if not any(pin == PWM and not level for _, pin, level in signals):
         raise RuntimeError("The GPIO trace did not show the backlight parked low")
@@ -39,6 +42,18 @@ def verify_power(bus, output):
                                   "vci_off_ms": dwell, "three_cycles_ns": cycles}) + "\n")
 
 
+def verify_first_frame(bus, output):
+    cycles = display_cycles(bus, 2, dark=False)
+    with bus.lock:
+        markers = [stamp for stamp, pin, level in bus.gpio if pin == SCANOUT_MARKER and level]
+        light = [stamp for stamp, pin, level in bus.gpio if pin == PWM and level and stamp >= cycles[0][0]]
+    if len(markers) != 1 or not light or not cycles[1][0] < markers[0] <= light[0] <= light[-1] < cycles[3][0]:
+        raise RuntimeError(f"Backlight active outside the verified scanout interval. See {bus.output}")
+    bus.pwm(markers[0], 75)
+    output.write_text(json.dumps({"second_fresh_vsync_ns": markers[0], "first_pwm_high_ns": light[0],
+                                  "pwm_percent": 75, "vci_cycles_ns": cycles}, indent=2) + "\n")
+
+
 def run(args):
     args.output.mkdir(parents=True, exist_ok=False)
     profile = args.output / "gpio-board.json"
@@ -47,20 +62,35 @@ def run(args):
     flash = args.build / "gtos-a3-panel-test-flash.bin"
     with Guest(args, flash, profile, args.output / "panel.log", elf_name="gtos-a3-panel-test.elf",
                extra=("--cosim-tcp", f"127.0.0.1:{port}")) as vm:
-        with Devices(port, args.output / "signals.json") as bus:
+        with Devices(port, args.output / "signals.json",
+                     watch_pins=(SCANOUT_MARKER,) if args.backlight else ()) as bus:
             offset = vm.offset()
             vm.part("reset")
             vm.find("GTOS_A3_PANEL_TEST DBI_PACKETS PASS", offset)
-            vm.find("GTOS_A3_PANEL_TEST INIT_ROLLBACK PASS", offset)
-            vm.find("GTOS_A3_PANEL_TEST DMA_AND_DELETE_RETRY PASS", offset)
+            if args.backlight:
+                vm.find("GTOS_A3_PANEL_TEST BEFORE_FRAME duty=0", offset)
+                vm.find("GTOS_A3_PANEL_TEST DRAW_AND_COPY_FAILURE_DARK PASS", offset)
+                vm.find("GTOS_A3_PANEL_TEST INCOMPLETE_SCANOUT_DARK PASS", offset)
+                vm.find("GTOS_A3_PANEL_TEST FIRST_FRAME_BACKLIGHT PASS", offset)
+                count = 2
+            else:
+                vm.find("GTOS_A3_PANEL_TEST INIT_ROLLBACK PASS", offset)
+                vm.find("GTOS_A3_PANEL_TEST DMA_AND_DELETE_RETRY PASS", offset)
+                count = 3
             vm.find("GTOS_A3_PANEL_TEST PASS", offset)
-            bus.wait(lambda: sum(pin == VCI and level == 1 for _, pin, level in bus.gpio) >= 3,
-                     "the third VCI assertion")
+            bus.wait(lambda: sum(pin == VCI and level == 1 for _, pin, level in bus.gpio) >= count,
+                     f"{count} VCI assertions")
             with bus.lock:
                 last_on = max(time for time, pin, level in bus.gpio if pin == VCI and level == 1)
             bus.edge(VCI, 0, last_on)
-            verify_power(bus, args.output / "power-sequence.json")
-    print("A3 DBI packets, dark startup, ST7703 init rollback, DMA retirement and restart passed:", args.output)
+            if args.backlight:
+                verify_first_frame(bus, args.output / "first-frame.json")
+            else:
+                verify_power(bus, args.output / "power-sequence.json")
+    if args.backlight:
+        print("A3 first frame and PWM sequencing, rejection, and restart passed:", args.output)
+    else:
+        print("A3 DBI packets, dark startup, ST7703 init rollback, DMA retirement and restart passed:", args.output)
 
 
 def main():
@@ -68,6 +98,7 @@ def main():
     parser.add_argument("--emulator", type=Path, required=True)
     parser.add_argument("--build", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--backlight", action="store_true", help="Run the GTOS_A3_TEST_BACKLIGHT fixture")
     run(parser.parse_args())
 
 

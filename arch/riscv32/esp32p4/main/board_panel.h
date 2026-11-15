@@ -26,5 +26,6 @@ const A3PanelProfile* a3_panel_profile(void);
 bool a3_panel_start(const A3PanelProfile* profile);
 bool a3_panel_stop(void);
 bool a3_panel_present(const uint16_t* pixels);
+bool a3_panel_wait_first_frame(void);
 
 #endif

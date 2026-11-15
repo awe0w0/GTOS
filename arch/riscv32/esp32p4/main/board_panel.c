@@ -1,6 +1,7 @@
 #include "board_a3.h"
 #include "board_panel.h"
 #include "driver/ppa.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -18,7 +19,7 @@ static esp_lcd_panel_io_handle_t io;
 static esp_lcd_panel_handle_t panel;
 static uint16_t* staging;
 static ppa_client_handle_t rotation;
-static SemaphoreHandle_t transfer_done;
+static SemaphoreHandle_t transfer_done, vsync;
 static bool transfer_pending, dma2d_enabled;
 static const A3PanelProfile* active;
 
@@ -78,6 +79,10 @@ bool a3_panel_stop(void) {
         vSemaphoreDelete(transfer_done);
         transfer_done = NULL;
     }
+    if (vsync) {
+        vSemaphoreDelete(vsync);
+        vsync = NULL;
+    }
     if (rotation) {
         if (ppa_unregister_client(rotation) != ESP_OK) return false;
         rotation = NULL;
@@ -88,8 +93,8 @@ bool a3_panel_stop(void) {
     return true;
 }
 
-static bool frame_copied(esp_lcd_panel_handle_t display, esp_lcd_dpi_panel_event_data_t* event,
-                         void* semaphore) {
+static bool IRAM_ATTR frame_copied(esp_lcd_panel_handle_t display, esp_lcd_dpi_panel_event_data_t* event,
+                                   void* semaphore) {
     (void)display;
     (void)event;
     BaseType_t wake = pdFALSE;
@@ -97,22 +102,45 @@ static bool frame_copied(esp_lcd_panel_handle_t display, esp_lcd_dpi_panel_event
     return wake == pdTRUE;
 }
 
-static bool enable_acceleration(bool portrait) {
-    if (portrait) {
+static bool IRAM_ATTR frame_sync(esp_lcd_panel_handle_t display, esp_lcd_dpi_panel_event_data_t* event,
+                                 void* unused) {
+    (void)display;
+    (void)event;
+    (void)unused;
+    BaseType_t wake = pdFALSE;
+    xSemaphoreGiveFromISR(vsync, &wake);
+    return wake == pdTRUE;
+}
+
+static bool configure_frame_events(const A3PanelProfile* profile, bool portrait) {
+    const bool accelerate = profile->use_graphics_acceleration;
+    if (accelerate && portrait) {
         const ppa_client_config_t ppa = {.oper_type = PPA_OPERATION_SRM};
         if (ppa_register_client(&ppa, &rotation) != ESP_OK) return false;
     }
-    transfer_done = xSemaphoreCreateBinary();
-    const esp_lcd_dpi_panel_event_callbacks_t callbacks = {.on_color_trans_done = frame_copied};
-    if (!transfer_done
-        || esp_lcd_dpi_panel_register_event_callbacks(panel, &callbacks, transfer_done) != ESP_OK
-        || esp_lcd_dpi_panel_enable_dma2d(panel) != ESP_OK) return false;
-    dma2d_enabled = true;
+    if (accelerate) {
+        transfer_done = xSemaphoreCreateBinary();
+        if (!transfer_done) return false;
+    }
+    if (profile->backlight_max_percent) {
+        vsync = xSemaphoreCreateBinary();
+        if (!vsync) return false;
+    }
+    const esp_lcd_dpi_panel_event_callbacks_t callbacks = {
+        .on_color_trans_done = transfer_done ? frame_copied : NULL,
+        .on_vsync = vsync ? frame_sync : NULL,
+    };
+    if ((transfer_done || vsync)
+        && esp_lcd_dpi_panel_register_event_callbacks(panel, &callbacks, transfer_done) != ESP_OK) return false;
+    if (accelerate) {
+        if (esp_lcd_dpi_panel_enable_dma2d(panel) != ESP_OK) return false;
+        dma2d_enabled = true;
+    }
     return true;
 }
 
 bool a3_panel_start(const A3PanelProfile* profile) {
-    if (!profile || panel || io || bus || phy || rotation || transfer_done || staging) return false;
+    if (!profile || panel || io || bus || phy || rotation || transfer_done || vsync || staging) return false;
     const bool portrait = profile->timing.h_size == A3_HEIGHT;
     if (portrait || profile->use_graphics_acceleration) {
         staging = heap_caps_aligned_alloc(128, FrameBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -146,7 +174,7 @@ bool a3_panel_start(const A3PanelProfile* profile) {
     };
     if (esp_lcd_new_panel_st7703(io, &device, &panel) != ESP_OK
         || esp_lcd_panel_init(panel) != ESP_OK
-        || (profile->use_graphics_acceleration && !enable_acceleration(portrait))
+        || !configure_frame_events(profile, portrait)
         || esp_lcd_panel_disp_on_off(panel, true) != ESP_OK) {
         a3_panel_stop();
         return false;
@@ -191,5 +219,18 @@ bool a3_panel_present(const uint16_t* pixels) {
                                   pixels) != ESP_OK) return false;
     // An asynchronous DMA2D operation owns staging until its callback.
     transfer_pending = transfer_done != NULL;
+    return true;
+}
+
+bool a3_panel_wait_first_frame(void) {
+    const TickType_t started = xTaskGetTickCount();
+    const TickType_t timeout = pdMS_TO_TICKS(500) + 1;
+    if (!vsync || !retire_transfer(timeout)) return false;
+    // Discard an earlier notification. A whole refresh fits between the next two.
+    xSemaphoreTake(vsync, 0);
+    for (unsigned i = 0; i < 2; ++i) {
+        const TickType_t elapsed = xTaskGetTickCount() - started;
+        if (elapsed >= timeout || xSemaphoreTake(vsync, timeout - elapsed) != pdTRUE) return false;
+    }
     return true;
 }

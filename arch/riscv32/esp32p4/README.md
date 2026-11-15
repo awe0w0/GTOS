@@ -253,6 +253,12 @@ GTOS_A3_PANEL_PROFILE 指向定义 *gtos_a3_panel_profile* 的 C 文件。
 为低电平，并继续初始化面板和提交画面。此时允许 `backlight_pwm_hz` 为 0。
 确认背光装配和额定电流后，由实板配置提供已确认的 PWM 频率和亮度上限。
 
+唤醒时先保持背光关闭。启用背光的配置首次提交画面时，固件等待帧复制完成，清掉旧的
+VSYNC 通知，再等两个新 VSYNC，让完整刷新能发生在两次通知之间。复制和 VSYNC
+共用约 500 ms 的等待预算。首帧绘制失败或超时会返回 I/O 错误，背光仍关闭，后续提交可重试。
+亮度设置可在首帧前写入，首帧确认后才应用。零背光配置继续提交帧，GPIO26 保持低电平。
+[ESP-IDF 6.1 DSI 帧复制与 VSYNC 回调](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html)
+
 关屏先置暗并等待挂起的复制完成，然后依次禁用 DMA2D、释放面板和 DSI 总线，再拉复位
 和关闭 VCI。`power_off_ms` 可按面板时序设定再次上电前的断电时间。
 关屏遇到暂时性错误时可重试，清理期间暂停提交新帧。
@@ -271,6 +277,20 @@ idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
 PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
     python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu \
     --build "$build" --output out/a3-panel-test-run
+~~~
+
+首帧回归用合成背光配置重跑板级驱动。它注入绘制失败、未完成的复制、旧 VSYNC
+以及缺少后续 VSYNC 的场景，并从 GPIO26 采样第二个新 VSYNC 后的 PWM。
+用例包含再次唤醒及不使用 DMA2D 时的帧确认。面板出图与实际背光电流仍在实板测量。
+
+~~~sh
+p=arch/riscv32/esp32p4
+build="$PWD/out/a3-panel-backlight-test"
+idf.py -C "$p/tests/panel" -B "$build" -D "SDKCONFIG=$build/sdkconfig" \
+    -D GTOS_A3_TEST_BACKLIGHT=ON merge-bin -o "$build/gtos-a3-panel-test-flash.bin"
+PYTHONPATH=/path/to/esp-emulator-v1.0.0/tools \
+    python3 "$p/tests/verify_panel.py" --emulator /path/to/esp-emu --backlight \
+    --build "$build" --output out/a3-panel-backlight-test-run
 ~~~
 
 使用 `GTOS_A3_PANEL_PROFILE` 时，A3 在构建目录生成两份 ESP-IDF v6.1 DSI 驱动。

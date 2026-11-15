@@ -1,5 +1,7 @@
 #include "board_a3.h"
 #include "board_panel.h"
+#include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "driver/ppa.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_commands.h"
@@ -15,7 +17,7 @@
 #include <stdio.h>
 
 enum { Pixels = A3_WIDTH * A3_HEIGHT };
-static enum { NoFailure, InitCommand, DisableDma, DeleteDpi } failure;
+static enum { NoFailure, InitCommand, DisableDma, DeleteDpi, Draw } failure;
 static bool phy_open, bus_open, io_open, dpi_open, dpi_active, dma_enabled, ppa_open;
 static bool id_read;
 static volatile bool copy_pending;
@@ -24,6 +26,11 @@ static unsigned command_count, starts, stops, frames;
 static esp_lcd_panel_t dpi;
 static esp_lcd_panel_io_t dbi;
 static esp_lcd_dpi_panel_color_trans_done_cb_t copy_done;
+#ifdef GTOS_A3_TEST_BACKLIGHT
+enum { ScanoutMarkerPin = 30 };
+static esp_lcd_dpi_panel_vsync_cb_t vsync_done;
+static volatile unsigned events, event_limit;
+#endif
 static void* copy_context;
 static char phy_token, bus_token, ppa_token;
 static bool test_started;
@@ -124,6 +131,9 @@ static esp_err_t delete_dpi(esp_lcd_panel_t* handle) {
     }
     if (dpi_active) assert(commands[command_count - 1] == LCD_CMD_DISPOFF);
     dpi_open = dpi_active = false;
+#ifdef GTOS_A3_TEST_BACKLIGHT
+    vsync_done = NULL;
+#endif
     ++stops;
     return ESP_OK;
 }
@@ -132,6 +142,10 @@ static esp_err_t draw_dpi(esp_lcd_panel_t* handle, int x0, int y0, int x1, int y
     assert(handle == &dpi && dpi_active && !copy_pending);
     assert(commands[command_count - 1] == LCD_CMD_DISPON);
     assert(x0 == 0 && y0 == 0 && x1 == A3_HEIGHT && y1 == A3_WIDTH);
+    if (failure == Draw) {
+        failure = NoFailure;
+        return ESP_ERR_INVALID_STATE;
+    }
     if (dma_enabled) copy_pending = true;
     else {
         const uint16_t* rotated = pixels;
@@ -156,7 +170,13 @@ esp_err_t __wrap_esp_lcd_new_panel_dpi(esp_lcd_dsi_bus_handle_t handle,
 
 esp_err_t __wrap_esp_lcd_dpi_panel_register_event_callbacks(esp_lcd_panel_handle_t handle,
         const esp_lcd_dpi_panel_event_callbacks_t* callbacks, void* context) {
-    assert(handle == &dpi && dpi_active && callbacks->on_color_trans_done && context);
+    assert(handle == &dpi && dpi_active);
+#ifdef GTOS_A3_TEST_BACKLIGHT
+    assert(callbacks->on_vsync);
+    vsync_done = callbacks->on_vsync;
+#else
+    assert(callbacks->on_color_trans_done && context && !callbacks->on_vsync);
+#endif
     copy_done = callbacks->on_color_trans_done;
     copy_context = context;
     return ESP_OK;
@@ -213,6 +233,110 @@ static void assert_closed(void) {
     assert(!copy_pending);
 }
 
+#ifdef GTOS_A3_TEST_BACKLIGHT
+static void emit_vsync(void* unused) {
+    (void)unused;
+    assert(vsync_done);
+    if (vsync_done(&dpi, NULL, copy_context)) esp_timer_isr_dispatch_need_yield();
+}
+
+static void first_frame_events(void* unused) {
+    (void)unused;
+    if (events >= event_limit) return;
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+    switch (events++) {
+        case 0:
+            assert(copy_pending);
+            emit_vsync(NULL);
+            break;
+        case 1:
+            complete_copy(NULL);
+            break;
+        case 2:
+            emit_vsync(NULL);
+            break;
+        case 3:
+            assert(gpio_set_level(ScanoutMarkerPin, 1) == ESP_OK);
+            emit_vsync(NULL);
+            break;
+    }
+}
+
+static esp_timer_handle_t create_isr_timer(esp_timer_cb_t callback) {
+    const esp_timer_create_args_t config = {.callback = callback, .dispatch_method = ESP_TIMER_ISR};
+    esp_timer_handle_t timer;
+    assert(esp_timer_create(&config, &timer) == ESP_OK);
+    return timer;
+}
+
+static void expect_frame_timeout(const uint16_t* pixels) {
+    const TickType_t started = xTaskGetTickCount();
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_IO);
+    const TickType_t elapsed = xTaskGetTickCount() - started;
+    assert(elapsed >= pdMS_TO_TICKS(500) && elapsed <= pdMS_TO_TICKS(500) + 2);
+}
+
+static void check_backlight(const uint16_t* pixels) {
+    assert(gpio_set_level(ScanoutMarkerPin, 0) == ESP_OK);
+    assert(gpio_set_direction(ScanoutMarkerPin, GPIO_MODE_OUTPUT) == ESP_OK);
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    printf("GTOS_A3_PANEL_TEST BEFORE_FRAME duty=%lu\n",
+           (unsigned long)ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+    assert(gtos_board_set_brightness(75) == GTOS_BOARD_OK);
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+
+    failure = Draw;
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_IO && !copy_pending && failure == NoFailure);
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+    expect_frame_timeout(pixels);
+    assert(copy_pending);
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+    esp_timer_handle_t timer = create_isr_timer(complete_copy);
+    assert(esp_timer_start_once(timer, 10000) == ESP_OK);
+    vTaskDelay(pdMS_TO_TICKS(30) + 1);
+    assert(!copy_pending && esp_timer_delete(timer) == ESP_OK);
+    puts("GTOS_A3_PANEL_TEST DRAW_AND_COPY_FAILURE_DARK PASS");
+
+    timer = create_isr_timer(first_frame_events);
+    events = 0;
+    event_limit = 3;
+    assert(esp_timer_start_periodic(timer, 20000) == ESP_OK);
+    expect_frame_timeout(pixels);
+    assert(!copy_pending);
+    assert(esp_timer_stop(timer) == ESP_OK && events == 3);
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+    puts("GTOS_A3_PANEL_TEST INCOMPLETE_SCANOUT_DARK PASS");
+
+    events = 0;
+    event_limit = 4;
+    assert(esp_timer_start_periodic(timer, 20000) == ESP_OK);
+    assert(gtos_board_present(pixels, Pixels) == GTOS_BOARD_OK && !copy_pending);
+    assert(esp_timer_stop(timer) == ESP_OK && events == 4);
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 767);
+    assert(esp_timer_delete(timer) == ESP_OK);
+    vTaskDelay(pdMS_TO_TICKS(40) + 1);
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert_closed();
+    assert(gtos_board_set_display(true) == GTOS_BOARD_OK);
+    assert(ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) == 0);
+    assert(gtos_board_set_display(false) == GTOS_BOARD_OK);
+    assert_closed();
+
+    A3PanelProfile software = gtos_a3_panel_profile;
+    software.use_graphics_acceleration = false;
+    assert(a3_panel_start(&software));
+    assert(a3_panel_present(pixels));
+    timer = create_isr_timer(emit_vsync);
+    assert(esp_timer_start_periodic(timer, 20000) == ESP_OK);
+    assert(a3_panel_wait_first_frame());
+    assert(esp_timer_stop(timer) == ESP_OK && esp_timer_delete(timer) == ESP_OK);
+    assert(a3_panel_stop());
+    assert_closed();
+    puts("GTOS_A3_PANEL_TEST FIRST_FRAME_BACKLIGHT PASS");
+}
+#endif
+
 static void check_dbi_packets(void) {
     static dsi_host_dev_t host;
     struct esp_lcd_dsi_bus_t test_bus = {.hal.host = &host};
@@ -257,6 +381,9 @@ void app_main(void) {
     a3_display_init();
     assert(gtos_board_set_brightness(100) == GTOS_BOARD_OK);
 
+#ifdef GTOS_A3_TEST_BACKLIGHT
+    check_backlight(pixels);
+#else
     failure = InitCommand;
     assert(gtos_board_set_display(true) == GTOS_BOARD_IO);
     assert(failure == NoFailure);
@@ -295,6 +422,7 @@ void app_main(void) {
     assert(a3_panel_present(pixels) && frames == 2);
     assert(a3_panel_stop());
     assert_closed();
+#endif
     assert(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) == free_psram);
     heap_caps_free(pixels);
     puts("GTOS_A3_PANEL_TEST PASS");

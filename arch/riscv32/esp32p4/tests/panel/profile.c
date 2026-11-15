@@ -18,6 +18,10 @@ const A3PanelProfile gtos_a3_panel_profile = {
     .power_on_ms = 20,
     .reset_release_ms = 20,
     .power_off_ms = 50,
+#ifdef GTOS_A3_TEST_BACKLIGHT
+    .backlight_pwm_hz = 1000,
+    .backlight_max_percent = 100,
+#endif
     .init_in_command_mode = true,
     .portrait_clockwise = true,
     .use_graphics_acceleration = true,
