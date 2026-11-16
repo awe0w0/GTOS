@@ -90,7 +90,7 @@ source_set("native_cxx_abi") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
     # Keep the GTOS guard's native thread ID separate from host generator inputs.
-    "libcxxabi/cxa_guard.cpp",
+    "//third_party/libc++abi/src/src/gtos/cxa_guard.cpp",
     "//third_party/libc++/src/src/exception.cpp",
     "//third_party/libc++abi/src/src/cxa_aux_runtime.cpp",
     "//third_party/libc++abi/src/src/cxa_default_handlers.cpp",

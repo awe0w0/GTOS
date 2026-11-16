@@ -847,8 +847,8 @@ ADDITIONS = {
     'build/config/gtos/runtime/BUILD.gn': 'sdk/codec-runtime.gn',
     'build/config/gtos/runtime/assert.cc': 'runtime/assert.cc',
     'build/config/gtos/runtime/codec_once.cc': 'sdk/codec_once.cc',
-    'build/config/gtos/runtime/libcxxabi/cxa_guard.cpp': '//third_party/libc++abi/src/src/cxa_guard.cpp',
-    'build/config/gtos/runtime/libcxxabi/cxa_guard_impl.h': '//third_party/libc++abi/src/src/cxa_guard_impl.h',
+    'third_party/libc++abi/src/src/gtos/cxa_guard.cpp': '//third_party/libc++abi/src/src/cxa_guard.cpp',
+    'third_party/libc++abi/src/src/gtos/cxa_guard_impl.h': '//third_party/libc++abi/src/src/cxa_guard_impl.h',
     'build/config/gtos/runtime/setjmp_i386.S': 'sdk/setjmp_i386.S',
     'third_party/libvpx/source/config/gtos/generic/vpx_config.h': 'libvpx/vpx_config.h',
     'third_party/libvpx/source/config/gtos/generic/vpx_config.c': 'libvpx/vpx_config.c',
@@ -979,7 +979,7 @@ ADDITIONS = {
 
 # Patch private copies of the qualified platform sources.
 PATCHED_ADDITIONS = {
-    'build/config/gtos/runtime/libcxxabi/cxa_guard_impl.h',
+    'third_party/libc++abi/src/src/gtos/cxa_guard_impl.h',
     'build/config/gtos/runtime/platform_file.cpp',
     'third_party/boringssl/src/crypto/thread_gtos.cc',
     'build/config/gtos/runtime/directory.cpp',
@@ -998,8 +998,8 @@ PATCHED_ADDITIONS = {
 
 # These provider bytes are pinned by the source locks or supplied SDK.
 ADDITION_SHA256 = {
-    'build/config/gtos/runtime/libcxxabi/cxa_guard.cpp': '97dbc2a48acb2233301bd7c11717cda173b23c73e7da64eb1710332c3b19f54d',
-    'build/config/gtos/runtime/libcxxabi/cxa_guard_impl.h': 'a797e74fdd91db19cfe8df5ce8a8a8b5ac1ecc0386fe9675476c786b40d34853',
+    'third_party/libc++abi/src/src/gtos/cxa_guard.cpp': '97dbc2a48acb2233301bd7c11717cda173b23c73e7da64eb1710332c3b19f54d',
+    'third_party/libc++abi/src/src/gtos/cxa_guard_impl.h': 'a797e74fdd91db19cfe8df5ce8a8a8b5ac1ecc0386fe9675476c786b40d34853',
     'build/config/gtos/runtime/platform_file.cpp': 'ea166301180799dcac8e599d167fe743820e3afb4ad1d7d7e5dc9ec9336ed86b',
     'build/config/gtos/runtime/directory.cpp': 'bdc65bf6eeb758adf8bd1d541dce9a8cd49508d9b545e40d7b6bad2a08bc7aae',
     'build/config/gtos/include/llvm-libc-macros/fnmatch-macros.h': 'beaf82fb2c84c3135286d48a40814d266456716543d7971d603e5b0d2c3b6a23',

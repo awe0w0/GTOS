@@ -1,5 +1,5 @@
---- a/build/config/gtos/runtime/libcxxabi/cxa_guard_impl.h
-+++ b/build/config/gtos/runtime/libcxxabi/cxa_guard_impl.h
+--- a/third_party/libc++abi/src/src/gtos/cxa_guard_impl.h
++++ b/third_party/libc++abi/src/src/gtos/cxa_guard_impl.h
 @@ -159,4 +159,9 @@
 -#if defined(__APPLE__) && _LIBCPP_HAS_THREAD_API_PTHREAD
 +#if defined(__GTOS__) && _LIBCPP_HAS_THREAD_API_EXTERNAL && !defined(_LIBCXXABI_HAS_NO_THREADS)
