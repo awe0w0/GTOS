@@ -89,10 +89,11 @@ source_set("native_error_strings") {
 source_set("native_cxx_abi") {
   assert(is_gtos && current_cpu == "x86")
   sources = [
+    # Keep the GTOS guard's native thread ID separate from host generator inputs.
+    "libcxxabi/cxa_guard.cpp",
     "//third_party/libc++/src/src/exception.cpp",
     "//third_party/libc++abi/src/src/cxa_aux_runtime.cpp",
     "//third_party/libc++abi/src/src/cxa_default_handlers.cpp",
-    "//third_party/libc++abi/src/src/cxa_guard.cpp",
     "//third_party/libc++abi/src/src/cxa_handlers.cpp",
     "//third_party/libc++abi/src/src/cxa_noexception.cpp",
     "//third_party/libc++abi/src/src/private_typeinfo.cpp",
@@ -102,6 +103,7 @@ source_set("native_cxx_abi") {
   include_dirs = [
     "//third_party/libc++/src/src",
     "//third_party/libc++abi/src/include",
+    "//third_party/libc++abi/src/src",
     "//third_party/libunwind/src/include",
   ]
   defines = [
