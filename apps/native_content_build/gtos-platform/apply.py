@@ -14,6 +14,7 @@ candidate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(candidate)
 
 INPUTS = {
+    'third_party/libc++abi/src/src/cxa_guard_impl.h': 'a797e74fdd91db19cfe8df5ce8a8a8b5ac1ecc0386fe9675476c786b40d34853',
     'components/services/storage/public/cpp/filesystem/filesystem_impl.cc': 'ca76030394b7f8d26697c5c709d97abe462b22e459a123b300f08bfac8ec2374',
     'components/services/storage/public/cpp/filesystem/filesystem_proxy.cc': 'fa0af3b31502c198b4b0659d140574162cd5af4ca058c1566d1c12d0251b10f0',
     'ui/compositor/BUILD.gn': 'a5a5f7c08e8d4be004c1d501edb3203daddb12028a1317cceb769e5797b9def1',
@@ -1048,6 +1049,8 @@ ADDITION_SHA256 = {
 # the unchanged TypeScript entry inside the private checkout so its validators
 # and GN arguments agree on the source root. No dependency check is relaxed.
 MATERIALIZED = {
+    # Compile the threaded guard in the same private tree as its GTOS header.
+    'third_party/libc++abi/src/src/cxa_guard.cpp': '97dbc2a48acb2233301bd7c11717cda173b23c73e7da64eb1710332c3b19f54d',
     # Use the upstream error classes and errno messages in the target runtime.
     'third_party/libc++/src/src/error_category.cpp': '06dff42f4f4dbb2d143b5e677f8bec24cc33bfd3f828562d53765f088a3e5fad',
     'third_party/libc++/src/src/include/atomic_support.h': 'c01d71b5a8fe48773f3670166030284b1050413e22f24bf21bb8c64637036f9e',

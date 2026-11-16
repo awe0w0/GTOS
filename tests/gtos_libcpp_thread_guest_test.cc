@@ -118,6 +118,69 @@ int TestThreadCapacity(const GtosProcessInfoResult& process) {
     return status;
 }
 
+struct StaticInitialization {
+    std::atomic<unsigned> requests{0};
+    std::atomic<unsigned> initializers{0};
+    std::atomic<unsigned> completed{0};
+    std::atomic<bool> release{false};
+};
+
+int GuardedValue(StaticInitialization& state) {
+    static const int value = [&] {
+        ++state.initializers;
+        while (!state.release.load()) std::this_thread::yield();
+        return 42;
+    }();
+    return value;
+}
+
+void* ReadGuardedValue(void* argument) {
+    auto& state = *static_cast<StaticInitialization*>(argument);
+    ++state.requests;
+    const int value = GuardedValue(state);
+    ++state.completed;
+    return reinterpret_cast<void*>(static_cast<uintptr_t>(value));
+}
+
+bool WaitForCount(const std::atomic<unsigned>& count, unsigned expected) {
+    for (unsigned attempt = 0; attempt < 4096; ++attempt) {
+        if (count.load() == expected) return true;
+        std::this_thread::yield();
+    }
+    return false;
+}
+
+int TestStaticInitialization() {
+    StaticInitialization state;
+    unsigned initializer = 0;
+    unsigned contender = 0;
+    if (gtos::native::StartThread(0, ReadGuardedValue, &state, &initializer)) return 55;
+
+    int status = 0;
+    if (!WaitForCount(state.initializers, 1) ||
+        gtos::native::StartThread(0, ReadGuardedValue, &state, &contender)) {
+        status = 56;
+    } else if (!WaitForCount(state.requests, 2)) {
+        status = 57;
+    } else {
+        // Let the contender reach the guard while the initializer is still pending.
+        for (unsigned attempt = 0; attempt < 64; ++attempt) std::this_thread::yield();
+        if (state.completed.load() || state.initializers.load() != 1) status = 58;
+    }
+
+    state.release.store(true);
+    for (unsigned thread : {initializer, contender}) {
+        if (!thread) continue;
+        void* result = nullptr;
+        if (gtos::native::JoinThread(thread, &result) ||
+            reinterpret_cast<uintptr_t>(result) != 42)
+            return 59;
+    }
+    if (!status && (state.completed.load() != 2 || state.initializers.load() != 1))
+        status = 59;
+    return status;
+}
+
 class V8Worker : public v8::base::Thread {
 public:
     V8Worker() : Thread(Options("gtos-v8-worker")) {}
@@ -179,6 +242,7 @@ int TestLibcppThread() {
     next.join();
     if (reused <= worker_id || next.joinable()) return 45;
     if (const int status = TestThreadCapacity(process)) return status;
+    if (const int status = TestStaticInitialization()) return status;
 
     V8Worker v8_worker;
     if (!v8_worker.StartSynchronously()) return 52;

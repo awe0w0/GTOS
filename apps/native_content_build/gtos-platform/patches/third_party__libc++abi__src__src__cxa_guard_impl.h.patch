@@ -1,0 +1,16 @@
+--- a/third_party/libc++abi/src/src/cxa_guard_impl.h
++++ b/third_party/libc++abi/src/src/cxa_guard_impl.h
+@@ -156,7 +156,12 @@
+ //                       PlatformGetThreadID
+ //===----------------------------------------------------------------------===//
+ 
+-#if defined(__APPLE__) && _LIBCPP_HAS_THREAD_API_PTHREAD
++#if defined(__GTOS__) && _LIBCPP_HAS_THREAD_API_EXTERNAL && !defined(_LIBCXXABI_HAS_NO_THREADS)
++uint32_t PlatformThreadID() {
++  static_assert(sizeof(std::__libcpp_thread_id) == sizeof(uint32_t), "");
++  return std::__libcpp_thread_get_current_id();
++}
++#elif defined(__APPLE__) && _LIBCPP_HAS_THREAD_API_PTHREAD
+ uint32_t PlatformThreadID() {
+   static_assert(sizeof(mach_port_t) == sizeof(uint32_t), "");
+   return static_cast<uint32_t>(pthread_mach_thread_np(std::__libcpp_thread_get_current_id()));
