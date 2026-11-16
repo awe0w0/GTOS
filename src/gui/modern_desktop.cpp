@@ -27,7 +27,7 @@ static void TraceImage(const char *format, const uint32_t *values) {
     Trace(record);
 }
 static const char *windowTitles[] = {"Welcome", "Applications", "System monitor", "Appearance",
-                                     "Catch", "Native image", "Native window 1",
+                                     "Catch", "Native image", "GTOS Shell", "Native window 1",
                                      "Native window 2", "Native window 3", "Native window 4"};
 static bool EqualText(const char *a, const char *b) {
     if (!a || !b)
@@ -597,6 +597,8 @@ uint32_t ModernDesktop::LauncherItems(uint8_t *out) const {
             gtos::i18n::ContainsAsciiFold(Label(aliases[i]), query) ||
             gtos::i18n::ContainsAsciiFold(aliases[i], query))
             out[count++] = i;
+    if (gtos::i18n::ContainsAsciiFold(windowTitles[ModernTerminal], query))
+        out[count++] = LauncherShell;
     if (store)
         for (uint32_t i = 0; i < store->Count(); ++i)
             if (gtos::i18n::ContainsAsciiFold(AppTitle(store->Get(i)), query) ||
@@ -609,12 +611,15 @@ void ModernDesktop::LauncherActivate(uint8_t item) {
     launcher = false;
     if (item < 4)
         Open((ModernWindowKind)item);
+    else if (item == LauncherShell)
+        Open(ModernTerminal);
     else {
         selected = item - 4;
         Launch();
     }
 }
 void ModernDesktop::Key(uint8_t k, bool down, uint8_t modifiers) {
+    const uint8_t typed = k;
     const int32_t focused = wm.Focused();
     const bool browserFocus = !launcher && !confirmRemove &&
         focused >= (int32_t)ModernNative0 && focused < (int32_t)ModernWindowCount &&
@@ -668,7 +673,7 @@ void ModernDesktop::Key(uint8_t k, bool down, uint8_t modifiers) {
             if (result != gtos::i18n::PinyinComposer::PassedThrough)
                 return;
         }
-        uint8_t items[12];
+        uint8_t items[LauncherCapacity];
         uint32_t count = LauncherItems(items);
         if (k == 27) {
             launcher = false;
@@ -728,6 +733,11 @@ void ModernDesktop::Key(uint8_t k, bool down, uint8_t modifiers) {
             // Reading/scrolling never appends to the ring it is inspecting.
             return;
         }
+    }
+    if (focused == ModernTerminal && k != '\t') {
+        if (k == 27) Close(ModernTerminal);
+        else commandShell.Key(typed);
+        return;
     }
     if (repeat)
         return;
@@ -795,6 +805,8 @@ void ModernDesktop::Key(uint8_t k, bool down, uint8_t modifiers) {
         Open(ModernApplications);
     else if (k == '4')
         Open(ModernSettings);
+    else if (k == 's')
+        Open(ModernTerminal);
     else if (k == 'r' && wm.Focused() == ModernApplications)
         ReloadDisk();
     else if (k == 'i')
@@ -974,7 +986,7 @@ void ModernDesktop::Pointer(const Input &e) {
             return;
         }
         if (y >= ly + 62 && y < ly + 314) {
-            uint8_t items[12];
+            uint8_t items[LauncherCapacity];
             uint32_t n = LauncherItems(items);
             int32_t first = launcherSelected >= 6 ? launcherSelected - 5 : 0;
             int32_t row = (y - ly - 62) / 42 + first;

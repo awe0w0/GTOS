@@ -8,7 +8,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 rows = json.loads((ROOT / 'tools/i18n_catalog.json').read_text())
 known = {row['en'] for row in rows}
 # Technical identifiers and key names deliberately remain unchanged in both locales.
-invariants = {'GTOS', 'BSP', 'MiB', '/', '32-bit x86  /  GTOS', 'EN', 'catch'}
+invariants = {'GTOS', 'BSP', 'MiB', '/', '32-bit x86  /  GTOS', 'EN', 'catch', '>'}
 missing = []
 for relative in ['src/gui/modern_desktop.cpp', 'src/gui/modern_render.cpp']:
     source = (ROOT / relative).read_text()

@@ -191,3 +191,4 @@ GTOS_STRING(NativeApplicationWindow, "Native application window", "原生应用�
 GTOS_STRING(WindowTooSmallToPresent, "Window too small to present", "窗口过小无法显示")
 GTOS_STRING(WaitingForFirstFrame, "Waiting for the first frame", "正在等候第一帧")
 GTOS_STRING(EscClosesThisWindow, "Esc closes this window", "按 Esc 关闭此窗口")
+GTOS_STRING(GTOSShell, "GTOS Shell", "GTOS Shell")

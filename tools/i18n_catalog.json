@@ -958,5 +958,10 @@
     "id": "EscClosesThisWindow",
     "en": "Esc closes this window",
     "zh-CN": "按 Esc 关闭此窗口"
+  },
+  {
+    "id": "GTOSShell",
+    "en": "GTOS Shell",
+    "zh-CN": "GTOS Shell"
   }
 ]

@@ -4,6 +4,7 @@
 #include <gui/native_image.h>
 #include <gui/native_window.h>
 #include <gui/modern_painter.h>
+#include <gui/command_shell.h>
 #include <gui/shell.h>
 #include <i18n/catalog.h>
 #include <i18n/pinyin.h>
@@ -35,6 +36,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     drivers::Framebuffer &fb;
     ModernPainter paint;
     ModernWindowManager wm;
+    CommandShell commandShell;
     const NativeImageProvider *imageProvider;
     NativeImageSnapshot image, pendingImage;
     // Persistent native windows: additive to the image path above.
@@ -108,6 +110,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void Remove();
     void Launch();
     void Notice(const char *text);
+    enum { LauncherCapacity = 5 + storage::AppStore::MaxApps, LauncherShell = 0xFF };
     uint32_t LauncherItems(uint8_t *out) const;
     void LauncherActivate(uint8_t item);
     void Draw();
@@ -120,6 +123,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     void DrawSettings(const ModernRect &r);
     void DrawGame(const ModernRect &r);
     void DrawNativeImage(const ModernRect &r);
+    void DrawShell(const ModernRect &r);
     void ReportNativeImagePresented();
     void DrawLauncher();
     void DrawModal();
@@ -134,6 +138,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
                   NativeWindowProvider *windowProvider = 0,
                   unsigned char *largeWindowBacking = 0);
     void SetInstaller(const uint8_t *data, uint32_t length);
+    bool AttachShellDisk(storage::ReadableDisk &disk) { return commandShell.AttachDisk(disk); }
     void Update(const SystemSnapshot &snapshot);
     virtual void OnKeyDown(char c);
     virtual void OnKeyUp(char c);
@@ -147,6 +152,7 @@ class ModernDesktop : public drivers::KeyboardEventHandler,
     virtual void Number(int32_t x, int32_t y, int32_t value, uint8_t color);
     // Read-only state supports deterministic window/input regression tests.
     const ModernWindowManager &Windows() const { return wm; }
+    const CommandShell &Shell() const { return commandShell; }
     bool LauncherOpen() const { return launcher; }
     bool BootLogVisible() const { return bootLogView && wm.Focused() == ModernMonitor; }
     uint32_t BootLogFirstLine() const { return bootLogFirst; }

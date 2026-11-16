@@ -3309,7 +3309,10 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     BootStage("B06", "PAGING");
     PeripheralComponentInterconnectController nvmePci;
     NvmeController nvmeController = {};
-    const bool nvmeRequested = BootOption(mbi, "nvme-probe");
+    NvmeDisk filesDisk(nvmePci, frames, DiskWaitTicks);
+    const bool nvmeProbe = BootOption(mbi, "nvme-probe");
+    const bool shellDisk = BootOption(mbi, "nvme-files");
+    const bool nvmeRequested = nvmeProbe || shellDisk;
     const bool nvmeFound = nvmeRequested && NvmeDisk::Find(nvmePci, nvmeController);
     if (nvmeRequested && !nvmeFound)
         printf("NVME CONTROLLER UNAVAILABLE\n");
@@ -3376,15 +3379,19 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     Task sleeper(&gdt, Sleeper), yielder(&gdt, Yielder);
     tasks.AddTask(&sleeper);
     tasks.AddTask(&yielder);
-    if (contentBoot) {
-        if (!nativeStacksPrepared || !contentAssetsReady || !modern ||
-            !largeWindowBacking || !StartContentShell(tasks, gdt, interrupts, cpu.GetInfo(), mbi))
-            printf("CONTENT SHELL LIMITED\n");
-    } else {
-        nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);
-        if (!nativeDemoReady)
-            printf("NATIVE RUNTIME LIMITED\n");
-    }
+    const auto startPrograms = [&]() {
+        if (contentBoot) {
+            if (!nativeStacksPrepared || !contentAssetsReady || !modern ||
+                !largeWindowBacking || !StartContentShell(tasks, gdt, interrupts, cpu.GetInfo(), mbi))
+                printf("CONTENT SHELL LIMITED\n");
+        } else {
+            nativeDemoReady = nativeStacksPrepared && StartNativeDemo(tasks, gdt, mbi);
+            if (!nativeDemoReady)
+                printf("NATIVE RUNTIME LIMITED\n");
+        }
+    };
+    if (!shellDisk)
+        startPrograms();
     BootStage("B07", "PS2 PIT IRQ");
     keyboard.Activate();
     mouse.Activate();
@@ -3395,8 +3402,22 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     pitData.Write(divisor & 255);
     pitData.Write(divisor >> 8);
     interrupts.Activate();
-    if (nvmeFound)
+    if (nvmeFound && nvmeProbe)
         ProbeNvme(nvmePci, nvmeController, BootOption(mbi, "nvme-fs-probe"));
+    if (nvmeFound && shellDisk && modern) {
+        if (filesDisk.Start(nvmeController, paging) && modern->AttachShellDisk(filesDisk)) {
+            printf("NVME FILES READY\n");
+        } else {
+            filesDisk.Stop();
+            printf("NVME FILES UNAVAILABLE\n");
+        }
+    }
+    if (shellDisk) {
+        // Account for the disk's long-lived DMA pages before the native
+        // runtime captures its free-frame baseline.
+        memory::InterruptGuard guard;
+        startPrograms();
+    }
     BootStage("B08", "DESKTOP");
     if (diagnosticBoot && bootScreenReady && modern) {
         printf("BOOT LOG PAUSED - PRESS ANY KEY FOR DESKTOP\n");

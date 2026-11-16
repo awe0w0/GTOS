@@ -55,15 +55,16 @@ prepare() {
   fi
   local sources="$repo/tests/desktop_tests.cpp $repo/src/drivers/framebuffer.cpp \
  $repo/src/gui/modern_geometry.cpp $repo/src/gui/modern_painter.cpp \
- $repo/src/gui/modern_desktop.cpp $repo/src/gui/modern_render.cpp \
+ $repo/src/gui/modern_desktop.cpp $repo/src/gui/modern_render.cpp $repo/src/gui/command_shell.cpp \
  $repo/src/common/boot_log.cpp $repo/src/apps/package.cpp $repo/src/apps/vm.cpp \
- $repo/src/storage/appstore.cpp $repo/src/storage/settings.cpp \
+ $repo/src/storage/appstore.cpp $repo/src/storage/settings.cpp $repo/src/storage/gpt.cpp $repo/src/storage/ntfs.cpp \
  $repo/src/process/native_windows.cpp $repo/src/i18n/catalog.cpp \
  $repo/src/i18n/font.cpp $repo/src/i18n/pinyin.cpp $repo/src/i18n/utf8.cpp"
   printf '%s\n' "$sources" > "$out/source-list.txt"
   local manifest="$sources $repo/include/gui/native_window.h $repo/include/process/window_abi.h \
  $repo/include/process/native_windows.h $repo/include/process/native_window_memory.h \
- $repo/include/gui/modern_desktop.h $repo/include/gui/modern_geometry.h \
+ $repo/include/gui/modern_desktop.h $repo/include/gui/modern_geometry.h $repo/include/gui/command_shell.h \
+ $repo/include/storage/readable_disk.h $repo/include/storage/gpt.h $repo/include/storage/ntfs.h \
  $repo/include/gui/native_image.h $repo/include/gui/modern_painter.h \
  $repo/include/drivers/framebuffer.h $repo/tools/kernel-cxxflags \
  $repo/tests/native_window_desktop_test.sh $repo/tests/native_window_desktop_status.py"

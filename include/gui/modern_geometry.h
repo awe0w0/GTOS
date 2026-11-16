@@ -17,6 +17,7 @@ enum ModernWindowKind {
     ModernSettings,
     ModernGame,
     ModernImage,
+    ModernTerminal,
     // Persistent native windows; additive. The six kinds above keep their ids
     // and the five dock cells are untouched.
     ModernNative0,

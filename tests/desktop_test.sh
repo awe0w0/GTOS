@@ -20,8 +20,8 @@ compile() {
       -fno-pie -no-pie -nostdlib -static -Wall -Wextra \
       -Werror -Wl,-e,_start tests/desktop_tests.cpp src/drivers/framebuffer.cpp \
       src/gui/modern_geometry.cpp src/gui/modern_painter.cpp src/gui/modern_desktop.cpp \
-      src/gui/modern_render.cpp src/common/boot_log.cpp src/apps/package.cpp src/apps/vm.cpp \
-      src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp \
+      src/gui/modern_render.cpp src/gui/command_shell.cpp src/common/boot_log.cpp src/apps/package.cpp src/apps/vm.cpp \
+      src/storage/appstore.cpp src/storage/settings.cpp src/storage/gpt.cpp src/storage/ntfs.cpp src/i18n/*.cpp \
       src/process/native_windows.cpp src/process/native_surface.cpp -o "$2"
 }
 # The strict sanitizer build is the same test body with address and undefined-behaviour instrumentation. It is a function so that the
@@ -33,8 +33,9 @@ compile_sanitized() {
       -fno-builtin -fno-pie -no-pie -Wall -Wextra -Werror \
       -fsanitize=address,undefined -fno-omit-frame-pointer \
       tests/desktop_tests.cpp src/drivers/framebuffer.cpp src/gui/modern_geometry.cpp \
-      src/gui/modern_painter.cpp src/gui/modern_desktop.cpp src/gui/modern_render.cpp \
-      src/common/boot_log.cpp src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp src/storage/settings.cpp src/i18n/*.cpp \
+      src/gui/modern_painter.cpp src/gui/modern_desktop.cpp src/gui/modern_render.cpp src/gui/command_shell.cpp \
+      src/common/boot_log.cpp src/apps/package.cpp src/apps/vm.cpp src/storage/appstore.cpp src/storage/settings.cpp \
+      src/storage/gpt.cpp src/storage/ntfs.cpp src/i18n/*.cpp \
       src/process/native_windows.cpp src/process/native_surface.cpp -o "$1"
 }
 

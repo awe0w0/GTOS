@@ -2,7 +2,7 @@
 #include <gui/modern_desktop.h>
 using namespace gtos::gui;
 static const char *titles[] = {"Welcome", "Applications", "System monitor", "Appearance",
-                               "Catch", "Native image", "Native window 1", "Native window 2",
+                               "Catch", "Native image", "GTOS Shell", "Native window 1", "Native window 2",
                                "Native window 3", "Native window 4"};
 static const char *dockTitles[] = {"Home", "Apps", "Monitor", "Settings", "Catch"};
 static const uint32_t gamePalette[] = {0x101923, 0x182633, 0x243744, 0x354D5A, 0x517080, 0x809BA9,
@@ -132,6 +132,8 @@ void ModernDesktop::DrawWindow(ModernWindowKind k) {
         DrawGame(r);
     else if (k == ModernImage)
         DrawNativeImage(r);
+    else if (k == ModernTerminal)
+        DrawShell(r);
     else if (k >= ModernNative0 && k < ModernWindowCount)
         DrawNativeSlot(r, (uint32_t)(k - ModernNative0));
     fb.ResetClip();
@@ -525,6 +527,30 @@ void ModernDesktop::DrawNativeSlot(const ModernRect &r, uint32_t slot) {
         }
     paint.Text(r.x + 24, r.y + r.h - 27, Label("Esc closes this window"), c.muted);
 }
+void ModernDesktop::DrawShell(const ModernRect &r) {
+    const Theme c = Colors();
+    const int32_t left = r.x + 13;
+    const int32_t top = r.y + 50;
+    const uint32_t skip = commandShell.Line(0)[0] ? 0 : 1;
+    uint32_t lines = commandShell.LineCount() - skip;
+    const uint32_t capacity = (r.h - 86) / 19;
+    if (lines > capacity) lines = capacity;
+    for (uint32_t row = 0; row < lines; ++row)
+        paint.Text(left, top + row * 19, commandShell.Line(skip + lines - row - 1), c.text);
+    const int32_t promptY = top + lines * 19 + 6;
+    fb.Rect(left, promptY - 6, r.w - 26, 1, c.line);
+    paint.Text(left, promptY, ">", c.accent);
+    const char* input = commandShell.Input();
+    char prefix[CommandShell::InputBytes];
+    const uint32_t cursor = commandShell.Cursor();
+    for (uint32_t i = 0; i < cursor; ++i) prefix[i] = input[i];
+    prefix[cursor] = 0;
+    uint32_t first = 0;
+    while (first < cursor && paint.TextWidth(prefix + first) > r.w - 64) ++first;
+    paint.Text(left + 20, promptY, input + first, c.text);
+    fb.Rect(left + 20 + paint.TextWidth(prefix + first), promptY, 1, 17, c.accent);
+}
+
 void ModernDesktop::DrawLauncher() {
     Theme c = Colors();
     int32_t x = 14, y = fb.Height() - ModernWindowManager::Bottom - 368;
@@ -557,7 +583,7 @@ void ModernDesktop::DrawLauncher() {
     paint.Rounded(x + 268, y + 18, 42, 27, 4, c.panel);
     paint.Text(x + 275, y + 23, pinyinInput ? Label("Pinyin") : "EN",
                pinyinInput ? c.accent : c.muted);
-    uint8_t items[12];
+    uint8_t items[LauncherCapacity];
     uint32_t count = LauncherItems(items);
     int32_t first = launcherSelected >= 6 ? launcherSelected - 5 : 0;
     if (!count)
@@ -571,7 +597,8 @@ void ModernDesktop::DrawLauncher() {
         if (index == (uint32_t)launcherSelected)
             paint.Rounded(x + 10, ry, 310, 38, 5, c.raised);
         paint.Icon(x + 22, ry + 11, item < 4 ? item : 4, c.accent);
-        const char *title = item < 4 ? Label(titles[item]) : AppTitle(store->Get(item - 4));
+        const char *title = item < 4 ? Label(titles[item]) :
+                            item == LauncherShell ? titles[ModernTerminal] : AppTitle(store->Get(item - 4));
         fb.SetClip(x + 57, ry + 4, 251, 31);
         paint.Text(x + 57, ry + 9, title, c.text);
         fb.ResetClip();

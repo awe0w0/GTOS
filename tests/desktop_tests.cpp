@@ -2292,6 +2292,44 @@ static void RunNativeWindows() {
         nativeGroups[i].run();
 }
 
+static void ShellTests() {
+    drivers::Framebuffer f;
+    Check(f.Bind(Mode(800, 600, 3200), (uint8_t *)display, surface, 800 * 600),
+          "shell framebuffer");
+    ModernDesktop desktop(&f, 0);
+    Pump(desktop);
+    Key(desktop, 'l');
+    Type(desktop, "shell");
+    Key(desktop, '\n');
+    Check(desktop.Windows().Focused() == ModernTerminal && !desktop.LauncherOpen(),
+          "shell opens from launcher");
+    Check(Same(i18n::Translate(i18n::English, "GTOS Shell"), "GTOS Shell") &&
+          Same(i18n::Translate(i18n::SimplifiedChinese, "GTOS Shell"), "GTOS Shell"),
+          "shell title resolves in both locales");
+    Type(desktop, "echo GTOS [Shell]");
+    Key(desktop, '\n');
+    Check(Same(desktop.Shell().Line(1), "GTOS [Shell]"), "shell preserves case and brackets");
+    Key(desktop, 0x83);
+    Check(Same(desktop.Shell().Input(), "echo GTOS [Shell]"), "shell recalls prior command");
+    Key(desktop, 0x84);
+    Type(desktop, "echo ab");
+    Key(desktop, 0x81);
+    Key(desktop, 'X');
+    Key(desktop, '\n');
+    Check(Same(desktop.Shell().Line(1), "aXb"), "shell inserts at the caret");
+    Type(desktop, "cat missing.txt");
+    Key(desktop, '\n');
+    Check(Same(desktop.Shell().Line(1), "Select a partition with mount."),
+          "shell refuses reads without a mount");
+    Key(desktop, 27);
+    Check(!desktop.Windows().Window(ModernTerminal).open, "escape closes shell");
+    Key(desktop, 's');
+    Check(desktop.Windows().Focused() == ModernTerminal &&
+          Same(desktop.Shell().Line(1), "Select a partition with mount."),
+          "shortcut reopens shell with scrollback");
+    Output("GTOS Shell keyboard and command tests passed\n");
+}
+
 static void RunTests() {
     FramebufferTests();
     GeometryTests();
@@ -2300,6 +2338,7 @@ static void RunTests() {
     DiskReloadTests();
     LocalizationTests();
     MinimumMonitorTests();
+    ShellTests();
     NativeImageTests();
     RunNativeWindows();
     Output("Desktop/framebuffer safety and interaction tests passed\n");
