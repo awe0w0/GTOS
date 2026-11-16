@@ -42,8 +42,11 @@ MENU_ENTRIES = (
     ("gtos-live-bootlog", "GTOS Live (boot log; press any key after logs)", ("bootlog",)),
     ("gtos-live-serial", "GTOS Live (boot log + COM1; serial hardware required)",
      ("bootlog", "serial")),
+    ("gtos-live-1080p", "GTOS Live (1920x1080, RAM only)", ()),
 )
 DEFAULT_ENTRY = "gtos-live-default"
+DEFAULT_VIDEO = "800x600x32,640x480x32"
+HIGH_RESOLUTION_VIDEO = "1920x1080x32," + DEFAULT_VIDEO
 DIAGNOSTIC_OMISSIONS = {
     "missing-kernel": "/boot/GTOS.bin",
     "missing-module": "/boot/native-fault.elf",
@@ -68,6 +71,7 @@ def boot_entries(diagnostic_failure=None):
     return [{"id": ident, "title": title,
              "kernel_arguments": {"bios": ["live"] + list(extra),
                                   "efi": ["live", "uefi"] + list(extra)},
+             "gfxpayload": HIGH_RESOLUTION_VIDEO if ident == "gtos-live-1080p" else DEFAULT_VIDEO,
              "module_slots": list(BOOT_MODULES)} for ident, title, extra in selected]
 
 
@@ -119,7 +123,8 @@ def live_config(diagnostic_failure=None, default_entry=DEFAULT_ENTRY):
                   '   echo "[GTOS LOADER L05] BIOS VBE loader module unavailable"',
                   "   gtos_loader_hold", "  fi", " fi",
                   ' if [ "$gtos_kernel_loaded" = "1" ]; then',
-                  "  set gfxpayload=800x600x32,640x480x32",
+                  # Multiboot sets gfxpayload from the kernel header while loading it.
+                  "  set gfxpayload=" + entry["gfxpayload"],
                   '  echo "[GTOS LOADER L21] loading four boot modules"']
         lines += module_gates()
         lines += [" else", '  echo "[GTOS LOADER L02] kernel was not loaded; refusing handoff"',
@@ -449,7 +454,8 @@ def main():
         # Qualify each generated grammar, including isolated negative-test variants.
         variants = [("normal", None, DEFAULT_ENTRY),
                     ("bootlog-default", None, "gtos-live-bootlog"),
-                    ("serial-default", None, "gtos-live-serial")]
+                    ("serial-default", None, "gtos-live-serial"),
+                    ("1080p-default", None, "gtos-live-1080p")]
         variants += [(failure, failure, DEFAULT_ENTRY) for failure in
                      ("missing-kernel", "missing-module", "kernel-panic")]
         for name, failure, default in variants:

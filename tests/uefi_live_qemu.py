@@ -28,7 +28,7 @@ MODULES = ['/boot/catch.gtapp', '/boot/native-fault.elf',
 LIVE_MARKERS = ('LIVE ATA WRITES DISABLED', 'LIVE RAM STORAGE READY',
                 'LIVE BOOT PACKAGE INSTALLED', 'SETTINGS RAM SESSION ONLY')
 LIVE_ENTRY_TOKENS = [('gtos-live-default', ()), ('gtos-live-bootlog', ('bootlog',)),
-                     ('gtos-live-serial', ('bootlog', 'serial'))]
+                     ('gtos-live-serial', ('bootlog', 'serial')), ('gtos-live-1080p', ())]
 
 
 def require(value, message):
@@ -82,7 +82,7 @@ def validate_live_entries(config, default_id='gtos-live-default', failure=None):
         default_id = 'gtos-live-test'
     else:
         require([entry['id'] for entry in entries] == [name for name, _ in LIVE_ENTRY_TOKENS],
-                'Live media must preserve normal, verbose and explicit serial menu entries')
+                'Live media requires normal, verbose, serial and 1080p entries')
         modes = LIVE_ENTRY_TOKENS
     for entry, (_, additions) in zip(entries, modes):
         expected = [['/boot/GTOS.bin', 'live', 'uefi'] + list(additions),
@@ -92,6 +92,14 @@ def validate_live_entries(config, default_id='gtos-live-default', failure=None):
             require(actual and actual[0] == wanted[0] and len(actual) == len(wanted)
                     and set(actual[1:]) == set(wanted[1:]),
                     'Unexpected kernel command line in entry ' + str(entry['id']))
+        graphics_modes = '800x600x32,640x480x32'
+        if entry['id'] == 'gtos-live-1080p':
+            graphics_modes = '1920x1080x32,' + graphics_modes
+        body = entry['body']
+        payloads = list(re.finditer(r'^\s*set gfxpayload=(\S+)$', body, re.MULTILINE))
+        require(len(payloads) == 1 and payloads[0].group(1) == graphics_modes
+                and body.rfind('multiboot /boot/GTOS.bin') < payloads[0].start(),
+                'Framebuffer mode must be selected after loading the kernel in ' + str(entry['id']))
     defaults = re.findall(r'^\s*set\s+default=["\']?([^"\'\s]+)', config, re.MULTILINE)
     require(len(defaults) == 1, 'Generated live configuration requires one explicit default')
     selected = entries[int(defaults[0])]['id'] if defaults[0].isdigit() and int(defaults[0]) < len(entries) else defaults[0]
