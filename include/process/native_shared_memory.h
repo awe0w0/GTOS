@@ -8,7 +8,10 @@ namespace gtos { namespace process {
 class NativeSharedMemory : public NativeSharedMemoryEndpoint {
 public:
     static const uint32_t MaximumObjects = 32, MaximumHandles = 64, MaximumMappings = 64;
+    static const uint32_t ContentMaximumObjects = 256, ContentMaximumHandles = 512,
+        ContentMaximumMappings = 512;
     explicit NativeSharedMemory(memory::PhysicalMemoryManager& allocator);
+    bool EnableContentProfile();
     int32_t Call(uint32_t owner, memory::ProcessAddressSpace& space,
         uint32_t operation, uint32_t request, uint32_t bytes) override;
     void ReclaimOwner(uint32_t owner) override;
@@ -26,10 +29,11 @@ private:
         Object* object;
     };
     memory::PhysicalMemoryManager& frames;
-    Object objects[MaximumObjects];
-    Handle handles[MaximumHandles];
-    Mapping mappings[MaximumMappings];
+    Object objects[ContentMaximumObjects];
+    Handle handles[ContentMaximumHandles];
+    Mapping mappings[ContentMaximumMappings];
     uint32_t nextHandle;
+    uint32_t objectLimit, handleLimit, mappingLimit;
 
     NativeSharedMemory(const NativeSharedMemory&) = delete;
     NativeSharedMemory& operator=(const NativeSharedMemory&) = delete;

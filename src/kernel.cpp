@@ -1054,6 +1054,7 @@ static bool StartContentShell(TaskManager &tasks, GlobalDescriptorTable &gdt,
         ((httpFixture || useTcp || BootOption(boot, "content-loopback")) && !nativeRuntime.AttachLoopback(nativeLoopback)) ||
         (useTcp && !StartContentTcp(tasks, interrupts, cpu)) ||
         !paging.sealForSharedProcessors() || !nativeEvents.EnableContentProfile() ||
+        !nativeSharedMemory.EnableContentProfile() ||
         !nativeRuntime.AttachEvents(nativeEvents) ||
         !nativeRuntime.AttachSharedMemory(nativeSharedMemory) ||
         !nativeRuntime.Activate(tasks, gdt, paging, frames, process::NativeFpSse2, true))

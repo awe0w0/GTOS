@@ -33,12 +33,22 @@ namespace {
 }
 
 NativeSharedMemory::NativeSharedMemory(PhysicalMemoryManager& allocator)
-    : frames(allocator), objects(), handles(), mappings(), nextHandle(1) {}
+    : frames(allocator), objects(), handles(), mappings(), nextHandle(1),
+      objectLimit(MaximumObjects), handleLimit(MaximumHandles), mappingLimit(MaximumMappings) {}
+
+bool NativeSharedMemory::EnableContentProfile() {
+    InterruptGuard guard;
+    if (nextHandle != 1 || objectLimit != MaximumObjects) return false;
+    objectLimit = ContentMaximumObjects;
+    handleLimit = ContentMaximumHandles;
+    mappingLimit = ContentMaximumMappings;
+    return true;
+}
 
 NativeSharedMemory::Handle* NativeSharedMemory::FindHandle(uint32_t owner, uint32_t id) {
     if (!id) return 0;
-    for (auto& handle : handles)
-        if (handle.id == id && handle.owner == owner) return &handle;
+    for (uint32_t i = 0; i < handleLimit; ++i)
+        if (handles[i].id == id && handles[i].owner == owner) return &handles[i];
     return 0;
 }
 
@@ -57,10 +67,10 @@ int32_t NativeSharedMemory::Create(uint32_t owner, ProcessAddressSpace& space,
     if (nextHandle > 0x7fffffffU) return GTOS_SHARED_MEMORY_ERR_OVERFLOW;
     Object* object = 0;
     Handle* handle = 0;
-    for (auto& candidate : objects)
-        if (!candidate.references) { object = &candidate; break; }
-    for (auto& candidate : handles)
-        if (!candidate.id) { handle = &candidate; break; }
+    for (uint32_t i = 0; i < objectLimit; ++i)
+        if (!objects[i].references) { object = &objects[i]; break; }
+    for (uint32_t i = 0; i < handleLimit; ++i)
+        if (!handles[i].id) { handle = &handles[i]; break; }
     if (!object || !handle) return GTOS_SHARED_MEMORY_ERR_LIMIT;
 
     const uint32_t pages = Pages(bytes);
@@ -81,7 +91,8 @@ int32_t NativeSharedMemory::Create(uint32_t owner, ProcessAddressSpace& space,
 int32_t NativeSharedMemory::Duplicate(uint32_t owner, Object& object) {
     if (object.mode == GTOS_SHARED_MEMORY_WRITABLE) return GTOS_SHARED_MEMORY_ERR_PERMISSION;
     if (nextHandle > 0x7fffffffU) return GTOS_SHARED_MEMORY_ERR_OVERFLOW;
-    for (auto& handle : handles) {
+    for (uint32_t i = 0; i < handleLimit; ++i) {
+        Handle& handle = handles[i];
         if (handle.id) continue;
         handle = {nextHandle++, owner, &object};
         ++object.references;
@@ -103,8 +114,8 @@ int32_t NativeSharedMemory::Map(uint32_t owner, ProcessAddressSpace& space,
     if (!space.ValidateUserRange(result, sizeof(uint32_t), true))
         return GTOS_SHARED_MEMORY_ERR_BAD_ADDRESS;
     Mapping* mapping = 0;
-    for (auto& candidate : mappings)
-        if (!candidate.owner) { mapping = &candidate; break; }
+    for (uint32_t i = 0; i < mappingLimit; ++i)
+        if (!mappings[i].owner) { mapping = &mappings[i]; break; }
     if (!mapping) return GTOS_SHARED_MEMORY_ERR_LIMIT;
 
     uint32_t base = 0, region = 0;
@@ -122,7 +133,8 @@ int32_t NativeSharedMemory::Map(uint32_t owner, ProcessAddressSpace& space,
 
 int32_t NativeSharedMemory::Unmap(uint32_t owner, ProcessAddressSpace& space,
                                   uint32_t base, uint32_t bytes) {
-    for (auto& mapping : mappings) {
+    for (uint32_t i = 0; i < mappingLimit; ++i) {
+        Mapping& mapping = mappings[i];
         if (mapping.owner != owner || mapping.base != base) continue;
         if (mapping.bytes != bytes) return GTOS_SHARED_MEMORY_ERR_INVALID;
         if (!space.UnmapSharedFrames(mapping.region)) return MapError(space.GetLastError());
@@ -197,12 +209,14 @@ int32_t NativeSharedMemory::Call(uint32_t owner, ProcessAddressSpace& space,
 void NativeSharedMemory::ReclaimOwner(uint32_t owner) {
     InterruptGuard guard;
     if (!owner) return;
-    for (auto& mapping : mappings) {
+    for (uint32_t i = 0; i < mappingLimit; ++i) {
+        Mapping& mapping = mappings[i];
         if (mapping.owner != owner) continue;
         DropReference(*mapping.object);
         mapping = {};
     }
-    for (auto& handle : handles) {
+    for (uint32_t i = 0; i < handleLimit; ++i) {
+        Handle& handle = handles[i];
         if (handle.owner != owner) continue;
         DropReference(*handle.object);
         handle = {};

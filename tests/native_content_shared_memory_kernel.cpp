@@ -3,6 +3,7 @@
 #undef NativeProcessSmoke
 #include "../apps/native_content_build/gtos-platform/probe/memory_record.h"
 #include <process/native_shared_memory.h>
+#include <process/shared_memory_abi.h>
 
 namespace {
     uint8_t image[65536];
@@ -18,6 +19,79 @@ namespace {
         printf((char*)reason);
         printf((char*)"\n");
         FinishShared(false);
+    }
+
+    template <typename Request>
+    int32_t CallShared(NativeSharedMemory& shared, ProcessAddressSpace& space,
+                       uint32_t owner, uint32_t operation, const Request& request) {
+        const uint32_t address = ProcessAddressSpace::UserBase;
+        RequireShared(space.CopyToUser(address, &request, sizeof(request)), "capacity copy request");
+        return shared.Call(owner, space, operation, address, sizeof(request));
+    }
+
+    void TestSharedCapacity(KernelPaging& paging, PhysicalMemoryManager& frames, bool content) {
+        const uint32_t baseline = frames.getStatistics().freeFrames;
+        const uint32_t owner = 1;
+        const uint32_t address = ProcessAddressSpace::UserBase;
+        const uint32_t page = GTOS_SHARED_MEMORY_PAGE_BYTES;
+        const uint32_t version = GTOS_SHARED_MEMORY_ABI_VERSION;
+        const uint32_t kernelDirectory = paging.getStatistics().directoryAddress;
+        const uint32_t objects = content ? NativeSharedMemory::ContentMaximumObjects
+                                         : NativeSharedMemory::MaximumObjects;
+        const uint32_t handles = content ? NativeSharedMemory::ContentMaximumHandles
+                                         : NativeSharedMemory::MaximumHandles;
+        const uint32_t mappings = content ? NativeSharedMemory::ContentMaximumMappings
+                                          : NativeSharedMemory::MaximumMappings;
+        NativeSharedMemory shared(frames);
+        if (content) RequireShared(shared.EnableContentProfile(), "enable Content shared profile");
+        ProcessAddressSpace space;
+        // Isolate the endpoint bounds from the address-space region bound.
+        uint32_t capacity = mappings + 1;
+        if (capacity < ProcessAddressSpace::MaximumPages)
+            capacity = ProcessAddressSpace::MaximumPages;
+        RequireShared(space.PrepareContent(paging, frames, capacity, ProcessAddressSpace::DynamicLimit),
+                      "prepare capacity address space");
+        RequireShared(space.MapNewPage(address, true), "map capacity request page");
+        RequireShared(space.Seal(), "seal capacity address space");
+        const GtosSharedMemoryCreateRequest create{version, page, GTOS_SHARED_MEMORY_UNSAFE};
+        uint32_t objectHandles[NativeSharedMemory::ContentMaximumObjects];
+        for (uint32_t i = 0; i < objects; ++i) {
+            const int32_t id = CallShared(shared, space, owner, GTOS_SYS_SHARED_MEMORY_CREATE, create);
+            RequireShared(id > 0, "fill shared objects");
+            objectHandles[i] = id;
+        }
+        RequireShared(CallShared(shared, space, owner, GTOS_SYS_SHARED_MEMORY_CREATE, create) ==
+                          GTOS_SHARED_MEMORY_ERR_LIMIT,
+                      "shared object cap");
+        RequireShared(!shared.EnableContentProfile(), "refuse changing a live shared table");
+        const GtosSharedMemoryControlRequest duplicate{version, objectHandles[0]};
+        RequireShared(CallShared(shared, space, owner + 1, GTOS_SYS_SHARED_MEMORY_DUP, duplicate) ==
+                          GTOS_SHARED_MEMORY_ERR_BAD_HANDLE,
+                      "shared handle owner isolation");
+        for (uint32_t i = objects; i < handles; ++i)
+            RequireShared(CallShared(shared, space, owner, GTOS_SYS_SHARED_MEMORY_DUP, duplicate) > 0,
+                          "fill shared handles");
+        RequireShared(CallShared(shared, space, owner, GTOS_SYS_SHARED_MEMORY_DUP, duplicate) ==
+                          GTOS_SHARED_MEMORY_ERR_LIMIT,
+                      "shared handle cap");
+
+        const uint32_t directory = space.DirectoryAddress();
+        asm volatile("movl %0, %%cr3" : : "r"(directory) : "memory");
+        GtosSharedMemoryMapRequest map{version, 0, 0, page, 0, address + 64};
+        for (uint32_t i = 0; i < mappings; ++i) {
+            map.handle = objectHandles[i % objects];
+            RequireShared(CallShared(shared, space, owner, GTOS_SYS_SHARED_MEMORY_MAP, map) == 0,
+                          "fill shared mappings");
+        }
+        RequireShared(CallShared(shared, space, owner, GTOS_SYS_SHARED_MEMORY_MAP, map) ==
+                          GTOS_SHARED_MEMORY_ERR_LIMIT,
+                      "shared mapping cap");
+        asm volatile("movl %0, %%cr3" : : "r"(kernelDirectory) : "memory");
+        RequireShared(space.Destroy(), "destroy capacity test address space");
+        shared.ReclaimOwner(owner);
+        RequireShared(frames.getStatistics().freeFrames == baseline, "capacity test frame accounting");
+        printf(content ? (char*)"CONTENT SHARED EXTENDED CAPACITY PASS\n"
+                       : (char*)"CONTENT SHARED DEFAULT CAPACITY PASS\n");
     }
 }
 
@@ -37,6 +111,8 @@ extern "C" void NativeProcessSmoke(void* multiboot, uint32_t magic) {
     NativeRuntime runtime;
     RequireShared(runtime.AttachSharedMemory(shared) && runtime.PrepareStacks(paging, frames), "endpoint and stacks");
     RequireShared(paging.enable() && paging.sealForSharedProcessors(), "sealed paging template");
+    TestSharedCapacity(paging, frames, false);
+    TestSharedCapacity(paging, frames, true);
     RequireShared(runtime.Activate(tasks, gdt, paging, frames, NativeFpSse2), "native runtime");
     const uint32_t baseline = frames.getStatistics().freeFrames;
     Task ring0(&gdt, Ring0Task);
