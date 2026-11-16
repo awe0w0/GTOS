@@ -66,6 +66,20 @@ CpuManager::CpuManager() {
     info.enumerationSource = CpuBootstrapOnly;
 }
 
+uint32_t CpuManager::PaeAddressBits() {
+    if (!CpuidAvailable()) return 0;
+    uint32_t a, b, c, d;
+    Cpuid(0, 0, a, b, c, d);
+    if (!a) return 0;
+    Cpuid(1, 0, a, b, c, d);
+    if (!(d & (1u << 6))) return 0;
+    Cpuid(0x80000000u, 0, a, b, c, d);
+    if (a < 0x80000008u) return 36;
+    Cpuid(0x80000008u, 0, a, b, c, d);
+    const uint32_t bits = a & 255;
+    return bits >= 32 && bits <= 52 ? bits : 0;
+}
+
 void CpuManager::DetectCpuid() {
     info.cpuidAvailable = CpuidAvailable();
     if (!info.cpuidAvailable) return;

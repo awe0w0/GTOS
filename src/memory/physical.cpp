@@ -24,9 +24,28 @@ namespace {
         return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8)
              | ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
     }
+    template<class Visitor>
+    bool visitMap(const MultibootInfo& info, Visitor visitor) {
+        if (!info.memoryMapLength || !accessibleBuffer(info.memoryMap, info.memoryMapLength))
+            return false;
+        uint32_t offset = 0;
+        while (offset < info.memoryMapLength) {
+            const uint32_t remaining = info.memoryMapLength - offset;
+            if (remaining < sizeof(uint32_t)) return false;
+            const auto* entry = (const MultibootMemoryMapEntry*)(info.memoryMap + offset);
+            if (entry->size < 20 || entry->size > remaining - sizeof(uint32_t) ||
+                !checkedRange(entry->address, entry->length))
+                return false;
+            visitor(*entry);
+            offset += entry->size + sizeof(uint32_t);
+        }
+        return true;
+    }
 }
 PhysicalMemoryManager::PhysicalMemoryManager()
-    : firstFreeWord(0), frameCount(0), freeCount(0), allocatedCount(0), failures(0), ready(false),
+    : firstFreeWord(0), frameCount(0), freeCount(0), allocatedCount(0), failures(0),
+      highEligible(0), highAllocated(0), highFrameCount(0), highFirstFreeWord(0),
+      highFreeCount(0), highAllocatedCount(0), highMetadataPages(0), ready(false),
       mapUsed(false), error(PhysicalMemoryNoMap) {}
 void PhysicalMemoryManager::clear() {
     bootstrap.clear();
@@ -35,6 +54,8 @@ void PhysicalMemoryManager::clear() {
         allocated[i] = 0;
     }
     firstFreeWord = frameCount = freeCount = allocatedCount = failures = 0;
+    highEligible = highAllocated = 0;
+    highFrameCount = highFirstFreeWord = highFreeCount = highAllocatedCount = highMetadataPages = 0;
     ready = mapUsed = false;
 }
 bool PhysicalMemoryManager::fail(PhysicalMemoryError reason) {
@@ -135,35 +156,25 @@ bool PhysicalMemoryManager::reserveBootData(const MultibootInfo& info, uint32_t 
 }
 bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic,
                                        uint32_t kernelStart, uint32_t kernelEnd,
-                                       const PhysicalRange* extraReservations, uint32_t extraCount) {
+                                       const PhysicalRange* extraReservations, uint32_t extraCount,
+                                       uint32_t physicalAddressBits) {
     InterruptGuard guard;
     // Never forget ownership of live pages if called accidentally after boot.
     if (ready && (allocatedCount || bootstrap.claimedPages())) { error = PhysicalMemoryAlreadyInUse; return false; }
     clear();
     if (magic != MultibootBootMagic) return fail(PhysicalMemoryBadMagic);
     if (!accessibleBuffer((uint32_t)multibootInfo, sizeof(MultibootInfo))
-        || !kernelStart || kernelEnd <= kernelStart
+        || !kernelStart || kernelEnd <= kernelStart || physicalAddressBits < 32 || physicalAddressBits > 52
         || !accessibleBuffer((uint32_t)extraReservations, (uint64_t)extraCount * sizeof(PhysicalRange)))
         return fail(PhysicalMemoryBadBootInfo);
     const MultibootInfo& info = *(const MultibootInfo*)multibootInfo;
     if (info.flags & (1u << 6)) {
-        if (!info.memoryMapLength || !accessibleBuffer(info.memoryMap, info.memoryMapLength))
-            return fail(PhysicalMemoryBadMap);
-        // Two passes give non-RAM entries priority over overlapping available entries.
-        for (uint32_t pass = 0; pass < 2; ++pass) {
-            uint32_t offset = 0;
-            while (offset < info.memoryMapLength) {
-                const uint32_t remaining = info.memoryMapLength - offset;
-                if (remaining < sizeof(uint32_t)) return fail(PhysicalMemoryBadMap);
-                const MultibootMemoryMapEntry* entry = (const MultibootMemoryMapEntry*)(info.memoryMap + offset);
-                if (entry->size < 20 || entry->size > remaining - sizeof(uint32_t))
-                    return fail(PhysicalMemoryBadMap);
-                if (!checkedRange(entry->address, entry->length)) return fail(PhysicalMemoryBadMap);
-                if (!pass && entry->type == 1) markAvailable(entry->address, entry->length);
-                if (pass && entry->type != 1) markReserved(entry->address, entry->length);
-                offset += entry->size + sizeof(uint32_t);
-            }
-        }
+        // Non-RAM descriptions override overlapping available entries.
+        if (!visitMap(info, [this](const MultibootMemoryMapEntry& entry) {
+                if (entry.type == 1) markAvailable(entry.address, entry.length);
+            }) || !visitMap(info, [this](const MultibootMemoryMapEntry& entry) {
+                if (entry.type != 1) markReserved(entry.address, entry.length);
+            })) return fail(PhysicalMemoryBadMap);
         mapUsed = true;
     } else if (info.flags & 1) {
         // mem_upper is KiB above 1 MiB, not an absolute top-of-RAM address.
@@ -188,7 +199,65 @@ bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic
     for (uint32_t frame = 0; frame < frameCount; ++frame) if (bit(eligible, frame)) ++freeCount;
     if (!freeCount) return fail(PhysicalMemoryNoUsableRam);
     ready = true;
+    if (mapUsed && physicalAddressBits > 32 &&
+        !prepareHigh(info, physicalAddressBits, extraReservations, extraCount))
+        return fail(PhysicalMemoryNoHighMetadata);
     error = PhysicalMemoryOk;
+    return true;
+}
+bool PhysicalMemoryManager::highRange(uint64_t address, uint64_t end, bool fullPages,
+                                      uint32_t& first, uint32_t& last) const {
+    const uint64_t top = Limit + ((uint64_t)highFrameCount << 12);
+    if (address >= end || end <= Limit || address >= top)
+        return false;
+    if (address < Limit) address = Limit;
+    if (end > top) end = top;
+    first = (uint32_t)((address - Limit + (fullPages ? PageSize - 1 : 0)) >> 12);
+    last = (uint32_t)((end - Limit + (fullPages ? 0 : PageSize - 1)) >> 12);
+    return first < last;
+}
+bool PhysicalMemoryManager::prepareHigh(const MultibootInfo& info, uint32_t addressBits,
+                                        const PhysicalRange* reservations, uint32_t reservationCount) {
+    // With 36-bit physical memory, two dense bitmaps need at most 3.75 MiB.
+    const uint64_t upper = 1ULL << (addressBits < 36 ? addressBits : 36);
+    uint64_t top = Limit;
+    if (!visitMap(info, [&](const MultibootMemoryMapEntry& entry) {
+            if (entry.type != 1 || !entry.length || entry.address >= upper) return;
+            uint64_t end = entry.address + entry.length;
+            if (end > upper) end = upper;
+            end &= ~(uint64_t)(PageSize - 1);
+            if (end > top) top = end;
+        })) return false;
+    if (top == Limit) return true;
+    highFrameCount = (uint32_t)((top - Limit) >> 12);
+    const uint32_t words = (highFrameCount + 31) / 32;
+    highMetadataPages = (words * 2 * sizeof(uint32_t) + PageSize - 1) >> 12;
+    uint32_t address;
+    if (!allocateContiguous(highMetadataPages, address, 1, 0x3FFFFFFFu)) return false;
+    highEligible = (uint32_t*)address;
+    highAllocated = highEligible + words;
+    for (uint32_t i = 0; i < words * 2; ++i) highEligible[i] = 0;
+    const auto mark = [this](uint64_t start, uint64_t end, bool available) {
+        uint32_t first, last;
+        if (highRange(start, end, available, first, last))
+            for (uint32_t i = first; i < last; ++i) set(highEligible, i, available);
+    };
+    // These passes use the same firmware records already validated above.
+    visitMap(info, [&](const MultibootMemoryMapEntry& entry) {
+        if (entry.type == 1) mark(entry.address, entry.address + entry.length, true);
+    });
+    visitMap(info, [&](const MultibootMemoryMapEntry& entry) {
+        if (entry.type != 1) mark(entry.address, entry.address + entry.length, false);
+    });
+    if (info.flags & (1u << 12))
+        mark(info.framebufferAddress,
+             info.framebufferAddress + (uint64_t)info.framebufferPitch * info.framebufferHeight, false);
+    for (uint32_t i = 0; i < reservationCount; ++i)
+        mark(reservations[i].address, reservations[i].address + reservations[i].length, false);
+    for (uint32_t i = 0; i < words; ++i) {
+        uint32_t free = highEligible[i];
+        for (; free; free &= free - 1) ++highFreeCount;
+    }
     return true;
 }
 bool PhysicalMemoryManager::claimLowBootstrapPage(uint32_t& address) {
@@ -270,17 +339,32 @@ bool PhysicalMemoryManager::freeContiguous(uint32_t address, uint32_t pages) {
 bool PhysicalMemoryManager::reserveRegion(uint64_t address, uint64_t length) {
     InterruptGuard guard;
     if (!ready || !checkedRange(address, length) || bootstrap.intersectsClaimed(address, length)) return false;
-    if (!length || address >= Limit) return true;
-    uint64_t end = address + length;
-    if (end > Limit) end = Limit;
-    const uint32_t start = (uint32_t)(address >> 12);
-    uint32_t limit = (uint32_t)((end + PageSize - 1) >> 12);
-    if (limit > frameCount) limit = frameCount;
-    for (uint32_t frame = start; frame < limit; ++frame) if (bit(allocated, frame)) return false;
-    for (uint32_t frame = start; frame < limit; ++frame) {
-        if (bit(eligible, frame)) { set(eligible, frame, false); --freeCount; }
+    if (!length) return true;
+    uint32_t highFirst, highLast;
+    const bool high = highRange(address, address + length, false, highFirst, highLast);
+    if (high)
+        for (uint32_t frame = highFirst; frame < highLast; ++frame)
+            if (bit(highAllocated, frame)) return false;
+    if (address < Limit) {
+        uint64_t end = address + length;
+        if (end > Limit) end = Limit;
+        const uint32_t start = (uint32_t)(address >> 12);
+        uint32_t limit = (uint32_t)((end + PageSize - 1) >> 12);
+        if (limit > frameCount) limit = frameCount;
+        for (uint32_t frame = start; frame < limit; ++frame)
+            if (bit(allocated, frame)) return false;
+        for (uint32_t frame = start; frame < limit; ++frame) {
+            if (bit(eligible, frame)) { set(eligible, frame, false); --freeCount; }
+        }
+        bootstrap.reserve(address, length);
     }
-    bootstrap.reserve(address, length);
+    if (high) {
+        for (uint32_t frame = highFirst; frame < highLast; ++frame)
+            if (bit(highEligible, frame)) {
+                set(highEligible, frame, false);
+                --highFreeCount;
+            }
+    }
     return true;
 }
 bool PhysicalMemoryManager::isFree(uint32_t address) const {
@@ -292,6 +376,45 @@ bool PhysicalMemoryManager::isFree(uint32_t address) const {
 bool PhysicalMemoryManager::isAllocated(uint32_t address) const {
     InterruptGuard guard;
     return isAllocatedLocked(address);
+}
+bool PhysicalMemoryManager::allocateHigh(uint64_t& address) {
+    InterruptGuard guard;
+    address = 0;
+    if (!ready || !highFreeCount) return false;
+    const uint32_t words = (highFrameCount + 31) / 32;
+    for (uint32_t word = highFirstFreeWord; word < words; ++word) {
+        const uint32_t available = highEligible[word] & ~highAllocated[word];
+        if (!available) continue;
+        const uint32_t page = __builtin_ctz(available);
+        highAllocated[word] |= 1u << page;
+        highFirstFreeWord = word;
+        --highFreeCount;
+        ++highAllocatedCount;
+        address = Limit + ((uint64_t)(word * 32 + page) << 12);
+        return true;
+    }
+    return false;
+}
+bool PhysicalMemoryManager::freeHigh(uint64_t address) {
+    InterruptGuard guard;
+    if (!isHighAllocated(address)) return false;
+    const uint32_t frame = (uint32_t)((address - Limit) >> 12);
+    set(highAllocated, frame, false);
+    if (frame / 32 < highFirstFreeWord) highFirstFreeWord = frame / 32;
+    ++highFreeCount;
+    --highAllocatedCount;
+    return true;
+}
+bool PhysicalMemoryManager::isHighAllocated(uint64_t address) const {
+    InterruptGuard guard;
+    if (!ready || address < Limit || (address & (PageSize - 1))) return false;
+    const uint64_t frame = (address - Limit) >> 12;
+    return frame < highFrameCount && bit(highAllocated, (uint32_t)frame);
+}
+HighMemoryStatistics PhysicalMemoryManager::getHighStatistics() const {
+    InterruptGuard guard;
+    return {highFrameCount, highFreeCount + highAllocatedCount, highFreeCount,
+            highAllocatedCount, highMetadataPages};
 }
 #ifdef GTOS_MEMORY_TEST
 bool PhysicalMemoryManager::gtos_host_seed(uint32_t addressable, uint32_t firstFree, uint32_t free) {

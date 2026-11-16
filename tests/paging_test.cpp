@@ -9,6 +9,8 @@ namespace {
     MultibootModule module;
     PhysicalMemoryManager frames;
     KernelPaging paging;
+    PhysicalMemoryManager highFrames;
+    KernelPaging highPaging;
     void print(const char* text) {
         uint32_t n = 0; while (text[n]) ++n;
         { uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4), "b"(1), "c"(text), "d"(n)  : "memory", "cc"); }
@@ -42,6 +44,57 @@ namespace {
         }
         PagingConfig c = config();
         return frames.initialize(&info, MultibootBootMagic, c.kernelStart, c.kernelEnd);
+    }
+    void highMemory() {
+        const uint64_t base = 1ULL << 32, cap = 1ULL << 33;
+        MultibootMemoryMapEntry source[] = {
+            {20, Arena, ArenaBytes, 1},
+            {20, base + 1, 6 * 4096 - 1, 1},
+            {20, base + 2 * 4096 + 25, 1, 2},
+            {20, cap - 4096, 8192, 1},
+        };
+        info = {};
+        info.flags = 1u << 6;
+        info.memoryMapLength = sizeof(source);
+        info.memoryMap = (uint32_t)source;
+        PagingConfig c = config();
+        const PhysicalRange claimed = {base + 3 * 4096 + 13, 1};
+        CHECK(highFrames.initialize(&info, MultibootBootMagic, c.kernelStart, c.kernelEnd,
+                                    &claimed, 1, 33));
+        const HighMemoryStatistics initial = highFrames.getHighStatistics();
+        CHECK(initial.addressableFrames == 1048576 && initial.usableFrames == 4 &&
+              initial.freeFrames == 4 && initial.allocatedFrames == 0 && initial.metadataFrames == 64);
+        CHECK(highFrames.reserveRegion(base + 4 * 4096, 1));
+        uint64_t first = 0, second = 0, last = 0, refused = 1;
+        CHECK(highFrames.allocateHigh(first) && first == base + 4096);
+        CHECK(highFrames.allocateHigh(second) && second == base + 5 * 4096);
+        CHECK(highFrames.allocateHigh(last) && last == cap - 4096);
+        CHECK(!highFrames.allocateHigh(refused) && !refused);
+        CHECK(!highFrames.reserveRegion(first, 4096) && highFrames.isHighAllocated(first));
+        CHECK(!highFrames.freeHigh(first + 1) && !highFrames.freeHigh(first - 4096));
+
+        const uint32_t retained = highFrames.getStatistics().allocatedFrames;
+        const uint32_t alias = 0x80000000;
+        CHECK(highPaging.prepareIdentity(highFrames, c));
+        CHECK(!highPaging.mapOwnedPage(alias, first, true));
+        CHECK(highPaging.abandon() && highFrames.getStatistics().allocatedFrames == retained);
+        CHECK(highPaging.prepareIdentity(highFrames, c, true));
+        CHECK(!highPaging.mapOwnedPage(alias, cap, true));
+        CHECK(highPaging.mapOwnedPage(alias, last, true));
+        PagingMapping mapping;
+        CHECK(highPaging.query(alias + 127, mapping) && mapping.physicalAddress == last + 127 &&
+              mapping.writable && mapping.managed && !mapping.userAccessible);
+        const uint64_t* pdpt = (const uint64_t*)highPaging.getStatistics().directoryAddress;
+        CHECK(pdpt[0] && pdpt[1] && pdpt[2] && pdpt[3] && (pdpt[2] & 7) == 1);
+        const uint64_t* directory = (const uint64_t*)(uint32_t)(pdpt[2] & ~4095ULL);
+        const uint64_t* table = (const uint64_t*)(uint32_t)(directory[0] & ~4095ULL);
+        CHECK((table[0] & ~4095ULL) == last);
+        CHECK(highPaging.protectOwnedPage(alias, false));
+        CHECK(highPaging.query(alias, mapping) && !mapping.writable);
+        CHECK(highPaging.unmapOwnedPage(alias) && !highPaging.query(alias, mapping));
+        CHECK(highPaging.abandon() && highFrames.getStatistics().allocatedFrames == retained);
+        CHECK(highFrames.freeHigh(first) && highFrames.freeHigh(second) && highFrames.freeHigh(last));
+        CHECK(!highFrames.freeHigh(first) && highFrames.getHighStatistics().freeFrames == 3);
     }
     void ownershipAndBounds() {
         CHECK(initialize());
@@ -206,7 +259,7 @@ extern "C" int pagingTests() {
     uint32_t address;
     asm volatile("int $0x80" : "=a"(address) : "a"(90), "b"(args) : "memory");
     if (address != Arena) { print("FAIL: mmap arena\n"); return 1; }
-    ownershipAndBounds(); failureRollback(); allocatorPlacement(); activeLifetime();
+    ownershipAndBounds(); failureRollback(); allocatorPlacement(); highMemory(); activeLifetime();
     print("Paging tests: "); number(checks); print(" checks, "); number(failures); print(" failures\n");
     return failures ? 1 : 0;
 }

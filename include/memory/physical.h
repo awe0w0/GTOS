@@ -17,6 +17,9 @@ namespace gtos { namespace memory {
         bool usedMemoryMap;
         bool initialized;
     };
+    struct HighMemoryStatistics {
+        uint32_t addressableFrames, usableFrames, freeFrames, allocatedFrames, metadataFrames;
+    };
     enum PhysicalMemoryError {
         PhysicalMemoryOk,
         PhysicalMemoryBadMagic,
@@ -25,7 +28,8 @@ namespace gtos { namespace memory {
         PhysicalMemoryBadMap,
         PhysicalMemoryBadReservation,
         PhysicalMemoryNoUsableRam,
-        PhysicalMemoryAlreadyInUse
+        PhysicalMemoryAlreadyInUse,
+        PhysicalMemoryNoHighMetadata
     };
     class ProcessAddressSpace;
     class PhysicalMemoryManager {
@@ -44,6 +48,8 @@ namespace gtos { namespace memory {
         uint32_t freeCount;
         uint32_t allocatedCount;
         uint32_t failures;
+        uint32_t *highEligible, *highAllocated;
+        uint32_t highFrameCount, highFirstFreeWord, highFreeCount, highAllocatedCount, highMetadataPages;
         bool ready;
         bool mapUsed;
         PhysicalMemoryError error;
@@ -54,6 +60,10 @@ namespace gtos { namespace memory {
         bool reserveBootData(const MultibootInfo& info, uint32_t infoAddress);
         bool reserveBuffer(uint32_t address, uint64_t length);
         bool reserveString(uint32_t address);
+        bool prepareHigh(const MultibootInfo& info, uint32_t addressBits,
+                         const PhysicalRange* reservations, uint32_t reservationCount);
+        bool highRange(uint64_t address, uint64_t end, bool fullPages,
+                       uint32_t& first, uint32_t& last) const;
         bool bit(const uint32_t* bitmap, uint32_t frame) const;
         void set(uint32_t* bitmap, uint32_t frame, bool value);
         // The address-space walker already holds a BSP interrupt guard.
@@ -68,9 +78,11 @@ namespace gtos { namespace memory {
         PhysicalMemoryManager();
         // Boot-time identity mapped addresses, exclusive kernelEnd. No heap needed.
         // Extra reservations describe early DMA buffers/MMIO not covered by the map.
+        // Pass the CPU's physical width to register high RAM for a PAE mapper.
         bool initialize(const void* multibootInfo, uint32_t magic,
                         uint32_t kernelStart, uint32_t kernelEnd,
-                        const PhysicalRange* extraReservations = 0, uint32_t extraCount = 0);
+                        const PhysicalRange* extraReservations = 0, uint32_t extraCount = 0,
+                        uint32_t physicalAddressBits = 32);
         // Permanently claim one E820/firmware-validated SIPI page below 1 MiB.
         // No matching free: another processor may still execute this trampoline.
         bool claimLowBootstrapPage(uint32_t& address);
@@ -87,6 +99,11 @@ namespace gtos { namespace memory {
         bool isFree(uint32_t address) const;
         bool isAllocated(uint32_t address) const;
         PhysicalMemoryStatistics getStatistics() const;
+        // High frames are physical addresses and require a mapping before access.
+        bool allocateHigh(uint64_t& address);
+        bool freeHigh(uint64_t address);
+        bool isHighAllocated(uint64_t address) const;
+        HighMemoryStatistics getHighStatistics() const;
 #ifdef GTOS_MEMORY_TEST
         // Host-unit seam. Supplies the memory a firmware map would have described, then leaves every allocator decision
         // to the production code. A test that used this to place a frame itself would be writing the answer it is

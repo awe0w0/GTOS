@@ -192,7 +192,7 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
     if ((dynamicEnd & 4095) || dynamicEnd <= DynamicBase || dynamicEnd > DynamicLimit)
         return Fail(ProcessMemoryBadRange);
     const PagingStatistics state = sharedKernel.getStatistics();
-    if (!state.prepared || !state.enabled || !state.sealedForSharing
+    if (!state.prepared || !state.enabled || !state.sealedForSharing || sharedKernel.pae
         || !sharedKernel.usesAllocator(allocator) || !allocator.getStatistics().initialized)
         return Fail(ProcessMemoryBadState);
     if (!SafeHardware() || CurrentDirectory() != state.directoryAddress)

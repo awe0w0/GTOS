@@ -366,6 +366,54 @@ static void LogSectorNumber(const char *label, uint64_t sector) {
     printfHex32((uint32_t)sector);
     printf("\n");
 }
+static void RunPaeProbe(const memory::PagingConfig& config) {
+    // The first PAE session is private to the BSP. Exercise two different
+    // PDPT entries and retire the tables before APs or legacy CPL3 consumers.
+    uint32_t lowFree = frames.getStatistics().freeFrames;
+    const memory::HighMemoryStatistics initial = frames.getHighStatistics();
+    LogValue("PAE HIGH FREE FRAMES ", initial.freeFrames);
+    LogValue("PAE HIGH METADATA FRAMES ", initial.metadataFrames);
+    uint64_t a, b;
+    if (!frames.allocateHigh(a) || !frames.allocateHigh(b) || a == b ||
+        a < 0x100000000ULL || b < 0x100000000ULL ||
+        frames.reserveRegion(a, 4096))
+        Panic("PAE HIGH FRAME OWNERSHIP", "E27");
+    memory::KernelPaging bootstrap;
+    const uint32_t va = 0x7FFFF000, vb = 0x80000000;
+    memory::PagingMapping mapping;
+    if (!bootstrap.prepareIdentity(frames, config, true) ||
+        !bootstrap.mapOwnedPage(va, a, true) || !bootstrap.mapOwnedPage(vb, b, true) ||
+        !bootstrap.query(va + 7, mapping) || mapping.physicalAddress != a + 7 ||
+        !mapping.writable || mapping.userAccessible || !mapping.managed ||
+        !bootstrap.enable())
+        Panic(memory::KernelPaging::ErrorName(bootstrap.getLastError()), "E27");
+    uint32_t cr4;
+    asm volatile("movl %%cr4,%0" : "=r"(cr4));
+    LogValue("PAE ACTIVE CR4 ", cr4);
+    LogSectorNumber("PAE ALLOCATED FRAME A ", a);
+    LogSectorNumber("PAE ALLOCATED FRAME B ", b);
+    if (!(cr4 & (1u << 5))) Panic("PAE CONTROL BIT", "E27");
+    volatile uint32_t *first = (volatile uint32_t*)va;
+    volatile uint32_t *second = (volatile uint32_t*)vb;
+    for (uint32_t i = 0; i < 1024; ++i) {
+        first[i] = 0x51F0150Au ^ i;
+        second[i] = 0xB069C852u ^ i;
+    }
+    if (!bootstrap.unmapOwnedPage(va) || !bootstrap.unmapOwnedPage(vb) ||
+        !bootstrap.mapOwnedPage(va, b, false) || !bootstrap.mapOwnedPage(vb, a, false) ||
+        !bootstrap.query(va, mapping) || mapping.writable)
+        Panic("PAE REMAP", "E27");
+    for (uint32_t i = 0; i < 1024; ++i)
+        if (first[i] != (0xB069C852u ^ i) || second[i] != (0x51F0150Au ^ i))
+            Panic("PAE HIGH PAGE DATA", "E27");
+    printf("PAE HIGH PAGE READ WRITE PASS\n");
+    if (!bootstrap.unmapOwnedPage(va) || !bootstrap.unmapOwnedPage(vb) ||
+        !bootstrap.retireBootstrapPae() || !frames.freeHigh(a) || !frames.freeHigh(b) ||
+        frames.freeHigh(a) || frames.getHighStatistics().freeFrames != initial.freeFrames ||
+        frames.getStatistics().freeFrames != lowFree)
+        Panic("PAE OWNERSHIP REAP", "E27");
+    printf("PAE HIGH FRAME REAP PASS\n");
+}
 static void ProbeNtfs(storage::ReadableDisk& disk, const storage::GptPartition& partition,
                       uint8_t *buffer, uint32_t capacity) {
     storage::NtfsVolume volume;
@@ -1403,6 +1451,15 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     if (!frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end))
         Panic("INVALID MEMORY MAP", "E01");
     const memory::MultibootInfo *mbi = (const memory::MultibootInfo *)multiboot;
+    const bool paeProbe = BootOption(mbi, "pae-probe");
+    if (paeProbe) {
+        const uint32_t addressBits = CpuManager::PaeAddressBits();
+        if (addressBits <= 32 ||
+            !frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end, 0, 0,
+                               addressBits))
+            Panic("PAE HIGH MEMORY MAP", "E27");
+        LogValue("PAE PHYSICAL ADDRESS BITS ", addressBits);
+    }
     const bool liveBoot = BootOption(mbi, "live");
     const bool uefiBoot = BootOption(mbi, "uefi");
     const bool diagnosticBoot = BootOption(mbi, "bootlog") || BootOption(mbi, "verbose");
@@ -3267,6 +3324,8 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         devices[deviceCount++] = {nvmeController.address, nvmeController.bytes};
         pagingConfig.deviceCount = deviceCount;
     }
+    if (paeProbe)
+        RunPaeProbe(pagingConfig);
     if (!paging.prepareIdentity(frames, pagingConfig))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
     const bool contentThreads = contentBoot && BootOption(mbi, "content-threads");

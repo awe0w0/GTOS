@@ -4,6 +4,7 @@ using namespace gtos::memory;
 namespace {
     const uint32_t Present = 1, Writable = 2, User = 4;
     const uint32_t Uncached = 0x18, Managed = 0x200, AddressMask = 0xFFFFF000u;
+    const uint64_t PhysicalMask = 0x000FFFFFFFFFF000ULL;
     const uint64_t AddressLimit = 0x100000000ULL;
     bool pageAligned(uint32_t address) { return (address & 4095) == 0; }
     bool validBytes(uint32_t address, uint64_t length) {
@@ -23,28 +24,51 @@ namespace {
     }
 }
 KernelPaging::KernelPaging() : frames(0), directory(0), mappedCount(0),
-    tableCount(0), prepared(false), active(false), sharedSealed(false), error(PagingOk) {
-    for (uint32_t i = 0; i < 1024; ++i) tables[i] = 0;
+    tableCount(0), savedCr0(0), savedCr3(0), savedCr4(0), prepared(false), active(false),
+    sharedSealed(false), pae(false), error(PagingOk) {
+    for (uint32_t& page : directories) page = 0;
+    for (uint32_t& page : tables) page = 0;
 }
 bool KernelPaging::fail(PagingError value) { error = value; return false; }
 bool KernelPaging::ownsPagingFrame(uint32_t address) const {
     if (address == directory) return true;
-    for (uint32_t i = 0; i < 1024; ++i) if (tables[i] == address) return true;
+    for (uint32_t page : directories) if (page == address) return true;
+    for (uint32_t page : tables) if (page == address) return true;
     return false;
 }
-bool KernelPaging::addPage(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags) {
-    const uint32_t di = virtualAddress >> 22, ti = (virtualAddress >> 12) & 1023;
+uint64_t KernelPaging::entry(uint32_t page, uint32_t index) const {
+    const uint32_t* words = (const uint32_t*)page;
+    return pae ? words[2 * index] | ((uint64_t)words[2 * index + 1] << 32) : words[index];
+}
+void KernelPaging::writeEntry(uint32_t page, uint32_t index, uint64_t value) {
+    volatile uint32_t* words = (volatile uint32_t*)page;
+    if (pae) {
+        // All mutating callers run on the BSP with interrupts disabled and
+        // before sharing CR3. Publish the present bit after the address bits.
+        words[2 * index] = 0;
+        words[2 * index + 1] = (uint32_t)(value >> 32);
+        words[2 * index] = (uint32_t)value;
+    } else {
+        words[index] = (uint32_t)value;
+    }
+}
+uint64_t KernelPaging::leafLocked(uint32_t address) const {
+    const uint32_t table = tables[directoryIndex(address)];
+    return directory && table ? entry(table, leafIndex(address)) : 0;
+}
+bool KernelPaging::addPage(uint32_t virtualAddress, uint64_t physicalAddress, uint32_t flags) {
+    const uint32_t di = directoryIndex(virtualAddress), ti = leafIndex(virtualAddress);
     if (!tables[di]) {
         uint32_t frame;
         if (!frames->allocate(frame)) return fail(PagingNoMemory);
         clearPage(frame);
         tables[di] = frame;
-        ((uint32_t*)directory)[di] = frame | Present | Writable;
+        if (pae) writeEntry(directories[di / 512], di % 512, frame | Present | Writable);
+        else writeEntry(directory, di, frame | Present | Writable);
         ++tableCount;
     }
-    uint32_t& entry = ((uint32_t*)tables[di])[ti];
-    if (entry & Present) return fail(PagingConflict);
-    entry = physicalAddress | Present | flags;
+    if (entry(tables[di], ti) & Present) return fail(PagingConflict);
+    writeEntry(tables[di], ti, physicalAddress | Present | flags);
     ++mappedCount;
     invalidate(virtualAddress);
     return true;
@@ -85,18 +109,22 @@ bool KernelPaging::abandon() {
     if (sharedSealed) return fail(PagingSealed);
     if (active) return fail(PagingBadState);
     if (frames) {
-        for (uint32_t i = 0; i < 1024; ++i) if (tables[i]) {
-            frames->free(tables[i]); tables[i] = 0;
+        for (uint32_t& page : tables) if (page) {
+            frames->free(page); page = 0;
+        }
+        for (uint32_t& page : directories) if (page) {
+            frames->free(page); page = 0;
         }
         if (directory) frames->free(directory);
     }
     directory = mappedCount = tableCount = 0;
-    prepared = false;
+    prepared = pae = false;
     frames = 0;
     error = PagingOk;
     return true;
 }
-bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const PagingConfig& config) {
+bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const PagingConfig& config,
+                                   bool usePae) {
     InterruptGuard guard;
     if (prepared || active || directory || pagingAlreadyEnabled()
         || !allocator.getStatistics().initialized) return fail(PagingBadState);
@@ -113,7 +141,20 @@ bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const Pagin
     }
     frames = &allocator;
     if (!frames->allocate(directory)) { frames = 0; return fail(PagingNoMemory); }
+    pae = usePae;
     clearPage(directory);
+    if (pae) {
+        // Allocate all four PDPTE targets before loading CR3; these entries
+        // are cached by the CPU and do not change during a paging session.
+        for (uint32_t i = 0; i < 4; ++i) {
+            if (!frames->allocate(directories[i])) {
+                abandon();
+                return fail(PagingNoMemory);
+            }
+            clearPage(directories[i]);
+            writeEntry(directory, i, directories[i] | Present);
+        }
+    }
     bool ok = identityBytes(config.kernelStart, (uint64_t)config.kernelEnd - config.kernelStart);
     // The allocator reserves its own bitmap storage even if it lives outside
     // the linked kernel (for example, in an early boot workspace). Retain it.
@@ -137,8 +178,7 @@ bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const Pagin
     }
     if (ok) {
         for (uint32_t page = config.readOnlyStart; page < config.readOnlyEnd; page += 4096) {
-            uint32_t& entry = ((uint32_t*)tables[page >> 22])[(page >> 12) & 1023];
-            entry &= ~Writable;
+            writeEntry(tables[directoryIndex(page)], leafIndex(page), leafLocked(page) & ~uint64_t(Writable));
         }
         prepared = true;
         error = PagingOk;
@@ -155,13 +195,13 @@ bool KernelPaging::query(uint32_t address, PagingMapping& result) const {
 bool KernelPaging::queryLocked(uint32_t address, PagingMapping& result) const {
     result.physicalAddress = 0;
     result.writable = result.userAccessible = result.cacheDisabled = result.managed = false;
-    const uint32_t entry = leafLocked(address);
-    if (!(entry & Present)) return false;
-    result.physicalAddress = (entry & AddressMask) | (address & 4095);
-    result.writable = (entry & Writable) != 0;
-    result.userAccessible = (entry & User) != 0;
-    result.cacheDisabled = (entry & 0x10) != 0;
-    result.managed = (entry & Managed) != 0;
+    const uint64_t value = leafLocked(address);
+    if (!(value & Present)) return false;
+    result.physicalAddress = (value & PhysicalMask) | (address & 4095);
+    result.writable = (value & Writable) != 0;
+    result.userAccessible = (value & User) != 0;
+    result.cacheDisabled = (value & 0x10) != 0;
+    result.managed = (value & Managed) != 0;
     return true;
 }
 void KernelPaging::invalidate(uint32_t address) {
@@ -171,13 +211,15 @@ void KernelPaging::invalidate(uint32_t address) {
     (void)address;
 #endif
 }
-bool KernelPaging::mapOwnedPage(uint32_t virtualAddress, uint32_t physicalAddress, bool writable) {
+bool KernelPaging::mapOwnedPage(uint32_t virtualAddress, uint64_t physicalAddress, bool writable) {
     InterruptGuard guard;
     if (!prepared) return fail(PagingBadState);
     if (sharedSealed) return fail(PagingSealed);
-    if (!virtualAddress || !physicalAddress || !pageAligned(virtualAddress)
-        || !pageAligned(physicalAddress)) return fail(PagingBadRange);
-    if (!frames->isAllocated(physicalAddress) || ownsPagingFrame(physicalAddress))
+    const bool high = physicalAddress >= AddressLimit;
+    if (!virtualAddress || !physicalAddress || !pageAligned(virtualAddress) ||
+        (physicalAddress & ~PhysicalMask) || (high && !pae)) return fail(PagingBadRange);
+    if (high ? !frames->isHighAllocated(physicalAddress) :
+               (!frames->isAllocated((uint32_t)physicalAddress) || ownsPagingFrame((uint32_t)physicalAddress)))
         return fail(PagingNotOwned);
     if (!addPage(virtualAddress, physicalAddress, Managed | (writable ? Writable : 0))) return false;
     error = PagingOk;
@@ -190,7 +232,7 @@ bool KernelPaging::unmapOwnedPage(uint32_t virtualAddress) {
     if (!virtualAddress || !pageAligned(virtualAddress)) return fail(PagingBadRange);
     PagingMapping mapping;
     if (!query(virtualAddress, mapping) || !mapping.managed) return fail(PagingPinnedMapping);
-    ((uint32_t*)tables[virtualAddress >> 22])[(virtualAddress >> 12) & 1023] = 0;
+    writeEntry(tables[directoryIndex(virtualAddress)], leafIndex(virtualAddress), 0);
     --mappedCount;
     invalidate(virtualAddress);
     error = PagingOk;
@@ -203,8 +245,9 @@ bool KernelPaging::protectOwnedPage(uint32_t virtualAddress, bool writable) {
     if (!virtualAddress || !pageAligned(virtualAddress)) return fail(PagingBadRange);
     PagingMapping mapping;
     if (!query(virtualAddress, mapping) || !mapping.managed) return fail(PagingPinnedMapping);
-    uint32_t& entry = ((uint32_t*)tables[virtualAddress >> 22])[(virtualAddress >> 12) & 1023];
-    entry = writable ? (entry | Writable) : (entry & ~Writable);
+    const uint64_t old = leafLocked(virtualAddress);
+    writeEntry(tables[directoryIndex(virtualAddress)], leafIndex(virtualAddress),
+               writable ? (old | Writable) : (old & ~uint64_t(Writable)));
     invalidate(virtualAddress);
     error = PagingOk;
     return true;
@@ -224,11 +267,14 @@ bool KernelPaging::enable() {
     // the IDT and boot sequence with interrupts disabled.
     if (!prepared || active || pagingAlreadyEnabled()) return fail(PagingBadState);
 #ifndef GTOS_PAGING_TEST
-    uint32_t cr4; asm volatile("movl %%cr4,%0" : "=r"(cr4));
-    // Legacy 1024-entry directories are not PAE PDPTs. PSE/PGE may remain set:
-    // all our PDE.PS and PTE.G bits are clear. Any previous PG disable flushed
-    // globals; loading CR3 below flushes nonglobal translations.
-    if (cr4 & (1u << 5)) return fail(PagingUnsafeContext);
+    asm volatile("movl %%cr0,%0; movl %%cr3,%1; movl %%cr4,%2"
+                 : "=r"(savedCr0), "=r"(savedCr3), "=r"(savedCr4));
+    if (!pae && (savedCr4 & (1u << 5))) return fail(PagingUnsafeContext);
+    if (pae) {
+        uint32_t eax = 1, ebx, ecx, edx;
+        asm volatile("cpuid" : "+a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx));
+        if (!(edx & (1u << 6))) return fail(PagingUnsafeContext);
+    }
     uint32_t flags, stack, instruction;
     asm volatile("pushfl; popl %0; movl %%esp,%1; call 1f; 1: popl %2"
                  : "=r"(flags), "=r"(stack), "=r"(instruction) : : "memory");
@@ -244,15 +290,34 @@ bool KernelPaging::enable() {
     if (!mappedBytes((uint32_t)this, sizeof(*this), true)
         || !mappedBytes((uint32_t)frames, sizeof(*frames), true)
         || !mappedBytes(directory, 4096, true)) return fail(PagingUnsafeContext);
-    for (uint32_t i = 0; i < 1024; ++i)
-        if (tables[i] && !mappedBytes(tables[i], 4096, true)) return fail(PagingUnsafeContext);
+    for (uint32_t page : directories)
+        if (page && !mappedBytes(page, 4096, true)) return fail(PagingUnsafeContext);
+    for (uint32_t page : tables)
+        if (page && !mappedBytes(page, 4096, true)) return fail(PagingUnsafeContext);
 #ifndef GTOS_PAGING_TEST
+    if (pae) {
+        const uint32_t control = savedCr4 | (1u << 5);
+        asm volatile("movl %0,%%cr4" : : "r"(control) : "memory");
+    }
     asm volatile("movl %0,%%cr3; movl %%cr0,%%eax; orl $0x80010000,%%eax; movl %%eax,%%cr0"
                  : : "r"(directory) : "eax", "memory", "cc");
 #endif
     active = true;
     error = PagingOk;
     return true;
+}
+bool KernelPaging::retireBootstrapPae() {
+    if (!active || !pae) return fail(PagingBadState);
+    if (sharedSealed) return fail(PagingSealed);
+#ifndef GTOS_PAGING_TEST
+    uint32_t flags, root;
+    asm volatile("pushfl; popl %0; movl %%cr3,%1" : "=r"(flags), "=r"(root) : : "memory");
+    if ((flags & (1u << 9)) || root != directory) return fail(PagingUnsafeContext);
+    asm volatile("movl %0,%%cr0; movl %1,%%cr4; movl %2,%%cr3"
+                 : : "r"(savedCr0), "r"(savedCr4), "r"(savedCr3) : "memory");
+#endif
+    active = false;
+    return abandon();
 }
 bool KernelPaging::sealForSharedProcessors() {
     InterruptGuard guard;
@@ -282,7 +347,7 @@ const char* KernelPaging::ErrorName(PagingError value) {
         case PagingNotOwned: return "not an owned data frame";
         case PagingPinnedMapping: return "pinned or absent mapping";
         case PagingBadBootInfo: return "invalid boot metadata";
-        case PagingUnsafeContext: return "unsafe context, interrupts enabled, or PAE mode";
+        case PagingUnsafeContext: return "unsafe context, interrupts enabled, or incompatible paging mode";
         case PagingSealed: return "page tables sealed for shared processors";
         default: return "unknown paging error";
     }

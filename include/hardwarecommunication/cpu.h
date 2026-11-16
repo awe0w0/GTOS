@@ -41,6 +41,8 @@ namespace gtos { namespace hardwarecommunication {
         bool TryMpPointer(uint32_t address, uint32_t accessiblePhysicalBytes);
     public:
         CpuManager();
+        // Zero when the processor doesn't advertise PAE.
+        static uint32_t PaeAddressBits();
         // Boot-time, identity-mapped physical memory only. The caller supplies
         // the smaller of its accessible segment/mapping limit and physical RAM
         // extent; out-of-range firmware pointers are skipped, never followed.
