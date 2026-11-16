@@ -24,7 +24,7 @@ PeripheralComponentInterconnectController::~PeripheralComponentInterconnectContr
 
 uint32_t PeripheralComponentInterconnectController::Read(uint16_t bus, uint16_t device, uint16_t function, uint32_t registeroffset) {
     uint32_t id = 
-        0x1 << 31
+        1u << 31
         | ((bus & 0xFF) << 16)
         | ((device & 0x1F) << 11)
         | ((function & 0x07) << 8)
@@ -37,7 +37,7 @@ uint32_t PeripheralComponentInterconnectController::Read(uint16_t bus, uint16_t 
 
 void PeripheralComponentInterconnectController::Write(uint16_t bus, uint16_t device, uint16_t function, uint32_t registeroffset, uint32_t value) {
     uint32_t id = 
-        0x1 << 31
+        1u << 31
         | ((bus & 0xFF) << 16)
         | ((device & 0x1F) << 11)
         | ((function & 0x07) << 8)
@@ -48,6 +48,51 @@ void PeripheralComponentInterconnectController::Write(uint16_t bus, uint16_t dev
 
 bool PeripheralComponentInterconnectController::DeviceHasFunctions(uint16_t bus, uint16_t device) {
     return Read(bus, device, 0, 0x0E) & (1 << 7);
+}
+
+bool PeripheralComponentInterconnectController::ProbeMemoryBar32(
+    const PeripheralComponentInterconnectDeviceDescriptor& d, uint8_t bar,
+    uint32_t& address, uint32_t& bytes) {
+    address = bytes = 0;
+    if (bar >= 6 || (Read(d.bus, d.device, d.function, 0x0E) & 0x7F) != 0)
+        return false;
+
+    const uint32_t offset = 0x10 + 4 * bar;
+    const uint32_t low = Read(d.bus, d.device, d.function, offset);
+    const uint32_t barType = low & 7;
+    const bool wide = barType == 4;
+    if ((barType != 0 && !wide) || (wide && bar == 5) || !(low & ~0xFu))
+        return false;
+    const uint32_t high = wide ? Read(d.bus, d.device, d.function, offset + 4) : 0;
+    if (high)
+        return false;
+
+    const uint16_t command = Read(d.bus, d.device, d.function, 4);
+    // Write zero to the adjacent write-one-to-clear Status bits.
+    Write(d.bus, d.device, d.function, 4, command & ~7u);
+    if (Read(d.bus, d.device, d.function, 4) & 7) {
+        Write(d.bus, d.device, d.function, 4, command);
+        return false;
+    }
+    Write(d.bus, d.device, d.function, offset, 0xFFFFFFFFu);
+    if (wide)
+        Write(d.bus, d.device, d.function, offset + 4, 0xFFFFFFFFu);
+    const uint32_t lowMask = Read(d.bus, d.device, d.function, offset) & ~0xFu;
+    const uint32_t highMask = wide ? Read(d.bus, d.device, d.function, offset + 4) : 0xFFFFFFFFu;
+    Write(d.bus, d.device, d.function, offset, low);
+    if (wide)
+        Write(d.bus, d.device, d.function, offset + 4, high);
+    Write(d.bus, d.device, d.function, 4, command);
+
+    const uint64_t mask = ((uint64_t)highMask << 32) | lowMask;
+    const uint64_t length = ~mask + 1;
+    const uint32_t base = low & ~0xFu;
+    if (!length || length > 0xFFFFFFFFu || (length & (length - 1)) ||
+        (base & (length - 1)) || (uint64_t)base + length > 0x100000000ULL)
+        return false;
+    address = base;
+    bytes = (uint32_t)length;
+    return true;
 }
 
 void printf(char*);
@@ -101,6 +146,7 @@ PeripheralComponentInterconnectDeviceDescriptor PeripheralComponentInterconnectC
     result.bus = bus;
     result.device = device;
     result.function = function;
+    result.portBase = 0;
 
     result.vendor_id = Read(bus, device, function, 0x00);
     result.device_id = Read(bus, device, function, 0x02);

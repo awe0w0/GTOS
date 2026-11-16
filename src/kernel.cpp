@@ -17,8 +17,11 @@
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/ata.h>
+#include <drivers/nvme.h>
 #include <drivers/amd_am79c973.h>
 #include <storage/settings.h>
+#include <storage/gpt.h>
+#include <common/crc32.h>
 #include <storage/liveblockdevice.h>
 #include <storage/content_volume_layout.h>
 #include <storage/filestore.h>
@@ -356,6 +359,68 @@ static process::NativeSharedMemory nativeSharedMemory(frames);
 static memory::KernelPaging paging;
 static TaskManager *activeTasks;
 static uint32_t DiskWaitTicks() { return activeTasks->Ticks(); }
+static void LogSectorNumber(const char *label, uint64_t sector) {
+    printf(label);
+    printfHex32((uint32_t)(sector >> 32));
+    printfHex32((uint32_t)sector);
+    printf("\n");
+}
+static void ProbeNvme(PeripheralComponentInterconnectController& pci,
+                      const NvmeController& controller) {
+    const uint32_t baseline = frames.getStatistics().freeFrames;
+    NvmeDisk disk(pci, frames, DiskWaitTicks);
+    if (!disk.Start(controller, paging)) {
+        LogValue("NVME START ERROR ", disk.Error());
+        LogValue("NVME COMPLETION STATUS ", disk.CompletionStatus());
+        return;
+    }
+    LogValue("NVME PCI ID ", ((uint32_t)controller.pci.vendor_id << 16) | controller.pci.device_id);
+    LogValue("NVME MMIO ", controller.address);
+    const uint32_t sectorBytes = disk.LogicalSectorBytes();
+    const uint64_t sectors = disk.LogicalSectorCount();
+    LogValue("NVME LOGICAL SECTOR BYTES ", sectorBytes);
+    LogSectorNumber("NVME LOGICAL SECTORS ", sectors);
+
+    // Three pages require PRP2 to point to a list even with 512-byte LBAs.
+    const uint32_t transfer = 3 * 4096;
+    uint8_t *block = new uint8_t[transfer];
+    if (block && disk.ReadSectors(0, transfer / sectorBytes, block)) {
+        LogValue("NVME PREFIX CRC32 ", ~common::Crc32Update(0xFFFFFFFFu, block, transfer));
+        if (!disk.ReadSectors(sectors, 1, block) && disk.Error() == NvmeBadRequest)
+            printf("NVME RANGE REJECT\n");
+        storage::GptTable gpt;
+        if (gpt.Open(disk)) {
+            printf(gpt.UsingBackup() ? "NVME GPT BACKUP\n" : "NVME GPT PRIMARY\n");
+            uint32_t partitions = 0;
+            for (uint32_t i = 0; i < gpt.EntryCount(); ++i) {
+                storage::GptPartition part;
+                const storage::GptEntryResult entry = gpt.Entry(i, part);
+                if (entry == storage::GptUnused)
+                    continue;
+                if (entry != storage::GptPartitionFound ||
+                    !disk.ReadSectors(part.first, 1, block)) {
+                    LogValue("NVME GPT ENTRY ERROR ", i + 1);
+                    break;
+                }
+                ++partitions;
+                LogValue("NVME GPT PARTITION ", i + 1);
+                LogSectorNumber("NVME GPT FIRST LBA ", part.first);
+                LogSectorNumber("NVME GPT LAST LBA ", part.last);
+                LogValue("NVME VOLUME BOOT CRC32 ",
+                         ~common::Crc32Update(0xFFFFFFFFu, block, sectorBytes));
+            }
+            LogValue("NVME GPT PARTITIONS ", partitions);
+        } else {
+            printf("NVME GPT UNAVAILABLE\n");
+        }
+    } else {
+        LogValue("NVME PREFIX READ ERROR ", disk.Error());
+    }
+    delete[] block;
+    const bool stopped = disk.Stop();
+    printf(stopped && frames.getStatistics().freeFrames == baseline
+               ? "NVME DMA REAP PASS\n" : "NVME DMA REAP FAIL\n");
+}
 static storage::FileStore *contentVolume;
 static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writable) {
     if (!disk.ConfigureWaitClock(DiskWaitTicks, 500U) || !disk.Identify() ||
@@ -3132,13 +3197,23 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         Panic("VGA MODE", "E10");
     graphicsActive = true;
     BootStage("B06", "PAGING");
-    memory::PagingDeviceRange devices[3];
+    PeripheralComponentInterconnectController nvmePci;
+    NvmeController nvmeController = {};
+    const bool nvmeRequested = BootOption(mbi, "nvme-probe");
+    const bool nvmeFound = nvmeRequested && NvmeDisk::Find(nvmePci, nvmeController);
+    if (nvmeRequested && !nvmeFound)
+        printf("NVME CONTROLLER UNAVAILABLE\n");
+    memory::PagingDeviceRange devices[4];
     uint32_t deviceCount = 0;
     // Never guess a LAPIC address: Prepare validated this page against the executing BSP's APIC-base MSR,
     // firmware inventory and hardware identity, so only a validated address is mapped here.
-    const memory::PagingConfig pagingConfig =
+    memory::PagingConfig pagingConfig =
         BuildPagingConfig(mbi, devices, deviceCount, modern ? &mode : 0,
                           (apsPrepared && apReport.localApicAddress) ? apReport.localApicAddress : 0);
+    if (nvmeFound) {
+        devices[deviceCount++] = {nvmeController.address, nvmeController.bytes};
+        pagingConfig.deviceCount = deviceCount;
+    }
     if (!paging.prepareIdentity(frames, pagingConfig))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
     const bool contentThreads = contentBoot && BootOption(mbi, "content-threads");
@@ -3208,6 +3283,8 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     pitData.Write(divisor & 255);
     pitData.Write(divisor >> 8);
     interrupts.Activate();
+    if (nvmeFound)
+        ProbeNvme(nvmePci, nvmeController);
     BootStage("B08", "DESKTOP");
     if (diagnosticBoot && bootScreenReady && modern) {
         printf("BOOT LOG PAUSED - PRESS ANY KEY FOR DESKTOP\n");

@@ -72,6 +72,7 @@ staged_unit() (
 during_run python3 -m unittest discover -s tests -p 'qemu_runtime_test.py'
 staged_unit ./tests/ata_wait_test.sh objects logs
 during_run ./tests/kernel_integer_test.sh
+during_run sh ./tests/gpt_test.sh
 during_run ./tests/memory_test.sh
 during_run ./tests/memory_bootstrap_test.sh
 staged_unit ./tests/live_storage_host_test.sh objects

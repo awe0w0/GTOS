@@ -1,24 +1,20 @@
 #include <apps/package.h>
+#include <common/crc32.h>
 using namespace gtos::apps;
+using gtos::common::Crc32Byte;
+using gtos::common::Crc32Update;
 uint32_t gtos::apps::Read32(const uint8_t* p) {
     return (uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24);
 }
 void gtos::apps::Write32(uint8_t* p,uint32_t v) {
     p[0]=v&255; p[1]=(v>>8)&255; p[2]=(v>>16)&255; p[3]=(v>>24)&255;
 }
-static uint32_t UpdateCRC(uint32_t c,uint8_t b) {
-    c^=b;
-    for (uint32_t i=0;i<8;i++) c=(c>>1)^((c&1)?0xEDB88320U:0);
-    return c;
-}
 uint32_t gtos::apps::CRC32(const uint8_t* p,uint32_t len) {
-    uint32_t c=0xFFFFFFFFU;
-    for (uint32_t i=0;i<len;i++) c=UpdateCRC(c,p[i]);
-    return ~c;
+    return ~Crc32Update(0xFFFFFFFFU,p,len);
 }
 uint32_t gtos::apps::PackageCRC(const uint8_t* p,uint32_t len) {
     uint32_t c=0xFFFFFFFFU;
-    for (uint32_t i=0;i<len;i++) c=UpdateCRC(c,(i>=120&&i<124)?0:p[i]);
+    for (uint32_t i=0;i<len;i++) c=Crc32Byte(c,(i>=120&&i<124)?0:p[i]);
     return ~c;
 }
 static bool ValidString(const uint8_t* p,uint32_t len,bool id,bool nonempty=true) {

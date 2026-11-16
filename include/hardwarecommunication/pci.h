@@ -58,6 +58,10 @@ namespace gtos {
             void Write(uint16_t bus, uint16_t device, uint16_t function, uint32_t registeroffset, uint32_t value);
             bool DeviceHasFunctions(uint16_t bus, uint16_t device);
 
+            // Probe a Type 0 memory BAR with decoding and DMA disabled, then restore it.
+            bool ProbeMemoryBar32(const PeripheralComponentInterconnectDeviceDescriptor& device,
+                                  uint8_t bar, uint32_t& address, uint32_t& bytes);
+
             void SelectDrivers(drivers::DriverManager* driverManager, hardwarecommunication::InterruptsManager* interrupts);
             drivers::Driver* GetDriver(PeripheralComponentInterconnectDeviceDescriptor, hardwarecommunication::InterruptsManager* interrupts);
             PeripheralComponentInterconnectDeviceDescriptor GetDeviceDescriptor(uint16_t bus, uint16_t device, uint16_t function);
