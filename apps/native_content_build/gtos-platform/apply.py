@@ -28,6 +28,7 @@ INPUTS = {
     'mojo/public/cpp/platform/BUILD.gn': '4eaffabd539552966ebd0d4a1fc81eda7eff6a66ffba97155ab824f94bd0c924',
     'mojo/public/cpp/platform/platform_channel_server.cc': '56e3d1dfdbfa12e12fa4ae4eb35ab5e83bd5266c7723d53bd1c295a8bb88d7db',
     'content/browser/devtools/protocol/media_recorder.cc': 'bdd28b29ad339f8bcbdb0a9454416bc75178cfd719dae9eec3f9119b1ca76075',
+    'content/browser/renderer_host/media/audio_output_authorization_handler.cc': '3173a242ae5cad78e422acbae3936623069b40657c3b957899f00416a673cdcc',
     'media/capture/video/mappable_shared_image_utils.cc': '943570000a103707b5bbd2a31451f99ccdd5a4e9041f3225136f2c252eee4753',
     'services/device/time_zone_monitor/time_zone_monitor.cc': 'd982fe5b64046b8fa754d9a2fd67885869fd139023fe7caaf858eb8f5b9554c9',
     'services/resource_coordinator/public/cpp/memory_instrumentation/os_metrics.cc': 'bba4951df19712f08c3f82de1e008b594959e007341d66fb4f7608814a302dd3',

@@ -1,0 +1,27 @@
+--- a/content/browser/renderer_host/media/audio_output_authorization_handler.cc
++++ b/content/browser/renderer_host/media/audio_output_authorization_handler.cc
+@@ -9,6 +9,7 @@
+ #include "base/task/bind_post_task.h"
+ #include "base/trace_event/trace_event.h"
++#include "build/build_config.h"
+ #include "content/browser/media/media_devices_permission_checker.h"
+ #include "content/browser/media/media_devices_util.h"
+ #include "content/browser/renderer_host/media/audio_input_device_manager.h"
+ #include "content/public/browser/browser_task_traits.h"
+@@ -344,6 +345,16 @@
+ 
+   trace_scope->FinishedGettingAudioParameters();
+ 
++#if BUILDFLAG(IS_GTOS)
++  // GTOS has no audio device or transferable audio socket. Let the media
++  // renderer select its timed silent sink when the device is unavailable.
++  if (!params) {
++    std::move(cb).Run(media::OUTPUT_DEVICE_STATUS_ERROR_NOT_FOUND,
++                      media::AudioParameters::UnavailableDeviceParams(),
++                      std::string(), std::string());
++    return;
++  }
++#endif
+   std::move(cb).Run(
+       media::OUTPUT_DEVICE_STATUS_OK,
+       params.value_or(media::AudioParameters::UnavailableDeviceParams()),
