@@ -21,6 +21,7 @@
 #include <drivers/amd_am79c973.h>
 #include <storage/settings.h>
 #include <storage/gpt.h>
+#include <storage/ntfs.h>
 #include <common/crc32.h>
 #include <storage/liveblockdevice.h>
 #include <storage/content_volume_layout.h>
@@ -365,8 +366,55 @@ static void LogSectorNumber(const char *label, uint64_t sector) {
     printfHex32((uint32_t)sector);
     printf("\n");
 }
+static void ProbeNtfs(storage::ReadableDisk& disk, const storage::GptPartition& partition,
+                      uint8_t *buffer, uint32_t capacity) {
+    storage::NtfsVolume volume;
+    storage::NtfsStatus status = volume.Mount(disk, partition);
+    if (status != storage::NtfsOk) {
+        LogValue("NVME NTFS MOUNT ERROR ", status);
+        return;
+    }
+    uint32_t entries = 0;
+    status = volume.List(volume.Root(), [](const storage::NtfsEntry&, void* context) {
+        ++*(uint32_t*)context;
+        return true;
+    }, &entries);
+    if (status != storage::NtfsOk) {
+        LogValue("NVME NTFS LIST ERROR ", status);
+        return;
+    }
+    LogValue("NVME NTFS ROOT ENTRIES ", entries);
+    storage::NtfsEntry file;
+    if (volume.Find(volume.Root(), "gtos-absent-file", file) == storage::NtfsNotFound)
+        printf("NVME NTFS MISSING REJECT\n");
+    const char* names[] = {"GTOS.bin", "catch.gtapp", "note.txt"};
+    for (const char* name : names) {
+        status = volume.Find(volume.Root(), name, file);
+        if (status != storage::NtfsOk || file.directory || file.reparse) {
+            printf("NVME NTFS LOOKUP ERROR "); printf(name); printf("\n");
+            LogValue("NVME NTFS STATUS ", status);
+            return;
+        }
+        uint32_t total = 0, crc = 0xFFFFFFFFu;
+        for (;;) {
+            uint32_t bytes = 0;
+            status = volume.ReadFile(file.id, total, capacity, buffer, bytes);
+            if (status != storage::NtfsOk || total > (16u << 20) - bytes) {
+                printf("NVME NTFS DATA ERROR "); printf(name); printf("\n");
+                LogValue("NVME NTFS STATUS ", status);
+                return;
+            }
+            if (!bytes)
+                break;
+            crc = common::Crc32Update(crc, buffer, bytes);
+            total += bytes;
+        }
+        printf("NVME NTFS FILE "); printf(name); printf(" ");
+        printfHex32(total); printf(" "); printfHex32(~crc); printf("\n");
+    }
+}
 static void ProbeNvme(PeripheralComponentInterconnectController& pci,
-                      const NvmeController& controller) {
+                      const NvmeController& controller, bool filesystemProbe) {
     const uint32_t baseline = frames.getStatistics().freeFrames;
     NvmeDisk disk(pci, frames, DiskWaitTicks);
     if (!disk.Start(controller, paging)) {
@@ -408,6 +456,11 @@ static void ProbeNvme(PeripheralComponentInterconnectController& pci,
                 LogSectorNumber("NVME GPT LAST LBA ", part.last);
                 LogValue("NVME VOLUME BOOT CRC32 ",
                          ~common::Crc32Update(0xFFFFFFFFu, block, sectorBytes));
+                bool ntfs = filesystemProbe;
+                for (uint32_t b = 0; b < 8 && ntfs; ++b)
+                    ntfs = block[3 + b] == "NTFS    "[b];
+                if (ntfs)
+                    ProbeNtfs(disk, part, block, transfer);
             }
             LogValue("NVME GPT PARTITIONS ", partitions);
         } else {
@@ -3284,7 +3337,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     pitData.Write(divisor >> 8);
     interrupts.Activate();
     if (nvmeFound)
-        ProbeNvme(nvmePci, nvmeController);
+        ProbeNvme(nvmePci, nvmeController, BootOption(mbi, "nvme-fs-probe"));
     BootStage("B08", "DESKTOP");
     if (diagnosticBoot && bootScreenReady && modern) {
         printf("BOOT LOG PAUSED - PRESS ANY KEY FOR DESKTOP\n");
