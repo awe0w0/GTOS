@@ -28,8 +28,7 @@ int FileStore::ReadBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,v
     if (!ValidRegion(cfg,block,off,size,buffer)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;
     uint32_t start=self->firstSector+block*SectorsPerBlock+off/SectorSize;
-    for (uint32_t i=0;i<size/SectorSize;i++)
-        if (!self->disk->ReadSector(start+i,(uint8_t*)buffer+i*SectorSize)) return LFS_ERR_IO;
+    if (size&&!self->disk->ReadSectors(start,size/SectorSize,(uint8_t*)buffer)) return LFS_ERR_IO;
     return 0;
 }
 int FileStore::ProgBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,const void* buffer,lfs_size_t size) {

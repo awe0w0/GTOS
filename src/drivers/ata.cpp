@@ -12,7 +12,11 @@ void AdvancedTechnologyAttachment::Delay() {
     for (uint32_t i=0;i<4;i++) controlPort.Read();
 }
 bool AdvancedTechnologyAttachment::Wait(bool drq) {
+#ifdef GTOS_ATA_HOST_TEST
+    const uint32_t flags=0x200U; // Host port spies cannot read the guest's IF.
+#else
     uint32_t flags; asm volatile("pushfl; popl %0" : "=r"(flags));
+#endif
     AtaWaitBudget budget(waitClock,waitTimeoutTicks,(flags&0x200U)!=0);
     switch (PollAta(commandPort,drq,budget)) {
         case AtaReady:lastError=None;return true;
@@ -46,29 +50,44 @@ bool AdvancedTechnologyAttachment::Identify() {
     for (int i=39;i>=0 && model[i]==' ';i--) model[i]=0;
     present=true; lastError=None; return true;
 }
-bool AdvancedTechnologyAttachment::Select(uint32_t sector) {
-    if (!present || sector>=sectors || sector>=0x10000000) { lastError=BadArgument; return false; }
+bool AdvancedTechnologyAttachment::Select(uint32_t sector,uint32_t count) {
+    if (!present || !count || count>256 || sector>=sectors || count>sectors-sector
+        || sector>=0x10000000 || count>0x10000000-sector) { lastError=BadArgument; return false; }
     devicePort.Write((master?0xE0:0xF0)|((sector>>24)&15)); Delay();
     if (!Wait(false)) return false;
-    errorPort.Write(0); sectorCountPort.Write(1);
+    errorPort.Write(0); sectorCountPort.Write((uint8_t)count); // Zero encodes 256 sectors.
     lbaLowPort.Write(sector&255); lbaMidPort.Write((sector>>8)&255); lbaHiPort.Write((sector>>16)&255);
     return true;
 }
 bool AdvancedTechnologyAttachment::Read28(uint32_t sector, uint8_t* data, int count) {
     if (!data || count<1 || count>512) { lastError=BadArgument; return false; }
+    if (count==512) return ReadSectors(sector,1,data);
     if (!Select(sector)) return false;
     commandPort.Write(0x20); Delay();
     if (!Wait(true)) return false;
-    if (count==512) {
-        dataPort.ReadWords(data,256);
-    } else {
-        for (int i=0;i<512;i+=2) {
-            uint16_t w=dataPort.Read();
-            if (i<count) data[i]=w&255;
-            if (i+1<count) data[i+1]=w>>8;
-        }
+    for (int i=0;i<512;i+=2) {
+        uint16_t w=dataPort.Read();
+        if (i<count) data[i]=w&255;
+        if (i+1<count) data[i+1]=w>>8;
     }
     Delay(); return Wait(false);
+}
+bool AdvancedTechnologyAttachment::ReadSectors(uint32_t first,uint32_t count,uint8_t* data) {
+    if (!present || !ValidRead(first,count,data)) { lastError=BadArgument; return false; }
+    while (count) {
+        const uint32_t batch=count>256?256:count;
+        if (!Select(first,batch)) return false;
+        commandPort.Write(0x20); Delay();
+        for (uint32_t i=0;i<batch;i++) {
+            if (!Wait(true)) return false;
+            dataPort.ReadWords(data,256);
+            data+=512;
+            Delay();
+        }
+        if (!Wait(false)) return false;
+        first+=batch;count-=batch;
+    }
+    return true;
 }
 bool AdvancedTechnologyAttachment::Write28(uint32_t sector, const uint8_t* data, int count) {
     // Reject before argument access, device selection, or any hardware I/O.

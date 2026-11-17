@@ -50,6 +50,19 @@ public:
         if (entry&&entry->sector==sector) entry->sector=Empty;
         return device.WriteSector(sector,data);
     }
+    bool ReadSectors(uint32_t first,uint32_t count,uint8_t* data) override {
+        if (!ValidRead(first,count,data)) return false;
+        if (count==1) return ReadSector(first,data);
+        if (!device.ReadSectors(first,count,data)) return false;
+        for (uint32_t i=0;i<count;i++) {
+            Entry* entry=Find(first+i);
+            if (entry) {
+                gtos_lfs_memcpy(entry->bytes,data+(__UINTPTR_TYPE__)i*FileStore::SectorSize,FileStore::SectorSize);
+                entry->sector=first+i;
+            }
+        }
+        return true;
+    }
     bool Flush() override { return device.Flush(); }
 };
 } }
