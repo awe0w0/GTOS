@@ -8,7 +8,7 @@ ${CC:-gcc} -m32 -std=c11 -Os -Wall -Wextra -Werror -ffreestanding \
     -nostdlib -fno-builtin -fno-pie -fno-stack-protector \
     -fno-asynchronous-unwind-tables -fno-unwind-tables \
     -mno-sse -mno-sse2 -mno-mmx -msoft-float \
-    -c "$repo/apps/browser_probe/main.c" -o "$out/main.o"
+    -I"$repo/include" -c "$repo/apps/browser_probe/main.c" -o "$out/main.o"
 ${AS:-as} --32 "$repo/apps/browser_probe/start.s" -o "$out/start.o"
 ${LD:-ld} -melf_i386 --build-id=none -z max-page-size=4096 \
     -T "$repo/apps/browser_probe/linker.ld" -o "$out/browser-probe.elf" \

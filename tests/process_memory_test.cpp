@@ -32,7 +32,7 @@ namespace {
     MultibootInfo info;
     MultibootMemoryMapEntry memoryMap[2];
     PhysicalMemoryManager frames, foreignFrames;
-    KernelPaging kernel;
+    KernelPaging kernel, paeKernel;
     ProcessAddressSpace first, second, spare;
     uint32_t retained[4096];
     uint8_t input[8192], output[8192];
@@ -1034,6 +1034,80 @@ namespace {
         indexedOwnership();
         contentCopies(); contentRegionCapacity(); contentIndexSizing(); contentLargeCommit(); partialTableRelease();
     }
+    uint64_t* paeDirectory(uint32_t root, uint32_t address) {
+        return (uint64_t*)(uint32_t)(((uint64_t*)root)[address >> 30] & ~4095ULL);
+    }
+    void paeAddressSpaces() {
+        PagingConfig config = {(uint32_t)&__executable_start, ((uint32_t)&_end + 4095) & ~4095u,
+            (uint32_t)&__executable_start, (uint32_t)&__executable_start + 4096, &info, 0, 0};
+        CHECK(paeKernel.prepareIdentity(frames, config, true));
+        CHECK(paeKernel.enable() && paeKernel.sealForSharedProcessors());
+        const uint32_t sharedRoot = paeKernel.getStatistics().directoryAddress;
+        const uint32_t before = used();
+        gtos_process_memory_test_cr3 = sharedRoot;
+        CHECK(!first.Prepare(paeKernel, frames) && used() == before);
+        gtos_process_memory_test_cr4 = 1U << 5;
+        // Exercise the exact QEMU access-bit update on the live kernel root.
+        uint64_t* sharedPdpt = (uint64_t*)sharedRoot;
+        sharedPdpt[0] |= 0x20;
+
+        // Fail after acquiring a root and part of its directory set.
+        uint32_t held = 0;
+        while (frames.getStatistics().freeFrames > 3 && held < 4096 && frames.allocate(retained[held]))
+            ++held;
+        CHECK(frames.getStatistics().freeFrames == 3);
+        CHECK(!first.Prepare(paeKernel, frames) && first.GetLastError() == ProcessMemoryNoMemory);
+        CHECK(!first.DirectoryAddress() && frames.getStatistics().freeFrames == 3);
+        while (held) frames.free(retained[--held]);
+        CHECK(used() == before);
+
+        CHECK(first.Prepare(paeKernel, frames) && used() == before + 5);
+        const uint32_t root = first.DirectoryAddress();
+        if (!root) return;
+        const uint32_t boundary = ProcessAddressSpace::DynamicBase;
+        CHECK(paeDirectory(root, boundary) != paeDirectory(sharedRoot, boundary));
+        CHECK(first.MapNewRange(boundary - 4096, 8192, true));
+        fill(input, 32, 0x79);
+        CHECK(first.CopyToUser(boundary - 16, input, 32));
+        CHECK(first.CopyFromUser(output, boundary - 16, 32) && equal(input, output, 32));
+        CHECK(!first.CopyFromUser(paeDirectory(root, boundary), boundary - 16, 32));
+        CHECK(!first.CopyFromUser(paeDirectory(sharedRoot, boundary), boundary - 16, 32));
+
+        uint64_t* userDirectory = paeDirectory(root, boundary);
+        const uint64_t pde = userDirectory[0];
+        CHECK(pde & 1);
+        if (!(pde & 1)) return;
+        uint64_t* userTable = (uint64_t*)(uint32_t)(pde & ~4095ULL);
+        const uint64_t pte = userTable[0];
+        userTable[0] = pte | (1ULL << 32);
+        CHECK(!first.ValidateUserRange(boundary, 1, false));
+        userTable[0] = pte;
+        uint64_t* pdpt = (uint64_t*)root;
+        const uint64_t pdpte = pdpt[2];
+        pdpt[2] = pdpte | 0x20;
+        CHECK(first.ValidateUserRange(boundary, 1, false));
+        pdpt[2] = pdpte | 0x40;
+        CHECK(!first.ValidateUserRange(boundary, 1, false));
+        pdpt[2] = pdpte | (1ULL << 32);
+        CHECK(!first.ValidateUserRange(boundary, 1, false));
+        pdpt[2] = pdpte;
+        CHECK(first.ProtectPage(boundary, false) && !first.ValidateUserRange(boundary, 1, true));
+        CHECK(first.Seal());
+        gtos_process_memory_test_cr3 = root;
+        CHECK(!first.Destroy() && first.GetLastError() == ProcessMemoryActive);
+        uint32_t base = 0, handle = 0;
+        const uint32_t hint = boundary + 0x1FF000;
+        CHECK(first.Reserve(8192, 4096, hint, base, handle) && base == hint);
+        CHECK(first.SetPermissions(handle, 0, 8192, ProcessMemoryReadWrite));
+        CHECK(first.CopyToUser(base + 4092, input, 8));
+        CHECK(first.CopyFromUser(output, base + 4092, 8) && equal(input, output, 8));
+        CHECK(first.Release(handle));
+        CHECK(!first.ValidateUserRange(base, 1, false));
+        gtos_process_memory_test_cr3 = sharedRoot;
+        CHECK(first.Destroy() && used() == before);
+        gtos_process_memory_test_cr4 = 0;
+        gtos_process_memory_test_cr3 = kernel.getStatistics().directoryAddress;
+    }
 }
 extern "C" int processMemoryTests() {
     uint32_t args[] = {Arena, ArenaBytes, 3, 0x32, 0xFFFFFFFF, 0};
@@ -1045,7 +1119,7 @@ extern "C" int processMemoryTests() {
     if (address != BufferAlias) { print("FAIL: mmap kernel buffer alias\n"); return 1; }
     diagnostics(); initialize(); preparationAndHardware(); allocatorIdentity(); templateRejections(); isolationAndCopies();
     corruptedMappings(); exhaustionAndAliases(); lifetimeAndLimits();
-    dynamicVirtualMemory();
+    dynamicVirtualMemory(); paeAddressSpaces();
     print("Process memory tests: "); number(checks); print(" checks, "); number(failures); print(" failures\n");
     return failures ? 1 : 0;
 }

@@ -434,7 +434,12 @@ bool NativeRuntime::LoadElf(const Elf32LoadPlan& plan, const uint8_t* image, uin
     const bool prepared = read ? target->space.PrepareContentFile(*paging, *frames, capacity, reservedBegin) :
         content ? target->space.PrepareContent(*paging, *frames, capacity, reservedBegin)
                 : target->space.Prepare(*paging, *frames, capacity, reservedBegin);
-    if (!prepared) return false;
+    if (!prepared) {
+        printf((char*)"NATIVE ELF ADDRESS SPACE FAILED ");
+        printf((char*)ProcessAddressSpace::ErrorName(target->space.GetLastError()));
+        printf((char*)"\n");
+        return false;
+    }
     Slot& slot = *target;
     for (uint32_t i = 0; i < plan.segmentCount; ++i) {
         const Elf32LoadSegment& segment = plan.segments[i];
@@ -467,6 +472,9 @@ bool NativeRuntime::LoadElf(const Elf32LoadPlan& plan, const uint8_t* image, uin
         return true;
     }
 rollback:
+    printf((char*)"NATIVE ELF LOAD FAILED ");
+    printf((char*)ProcessAddressSpace::ErrorName(slot.space.GetLastError()));
+    printf((char*)"\n");
     slot.space.Destroy(); return false;
 }
 bool NativeRuntime::MemoryStatistics(uint32_t id, ProcessMemoryStatistics& result) const {

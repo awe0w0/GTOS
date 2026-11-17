@@ -48,7 +48,7 @@ obj/native/start.o: apps/native/start.s
 obj/native/%.elf: obj/native/%.o obj/native/start.o apps/native/image.ld
 	$(LD) $(LDFLAGS) -T apps/native/image.ld -o $@ $< obj/native/start.o
 .SECONDARY: obj/native/fault.o obj/native/peer.o obj/native/fault.elf obj/native/peer.elf obj/native/peer-concurrent.o obj/native/peer-concurrent.elf
-obj/browser-probe/browser-probe.elf: apps/browser_probe/main.c apps/browser_probe/start.s apps/browser_probe/linker.ld tools/build-browser-probe.sh tools/browser_artifact.py
+obj/browser-probe/browser-probe.elf: apps/browser_probe/main.c apps/browser_probe/start.s apps/browser_probe/linker.ld include/process/vm_abi.h tools/build-browser-probe.sh tools/browser_artifact.py
 	./tools/build-browser-probe.sh "$(abspath obj/browser-probe)"
 # Explicit enabled-profile acceptance payloads. Their FP instructions live in
 # user assembly; this does not relax the kernel compiler/audit policy.

@@ -20,7 +20,7 @@ namespace gtos { namespace memory {
     struct ProcessMemoryStatistics {
         uint32_t residentPages, dynamicPages, capacityPages, metadataFrames, tableFrames;
     };
-    // BSP-only, non-PAE user mappings. KernelPaging must be enabled and
+    // BSP-only user mappings with the same paging mode as KernelPaging. It must be enabled and
     // permanently sealed; it and its allocator must outlive every process.
     // No destructor tears mappings down. Before Destroy(), remove ALL runnable
     // references and deferred interrupt/return frames, then switch to kernel CR3.
@@ -49,26 +49,27 @@ namespace gtos { namespace memory {
                             process::Elf32ReadAt read, void* source);
         bool PrepareContentFile(KernelPaging&, PhysicalMemoryManager&,
                                 uint32_t capacityPages, uint32_t dynamicEnd);
-        struct Page { uint32_t address, frame, region; bool writable, present; };
+        struct Page { uint32_t address, frameNumber, region; bool writable, present; };
         static_assert(sizeof(Page) == 16, "ownership record wire-independent size");
         struct Region { uint32_t base, bytes, handle, sharedFrames; };
-        struct PendingPage { uint32_t address, frame; };
+        struct PendingPage { uint32_t address, frameNumber; };
         struct PendingTable { uint32_t index, frame; };
         static const uint32_t MaximumContentCommitPages = 16 * 1024;
         KernelPaging* kernel;
         PhysicalMemoryManager* frames;
         uint32_t directory, kernelDirectory, pageCount;
-        uint32_t tables[1024]; // Owned tables only; borrowed tables stay zero.
+        uint32_t directories[4]; // Owned PAE directories addressed by the root.
+        uint32_t tables[1024]; // Owned tables indexed within the user arena.
         Page inlinePages[MaximumPages];
         Page* pages; // Authoritative ownership, never inferred from PTEs.
         uint32_t pageLimit, metadataBase, metadataPages, dynamicLimit;
         Region inlineRegions[MaximumRegions];
         Region* regions;
         uint32_t regionLimit;
-        // Ordinary processes need at most two new tables per transaction.
+        // An unaligned four MiB shared range may span three PAE tables.
         // Content keeps its larger transaction scratch in supervisor metadata.
         PendingPage inlinePendingPages[MaximumPages];
-        PendingTable inlinePendingTables[2];
+        PendingTable inlinePendingTables[3];
         uint32_t pendingPageCount, pendingTableCount;
         bool prepared, sealed;
         // Only large spaces own persistent indexes in supervisor memory.
@@ -79,6 +80,25 @@ namespace gtos { namespace memory {
         bool Context(bool allowOwnDirectory) const;
         bool KernelPageAlias(uint32_t page, bool writable) const;
         bool KernelAlias(uint32_t address, uint32_t length, bool writable) const;
+        uint32_t DirectoryCount() const { return kernel->pae ? 2048 : 1024; }
+        uint32_t LeafCount() const { return kernel->pae ? 512 : 1024; }
+        bool UserDirectory(uint32_t index) const {
+            return index >= kernel->directoryIndex(UserBase) && index <= kernel->directoryIndex(UserLimit - 1);
+        }
+        uint32_t OwnTable(uint32_t index) const {
+            return UserDirectory(index) ? tables[index - kernel->directoryIndex(UserBase)] : 0;
+        }
+        uint64_t DirectoryEntry(uint32_t index, bool shared) const;
+        void WriteDirectoryEntry(uint32_t index, uint64_t value);
+        void SetTable(uint32_t index, uint32_t frame);
+        uint64_t Leaf(uint32_t address) const {
+            return kernel->entry(OwnTable(kernel->directoryIndex(address)), kernel->leafIndex(address));
+        }
+        void WriteLeaf(uint32_t address, uint64_t value);
+        bool ValidPaeRoot(const PhysicalMemoryManager& allocator, uint32_t root,
+                          const uint32_t* levels) const;
+        bool AllocateRoot();
+        void FreeRoot();
         bool LayoutRoot() const;
         bool LayoutDirectories(uint32_t* nonzeroLeaves) const;
         bool Layout(bool complete, bool* unreservedDynamicPages = nullptr) const;
@@ -90,7 +110,7 @@ namespace gtos { namespace memory {
                               uint32_t capacityPages, uint32_t dynamicEnd,
                               uint32_t maximumPages, uint32_t maximumRegions);
         static uint32_t PageMetadataBytes(uint32_t capacityPages);
-        static uint32_t MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions);
+        uint32_t MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions) const;
         static uint32_t ContentCommitCapacity(uint32_t capacityPages);
         PendingPage* PendingPages();
         PendingTable* PendingTables();
@@ -104,6 +124,12 @@ namespace gtos { namespace memory {
         bool RegionRange(uint32_t handle, uint32_t offset, uint32_t bytes, uint32_t& base) const;
         uint32_t ConflictEnd(uint32_t base, uint32_t bytes, bool unreservedDynamicPages) const;
         bool AllocateFrame(uint32_t& address);
+        bool AllocateDataFrame(uint32_t& number);
+        bool ValidDataFrame(uint32_t number) const;
+        uint32_t MapDataFrame(uint32_t number) const;
+        void UnmapDataFrame(uint32_t number) const;
+        void ClearDataFrame(uint32_t number) const;
+        void FreeDataFrame(uint32_t number);
         bool MetadataLayout() const;
         bool MapOwnedPage(uint32_t address, bool writable);
         void RemovePage(uint32_t index);

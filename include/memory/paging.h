@@ -34,19 +34,27 @@ namespace gtos { namespace memory {
         PhysicalMemoryManager* frames;
         uint32_t directory;
         uint32_t directories[4], tables[2048];
-        uint32_t mappedCount, tableCount;
+        uint32_t mappedCount, tableCount, highWindow;
         uint32_t savedCr0, savedCr3, savedCr4;
         bool prepared, active, sharedSealed, pae;
         PagingError error;
         bool fail(PagingError value);
+        bool ensureTable(uint32_t index);
         bool addPage(uint32_t virtualAddress, uint64_t physicalAddress, uint32_t flags);
+        bool reserveHighWindow();
+        // Used only by the BSP with interrupts disabled. APs never access this
+        // address. Its directory entry stays fixed even while its PTE changes.
+        void bindHighWindow(uint64_t physicalAddress);
         bool identityBytes(uint32_t address, uint64_t length);
         bool bootMappings(const MultibootInfo* info);
         bool ownsPagingFrame(uint32_t address) const;
         bool mappedBytes(uint32_t address, uint32_t length, bool writable) const;
         uint32_t directoryIndex(uint32_t address) const { return address >> (pae ? 21 : 22); }
         uint32_t leafIndex(uint32_t address) const { return (address >> 12) & (pae ? 511 : 1023); }
-        uint64_t entry(uint32_t page, uint32_t index) const;
+        uint64_t entry(uint32_t page, uint32_t index) const {
+            const uint32_t* words = (const uint32_t*)page;
+            return pae ? words[2 * index] | ((uint64_t)words[2 * index + 1] << 32) : words[index];
+        }
         void writeEntry(uint32_t page, uint32_t index, uint64_t value);
         uint64_t leafLocked(uint32_t address) const;
         bool queryLocked(uint32_t address, PagingMapping& result) const;

@@ -839,7 +839,7 @@ struct NativeProbeData {
     uint32_t signature, progress, errors;
 };
 static uint32_t nativeFaultId = 0, nativePeerId = 0, nativeBrowserId = 0, nativeFrameBaseline = 0,
-                nativeBeginTick = 0;
+                nativeBeginTick = 0, nativeHighFrameBaseline = 0;
 static bool nativeDemoReady = false, nativeDemoReported = false, nativePeerAfterFault = false;
 static bool nativeFpDemo = false, nativeFpDiagnostic = false;
 #if defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
@@ -1036,8 +1036,10 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
     const process::NativeFpPolicy fpPolicy = nativeFpDemo ? process::NativeFpSse2 : process::NativeFpDisabled;
     if (!paging.sealForSharedProcessors() || !nativeRuntime.AttachEvents(nativeEvents)
         || !nativeRuntime.AttachSharedMemory(nativeSharedMemory)
-        || !nativeRuntime.Activate(tasks, gdt, paging, frames, fpPolicy))
+        || !nativeRuntime.Activate(tasks, gdt, paging, frames, fpPolicy)) {
+        printf("NATIVE RUNTIME ACTIVATION FAILED\n");
         return false;
+    }
 #if defined(GTOS_FP_DESKTOP_DIAGNOSTIC)
     if (nativeFpDiagnostic) {
         memory::InterruptGuard guard;
@@ -1048,6 +1050,8 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
     }
 #endif
     nativeFrameBaseline = frames.getStatistics().freeFrames;
+    nativeHighFrameBaseline = BootOption(boot, "pae") && BootOption(boot, "pae-probe")
+        ? frames.getHighStatistics().freeFrames : 0;
     if (!(boot->flags & (1u << 3)) || boot->moduleCount < 4)
         return false;
     const memory::MultibootModule *modules = (const memory::MultibootModule *)boot->modules;
@@ -1061,6 +1065,7 @@ static bool StartNativeDemo(TaskManager &tasks, GlobalDescriptorTable &gdt,
                                  modules[2].end - modules[2].start, nativePeerId) ||
         !nativeRuntime.CreateElf((const uint8_t *)modules[3].start,
                                  modules[3].end - modules[3].start, nativeBrowserId)) {
+        LogValue("NATIVE MODULE LOAD FAILED ", !nativeFaultId ? 1 : !nativePeerId ? 2 : 3);
         if (nativeFaultId)
             nativeRuntime.RequestExit(nativeFaultId, 0xE0);
         if (nativePeerId)
@@ -1378,11 +1383,20 @@ static void ServiceNativeDemo(TaskManager &tasks) {
     // point at which "reclaimed at Stop" can be observed rather than inferred.
     reclaimStopOK = ReclaimStopped();
 #endif
+    const uint32_t highBeforeReap = frames.getHighStatistics().freeFrames;
     uint32_t reaped = nativeRuntime.Reap();
     process::NativeStatistics counts = nativeRuntime.Statistics();
     valid = valid && reaped == 3 && counts.created == 3 && counts.faulted == 1 &&
             counts.exited == 2 && counts.reaped == 3 &&
             frames.getStatistics().freeFrames == nativeFrameBaseline;
+    if (nativeHighFrameBaseline) {
+        const uint32_t highAfterReap = frames.getHighStatistics().freeFrames;
+        LogValue("PAE NATIVE HIGH BASELINE ", nativeHighFrameBaseline);
+        LogValue("PAE NATIVE HIGH BEFORE REAP ", highBeforeReap);
+        LogValue("PAE NATIVE HIGH AFTER REAP ", highAfterReap);
+        valid = valid && highBeforeReap == nativeHighFrameBaseline - 2 &&
+            highAfterReap == nativeHighFrameBaseline;
+    }
 #if defined(GTOS_NATIVE_RECLAIM)
     // Reap has completed, so the page/object accounting must be back at baseline
     // and the reclaimed slots must be reusable without reviving the old handles.
@@ -1452,7 +1466,8 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         Panic("INVALID MEMORY MAP", "E01");
     const memory::MultibootInfo *mbi = (const memory::MultibootInfo *)multiboot;
     const bool paeProbe = BootOption(mbi, "pae-probe");
-    if (paeProbe) {
+    const bool usePae = BootOption(mbi, "pae");
+    if (paeProbe || usePae) {
         const uint32_t addressBits = CpuManager::PaeAddressBits();
         if (addressBits <= 32 ||
             !frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end, 0, 0,
@@ -3329,11 +3344,14 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     }
     if (paeProbe)
         RunPaeProbe(pagingConfig);
-    if (!paging.prepareIdentity(frames, pagingConfig))
+    if (!paging.prepareIdentity(frames, pagingConfig, usePae))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
     const bool contentThreads = contentBoot && BootOption(mbi, "content-threads");
     bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames, contentThreads);
-    bool workersStarted = workersPrepared && workers.Start(paging);
+    if (!nativeStacksPrepared)
+        printf("NATIVE KERNEL STACK PREPARATION FAILED\n");
+    // The worker entry still walks and loads a legacy paging root.
+    bool workersStarted = !usePae && workersPrepared && workers.Start(paging);
     // Only a pre-handoff failure may use the original parked path. Once an AP
     // has been handed off (even if it times out), never resend INIT/SIPI.
     if (!workersStarted && apsPrepared && cpuStartup.ReadyToStart()) {
@@ -3376,6 +3394,12 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         Panic("PAGING PROTECTION SELFTEST", "E14");
     printf("PAGING PG WP NULL RO PASS\n");
     LogValue("PAGING CR3 ", paging.getStatistics().directoryAddress);
+    if (usePae) {
+        uint32_t cr4;
+        asm volatile("movl %%cr4,%0" : "=r"(cr4));
+        if (!(cr4 & (1u << 5))) Panic("PAE CONTROL BIT", "E27");
+        LogValue("PAE PAGING CR4 ", cr4);
+    }
     Task sleeper(&gdt, Sleeper), yielder(&gdt, Yielder);
     tasks.AddTask(&sleeper);
     tasks.AddTask(&yielder);

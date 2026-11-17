@@ -24,7 +24,7 @@ namespace {
     }
 }
 KernelPaging::KernelPaging() : frames(0), directory(0), mappedCount(0),
-    tableCount(0), savedCr0(0), savedCr3(0), savedCr4(0), prepared(false), active(false),
+    tableCount(0), highWindow(0), savedCr0(0), savedCr3(0), savedCr4(0), prepared(false), active(false),
     sharedSealed(false), pae(false), error(PagingOk) {
     for (uint32_t& page : directories) page = 0;
     for (uint32_t& page : tables) page = 0;
@@ -36,15 +36,11 @@ bool KernelPaging::ownsPagingFrame(uint32_t address) const {
     for (uint32_t page : tables) if (page == address) return true;
     return false;
 }
-uint64_t KernelPaging::entry(uint32_t page, uint32_t index) const {
-    const uint32_t* words = (const uint32_t*)page;
-    return pae ? words[2 * index] | ((uint64_t)words[2 * index + 1] << 32) : words[index];
-}
 void KernelPaging::writeEntry(uint32_t page, uint32_t index, uint64_t value) {
     volatile uint32_t* words = (volatile uint32_t*)page;
     if (pae) {
-        // All mutating callers run on the BSP with interrupts disabled and
-        // before sharing CR3. Publish the present bit after the address bits.
+        // These entries are private to the BSP during mutation. Publish the
+        // present bit after the physical address has been written.
         words[2 * index] = 0;
         words[2 * index + 1] = (uint32_t)(value >> 32);
         words[2 * index] = (uint32_t)value;
@@ -56,8 +52,7 @@ uint64_t KernelPaging::leafLocked(uint32_t address) const {
     const uint32_t table = tables[directoryIndex(address)];
     return directory && table ? entry(table, leafIndex(address)) : 0;
 }
-bool KernelPaging::addPage(uint32_t virtualAddress, uint64_t physicalAddress, uint32_t flags) {
-    const uint32_t di = directoryIndex(virtualAddress), ti = leafIndex(virtualAddress);
+bool KernelPaging::ensureTable(uint32_t di) {
     if (!tables[di]) {
         uint32_t frame;
         if (!frames->allocate(frame)) return fail(PagingNoMemory);
@@ -67,11 +62,30 @@ bool KernelPaging::addPage(uint32_t virtualAddress, uint64_t physicalAddress, ui
         else writeEntry(directory, di, frame | Present | Writable);
         ++tableCount;
     }
+    return true;
+}
+bool KernelPaging::addPage(uint32_t virtualAddress, uint64_t physicalAddress, uint32_t flags) {
+    const uint32_t di = directoryIndex(virtualAddress), ti = leafIndex(virtualAddress);
+    if (!ensureTable(di)) return false;
     if (entry(tables[di], ti) & Present) return fail(PagingConflict);
     writeEntry(tables[di], ti, physicalAddress | Present | flags);
     ++mappedCount;
     invalidate(virtualAddress);
     return true;
+}
+bool KernelPaging::reserveHighWindow() {
+    for (uint32_t address = 0xFFFFF000u; address >= 0xF0000000u; address -= 4096) {
+        if (leafLocked(address)) continue;
+        if (!ensureTable(directoryIndex(address))) return false;
+        highWindow = address;
+        return true;
+    }
+    return fail(PagingConflict);
+}
+void KernelPaging::bindHighWindow(uint64_t physicalAddress) {
+    writeEntry(tables[directoryIndex(highWindow)], leafIndex(highWindow),
+               physicalAddress ? physicalAddress | Present | Writable : 0);
+    invalidate(highWindow);
 }
 bool KernelPaging::identityBytes(uint32_t address, uint64_t length) {
     if (!validBytes(address, length)) return fail(PagingBadRange);
@@ -118,6 +132,7 @@ bool KernelPaging::abandon() {
         if (directory) frames->free(directory);
     }
     directory = mappedCount = tableCount = 0;
+    highWindow = 0;
     prepared = pae = false;
     frames = 0;
     error = PagingOk;
@@ -176,6 +191,8 @@ bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const Pagin
             ok = addPage((uint32_t)page, (uint32_t)page, Writable | Uncached);
         }
     }
+    if (ok && pae && frames->getHighStatistics().usableFrames)
+        ok = reserveHighWindow();
     if (ok) {
         for (uint32_t page = config.readOnlyStart; page < config.readOnlyEnd; page += 4096) {
             writeEntry(tables[directoryIndex(page)], leafIndex(page), leafLocked(page) & ~uint64_t(Writable));
@@ -216,7 +233,7 @@ bool KernelPaging::mapOwnedPage(uint32_t virtualAddress, uint64_t physicalAddres
     if (!prepared) return fail(PagingBadState);
     if (sharedSealed) return fail(PagingSealed);
     const bool high = physicalAddress >= AddressLimit;
-    if (!virtualAddress || !physicalAddress || !pageAligned(virtualAddress) ||
+    if (!virtualAddress || virtualAddress == highWindow || !physicalAddress || !pageAligned(virtualAddress) ||
         (physicalAddress & ~PhysicalMask) || (high && !pae)) return fail(PagingBadRange);
     if (high ? !frames->isHighAllocated(physicalAddress) :
                (!frames->isAllocated((uint32_t)physicalAddress) || ownsPagingFrame((uint32_t)physicalAddress)))

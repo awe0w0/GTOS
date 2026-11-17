@@ -2,11 +2,13 @@
 #include <memory/criticalsection.h>
 using namespace gtos::memory;
 namespace {
-    const uint32_t Present = 1, Writable = 2, User = 4, Accessed = 0x20, Dirty = 0x40;
+    const uint32_t Present = 1, Writable = 2, User = 4;
+    const uint64_t Accessed = 0x20, Dirty = 0x40;
     const uint32_t CacheDisabled = 0x10;
     const uint32_t AddressMask = 0xFFFFF000u;
-    const uint32_t KernelPdeFlags = Present | Writable | Accessed;
-    const uint32_t KernelPteFlags = Present | Writable | 0x18 | Accessed | Dirty | 0x200;
+    const uint64_t KernelPdeMask = AddressMask | Present | Writable | Accessed;
+    const uint64_t KernelPteMask = AddressMask | Present | Writable | 0x18 | Accessed | Dirty | 0x200;
+    const uint64_t PhysicalMask = 0x000FFFFFFFFFF000ULL;
     const uint64_t AddressLimit = 0x100000000ULL;
     // BSP interrupt guards serialize successful reservations across all owners.
     // This sequence deliberately survives Destroy() and process slot reuse.
@@ -22,8 +24,8 @@ namespace {
         while (slots < 2 * capacity) slots *= 2;
         return slots;
     }
-    uint32_t LayoutHash(uint32_t address, uint32_t slots) {
-        const uint32_t hash = (address >> 12) * 2654435761U;
+    uint32_t LayoutHash(uint32_t number, uint32_t slots) {
+        const uint32_t hash = number * 2654435761U;
         return (hash ^ (hash >> 16)) & (slots - 1);
     }
 #ifdef GTOS_PROCESS_MEMORY_TEST
@@ -41,15 +43,16 @@ namespace {
         return value & AddressMask;
 #endif
     }
-    bool SafeHardware() {
+    bool SafeHardware(bool pae) {
 #ifdef GTOS_PROCESS_MEMORY_TEST
         return gtos_process_memory_test_bsp
             && (gtos_process_memory_test_cr0 & 0x80010000u) == 0x80010000u
-            && !(gtos_process_memory_test_cr4 & (1u << 5));
+            && ((gtos_process_memory_test_cr4 & (1u << 5)) != 0) == pae;
 #else
         uint32_t cr0, cr4;
         asm volatile("movl %%cr0,%0; movl %%cr4,%1" : "=r"(cr0), "=r"(cr4));
-        if ((cr0 & 0x80010000u) != 0x80010000u || (cr4 & (1u << 5))) return false;
+        if ((cr0 & 0x80010000u) != 0x80010000u || ((cr4 & (1u << 5)) != 0) != pae)
+            return false;
         uint32_t before, after;
         asm volatile("pushfl; popl %0; movl %0,%1; xorl $0x200000,%1;"
                      "pushl %1; popfl; pushfl; popl %1; pushl %0; popfl"
@@ -75,8 +78,10 @@ namespace {
         uint32_t* page = (uint32_t*)address;
         for (uint32_t i = 0; i < 1024; ++i) page[i] = 0;
     }
-    uint32_t PageEntry(uint32_t frame, bool writable) {
-        return frame | Present | User | (writable ? Writable : 0);
+    uint64_t FrameAddress(uint32_t number) { return (uint64_t)number << 12; }
+    bool HighFrame(uint32_t number) { return number >= (AddressLimit >> 12); }
+    uint64_t PageEntry(uint32_t number, bool writable) {
+        return FrameAddress(number) | Present | User | (writable ? Writable : 0);
     }
 }
 ProcessAddressSpace::ProcessAddressSpace() : kernel(0), frames(0), directory(0),
@@ -84,19 +89,20 @@ ProcessAddressSpace::ProcessAddressSpace() : kernel(0), frames(0), directory(0),
     metadataBase(0), metadataPages(0), dynamicLimit(DynamicLimit),
     regions(inlineRegions), regionLimit(MaximumRegions), pendingPageCount(0), pendingTableCount(0),
     prepared(false), sealed(false), contentCopyLayoutValid(false), layoutSlots(0), error(ProcessMemoryOk) {
-    for (uint32_t i = 0; i < 1024; ++i) tables[i] = 0;
+    for (uint32_t& frame : directories) frame = 0;
+    for (uint32_t& frame : tables) frame = 0;
     for (uint32_t i = 0; i < MaximumPages; ++i) {
-        pages[i].address = pages[i].frame = pages[i].region = 0;
+        pages[i].address = pages[i].frameNumber = pages[i].region = 0;
         pages[i].writable = pages[i].present = false;
         inlinePendingPages[i] = {};
     }
     for (uint32_t i = 0; i < MaximumRegions; ++i)
         inlineRegions[i] = {};
-    for (uint32_t i = 0; i < 2; ++i) inlinePendingTables[i] = {};
+    for (PendingTable& table : inlinePendingTables) table = {};
 }
 bool ProcessAddressSpace::Fail(ProcessMemoryError value) const { error = value; return false; }
 bool ProcessAddressSpace::Context(bool allowOwnDirectory) const {
-    if (!SafeHardware()) return Fail(ProcessMemoryUnsafeContext);
+    if (!SafeHardware(kernel->pae)) return Fail(ProcessMemoryUnsafeContext);
     const uint32_t active = CurrentDirectory();
     if (directory && active == directory && !allowOwnDirectory) return Fail(ProcessMemoryActive);
     if (active != kernelDirectory && !(allowOwnDirectory && directory && active == directory))
@@ -104,7 +110,7 @@ bool ProcessAddressSpace::Context(bool allowOwnDirectory) const {
     return true;
 }
 inline bool ProcessAddressSpace::KernelPageAlias(uint32_t page, bool writable) const {
-    const uint32_t mask = AddressMask | Present | User | CacheDisabled | (writable ? Writable : 0);
+    const uint64_t mask = PhysicalMask | Present | User | CacheDisabled | (writable ? Writable : 0);
     const uint32_t expected = page | Present | (writable ? Writable : 0);
     return page && (kernel->leafLocked(page) & mask) == expected;
 }
@@ -115,6 +121,59 @@ bool ProcessAddressSpace::KernelAlias(uint32_t address, uint32_t length, bool wr
         if (!KernelPageAlias((uint32_t)page, writable)) return false;
     return true;
 }
+uint64_t ProcessAddressSpace::DirectoryEntry(uint32_t index, bool shared) const {
+    if (kernel->pae) {
+        const uint32_t* levels = shared ? kernel->directories : directories;
+        return kernel->entry(levels[index / 512], index % 512);
+    }
+    return kernel->entry(shared ? kernelDirectory : directory, index);
+}
+void ProcessAddressSpace::WriteDirectoryEntry(uint32_t index, uint64_t value) {
+    if (kernel->pae) kernel->writeEntry(directories[index / 512], index % 512, value);
+    else kernel->writeEntry(directory, index, value);
+}
+void ProcessAddressSpace::SetTable(uint32_t index, uint32_t frame) {
+    tables[index - kernel->directoryIndex(UserBase)] = frame;
+    WriteDirectoryEntry(index, frame ? frame | Present | Writable | User : 0);
+}
+void ProcessAddressSpace::WriteLeaf(uint32_t address, uint64_t value) {
+    kernel->writeEntry(OwnTable(kernel->directoryIndex(address)), kernel->leafIndex(address), value);
+}
+bool ProcessAddressSpace::ValidPaeRoot(const PhysicalMemoryManager& allocator, uint32_t root,
+                                       const uint32_t* levels) const {
+    if (!kernel->pae) return true;
+    for (uint32_t i = 0; i < 4; ++i) {
+        const uint32_t page = levels[i];
+        // TCG sets the accessed bit in 32-bit PAE PDPTEs. Keep every
+        // other flag and the complete physical address under validation.
+        if (!page || page == root || !allocator.isAllocatedLocked(page) || !KernelPageAlias(page, true)
+            || (kernel->entry(root, i) & ~Accessed) != (page | Present)) return false;
+        for (uint32_t previous = 0; previous < i; ++previous)
+            if (levels[previous] == page) return false;
+    }
+    return true;
+}
+bool ProcessAddressSpace::AllocateRoot() {
+    if (!AllocateFrame(directory)) return false;
+    if (kernel->pae) {
+        for (uint32_t i = 0; i < 4; ++i) {
+            if (!AllocateFrame(directories[i])) {
+                FreeRoot();
+                return false;
+            }
+            kernel->writeEntry(directory, i, directories[i] | Present);
+        }
+    }
+    // CR3 and the four PAE root entries stay fixed for the lifetime of this space.
+    for (uint32_t i = 0; i < DirectoryCount(); ++i)
+        WriteDirectoryEntry(i, DirectoryEntry(i, true));
+    return true;
+}
+void ProcessAddressSpace::FreeRoot() {
+    ClearPage(directory); frames->free(directory); directory = 0;
+    for (uint32_t& page : directories)
+        if (page) { ClearPage(page); frames->free(page); page = 0; }
+}
 bool ProcessAddressSpace::AllocateFrame(uint32_t& address) {
     address = 0;
     if (!frames->allocate(address)) return Fail(ProcessMemoryNoMemory);
@@ -124,6 +183,42 @@ bool ProcessAddressSpace::AllocateFrame(uint32_t& address) {
     }
     ClearPage(address);
     return true;
+}
+bool ProcessAddressSpace::AllocateDataFrame(uint32_t& number) {
+    uint64_t high;
+    // Page tables, loaded images and shared/DMA pages still use low RAM.
+    if (kernel->highWindow && frames->allocateHigh(high)) {
+        number = (uint32_t)(high >> 12);
+        ClearDataFrame(number);
+        return true;
+    }
+    uint32_t low;
+    if (!AllocateFrame(low)) return false;
+    number = low >> 12;
+    return true;
+}
+bool ProcessAddressSpace::ValidDataFrame(uint32_t number) const {
+    if (HighFrame(number))
+        return kernel->highWindow && frames->isHighAllocated(FrameAddress(number));
+    const uint32_t address = number << 12;
+    return frames->isAllocatedLocked(address) && !IsMetadataFrame(address) && KernelPageAlias(address, true);
+}
+uint32_t ProcessAddressSpace::MapDataFrame(uint32_t number) const {
+    if (!HighFrame(number)) return number << 12;
+    kernel->bindHighWindow(FrameAddress(number));
+    return kernel->highWindow;
+}
+void ProcessAddressSpace::UnmapDataFrame(uint32_t number) const {
+    if (HighFrame(number)) kernel->bindHighWindow(0);
+}
+void ProcessAddressSpace::ClearDataFrame(uint32_t number) const {
+    ClearPage(MapDataFrame(number));
+    UnmapDataFrame(number);
+}
+void ProcessAddressSpace::FreeDataFrame(uint32_t number) {
+    ClearDataFrame(number);
+    if (HighFrame(number)) frames->freeHigh(FrameAddress(number));
+    else frames->free(number << 12);
 }
 bool ProcessAddressSpace::Prepare(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator) {
     return Prepare(sharedKernel, allocator, MaximumPages);
@@ -152,12 +247,12 @@ uint32_t ProcessAddressSpace::PageMetadataBytes(uint32_t capacityPages) {
     if (capacityPages > MaximumCapacityPages) bytes += 2 * IndexSlots(capacityPages) * sizeof(uint32_t);
     return bytes;
 }
-uint32_t ProcessAddressSpace::MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions) {
+uint32_t ProcessAddressSpace::MetadataFrameCount(uint32_t capacityPages, uint32_t maximumRegions) const {
     uint32_t bytes = PageMetadataBytes(capacityPages);
     if (maximumRegions > MaximumRegions) {
         const uint32_t pages = ContentCommitCapacity(capacityPages);
         // Include the initial partial page table for an unaligned interval.
-        const uint32_t tables = 1 + (pages + 1022) / 1024;
+        const uint32_t tables = 1 + (pages + LeafCount() - 2) / LeafCount();
         bytes += maximumRegions * sizeof(Region) + pages * sizeof(PendingPage)
             + tables * sizeof(PendingTable);
     }
@@ -192,36 +287,36 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
     if ((dynamicEnd & 4095) || dynamicEnd <= DynamicBase || dynamicEnd > DynamicLimit)
         return Fail(ProcessMemoryBadRange);
     const PagingStatistics state = sharedKernel.getStatistics();
-    if (!state.prepared || !state.enabled || !state.sealedForSharing || sharedKernel.pae
+    if (!state.prepared || !state.enabled || !state.sealedForSharing
         || !sharedKernel.usesAllocator(allocator) || !allocator.getStatistics().initialized)
         return Fail(ProcessMemoryBadState);
-    if (!SafeHardware() || CurrentDirectory() != state.directoryAddress)
+    if (!SafeHardware(sharedKernel.pae) || CurrentDirectory() != state.directoryAddress)
         return Fail(ProcessMemoryUnsafeContext);
     kernel = &sharedKernel; kernelDirectory = state.directoryAddress;
     // The shared mapper is trusted, but its raw structures must satisfy the
-    // supervisor-only non-PAE contract before any PDE is borrowed.
+    // supervisor-only contract before borrowing any directory entry.
     bool valid = allocator.isAllocatedLocked(kernelDirectory)
         && KernelPageAlias(kernelDirectory, true)
         && KernelAlias((uint32_t)this, sizeof(*this), true)
         && KernelAlias((uint32_t)&allocator, sizeof(allocator), true)
-        && KernelAlias((uint32_t)&sharedKernel, sizeof(sharedKernel), true);
-    const uint32_t* source = (const uint32_t*)kernelDirectory;
-    for (uint32_t di = 0; valid && di < 1024; ++di) {
-        const uint32_t pde = source[di];
+        && KernelAlias((uint32_t)&sharedKernel, sizeof(sharedKernel), true)
+        && ValidPaeRoot(allocator, kernelDirectory, sharedKernel.directories);
+    for (uint32_t di = 0; valid && di < DirectoryCount(); ++di) {
+        const uint64_t pde = DirectoryEntry(di, true);
         if (!pde) continue;
-        if (!(pde & Present) || (pde & 4095 & ~KernelPdeFlags)
-            || !(pde & Writable) || (di >= UserBase >> 22 && di < UserLimit >> 22)) {
+        if (!(pde & Present) || (pde & ~KernelPdeMask) || !(pde & Writable) || UserDirectory(di)) {
             valid = false; break;
         }
         const uint32_t table = pde & AddressMask;
-        if (table == kernelDirectory || !allocator.isAllocatedLocked(table)
+        if (!table || table == kernelDirectory || !allocator.isAllocatedLocked(table)
             || !KernelPageAlias(table, true)) { valid = false; break; }
+        for (uint32_t page : sharedKernel.directories)
+            if (page == table) valid = false;
         for (uint32_t previous = 0; previous < di; ++previous)
-            if ((source[previous] & AddressMask) == table) valid = false;
-        const uint32_t* entries = (const uint32_t*)table;
-        for (uint32_t ti = 0; valid && ti < 1024; ++ti) {
-            const uint32_t pte = entries[ti];
-            if (pte && (!(pte & Present) || (pte & 4095 & ~KernelPteFlags))) valid = false;
+            if ((DirectoryEntry(previous, true) & AddressMask) == table) valid = false;
+        for (uint32_t ti = 0; valid && ti < LeafCount(); ++ti) {
+            const uint64_t pte = kernel->entry(table, ti);
+            if (pte && (!(pte & Present) || (pte & ~KernelPteMask))) valid = false;
         }
     }
     if (!valid) {
@@ -250,7 +345,7 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
         // space it just built because pageLimit is zero and pages does not point at the inline array.
         pages = inlinePages; pageLimit = capacityPages;
     }
-    if (!AllocateFrame(directory)) {
+    if (!AllocateRoot()) {
         if (metadataBase) {
             frames->freeContiguous(metadataBase, metadataPages);
             metadataBase = metadataPages = 0; pages = inlinePages; pageLimit = MaximumPages;
@@ -258,7 +353,6 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
         frames = 0; kernel = 0; kernelDirectory = 0;
         return false;
     }
-    for (uint32_t i = 0; i < 1024; ++i) ((uint32_t*)directory)[i] = source[i];
     regionLimit = maximumRegions;
     // Keep the browser's extra reservations in its own supervisor metadata.
     regions = regionLimit == MaximumRegions ? inlineRegions
@@ -271,12 +365,12 @@ int ProcessAddressSpace::IndexedLayoutPage(uint32_t key, bool byFrame) const {
     const uint32_t* entries = LayoutIndex(byFrame);
     const uint32_t slots = layoutSlots;
     if (!slots) return -1;
-    uint32_t slot = LayoutHash(key, slots);
+    uint32_t slot = LayoutHash(byFrame ? key : key >> 12, slots);
     for (uint32_t count = 0; count < slots; ++count) {
         const uint32_t record = entries[slot];
         if (!record || record > pageCount) return -1;
         const Page& page = pages[record - 1];
-        if ((byFrame ? page.frame : page.address) == key) return (int)(record - 1);
+        if ((byFrame ? page.frameNumber : page.address) == key) return (int)(record - 1);
         slot = (slot + 1) & (slots - 1);
     }
     return -1;
@@ -309,38 +403,43 @@ bool ProcessAddressSpace::MetadataLayout() const {
     if (IsMetadataFrame(directory) || IsMetadataFrame(kernelDirectory)) return false;
     for (uint32_t i = 0; i < metadataPages; ++i)
         if (!frames->isAllocatedLocked(metadataBase + i * 4096)) return false;
-    for (uint32_t di = 0; di < 1024; ++di)
-        if (IsMetadataFrame(tables[di]) || IsMetadataFrame(((uint32_t*)kernelDirectory)[di] & AddressMask))
+    for (uint32_t i = 0; i < 4; ++i)
+        if (IsMetadataFrame(directories[i]) || IsMetadataFrame(kernel->directories[i])) return false;
+    for (uint32_t di = 0; di < DirectoryCount(); ++di)
+        if (IsMetadataFrame(OwnTable(di)) || IsMetadataFrame(DirectoryEntry(di, true) & AddressMask))
             return false;
     return true;
 }
 bool ProcessAddressSpace::LayoutRoot() const {
     const PagingStatistics state = kernel->getStatistics();
     if (!state.prepared || !state.enabled || !state.sealedForSharing
-        || state.directoryAddress != kernelDirectory) return Fail(ProcessMemoryBadTemplate);
+        || state.directoryAddress != kernelDirectory
+        || (kernel->highWindow && kernel->leafLocked(kernel->highWindow)))
+        return Fail(ProcessMemoryBadTemplate);
     if (!frames->isAllocatedLocked(directory) || !KernelPageAlias(directory, true)
         || !KernelPageAlias(kernelDirectory, true)) return Fail(ProcessMemoryBadAlias);
+    if (!ValidPaeRoot(*frames, kernelDirectory, kernel->directories)) return Fail(ProcessMemoryBadTemplate);
+    if (!ValidPaeRoot(*frames, directory, directories)) return Fail(ProcessMemoryBadMapping);
     return true;
 }
 bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
-    const uint32_t* shared = (const uint32_t*)kernelDirectory;
-    const uint32_t* own = (const uint32_t*)directory;
-    for (uint32_t di = 0; di < 1024; ++di) {
-        if (!tables[di]) {
-            if ((!shared[di] && own[di])
-                || (own[di] & ~Accessed) != (shared[di] & ~Accessed)) return Fail(ProcessMemoryBadMapping);
-            if (di >= UserBase >> 22 && di < UserLimit >> 22 && shared[di])
-                return Fail(ProcessMemoryBadTemplate);
+    for (uint32_t di = 0; di < DirectoryCount(); ++di) {
+        const uint64_t shared = DirectoryEntry(di, true), own = DirectoryEntry(di, false);
+        const uint32_t table = OwnTable(di);
+        if (UserDirectory(di) && shared) {
+            if (table) return Fail(ProcessMemoryBadMapping);
+            return Fail(ProcessMemoryBadTemplate);
+        }
+        if (!table) {
+            if ((!shared && own) || (own & ~Accessed) != (shared & ~Accessed))
+                return Fail(ProcessMemoryBadMapping);
             continue;
         }
-        if (di < UserBase >> 22 || di >= UserLimit >> 22 || shared[di]
-            || !frames->isAllocatedLocked(tables[di]) || !KernelPageAlias(tables[di], true)
-            || (own[di] & ~Accessed) != (tables[di] | Present | Writable | User))
+        if (!frames->isAllocatedLocked(table) || !KernelPageAlias(table, true)
+            || (own & ~Accessed) != (table | Present | Writable | User))
             return Fail(ProcessMemoryBadMapping);
-        if (nonzeroLeaves) {
-            const uint32_t* table = (const uint32_t*)tables[di];
-            for (uint32_t ti = 0; ti < 1024; ++ti) *nonzeroLeaves += table[ti] != 0;
-        }
+        if (nonzeroLeaves)
+            for (uint32_t ti = 0; ti < LeafCount(); ++ti) *nonzeroLeaves += kernel->entry(table, ti) != 0;
     }
     return true;
 }
@@ -379,17 +478,17 @@ bool ProcessAddressSpace::Layout(bool complete, bool* unreservedDynamicPages) co
     for (uint32_t i = 0; i < slots; ++i) layoutAddresses[i] = layoutFrames[i] = 0;
     for (uint32_t i = 0; i < pageCount; ++i) {
         const Page& page = pages[i];
-        uint32_t slot = LayoutHash(page.address, slots), count = 0;
+        uint32_t slot = LayoutHash(page.address >> 12, slots), count = 0;
         while (layoutAddresses[slot]) {
             if (pages[layoutAddresses[slot] - 1].address == page.address || ++count == slots)
                 return Fail(ProcessMemoryBadMapping);
             slot = (slot + 1) & (slots - 1);
         }
         layoutAddresses[slot] = i + 1;
-        slot = LayoutHash(page.frame, slots); count = 0;
+        slot = LayoutHash(page.frameNumber, slots); count = 0;
         while (layoutFrames[slot]) {
             const Page& other = pages[layoutFrames[slot] - 1];
-            if (other.frame == page.frame) {
+            if (other.frameNumber == page.frameNumber) {
                 if (!SharesFrame(page) || !SharesFrame(other)) return Fail(ProcessMemoryBadMapping);
                 break;
             }
@@ -412,7 +511,7 @@ bool ProcessAddressSpace::Layout(bool complete, bool* unreservedDynamicPages) co
                 return Fail(ProcessMemoryBadMapping);
             const Region& region = regions[index];
             if (region.sharedFrames) {
-                if (!page.present || page.frame != region.sharedFrames + (page.address - region.base))
+                if (!page.present || FrameAddress(page.frameNumber) != region.sharedFrames + (page.address - region.base))
                     return Fail(ProcessMemoryBadMapping);
                 ++sharedCounts[index];
             }
@@ -428,12 +527,10 @@ bool ProcessAddressSpace::Layout(bool complete, bool* unreservedDynamicPages) co
             }
         }
         if (!page.present && page.writable) return Fail(ProcessMemoryBadMapping);
-        const uint32_t table = tables[page.address >> 22];
-        if (!UserPage(page.address) || !table || !frames->isAllocatedLocked(page.frame)
-            || IsMetadataFrame(page.frame)
-            || !KernelPageAlias(page.frame, true)
-            || (((uint32_t*)table)[(page.address >> 12) & 1023] & ~(Accessed | Dirty))
-                != (page.present ? PageEntry(page.frame, page.writable) : 0))
+        const uint32_t table = OwnTable(kernel->directoryIndex(page.address));
+        if (!UserPage(page.address) || !table || !ValidDataFrame(page.frameNumber)
+            || (kernel->entry(table, kernel->leafIndex(page.address)) & ~(Accessed | Dirty))
+                != (page.present ? PageEntry(page.frameNumber, page.writable) : 0))
             return Fail(ProcessMemoryBadMapping);
         presentPages += page.present;
     }
@@ -463,8 +560,8 @@ bool ProcessAddressSpace::RuntimeMutable(bool* unreservedDynamicPages) const {
     return Layout(true, unreservedDynamicPages);
 }
 bool ProcessAddressSpace::MapOwnedPage(uint32_t address, bool writable) {
-    const uint32_t di = address >> 22, ti = (address >> 12) & 1023;
-    uint32_t table = tables[di], frame = 0;
+    const uint32_t di = kernel->directoryIndex(address);
+    uint32_t table = OwnTable(di), frame = 0;
     const bool newTable = !table;
     if (newTable && !AllocateFrame(table)) return false;
     if (!AllocateFrame(frame)) {
@@ -474,13 +571,10 @@ bool ProcessAddressSpace::MapOwnedPage(uint32_t address, bool writable) {
     // No fallible operations follow publication. Both newly allocated pages
     // were zeroed through verified identity aliases before becoming visible.
     contentCopyLayoutValid = false;
-    ((uint32_t*)table)[ti] = PageEntry(frame, writable);
-    if (newTable) {
-        tables[di] = table;
-        ((uint32_t*)directory)[di] = table | Present | Writable | User;
-    }
+    kernel->writeEntry(table, kernel->leafIndex(address), PageEntry(frame >> 12, writable));
+    if (newTable) SetTable(di, table);
     Page& page = pages[pageCount++];
-    page.address = address; page.frame = frame; page.region = 0;
+    page.address = address; page.frameNumber = frame >> 12; page.region = 0;
     page.writable = writable; page.present = true;
     error = ProcessMemoryOk;
     return true;
@@ -546,8 +640,8 @@ bool ProcessAddressSpace::ProtectRange(uint32_t address, uint32_t bytes, bool wr
     contentCopyLayoutValid = false;
     for (uint32_t page = address; page < end; page += 4096) {
         Page& owned = pages[IndexedLayoutPage(page)];
-        uint32_t& entry = ((uint32_t*)tables[page >> 22])[(page >> 12) & 1023];
-        entry = writable ? entry | Writable : entry & ~Writable;
+        const uint64_t entry = Leaf(page);
+        WriteLeaf(page, writable ? entry | Writable : entry & ~uint64_t(Writable));
         owned.writable = writable;
     }
     error = ProcessMemoryOk;
@@ -566,19 +660,21 @@ bool ProcessAddressSpace::UnmapPage(uint32_t address) {
 void ProcessAddressSpace::RemovePage(uint32_t index) {
     contentCopyLayoutValid = false;
     const uint32_t address = pages[index].address;
-    const uint32_t di = address >> 22, frame = pages[index].frame;
-    ((uint32_t*)tables[di])[(address >> 12) & 1023] = 0;
+    const uint32_t di = kernel->directoryIndex(address), number = pages[index].frameNumber;
+    WriteLeaf(address, 0);
     pages[index] = pages[--pageCount];
-    pages[pageCount].address = pages[pageCount].frame = pages[pageCount].region = 0;
+    pages[pageCount].address = pages[pageCount].frameNumber = pages[pageCount].region = 0;
     pages[pageCount].writable = pages[pageCount].present = false;
     // Ownership and all mappings were validated before any mutation. With BSP
     // interrupts masked the allocator cannot change between validation and free.
-    ClearPage(frame); frames->free(frame);
+    FreeDataFrame(number);
     bool occupied = false;
-    for (uint32_t i = 0; i < pageCount; ++i) if (pages[i].address >> 22 == di) occupied = true;
+    for (uint32_t i = 0; i < pageCount; ++i)
+        if (kernel->directoryIndex(pages[i].address) == di) occupied = true;
     if (!occupied) {
-        ((uint32_t*)directory)[di] = 0;
-        ClearPage(tables[di]); frames->free(tables[di]); tables[di] = 0;
+        const uint32_t table = OwnTable(di);
+        SetTable(di, 0);
+        ClearPage(table); frames->free(table);
     }
 }
 bool ProcessAddressSpace::Seal() {
@@ -656,7 +752,7 @@ bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, b
                                           uint32_t& outBase, uint32_t& outHandle) {
     InterruptGuard guard;
     if (!RuntimeMutable()) return false;
-    // A four MiB mapping spans at most two PDEs, even with an unaligned base.
+    // The largest shared range spans at most three PAE tables.
     if (!firstFrame || !bytes || ((firstFrame | bytes) & 4095) || bytes > (1U << 22))
         return Fail(ProcessMemoryBadRange);
     if (bytes / 4096 > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
@@ -668,12 +764,14 @@ bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, b
         || (metadataBase && (uint64_t)metadataBase < (uint64_t)firstFrame + bytes
             && (uint64_t)firstFrame < (uint64_t)metadataBase + metadataPages * 4096))
         return Fail(ProcessMemoryBadAlias);
-    const uint32_t* shared = (const uint32_t*)kernelDirectory;
-    for (uint32_t di = 0; di < 1024; ++di)
-        if (contains(tables[di]) || contains(shared[di] & AddressMask))
+    for (uint32_t i = 0; i < 4; ++i)
+        if (contains(directories[i]) || contains(kernel->directories[i]))
+            return Fail(ProcessMemoryBadAlias);
+    for (uint32_t di = 0; di < DirectoryCount(); ++di)
+        if (contains(OwnTable(di)) || contains(DirectoryEntry(di, true) & AddressMask))
             return Fail(ProcessMemoryBadAlias);
     for (uint32_t i = 0; i < pageCount; ++i)
-        if (contains(pages[i].frame) && !SharesFrame(pages[i]))
+        if (!HighFrame(pages[i].frameNumber) && contains(pages[i].frameNumber << 12) && !SharesFrame(pages[i]))
             return Fail(ProcessMemoryBadAlias);
     for (uint32_t offset = 0; offset < bytes; offset += 4096)
         if (!frames->isAllocatedLocked(firstFrame + offset)) return Fail(ProcessMemoryBadAlias);
@@ -682,8 +780,9 @@ bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, b
     if (!Reserve(bytes, 4096, 0, base, handle)) return false;
     Region& region = regions[FindRegion(handle)];
     PendingTable* pendingTables = PendingTables();
-    for (uint32_t di = base >> 22; di <= (base + bytes - 1) >> 22; ++di) {
-        if (tables[di]) continue;
+    const uint32_t lastTable = kernel->directoryIndex(base + bytes - 1);
+    for (uint32_t di = kernel->directoryIndex(base); di <= lastTable; ++di) {
+        if (OwnTable(di)) continue;
         uint32_t table;
         if (!AllocateFrame(table)) {
             RollbackPending();
@@ -696,13 +795,12 @@ bool ProcessAddressSpace::MapSharedFrames(uint32_t firstFrame, uint32_t bytes, b
     contentCopyLayoutValid = false;
     for (uint32_t i = 0; i < pendingTableCount; ++i) {
         const PendingTable& pending = pendingTables[i];
-        tables[pending.index] = pending.frame;
-        ((uint32_t*)directory)[pending.index] = pending.frame | Present | Writable | User;
+        SetTable(pending.index, pending.frame);
     }
     for (uint32_t offset = 0; offset < bytes; offset += 4096) {
         const uint32_t address = base + offset, frame = firstFrame + offset;
-        pages[pageCount++] = {address, frame, handle, writable, true};
-        ((uint32_t*)tables[address >> 22])[(address >> 12) & 1023] = PageEntry(frame, writable);
+        pages[pageCount++] = {address, frame >> 12, handle, writable, true};
+        WriteLeaf(address, PageEntry(frame >> 12, writable));
         InvalidatePage(address);
     }
     for (uint32_t i = 0; i < pendingTableCount; ++i) pendingTables[i] = {};
@@ -735,8 +833,8 @@ void ProcessAddressSpace::RollbackPending() {
     PendingPage* pendingPages = PendingPages();
     PendingTable* pendingTables = PendingTables();
     for (uint32_t i = 0; i < pendingPageCount; ++i) {
-        ClearPage(pendingPages[i].frame); frames->free(pendingPages[i].frame);
-        pendingPages[i].address = pendingPages[i].frame = 0;
+        FreeDataFrame(pendingPages[i].frameNumber);
+        pendingPages[i].address = pendingPages[i].frameNumber = 0;
     }
     for (uint32_t i = 0; i < pendingTableCount; ++i) {
         ClearPage(pendingTables[i].frame); frames->free(pendingTables[i].frame);
@@ -766,8 +864,8 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
         if (missing > pageLimit - pageCount) return Fail(ProcessMemoryLimit);
         for (uint32_t address = base; address < end; address += 4096) {
             if (IndexedLayoutPage(address) >= 0) continue;
-            const uint32_t di = address >> 22;
-            bool newTable = !tables[di];
+            const uint32_t di = kernel->directoryIndex(address);
+            bool newTable = !OwnTable(di);
             for (uint32_t i = 0; i < pendingTableCount; ++i)
                 if (pendingTables[i].index == di) newTable = false;
             if (newTable) {
@@ -776,25 +874,24 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
                 PendingTable& pending = pendingTables[pendingTableCount++];
                 pending.index = di; pending.frame = table;
             }
-            uint32_t frame;
-            if (!AllocateFrame(frame)) { RollbackPending(); return false; }
+            uint32_t number;
+            if (!AllocateDataFrame(number)) { RollbackPending(); return false; }
             PendingPage& pending = pendingPages[pendingPageCount++];
-            pending.address = address; pending.frame = frame;
+            pending.address = address; pending.frameNumber = number;
         }
         // No fallible operation follows. Publish only after all allocation,
         // alias validation, and zeroing succeeds, including across PDE edges.
         if (pendingPageCount) contentCopyLayoutValid = false;
         for (uint32_t i = 0; i < pendingTableCount; ++i) {
             const PendingTable& pending = pendingTables[i];
-            tables[pending.index] = pending.frame;
-            ((uint32_t*)directory)[pending.index] = pending.frame | Present | Writable | User;
+            SetTable(pending.index, pending.frame);
         }
         for (uint32_t i = 0; i < pendingPageCount; ++i) {
             Page& page = pages[pageCount++];
-            page.address = pendingPages[i].address; page.frame = pendingPages[i].frame;
+            page.address = pendingPages[i].address; page.frameNumber = pendingPages[i].frameNumber;
             page.region = handle; page.present = true;
             page.writable = protection == ProcessMemoryReadWrite;
-            pendingPages[i].address = pendingPages[i].frame = 0;
+            pendingPages[i].address = pendingPages[i].frameNumber = 0;
         }
         for (uint32_t i = 0; i < pendingTableCount; ++i)
             pendingTables[i].index = pendingTables[i].frame = 0;
@@ -805,10 +902,9 @@ bool ProcessAddressSpace::SetPermissions(uint32_t handle, uint32_t offset, uint3
         if (page.region != handle || page.address < base || page.address >= end) continue;
         page.present = protection != ProcessMemoryNone;
         page.writable = protection == ProcessMemoryReadWrite;
-        uint32_t& entry = ((uint32_t*)tables[page.address >> 22])[(page.address >> 12) & 1023];
-        const uint32_t expected = page.present ? PageEntry(page.frame, page.writable) : 0;
-        if ((entry & ~(Accessed | Dirty)) != expected) {
-            entry = expected;
+        const uint64_t expected = page.present ? PageEntry(page.frameNumber, page.writable) : 0;
+        if ((Leaf(page.address) & ~(Accessed | Dirty)) != expected) {
+            WriteLeaf(page.address, expected);
             InvalidatePage(page.address);
         }
     }
@@ -832,8 +928,7 @@ bool ProcessAddressSpace::SetDataReadOnly(uint32_t address, uint32_t bytes) {
     for (uint32_t i = 0; i < pageCount; ++i) {
         Page& page = pages[i];
         if (page.address < address || page.address >= end || !page.writable) continue;
-        uint32_t& entry = ((uint32_t*)tables[page.address >> 22])[(page.address >> 12) & 1023];
-        entry &= ~Writable;
+        WriteLeaf(page.address, Leaf(page.address) & ~uint64_t(Writable));
         page.writable = false;
         InvalidatePage(page.address);
     }
@@ -844,12 +939,12 @@ void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint
                                             bool releaseFrames) {
     if (!bytes) return;
     const uint32_t end = base + bytes;
-    const uint32_t firstTable = base >> 22, lastTable = (end - 1) >> 22;
+    const uint32_t firstTable = kernel->directoryIndex(base), lastTable = kernel->directoryIndex(end - 1);
     // Count ownership even for nonpresent pages and pages from other
     // reservations. Only the last owner may release an empty table.
-    uint16_t owned[(DynamicLimit - DynamicBase + 0x3FFFFFu) >> 22] = {};
+    uint16_t owned[(DynamicLimit - DynamicBase + 0x1FFFFFu) >> 21] = {};
     for (uint32_t i = 0; i < pageCount; ++i) {
-        const uint32_t di = pages[i].address >> 22;
+        const uint32_t di = kernel->directoryIndex(pages[i].address);
         if (di >= firstTable && di <= lastTable) ++owned[di - firstTable];
     }
     uint32_t index = 0;
@@ -857,20 +952,20 @@ void ProcessAddressSpace::RemoveRegionPages(uint32_t handle, uint32_t base, uint
         const Page& page = pages[index];
         if (page.region != handle || page.address < base || page.address >= end) { ++index; continue; }
         contentCopyLayoutValid = false;
-        const uint32_t address = page.address, frame = page.frame, di = address >> 22;
-        const uint32_t table = tables[di];
-        ((uint32_t*)table)[(address >> 12) & 1023] = 0;
+        const uint32_t address = page.address, number = page.frameNumber;
+        const uint32_t di = kernel->directoryIndex(address), table = OwnTable(di);
+        WriteLeaf(address, 0);
         pages[index] = pages[--pageCount];
-        pages[pageCount].address = pages[pageCount].frame = pages[pageCount].region = 0;
+        pages[pageCount].address = pages[pageCount].frameNumber = pages[pageCount].region = 0;
         pages[pageCount].writable = pages[pageCount].present = false;
         const bool empty = --owned[di - firstTable] == 0;
-        if (empty) ((uint32_t*)directory)[di] = 0;
+        if (empty) SetTable(di, 0);
         // Flush both leaf and paging-structure caches before either data or
         // the last owned table can be freed and reused by another reservation.
         InvalidatePage(address);
-        if (releaseFrames) { ClearPage(frame); frames->free(frame); }
+        if (releaseFrames) FreeDataFrame(number);
         if (empty) {
-            ClearPage(table); frames->free(table); tables[di] = 0;
+            ClearPage(table); frames->free(table);
         }
     }
 }
@@ -896,7 +991,7 @@ bool ProcessAddressSpace::Discard(uint32_t handle, uint32_t offset, uint32_t byt
     }
     for (uint32_t i = 0; i < pageCount; ++i)
         if (pages[i].region == handle && pages[i].address >= base && pages[i].address < end)
-            ClearPage(pages[i].frame);
+            ClearDataFrame(pages[i].frameNumber);
     error = ProcessMemoryOk;
     return true;
 }
@@ -950,11 +1045,10 @@ bool ProcessAddressSpace::Range(uint32_t address, uint32_t length, bool writable
         if (pageLimit > MaximumCapacityPages) {
             // The cached record is only an index. Revalidate the live leaf and
             // its supervisor alias before using the physical frame for a copy.
-            const uint32_t table = tables[page.address >> 22];
-            if (!table || !frames->isAllocatedLocked(page.frame) || IsMetadataFrame(page.frame)
-                || !KernelPageAlias(page.frame, true)
-                || (((uint32_t*)table)[(page.address >> 12) & 1023] & ~(Accessed | Dirty))
-                    != PageEntry(page.frame, page.writable)) {
+            const uint32_t table = OwnTable(kernel->directoryIndex(page.address));
+            if (!table || !ValidDataFrame(page.frameNumber)
+                || (kernel->entry(table, kernel->leafIndex(page.address)) & ~(Accessed | Dirty))
+                    != PageEntry(page.frameNumber, page.writable)) {
                 contentCopyLayoutValid = false;
                 return Fail(ProcessMemoryBadMapping);
             }
@@ -970,13 +1064,17 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
         PagingMapping mapping;
         if (!kernel->queryLocked((uint32_t)current, mapping) || mapping.userAccessible
             || mapping.cacheDisabled || (writable && !mapping.writable)) return Fail(ProcessMemoryBadAlias);
+        if (mapping.physicalAddress >= AddressLimit) return Fail(ProcessMemoryBadAlias);
         const uint32_t physical = mapping.physicalAddress;
         if (IsMetadataFrame(physical)) return Fail(ProcessMemoryBadAlias);
         if (physical == directory || physical == kernelDirectory) return Fail(ProcessMemoryBadAlias);
-        for (uint32_t di = 0; di < 1024; ++di)
-            if (physical == tables[di]
-                || physical == (((uint32_t*)kernelDirectory)[di] & AddressMask)) return Fail(ProcessMemoryBadAlias);
-        if (IndexedLayoutPage(physical, /*byFrame=*/true) >= 0)
+        for (uint32_t i = 0; i < 4; ++i)
+            if (physical == directories[i] || physical == kernel->directories[i])
+                return Fail(ProcessMemoryBadAlias);
+        for (uint32_t di = 0; di < DirectoryCount(); ++di)
+            if (physical == OwnTable(di) || physical == (DirectoryEntry(di, true) & AddressMask))
+                return Fail(ProcessMemoryBadAlias);
+        if (IndexedLayoutPage(physical >> 12, /*byFrame=*/true) >= 0)
             return Fail(ProcessMemoryBadAlias);
     }
     return true;
@@ -1007,8 +1105,10 @@ bool ProcessAddressSpace::CopyToUser(uint32_t destination, const void* source, u
     while (length) {
         const uint32_t offset = destination & 4095;
         const uint32_t chunk = length < 4096 - offset ? length : 4096 - offset;
-        uint8_t* output = (uint8_t*)(pages[IndexedLayoutPage(destination & AddressMask)].frame + offset);
+        const uint32_t number = pages[IndexedLayoutPage(destination & AddressMask)].frameNumber;
+        uint8_t* output = (uint8_t*)(MapDataFrame(number) + offset);
         for (uint32_t i = 0; i < chunk; ++i) output[i] = input[i];
+        UnmapDataFrame(number);
         destination += chunk; input += chunk; length -= chunk;
     }
     error = ProcessMemoryOk;
@@ -1022,7 +1122,11 @@ bool ProcessAddressSpace::LoadImageRange(uint32_t address, uint32_t fileOffset, 
         const uint32_t offset = address & 4095;
         const uint32_t chunk = bytes < 4096 - offset ? bytes : 4096 - offset;
         const int index = IndexedLayoutPage(address & AddressMask);
-        void* output = (void*)(pages[index].frame + offset);
+        // LoadImageRange uses the low frames installed by MapNewRange. Never
+        // invoke a storage callback while the temporary high mapping is live.
+        const uint32_t number = pages[index].frameNumber;
+        if (HighFrame(number)) return Fail(ProcessMemoryBadMapping);
+        void* output = (void*)((number << 12) + offset);
         if (!read(source, fileOffset, output, chunk)) return false;
         address += chunk;
         fileOffset += chunk;
@@ -1037,8 +1141,10 @@ bool ProcessAddressSpace::CopyFromUser(void* destination, uint32_t source, uint3
     while (length) {
         const uint32_t offset = source & 4095;
         const uint32_t chunk = length < 4096 - offset ? length : 4096 - offset;
-        const uint8_t* input = (const uint8_t*)(pages[IndexedLayoutPage(source & AddressMask)].frame + offset);
+        const uint32_t number = pages[IndexedLayoutPage(source & AddressMask)].frameNumber;
+        const uint8_t* input = (const uint8_t*)(MapDataFrame(number) + offset);
         for (uint32_t i = 0; i < chunk; ++i) output[i] = input[i];
+        UnmapDataFrame(number);
         source += chunk; output += chunk; length -= chunk;
     }
     error = ProcessMemoryOk;
@@ -1052,14 +1158,13 @@ bool ProcessAddressSpace::Destroy() {
     // references and switched CR3. This module cannot inspect scheduler queues.
     contentCopyLayoutValid = false;
     for (uint32_t i = 0; i < pageCount; ++i) {
-        if (!SharesFrame(pages[i])) { ClearPage(pages[i].frame); frames->free(pages[i].frame); }
-        pages[i].address = pages[i].frame = pages[i].region = 0;
+        if (!SharesFrame(pages[i])) FreeDataFrame(pages[i].frameNumber);
+        pages[i].address = pages[i].frameNumber = pages[i].region = 0;
         pages[i].writable = pages[i].present = false;
     }
-    for (uint32_t i = 0; i < 1024; ++i) if (tables[i]) {
-        ClearPage(tables[i]); frames->free(tables[i]); tables[i] = 0;
-    }
-    ClearPage(directory); frames->free(directory);
+    for (uint32_t& table : tables)
+        if (table) { ClearPage(table); frames->free(table); table = 0; }
+    FreeRoot();
     for (uint32_t i = 0; i < MaximumRegions; ++i)
         inlineRegions[i] = {};
     regions = inlineRegions; regionLimit = MaximumRegions;
@@ -1077,9 +1182,9 @@ uint32_t ProcessAddressSpace::DirectoryAddress() const { return directory; }
 bool ProcessAddressSpace::QueryStatistics(ProcessMemoryStatistics& info) const {
     InterruptGuard guard;
     if (!prepared || !Context(true) || !Layout(false)) return false;
-    ProcessMemoryStatistics result = {pageCount, 0, pageLimit, metadataPages, 0};
+    ProcessMemoryStatistics result = {pageCount, 0, pageLimit, metadataPages, kernel->pae ? 4u : 0u};
     for (uint32_t i = 0; i < pageCount; ++i) if (pages[i].region) ++result.dynamicPages;
-    for (uint32_t di = 0; di < 1024; ++di) if (tables[di]) ++result.tableFrames;
+    for (uint32_t table : tables) if (table) ++result.tableFrames;
     info = result; error = ProcessMemoryOk;
     return true;
 }
