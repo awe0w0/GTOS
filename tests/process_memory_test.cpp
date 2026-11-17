@@ -1078,10 +1078,23 @@ namespace {
         CHECK(pde & 1);
         if (!(pde & 1)) return;
         uint64_t* userTable = (uint64_t*)(uint32_t)(pde & ~4095ULL);
+        uint64_t* sharedDirectory = paeDirectory(sharedRoot, (uint32_t)input);
+        const uint64_t sharedPde = sharedDirectory[((uint32_t)input >> 21) & 511];
+        CHECK(sharedPde & 1);
+        CHECK(!first.CopyFromUser(userTable, boundary - 16, 32)
+              && first.GetLastError() == ProcessMemoryBadAlias);
+        CHECK(!first.CopyFromUser((void*)(uint32_t)(sharedPde & ~4095ULL), boundary - 16, 32)
+              && first.GetLastError() == ProcessMemoryBadAlias);
         const uint64_t pte = userTable[0];
         userTable[0] = pte | (1ULL << 32);
         CHECK(!first.ValidateUserRange(boundary, 1, false));
         userTable[0] = pte;
+        userDirectory[0] = pde | 0x20;
+        CHECK(first.ValidateUserRange(boundary, 1, false));
+        userDirectory[0] = pde | (1ULL << 32);
+        CHECK(!first.ValidateUserRange(boundary, 1, false)
+              && first.GetLastError() == ProcessMemoryBadMapping);
+        userDirectory[0] = pde;
         uint64_t* pdpt = (uint64_t*)root;
         const uint64_t pdpte = pdpt[2];
         pdpt[2] = pdpte | 0x20;

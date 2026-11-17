@@ -423,23 +423,45 @@ bool ProcessAddressSpace::LayoutRoot() const {
     return true;
 }
 bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
-    for (uint32_t di = 0; di < DirectoryCount(); ++di) {
-        const uint64_t shared = DirectoryEntry(di, true), own = DirectoryEntry(di, false);
-        const uint32_t table = OwnTable(di);
-        if (UserDirectory(di) && shared) {
-            if (table) return Fail(ProcessMemoryBadMapping);
-            return Fail(ProcessMemoryBadTemplate);
-        }
-        if (!table) {
-            if ((!shared && own) || (own & ~Accessed) != (shared & ~Accessed))
+    // LayoutRoot has checked the supervisor aliases (and all four PAE roots).
+    // Walk each contiguous directory directly: user copies call this even when
+    // their ownership index is cached, so don't rediscover the mode and roots
+    // for every entry. Every shared and owned entry still gets checked.
+    const uint32_t firstUser = kernel->directoryIndex(UserBase);
+    const uint32_t lastUser = kernel->directoryIndex(UserLimit - 1);
+    const bool pae = kernel->pae;
+    const uint32_t stride = pae ? 2 : 1;
+    const auto check = [&](uint32_t sharedDirectory, uint32_t ownedDirectory,
+                           uint32_t first, uint32_t count) {
+        const uint32_t* sharedEntries = (const uint32_t*)sharedDirectory;
+        const uint32_t* ownEntries = (const uint32_t*)ownedDirectory;
+        for (uint32_t i = 0, word = 0; i < count; ++i, word += stride) {
+            const uint32_t di = first + i;
+            const bool user = di >= firstUser && di <= lastUser;
+            const uint32_t table = user ? tables[di - firstUser] : 0;
+            uint64_t shared = sharedEntries[word], own = ownEntries[word];
+            if (pae) {
+                shared |= (uint64_t)sharedEntries[word + 1] << 32;
+                own |= (uint64_t)ownEntries[word + 1] << 32;
+            }
+            if (user && shared)
+                return Fail(table ? ProcessMemoryBadMapping : ProcessMemoryBadTemplate);
+            if (!table) {
+                if ((!shared && own) || (own & ~Accessed) != (shared & ~Accessed))
+                    return Fail(ProcessMemoryBadMapping);
+                continue;
+            }
+            if (!frames->isAllocatedLocked(table) || !KernelPageAlias(table, true)
+                || (own & ~Accessed) != (table | Present | Writable | User))
                 return Fail(ProcessMemoryBadMapping);
-            continue;
+            if (nonzeroLeaves)
+                for (uint32_t ti = 0; ti < count; ++ti) *nonzeroLeaves += kernel->entry(table, ti) != 0;
         }
-        if (!frames->isAllocatedLocked(table) || !KernelPageAlias(table, true)
-            || (own & ~Accessed) != (table | Present | Writable | User))
-            return Fail(ProcessMemoryBadMapping);
-        if (nonzeroLeaves)
-            for (uint32_t ti = 0; ti < LeafCount(); ++ti) *nonzeroLeaves += kernel->entry(table, ti) != 0;
+        return true;
+    };
+    if (!pae) return check(kernelDirectory, directory, 0, 1024);
+    for (uint32_t i = 0; i < 4; ++i) {
+        if (!check(kernel->directories[i], directories[i], i * 512, 512)) return false;
     }
     return true;
 }
@@ -1060,6 +1082,10 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
     if (!length) return true;
     if (!address || length > AddressLimit - address) return Fail(ProcessMemoryBadAlias);
     const uint64_t end = (uint64_t)address + length;
+    const bool pae = kernel->pae;
+    const uint32_t directoryPages = pae ? 4 : 1, stride = pae ? 2 : 1;
+    const uint32_t ownedTables = kernel->directoryIndex(UserLimit - 1)
+        - kernel->directoryIndex(UserBase) + 1;
     for (uint64_t current = address & AddressMask; current < end; current += 4096) {
         PagingMapping mapping;
         if (!kernel->queryLocked((uint32_t)current, mapping) || mapping.userAccessible
@@ -1071,9 +1097,16 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
         for (uint32_t i = 0; i < 4; ++i)
             if (physical == directories[i] || physical == kernel->directories[i])
                 return Fail(ProcessMemoryBadAlias);
-        for (uint32_t di = 0; di < DirectoryCount(); ++di)
-            if (physical == OwnTable(di) || physical == (DirectoryEntry(di, true) & AddressMask))
-                return Fail(ProcessMemoryBadAlias);
+        for (uint32_t i = 0; i < ownedTables; ++i)
+            if (physical == tables[i]) return Fail(ProcessMemoryBadAlias);
+        // The shared tables, like the owned tables, are allocated below 4 GiB.
+        // LayoutRoot has already validated the directories. The frame number
+        // compared here comes from the low word in both paging modes.
+        for (uint32_t i = 0; i < directoryPages; ++i) {
+            const uint32_t* entries = (const uint32_t*)(pae ? kernel->directories[i] : kernelDirectory);
+            for (uint32_t word = 0; word < 1024; word += stride)
+                if (physical == (entries[word] & AddressMask)) return Fail(ProcessMemoryBadAlias);
+        }
         if (IndexedLayoutPage(physical >> 12, /*byFrame=*/true) >= 0)
             return Fail(ProcessMemoryBadAlias);
     }
