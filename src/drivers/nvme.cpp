@@ -30,6 +30,7 @@ namespace {
 NvmeDisk::NvmeDisk(PeripheralComponentInterconnectController& pci,
                    PhysicalMemoryManager& frames, uint32_t (*ticks)())
     : pci(pci), frames(frames), ticks(ticks), controller{}, registers(0), dma(0),
+      dmaPages(0), readDepth(0),
       stride(0), readyTicks(0), maximumBytes(0), nsid(0), sectorBytes(0), entries(0),
       sectors(0), nextCommand(0), ready(false), error(NvmeOk), completionStatus(0),
       admin{}, io{} {}
@@ -120,8 +121,8 @@ bool NvmeDisk::Fail(NvmeError reason) {
     return false;
 }
 
-uint32_t NvmeDisk::DataAddress() const {
-    return dma + 5 * PageBytes;
+uint32_t NvmeDisk::DataAddress(uint32_t slot) const {
+    return dma + (QueuePages + slot * DataSlotPages + 1) * PageBytes;
 }
 
 bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging) {
@@ -162,12 +163,29 @@ bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging)
     WriteRegister(Configuration, 0);
     if (!WaitReady(false))
         return Fail(NvmeControllerTimeout);
-    if (!frames.allocateContiguous(DmaPages, dma))
+    // Keep one submission entry empty. A controller with fewer queue entries
+    // or a machine with less contiguous low memory can still run at depth one.
+    readDepth = entries - 1 < MaximumReadDepth ? entries - 1 : MaximumReadDepth;
+    while (readDepth) {
+        dmaPages = QueuePages + readDepth * DataSlotPages;
+        if (frames.allocateContiguous(dmaPages, dma))
+            break;
+        --readDepth;
+    }
+    if (!readDepth)
         return Fail(NvmeNoDmaMemory);
 
     uint32_t* queuePages = (uint32_t*)dma;
-    for (uint32_t i = 0; i < 5 * PageBytes / sizeof(uint32_t); ++i)
+    for (uint32_t i = 0; i < QueuePages * PageBytes / sizeof(uint32_t); ++i)
         queuePages[i] = 0;
+    // A slot always DMA-transfers to the same run of pages. The controller
+    // consumes only the list entries covered by the command's block count.
+    for (uint32_t slot = 0; slot < readDepth; ++slot) {
+        const uint32_t address = DataAddress(slot);
+        uint64_t* prps = (uint64_t*)(address - PageBytes);
+        for (uint32_t i = 0; i + 1 < DataPages; ++i)
+            prps[i] = address + (i + 1) * PageBytes;
+    }
     nextCommand = 0;
     admin = {dma, dma + PageBytes, 0, 0, 0, 1};
     io = {dma + 2 * PageBytes, dma + 3 * PageBytes, 1, 0, 0, 1};
@@ -190,7 +208,7 @@ bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging)
     return true;
 }
 
-bool NvmeDisk::Submit(Queue& queue, Command& command) {
+uint16_t NvmeDisk::Enqueue(Queue& queue, Command& command) {
     const uint16_t cid = ++nextCommand;
     command.words[0] |= (uint32_t)cid << 16;
     volatile uint32_t* submission = (volatile uint32_t*)queue.submission + 16 * queue.tail;
@@ -198,9 +216,15 @@ bool NvmeDisk::Submit(Queue& queue, Command& command) {
         submission[i] = command.words[i];
     if (++queue.tail == entries)
         queue.tail = 0;
+    return cid;
+}
+
+void NvmeDisk::RingSubmission(const Queue& queue) {
     __sync_synchronize();
     WriteRegister(BaseDoorbell + 2 * queue.id * stride, queue.tail);
+}
 
+bool NvmeDisk::Receive(Queue& queue, uint16_t& cid) {
     const uint32_t start = ticks();
     volatile uint32_t* completion = (volatile uint32_t*)queue.completion + 4 * queue.head;
     for (uint32_t attempts = 0; attempts < PollLimit; ++attempts) {
@@ -208,17 +232,18 @@ bool NvmeDisk::Submit(Queue& queue, Command& command) {
         if (((result >> 16) & 1) == queue.phase) {
             __sync_synchronize();
             const uint32_t queueInfo = completion[2];
-            if ((uint16_t)result != cid || (queueInfo >> 16) != queue.id ||
+            if ((queueInfo >> 16) != queue.id ||
                 (uint16_t)queueInfo >= entries) {
                 error = NvmeBadCompletion;
                 return false;
             }
+            cid = (uint16_t)result;
             completionStatus = (uint16_t)(result >> 16) & ~1u;
             if (++queue.head == entries) {
                 queue.head = 0;
                 queue.phase ^= 1;
             }
-            WriteRegister(BaseDoorbell + (2 * queue.id + 1) * stride, queue.head);
+
             error = completionStatus ? NvmeCommandFailed : NvmeOk;
             return !completionStatus;
         }
@@ -228,6 +253,24 @@ bool NvmeDisk::Submit(Queue& queue, Command& command) {
     }
     error = NvmeCommandTimeout;
     return false;
+}
+
+void NvmeDisk::RingCompletion(const Queue& queue) {
+    WriteRegister(BaseDoorbell + (2 * queue.id + 1) * stride, queue.head);
+}
+
+bool NvmeDisk::Submit(Queue& queue, Command& command) {
+    const uint16_t expected = Enqueue(queue, command);
+    RingSubmission(queue);
+    uint16_t observed;
+    if (!Receive(queue, observed))
+        return false;
+    RingCompletion(queue);
+    if (observed != expected) {
+        error = NvmeBadCompletion;
+        return false;
+    }
+    return true;
 }
 
 bool NvmeDisk::Identify() {
@@ -304,35 +347,58 @@ bool NvmeDisk::ReadSectors(uint64_t first, uint32_t count, uint8_t* destination)
     }
 
     const uint32_t maxSectors = maximumBytes / sectorBytes;
-    const uint8_t* buffer = (const uint8_t*)DataAddress();
+    struct Pending {
+        uint8_t* destination;
+        uint32_t bytes;
+        uint16_t cid;
+        bool active;
+    };
     while (count) {
-        const uint32_t blockCount = count <= maxSectors ? count : maxSectors;
-        const uint32_t transfer = blockCount * sectorBytes;
-        const uint32_t pages = (transfer + PageBytes - 1) / PageBytes;
-        Command command = {};
-        command.words[0] = 0x02;
-        command.words[1] = nsid;
-        command.words[6] = DataAddress();
-        if (pages == 2) {
-            command.words[8] = DataAddress() + PageBytes;
-        } else if (pages > 2) {
-            const uint32_t prpAddress = dma + 4 * PageBytes;
-            uint64_t* prps = (uint64_t*)prpAddress;
-            for (uint32_t i = 0; i + 1 < pages; ++i)
-                prps[i] = DataAddress() + (i + 1) * PageBytes;
-            command.words[8] = prpAddress;
+        Pending pending[MaximumReadDepth];
+        uint32_t posted = 0;
+        while (count && posted < readDepth) {
+            const uint32_t blockCount = count <= maxSectors ? count : maxSectors;
+            const uint32_t transfer = blockCount * sectorBytes;
+            const uint32_t pages = (transfer + PageBytes - 1) / PageBytes;
+            const uint32_t address = DataAddress(posted);
+            Command command = {};
+            command.words[0] = 0x02;
+            command.words[1] = nsid;
+            command.words[6] = address;
+            if (pages == 2)
+                command.words[8] = address + PageBytes;
+            else if (pages > 2)
+                command.words[8] = address - PageBytes;
+            command.words[10] = (uint32_t)first;
+            command.words[11] = (uint32_t)(first >> 32);
+            command.words[12] = blockCount - 1;
+            pending[posted++] = {destination, transfer, Enqueue(io, command), true};
+            first += blockCount;
+            count -= blockCount;
+            destination += transfer;
         }
-        command.words[10] = (uint32_t)first;
-        command.words[11] = (uint32_t)(first >> 32);
-        command.words[12] = blockCount - 1;
-        if (!Submit(io, command))
-            return Fail(error);
 
-        for (uint32_t i = 0; i < transfer; ++i)
-            destination[i] = buffer[i];
-        first += blockCount;
-        count -= blockCount;
-        destination += transfer;
+        RingSubmission(io);
+        for (uint32_t completed = 0; completed < posted; ++completed) {
+            uint16_t cid;
+            if (!Receive(io, cid))
+                return Fail(error);
+            uint32_t slot = 0;
+            while (slot < posted && (!pending[slot].active || pending[slot].cid != cid))
+                ++slot;
+            if (slot == posted)
+                return Fail(NvmeBadCompletion);
+
+            // Supported LBAs are multiples of a word. Copy only completed data
+            // into caller storage, including when completions arrive out of order.
+            uint8_t* to = pending[slot].destination;
+            const uint8_t* from = (const uint8_t*)DataAddress(slot);
+            uint32_t words = pending[slot].bytes / sizeof(uint32_t);
+            asm volatile("cld; rep movsl" : "+D"(to), "+S"(from), "+c"(words) : : "memory", "cc");
+            pending[slot].active = false;
+        }
+        // The batch uses fewer entries than the CQ can hold.
+        RingCompletion(io);
     }
     return true;
 }
@@ -348,7 +414,9 @@ bool NvmeDisk::Stop() {
     const bool stopped = WaitReady(false);
     SetBusMaster(false);
     registers = 0;
-    if (stopped && dma && frames.freeContiguous(dma, DmaPages))
-        dma = 0;
+    if (stopped && dma && frames.freeContiguous(dma, dmaPages)) {
+        dma = dmaPages = 0;
+        readDepth = 0;
+    }
     return stopped && !dma;
 }

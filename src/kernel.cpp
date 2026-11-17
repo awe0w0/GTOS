@@ -462,8 +462,79 @@ static void ProbeNtfs(storage::ReadableDisk& disk, const storage::GptPartition& 
         printfHex32(total); printf(" "); printfHex32(~crc); printf("\n");
     }
 }
+static bool IsNvmeBenchPartition(const storage::GptPartition& part) {
+    static const char name[] = "GTOS NVMe test data";
+    for (uint32_t i = 0; i < sizeof(name); ++i)
+        if (part.name[i] != (uint16_t)name[i])
+            return false;
+    return true;
+}
+
+static uint64_t ReadBenchMarker(const uint8_t* bytes) {
+    uint64_t value = 0;
+    for (uint32_t i = 0; i < 8; ++i)
+        value |= (uint64_t)bytes[i] << (8 * i);
+    return value;
+}
+
+static void ProbeNvmeSequential(NvmeDisk& disk, const storage::GptPartition& part) {
+    const uint32_t chunkBytes = 1024u * 1024;
+    const uint32_t chunks = 512;
+    const uint32_t chunksPerRead = 4;
+    const uint32_t readBytes = chunksPerRead * chunkBytes;
+    const uint32_t total = chunkBytes * chunks;
+    const uint32_t sectorBytes = disk.LogicalSectorBytes();
+    const uint32_t chunkSectors = chunkBytes / sectorBytes;
+    if (part.last - part.first != (uint64_t)chunkSectors * chunks - 1) {
+        printf("NVME SEQUENTIAL GEOMETRY FAIL\n");
+        return;
+    }
+    const uint32_t pages = (readBytes + 4095) / 4096;
+    uint32_t address;
+    if (!frames.allocateContiguous(pages, address)) {
+        printf("NVME SEQUENTIAL ALLOCATION FAIL\n");
+        return;
+    }
+    uint8_t* data = (uint8_t*)address;
+    printf("NVME SEQUENTIAL BEGIN\n");
+    LogValue("NVME SEQUENTIAL REQUEST BYTES ", readBytes);
+    LogValue("NVME SEQUENTIAL COMMAND BYTES ", disk.MaxReadBytes());
+    LogValue("NVME SEQUENTIAL READ DEPTH ", disk.ReadDepth());
+    bool success = true;
+    for (uint32_t sample = 0; sample < 3 && success; ++sample) {
+        const uint32_t start = DiskWaitTicks();
+        for (uint32_t chunk = 0; chunk < chunks && success; chunk += chunksPerRead) {
+            if (!disk.ReadSectors(part.first + chunk * chunkSectors,
+                                  chunksPerRead * chunkSectors, data)) {
+                success = false;
+                LogValue("NVME SEQUENTIAL READ ERROR ", disk.Error());
+                break;
+            }
+            for (uint32_t i = 0; i < chunksPerRead; ++i) {
+                const uint8_t* chunkData = data + i * chunkBytes;
+                const uint64_t marker = 0x615DC8D279B304EFULL ^ (chunk + i);
+                if (ReadBenchMarker(chunkData) != marker ||
+                    ReadBenchMarker(chunkData + chunkBytes - 8) != ~marker) {
+                    success = false;
+                    LogValue("NVME SEQUENTIAL BAD CHUNK ", chunk + i);
+                    break;
+                }
+            }
+        }
+        const uint32_t elapsed = DiskWaitTicks() - start;
+        if (!success || !elapsed) {
+            success = false;
+            break;
+        }
+        printf("NVME SEQUENTIAL SAMPLE ");
+        printfHex32(total); printf(" "); printfHex32(elapsed); printf("\n");
+    }
+    success = frames.freeContiguous(address, pages) && success;
+    printf(success ? "NVME SEQUENTIAL PASS\n" : "NVME SEQUENTIAL FAIL\n");
+}
+
 static void ProbeNvme(PeripheralComponentInterconnectController& pci,
-                      const NvmeController& controller, bool filesystemProbe) {
+                      const NvmeController& controller, bool filesystemProbe, bool sequentialProbe) {
     const uint32_t baseline = frames.getStatistics().freeFrames;
     NvmeDisk disk(pci, frames, DiskWaitTicks);
     if (!disk.Start(controller, paging)) {
@@ -505,6 +576,8 @@ static void ProbeNvme(PeripheralComponentInterconnectController& pci,
                 LogSectorNumber("NVME GPT LAST LBA ", part.last);
                 LogValue("NVME VOLUME BOOT CRC32 ",
                          ~common::Crc32Update(0xFFFFFFFFu, block, sectorBytes));
+                if (sequentialProbe && IsNvmeBenchPartition(part))
+                    ProbeNvmeSequential(disk, part);
                 bool ntfs = filesystemProbe;
                 for (uint32_t b = 0; b < 8 && ntfs; ++b)
                     ntfs = block[3 + b] == "NTFS    "[b];
@@ -3455,7 +3528,8 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     pitData.Write(divisor >> 8);
     interrupts.Activate();
     if (nvmeFound && nvmeProbe)
-        ProbeNvme(nvmePci, nvmeController, BootOption(mbi, "nvme-fs-probe"));
+        ProbeNvme(nvmePci, nvmeController, BootOption(mbi, "nvme-fs-probe"),
+                  BootOption(mbi, "nvme-read-bench"));
     if (nvmeFound && shellDisk && modern) {
         if (filesDisk.Start(nvmeController, paging) && modern->AttachShellDisk(filesDisk)) {
             printf("NVME FILES READY\n");

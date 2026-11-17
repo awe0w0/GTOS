@@ -210,7 +210,8 @@ Real hardware has not been tested. The EFI application is unsigned and Secure
 Boot signing/qualification is unavailable; build and delivery do not alter
 firmware settings, host partitions, security policy or boot entries.
 
-Input uses 8042/PS2; USB HID, NVMe and AHCI drivers are unavailable.
+Input uses 8042/PS2. This live-image qualification did not cover USB HID, NVMe or
+AHCI. The newer [UEFI NVMe profile](uefi-pae-nvme.md) covers read-only NVMe.
 UEFI requires a direct RGB32 framebuffer below 4 GiB, at least 640x480 and
 at most 1920x1080, with an aligned pitch no greater than 16384 bytes.
 Firmware keyboard support does not establish GTOS USB input support.
@@ -219,9 +220,9 @@ The live image never installs to or formats an internal disk.
 PC OVMF's GOP at `0x80000000` conflicts with the existing native-process user
 arena. Its desktop works, while native execution remains unqualified on that
 profile. Q35 OVMF passed native execution/reaping on the historical image.
-Both UEFI profiles lacked usable AP inventory; UEFI AP execution is still
-unqualified. BIOS four-CPU worker results do not qualify UEFI AP or real
-hardware. No paging, user arena, ACPI discovery or ELF64 contract is changed.
+Those UEFI profiles lacked usable AP inventory. The newer Multiboot2 EFI
+profile passes separate checks for PAE and AP workers under QEMU. The original
+live-image qualification did not cover AP execution or real hardware.
 
 GRUB's [Multiboot implementation](https://raw.githubusercontent.com/rhboot/grub2/grub-2.06/grub-core/loader/multiboot.c),
 [EFI handoff](https://raw.githubusercontent.com/rhboot/grub2/grub-2.06/grub-core/loader/i386/multiboot_mbi.c)

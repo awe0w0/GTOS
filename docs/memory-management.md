@@ -1,8 +1,9 @@
 # Memory management
 
-GTOS now separates page ownership from small-object allocation. This is a
-single-CPU, identity-mapped 32-bit implementation; it does not enable paging,
-virtual address spaces, demand allocation, swapping, or SMP synchronization.
+GTOS separates page ownership from small-object allocation. This document
+describes the allocator for identity-mapped RAM below 4 GiB. See
+[UEFI, PAE and read-only storage](uefi-pae-nvme.md) for the high-frame allocator
+and the opt-in PAE process and worker paths.
 
 ## Kernel integration
 
@@ -53,7 +54,8 @@ Compile allocation call sites with `-fcheck-new`; global freestanding
 - Makes only complete, available (type 1) 4 KiB pages eligible
 - Processes reserved entries after available entries, so reserved entries win
   over overlapping or out-of-order available ranges
-- Clips physical addresses at 4 GiB; PAE/high-memory support is not implied
+- Keeps the 32-bit address API below 4 GiB; the separate high-frame API
+  tracks PAE frames with 64-bit physical addresses
 - Excludes the first MiB, loaded kernel, allocator metadata, Multiboot structure,
   memory-map descriptors, modules and names, command line, bootloader name,
   symbol tables and loaded ELF sections, drive/APM/VBE data, and framebuffer
