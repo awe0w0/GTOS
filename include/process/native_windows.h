@@ -36,6 +36,10 @@ class NativeWindows : public gui::NativeWindowProvider {
         bool resetPending, closePending, large;
     };
     Slot slots[GTOS_WINDOW_MAX_OBJECTS];
+    // One admitted Content window can retain keystrokes across a slow paint or
+    // navigation. Ordinary windows keep their original queue and limit.
+    static const unsigned LargeInputEntries = 512;
+    GtosInputEvent largeInput[LargeInputEntries];
     // Bank scratch for one INPUT_READ transaction; never on the kernel stack.
     GtosInputEvent scratch[GTOS_INPUT_READ_LIMIT];
     unsigned nextHandle;
@@ -48,6 +52,8 @@ class NativeWindows : public gui::NativeWindowProvider {
     Slot* FreeSlot();
     void ClearSlot(Slot& slot);
     void ClearQueue(Slot& slot);
+    unsigned InputCapacity(const Slot& slot) const;
+    GtosInputEvent* InputQueue(Slot& slot);
     void DropNormal(Slot& slot);
     // Returns true only when THIS delivery performed an overflow reset.
     bool PushNormal(Slot& slot, const GtosInputEvent& event);

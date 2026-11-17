@@ -92,6 +92,14 @@ void NativeWindows::ScrubDraft(Slot& slot) {
     slot.progress = 0;
 }
 
+unsigned NativeWindows::InputCapacity(const Slot& slot) const {
+    return slot.large ? LargeInputEntries : GTOS_INPUT_NORMAL_ENTRIES;
+}
+
+GtosInputEvent* NativeWindows::InputQueue(Slot& slot) {
+    return slot.large ? largeInput : slot.queue;
+}
+
 void NativeWindows::DropNormal(Slot& slot) {
     unsigned dropped = slot.queueCount;
     slot.queueHead = slot.queueCount = 0;
@@ -104,14 +112,15 @@ void NativeWindows::DropNormal(Slot& slot) {
 // had to be reset. Whether a reset was already pending is a separate question.
 bool NativeWindows::PushNormal(Slot& slot, const GtosInputEvent& event) {
     if (slot.lifecycle != GTOS_WINDOW_LIVE) return false;
+    const unsigned capacity = InputCapacity(slot);
     bool overflowed = false;
-    if (slot.queueCount >= GTOS_INPUT_NORMAL_ENTRIES) {
+    if (slot.queueCount >= capacity) {
         DropNormal(slot);
         slot.resetPending = true;
         overflowed = true;
     }
-    unsigned index = (slot.queueHead + slot.queueCount) % GTOS_INPUT_NORMAL_ENTRIES;
-    slot.queue[index] = event;
+    unsigned index = (slot.queueHead + slot.queueCount) % capacity;
+    InputQueue(slot)[index] = event;
     ++slot.queueCount;
     return overflowed;
 }
@@ -306,9 +315,11 @@ int NativeWindows::SelectLocked(Slot& slot, unsigned count, unsigned& selected) 
         event.y = 0;
         scratch[selected++] = event;
     }
+    const unsigned capacity = InputCapacity(slot);
+    const GtosInputEvent* queue = InputQueue(slot);
     for (unsigned at = 0; at < slot.queueCount && selected < count; ++at) {
-        unsigned index = (slot.queueHead + at) % GTOS_INPUT_NORMAL_ENTRIES;
-        scratch[selected++] = slot.queue[index];
+        unsigned index = (slot.queueHead + at) % capacity;
+        scratch[selected++] = queue[index];
     }
     return 0;
 }
@@ -324,7 +335,7 @@ void NativeWindows::CommitLocked(Slot& slot, unsigned selected) {
         --selected;
     }
     if (selected > slot.queueCount) selected = slot.queueCount;
-    slot.queueHead = (slot.queueHead + selected) % GTOS_INPUT_NORMAL_ENTRIES;
+    slot.queueHead = (slot.queueHead + selected) % InputCapacity(slot);
     slot.queueCount -= selected;
 }
 

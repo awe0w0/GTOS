@@ -262,6 +262,40 @@ void LargeFrames() {
     const int small = windows.Create(42, CreateReq(8, 8));
     Check(small > 0, "large frame backing does not consume the ordinary bank");
 
+    // A busy browser can miss several input polls while the user enters a URL.
+    // Use the real delivery and read paths, including both edges of every key.
+    const char url[] =
+        "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm";
+    const unsigned eventCount = 2 * (sizeof(url) - 1);
+    bool overflow = false;
+    for (unsigned i = 0; i < eventCount; ++i) {
+        unsigned type = i % 2 ? GTOS_INPUT_KEY_UP : GTOS_INPUT_KEY_DOWN;
+        if (windows.DeliverInput(41, h, Event(type, url[i / 2], 0, 0)))
+            overflow = true;
+    }
+    Check(!overflow, "large window keeps a complete URL's key edges while busy");
+    GtosInputReadRequest input{GTOS_WINDOW_ABI_VERSION, h, GTOS_INPUT_READ_LIMIT, 4096};
+    address = PutRequest(&input, sizeof(input));
+    const GtosInputEvent* events = (const GtosInputEvent*)(arena.bytes + 4096);
+    unsigned consumed = 0;
+    bool ordered = true;
+    while (consumed < eventCount) {
+        int count = windows.Call(41, arena, GTOS_SYS_INPUT_READ, address, sizeof(input));
+        if (count <= 0 || (unsigned)count > eventCount - consumed) break;
+        for (int i = 0; i < count; ++i, ++consumed) {
+            unsigned type = consumed % 2 ? GTOS_INPUT_KEY_UP : GTOS_INPUT_KEY_DOWN;
+            if (events[i].type != type || events[i].code != (unsigned)url[consumed / 2])
+                ordered = false;
+        }
+    }
+    Check(consumed == eventCount && ordered, "large input arrives in order across read batches");
+    if (small > 0) {
+        input.handle = (unsigned)small;
+        address = PutRequest(&input, sizeof(input));
+        Check(windows.Call(42, arena, GTOS_SYS_INPUT_READ, address, sizeof(input)) == 0,
+              "large window input does not reach the ordinary window");
+    }
+
     const unsigned bytes = create.width * create.height * 4;
     for (unsigned i = 0; i < bytes; i += 4) {
         arena.bytes[256 + i] = (unsigned char)(i % 251);
