@@ -6,6 +6,7 @@
 #include <gdt.h>
 #include <memorymanagement.h>
 #include <memory/physical.h>
+#include <memory/multiboot2.h>
 #include <memory/selftest.h>
 #include <memory/paging.h>
 #include <memory/criticalsection.h>
@@ -1457,12 +1458,23 @@ static void ServiceNativeDemo(TaskManager &tasks) {
     LogValue("NATIVE REAPED ", reaped);
     printf(valid ? "NATIVE RUNTIME PASS\n" : "NATIVE RUNTIME FAIL ISOLATION OR REAP\n");
 }
-extern "C" void kernelMain(void *multiboot, uint32_t magic) {
+extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     common::BootLog::Reset();
     BootStage("B01", "HANDOFF");
     printf("GTOS " GTOS_VERSION_RELEASE " PROTECTED DESKTOP BOOT\n");
     BootStage("B02", "MEMORY");
-    if (!frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end))
+    static memory::Multiboot2Handoff handoff;
+    const bool taggedBoot = magic == memory::Multiboot2BootMagic;
+    if (taggedBoot && !handoff.read(multiboot, memory::Multiboot2Handoff::MaximumBytes))
+        Panic("INVALID MULTIBOOT2 HANDOFF", "E01");
+    const bool efiHandoff = taggedBoot && handoff.fromEfi();
+    if (taggedBoot) {
+        multiboot = handoff.bootInfo();
+        magic = memory::MultibootBootMagic;
+        printf(efiHandoff ? "MULTIBOOT2 EFI HANDOFF\n" : "MULTIBOOT2 HANDOFF\n");
+    }
+    if (!frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end,
+                           0, 0, 32, efiHandoff))
         Panic("INVALID MEMORY MAP", "E01");
     const memory::MultibootInfo *mbi = (const memory::MultibootInfo *)multiboot;
     const bool paeProbe = BootOption(mbi, "pae-probe");
@@ -1471,7 +1483,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         const uint32_t addressBits = CpuManager::PaeAddressBits();
         if (addressBits <= 32 ||
             !frames.initialize(multiboot, magic, (uint32_t)&kernel_start, (uint32_t)&kernel_end, 0, 0,
-                               addressBits))
+                               addressBits, efiHandoff))
             Panic("PAE HIGH MEMORY MAP", "E27");
         LogValue("PAE PHYSICAL ADDRESS BITS ", addressBits);
     }
@@ -1535,7 +1547,12 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     BootStage("B03", "GDT IDT SCHEDULER");
     GlobalDescriptorTable gdt;
     CpuManager cpu;
-    cpu.Detect(ramMiB * 1024 * 1024);
+    uint32_t firmwareLimit = ramMiB * 1024 * 1024;
+    uint32_t rsdpBytes = 0;
+    const void* rsdp = taggedBoot ? handoff.acpi(rsdpBytes) : 0;
+    if (rsdp && handoff.acpiPhysicalLimit() > firmwareLimit)
+        firmwareLimit = handoff.acpiPhysicalLimit();
+    cpu.Detect(firmwareLimit, rsdp, rsdpBytes);
     printf("CPU VENDOR ");
     printf((char *)cpu.GetInfo().vendor);
     printf(" SOURCE ");
@@ -1562,7 +1579,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     if (bootDiagnostic.stop == common::BootDiagnostic::StopAp) {
         CpuStartup apDiagnostic;
         const bool apPrepared =
-            apDiagnostic.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+            apDiagnostic.Prepare(cpu.GetInfo(), frames, firmwareLimit);
         CpuStartupReport apReady = apDiagnostic.GetReport();
         LogValue("AP DIAG DETECTED ", apReady.detectedProcessors);
         LogValue("AP DIAG BSP APIC ", cpu.GetInfo().bspApicId);
@@ -3198,9 +3215,10 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     // Prepare resources before identity mappings are built. BSP GDT/IDT already
     // exist, while interrupts and paging remain disabled.
     CpuStartup cpuStartup;
-    bool apsPrepared = cpuStartup.Prepare(cpu.GetInfo(), frames, ramMiB * 1024 * 1024);
+    bool apsPrepared = cpuStartup.Prepare(cpu.GetInfo(), frames, firmwareLimit);
     CpuWorkPool workers;
-    bool workersPrepared = apsPrepared && workers.Prepare(cpuStartup, frames);
+    bool workersPrepared = apsPrepared && workers.Prepare(cpuStartup, frames,
+        BootOption(mbi, "tcg-reset-mtrrs"));
     CpuStartupReport apReport = cpuStartup.GetReport();
     BootStage("B04", liveBoot ? "RAM STORAGE" : "STORAGE");
     AdvancedTechnologyAttachment disk(0x1F0, true);
@@ -3350,8 +3368,7 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames, contentThreads);
     if (!nativeStacksPrepared)
         printf("NATIVE KERNEL STACK PREPARATION FAILED\n");
-    // The worker entry still walks and loads a legacy paging root.
-    bool workersStarted = !usePae && workersPrepared && workers.Start(paging);
+    bool workersStarted = workersPrepared && workers.Start(paging);
     // Only a pre-handoff failure may use the original parked path. Once an AP
     // has been handed off (even if it times out), never resend INIT/SIPI.
     if (!workersStarted && apsPrepared && cpuStartup.ReadyToStart()) {
@@ -3376,9 +3393,20 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
     LogValue("WORKER FAILED ", workerReport.faultedWorkers);
     for (uint32_t index = 0; index < workerReport.configuredWorkers; ++index) {
         CpuWorkerSnapshot worker;
-        if (workers.GetWorker(index, worker) && worker.state == CpuWorkerFaulted) {
+        if (!workers.GetWorker(index, worker)) continue;
+        if (worker.state == CpuWorkerFaulted) {
             LogValue("WORKER LIMITED APIC ", worker.apicId);
             LogValue("WORKER FAILURE REASON ", (uint32_t)worker.failure);
+            if (worker.failure == CpuWorkerMemoryTypeMismatch) {
+                LogValue("WORKER MEMORY TYPE CHECK ", worker.memoryTypeFailure.reason);
+                LogValue("WORKER MEMORY TYPE INDEX ", worker.memoryTypeFailure.index);
+                LogSectorNumber("WORKER MEMORY TYPE EXPECTED ", worker.memoryTypeFailure.expected);
+                LogSectorNumber("WORKER MEMORY TYPE OBSERVED ", worker.memoryTypeFailure.observed);
+            }
+        } else if (worker.state == CpuWorkerIdle || worker.state == CpuWorkerBusy) {
+            LogValue("WORKER PAGING APIC ", worker.apicId);
+            LogValue("WORKER PAGING CR3 ", worker.observedCr3);
+            LogValue("WORKER PAGING CR4 ", worker.observedCr4);
         }
     }
 
@@ -3468,8 +3496,9 @@ extern "C" void kernelMain(void *multiboot, uint32_t magic) {
         gui::SystemSnapshot snapshot;
         physical = frames.getStatistics();
         HeapStatistics hs = heap.getStatistics();
-        snapshot.ramMiB = ramMiB;
-        snapshot.freePages = physical.freeFrames;
+        const memory::HighMemoryStatistics high = frames.getHighStatistics();
+        snapshot.ramMiB = ramMiB + (usePae ? high.usableFrames / 256 : 0);
+        snapshot.freePages = physical.freeFrames + (usePae ? high.freeFrames : 0);
         snapshot.heapKiB = hs.totalBytes / 1024;
         snapshot.heapUsedKiB = hs.usedBytes / 1024;
         snapshot.logicalCPUs = cpu.DetectedLogicalProcessors();

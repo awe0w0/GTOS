@@ -157,7 +157,7 @@ bool PhysicalMemoryManager::reserveBootData(const MultibootInfo& info, uint32_t 
 bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic,
                                        uint32_t kernelStart, uint32_t kernelEnd,
                                        const PhysicalRange* extraReservations, uint32_t extraCount,
-                                       uint32_t physicalAddressBits) {
+                                       uint32_t physicalAddressBits, bool efiMemoryMap) {
     InterruptGuard guard;
     // Never forget ownership of live pages if called accidentally after boot.
     if (ready && (allocatedCount || bootstrap.claimedPages())) { error = PhysicalMemoryAlreadyInUse; return false; }
@@ -192,9 +192,13 @@ bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic
         markReserved(extraReservations[i].address, extraReservations[i].length);
     }
     if (mapUsed) {
-        if ((info.flags & 1) && !info.memLower) bootstrap.reserve(0, 0x100000);
-        bootstrap.restrictFirmware(readBiosWord(0x413), (uint32_t)readBiosWord(0x40E) << 4,
-                                   (info.flags & 1) ? info.memLower : 0);
+        if (efiMemoryMap) {
+            bootstrap.restrictEfiMemoryMap();
+        } else {
+            if ((info.flags & 1) && !info.memLower) bootstrap.reserve(0, 0x100000);
+            bootstrap.restrictFirmware(readBiosWord(0x413), (uint32_t)readBiosWord(0x40E) << 4,
+                                       (info.flags & 1) ? info.memLower : 0);
+        }
     }
     for (uint32_t frame = 0; frame < frameCount; ++frame) if (bit(eligible, frame)) ++freeCount;
     if (!freeCount) return fail(PhysicalMemoryNoUsableRam);

@@ -9,7 +9,7 @@ for optimization in 0 2; do
         -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -fno-pie -no-pie \
         -fno-threadsafe-statics -Wall -Wextra -Werror -DGTOS_MEMORY_TEST -Iinclude \
         -Wl,-e,_start -Wl,--build-id=none tests/memory_bootstrap_test.cpp \
-        src/memory/physical.cpp src/memory/bootstrap.cpp -o "$build/low-bootstrap-O$optimization"
+        src/memory/physical.cpp src/memory/bootstrap.cpp src/memory/multiboot2.cpp -o "$build/low-bootstrap-O$optimization"
     if command -v qemu-i386 >/dev/null 2>&1; then
         qemu-i386 "$build/low-bootstrap-O$optimization"
     else

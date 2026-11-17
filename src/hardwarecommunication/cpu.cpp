@@ -226,12 +226,15 @@ bool CpuManager::TryAcpiRoot(uint32_t address, bool xsdt, uint32_t limit) {
 }
 bool CpuManager::TryRsdp(uint32_t address, uint32_t limit) {
     if (!Range(address, 20, limit)) return false;
-    const uint8_t* p = (const uint8_t*)address;
-    if (!Equal(p, "RSD PTR ", 8) || !Checksum(p, 20)) return false;
+    return ParseRsdp((const void*)address, limit-address, limit);
+}
+bool CpuManager::ParseRsdp(const void* table, uint32_t bytes, uint32_t limit) {
+    const uint8_t* p = (const uint8_t*)table;
+    if (!p || bytes<20 || !Equal(p, "RSD PTR ", 8) || !Checksum(p, 20)) return false;
     if (p[15] >= 2) {
-        if (!Range(address, 36, limit)) return false;
+        if (bytes<36) return false;
         uint32_t length = Read32(p + 20);
-        if (length < 36 || length > 4096 || !Range(address, length, limit)
+        if (length < 36 || length > 4096 || length > bytes
             || !Checksum(p, length)) return false;
         if (!Read32(p + 28) && TryAcpiRoot(Read32(p + 24), true, limit)) return true;
     }
@@ -280,11 +283,12 @@ bool CpuManager::DetectMp(uint32_t limit) {
             if (TryMpPointer(address, limit)) return true;
     return false;
 }
-void CpuManager::Detect(uint32_t accessiblePhysicalBytes) {
+void CpuManager::Detect(uint32_t accessiblePhysicalBytes, const void* bootRsdp, uint32_t bootRsdpBytes) {
     // Reset rather than retaining information from an earlier machine/probe.
     CpuManager empty;
     info = empty.info;
     DetectCpuid();
+    if (ParseRsdp(bootRsdp, bootRsdpBytes, accessiblePhysicalBytes)) return;
     if (!DetectAcpi(accessiblePhysicalBytes)) DetectMp(accessiblePhysicalBytes);
 }
 const CpuInfo& CpuManager::GetInfo() const { return info; }

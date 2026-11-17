@@ -19,6 +19,9 @@ namespace gtos { namespace memory {
         // A zero EBDA pointer means no EBDA; otherwise reserve from EBDA to 0xA0000.
         bool restrictFirmware(uint32_t conventionalKB, uint32_t ebdaAddress,
                               uint32_t multibootLowerKB = 0);
+        // No BIOS data area after an EFI handoff. Limit the firmware-provided
+        // free pages to conventional memory and keep low scratch reserved.
+        bool restrictEfiMemoryMap();
         bool claim(uint32_t& address);
         bool intersectsClaimed(uint64_t address, uint64_t length) const;
         bool isClaimed(uint32_t address) const;

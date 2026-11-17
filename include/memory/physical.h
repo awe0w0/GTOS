@@ -82,7 +82,7 @@ namespace gtos { namespace memory {
         bool initialize(const void* multibootInfo, uint32_t magic,
                         uint32_t kernelStart, uint32_t kernelEnd,
                         const PhysicalRange* extraReservations = 0, uint32_t extraCount = 0,
-                        uint32_t physicalAddressBits = 32);
+                        uint32_t physicalAddressBits = 32, bool efiMemoryMap = false);
         // Permanently claim one E820/firmware-validated SIPI page below 1 MiB.
         // No matching free: another processor may still execute this trampoline.
         bool claimLowBootstrapPage(uint32_t& address);

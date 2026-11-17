@@ -23,14 +23,16 @@ extern "C" {
     void gtos_work_unexpected_interrupt();
 }
 namespace {
+    const uint32_t Cr4Pae = 1U << 5;
     struct Gate { uint16_t low, selector; uint8_t reserved, access; uint16_t high; } __attribute__((packed));
     struct Idtr { uint16_t limit; uint32_t base; } __attribute__((packed));
     struct InterruptFrame { uint32_t edi,esi,ebp,esp,ebx,edx,ecx,eax,vector,error,eip,cs,eflags; };
     struct Worker {
         CpuWorkQueue queue;
         uint32_t apicId, stackBase, stackPages;
-        volatile uint32_t state, failure, observedCr3, observedCr0, wakes, spurious;
+        volatile uint32_t state, failure, observedCr3, observedCr0, observedCr4, wakes, spurious;
         volatile uint32_t faultVector, faultError, faultInstruction, faultAddress;
+        CpuMemoryTypeFailure memoryTypeFailure;
         // Park protocol: the BSP writes the request, the AP writes the acknowledgement after its last job access.
         volatile uint32_t parkRequested, parkAckedSession, parkAckCount;
         // The queue identity a pool ticket carries, so a raw (slot, id) pair is addressable on one worker only.
@@ -47,7 +49,7 @@ namespace {
     uint32_t Flags() { return gtos_host_flags; }
     uint32_t Cr0() { return gtos_host_cr0; }
     uint32_t Cr3() { return gtos_host_cr3; }
-    // Start() reads CR4 to refuse a PAE machine. That read is privileged, so the seam answers it.
+    // The control-register reads are privileged. The seam answers them on the host.
     uint32_t Cr4() { return gtos_host_cr4; }
     uint32_t Identity() { return gtos_host_identity; }
 #else
@@ -65,6 +67,10 @@ namespace {
     uint32_t State(const Worker& worker) { return __atomic_load_n(&worker.state,__ATOMIC_ACQUIRE); }
     void SetState(Worker& worker,CpuWorkerState state) { __atomic_store_n(&worker.state,(uint32_t)state,__ATOMIC_RELEASE); }
     bool Ready(uint32_t state) { return state==CpuWorkerIdle||state==CpuWorkerBusy; }
+    bool PagingReady(const Worker& worker, uint32_t directory, bool pae) {
+        return Load(worker.observedCr3)==directory && (Load(worker.observedCr0)&0xE0010001U)==0x80010001U
+            && ((Load(worker.observedCr4)&Cr4Pae)!=0)==pae;
+    }
 #ifdef GTOS_CPU_WORK_POOL_HOST_TEST
     // Interrupt masking is not observable on the host; the seam records the intent without executing it.
     class Guard {
@@ -104,6 +110,39 @@ namespace {
         return true;
 #endif
     }
+    bool MappedTables(memory::KernelPaging& paging, uint32_t root, bool pae, const CpuMemoryTypes* types) {
+        if (!root || (root&4095U) || !Mapped(paging,root,4096,true,types)) return false;
+        if (!pae) {
+            const uint32_t* directory=(const uint32_t*)root;
+            for (uint32_t i=0;i<1024;++i) {
+                const uint32_t entry=directory[i];
+                if ((entry&1) && ((entry&0x80) || !Mapped(paging,entry&0xFFFFF000U,4096,true,types)))
+                    return false;
+            }
+            return true;
+        }
+        const uint64_t address=0xFFFFF000ULL, accessed=1U<<5;
+        const uint64_t* pdpt=(const uint64_t*)root;
+        for (uint32_t pd=0;pd<4;++pd) {
+            const uint64_t entry=pdpt[pd];
+            const uint32_t frame=(uint32_t)(entry&address);
+            if (!(entry&1) || (entry&~(address|accessed|1)) || !frame || frame==root
+                || !Mapped(paging,frame,4096,true,types)) return false;
+            for (uint32_t other=0;other<pd;++other)
+                if ((pdpt[other]&address)==frame) return false;
+            const uint64_t* directory=(const uint64_t*)frame;
+            for (uint32_t i=0;i<512;++i) {
+                const uint64_t pde=directory[i];
+                if (!pde) continue;
+                const uint32_t table=(uint32_t)(pde&address);
+                if ((pde&3)!=3 || (pde&~(address|accessed|3)) || !table || table==root
+                    || !Mapped(paging,table,4096,true,types)) return false;
+                for (uint32_t other=0;other<4;++other)
+                    if ((pdpt[other]&address)==table) return false;
+            }
+        }
+        return true;
+    }
 #ifdef GTOS_CPU_WORK_POOL_HOST_TEST
     bool WaitIcr(volatile uint32_t*) { return true; }
 #else
@@ -116,6 +155,7 @@ namespace {
 namespace gtos { namespace hardwarecommunication {
     struct CpuWorkPoolShared {
         uint32_t bspApicId, localApic, directory, count, allocationBase, allocationPages;
+        bool pae, restoreTcgMtrrs;
         // The session every park acknowledgement from this pool is stamped with.
         uint32_t session;
         CpuMemoryTypes memoryTypes;
@@ -219,7 +259,7 @@ int CpuWorkPool::FindWorker(uint32_t apicId)const{
         if (shared->workers[i]->apicId==apicId) return i;
     return -1;
 }
-bool CpuWorkPool::Prepare(CpuStartup& boot,memory::PhysicalMemoryManager& frames){
+bool CpuWorkPool::Prepare(CpuStartup& boot,memory::PhysicalMemoryManager& frames,bool restoreTcgMtrrs){
     if(prepared||activePool||(Flags()&0x200)||(Cr0()&0x80000000U)){error=CpuWorkPoolBadState;return false;}
     CpuStartupReport report=boot.GetReport();
     if(!boot.ReadyToStart()||report.error!=CpuStartupOk||!report.detectedProcessors||report.attemptedAps){error=CpuWorkPoolBadState;return false;}
@@ -231,6 +271,7 @@ bool CpuWorkPool::Prepare(CpuStartup& boot,memory::PhysicalMemoryManager& frames
     if(!frames.allocateContiguous(pages,address,1,0xFFFFEFFFU)){error=CpuWorkPoolNoMemory;return false;}
     shared=(CpuWorkPoolShared*)address;Zero(shared,pages*4096);
     shared->bspApicId=report.detectedProcessors>1?Identity():0;shared->localApic=report.localApicAddress;
+    shared->restoreTcgMtrrs=restoreTcgMtrrs;
     shared->allocationBase=address;shared->allocationPages=pages;
     shared->session=nextSession++;
     if (candidates) shared->memoryTypes=memoryTypes;
@@ -270,13 +311,23 @@ void CpuWorkPool::ApplicationProcessorMain(uint32_t apicId,void* opaque){
         Store(worker->failure,CpuWorkerApicMismatch); SetState(*worker,CpuWorkerFaulted);
         for (;;) asm volatile("cli; hlt");
     }
-    if (!PrepareApplicationProcessorMemory(pool->memoryTypes)) {
+    if (!PrepareApplicationProcessorMemory(pool->memoryTypes,&worker->memoryTypeFailure,pool->restoreTcgMtrrs)) {
         Store(worker->failure,CpuWorkerMemoryTypeMismatch); SetState(*worker,CpuWorkerFaulted);
         for (;;) asm volatile("cli; hlt");
     }
+    if (pool->pae && !(featureD & (1U<<6))) {
+        Store(worker->failure,CpuWorkerPagingMismatch); SetState(*worker,CpuWorkerFaulted);
+        for (;;) asm volatile("cli; hlt");
+    }
+    const uint32_t cr4=(Cr4()&~Cr4Pae)|(pool->pae?Cr4Pae:0U);
+    asm volatile("movl %0,%%cr4"::"r"(cr4):"memory");
     asm volatile("movl %0,%%cr3"::"r"(pool->directory):"memory");
     uint32_t control=Cr0()|0x80010000U;asm volatile("movl %0,%%cr0"::"r"(control):"memory");
-    Store(worker->observedCr3,Cr3());Store(worker->observedCr0,Cr0());
+    Store(worker->observedCr3,Cr3());Store(worker->observedCr0,Cr0());Store(worker->observedCr4,Cr4());
+    if(!PagingReady(*worker,pool->directory,pool->pae)){
+        Store(worker->failure,CpuWorkerPagingMismatch);SetState(*worker,CpuWorkerFaulted);
+        for(;;)asm volatile("cli; hlt");
+    }
     volatile uint32_t* lapic=(volatile uint32_t*)pool->localApic;
     if ((lapic[0x20/4] >> 24) != apicId) {
         Store(worker->failure,CpuWorkerApicMismatch); SetState(*worker,CpuWorkerFaulted);
@@ -288,7 +339,6 @@ void CpuWorkPool::ApplicationProcessorMain(uint32_t apicId,void* opaque){
     if(maxLvt>=4)lapic[0x340/4]=1U<<16;
     if(maxLvt>=5)lapic[0x330/4]=1U<<16;
     lapic[0x80/4]=0;lapic[0xF0/4]=0x1FF;(void)lapic[0x20/4];
-    if(Cr3()!=pool->directory||(Cr0()&0xE0010001U)!=0x80010001U){SetState(*worker,CpuWorkerFaulted);for(;;)asm volatile("cli; hlt");}
     for(;;){
         asm volatile("cli":::"memory");
 #ifdef GTOS_CPU_WORK_POOL_TEST
@@ -340,7 +390,7 @@ bool CpuWorkPool::Start(memory::KernelPaging& paging){
     const CpuMemoryTypes* types=shared->count?&shared->memoryTypes:0;
     if(!stats.prepared||!stats.directoryAddress){error=CpuWorkPoolBadPaging;return false;}
     uint32_t cr4 = Cr4();
-    if ((cr4 & (1U<<5)) || (uint32_t)&kernel_readonly_end <= (uint32_t)&kernel_readonly_start
+    if ((!stats.pae && (cr4 & Cr4Pae)) || (uint32_t)&kernel_readonly_end <= (uint32_t)&kernel_readonly_start
         || !Mapped(paging,(uint32_t)&kernel_readonly_start,
                    (uint32_t)&kernel_readonly_end-(uint32_t)&kernel_readonly_start,false,types)) {
         error=CpuWorkPoolBadPaging; return false;
@@ -351,25 +401,20 @@ bool CpuWorkPool::Start(memory::KernelPaging& paging){
     CpuStartupReport bootReport=startup->GetReport();
     if(shared->count&&!Mapped(paging,bootReport.trampolineAddress,4096,true,types)){error=CpuWorkPoolBadPaging;return false;}
     for(uint32_t i=0;i<shared->count;++i)if(!Mapped(paging,shared->workers[i]->stackBase,shared->workers[i]->stackPages*4096,true,types)){error=CpuWorkPoolBadPaging;return false;}
+    uint32_t workerDirectory=stats.directoryAddress;
     if (shared->count) {
         uint32_t bootAddress,bootBytes;
         if (!startup->GetSharedMemoryRange(bootAddress,bootBytes)
             || !Mapped(paging,bootAddress,bootBytes,true,types)
-            || !Mapped(paging,stats.directoryAddress,4096,true,types)) {
+            || !MappedTables(paging,stats.directoryAddress,stats.pae,types)
+            || !paging.sealForSharedProcessors(&workerDirectory)
+            || (workerDirectory!=stats.directoryAddress && !MappedTables(paging,workerDirectory,stats.pae,types))) {
             error=CpuWorkPoolBadPaging; return false;
         }
-        const uint32_t* directory=(const uint32_t*)stats.directoryAddress;
-        for (uint32_t index=0;index<1024;++index) {
-            uint32_t entry=directory[index];
-            if ((entry&1) && ((entry&0x80) || !Mapped(paging,entry&0xFFFFF000U,4096,true,types))) {
-                error=CpuWorkPoolBadPaging; return false;
-            }
-        }
     }
-    if(shared->count && !paging.sealForSharedProcessors()){error=CpuWorkPoolBadPaging;return false;}
     // Publish the owner before delivery so an AP that enters can identify itself and route its interrupts.
     // Publication is one-way: it is never undone, because an AP may already be reading the block.
-    error=CpuWorkPoolOk;shared->directory=stats.directoryAddress;activePool=shared;
+    error=CpuWorkPoolOk;shared->directory=workerDirectory;shared->pae=stats.pae;activePool=shared;
     // Admission opens only after delivery actually succeeded. Setting it first meant a failed delivery still left the
     // pool claiming it had started, which is a state a caller cannot tell from a real one.
     started=startup->StartPrepared(&ApplicationProcessorMain,shared);
@@ -533,7 +578,7 @@ CpuWorkPoolReport CpuWorkPool::GetReport()const{
     result.configuredWorkers=shared->count;result.sharedPageDirectory=shared->directory;
     result.session=shared->session;
     for(uint32_t i=0;i<shared->count;++i){const Worker& worker=*shared->workers[i];uint32_t state=State(worker);
-        if(Ready(state)&&Load(worker.observedCr3)==shared->directory&&(Load(worker.observedCr0)&0xE0010001U)==0x80010001U)++result.readyWorkers;
+        if(Ready(state)&&PagingReady(worker,shared->directory,shared->pae))++result.readyWorkers;
         if (state==CpuWorkerBusy) ++result.busyWorkers;
         if (state==CpuWorkerFaulted) ++result.faultedWorkers;
         result.completedJobs+=worker.queue.GetStats().completed;
@@ -547,7 +592,10 @@ bool CpuWorkPool::GetWorker(uint32_t index,CpuWorkerSnapshot& result)const{
     const Worker& worker=*shared->workers[index];
     result.apicId=worker.apicId;result.state=(CpuWorkerState)State(worker);
     result.failure=(CpuWorkerFailure)Load(worker.failure);
-    result.observedCr3=Load(worker.observedCr3);result.observedCr0=Load(worker.observedCr0);
+    result.memoryTypeFailure={};
+    if(result.state==CpuWorkerFaulted && result.failure==CpuWorkerMemoryTypeMismatch)
+        result.memoryTypeFailure=worker.memoryTypeFailure;
+    result.observedCr3=Load(worker.observedCr3);result.observedCr0=Load(worker.observedCr0);result.observedCr4=Load(worker.observedCr4);
     result.wakeInterrupts=Load(worker.wakes);result.spuriousInterrupts=Load(worker.spurious);
     result.faultVector=Load(worker.faultVector);result.faultError=Load(worker.faultError);
     result.faultInstruction=Load(worker.faultInstruction);result.faultAddress=Load(worker.faultAddress);
@@ -737,6 +785,7 @@ extern "C" bool gtos_host_ap_enter(uint32_t apicId) {
     if (State(*worker) != CpuWorkerPrepared) return false;
     Store(worker->observedCr3, pool->directory);
     Store(worker->observedCr0, 0x80010011U);
+    Store(worker->observedCr4, pool->pae ? Cr4Pae : 0);
     SetState(*worker, CpuWorkerIdle);
     return true;
 }

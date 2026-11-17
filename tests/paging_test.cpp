@@ -47,7 +47,7 @@ namespace {
     }
     void highMemory() {
         const uint64_t base = 1ULL << 32, cap = 1ULL << 33;
-        MultibootMemoryMapEntry source[] = {
+        static const MultibootMemoryMapEntry source[] = {
             {20, Arena, ArenaBytes, 1},
             {20, base + 1, 6 * 4096 - 1, 1},
             {20, base + 2 * 4096 + 25, 1, 2},
@@ -95,6 +95,42 @@ namespace {
         CHECK(highPaging.abandon() && highFrames.getStatistics().allocatedFrames == retained);
         CHECK(highFrames.freeHigh(first) && highFrames.freeHigh(second) && highFrames.freeHigh(last));
         CHECK(!highFrames.freeHigh(first) && highFrames.getHighStatistics().freeFrames == 3);
+
+        // The BSP aperture is the last page, but an adjacent device mapping
+        // must still be present in the worker root.
+        const PagingDeviceRange device = {0xFFFFE000u, 4096};
+        c.devices = &device;
+        c.deviceCount = 1;
+        const bool prepared = highPaging.prepareIdentity(highFrames, c, true);
+        if (!prepared) { print(KernelPaging::ErrorName(highPaging.getLastError())); print("\n"); }
+        CHECK(prepared);
+        if (!prepared) return;
+        const PagingStatistics beforeSeal = highPaging.getStatistics();
+        const uint32_t allocated = highFrames.getStatistics().allocatedFrames;
+        uint32_t worker = 0;
+        CHECK(highPaging.sealForSharedProcessors(&worker));
+        CHECK(beforeSeal.pae && worker && worker != beforeSeal.directoryAddress);
+        if (worker) {
+            const uint64_t* bspRoot = (const uint64_t*)beforeSeal.directoryAddress;
+            const uint64_t* apRoot = (const uint64_t*)worker;
+            CHECK(apRoot[0] == bspRoot[0] && apRoot[1] == bspRoot[1] && apRoot[2] == bspRoot[2]);
+            CHECK(apRoot[3] != bspRoot[3]);
+            const uint64_t* bspPd = (const uint64_t*)(uint32_t)(bspRoot[3] & ~4095ULL);
+            const uint64_t* apPd = (const uint64_t*)(uint32_t)(apRoot[3] & ~4095ULL);
+            CHECK(apPd[511] != bspPd[511]);
+            uint64_t* bspPt = (uint64_t*)(uint32_t)(bspPd[511] & ~4095ULL);
+            const uint64_t* apPt = (const uint64_t*)(uint32_t)(apPd[511] & ~4095ULL);
+            CHECK(apPt[510] == bspPt[510] && (apPt[510] & ~4095ULL) == device.address);
+            const uint64_t old = bspPt[511];
+            bspPt[511] = base | 3;
+            CHECK(old == 0 && apPt[511] == 0 && highPaging.query(0xFFFFF000u, mapping) &&
+                  mapping.physicalAddress == base);
+            bspPt[511] = old;
+        }
+        uint32_t workerAgain = 0;
+        CHECK(highPaging.sealForSharedProcessors(&workerAgain) && workerAgain == worker);
+        CHECK(highFrames.getStatistics().allocatedFrames == allocated + 3);
+        CHECK(!highPaging.abandon());
     }
     void ownershipAndBounds() {
         CHECK(initialize());

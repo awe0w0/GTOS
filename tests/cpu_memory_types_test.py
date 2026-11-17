@@ -33,11 +33,9 @@ args = parser.parse_args()
 source_path = args.source.resolve()
 includes = args.include or [root / "include"]
 source = source_path.read_text()
-if "wrmsr" in source.lower():
-    raise SystemExit("The memory-type compatibility helper must never write MSRs")
 start=source.index('    uint32_t Control0()')
 end=source.index('    void Clear(',start)
-if source[start:end].count('asm volatile') != 5:
+if source[start:end].count('asm volatile') != 6:
     raise SystemExit('Privileged backend changed; review the test substitution')
 source=source[:start]+'''    uint32_t Control0() { return mockCr0; }
     uint32_t Flags() { return mockFlags; }
@@ -45,9 +43,12 @@ source=source[:start]+'''    uint32_t Control0() { return mockCr0; }
     void Cpuid(uint32_t leaf, uint32_t& a, uint32_t& b, uint32_t& c, uint32_t& d) {
         ++cpuidReads; a=b=c=d=0;
         if (leaf == 0) a=mockMaxLeaf;
-        else if (leaf == 1) d=mockFeatures;
+        else if (leaf == 1) { d=mockFeatures; c=mockTcg ? (1U<<31) : 0; }
         else if (leaf == 0x80000000U) a=mockExtended;
         else if (leaf == 0x80000008U) a=mockBits;
+        else if (leaf == 0x40000000U && mockTcg) {
+            a=0x40000001; b=0x54474354; c=0x43544743; d=0x47435447;
+        }
         else Unexpected("unexpected CPUID leaf");
     }
     uint64_t ReadMsr(uint32_t index) {
@@ -65,20 +66,32 @@ source=source[:start]+'''    uint32_t Control0() { return mockCr0; }
             Unexpected("fixed MTRR read without capability");
         ++reads[index]; return msrs[index];
     }
+    void WriteMsr(uint32_t index, uint64_t value) {
+        if (!mockTcg || (mockCr0&0xE0000000U)!=0x40000000U || msrs[0x2FF]
+            || index>=0x300 || index==0x277)
+            Unexpected("unsafe virtual MTRR write");
+        ++msrWrites; lastWrite=index;
+        if (!dropMtrrWrites) msrs[index]=value;
+    }
 ''' + source[end:]
 old='''    asm volatile("movl %0,%%cr0; wbinvd; movl %1,%%cr0"
                  : : "r"(noFill), "r"(enabled) : "memory");'''
 if source.count(old) != 1:
     raise SystemExit('Cache transition changed; review the test substitution')
 source=source.replace(old, '    MockCacheTransition(noFill, enabled);')
+old='asm volatile("movl %0,%%cr0; wbinvd" : : "r"(noFill) : "memory");'
+if source.count(old) != 1:
+    raise SystemExit('No-fill transition changed; review the test substitution')
+source=source.replace(old, 'mockCr0 = noFill;')
 prefix='''#include <hardwarecommunication/cpu_memory_types.h>
 extern "C" int puts(const char*);
 extern "C" int printf(const char*, ...);
 extern "C" void exit(int);
 uint32_t mockCr0, mockFlags, mockFeatures, mockMaxLeaf, mockExtended, mockBits;
-bool mockCpuid;
+bool mockCpuid, mockTcg, dropMtrrWrites;
 uint64_t msrs[0x300];
 uint32_t reads[0x300], cpuidReads, msrReads, cacheChanges, assertions;
+uint32_t msrWrites, lastWrite;
 void Unexpected(const char* s) { puts(s); exit(1); }
 void MockCacheTransition(uint32_t noFill,uint32_t enabled) {
     if ((noFill&0xE0000000U)!=0x40000000U) Unexpected("invalid no-fill state");
@@ -91,6 +104,7 @@ void MockCacheTransition(uint32_t noFill,uint32_t enabled) {
 void Reset() {
     mockCr0=0x10011; mockFlags=0; mockFeatures=0x11020; mockMaxLeaf=1;
     mockExtended=0x80000008U; mockBits=36; mockCpuid=true;
+    mockTcg=dropMtrrWrites=false; msrWrites=lastWrite=0;
     cpuidReads=msrReads=cacheChanges=0;
     for(uint32_t i=0;i<0x300;++i) { msrs[i]=0; reads[i]=0; }
     msrs[0xFE]=0x508; msrs[0x2FF]=0xC06; msrs[0x277]=0x0007040600070406ULL;
@@ -245,6 +259,33 @@ void CheckRangesAndEncodings() {
     Reset(); CHECK(CaptureMemoryTypes(bsp)); bsp.valid=0;
     CHECK(!MemoryTypeRangeIsWriteBack(bsp,0x200000,4096));
 }
+void CheckTcgMtrrRestoration() {
+    CpuMemoryTypes bsp;
+    CpuMemoryTypeFailure failure;
+    for (uint32_t scenario=0;scenario<6;++scenario) {
+        Reset();
+        CHECK(CaptureMemoryTypes(bsp));
+        msrs[0x2FF]=0;
+        for (uint32_t i=0x200;i<=0x20F;++i) msrs[i]=0;
+        msrs[0x250]=msrs[0x258]=msrs[0x259]=0;
+        for (uint32_t i=0x268;i<=0x26F;++i) msrs[i]=0;
+        mockCr0|=0x60000000U;
+        mockTcg=scenario!=1;
+        if(scenario==2) msrs[0x250]=6; // Valid, but not a reset AP.
+        if(scenario==3) msrs[0x277]^=3ULL<<8; // Different, valid PAT.
+        if(scenario==4) dropMtrrWrites=true;
+        const bool ok=PrepareApplicationProcessorMemory(bsp,&failure,scenario!=0);
+        if(scenario==5) {
+            CHECK(ok && !failure.reason);
+            CHECK(msrWrites==28 && lastWrite==0x2FF && cacheChanges==1);
+            continue;
+        }
+        CHECK(!ok && failure.reason==CpuMemoryTypeFailure::DifferentState);
+        CHECK(failure.index==0x2FF && failure.expected==0xC06 && failure.observed==0);
+        CHECK(!cacheChanges && msrWrites==(scenario==4 ? 28U : 0U));
+        CHECK(mockCr0==(scenario==4 ? 0x40010011U : 0x60010011U));
+    }
+}
 int main() {
     CpuMemoryTypes bsp;
     Reset(); CHECK(CaptureMemoryTypes(bsp)); CHECK(bsp.valid==1);
@@ -314,6 +355,7 @@ int main() {
     Reset(); mockBits=32; CHECK(CaptureMemoryTypes(bsp)); CHECK(PrepareApplicationProcessorMemory(bsp));
     Reset(); mockBits=52; CHECK(CaptureMemoryTypes(bsp)); CHECK(PrepareApplicationProcessorMemory(bsp));
     CheckRangesAndEncodings();
+    CheckTcgMtrrRestoration();
     printf("memory-type mock checks passed: %u assertions, including 60 MSR mismatches\\n", assertions);
     return 0;
 }

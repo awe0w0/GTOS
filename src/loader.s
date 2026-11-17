@@ -11,6 +11,21 @@
     # Multiboot v1 preferred linear RGB framebuffer: graphics,800x600x32.
     .long 0, 800, 600, 32
 
+    # Keep the v1 entry for existing BIOS images. EFI loaders can use v2
+    # to deliver the ACPI root, the memory map and the linear framebuffer.
+    .balign 8
+.Lmultiboot2:
+    .long 0xe85250d6, 0, .Lmultiboot2_end - .Lmultiboot2
+    .long -(0xe85250d6 + (.Lmultiboot2_end - .Lmultiboot2))
+    .short 5, 1
+    .long 20, 800, 600, 32
+    .balign 8
+    .short 6, 0
+    .long 8
+    .short 0, 0
+    .long 8
+.Lmultiboot2_end:
+
 .section .text
 .extern kernelMain
 .extern callConstructors

@@ -23,7 +23,7 @@ namespace gtos { namespace memory {
     };
     struct PagingStatistics {
         uint32_t mappedPages, pageTableFrames, directoryAddress;
-        bool prepared, enabled, sealedForSharing;
+        bool prepared, enabled, sealedForSharing, pae;
     };
     // BSP-only, 4 KiB supervisor mappings. The physical manager and this
     // object must outlive paging. Never free its directory/table frames manually.
@@ -33,7 +33,7 @@ namespace gtos { namespace memory {
         friend class ProcessAddressSpace;
         PhysicalMemoryManager* frames;
         uint32_t directory;
-        uint32_t directories[4], tables[2048];
+        uint32_t directories[4], tables[2048], workerFrames[3];
         uint32_t mappedCount, tableCount, highWindow;
         uint32_t savedCr0, savedCr3, savedCr4;
         bool prepared, active, sharedSealed, pae;
@@ -42,8 +42,8 @@ namespace gtos { namespace memory {
         bool ensureTable(uint32_t index);
         bool addPage(uint32_t virtualAddress, uint64_t physicalAddress, uint32_t flags);
         bool reserveHighWindow();
-        // Used only by the BSP with interrupts disabled. APs never access this
-        // address. Its directory entry stays fixed even while its PTE changes.
+        // Used only by the BSP with interrupts disabled. The worker root keeps
+        // the slot absent. The BSP can change its PTE without an AP shootdown.
         void bindHighWindow(uint64_t physicalAddress);
         bool identityBytes(uint32_t address, uint64_t length);
         bool bootMappings(const MultibootInfo* info);
@@ -72,10 +72,10 @@ namespace gtos { namespace memory {
         // End a private boot-time PAE session before any other CPU or address
         // space shares it. Requires IF=0 and the exact active CR3.
         bool retireBootstrapPae();
-        // One-way mapping freeze before CR3 is shared with APs. Retains tables
-        // permanently, including partial AP-start failures. This is not a TLB
-        // shootdown and does not make the physical allocator safe for AP use.
-        bool sealForSharedProcessors();
+        // One-way freeze. If requested, give workers an immutable root without
+        // the BSP's temporary high-memory window. A new worker root must be
+        // prepared before enabling paging. Retains tables even on AP failure.
+        bool sealForSharedProcessors(uint32_t* workerDirectory = 0);
         // Reclaim all paging frames only before enable(). Active tables live for
         // the kernel lifetime; no silent destructor teardown is performed.
         bool abandon();

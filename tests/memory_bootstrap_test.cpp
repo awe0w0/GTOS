@@ -1,5 +1,6 @@
 #include <memory/physical.h>
 #include <memory/bootstrap.h>
+#include <memory/multiboot2.h>
 using namespace gtos::memory;
 static uint32_t checks=0, failures=0;
 static void print(const char* text){uint32_t length=0;while(text[length])++length;{ uint32_t written; asm volatile("int $0x80" : "=a"(written) : "0"(4),"b"(1),"c"(text),"d"(length) : "memory", "cc"); }}
@@ -86,5 +87,50 @@ static void integrationTests(){
  prepare();map[0].size=19;
  CHECK(!fallback.initialize(&info,MultibootBootMagic,0x100000,0x200000));CHECK(!fallback.claimLowBootstrapPage(address));
 }
-extern "C" int lowMemoryTests(){policyTests();integrationTests();print("Low bootstrap tests: ");number(checks);print(" checks, ");number(failures);print(" failures\n");return failures?1:0;}
+static void taggedHandoffTests(){
+ // The high allocator writes a bitmap into low RAM. In the host process
+ // the corresponding physical address must point to a mapped, owned page.
+ alignas(4096) static uint8_t bitmapRam[4096];
+ alignas(8) uint32_t tags[]={
+  232,0,
+  1,12,0x00656170,0,
+  4,16,640,1023*1024,
+  3,17,0x10000,0x11001,0,0,
+  6,112,24,0,
+  0,0,0x9F000,0,1,0,
+  (uint32_t)bitmapRam,0,sizeof(bitmapRam),0,1,0,
+  0x3FF00000,0,0x10000,0,3,0,
+  0,1,0x4000,0,1,0,
+  14,28,0x20445352,0x20525450,0,0,0,0,
+  12,16,0x3F000000,0,
+  0,8,
+ };
+ static_assert(sizeof(tags)==232,"fixture bytes");
+ Multiboot2Handoff handoff;
+ CHECK(handoff.read(tags,sizeof(tags))&&handoff.fromEfi());
+ const MultibootInfo* boot=handoff.bootInfo();
+ if(!boot)return;
+ CHECK(boot->flags==0x4D && boot->moduleCount==1 && boot->memoryMapLength==4*24);
+ CHECK(handoff.acpiPhysicalLimit()==0x3FF10000);
+ uint32_t acpiBytes=0;
+ const uint8_t* acpi=(const uint8_t*)handoff.acpi(acpiBytes);
+ CHECK(acpi && acpi[0]=='R' && acpiBytes==20);
+ tags[4]=0;
+ CHECK(*(const char*)boot->commandLine=='p'); // The input buffer is no longer retained.
+ const MultibootMemoryMapEntry* memoryMap=(const MultibootMemoryMapEntry*)boot->memoryMap;
+ CHECK(memoryMap[3].address==(1ULL<<32) && memoryMap[3].length==0x4000);
+ static PhysicalMemoryManager efiFrames;
+ CHECK(efiFrames.initialize(boot,MultibootBootMagic,0x100000,0x200000,0,0,33,handoff.fromEfi()));
+ CHECK(efiFrames.getHighStatistics().usableFrames==4);
+ uint32_t first;
+ CHECK(efiFrames.claimLowBootstrapPage(first)&&first==0x12000); // Module pages stay reserved.
+ CHECK(!handoff.read(tags,sizeof(tags)-1)&&!handoff.bootInfo()&&!handoff.fromEfi());
+ CHECK(!handoff.read(tags+1,sizeof(tags)-4));
+ tags[18]=23; CHECK(!handoff.read(tags,sizeof(tags))); tags[18]=24;
+ tags[52]=18; CHECK(!handoff.read(tags,sizeof(tags))); tags[52]=12; // Live EFI services.
+ tags[52]=1; CHECK(!handoff.read(tags,sizeof(tags))); tags[52]=12; // Duplicate command line.
+ tags[57]=9; CHECK(!handoff.read(tags,sizeof(tags))); tags[57]=8;
+ CHECK(handoff.read(tags,sizeof(tags)));
+}
+extern "C" int lowMemoryTests(){policyTests();integrationTests();taggedHandoffTests();print("Low bootstrap tests: ");number(checks);print(" checks, ");number(failures);print(" failures\n");return failures?1:0;}
 asm(".global _start\n_start:\n andl $-16,%esp\n call lowMemoryTests\n movl %eax,%ebx\n movl $1,%eax\n int $0x80\n");

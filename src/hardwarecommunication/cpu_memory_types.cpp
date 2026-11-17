@@ -48,6 +48,10 @@ namespace {
         asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(index) : "memory");
         return ((uint64_t)high << 32) | low;
     }
+    void WriteMsr(uint32_t index, uint64_t value) {
+        asm volatile("wrmsr" : : "c"(index), "a"((uint32_t)value),
+                     "d"((uint32_t)(value >> 32)) : "memory");
+    }
     void Clear(CpuMemoryTypes& result) {
         // Volatile stores keep this freestanding even without -fno-builtin.
         volatile uint8_t* bytes = (volatile uint8_t*)&result;
@@ -184,18 +188,44 @@ namespace {
         result.valid = 1;
         return true;
     }
-    bool Equivalent(const CpuMemoryTypes& a, const CpuMemoryTypes& b) {
-        if (a.valid != 1 || b.valid != 1 || a.cpuidFeatures != b.cpuidFeatures
-            || a.physicalAddressBits != b.physicalAddressBits
-            || a.capability != b.capability || a.variableCount != b.variableCount
-            || a.defaultType != b.defaultType || a.pat != b.pat) return false;
+    bool Different(CpuMemoryTypeFailure* failure, uint32_t index, uint64_t expected, uint64_t observed) {
+        if (expected == observed) return false;
+        if (failure) *failure = {CpuMemoryTypeFailure::DifferentState, index, expected, observed};
+        return true;
+    }
+    bool CanRestoreTcgMtrrs(const CpuMemoryTypes& bsp, const CpuMemoryTypes& ap) {
+        // QEMU TCG resets the per-vCPU MTRRs on INIT, but preserves PAT.
+        // Do not treat an arbitrary firmware or hypervisor mismatch as reset.
+        if (!(bsp.cpuidFeatures & FeatureMtrr) || !(bsp.defaultType & MtrrEnable)
+            || !ValidConfiguration(bsp) || bsp.cpuidFeatures != ap.cpuidFeatures
+            || bsp.physicalAddressBits != ap.physicalAddressBits
+            || bsp.capability != ap.capability || bsp.pat != ap.pat || ap.defaultType)
+            return false;
+        for (uint32_t i = 0; i < ap.variableCount; ++i)
+            if (ap.variableBase[i] || ap.variableMask[i]) return false;
+        for (uint32_t i = 0; i < CpuMemoryTypes::FixedMtrrCount; ++i)
+            if (ap.fixed[i]) return false;
+        uint32_t a, b, c, d;
+        Cpuid(1, a, b, c, d);
+        if (!(c & (1U << 31))) return false;
+        Cpuid(0x40000000, a, b, c, d);
+        // The little-endian words of QEMU's "TCGTCGTCGTCG" hypervisor ID.
+        return a >= 0x40000001 && b == 0x54474354 && c == 0x43544743 && d == 0x47435447;
+    }
+    bool Equivalent(const CpuMemoryTypes& a, const CpuMemoryTypes& b, CpuMemoryTypeFailure* failure) {
+        if (Different(failure, 0x10000, a.cpuidFeatures, b.cpuidFeatures)
+            || Different(failure, 0x10001, a.physicalAddressBits, b.physicalAddressBits)
+            || Different(failure, 0xFE, a.capability, b.capability)
+            || Different(failure, 0x10002, a.variableCount, b.variableCount)
+            || Different(failure, 0x2FF, a.defaultType, b.defaultType)
+            || Different(failure, 0x277, a.pat, b.pat)) return false;
         // b was captured with a checked bound, and counts now match.
         for (uint32_t i = 0; i < b.variableCount; ++i)
-            if (a.variableBase[i] != b.variableBase[i]
-                || a.variableMask[i] != b.variableMask[i]) return false;
+            if (Different(failure, 0x200 + i * 2, a.variableBase[i], b.variableBase[i])
+                || Different(failure, 0x201 + i * 2, a.variableMask[i], b.variableMask[i])) return false;
         if (b.capability & FixedMtrrs)
             for (uint32_t i = 0; i < CpuMemoryTypes::FixedMtrrCount; ++i)
-                if (a.fixed[i] != b.fixed[i]) return false;
+                if (Different(failure, FixedMsrs[i], a.fixed[i], b.fixed[i])) return false;
         return true;
     }
 }
@@ -221,21 +251,47 @@ bool gtos::hardwarecommunication::MemoryTypeRangeIsWriteBack(
 }
 
 bool gtos::hardwarecommunication::PrepareApplicationProcessorMemory(
-    const CpuMemoryTypes& bootstrap) {
+    const CpuMemoryTypes& bootstrap, CpuMemoryTypeFailure* failure, bool restoreTcgMtrrs) {
+    if (failure) *failure = {};
     const uint32_t cr0 = Control0();
-    if (bootstrap.valid != 1 || !(cr0 & Cr0Protected)
-        || (cr0 & Cr0Paging) || (Flags() & InterruptEnable)) return false;
+    const uint32_t flags = Flags();
+    if (bootstrap.valid != 1 || !(cr0 & Cr0Protected) || (cr0 & Cr0Paging) || (flags & InterruptEnable)) {
+        if (failure) *failure = {CpuMemoryTypeFailure::InvalidEntryState, 0, 0,
+                                 ((uint64_t)flags << 32) | cr0};
+        return false;
+    }
     CpuMemoryTypes application;
-    if (!ReadMemoryTypes(application) || !Equivalent(bootstrap, application)) return false;
-
-    // Intel SDM Vol. 3A 12.5.1, 12.5.3 and 12.11.8: normalize INIT's CD/NW
-    // state to CD=1/NW=0, write back/invalidate, then enter normal cache mode.
-    // No MTRR/PAT writes take place, so this is NOT the global MTRR-update
-    // algorithm. PG is already zero and remains zero; no stale translations
-    // are used and the caller installs its shared CR3 before enabling paging.
+    if (!ReadMemoryTypes(application)) {
+        if (failure) *failure = {CpuMemoryTypeFailure::InvalidSnapshot, 0xFE,
+                                 bootstrap.capability, application.capability};
+        return false;
+    }
     const uint32_t noFill = (cr0 | Cr0CacheDisable) & ~Cr0NotWriteThrough;
     const uint32_t enabled = cr0 & ~(Cr0CacheDisable | Cr0NotWriteThrough);
+    if (!Equivalent(bootstrap, application, failure)) {
+        if (!restoreTcgMtrrs || !CanRestoreTcgMtrrs(bootstrap, application)) return false;
+        // This AP has no paging, interrupts or jobs, and its MTRRs are disabled.
+        // Stop cache fills before writing the ranges. Publish their enable bits
+        // last, and keep this AP offline with caching disabled on bad readback.
+        asm volatile("movl %0,%%cr0; wbinvd" : : "r"(noFill) : "memory");
+        if (bootstrap.capability & FixedMtrrs)
+            for (uint32_t i = 0; i < CpuMemoryTypes::FixedMtrrCount; ++i)
+                WriteMsr(FixedMsrs[i], bootstrap.fixed[i]);
+        for (uint32_t i = 0; i < bootstrap.variableCount; ++i) {
+            WriteMsr(0x200 + i * 2, bootstrap.variableBase[i]);
+            WriteMsr(0x201 + i * 2, bootstrap.variableMask[i]);
+        }
+        WriteMsr(0x2FF, bootstrap.defaultType);
+        if (!ReadMemoryTypes(application) || !Equivalent(bootstrap, application, failure)) return false;
+        if (failure) *failure = {};
+    }
+
+    // Normalize INIT's CD/NW state to CD=1/NW=0, flush, then enter normal
+    // cache mode. The caller installs its shared CR3 before enabling paging.
     asm volatile("movl %0,%%cr0; wbinvd; movl %1,%%cr0"
                  : : "r"(noFill), "r"(enabled) : "memory");
-    return Control0() == enabled;
+    const uint32_t observed = Control0();
+    if (observed == enabled) return true;
+    if (failure) *failure = {CpuMemoryTypeFailure::CacheTransitionFailed, 0, enabled, observed};
+    return false;
 }

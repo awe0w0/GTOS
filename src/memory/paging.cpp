@@ -28,12 +28,14 @@ KernelPaging::KernelPaging() : frames(0), directory(0), mappedCount(0),
     sharedSealed(false), pae(false), error(PagingOk) {
     for (uint32_t& page : directories) page = 0;
     for (uint32_t& page : tables) page = 0;
+    for (uint32_t& page : workerFrames) page = 0;
 }
 bool KernelPaging::fail(PagingError value) { error = value; return false; }
 bool KernelPaging::ownsPagingFrame(uint32_t address) const {
     if (address == directory) return true;
     for (uint32_t page : directories) if (page == address) return true;
     for (uint32_t page : tables) if (page == address) return true;
+    for (uint32_t page : workerFrames) if (page == address) return true;
     return false;
 }
 void KernelPaging::writeEntry(uint32_t page, uint32_t index, uint64_t value) {
@@ -336,10 +338,34 @@ bool KernelPaging::retireBootstrapPae() {
     active = false;
     return abandon();
 }
-bool KernelPaging::sealForSharedProcessors() {
+bool KernelPaging::sealForSharedProcessors(uint32_t* workerDirectory) {
     InterruptGuard guard;
+    if (workerDirectory) *workerDirectory = 0;
     if (!prepared) return fail(PagingBadState);
+    if (workerDirectory && highWindow && !workerFrames[0]) {
+        if (active || sharedSealed || pagingAlreadyEnabled() || leafLocked(highWindow))
+            return fail(PagingUnsafeContext);
+        uint32_t copy[3] = {};
+        for (uint32_t& page : copy) {
+            if (!frames->allocate(page) || !mappedBytes(page, 4096, true)) {
+                const PagingError reason = page ? PagingUnsafeContext : PagingNoMemory;
+                for (uint32_t allocated : copy) if (allocated) frames->free(allocated);
+                return fail(reason);
+            }
+        }
+        const uint32_t di = directoryIndex(highWindow), pd = di / 512, pde = di % 512;
+        clearPage(copy[0]);
+        for (uint32_t i = 0; i < 4; ++i)
+            writeEntry(copy[0], i, (i == pd ? copy[1] : directories[i]) | Present);
+        for (uint32_t i = 0; i < 512; ++i) {
+            const uint64_t value = entry(directories[pd], i);
+            writeEntry(copy[1], i, i == pde ? copy[2] | (value & ~PhysicalMask) : value);
+            writeEntry(copy[2], i, i == leafIndex(highWindow) ? 0 : entry(tables[di], i));
+        }
+        for (uint32_t i = 0; i < 3; ++i) workerFrames[i] = copy[i];
+    }
     sharedSealed = true;
+    if (workerDirectory) *workerDirectory = workerFrames[0] ? workerFrames[0] : directory;
     error = PagingOk;
     return true;
 }
@@ -349,7 +375,7 @@ bool KernelPaging::usesAllocator(const PhysicalMemoryManager& allocator) const {
 }
 PagingStatistics KernelPaging::getStatistics() const {
     InterruptGuard guard;
-    PagingStatistics result = {mappedCount, tableCount, directory, prepared, active, sharedSealed};
+    PagingStatistics result = {mappedCount, tableCount, directory, prepared, active, sharedSealed, pae};
     return result;
 }
 PagingError KernelPaging::getLastError() const { return error; }

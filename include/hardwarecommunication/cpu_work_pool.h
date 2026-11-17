@@ -1,5 +1,6 @@
 #ifndef __GTOS__HARDWARECOMMUNICATION__CPU_WORK_POOL_H
 #define __GTOS__HARDWARECOMMUNICATION__CPU_WORK_POOL_H
+#include <hardwarecommunication/cpu_memory_types.h>
 #include <hardwarecommunication/cpu_startup.h>
 #include <hardwarecommunication/cpu_work_queue.h>
 #include <memory/paging.h>
@@ -8,7 +9,8 @@ namespace gtos { namespace hardwarecommunication {
     // BSP may reclaim. It is reached only through CloseAdmission followed by Drain.
     enum CpuWorkerState { CpuWorkerPrepared, CpuWorkerStarting, CpuWorkerIdle, CpuWorkerBusy, CpuWorkerFaulted,
         CpuWorkerParkRequested, CpuWorkerParked };
-    enum CpuWorkerFailure { CpuWorkerNoFailure, CpuWorkerMemoryTypeMismatch, CpuWorkerApicMismatch, CpuWorkerSelfTestMismatch, CpuWorkerException };
+    enum CpuWorkerFailure { CpuWorkerNoFailure, CpuWorkerMemoryTypeMismatch, CpuWorkerApicMismatch,
+        CpuWorkerSelfTestMismatch, CpuWorkerException, CpuWorkerPagingMismatch };
     enum CpuWorkPoolError { CpuWorkPoolOk, CpuWorkPoolBadState, CpuWorkPoolWrongCpu,
         CpuWorkPoolNoMemory, CpuWorkPoolBadPaging, CpuWorkPoolStartupFailed,
         CpuWorkPoolReadyTimeout, CpuWorkPoolWakeFailed, CpuWorkPoolBadMemoryTypes, CpuWorkPoolWorkerSetupFailed,
@@ -31,7 +33,8 @@ namespace gtos { namespace hardwarecommunication {
         uint32_t apicId;
         CpuWorkerState state;
         CpuWorkerFailure failure;
-        uint32_t observedCr3, observedCr0, wakeInterrupts, spuriousInterrupts;
+        CpuMemoryTypeFailure memoryTypeFailure;
+        uint32_t observedCr3, observedCr0, observedCr4, wakeInterrupts, spuriousInterrupts;
         uint32_t faultVector, faultError, faultInstruction, faultAddress;
         WorkQueueStats queue;
         // The park protocol. `parkRequested` is written by the BSP; `parkAckedSession` is written by the AP itself
@@ -112,7 +115,8 @@ namespace gtos { namespace hardwarecommunication {
     public:
         CpuWorkPool();
         // Call after CpuStartup::Prepare and before KernelPaging::prepareIdentity.
-        bool Prepare(CpuStartup& boot, memory::PhysicalMemoryManager& frames);
+        bool Prepare(CpuStartup& boot, memory::PhysicalMemoryManager& frames,
+                     bool restoreTcgMtrrs = false);
         // Seals a prepared shared identity directory, then invokes StartPrepared
         // with a private AP continuation. BSP paging may be enabled afterward.
         bool Start(memory::KernelPaging& paging);

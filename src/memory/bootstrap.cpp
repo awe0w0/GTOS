@@ -49,6 +49,13 @@ bool LowBootstrapPool::restrictFirmware(uint32_t conventionalKB, uint32_t ebdaAd
     firmwareBoundsValid = true;
     return true;
 }
+bool LowBootstrapPool::restrictEfiMemoryMap() {
+    if (claimedCount) return false;
+    reserve(0, 0x10000);
+    reserve(0xA0000, 0x60000);
+    firmwareBoundsValid = true;
+    return true;
+}
 bool LowBootstrapPool::claim(uint32_t& address) {
     address = 0;
     if (!firmwareBoundsValid) return false;

@@ -233,6 +233,7 @@ void LowBootstrapPool::addAvailable(uint64_t, uint64_t) { for (;;) asm volatile(
 // halting here would fault on a call the unit is supposed to make.
 void LowBootstrapPool::reserve(uint64_t address, uint64_t length) { (void)address; (void)length; }
 bool LowBootstrapPool::restrictFirmware(uint32_t, uint32_t, uint32_t) { return false; }
+bool LowBootstrapPool::restrictEfiMemoryMap() { return false; }
 bool LowBootstrapPool::claim(uint32_t&) { return false; }
 bool LowBootstrapPool::intersectsClaimed(uint64_t, uint64_t) const { return false; }
 bool LowBootstrapPool::isClaimed(uint32_t) const { return false; }

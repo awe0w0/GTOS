@@ -38,6 +38,7 @@ namespace gtos { namespace hardwarecommunication {
         bool DetectMp(uint32_t accessiblePhysicalBytes);
         bool TryAcpiRoot(uint32_t address, bool xsdt, uint32_t accessiblePhysicalBytes);
         bool TryRsdp(uint32_t address, uint32_t accessiblePhysicalBytes);
+        bool ParseRsdp(const void* table, uint32_t bytes, uint32_t accessiblePhysicalBytes);
         bool TryMpPointer(uint32_t address, uint32_t accessiblePhysicalBytes);
     public:
         CpuManager();
@@ -46,7 +47,8 @@ namespace gtos { namespace hardwarecommunication {
         // Boot-time, identity-mapped physical memory only. The caller supplies
         // the smaller of its accessible segment/mapping limit and physical RAM
         // extent; out-of-range firmware pointers are skipped, never followed.
-        void Detect(uint32_t accessiblePhysicalBytes = 64U * 1024U * 1024U);
+        void Detect(uint32_t accessiblePhysicalBytes = 64U * 1024U * 1024U,
+                    const void* bootRsdp = 0, uint32_t bootRsdpBytes = 0);
         const CpuInfo& GetInfo() const;
         uint32_t DetectedLogicalProcessors() const;
         uint32_t OnlineProcessors() const;

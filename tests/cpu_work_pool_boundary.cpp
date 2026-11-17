@@ -72,7 +72,7 @@ uint32_t gtos_host_machine_memory_types = 1;
 // Paging: whether a directory exists and whether sealing succeeds.
 uint32_t gtos_host_machine_paging_prepared = 1;
 // Start() walks the directory as memory, so it is a real zeroed array too.
-uint32_t gtos_host_machine_paging_directory_storage[1024];
+__attribute__((aligned(4096))) uint32_t gtos_host_machine_paging_directory_storage[1024];
 uint32_t gtos_host_machine_paging_directory = 0;
 uint32_t gtos_host_machine_paging_seal = 1;
 uint32_t gtos_host_machine_paging_sealed = 0;
@@ -200,7 +200,9 @@ bool CaptureMemoryTypes(CpuMemoryTypes& result) {
 bool MemoryTypeRangeIsWriteBack(const CpuMemoryTypes& types, uint32_t, uint32_t length) {
     return types.valid != 0 && length != 0;
 }
-bool PrepareApplicationProcessorMemory(const CpuMemoryTypes& bootstrap) { return bootstrap.valid != 0; }
+bool PrepareApplicationProcessorMemory(const CpuMemoryTypes& bootstrap,CpuMemoryTypeFailure*,bool) {
+    return bootstrap.valid != 0;
+}
 
 } }
 
@@ -273,6 +275,7 @@ void LowBootstrapPool::clear() {}
 void LowBootstrapPool::addAvailable(uint64_t, uint64_t) { UnreachablePool(); }
 void LowBootstrapPool::reserve(uint64_t, uint64_t) { UnreachablePool(); }
 bool LowBootstrapPool::restrictFirmware(uint32_t, uint32_t, uint32_t) { return false; }
+bool LowBootstrapPool::restrictEfiMemoryMap() { return false; }
 bool LowBootstrapPool::claim(uint32_t&) { return false; }
 bool LowBootstrapPool::intersectsClaimed(uint64_t, uint64_t) const { return false; }
 bool LowBootstrapPool::isClaimed(uint32_t) const { return false; }
@@ -318,6 +321,7 @@ PagingStatistics KernelPaging::getStatistics() const {
     answer.prepared = gtos_host_machine_paging_prepared != 0;
     answer.enabled = false;
     answer.sealedForSharing = gtos_host_machine_paging_sealed != 0;
+    answer.pae = false;
     return answer;
 }
 bool KernelPaging::query(uint32_t virtualAddress, PagingMapping& result) const {
@@ -341,9 +345,11 @@ bool KernelPaging::query(uint32_t virtualAddress, PagingMapping& result) const {
     result.managed = inArena;
     return true;
 }
-bool KernelPaging::sealForSharedProcessors() {
+bool KernelPaging::sealForSharedProcessors(uint32_t* workerDirectory) {
+    if (workerDirectory) *workerDirectory = 0;
     if (!gtos_host_machine_paging_seal) return false;
     gtos_host_machine_paging_sealed = 1;
+    if (workerDirectory) *workerDirectory = gtos_host_machine_paging_directory;
     return true;
 }
 
