@@ -538,11 +538,20 @@ void ShellPlatformDelegate::EnableUIControl(Shell* shell, UIControl, bool) {
 }
 
 void ShellPlatformDelegate::SetAddressBarURL(Shell* shell, const GURL&) {
-  platform_->browser->UpdateLocation(shell);
+  auto* browser = platform_->browser.get();
+  browser->UpdateLocation(shell);
+  browser->UpdateNavigation(shell);
+  // A committed history entry can change without a new TitleWasSet event.
+  browser->UpdateTabTitle(shell);
 }
 
-void ShellPlatformDelegate::SetIsLoading(Shell* shell, bool) {
-  platform_->browser->UpdateNavigation(shell);
+void ShellPlatformDelegate::SetIsLoading(Shell* shell, bool is_loading) {
+  auto* browser = platform_->browser.get();
+  browser->UpdateNavigation(shell);
+  if (!is_loading) {
+    // An untitled document can finish without a TitleWasSet notification.
+    browser->UpdateTabTitle(shell);
+  }
 }
 
 void ShellPlatformDelegate::SetTitle(Shell* shell, const std::u16string&) {
