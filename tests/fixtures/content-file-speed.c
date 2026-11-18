@@ -3,6 +3,7 @@
 #include <process/file_abi.h>
 
 enum { TransferBytes = GTOS_FILE_TRANSFER_LIMIT, BlockCount = 8192 };
+enum { PositionedReadCount = 512, PositionedReadBytes = 512 };
 static const char input_path[] = "/content/io-seed.bin";
 static const char output_path[] = "/content/io-write.bin";
 static unsigned received[TransferBytes / sizeof(unsigned)];
@@ -51,10 +52,33 @@ static int read_and_check(int handle, unsigned* pattern, unsigned tag) {
            control(GTOS_SYS_FILE_CLOSE, handle) == 0;
 }
 
+static int read_positioned_and_check(const unsigned* pattern, unsigned tag) {
+    int handle = open_file(input_path, sizeof(input_path), GTOS_FILE_READ);
+    if (handle <= 0) return 0;
+    for (unsigned index = 0; index < PositionedReadCount; ++index) {
+        unsigned block = (17 + index * 4051) % BlockCount;
+        unsigned byte = (index % (TransferBytes / PositionedReadBytes)) * PositionedReadBytes;
+        GtosFilePositionedTransferRequest request = {
+            GTOS_FILE_ABI_VERSION, (unsigned)handle, (unsigned)received, PositionedReadBytes,
+            block * TransferBytes + byte, 0
+        };
+        if (call(GTOS_SYS_FILE_READ_AT, &request, sizeof(request)) != PositionedReadBytes) return 0;
+        for (unsigned word = 0; word < PositionedReadBytes / sizeof(unsigned); ++word) {
+            unsigned position = byte / sizeof(unsigned) + word;
+            if (received[word] != (position ? pattern[position] : block ^ tag)) return 0;
+        }
+    }
+    return control(GTOS_SYS_FILE_CLOSE, handle) == 0;
+}
+
 int browser_probe_main(void) {
     unsigned pattern[TransferBytes / sizeof(unsigned)];
     for (unsigned word = 1; word < TransferBytes / sizeof(unsigned); ++word)
         pattern[word] = 0x6ca49d81u ^ (word * 0x9e3779b9u);
+
+    Log("GTOS FILE SPEED POSITIONED BEGIN\n");
+    if (!read_positioned_and_check(pattern, 0xa23f89d5u)) return 7;
+    Log("GTOS FILE SPEED POSITIONED END\n");
 
     Log("GTOS FILE SPEED READ BEGIN\n");
     int handle = open_file(input_path, sizeof(input_path), GTOS_FILE_READ);

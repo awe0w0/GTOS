@@ -41,10 +41,10 @@ static inline void lfs_cache_zero(lfs_t *lfs, lfs_cache_t *pcache) {
     pcache->block = LFS_BLOCK_NULL;
 }
 
-static int lfs_bd_read(lfs_t *lfs,
+static int lfs_bd_read_(lfs_t *lfs,
         const lfs_cache_t *pcache, lfs_cache_t *rcache, lfs_size_t hint,
         lfs_block_t block, lfs_off_t off,
-        void *buffer, lfs_size_t size) {
+        void *buffer, lfs_size_t size, bool readahead) {
     uint8_t *data = buffer;
     if (off+size > lfs->cfg->block_size
             || (lfs->block_count && block >= lfs->block_count)) {
@@ -88,8 +88,12 @@ static int lfs_bd_read(lfs_t *lfs,
             diff = lfs_min(diff, rcache->off-off);
         }
 
-        if (size >= hint && off % lfs->cfg->read_size == 0 &&
-                size >= lfs->cfg->read_size) {
+        // For demand reads, keep a short unaligned range in one I/O.
+        // Large transfers and whole read units can still bypass the cache.
+        bool direct = readahead ? size >= hint
+                : diff >= lfs->cfg->cache_size || diff % lfs->cfg->read_size == 0;
+        if (direct && off % lfs->cfg->read_size == 0 &&
+                diff >= lfs->cfg->read_size) {
             // bypass cache?
             diff = lfs_aligndown(diff, lfs->cfg->read_size);
             int err = lfs->cfg->read(lfs->cfg, block, off, data, diff);
@@ -110,7 +114,7 @@ static int lfs_bd_read(lfs_t *lfs,
         rcache->off = lfs_aligndown(off, lfs->cfg->read_size);
         rcache->size = lfs_min(
                 lfs_min(
-                    lfs_alignup(off+hint, lfs->cfg->read_size),
+                    lfs_alignup(off+(readahead ? hint : diff), lfs->cfg->read_size),
                     lfs->cfg->block_size)
                 - rcache->off,
                 lfs->cfg->cache_size);
@@ -123,6 +127,13 @@ static int lfs_bd_read(lfs_t *lfs,
     }
 
     return 0;
+}
+
+static int lfs_bd_read(lfs_t *lfs,
+        const lfs_cache_t *pcache, lfs_cache_t *rcache, lfs_size_t hint,
+        lfs_block_t block, lfs_off_t off,
+        void *buffer, lfs_size_t size) {
+    return lfs_bd_read_(lfs, pcache, rcache, hint, block, off, buffer, size, true);
 }
 
 static int lfs_bd_cmp(lfs_t *lfs,
@@ -590,9 +601,9 @@ static int lfs1_traverse(lfs_t *lfs,
 static int lfs_dir_rewind_(lfs_t *lfs, lfs_dir_t *dir);
 
 static lfs_ssize_t lfs_file_flushedread(lfs_t *lfs, lfs_file_t *file,
-        void *buffer, lfs_size_t size);
+        void *buffer, lfs_size_t size, bool readahead);
 static lfs_ssize_t lfs_file_read_(lfs_t *lfs, lfs_file_t *file,
-        void *buffer, lfs_size_t size);
+        void *buffer, lfs_size_t size, bool readahead);
 static int lfs_file_close_(lfs_t *lfs, lfs_file_t *file);
 static lfs_soff_t lfs_file_size_(lfs_t *lfs, lfs_file_t *file);
 
@@ -3377,7 +3388,7 @@ static int lfs_file_flush(lfs_t *lfs, lfs_file_t *file) {
                 // copy over a byte at a time, leave it up to caching
                 // to make this efficient
                 uint8_t data;
-                lfs_ssize_t res = lfs_file_flushedread(lfs, &orig, &data, 1);
+                lfs_ssize_t res = lfs_file_flushedread(lfs, &orig, &data, 1, true);
                 if (res < 0) {
                     return res;
                 }
@@ -3498,7 +3509,7 @@ static int lfs_file_sync_(lfs_t *lfs, lfs_file_t *file) {
 #endif
 
 static lfs_ssize_t lfs_file_flushedread(lfs_t *lfs, lfs_file_t *file,
-        void *buffer, lfs_size_t size) {
+        void *buffer, lfs_size_t size, bool readahead) {
     uint8_t *data = buffer;
     lfs_size_t nsize = size;
 
@@ -3541,9 +3552,9 @@ static lfs_ssize_t lfs_file_flushedread(lfs_t *lfs, lfs_file_t *file,
                 return err;
             }
         } else {
-            int err = lfs_bd_read(lfs,
+            int err = lfs_bd_read_(lfs,
                     NULL, &file->cache, lfs->cfg->block_size,
-                    file->block, file->off, data, diff);
+                    file->block, file->off, data, diff, readahead);
             if (err) {
                 return err;
             }
@@ -3559,7 +3570,7 @@ static lfs_ssize_t lfs_file_flushedread(lfs_t *lfs, lfs_file_t *file,
 }
 
 static lfs_ssize_t lfs_file_read_(lfs_t *lfs, lfs_file_t *file,
-        void *buffer, lfs_size_t size) {
+        void *buffer, lfs_size_t size, bool readahead) {
     LFS_ASSERT((file->flags & LFS_O_RDONLY) == LFS_O_RDONLY);
 
 #ifndef LFS_READONLY
@@ -3572,7 +3583,7 @@ static lfs_ssize_t lfs_file_read_(lfs_t *lfs, lfs_file_t *file,
     }
 #endif
 
-    return lfs_file_flushedread(lfs, file, buffer, size);
+    return lfs_file_flushedread(lfs, file, buffer, size, readahead);
 }
 
 
@@ -3779,7 +3790,7 @@ static int lfs_file_truncate_(lfs_t *lfs, lfs_file_t *file, lfs_off_t size) {
             // read our data into rcache temporarily
             lfs_cache_drop(lfs, &lfs->rcache);
             res = lfs_file_flushedread(lfs, file,
-                    lfs->rcache.buffer, size);
+                    lfs->rcache.buffer, size, true);
             if (res < 0) {
                 return (int)res;
             }
@@ -6218,6 +6229,11 @@ int lfs_file_sync(lfs_t *lfs, lfs_file_t *file) {
 
 lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file,
         void *buffer, lfs_size_t size) {
+    return lfs_file_read_with_readahead(lfs, file, buffer, size, true);
+}
+
+lfs_ssize_t lfs_file_read_with_readahead(lfs_t *lfs, lfs_file_t *file,
+        void *buffer, lfs_size_t size, bool readahead) {
     int err = LFS_LOCK(lfs->cfg);
     if (err) {
         return err;
@@ -6226,7 +6242,7 @@ lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file,
             (void*)lfs, (void*)file, buffer, size);
     LFS_ASSERT(lfs_mlist_isopen(lfs->mlist, (struct lfs_mlist*)file));
 
-    lfs_ssize_t res = lfs_file_read_(lfs, file, buffer, size);
+    lfs_ssize_t res = lfs_file_read_(lfs, file, buffer, size, readahead);
 
     LFS_TRACE("lfs_file_read -> %"PRId32, res);
     LFS_UNLOCK(lfs->cfg);

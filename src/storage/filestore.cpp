@@ -290,7 +290,9 @@ int32_t FileStore::ReadFileAt(uint32_t owner,uint32_t handle,int64_t offset,void
     if (!slot||slot->mode==Write) return LFS_ERR_BADF;
     if ((!buffer&&size)||size>0x7FFFFFFFU) return LFS_ERR_INVAL;
     return TransferAt(filesystem,slot->file,offset,size,[&] {
-        return lfs_file_read(&filesystem,&slot->file,buffer,size);
+        // Restoring the shared cursor can discard speculative data. Fetch
+        // only the requested sectors on the large-block resource volume.
+        return lfs_file_read_with_readahead(&filesystem,&slot->file,buffer,size,config.block_size==BlockSize);
     });
 }
 int32_t FileStore::WriteFileAt(uint32_t owner,uint32_t handle,int64_t offset,const void* buffer,uint32_t size) {

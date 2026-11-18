@@ -614,6 +614,11 @@ int lfs_file_sync(lfs_t *lfs, lfs_file_t *file);
 lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file,
         void *buffer, lfs_size_t size);
 
+// GTOS extension. With readahead disabled, outlined file data is fetched
+// only for the requested range, rounded to the device read granularity.
+lfs_ssize_t lfs_file_read_with_readahead(lfs_t *lfs, lfs_file_t *file,
+        void *buffer, lfs_size_t size, bool readahead);
+
 #ifndef LFS_READONLY
 // Write data to file
 //

@@ -57,7 +57,7 @@ struct NvmeTestFixture {
     static uint8_t media[2048U*512U];
     static uint32_t registers[8192U/4U];
     static uint32_t submission,completion,phase,commands,reads,writes,flushes,batches;
-    static uint32_t multiSectorReads,blockErases,multiSectorPrograms;
+    static uint32_t multiSectorReads,readSectors,blockErases,multiSectorPrograms;
     static uint32_t failAt;
     static bool reverse,badCid,resetFails,dropCompletion;
     static uint8_t* mutate;
@@ -77,7 +77,7 @@ struct NvmeTestFixture {
             for (uint32_t page=1;page<128;page++) prps[page-1]=data+page*4096U;
         }
         submission=completion=commands=reads=writes=flushes=batches=multiSectorReads=0;phase=1;
-        blockErases=multiSectorPrograms=0;
+        readSectors=blockErases=multiSectorPrograms=0;
         failAt=0xFFFFFFFFU;reverse=badCid=resetFails=dropCompletion=false;mutate=nullptr;
         releases=0;pciCommand=4;clockTicks=0;registers[0x1C/4]=1;
     }
@@ -134,6 +134,7 @@ struct NvmeTestFixture {
                     }
                     else {
                         ++reads;
+                        readSectors+=count;
                         if (count>1) ++multiSectorReads;
                         Copy(bounce,media+(uint32_t)first*512U,bytes);
                     }
@@ -155,7 +156,8 @@ uint32_t NvmeTestFixture::registers[8192U/4U];
 uint32_t NvmeTestFixture::submission,NvmeTestFixture::completion,NvmeTestFixture::phase;
 uint32_t NvmeTestFixture::commands,NvmeTestFixture::reads,NvmeTestFixture::writes;
 uint32_t NvmeTestFixture::flushes,NvmeTestFixture::batches,NvmeTestFixture::failAt;
-uint32_t NvmeTestFixture::multiSectorReads,NvmeTestFixture::blockErases,NvmeTestFixture::multiSectorPrograms;
+uint32_t NvmeTestFixture::multiSectorReads,NvmeTestFixture::readSectors;
+uint32_t NvmeTestFixture::blockErases,NvmeTestFixture::multiSectorPrograms;
 bool NvmeTestFixture::reverse,NvmeTestFixture::badCid,NvmeTestFixture::resetFails;
 bool NvmeTestFixture::dropCompletion;
 uint8_t* NvmeTestFixture::mutate;
@@ -326,8 +328,28 @@ static void LargeVolume(NvmeDisk& disk) {
     Check(store.Mount(&cache,8,diskSectors,true)!=0,"the legacy mount refuses the different block geometry");
     Check(store.Mount(&cache,8,diskSectors,true,nullptr,&caches)==0,"explicit geometry remounts the volume");
     handle=store.Open(1,"/profile",FileStore::Read);
+    const uint32_t sectorEdge=3*FileStore::SectorSize-7;
+    const uint32_t offsets[]={blockBytes/2+13,blockBytes+123,sectorEdge};
+    for (uint32_t offset:offsets) {
+        const uint32_t before=F::readSectors,requests=F::reads;
+        Check(handle>0&&store.ReadFileAt(1,handle,offset,output,19)==19&&Equal(input+offset,output,19),
+              "a short positioned read returns the requested bytes");
+        const uint32_t sectors=F::readSectors-before;
+        char line[]="POSITIONED READ SECTORS 000";
+        line[sizeof(line)-4]='0'+sectors/100;
+        line[sizeof(line)-3]='0'+sectors/10%10;
+        line[sizeof(line)-2]='0'+sectors%10;
+        puts(line);
+        Check(sectors<=4,"short positioned reads avoid large block prefetch");
+        if (offset==sectorEdge)
+            Check(sectors==2&&F::reads-requests==1,"a sector-spanning short read uses one NVMe transfer");
+    }
+    Check(handle>0&&store.ReadFileAt(1,handle,blockBytes-11,output,4096)==4096
+          &&Equal(input+blockBytes-11,output,4096),"positioned read crosses large block boundaries");
+    Check(handle>0&&store.ReadFileAt(1,handle,size-17,output,32)==17&&Equal(input+size-17,output,17)
+          &&store.ReadFileAt(1,handle,size,output,32)==0,"positioned reads clamp to EOF");
     Check(handle>0&&store.ReadFile(1,handle,output,size)==(int32_t)size&&Equal(input,output,size),
-          "every byte survives a read-only large-block remount");
+          "positioned reads preserve the cursor for a full sequential read");
     Check(store.Close(1,handle)==0&&store.Unmount()==0,"close all large-block resources");
 }
 int main() {
