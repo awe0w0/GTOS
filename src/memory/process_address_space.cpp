@@ -430,31 +430,44 @@ bool ProcessAddressSpace::LayoutRoot() const {
 }
 bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
     // LayoutRoot has checked the supervisor aliases (and all four PAE roots).
-    // Walk each contiguous directory directly: user copies call this even when
-    // their ownership index is cached, so don't rediscover the mode and roots
-    // for every entry. Every shared and owned entry still gets checked.
+    // Audit the contiguous shared spans separately from the user tables.
+    // Copies need the full audit even when their ownership index is cached.
     const uint32_t firstUser = kernel->directoryIndex(UserBase);
-    const uint32_t lastUser = kernel->directoryIndex(UserLimit - 1);
+    const uint32_t endUser = kernel->directoryIndex(UserLimit - 1) + 1;
     const bool pae = kernel->pae;
     const uint32_t stride = pae ? 2 : 1;
     const auto check = [&](uint32_t sharedDirectory, uint32_t ownedDirectory,
                            uint32_t first, uint32_t count) {
         const uint32_t* sharedEntries = (const uint32_t*)sharedDirectory;
         const uint32_t* ownEntries = (const uint32_t*)ownedDirectory;
-        for (uint32_t i = 0, word = 0; i < count; ++i, word += stride) {
-            const uint32_t di = first + i;
-            const bool user = di >= firstUser && di <= lastUser;
-            const uint32_t table = user ? tables[di - firstUser] : 0;
-            uint64_t shared = sharedEntries[word], own = ownEntries[word];
-            if (pae) {
-                shared |= (uint64_t)sharedEntries[word + 1] << 32;
-                own |= (uint64_t)ownEntries[word + 1] << 32;
+        const auto inDirectory = [&](uint32_t index) {
+            if (index <= first) return 0u;
+            return index - first < count ? index - first : count;
+        };
+        const auto sharedMatches = [&](uint32_t begin, uint32_t end) {
+            uint32_t mismatch = 0;
+            for (uint32_t word = begin * stride; word < end * stride; word += stride) {
+                const uint32_t shared = sharedEntries[word], own = ownEntries[word];
+                const uint32_t sharedHigh = pae ? sharedEntries[word + 1] : 0;
+                if (pae) mismatch |= ownEntries[word + 1] ^ sharedHigh;
+                mismatch |= (shared ^ own) & ~(uint32_t)Accessed;
+                // A wholly absent shared entry must also be wholly absent
+                // in the process. Accessed alone is not a valid entry.
+                if (!(shared | sharedHigh)) mismatch |= own;
             }
-            if (user && shared)
+            return !mismatch;
+        };
+        const uint32_t begin = inDirectory(firstUser), end = inDirectory(endUser);
+        if (!sharedMatches(0, begin)) return Fail(ProcessMemoryBadMapping);
+        for (uint32_t i = begin; i < end; ++i) {
+            const uint32_t word = i * stride;
+            const uint32_t table = tables[first + i - firstUser];
+            if (sharedEntries[word] || (pae && sharedEntries[word + 1]))
                 return Fail(table ? ProcessMemoryBadMapping : ProcessMemoryBadTemplate);
+            const uint32_t own = ownEntries[word];
+            if (pae && ownEntries[word + 1]) return Fail(ProcessMemoryBadMapping);
             if (!table) {
-                if ((!shared && own) || (own & ~Accessed) != (shared & ~Accessed))
-                    return Fail(ProcessMemoryBadMapping);
+                if (own) return Fail(ProcessMemoryBadMapping);
                 continue;
             }
             if (!frames->isAllocatedLocked(table) || !KernelPageAlias(table, true)
@@ -463,7 +476,7 @@ bool ProcessAddressSpace::LayoutDirectories(uint32_t* nonzeroLeaves) const {
             if (nonzeroLeaves)
                 for (uint32_t ti = 0; ti < count; ++ti) *nonzeroLeaves += kernel->entry(table, ti) != 0;
         }
-        return true;
+        return sharedMatches(end, count) || Fail(ProcessMemoryBadMapping);
     };
     if (!pae) return check(kernelDirectory, directory, 0, 1024);
     for (uint32_t i = 0; i < 4; ++i) {

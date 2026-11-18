@@ -1117,8 +1117,27 @@ namespace {
         if (!(pde & 1)) return;
         uint64_t* userTable = (uint64_t*)(uint32_t)(pde & ~4095ULL);
         uint64_t* sharedDirectory = paeDirectory(sharedRoot, (uint32_t)input);
-        const uint64_t sharedPde = sharedDirectory[((uint32_t)input >> 21) & 511];
+        const uint32_t sharedIndex = ((uint32_t)input >> 21) & 511;
+        const uint64_t sharedPde = sharedDirectory[sharedIndex];
         CHECK(sharedPde & 1);
+        uint64_t* processShared = paeDirectory(root, (uint32_t)input);
+        const uint64_t processPde = processShared[sharedIndex];
+        processShared[sharedIndex] = sharedPde ^ 0x20;
+        CHECK(first.ValidateUserRange(boundary, 1, false));
+        processShared[sharedIndex] = sharedPde ^ (1ULL << 32);
+        CHECK(!first.ValidateUserRange(boundary, 1, false)
+              && first.GetLastError() == ProcessMemoryBadMapping);
+        processShared[sharedIndex] = processPde;
+        uint32_t empty = 0;
+        while (empty < 512 && sharedDirectory[empty]) ++empty;
+        CHECK(empty < 512);
+        if (empty < 512) {
+            const uint64_t absent = processShared[empty];
+            processShared[empty] = 0x20;
+            CHECK(!first.ValidateUserRange(boundary, 1, false)
+                  && first.GetLastError() == ProcessMemoryBadMapping);
+            processShared[empty] = absent;
+        }
         CHECK(!first.CopyFromUser(userTable, boundary - 16, 32)
               && first.GetLastError() == ProcessMemoryBadAlias);
         CHECK(!first.CopyFromUser((void*)(uint32_t)(sharedPde & ~4095ULL), boundary - 16, 32)
