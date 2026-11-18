@@ -52,6 +52,7 @@ namespace gtos { namespace memory {
         uint32_t highFrameCount, highFirstFreeWord, highFreeCount, highAllocatedCount, highMetadataPages;
         bool ready;
         bool mapUsed;
+        uint32_t physicalBits;
         PhysicalMemoryError error;
         void clear();
         bool fail(PhysicalMemoryError reason);
@@ -103,6 +104,7 @@ namespace gtos { namespace memory {
         bool allocateHigh(uint64_t& address);
         bool freeHigh(uint64_t address);
         bool isHighAllocated(uint64_t address) const;
+        bool permitsHighMmio(const MultibootInfo& info, uint64_t address, uint32_t length) const;
         HighMemoryStatistics getHighStatistics() const;
 #ifdef GTOS_MEMORY_TEST
         // Host-unit seam. Supplies the memory a firmware map would have described, then leaves every allocator decision

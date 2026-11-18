@@ -143,14 +143,14 @@ HeapStatistics MemoryManager::getStatistics() const {
     }
     return result;
 }
-void* operator new(unsigned size) noexcept {
+void* operator new(__SIZE_TYPE__ size) noexcept {
     return MemoryManager::activeMemoryManager ? MemoryManager::activeMemoryManager->malloc(size) : 0;
 }
-void* operator new[](unsigned size) noexcept { return ::operator new(size); }
-void* operator new(unsigned, void* ptr) noexcept { return ptr; }
+void* operator new[](__SIZE_TYPE__ size) noexcept { return ::operator new(size); }
+void* operator new(__SIZE_TYPE__, void* ptr) noexcept { return ptr; }
 void operator delete(void* ptr) noexcept {
     if (MemoryManager::activeMemoryManager) MemoryManager::activeMemoryManager->free(ptr);
 }
 void operator delete[](void* ptr) noexcept { ::operator delete(ptr); }
-void operator delete(void* ptr, unsigned) noexcept { ::operator delete(ptr); }
-void operator delete[](void* ptr, unsigned) noexcept { ::operator delete(ptr); }
+void operator delete(void* ptr, __SIZE_TYPE__) noexcept { ::operator delete(ptr); }
+void operator delete[](void* ptr, __SIZE_TYPE__) noexcept { ::operator delete(ptr); }

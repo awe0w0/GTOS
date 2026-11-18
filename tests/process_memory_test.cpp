@@ -107,7 +107,7 @@ namespace {
         info.flags = 1u << 6; info.memoryMap = (uint32_t)memoryMap; info.memoryMapLength = sizeof(memoryMap);
         PagingConfig config = {(uint32_t)&__executable_start, ((uint32_t)&_end + 4095) & ~4095u,
             (uint32_t)&__executable_start, (uint32_t)&__executable_start + 4096, &info, 0, 0};
-        CHECK(frames.initialize(&info, MultibootBootMagic, config.kernelStart, config.kernelEnd));
+        CHECK(frames.initialize(&info, MultibootBootMagic, config.kernelStart, config.kernelEnd, 0, 0, 40));
         CHECK(kernel.prepareIdentity(frames, config));
         CHECK(!first.Prepare(kernel, frames)); // Unsealed, inactive template.
         CHECK(frames.allocate(borrowedBuffer));
@@ -1040,7 +1040,13 @@ namespace {
     void paeAddressSpaces() {
         PagingConfig config = {(uint32_t)&__executable_start, ((uint32_t)&_end + 4095) & ~4095u,
             (uint32_t)&__executable_start, (uint32_t)&__executable_start + 4096, &info, 0, 0};
+        uint32_t mapped = 0;
+        const PagingDeviceRange bar(0xC000000000ULL, 16384, &mapped);
+        config.devices = &bar;
+        config.deviceCount = 1;
         CHECK(paeKernel.prepareIdentity(frames, config, true));
+        CHECK(mapped >= ProcessAddressSpace::UserLimit);
+        if (!mapped) return;
         CHECK(paeKernel.enable() && paeKernel.sealForSharedProcessors());
         const uint32_t sharedRoot = paeKernel.getStatistics().directoryAddress;
         const uint32_t before = used();
@@ -1050,6 +1056,38 @@ namespace {
         // Exercise the exact QEMU access-bit update on the live kernel root.
         uint64_t* sharedPdpt = (uint64_t*)sharedRoot;
         sharedPdpt[0] |= 0x20;
+        uint64_t& mmioDirectory = paeDirectory(sharedRoot, mapped)[(mapped >> 21) & 511];
+        const uint64_t mmioPde = mmioDirectory;
+        uint64_t* leaves = (uint64_t*)(uint32_t)(mmioPde & ~4095ULL);
+        mmioDirectory = 0;
+        CHECK(!first.Prepare(paeKernel, frames) && first.GetLastError() == ProcessMemoryBadTemplate);
+        CHECK(!first.DirectoryAddress() && used() == before);
+        mmioDirectory = mmioPde;
+        uint32_t spare = 0;
+        CHECK(frames.allocate(spare));
+        if (spare) {
+            fill((uint8_t*)spare, 4096, 0);
+            mmioDirectory = spare | 3;
+            CHECK(!first.Prepare(paeKernel, frames) && first.GetLastError() == ProcessMemoryBadTemplate);
+            CHECK(!first.DirectoryAddress() && used() == before + 1);
+            mmioDirectory = mmioPde | 0x20;
+            CHECK(frames.free(spare));
+        }
+        const uint32_t ti = (mapped >> 12) & 511;
+        const uint64_t original = leaves[ti];
+        CHECK(original == (bar.address | 0x1b));
+        const uint64_t bad[] = {0, original & 0xFFFFFFFFu, original ^ (1ULL << 32),
+                                original | 4, original & ~0x10ULL, original | (1ULL << 63)};
+        for (uint64_t changed : bad) {
+            leaves[ti] = changed;
+            CHECK(!first.Prepare(paeKernel, frames) && first.GetLastError() == ProcessMemoryBadTemplate);
+            CHECK(!first.DirectoryAddress() && used() == before);
+        }
+        leaves[ti] = original | 0x60;
+        CHECK(ti + 4 < 512 && !leaves[ti + 4]);
+        leaves[ti + 4] = original;
+        CHECK(!first.Prepare(paeKernel, frames) && first.GetLastError() == ProcessMemoryBadTemplate);
+        leaves[ti + 4] = 0;
 
         // Fail after acquiring a root and part of its directory set.
         uint32_t held = 0;

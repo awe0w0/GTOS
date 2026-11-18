@@ -597,8 +597,8 @@ static void ProbeNvme(PeripheralComponentInterconnectController& pci,
                ? "NVME DMA REAP PASS\n" : "NVME DMA REAP FAIL\n");
 }
 static storage::FileStore *contentVolume;
-static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writable) {
-    if (!disk.ConfigureWaitClock(DiskWaitTicks, 500U) || !disk.Identify() ||
+static bool AttachContentAssets(storage::BlockDevice &disk, bool writable) {
+    if (!disk.Identify() ||
         disk.SectorCount() <= GTOS_CONTENT_VOLUME_FIRST_SECTOR) return false;
 
     // Both the mounted store and its endpoint must live through every Reap.
@@ -607,6 +607,7 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writabl
         storage::FileStore store;
         process::NativeFiles files{store};
         storage::FileStore::AllocationLookahead allocation;
+        storage::FileStore::BlockCaches caches;
 
         explicit Volume(storage::BlockDevice& source):disk(source) {}
     };
@@ -615,7 +616,7 @@ static bool AttachContentAssets(AdvancedTechnologyAttachment &disk, bool writabl
     storage::FileStore::Info info;
     if (volume->store.Mount(&volume->disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
                             disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable,
-                            writable ? &volume->allocation : nullptr) == 0 &&
+                            writable ? &volume->allocation : nullptr, &volume->caches) == 0 &&
         volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
         info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) {
         contentVolume = &volume->store;
@@ -3331,12 +3332,18 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     LogValue("APP STORE GENERATION ", store.Generation());
     AdvancedTechnologyAttachment contentDisk(0x1F0, false);
     const bool contentBoot = BootOption(mbi, "content-shell");
+    const bool contentNvme = BootOption(mbi, "content-nvme");
+    if (contentNvme && (!contentBoot || !BootOption(mbi, "content-assets") || liveBoot ||
+                        BootOption(mbi, "nvme-probe") || BootOption(mbi, "nvme-files")))
+        Panic("CONTENT NVME EXCLUSIVE DEVICE", "E28");
     bool contentAssetsReady = false;
-    if (BootOption(mbi, "content-assets")) {
+    if (BootOption(mbi, "content-assets") && !contentNvme) {
         // Live boot must not probe any internal ATA device.
         const bool writable = contentBoot && BootOption(mbi, "content-profile-write");
-        contentAssetsReady = !liveBoot && AttachContentAssets(contentDisk, writable);
+        contentAssetsReady = !liveBoot && contentDisk.ConfigureWaitClock(DiskWaitTicks, 500U) &&
+                             AttachContentAssets(contentDisk, writable);
         if (contentAssetsReady) {
+            printf("CONTENT ASSET TRANSPORT ATA\n");
             printf("CONTENT ASSET VOLUME READY\n");
             if (writable) printf("CONTENT ASSET VOLUME WRITABLE\n");
         } else
@@ -3371,7 +3378,7 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
         if (frames.allocateContiguous(backbufferPages, backbuffer) &&
             framebuffer.Configure(mbi, (uint32_t *)backbuffer, backbufferPages * 1024)) {
             printf("FB CONFIGURED\n");
-            if (contentBoot && contentAssetsReady)
+            if (contentBoot && (contentAssetsReady || contentNvme))
                 largeWindowBacking = new unsigned char[3 * GTOS_WINDOW_LARGE_BYTES];
             modern = new gui::ModernDesktop(&framebuffer, &store, &settings, liveBoot,
                                             &process::NativeSurfaceBank::Instance(),
@@ -3418,8 +3425,8 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     NvmeDisk filesDisk(nvmePci, frames, DiskWaitTicks);
     const bool nvmeProbe = BootOption(mbi, "nvme-probe");
     const bool shellDisk = BootOption(mbi, "nvme-files");
-    const bool nvmeRequested = nvmeProbe || shellDisk;
-    const bool nvmeFound = nvmeRequested && NvmeDisk::Find(nvmePci, nvmeController);
+    const bool nvmeRequested = nvmeProbe || shellDisk || contentNvme;
+    const bool nvmeFound = nvmeRequested && NvmeDisk::Find(nvmePci, nvmeController, usePae);
     if (nvmeRequested && !nvmeFound)
         printf("NVME CONTROLLER UNAVAILABLE\n");
     memory::PagingDeviceRange devices[4];
@@ -3430,13 +3437,18 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
         BuildPagingConfig(mbi, devices, deviceCount, modern ? &mode : 0,
                           (apsPrepared && apReport.localApicAddress) ? apReport.localApicAddress : 0);
     if (nvmeFound) {
-        devices[deviceCount++] = {nvmeController.address, nvmeController.bytes};
+        devices[deviceCount++] = {nvmeController.physicalAddress, nvmeController.bytes,
+                                  &nvmeController.address};
         pagingConfig.deviceCount = deviceCount;
     }
     if (paeProbe)
         RunPaeProbe(pagingConfig);
     if (!paging.prepareIdentity(frames, pagingConfig, usePae))
         Panic(memory::KernelPaging::ErrorName(paging.getLastError()), "E12");
+    if (nvmeFound) {
+        LogSectorNumber("NVME BAR PHYSICAL ", nvmeController.physicalAddress);
+        LogValue("NVME BAR VIRTUAL ", nvmeController.address);
+    }
     const bool contentThreads = contentBoot && BootOption(mbi, "content-threads");
     bool nativeStacksPrepared = nativeRuntime.PrepareStacks(paging, frames, contentThreads);
     if (!nativeStacksPrepared)
@@ -3500,6 +3512,24 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
         asm volatile("movl %%cr4,%0" : "=r"(cr4));
         if (!(cr4 & (1u << 5))) Panic("PAE CONTROL BIT", "E27");
         LogValue("PAE PAGING CR4 ", cr4);
+    }
+    NvmeBlockDevice contentNvmeDisk(filesDisk);
+    if (contentNvme) {
+        const bool writable = BootOption(mbi, "content-profile-write");
+        contentAssetsReady = nvmeFound && filesDisk.Start(nvmeController, paging) &&
+                             AttachContentAssets(contentNvmeDisk, writable);
+        if (contentAssetsReady) {
+            printf("CONTENT ASSET TRANSPORT NVME\n");
+            LogValue("CONTENT NVME COMMAND BYTES ", filesDisk.MaxReadBytes());
+            LogValue("CONTENT NVME QUEUE DEPTH ", filesDisk.ReadDepth());
+            printf("CONTENT ASSET VOLUME READY\n");
+            if (writable) printf("CONTENT ASSET VOLUME WRITABLE\n");
+        } else {
+            LogValue("CONTENT NVME ERROR ", filesDisk.Error());
+            LogValue("CONTENT NVME COMPLETION STATUS ", filesDisk.CompletionStatus());
+            filesDisk.Stop();
+            printf("CONTENT ASSET VOLUME REFUSED\n");
+        }
     }
     Task sleeper(&gdt, Sleeper), yielder(&gdt, Yielder);
     tasks.AddTask(&sleeper);

@@ -1,0 +1,80 @@
+/* CPL3 workload for measuring the disk-backed Content volume through the file ABI. */
+#include <process/abi.h>
+#include <process/file_abi.h>
+
+enum { TransferBytes = GTOS_FILE_TRANSFER_LIMIT, BlockCount = 8192 };
+static const char input_path[] = "/content/io-seed.bin";
+static const char output_path[] = "/content/io-write.bin";
+static unsigned received[TransferBytes / sizeof(unsigned)];
+
+static int call(unsigned operation, const void* request, unsigned bytes) {
+    int result;
+    __asm__ volatile("int $0x80" : "=a"(result)
+                     : "a"(operation), "b"((unsigned)request), "c"(bytes) : "memory", "cc");
+    return result;
+}
+
+#define Log(literal) call(GTOS_SYS_WRITE, literal, sizeof(literal) - 1)
+
+static int open_file(const char* path, unsigned bytes, unsigned flags) {
+    GtosFileOpenRequest request = {GTOS_FILE_ABI_VERSION, (unsigned)path, bytes, flags};
+    return call(GTOS_SYS_FILE_OPEN, &request, sizeof(request));
+}
+
+static int control(unsigned operation, int handle) {
+    GtosFileControlRequest request = {GTOS_FILE_ABI_VERSION, (unsigned)handle};
+    return call(operation, &request, sizeof(request));
+}
+
+static int transfer(unsigned operation, int handle, void* buffer) {
+    GtosFileTransferRequest request = {
+        GTOS_FILE_ABI_VERSION, (unsigned)handle, (unsigned)buffer, TransferBytes
+    };
+    return call(operation, &request, sizeof(request));
+}
+
+static int read_and_check(int handle, unsigned* pattern, unsigned tag) {
+    if (handle <= 0) return 0;
+    for (unsigned block = 0; block < BlockCount; ++block) {
+        if (transfer(GTOS_SYS_FILE_READ, handle, received) != TransferBytes) return 0;
+        pattern[0] = block ^ tag;
+        const unsigned* expected = pattern;
+        const unsigned* actual = received;
+        unsigned words = TransferBytes / sizeof(unsigned);
+        unsigned char matches;
+        __asm__ volatile("cld; repe cmpsl; sete %0"
+                         : "=q"(matches), "+S"(expected), "+D"(actual), "+c"(words)
+                         : : "memory", "cc");
+        if (!matches) return 0;
+    }
+    return transfer(GTOS_SYS_FILE_READ, handle, received) == 0 &&
+           control(GTOS_SYS_FILE_CLOSE, handle) == 0;
+}
+
+int browser_probe_main(void) {
+    unsigned pattern[TransferBytes / sizeof(unsigned)];
+    for (unsigned word = 1; word < TransferBytes / sizeof(unsigned); ++word)
+        pattern[word] = 0x6ca49d81u ^ (word * 0x9e3779b9u);
+
+    Log("GTOS FILE SPEED READ BEGIN\n");
+    int handle = open_file(input_path, sizeof(input_path), GTOS_FILE_READ);
+    if (!read_and_check(handle, pattern, 0xa23f89d5u)) return 1;
+    Log("GTOS FILE SPEED READ END\n");
+
+    Log("GTOS FILE SPEED WRITE BEGIN\n");
+    handle = open_file(output_path, sizeof(output_path),
+                       GTOS_FILE_WRITE | GTOS_FILE_CREATE | GTOS_FILE_EXCLUSIVE);
+    if (handle <= 0) return 2;
+    for (unsigned block = 0; block < BlockCount; ++block) {
+        pattern[0] = block ^ 0x783bcc0du;
+        if (transfer(GTOS_SYS_FILE_WRITE, handle, pattern) != TransferBytes) return 3;
+    }
+    if (control(GTOS_SYS_FILE_SYNC, handle) != 0) return 4;
+    if (control(GTOS_SYS_FILE_CLOSE, handle) != 0) return 5;
+    Log("GTOS FILE SPEED WRITE END\n");
+
+    handle = open_file(output_path, sizeof(output_path), GTOS_FILE_READ);
+    if (!read_and_check(handle, pattern, 0x783bcc0du)) return 6;
+    Log("GTOS FILE SPEED SYNC AND READBACK PASS\n");
+    return 0;
+}

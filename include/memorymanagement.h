@@ -50,13 +50,13 @@ namespace gtos {
     };
 }
 
-void* operator new(unsigned size) noexcept;
-void* operator new[](unsigned size) noexcept;
-void* operator new(unsigned size, void* ptr) noexcept;
-inline void* operator new[](unsigned, void* ptr) noexcept { return ptr; }
+void* operator new(__SIZE_TYPE__ size) noexcept;
+void* operator new[](__SIZE_TYPE__ size) noexcept;
+void* operator new(__SIZE_TYPE__ size, void* ptr) noexcept;
+inline void* operator new[](__SIZE_TYPE__, void* ptr) noexcept { return ptr; }
 void operator delete(void* ptr) noexcept;
 void operator delete[](void* ptr) noexcept;
-void operator delete(void* ptr, unsigned size) noexcept;
-void operator delete[](void* ptr, unsigned size) noexcept;
+void operator delete(void* ptr, __SIZE_TYPE__ size) noexcept;
+void operator delete[](void* ptr, __SIZE_TYPE__ size) noexcept;
 
 #endif

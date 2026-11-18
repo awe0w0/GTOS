@@ -96,6 +96,33 @@ namespace {
         CHECK(highFrames.freeHigh(first) && highFrames.freeHigh(second) && highFrames.freeHigh(last));
         CHECK(!highFrames.freeHigh(first) && highFrames.getHighStatistics().freeFrames == 3);
 
+        // Firmware can put a PCI BAR above 4 GiB while its low dword is zero.
+        // Use an addressable hole and put a low device in the first candidate VA.
+        const uint64_t bar = base + 0x100000;
+        uint32_t mapped = 0, next = 0;
+        PagingDeviceRange bars[] = {{bar, 16384, &mapped}, {0xC0000000, 8192},
+                                    {bar + 16384, 4096, &next}};
+        c.devices = bars;
+        c.deviceCount = 3;
+        CHECK(!highPaging.prepareIdentity(highFrames, c) && mapped == 0 && next == 0);
+        CHECK(highPaging.prepareIdentity(highFrames, c, true));
+        CHECK(mapped == 0xC0002000 && next == mapped + 16384);
+        CHECK(highPaging.query(mapped + 16383, mapping) && mapping.physicalAddress == bar + 16383 &&
+              mapping.writable && mapping.cacheDisabled && !mapping.userAccessible && !mapping.managed);
+        CHECK(!highPaging.unmapOwnedPage(mapped) && !highPaging.protectOwnedPage(mapped, false));
+        CHECK(highPaging.abandon() && highFrames.getStatistics().allocatedFrames == retained);
+        bars[2].address = bar + 4096;
+        mapped = next = 0;
+        CHECK(!highPaging.prepareIdentity(highFrames, c, true) && mapped == 0 && next == 0);
+        c.deviceCount = 1;
+        bars[0].address = base + 4096; // E820 RAM, even after releasing the frame.
+        CHECK(!highPaging.prepareIdentity(highFrames, c, true) && !mapped);
+        bars[0].address = cap; // Past the configured 33 physical address bits.
+        CHECK(!highPaging.prepareIdentity(highFrames, c, true) && !mapped);
+        bars[0] = {bar, 4096};
+        CHECK(!highPaging.prepareIdentity(highFrames, c, true));
+        CHECK(highFrames.getStatistics().allocatedFrames == retained);
+
         // The BSP aperture is the last page, but an adjacent device mapping
         // must still be present in the worker root.
         const PagingDeviceRange device = {0xFFFFE000u, 4096};

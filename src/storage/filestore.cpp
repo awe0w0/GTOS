@@ -2,7 +2,8 @@
 #include <memory/criticalsection.h>
 using namespace gtos::storage;
 using gtos::memory::InterruptGuard;
-FileStore::FileStore():disk(0),firstSector(0),volumeSectors(0),nextHandle(1),mounted(false),readOnly(false) {
+FileStore::FileStore():disk(0),firstSector(0),volumeSectors(0),nextHandle(1),mounted(false),readOnly(false),
+                        blockCaches(nullptr) {
     gtos_lfs_memset(&filesystem,0,sizeof(filesystem));gtos_lfs_memset(&config,0,sizeof(config));
     gtos_lfs_memset(slots,0,sizeof(slots));
     gtos_lfs_memset(resources,0,sizeof(resources));
@@ -57,7 +58,7 @@ int32_t FileStore::Format(BlockDevice* device,uint32_t first,uint32_t sectors) {
     return lfs_format(&filesystem,&config);
 }
 int32_t FileStore::Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect,
-                         AllocationLookahead* allocation) {
+                         AllocationLookahead* allocation,BlockCaches* caches) {
     InterruptGuard guard;if (mounted) return Busy;
     int32_t error=Configure(device,first,sectors,protect);if (error) return error;
     if (allocation) {
@@ -65,7 +66,17 @@ int32_t FileStore::Mount(BlockDevice* device,uint32_t first,uint32_t sectors,boo
         config.lookahead_size=needed<sizeof(allocation->bytes)?needed:sizeof(allocation->bytes);
         config.lookahead_buffer=allocation->bytes;
     }
-    error=lfs_mount(&filesystem,&config);mounted=error==0;return error;
+    if (caches) {
+        // LittleFS data follows the CTZ links at an unaligned offset. Its
+        // buffered read can fetch the rest of that block in one transfer.
+        config.cache_size=BlockSize;
+        config.read_buffer=caches->read;
+        config.prog_buffer=caches->program;
+    }
+    error=lfs_mount(&filesystem,&config);
+    mounted=error==0;
+    blockCaches=mounted?caches:nullptr;
+    return error;
 }
 uint32_t FileStore::OpenCount() const {
     InterruptGuard guard;uint32_t count=0;
@@ -75,7 +86,12 @@ uint32_t FileStore::OpenCount() const {
 int32_t FileStore::Unmount() {
     InterruptGuard guard;if (!mounted) return LFS_ERR_BADF;
     if (OpenCount()) return Busy;
-    int32_t error=lfs_unmount(&filesystem);if (!error) mounted=false;return error;
+    int32_t error=lfs_unmount(&filesystem);
+    if (!error) {
+        mounted=false;
+        blockCaches=nullptr;
+    }
+    return error;
 }
 int32_t FileStore::ValidPath(const char* path) {
     if (!path||!path[0]) return LFS_ERR_INVAL;
@@ -121,7 +137,8 @@ int32_t FileStore::Open(uint32_t owner,const char* path,uint32_t flags) {
     if (nextHandle>0x7FFFFFFFU) return Overflow;
     Slot* slot=FreeSlot();if (!slot) return TooManyHandles;
     Resource* resource=FreeResource();if (!resource) return TooManyHandles;
-    gtos_lfs_memset(resource,0,sizeof(*resource));resource->config.buffer=resource->cache;
+    gtos_lfs_memset(resource,0,sizeof(*resource));
+    resource->config.buffer=blockCaches?blockCaches->files[resource-resources]:resource->cache;
     error=lfs_file_opencfg(&filesystem,&resource->file,path,flags&~(Temporary|Locked),&resource->config);if (error) return error;
     if (flags&Locked) {
         for (uint32_t i=0;i<MaximumHandles;i++) {

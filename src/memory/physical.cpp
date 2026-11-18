@@ -46,7 +46,7 @@ PhysicalMemoryManager::PhysicalMemoryManager()
     : firstFreeWord(0), frameCount(0), freeCount(0), allocatedCount(0), failures(0),
       highEligible(0), highAllocated(0), highFrameCount(0), highFirstFreeWord(0),
       highFreeCount(0), highAllocatedCount(0), highMetadataPages(0), ready(false),
-      mapUsed(false), error(PhysicalMemoryNoMap) {}
+      mapUsed(false), physicalBits(32), error(PhysicalMemoryNoMap) {}
 void PhysicalMemoryManager::clear() {
     bootstrap.clear();
     for (uint32_t i = 0; i < MaximumFrames / 32; ++i) {
@@ -57,6 +57,7 @@ void PhysicalMemoryManager::clear() {
     highEligible = highAllocated = 0;
     highFrameCount = highFirstFreeWord = highFreeCount = highAllocatedCount = highMetadataPages = 0;
     ready = mapUsed = false;
+    physicalBits = 32;
 }
 bool PhysicalMemoryManager::fail(PhysicalMemoryError reason) {
     clear();
@@ -206,8 +207,24 @@ bool PhysicalMemoryManager::initialize(const void* multibootInfo, uint32_t magic
     if (mapUsed && physicalAddressBits > 32 &&
         !prepareHigh(info, physicalAddressBits, extraReservations, extraCount))
         return fail(PhysicalMemoryNoHighMetadata);
+    physicalBits = physicalAddressBits;
     error = PhysicalMemoryOk;
     return true;
+}
+bool PhysicalMemoryManager::permitsHighMmio(const MultibootInfo& info, uint64_t address,
+                                           uint32_t length) const {
+    const uint64_t limit = 1ULL << physicalBits;
+    if (!ready || !mapUsed || !(info.flags & (1u << 6)) || address < Limit ||
+        !length || address >= limit || length > limit - address)
+        return false;
+    bool overlapsMemory = false;
+    const bool valid = visitMap(info, [&](const MultibootMemoryMapEntry& entry) {
+        // A PCI aperture may occupy a hole or a firmware-reserved range.
+        if (entry.type != 2 && entry.length && address < entry.address + entry.length &&
+            entry.address < address + length)
+            overlapsMemory = true;
+    });
+    return valid && !overlapsMemory;
 }
 bool PhysicalMemoryManager::highRange(uint64_t address, uint64_t end, bool fullPages,
                                       uint32_t& first, uint32_t& last) const {

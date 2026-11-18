@@ -4,8 +4,10 @@ The Multiboot2 EFI profile is tested on QEMU 8.2.2 with Q35, x86-64 OVMF, 8 GiB
 of RAM and eight virtual CPUs:
 
 - Use `-m 8192 -smp 8,sockets=1,cores=8,threads=1` on
-  `q35,max-ram-below-4g=1G`. The test puts the NVMe BAR and GOP framebuffer
-  below 4 GiB with `-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=0`.
+  `q35,max-ram-below-4g=1G`. With the default OVMF PCI window, the tested
+  NVMe BAR is at physical address `0x800000000`. GTOS maps it through PAE
+  while retaining the GOP framebuffer. A second test covers a low BAR with
+  `-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=0`.
 - The GPT disk uses a FAT32 EFI system partition and a read-only NTFS volume.
   Boot with `pae`, `pae-probe`, `nvme-probe`, `nvme-fs-probe` and
   `nvme-files` to exercise high frames, the NVMe controller and the Shell.

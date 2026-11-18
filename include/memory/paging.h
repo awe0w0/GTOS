@@ -4,7 +4,14 @@
 namespace gtos { namespace memory {
     // Every supplied device interval is an explicit, page-aligned permission to
     // map MMIO. RAM, retained boot metadata, and kernel cannot be retyped as MMIO.
-    struct PagingDeviceRange { uint32_t address; uint32_t length; };
+    struct PagingDeviceRange {
+        uint64_t address;
+        uint32_t length;
+        // High BARs need a supervisor virtual window. Publish it only on success.
+        uint32_t* mappedAddress;
+        PagingDeviceRange(uint64_t base = 0, uint32_t bytes = 0, uint32_t* mapped = 0)
+            : address(base), length(bytes), mappedAddress(mapped) {}
+    };
     struct PagingConfig {
         uint32_t kernelStart, kernelEnd;       // Page-aligned, exclusive end.
         uint32_t readOnlyStart, readOnlyEnd;   // Text + rodata, whole pages only.
@@ -35,6 +42,14 @@ namespace gtos { namespace memory {
         uint32_t directory;
         uint32_t directories[4], tables[2048], workerFrames[3];
         uint32_t mappedCount, tableCount, highWindow;
+        struct DeviceWindow {
+            uint64_t physical;
+            uint32_t base, bytes;
+            bool matches(uint32_t address, uint64_t entry) const;
+        };
+        static const uint32_t MaximumDevices = 64;
+        DeviceWindow highDevices[MaximumDevices];
+        uint32_t highDeviceCount;
         uint32_t savedCr0, savedCr3, savedCr4;
         bool prepared, active, sharedSealed, pae;
         PagingError error;
@@ -42,6 +57,9 @@ namespace gtos { namespace memory {
         bool ensureTable(uint32_t index);
         bool addPage(uint32_t virtualAddress, uint64_t physicalAddress, uint32_t flags);
         bool reserveHighWindow();
+        uint32_t findDeviceWindow(uint32_t bytes) const;
+        bool matchesHighDevice(uint32_t address, uint64_t entry) const;
+        bool highDevicesIntact() const;
         // Used only by the BSP with interrupts disabled. The worker root keeps
         // the slot absent. The BSP can change its PTE without an AP shootdown.
         void bindHighWindow(uint64_t physicalAddress);
@@ -52,7 +70,7 @@ namespace gtos { namespace memory {
         uint32_t directoryIndex(uint32_t address) const { return address >> (pae ? 21 : 22); }
         uint32_t leafIndex(uint32_t address) const { return (address >> 12) & (pae ? 511 : 1023); }
         uint64_t entry(uint32_t page, uint32_t index) const {
-            const uint32_t* words = (const uint32_t*)page;
+            const uint32_t* words = (const uint32_t*)(__UINTPTR_TYPE__)page;
             return pae ? words[2 * index] | ((uint64_t)words[2 * index + 1] << 32) : words[index];
         }
         void writeEntry(uint32_t page, uint32_t index, uint64_t value);

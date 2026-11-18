@@ -4,6 +4,12 @@ using namespace gtos::drivers;
 using namespace gtos::hardwarecommunication;
 using namespace gtos::memory;
 
+#ifdef GTOS_NVME_TEST
+namespace gtos { namespace drivers {
+    void NvmeTestWriteRegister(NvmeDisk&, uint32_t, uint32_t);
+} }
+#endif
+
 namespace {
     const uint32_t BaseDoorbell = 0x1000;
     const uint32_t PciInterruptDisable = 1u << 10;
@@ -35,7 +41,9 @@ NvmeDisk::NvmeDisk(PeripheralComponentInterconnectController& pci,
       sectors(0), nextCommand(0), ready(false), error(NvmeOk), completionStatus(0),
       admin{}, io{} {}
 
-bool NvmeDisk::Find(PeripheralComponentInterconnectController& pci, NvmeController& found) {
+bool NvmeDisk::Find(PeripheralComponentInterconnectController& pci, NvmeController& found,
+                    bool allowHighBar) {
+    found.physicalAddress = 0;
     found.address = found.bytes = 0;
     for (uint16_t bus = 0; bus < 256; ++bus) {
         for (uint16_t device = 0; device < 32; ++device) {
@@ -48,11 +56,13 @@ bool NvmeDisk::Find(PeripheralComponentInterconnectController& pci, NvmeControll
                 if (pci.Read(bus, device, function, 8) >> 8 != 0x010802)
                     continue;
                 const auto d = pci.GetDeviceDescriptor(bus, device, function);
-                uint32_t address = 0, bytes = 0;
-                if (pci.ProbeMemoryBar32(d, 0, address, bytes) && bytes >= 8192 &&
-                    bytes <= 16 * 1024 * 1024) {
+                uint64_t address;
+                uint32_t bytes;
+                if (pci.ProbeMemoryBar(d, 0, address, bytes) && bytes >= 8192 &&
+                    bytes <= 16 * 1024 * 1024 && (allowHighBar || address < 0x100000000ULL)) {
                     found.pci = d;
-                    found.address = address;
+                    found.physicalAddress = address;
+                    found.address = address < 0x100000000ULL ? (uint32_t)address : 0;
                     found.bytes = bytes;
                     return true;
                 }
@@ -98,6 +108,9 @@ uint32_t NvmeDisk::Register(uint32_t offset) const {
 
 void NvmeDisk::WriteRegister(uint32_t offset, uint32_t value) {
     registers[offset / 4] = value;
+#ifdef GTOS_NVME_TEST
+    gtos::drivers::NvmeTestWriteRegister(*this, offset, value);
+#endif
 }
 
 bool NvmeDisk::WaitReady(bool expected) const {
@@ -137,7 +150,7 @@ bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging)
     for (uint32_t offset = 0; offset < selected.bytes; offset += PageBytes) {
         const uint32_t address = selected.address + offset;
         PagingMapping mapping;
-        if (!paging.query(address, mapping) || mapping.physicalAddress != address ||
+        if (!paging.query(address, mapping) || mapping.physicalAddress != selected.physicalAddress + offset ||
             !mapping.writable || mapping.userAccessible || !mapping.cacheDisabled) {
             error = NvmeBadMapping;
             return false;
@@ -145,7 +158,7 @@ bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging)
     }
 
     controller = selected;
-    registers = (volatile uint32_t*) selected.address;
+    registers = (volatile uint32_t*)(__UINTPTR_TYPE__)selected.address;
     SetBusMaster(false);
     const uint32_t cap = Register(Capabilities);
     const uint32_t capHigh = Register(Capabilities + 4);
@@ -175,14 +188,14 @@ bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging)
     if (!readDepth)
         return Fail(NvmeNoDmaMemory);
 
-    uint32_t* queuePages = (uint32_t*)dma;
+    uint32_t* queuePages = (uint32_t*)(__UINTPTR_TYPE__)dma;
     for (uint32_t i = 0; i < QueuePages * PageBytes / sizeof(uint32_t); ++i)
         queuePages[i] = 0;
     // A slot always DMA-transfers to the same run of pages. The controller
     // consumes only the list entries covered by the command's block count.
     for (uint32_t slot = 0; slot < readDepth; ++slot) {
         const uint32_t address = DataAddress(slot);
-        uint64_t* prps = (uint64_t*)(address - PageBytes);
+        uint64_t* prps = (uint64_t*)(__UINTPTR_TYPE__)(address - PageBytes);
         for (uint32_t i = 0; i + 1 < DataPages; ++i)
             prps[i] = address + (i + 1) * PageBytes;
     }
@@ -211,7 +224,7 @@ bool NvmeDisk::Start(const NvmeController& selected, const KernelPaging& paging)
 uint16_t NvmeDisk::Enqueue(Queue& queue, Command& command) {
     const uint16_t cid = ++nextCommand;
     command.words[0] |= (uint32_t)cid << 16;
-    volatile uint32_t* submission = (volatile uint32_t*)queue.submission + 16 * queue.tail;
+    volatile uint32_t* submission = (volatile uint32_t*)(__UINTPTR_TYPE__)queue.submission + 16 * queue.tail;
     for (uint32_t i = 0; i < 16; ++i)
         submission[i] = command.words[i];
     if (++queue.tail == entries)
@@ -226,7 +239,7 @@ void NvmeDisk::RingSubmission(const Queue& queue) {
 
 bool NvmeDisk::Receive(Queue& queue, uint16_t& cid) {
     const uint32_t start = ticks();
-    volatile uint32_t* completion = (volatile uint32_t*)queue.completion + 4 * queue.head;
+    volatile uint32_t* completion = (volatile uint32_t*)(__UINTPTR_TYPE__)queue.completion + 4 * queue.head;
     for (uint32_t attempts = 0; attempts < PollLimit; ++attempts) {
         const uint32_t result = completion[3];
         if (((result >> 16) & 1) == queue.phase) {
@@ -281,7 +294,7 @@ bool NvmeDisk::Identify() {
     if (!Submit(admin, identify))
         return false;
 
-    const uint8_t* data = (const uint8_t*)DataAddress();
+    const uint8_t* data = (const uint8_t*)(__UINTPTR_TYPE__)DataAddress();
     const uint32_t mdts = data[77];
     maximumBytes = mdts && mdts < 7 ? PageBytes << mdts : DataPages * PageBytes;
 
@@ -339,9 +352,19 @@ bool NvmeDisk::StartQueues() {
 }
 
 bool NvmeDisk::ReadSectors(uint64_t first, uint32_t count, uint8_t* destination) {
+    return Transfer(first, count, destination, nullptr);
+}
+
+bool NvmeDisk::WriteSectors(uint64_t first, uint32_t count, const uint8_t* source) {
+    return Transfer(first, count, nullptr, source);
+}
+
+bool NvmeDisk::Transfer(uint64_t first, uint32_t count, uint8_t* destination,
+                        const uint8_t* source) {
     const uint64_t bytes = (uint64_t)sectorBytes * count;
-    if (!ready || !count || !destination || first >= sectors || count > sectors - first ||
-        bytes + (uint32_t)destination > 0x100000000ULL) {
+    const uint64_t address = source ? (__UINTPTR_TYPE__)source : (__UINTPTR_TYPE__)destination;
+    if (!ready || !count || (!destination && !source) || first >= sectors || count > sectors - first ||
+        address >= 0x100000000ULL || bytes > 0x100000000ULL - address) {
         error = NvmeBadRequest;
         return false;
     }
@@ -362,7 +385,7 @@ bool NvmeDisk::ReadSectors(uint64_t first, uint32_t count, uint8_t* destination)
             const uint32_t pages = (transfer + PageBytes - 1) / PageBytes;
             const uint32_t address = DataAddress(posted);
             Command command = {};
-            command.words[0] = 0x02;
+            command.words[0] = source ? 0x01 : 0x02;
             command.words[1] = nsid;
             command.words[6] = address;
             if (pages == 2)
@@ -372,10 +395,19 @@ bool NvmeDisk::ReadSectors(uint64_t first, uint32_t count, uint8_t* destination)
             command.words[10] = (uint32_t)first;
             command.words[11] = (uint32_t)(first >> 32);
             command.words[12] = blockCount - 1;
+            if (source) {
+                // Copy before posting. An NVMe write must not DMA from a
+                // caller buffer that a later task can change or release.
+                uint8_t* to = (uint8_t*)(__UINTPTR_TYPE__)address;
+                const uint8_t* from = source;
+                uint32_t words = transfer / sizeof(uint32_t);
+                asm volatile("cld; rep movsl" : "+D"(to), "+S"(from), "+c"(words) : : "memory", "cc");
+            }
             pending[posted++] = {destination, transfer, Enqueue(io, command), true};
             first += blockCount;
             count -= blockCount;
-            destination += transfer;
+            if (source) source += transfer;
+            else destination += transfer;
         }
 
         RingSubmission(io);
@@ -391,16 +423,28 @@ bool NvmeDisk::ReadSectors(uint64_t first, uint32_t count, uint8_t* destination)
 
             // Supported LBAs are multiples of a word. Copy only completed data
             // into caller storage, including when completions arrive out of order.
-            uint8_t* to = pending[slot].destination;
-            const uint8_t* from = (const uint8_t*)DataAddress(slot);
-            uint32_t words = pending[slot].bytes / sizeof(uint32_t);
-            asm volatile("cld; rep movsl" : "+D"(to), "+S"(from), "+c"(words) : : "memory", "cc");
+            if (pending[slot].destination) {
+                uint8_t* to = pending[slot].destination;
+                const uint8_t* from = (const uint8_t*)(__UINTPTR_TYPE__)DataAddress(slot);
+                uint32_t words = pending[slot].bytes / sizeof(uint32_t);
+                asm volatile("cld; rep movsl" : "+D"(to), "+S"(from), "+c"(words) : : "memory", "cc");
+            }
             pending[slot].active = false;
         }
         // The batch uses fewer entries than the CQ can hold.
         RingCompletion(io);
     }
     return true;
+}
+
+bool NvmeDisk::Flush() {
+    if (!ready) {
+        error = NvmeBadRequest;
+        return false;
+    }
+    Command command = {};
+    command.words[1] = nsid;
+    return Submit(io, command) || Fail(error);
 }
 
 bool NvmeDisk::Stop() {

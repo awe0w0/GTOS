@@ -24,7 +24,7 @@ namespace {
     }
 }
 KernelPaging::KernelPaging() : frames(0), directory(0), mappedCount(0),
-    tableCount(0), highWindow(0), savedCr0(0), savedCr3(0), savedCr4(0), prepared(false), active(false),
+    tableCount(0), highWindow(0), highDeviceCount(0), savedCr0(0), savedCr3(0), savedCr4(0), prepared(false), active(false),
     sharedSealed(false), pae(false), error(PagingOk) {
     for (uint32_t& page : directories) page = 0;
     for (uint32_t& page : tables) page = 0;
@@ -73,6 +73,39 @@ bool KernelPaging::addPage(uint32_t virtualAddress, uint64_t physicalAddress, ui
     writeEntry(tables[di], ti, physicalAddress | Present | flags);
     ++mappedCount;
     invalidate(virtualAddress);
+    return true;
+}
+uint32_t KernelPaging::findDeviceWindow(uint32_t bytes) const {
+    uint32_t available = 0;
+    // Native ELF, heap and stack addresses are below this supervisor interval.
+    for (uint64_t page = 0xC0000000ULL; page < AddressLimit; page += 4096) {
+        if (leafLocked((uint32_t)page)) {
+            available = 0;
+        } else {
+            available += 4096;
+            if (available == bytes) return (uint32_t)(page + 4096 - bytes);
+        }
+    }
+    return 0;
+}
+bool KernelPaging::DeviceWindow::matches(uint32_t address, uint64_t entry) const {
+    if (address < base || address - base >= bytes) return false;
+    const uint64_t expected = (physical + (address - base)) | Present | Writable | Uncached;
+    return (entry & ~0x60ULL) == expected; // Hardware may set accessed and dirty.
+}
+bool KernelPaging::matchesHighDevice(uint32_t address, uint64_t entry) const {
+    for (uint32_t i = 0; i < highDeviceCount; ++i)
+        if (highDevices[i].matches(address, entry)) return true;
+    return false;
+}
+bool KernelPaging::highDevicesIntact() const {
+    for (uint32_t i = 0; i < highDeviceCount; ++i) {
+        const DeviceWindow& window = highDevices[i];
+        for (uint32_t offset = 0; offset < window.bytes; offset += 4096) {
+            const uint32_t address = window.base + offset;
+            if (!window.matches(address, leafLocked(address))) return false;
+        }
+    }
     return true;
 }
 bool KernelPaging::reserveHighWindow() {
@@ -135,6 +168,7 @@ bool KernelPaging::abandon() {
     }
     directory = mappedCount = tableCount = 0;
     highWindow = 0;
+    highDeviceCount = 0;
     prepared = pae = false;
     frames = 0;
     error = PagingOk;
@@ -149,12 +183,25 @@ bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const Pagin
         || config.kernelEnd <= config.kernelStart || !pageAligned(config.readOnlyStart)
         || !pageAligned(config.readOnlyEnd) || config.readOnlyStart < config.kernelStart
         || config.readOnlyEnd > config.kernelEnd || config.readOnlyEnd <= config.readOnlyStart
-        || config.deviceCount > 64 || (config.deviceCount && !config.devices))
+        || config.deviceCount > MaximumDevices || (config.deviceCount && !config.devices))
         return fail(PagingBadRange);
     for (uint32_t i = 0; i < config.deviceCount; ++i) {
         const PagingDeviceRange& device = config.devices[i];
-        if (!device.length || !pageAligned(device.address) || !pageAligned(device.length)
-            || !validBytes(device.address, device.length)) return fail(PagingBadRange);
+        if (!device.length || (device.address & 4095) || !pageAligned(device.length))
+            return fail(PagingBadRange);
+        if (device.address < AddressLimit) {
+            if (!validBytes((uint32_t)device.address, device.length)) return fail(PagingBadRange);
+        } else {
+            if (!usePae || !device.mappedAddress || !config.bootInfo ||
+                !allocator.permitsHighMmio(*config.bootInfo, device.address, device.length))
+                return fail(PagingBadRange);
+            for (uint32_t j = 0; j < i; ++j) {
+                const PagingDeviceRange& other = config.devices[j];
+                if (device.address < other.address + other.length &&
+                    other.address < device.address + device.length)
+                    return fail(PagingConflict);
+            }
+        }
     }
     frames = &allocator;
     if (!frames->allocate(directory)) { frames = 0; return fail(PagingNoMemory); }
@@ -185,19 +232,37 @@ bool KernelPaging::prepareIdentity(PhysicalMemoryManager& allocator, const Pagin
     for (uint32_t page = 4096; ok && page < 0x100000; page += 4096)
         if (frames->isBootstrapPage(page)) ok = identityBytes(page, 4096);
     if (ok) ok = bootMappings(config.bootInfo);
+    uint32_t deviceBases[MaximumDevices];
     for (uint32_t i = 0; ok && i < config.deviceCount; ++i) {
         const PagingDeviceRange& device = config.devices[i];
+        if (device.address >= AddressLimit) continue;
+        deviceBases[i] = (uint32_t)device.address;
         const uint64_t end = (uint64_t)device.address + device.length;
         for (uint64_t page = device.address; ok && page < end; page += 4096) {
             // A collision with any RAM/kernel/boot mapping fails closed.
             ok = addPage((uint32_t)page, (uint32_t)page, Writable | Uncached);
         }
     }
+    // All identity mappings are present before selecting holes for high BARs.
+    for (uint32_t i = 0; ok && i < config.deviceCount; ++i) {
+        const PagingDeviceRange& device = config.devices[i];
+        if (device.address < AddressLimit) continue;
+        deviceBases[i] = findDeviceWindow(device.length);
+        if (!deviceBases[i]) { ok = fail(PagingConflict); break; }
+        for (uint32_t offset = 0; ok && offset < device.length; offset += 4096)
+            ok = addPage(deviceBases[i] + offset, device.address + offset, Writable | Uncached);
+    }
     if (ok && pae && frames->getHighStatistics().usableFrames)
         ok = reserveHighWindow();
     if (ok) {
         for (uint32_t page = config.readOnlyStart; page < config.readOnlyEnd; page += 4096) {
             writeEntry(tables[directoryIndex(page)], leafIndex(page), leafLocked(page) & ~uint64_t(Writable));
+        }
+        for (uint32_t i = 0; i < config.deviceCount; ++i) {
+            const PagingDeviceRange& device = config.devices[i];
+            if (device.address >= AddressLimit)
+                highDevices[highDeviceCount++] = {device.address, deviceBases[i], device.length};
+            if (device.mappedAddress) *device.mappedAddress = deviceBases[i];
         }
         prepared = true;
         error = PagingOk;

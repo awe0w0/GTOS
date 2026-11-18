@@ -300,9 +300,12 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
         && KernelAlias((uint32_t)this, sizeof(*this), true)
         && KernelAlias((uint32_t)&allocator, sizeof(allocator), true)
         && KernelAlias((uint32_t)&sharedKernel, sizeof(sharedKernel), true)
-        && ValidPaeRoot(allocator, kernelDirectory, sharedKernel.directories);
+        && ValidPaeRoot(allocator, kernelDirectory, sharedKernel.directories)
+        && sharedKernel.highDevicesIntact();
     for (uint32_t di = 0; valid && di < DirectoryCount(); ++di) {
         const uint64_t pde = DirectoryEntry(di, true);
+        // Validate the actual walk against the tables used to check shared mappings.
+        if ((pde & AddressMask) != sharedKernel.tables[di]) { valid = false; break; }
         if (!pde) continue;
         if (!(pde & Present) || (pde & ~KernelPdeMask) || !(pde & Writable) || UserDirectory(di)) {
             valid = false; break;
@@ -316,7 +319,10 @@ bool ProcessAddressSpace::PrepareWithLimit(KernelPaging& sharedKernel, PhysicalM
             if ((DirectoryEntry(previous, true) & AddressMask) == table) valid = false;
         for (uint32_t ti = 0; valid && ti < LeafCount(); ++ti) {
             const uint64_t pte = kernel->entry(table, ti);
-            if (pte && (!(pte & Present) || (pte & ~KernelPteMask))) valid = false;
+            if (pte && (!(pte & Present) || (pte & ~KernelPteMask))) {
+                const uint32_t address = (di * LeafCount() + ti) << 12;
+                valid = sharedKernel.matchesHighDevice(address, pte);
+            }
         }
     }
     if (!valid) {

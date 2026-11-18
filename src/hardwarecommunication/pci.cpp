@@ -53,6 +53,19 @@ bool PeripheralComponentInterconnectController::DeviceHasFunctions(uint16_t bus,
 bool PeripheralComponentInterconnectController::ProbeMemoryBar32(
     const PeripheralComponentInterconnectDeviceDescriptor& d, uint8_t bar,
     uint32_t& address, uint32_t& bytes) {
+    uint64_t base;
+    address = 0;
+    if (!ProbeMemoryBar(d, bar, base, bytes) || base >= 0x100000000ULL) {
+        bytes = 0;
+        return false;
+    }
+    address = (uint32_t)base;
+    return true;
+}
+
+bool PeripheralComponentInterconnectController::ProbeMemoryBar(
+    const PeripheralComponentInterconnectDeviceDescriptor& d, uint8_t bar,
+    uint64_t& address, uint32_t& bytes) {
     address = bytes = 0;
     if (bar >= 6 || (Read(d.bus, d.device, d.function, 0x0E) & 0x7F) != 0)
         return false;
@@ -61,10 +74,11 @@ bool PeripheralComponentInterconnectController::ProbeMemoryBar32(
     const uint32_t low = Read(d.bus, d.device, d.function, offset);
     const uint32_t barType = low & 7;
     const bool wide = barType == 4;
-    if ((barType != 0 && !wide) || (wide && bar == 5) || !(low & ~0xFu))
+    if ((barType != 0 && !wide) || (wide && bar == 5))
         return false;
     const uint32_t high = wide ? Read(d.bus, d.device, d.function, offset + 4) : 0;
-    if (high)
+    const uint64_t base = ((uint64_t)high << 32) | (low & ~0xFu);
+    if (!base)
         return false;
 
     const uint16_t command = Read(d.bus, d.device, d.function, 4);
@@ -86,9 +100,8 @@ bool PeripheralComponentInterconnectController::ProbeMemoryBar32(
 
     const uint64_t mask = ((uint64_t)highMask << 32) | lowMask;
     const uint64_t length = ~mask + 1;
-    const uint32_t base = low & ~0xFu;
     if (!length || length > 0xFFFFFFFFu || (length & (length - 1)) ||
-        (base & (length - 1)) || (uint64_t)base + length > 0x100000000ULL)
+        (base & (length - 1)) || length - 1 > ~base)
         return false;
     address = base;
     bytes = (uint32_t)length;

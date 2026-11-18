@@ -21,6 +21,10 @@ public:
     struct Info { uint32_t type,size;char name[256]; };
     struct ReclaimResult { uint32_t released;int32_t error; };
     struct AllocationLookahead { uint8_t bytes[32*1024]; };
+    struct BlockCaches {
+        uint8_t read[BlockSize], program[BlockSize];
+        uint8_t files[MaximumHandles][BlockSize];
+    };
 private:
     friend struct FileStoreDescriptorFixture;
     struct Resource {
@@ -37,6 +41,7 @@ private:
     bool mounted,readOnly;
     lfs_t filesystem;
     lfs_config config;
+    BlockCaches* blockCaches;
     uint8_t readCache[SectorSize],progCache[SectorSize],lookahead[128],eraseCache[SectorSize];
     Slot slots[MaximumHandles];
     Resource resources[MaximumHandles];
@@ -61,8 +66,9 @@ public:
     int32_t Format(BlockDevice* device,uint32_t first,uint32_t sectors);
     // An optional allocation bitmap belongs exclusively to this mount and
     // must outlive it. A full bitmap avoids another traversal per small window.
+    // Optional block-sized buffers belong to this mount for its entire lifetime.
     int32_t Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect=false,
-                  AllocationLookahead* allocation=nullptr);
+                  AllocationLookahead* allocation=nullptr,BlockCaches* caches=nullptr);
     int32_t Unmount();
     bool Mounted() const { return mounted; }
     uint32_t OpenCount() const;
