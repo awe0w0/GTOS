@@ -1,5 +1,5 @@
 #!/bin/sh
-# Real ATA read implementation and cache at both optimizations, plus freestanding i386.
+# Real ATA batch transfers and cache at both optimizations, plus freestanding i386.
 set -eu
 cd "$(dirname "$0")/.."
 . ./tests/host-runner.sh

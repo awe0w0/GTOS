@@ -38,6 +38,7 @@ public:
     virtual bool ReadSector(uint32_t sector,uint8_t* data) { return Read28(sector,data,512); }
     bool ReadSectors(uint32_t first,uint32_t count,uint8_t* data) override;
     virtual bool WriteSector(uint32_t sector,const uint8_t* data) { return Write28(sector,data,512); }
+    bool WriteSectors(uint32_t first,uint32_t count,const uint8_t* data) override;
     bool Present() const { return present; }
     virtual uint32_t SectorCount() const { return sectors; }
     const char* Model() const { return model; }

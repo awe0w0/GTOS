@@ -42,7 +42,7 @@ private:
     lfs_t filesystem;
     lfs_config config;
     BlockCaches* blockCaches;
-    uint8_t readCache[SectorSize],progCache[SectorSize],lookahead[128],eraseCache[SectorSize];
+    uint8_t readCache[SectorSize],progCache[SectorSize],lookahead[128],eraseCache[BlockSize];
     Slot slots[MaximumHandles];
     Resource resources[MaximumHandles];
     FileStore(const FileStore&);

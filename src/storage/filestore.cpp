@@ -36,16 +36,14 @@ int FileStore::ProgBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,c
     if (!ValidRegion(cfg,block,off,size,buffer)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;if (self->readOnly) return ReadOnly;
     uint32_t start=self->firstSector+block*SectorsPerBlock+off/SectorSize;
-    for (uint32_t i=0;i<size/SectorSize;i++)
-        if (!self->disk->WriteSector(start+i,(const uint8_t*)buffer+i*SectorSize)) return LFS_ERR_IO;
+    if (size&&!self->disk->WriteSectors(start,size/SectorSize,(const uint8_t*)buffer)) return LFS_ERR_IO;
     return 0;
 }
 int FileStore::EraseBlock(const lfs_config* cfg,lfs_block_t block) {
     if (!ValidRegion(cfg,block,0,BlockSize,cfg)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;if (self->readOnly) return ReadOnly;
-    for (uint32_t i=0;i<SectorsPerBlock;i++)
-        if (!self->disk->WriteSector(self->firstSector+block*SectorsPerBlock+i,self->eraseCache)) return LFS_ERR_IO;
-    return 0;
+    return self->disk->WriteSectors(self->firstSector+block*SectorsPerBlock,SectorsPerBlock,self->eraseCache)
+        ?0:LFS_ERR_IO;
 }
 int FileStore::SyncBlock(const lfs_config* cfg) {
     FileStore* self=(FileStore*)cfg->context;

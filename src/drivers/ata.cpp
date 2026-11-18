@@ -73,7 +73,7 @@ bool AdvancedTechnologyAttachment::Read28(uint32_t sector, uint8_t* data, int co
     Delay(); return Wait(false);
 }
 bool AdvancedTechnologyAttachment::ReadSectors(uint32_t first,uint32_t count,uint8_t* data) {
-    if (!present || !ValidRead(first,count,data)) { lastError=BadArgument; return false; }
+    if (!present || !ValidTransfer(first,count,data)) { lastError=BadArgument; return false; }
     while (count) {
         const uint32_t batch=count>256?256:count;
         if (!Select(first,batch)) return false;
@@ -93,6 +93,7 @@ bool AdvancedTechnologyAttachment::Write28(uint32_t sector, const uint8_t* data,
     // Reject before argument access, device selection, or any hardware I/O.
     if (liveWritesDisabled) { lastError=WriteProtected; return false; }
     if (!data || count<1 || count>512) { lastError=BadArgument; return false; }
+    if (count==512) return WriteSectors(sector,1,data);
     if (!Select(sector)) return false;
     commandPort.Write(0x30); Delay();
     if (!Wait(true)) return false;
@@ -102,6 +103,24 @@ bool AdvancedTechnologyAttachment::Write28(uint32_t sector, const uint8_t* data,
         dataPort.Write(w);
     }
     Delay(); return Wait(false);
+}
+bool AdvancedTechnologyAttachment::WriteSectors(uint32_t first,uint32_t count,const uint8_t* data) {
+    if (liveWritesDisabled) { lastError=WriteProtected; return false; }
+    if (!present || !ValidTransfer(first,count,data)) { lastError=BadArgument; return false; }
+    while (count) {
+        const uint32_t batch=count>256?256:count;
+        if (!Select(first,batch)) return false;
+        commandPort.Write(0x30); Delay();
+        for (uint32_t i=0;i<batch;i++) {
+            if (!Wait(true)) return false;
+            dataPort.WriteWords(data,256);
+            data+=512;
+            Delay();
+        }
+        if (!Wait(false)) return false;
+        first+=batch;count-=batch;
+    }
+    return true;
 }
 bool AdvancedTechnologyAttachment::Flush() {
     // Even flushing an existing device cache is forbidden in a live boot.

@@ -106,10 +106,13 @@ namespace gtos { namespace drivers {
             return ReadSectors(sector, 1, data);
         }
         bool ReadSectors(uint32_t first, uint32_t count, uint8_t* data) override {
-            return ValidRead(first, count, data) && disk.ReadSectors(first, count, data);
+            return ValidTransfer(first, count, data) && disk.ReadSectors(first, count, data);
         }
         bool WriteSector(uint32_t sector, const uint8_t* data) override {
-            return ValidRead(sector, 1, data) && disk.WriteSectors(sector, 1, data);
+            return WriteSectors(sector, 1, data);
+        }
+        bool WriteSectors(uint32_t first, uint32_t count, const uint8_t* data) override {
+            return ValidTransfer(first, count, data) && disk.WriteSectors(first, count, data);
         }
         bool Flush() override { return Identify() && disk.Flush(); }
     };

@@ -45,13 +45,19 @@ public:
         return true;
     }
     bool WriteSector(uint32_t sector,const uint8_t* data) override {
-        // An unsuccessful write may still have changed the medium.
-        Entry* entry=Find(sector);
-        if (entry&&entry->sector==sector) entry->sector=Empty;
-        return device.WriteSector(sector,data);
+        return WriteSectors(sector,1,data);
+    }
+    bool WriteSectors(uint32_t first,uint32_t count,const uint8_t* data) override {
+        if (!ValidTransfer(first,count,data)) return false;
+        // A failed batch may already have written some of these sectors.
+        for (uint32_t i=0;i<count;i++) {
+            Entry* entry=Find(first+i);
+            if (entry&&entry->sector==first+i) entry->sector=Empty;
+        }
+        return device.WriteSectors(first,count,data);
     }
     bool ReadSectors(uint32_t first,uint32_t count,uint8_t* data) override {
-        if (!ValidRead(first,count,data)) return false;
+        if (!ValidTransfer(first,count,data)) return false;
         if (count==1) return ReadSector(first,data);
         if (!device.ReadSectors(first,count,data)) return false;
         for (uint32_t i=0;i<count;i++) {

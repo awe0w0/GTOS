@@ -14,11 +14,13 @@ static uint8_t Pattern(uint32_t sector,uint32_t byte) {
 namespace gtos { namespace hardwarecommunication {
 static uint32_t accesses=0,capacity=0x10000000U,word=0,current=0,remaining=0,completed=0;
 static uint32_t commands=0,starts[513],counts[513],failAfter=0xFFFFFFFFU;
+static uint32_t writeSize=512;
 static uint8_t registers[8];
-static bool identify=false,failFinish=false;
+static bool identify=false,failFinish=false,writing=false,writeDataMatches=true;
 static void Reset() {
     accesses=commands=completed=remaining=word=0;
-    failAfter=0xFFFFFFFFU;failFinish=false;
+    failAfter=0xFFFFFFFFU;failFinish=false;writing=false;
+    writeSize=512;writeDataMatches=true;
 }
 Port::Port(uint16_t number):portnumber(number) {}
 Port::~Port() {}
@@ -29,7 +31,8 @@ void Port8Bit::Write(uint8_t value) {
     if (portnumber>=0x1F0&&portnumber<=0x1F7) registers[portnumber-0x1F0]=value;
     if (portnumber!=0x1F7) return;
     if (value==0xEC) { identify=true;word=0; }
-    if (value==0x20) {
+    if (value==0x20||value==0x30) {
+        writing=value==0x30;
         Check(commands<513,"command capture bound");
         current=((uint32_t)(registers[6]&15)<<24)|((uint32_t)registers[5]<<16)
             |((uint32_t)registers[4]<<8)|registers[3];
@@ -48,7 +51,15 @@ uint8_t Port8Bit::Read() {
 }
 Port16Bit::Port16Bit(uint16_t number):Port(number) {}
 Port16Bit::~Port16Bit() {}
-void Port16Bit::Write(uint16_t) { ++accesses; }
+void Port16Bit::Write(uint16_t value) {
+    ++accesses;
+    Check(remaining&&writing,"data write has a pending sector");
+    const uint32_t byte=word*2U;
+    const uint16_t low=byte<writeSize?Pattern(current,byte):0;
+    const uint16_t high=byte+1<writeSize?Pattern(current,byte+1):0;
+    writeDataMatches&=value==(low|(high<<8));
+    if (++word==256) { word=0;++current;--remaining;++completed; }
+}
 uint16_t Port16Bit::Read() {
     ++accesses;
     if (identify) {
@@ -70,10 +81,18 @@ void Port16Bit::ReadWords(uint8_t* data,uint32_t count) {
         const uint16_t value=Read();*data++=(uint8_t)value;*data++=(uint8_t)(value>>8);
     }
 }
+void Port16Bit::WriteWords(const uint8_t* data,uint32_t count) {
+    Check(count==256,"bulk write transfers exactly one sector per DRQ");
+    for (uint32_t i=0;i<count;i++,data+=2) Write(data[0]|((uint16_t)data[1]<<8));
+}
 } }
 using namespace gtos::hardwarecommunication;
 static uint8_t bytes[513U*512U+2];
 static void Fill(uint8_t value) { for (uint32_t i=0;i<sizeof(bytes);i++) bytes[i]=value; }
+static void FillSectors(uint32_t first,uint32_t count) {
+    for (uint32_t sector=0;sector<count;sector++)
+        for (uint32_t i=0;i<512;i++) bytes[1+sector*512U+i]=Pattern(first+sector,i);
+}
 static bool Matches(uint32_t first,uint32_t count,const uint8_t* data) {
     for (uint32_t sector=0;sector<count;sector++)
         for (uint32_t i=0;i<512;i++) if (data[sector*512U+i]!=Pattern(first+sector,i)) return false;
@@ -138,10 +157,33 @@ static void AtaReads() {
     Reset();AdvancedTechnologyAttachment absent(0x1F0,true);
     Check(!absent.ReadSectors(0,1,bytes)&&!accesses,"unidentified disk performs no hardware access");
 }
+static void AtaWrites() {
+    AdvancedTechnologyAttachment disk(0x1F0,true);
+    Check(disk.Identify(),"identify a writable ATA disk");
+    Reset();FillSectors(31,257);
+    Check(disk.WriteSectors(31,257,bytes+1)&&commands==2&&completed==257
+        &&starts[0]==31&&starts[1]==287&&counts[0]==256&&counts[1]==1
+        &&writeDataMatches&&Matches(31,257,bytes+1),"write batches preserve unaligned bytes and split at 256 sectors");
+    Reset();failAfter=2;
+    Check(!disk.WriteSectors(31,257,bytes+1)&&commands==1&&completed==2&&writeDataMatches
+        &&disk.LastError()==AdvancedTechnologyAttachment::DeviceError,"failed write stops before issuing another command");
+    Reset();failFinish=true;
+    Check(!disk.WriteSectors(31,1,bytes+1)&&commands==1&&completed==1
+        &&disk.LastError()==AdvancedTechnologyAttachment::DeviceError,"final write status is checked");
+    Reset();writeSize=3;
+    Check(disk.Write28(31,bytes+1,3)&&commands==1&&completed==1&&writeDataMatches,
+          "legacy partial write still pads a sector with zeroes");
+    Reset();
+    Check(!disk.WriteSectors(0,0,bytes)&&!disk.WriteSectors(0,1,0)
+        &&!disk.WriteSectors(capacity-1,2,bytes)
+        &&!disk.WriteSectors(0,1,(const uint8_t*)(~(__UINTPTR_TYPE__)0-255))
+        &&!accesses&&disk.LastError()==AdvancedTechnologyAttachment::BadArgument,
+        "invalid writes fail before the first port access");
+}
 class SectorDisk : public BlockDevice {
 public:
-    uint32_t reads,batches,failed;
-    SectorDisk():reads(0),batches(0),failed(0xFFFFFFFFU) {}
+    uint32_t reads,writes,batches,failed;
+    SectorDisk():reads(0),writes(0),batches(0),failed(0xFFFFFFFFU) {}
     bool Identify() override { return true; }
     uint32_t SectorCount() const override { return 2048; }
     bool ReadSector(uint32_t sector,uint8_t* data) override {
@@ -149,13 +191,20 @@ public:
         for (uint32_t i=0;i<512;i++) data[i]=Pattern(sector,i);
         return true;
     }
-    bool WriteSector(uint32_t,const uint8_t*) override { return false; }
+    bool WriteSector(uint32_t sector,const uint8_t* data) override {
+        ++writes;
+        return sector!=failed&&sector<SectorCount()&&data&&Matches(sector,1,data);
+    }
     bool Flush() override { return true; }
 };
 class BatchDisk : public SectorDisk {
 public:
+    uint32_t writeBatches=0;
     bool ReadSectors(uint32_t first,uint32_t count,uint8_t* data) override {
         ++batches;return BlockDevice::ReadSectors(first,count,data);
+    }
+    bool WriteSectors(uint32_t first,uint32_t count,const uint8_t* data) override {
+        ++writeBatches;return BlockDevice::WriteSectors(first,count,data);
     }
 };
 static void DeviceAndCache() {
@@ -168,14 +217,32 @@ static void DeviceAndCache() {
     disk.failed=3;disk.reads=0;Fill(0xA5);
     Check(!disk.ReadSectors(1,4,bytes+1)&&disk.reads==3&&Matches(1,2,bytes+1)
         &&bytes[1025]==0xA5,"fallback stops at the first failed sector");
+    FillSectors(1,4);
+    Check(!disk.WriteSectors(1,4,bytes+1)&&disk.writes==3,"write fallback stops at the first failed sector");
+    Check(!disk.WriteSectors(2047,2,bytes+1)&&disk.writes==3,"invalid write range never touches the disk");
+    disk.failed=0xFFFFFFFFU;
+    Check(disk.WriteSectors(1,4,bytes+1)&&disk.writes==7,"sector-only write devices keep the bounded fallback");
     BatchDisk source;BlockHeaderCache cache(source);
     Check(cache.ReadSectors(8,17,bytes+1)&&source.batches==1&&source.reads==17
         &&Matches(8,17,bytes+1),"metadata cache forwards one contiguous device request");
     const uint32_t readBaseline=source.reads;
     Check(cache.ReadSector(8,bytes)&&cache.ReadSectors(16,1,bytes)
         &&cache.ReadSector(24,bytes)&&source.reads==readBaseline,"batch populates every aligned block header");
-    Check(!cache.WriteSector(8,bytes)&&cache.ReadSector(8,bytes)
+    source.failed=8;
+    Check(!cache.WriteSector(8,bytes)&&!cache.ReadSector(8,bytes)
         &&source.reads==readBaseline+1,"failed write still invalidates the cached header");
+    source.failed=0xFFFFFFFFU;
+    Check(cache.ReadSector(8,bytes),"reload the header before testing a partial write");
+    source.failed=9;
+    FillSectors(8,17);
+    Check(!cache.WriteSectors(8,17,bytes+1)&&source.writeBatches==2,
+          "cache forwards a batched write once and propagates partial failure");
+    source.failed=0xFFFFFFFFU;
+    const uint32_t afterWrite=source.reads;
+    Check(cache.ReadSector(8,bytes)&&cache.ReadSector(16,bytes)&&cache.ReadSector(24,bytes)
+        &&source.reads==afterWrite+3,"partial write invalidates every possibly written header");
+    Check(!cache.WriteSectors(2047,2,bytes)&&!cache.WriteSectors(0,1,0)
+        &&source.writeBatches==2,"cache rejects invalid writes before forwarding");
     const uint32_t batchBaseline=source.batches;
     Check(!cache.ReadSectors(2047,2,bytes)&&!cache.ReadSectors(0,1,0)
         &&source.batches==batchBaseline,"cache rejects invalid requests before forwarding");
@@ -185,7 +252,7 @@ static void DeviceAndCache() {
     Check(cache.ReadSector(64,bytes)&&source.reads==failedReads+1,"failed batch cannot supply a later cache hit");
 }
 int main() {
-    AtaReads();DeviceAndCache();
+    AtaReads();AtaWrites();DeviceAndCache();
     Check(checks>1000,"all full-sector port transfers were exercised");
     puts(failures?"ATA BATCH READ FAIL":"ATA BATCH READ PASS");
     return failures?1:0;

@@ -67,6 +67,11 @@ void Port16Bit::ReadWords(uint8_t* destination, uint32_t count) {
         : "+D"(destination), "+c"(count) : "d"(portnumber) : "memory", "cc");
 }
 
+void Port16Bit::WriteWords(const uint8_t* source, uint32_t count) {
+    __asm__ volatile("cld; rep outsw"
+        : "+S"(source), "+c"(count) : "d"(portnumber) : "memory", "cc");
+}
+
 Port32Bit::Port32Bit(uint16_t portnumber) 
 : Port(portnumber){
 

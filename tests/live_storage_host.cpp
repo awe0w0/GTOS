@@ -139,6 +139,9 @@ void Port16Bit::ReadWords(uint8_t* destination, uint32_t count) {
         *destination++=(uint8_t)(word>>8);
     }
 }
+void Port16Bit::WriteWords(const uint8_t* source, uint32_t count) {
+    for (uint32_t i=0;i<count;++i,source+=2) Write(source[0]|((uint16_t)source[1]<<8));
+}
 } }
 static void AtaContract() {
     using namespace gtos::drivers;
@@ -158,6 +161,9 @@ static void AtaContract() {
     Check(!throughInterface->WriteSector(0,sector)
           && existing.LastError()==AdvancedTechnologyAttachment::WriteProtected,
           "live blocks virtual WriteSector");
+    Check(!throughInterface->WriteSectors(0,2,(const uint8_t*)1)
+          && existing.LastError()==AdvancedTechnologyAttachment::WriteProtected,
+          "live blocks a bulk write before reading its source");
     Check(!existing.Flush() && existing.LastError()==AdvancedTechnologyAttachment::WriteProtected,
           "live blocks existing instance Flush");
     Check(!existing.Write28(0xFFFFFFFFU,(const uint8_t*)1,-1)

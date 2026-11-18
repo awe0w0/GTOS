@@ -56,7 +56,7 @@ struct NvmeTestFixture {
     static uint8_t media[2048U*512U];
     static uint32_t registers[8192U/4U];
     static uint32_t submission,completion,phase,commands,reads,writes,flushes,batches;
-    static uint32_t multiSectorReads;
+    static uint32_t multiSectorReads,blockErases,multiSectorPrograms;
     static uint32_t failAt;
     static bool reverse,badCid,resetFails,dropCompletion;
     static uint8_t* mutate;
@@ -76,6 +76,7 @@ struct NvmeTestFixture {
             for (uint32_t page=1;page<128;page++) prps[page-1]=data+page*4096U;
         }
         submission=completion=commands=reads=writes=flushes=batches=multiSectorReads=0;phase=1;
+        blockErases=multiSectorPrograms=0;
         failAt=0xFFFFFFFFU;reverse=badCid=resetFails=dropCompletion=false;mutate=nullptr;
         releases=0;pciCommand=4;clockTicks=0;registers[0x1C/4]=1;
     }
@@ -122,7 +123,14 @@ struct NvmeTestFixture {
                 }
                 if (!failed) {
                     uint8_t* bounce=(uint8_t*)(__UINTPTR_TYPE__)command[6];
-                    if (opcode==1) { ++writes;Copy(media+(uint32_t)first*512U,bounce,bytes); }
+                    if (opcode==1) {
+                        ++writes;
+                        bool erased=true;
+                        for (uint32_t i=0;i<bytes;i++) erased&=bounce[i]==0xFF;
+                        if (erased&&bytes==FileStore::BlockSize) ++blockErases;
+                        if (!erased&&count>1) ++multiSectorPrograms;
+                        Copy(media+(uint32_t)first*512U,bounce,bytes);
+                    }
                     else {
                         ++reads;
                         if (count>1) ++multiSectorReads;
@@ -146,7 +154,7 @@ uint32_t NvmeTestFixture::registers[8192U/4U];
 uint32_t NvmeTestFixture::submission,NvmeTestFixture::completion,NvmeTestFixture::phase;
 uint32_t NvmeTestFixture::commands,NvmeTestFixture::reads,NvmeTestFixture::writes;
 uint32_t NvmeTestFixture::flushes,NvmeTestFixture::batches,NvmeTestFixture::failAt;
-uint32_t NvmeTestFixture::multiSectorReads;
+uint32_t NvmeTestFixture::multiSectorReads,NvmeTestFixture::blockErases,NvmeTestFixture::multiSectorPrograms;
 bool NvmeTestFixture::reverse,NvmeTestFixture::badCid,NvmeTestFixture::resetFails;
 bool NvmeTestFixture::dropCompletion;
 uint8_t* NvmeTestFixture::mutate;
@@ -212,12 +220,14 @@ static void Volume(NvmeDisk& disk) {
     F::Geometry(disk,512,0x100000000ULL);
     Check(!device.Identify()&&device.SectorCount()==0,"FileStore geometry overflow refused");
     F::Geometry(disk,512,2048);
-    Check(!device.ReadSectors(2047,2,output)&&!device.WriteSector(2048,input),"adapter range checks before hardware");
+    Check(!device.ReadSectors(2047,2,output)&&!device.WriteSector(2048,input)
+        &&!device.WriteSectors(2047,2,input)&&!device.WriteSectors(0,1,nullptr),"adapter range checks before hardware");
     Check(F::commands==0,"adapter refusals submit zero commands");
     // Kernel I/O buffers are in the low identity map. Keep this real
     // filesystem's caches below 4 GiB in the no-PIE host image as well.
     static FileStore store;
     Check(store.Format(&device,8,2040)==0&&store.Mount(&device,8,2040)==0,"real LittleFS formats and mounts NVMe adapter");
+    Check(F::blockErases>=2,"real LittleFS format erases complete blocks in single NVMe writes");
     const int32_t fd=store.Open(1,"/profile",FileStore::ReadWrite|FileStore::Create);
     Check(fd>0&&store.WriteFile(1,fd,input,32769)==32769,"real file writes across many queue wraps");
     Check(store.Close(1,fd)==0&&store.Unmount()==0,"close and unmount flush actual NVM writes");
@@ -242,8 +252,10 @@ static void Volume(NvmeDisk& disk) {
           "block caches issue real multi-sector reads and reduce command count");
     const int32_t writer=store.Open(2,"/profile",FileStore::Write|FileStore::Truncate);
     const uint32_t flushBefore=F::flushes;
+    const uint32_t programsBefore=F::multiSectorPrograms;
     Check(writer>0&&store.WriteFile(2,writer,input+1,32769)==32769&&store.Sync(2,writer)==0&&
           F::flushes>flushBefore,"block-sized program cache persists writes and flushes");
+    Check(F::multiSectorPrograms>programsBefore,"program cache writes useful payload in multi-sector NVMe commands");
     Check(store.Close(2,writer)==0&&store.ReadFileAt(1,reader,4095,output,4098)==4098&&
           Equal(input+1+4095,output,4098),"open reader sees persisted writes across block boundaries");
     Check(store.Close(1,reader)==0&&store.Unmount()==0&&store.Mount(&device,8,2040,true)==0,
