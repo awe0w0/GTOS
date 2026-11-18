@@ -93,6 +93,11 @@ static int measure_process_info(void) {
 #endif
 
 int browser_probe_main(void) {
+#ifdef GTOS_TEST_CHROMIUM_THREAD_ID
+    extern int CheckChromiumThreadIdentity(void);
+    if (!CheckChromiumThreadIdentity()) return 9;
+    Log("GTOS CHROMIUM THREAD ID PASS\n");
+#endif
 #ifdef GTOS_PROCESS_INFO_BENCH_CALLS
     if (!measure_process_info()) return 8;
 #endif

@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <memory>
+#include <process/identity_abi.h>
 
 #include "base/check_op.h"
 #include "base/location.h"
@@ -18,7 +19,6 @@
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_restrictions.h"
 #include "partition_alloc/buildflags.h"
-#include "tools/gtos_native_sdk/native-services.h"
 #include "tools/gtos_native_sdk/native-thread.h"
 
 #if PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
@@ -92,7 +92,7 @@ bool StartDelegate(size_t stack_size, PlatformThreadBase::Delegate* delegate,
 }  // namespace
 
 PlatformThreadId PlatformThreadBase::CurrentId() {
-  return PlatformThreadId(gtos::native::CurrentProcessInfo().thread_id);
+  return PlatformThreadId(gtos::native::CurrentProcessIdentity().thread_id);
 }
 
 PlatformThreadRef PlatformThreadBase::CurrentRef() {
