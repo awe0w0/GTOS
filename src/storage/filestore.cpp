@@ -42,6 +42,9 @@ int FileStore::ProgBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,c
 int FileStore::EraseBlock(const lfs_config* cfg,lfs_block_t block) {
     if (!ValidRegion(cfg,block,0,BlockSize,cfg)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;if (self->readOnly) return ReadOnly;
+    // LittleFS leaves erased bytes undefined. Devices that allow overwrites
+    // can program directly, with the same copy-on-write and sync boundaries.
+    if (self->disk->CanOverwriteSectors()) return 0;
     return self->disk->WriteSectors(self->firstSector+block*SectorsPerBlock,SectorsPerBlock,self->eraseCache)
         ?0:LFS_ERR_IO;
 }

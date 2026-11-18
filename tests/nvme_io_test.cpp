@@ -1,4 +1,5 @@
 #include <drivers/nvme.h>
+#include <storage/blockheadercache.h>
 #include <storage/filestore.h>
 
 extern "C" int puts(const char*);
@@ -212,7 +213,7 @@ static void Refusals(NvmeDisk& disk) {
     Check(!disk.Flush()&&disk.Error()==NvmeCommandTimeout,"flush timeout propagates");
 }
 static void Volume(NvmeDisk& disk) {
-    F::Setup(disk);Fill(F::media,0xFF,sizeof(F::media));
+    F::Setup(disk);Fill(F::media,0xA5,sizeof(F::media));
     NvmeBlockDevice device(disk);
     Check(device.Identify()&&device.SectorCount()==2048,"512-byte geometry adapts without truncation");
     F::Geometry(disk,4096,2048);
@@ -223,15 +224,16 @@ static void Volume(NvmeDisk& disk) {
     Check(!device.ReadSectors(2047,2,output)&&!device.WriteSector(2048,input)
         &&!device.WriteSectors(2047,2,input)&&!device.WriteSectors(0,1,nullptr),"adapter range checks before hardware");
     Check(F::commands==0,"adapter refusals submit zero commands");
+    static BlockHeaderCache cache(device);
     // Kernel I/O buffers are in the low identity map. Keep this real
     // filesystem's caches below 4 GiB in the no-PIE host image as well.
     static FileStore store;
-    Check(store.Format(&device,8,2040)==0&&store.Mount(&device,8,2040)==0,"real LittleFS formats and mounts NVMe adapter");
-    Check(F::blockErases>=2,"real LittleFS format erases complete blocks in single NVMe writes");
+    Check(store.Format(&cache,8,2040)==0&&store.Mount(&cache,8,2040)==0,"LittleFS formats and mounts a non-erased NVMe volume");
+    Check(F::writes>0&&F::blockErases==0,"format programs metadata without erase writes");
     const int32_t fd=store.Open(1,"/profile",FileStore::ReadWrite|FileStore::Create);
     Check(fd>0&&store.WriteFile(1,fd,input,32769)==32769,"real file writes across many queue wraps");
     Check(store.Close(1,fd)==0&&store.Unmount()==0,"close and unmount flush actual NVM writes");
-    Check(store.Mount(&device,8,2040)==0,"remount sees committed metadata");
+    Check(store.Mount(&cache,8,2040)==0,"remount sees committed metadata");
     FileStore::Info info;
     Check(store.Stat("/profile",info)==0&&info.size==32769,"persisted file size agrees");
     int32_t reader=store.Open(1,"/profile",FileStore::Read);
@@ -242,7 +244,7 @@ static void Volume(NvmeDisk& disk) {
     Check(F::writes>0&&F::reads>0&&F::flushes>0,"filesystem used real read, write and flush paths");
 
     static FileStore::BlockCaches caches;
-    Check(store.Mount(&device,8,2040,false,nullptr,&caches)==0,"block caches mount the same on-disk volume");
+    Check(store.Mount(&cache,8,2040,false,nullptr,&caches)==0,"block caches mount the same on-disk volume");
     reader=store.Open(1,"/profile",FileStore::Read);
     const uint32_t blockCacheStart=F::reads;
     const uint32_t batchesBefore=F::multiSectorReads;
@@ -258,12 +260,43 @@ static void Volume(NvmeDisk& disk) {
     Check(F::multiSectorPrograms>programsBefore,"program cache writes useful payload in multi-sector NVMe commands");
     Check(store.Close(2,writer)==0&&store.ReadFileAt(1,reader,4095,output,4098)==4098&&
           Equal(input+1+4095,output,4098),"open reader sees persisted writes across block boundaries");
-    Check(store.Close(1,reader)==0&&store.Unmount()==0&&store.Mount(&device,8,2040,true)==0,
+    Check(store.Close(1,reader)==0&&store.Unmount()==0&&store.Mount(&cache,8,2040,true)==0,
           "a remount can return to sector-sized buffers");
     reader=store.Open(1,"/profile",FileStore::Read);
     Check(reader>0&&store.ReadFile(1,reader,output,32769)==32769&&Equal(input+1,output,32769),
           "block-cache writes persist through a read-only sector-cache mount");
     Check(store.Close(1,reader)==0&&store.Unmount()==0,"releases remounted file and caches");
+    Check(F::blockErases==0,"write, truncate, and remount need no fill writes on NVMe");
+
+    // Leave a replacement's data on the simulated disk and lose the live
+    // handles before sync. A fresh reader must see the committed version.
+    Check(store.Mount(&cache,8,2040,false,nullptr,&caches)==0,"mount for an interrupted rewrite");
+    const int32_t abandoned=store.Open(3,"/profile",FileStore::Write);
+    const uint32_t writesBefore=F::writes;
+    Check(abandoned>0&&store.TruncateFile(3,abandoned,0)==0
+          &&store.WriteFile(3,abandoned,input,32769)==32769&&F::writes>writesBefore,
+          "uncommitted replacement reaches the block device");
+    F::Setup(disk);
+    static BlockHeaderCache recoveredCache(device);
+    static FileStore recovered;
+    Check(recovered.Mount(&recoveredCache,8,2040)==0,"recover a fresh mount after interrupted write");
+    reader=recovered.Open(1,"/profile",FileStore::Read);
+    Check(reader>0&&recovered.ReadFile(1,reader,output,32769)==32769&&Equal(input+1,output,32769),
+          "recovery exposes the earlier committed file, not the uncommitted replacement");
+    Check(recovered.Close(1,reader)==0&&recovered.Unmount()==0,"release recovered file");
+    Check(recovered.Format(&recoveredCache,8,2040)==0&&recovered.Mount(&recoveredCache,8,2040)==0
+          &&recovered.Open(1,"/profile",FileStore::Read)==LFS_ERR_NOENT,"reformat hides old metadata");
+    const int32_t sparse=recovered.Open(1,"/sparse",FileStore::ReadWrite|FileStore::Create);
+    const uint32_t hole=8193;
+    Check(sparse>0&&recovered.Seek(1,sparse,hole,0)==(int32_t)hole&&recovered.WriteFile(1,sparse,input,1)==1
+          &&recovered.Sync(1,sparse)==0,"write a file with a hole over the reused volume");
+    Check(recovered.Seek(1,sparse,0,0)==0&&recovered.ReadFile(1,sparse,output,hole+1)==(int32_t)(hole+1),
+          "read the entire sparse file");
+    bool zero=true;
+    for (uint32_t i=0;i<hole;i++) zero&=output[i]==0;
+    Check(zero&&output[hole]==input[0],"unwritten bytes stay zero on reused blocks");
+    Check(recovered.Close(1,sparse)==0&&recovered.Unmount()==0&&F::blockErases==0,
+          "recovery, reformat and sparse writes require no erase writes");
 }
 int main() {
     PeripheralComponentInterconnectController pci;

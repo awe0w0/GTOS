@@ -158,6 +158,7 @@ static void AtaContract() {
     Check(!existing.Write28(0,sector) && existing.LastError()==AdvancedTechnologyAttachment::WriteProtected,
           "live blocks existing instance Write28");
     BlockDevice* throughInterface=&existing;
+    Check(!throughInterface->CanOverwriteSectors(),"live does not expose the overwrite capability");
     Check(!throughInterface->WriteSector(0,sector)
           && existing.LastError()==AdvancedTechnologyAttachment::WriteProtected,
           "live blocks virtual WriteSector");

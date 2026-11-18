@@ -15,6 +15,8 @@ public:
         return true;
     }
     virtual bool WriteSector(uint32_t sector,const uint8_t* data)=0;
+    // Devices that accept arbitrary replacements without an erase step.
+    virtual bool CanOverwriteSectors() const { return false; }
     virtual bool WriteSectors(uint32_t first,uint32_t count,const uint8_t* data) {
         if (!ValidTransfer(first,count,data)) return false;
         for (uint32_t i=0;i<count;i++)

@@ -30,6 +30,7 @@ public:
         return device.Identify();
     }
     uint32_t SectorCount() const override { return device.SectorCount(); }
+    bool CanOverwriteSectors() const override { return device.CanOverwriteSectors(); }
     bool ReadSector(uint32_t sector,uint8_t* data) override {
         if (!data) return false;
         Entry* entry=Find(sector);

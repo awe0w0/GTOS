@@ -114,6 +114,7 @@ namespace gtos { namespace drivers {
         bool WriteSectors(uint32_t first, uint32_t count, const uint8_t* data) override {
             return ValidTransfer(first, count, data) && disk.WriteSectors(first, count, data);
         }
+        bool CanOverwriteSectors() const override { return true; }
         bool Flush() override { return Identify() && disk.Flush(); }
     };
 } }
