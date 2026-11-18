@@ -86,6 +86,54 @@ static drivers::FramebufferMode Mode(uint32_t w = 64, uint32_t h = 48, uint32_t 
     drivers::FramebufferMode m = {w, h, pitch, 16, 8, 8, 8, 0, 8};
     return m;
 }
+static void CheckRgbaScaling(drivers::Framebuffer& f) {
+    const uint32_t sourceWidth = 7, sourceHeight = 5, background = 0x183451;
+    uint8_t source[sourceWidth * sourceHeight * 4];
+    for (uint32_t i = 0; i < sourceWidth * sourceHeight; ++i) {
+        const uint8_t alpha = i % 3 == 0 ? 0 : i % 3 == 1 ? 128 : 255;
+        source[4 * i] = alpha ? 3 * i : 0;
+        source[4 * i + 1] = alpha ? 2 * i : 0;
+        source[4 * i + 2] = alpha ? i : 0;
+        source[4 * i + 3] = alpha;
+    }
+    const struct { int32_t x, y, w, h; const char* message; } cases[] = {
+        {-7, -3, 37, 21, "RGBA fractional enlargement with a clipped origin"},
+        {55, 41, 4, 3, "RGBA fractional reduction at the clip boundary"},
+        {9, 9, 7, 5, "RGBA unchanged size"},
+        {3, 4, 1, 1, "RGBA single-pixel destination"},
+        {-1200, -10, 1920, 1080, "RGBA wide blit with a displaced clip"},
+        {0x7FFFFFFF, 4, 1920, 1080, "RGBA invalid intersection draws nothing"}
+    };
+    for (const auto& test : cases) {
+        f.ResetClip();
+        f.Clear(background);
+        f.Present();
+        f.SetClip(3, 4, 57, 39);
+        f.BlitRgba(test.x, test.y, test.w, test.h, source, sourceWidth, sourceHeight);
+        f.Present();
+        bool matches = true;
+        for (int32_t y = 0; y < 48; ++y)
+            for (int32_t x = 0; x < 64; ++x) {
+                uint32_t expected = background;
+                if (x >= 3 && x < 60 && y >= 4 && y < 43 &&
+                    x >= test.x && x < (int64_t)test.x + test.w &&
+                    y >= test.y && y < (int64_t)test.y + test.h) {
+                    const uint32_t sx = (x - test.x) * sourceWidth / test.w;
+                    const uint32_t sy = (y - test.y) * sourceHeight / test.h;
+                    const uint8_t* pixel = source + (sy * sourceWidth + sx) * 4;
+                    expected = 0;
+                    for (uint32_t channel = 0; channel < 3; ++channel) {
+                        const uint32_t shift = 16 - 8 * channel;
+                        const uint32_t bg = (background >> shift) & 255;
+                        expected |= (pixel[channel] + (bg * (255 - pixel[3]) + 127) / 255) << shift;
+                    }
+                }
+                matches &= f.ReadPixel(x, y) == expected && video[16 + y * 72 + x] == expected;
+            }
+        Check(matches, test.message);
+    }
+    f.ResetClip();
+}
 static void FramebufferTests() {
     drivers::Framebuffer f;
     drivers::FramebufferMode m = Mode();
@@ -137,6 +185,7 @@ static void FramebufferTests() {
     f.ResetClip();
     f.Blend(20, 20, 0xFFFFFF, 7);
     Check(f.ReadPixel(20, 20) == 0x777777, "4-bit alpha blend");
+    CheckRgbaScaling(f);
     ModernPainter p(f);
     p.Text(-20, -8, "Text clip !?", 0xFFFFFF);
     p.Text(0x7FFFFFFF, 0x7FFFFFFF, "Invisible", 0xFFFFFF, 3);

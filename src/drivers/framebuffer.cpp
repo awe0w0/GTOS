@@ -152,13 +152,20 @@ void Framebuffer::BlitRgba(int32_t x, int32_t y, int32_t w, int32_t h, const uin
     const int32_t endX = right < clipR ? (int32_t)right : clipR;
     const int32_t endY = bottom < clipB ? (int32_t)bottom : clipB;
     if (left >= endX || top >= endY) return;
+    // The horizontal sampling positions are the same for every row.
+    // The width limits above bound both the number and size of the offsets.
+    uint16_t horizontalOffsets[1920];
+    for (int32_t column = left; column < endX; ++column) {
+        const uint32_t sourceX = (uint32_t)(column - x) * sourceWidth / (uint32_t)w;
+        horizontalOffsets[column - left] = sourceX * 4;
+    }
     for (int32_t row = top; row < endY; ++row) {
         const uint32_t sourceY = (uint32_t)(row - y) * sourceHeight / (uint32_t)h;
         const uint8_t* sourceRow = source + sourceY * sourceWidth * 4;
         uint32_t* output = pixels + row * mode.width;
+        const uint16_t* horizontal = horizontalOffsets;
         for (int32_t column = left; column < endX; ++column) {
-            const uint32_t sourceX = (uint32_t)(column - x) * sourceWidth / (uint32_t)w;
-            const uint8_t* rgba = sourceRow + sourceX * 4;
+            const uint8_t* rgba = sourceRow + *horizontal++;
             uint32_t color = (uint32_t)rgba[0] << 16 | (uint32_t)rgba[1] << 8 | rgba[2];
             if (rgba[3] != 255) {
                 const uint32_t background = output[column], inverseAlpha = 255 - rgba[3];
