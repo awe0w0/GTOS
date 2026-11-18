@@ -103,8 +103,8 @@ namespace gtos { namespace process {
         NativeSharedMemoryEndpoint* sharedMemory;
         uint8_t bounce[GTOS_NATIVE_WRITE_LIMIT + 1];
         static NativeRuntime* active;
-        Slot* Current();
-        void Observe(Slot&, const CPUState&);
+        Slot* Current(uint32_t* directory = 0);
+        void Observe(Slot&, const CPUState&, uint32_t directory);
         CPUState* Stop(Slot&, CPUState*, uint32_t code);
         void StopGroup(Slot&, uint32_t code);
         int CreateThread(Slot&, const GtosThreadCreateRequest&);

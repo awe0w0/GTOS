@@ -265,6 +265,7 @@ bool NativeRuntime::Admit(Slot& slot, uint32_t index, uint32_t entry, uint32_t& 
     cpu.esp = UserStackTop - 16; cpu.eflags = 0x202; // IF=1, IOPL=NT=VM=0.
     slot.task.userMode = true; slot.task.directoryAddress = slot.space.DirectoryAddress();
     slot.task.kernelStackTop = top;
+    slot.task.nativeSlot = index;
     if (!fp.Initialize(slot.fp, nextId)) return false;
     if (environment) slot.environment = *environment;
     else slot.environment.Clear();
@@ -485,17 +486,19 @@ bool NativeRuntime::MemoryStatistics(uint32_t id, ProcessMemoryStatistics& resul
             return slots[i].Space().QueryStatistics(result);
     return false;
 }
-NativeRuntime::Slot* NativeRuntime::Current() {
+NativeRuntime::Slot* NativeRuntime::Current(uint32_t* directory) {
     if (!enabled) return 0;
     Task* task = scheduler->CurrentTask();
-    if (!task || !task->UserMode()) return 0;
-    for (uint32_t i = 0; i < slotCount; ++i)
-        if (slots[i].occupied && &slots[i].task == task
-            && Cr3() == slots[i].Space().DirectoryAddress()) return &slots[i];
-    return 0;
+    if (!task || !task->UserMode() || task->nativeSlot >= slotCount) return 0;
+    Slot& slot = slots[task->nativeSlot];
+    if (!slot.occupied || &slot.task != task) return 0;
+    const uint32_t currentDirectory = Cr3();
+    if (currentDirectory != slot.Space().DirectoryAddress()) return 0;
+    if (directory) *directory = currentDirectory;
+    return &slot;
 }
-void NativeRuntime::Observe(Slot& slot, const CPUState& cpu) {
-    slot.status.observedCs = cpu.cs; slot.status.observedCr3 = Cr3();
+void NativeRuntime::Observe(Slot& slot, const CPUState& cpu, uint32_t directory) {
+    slot.status.observedCs = cpu.cs; slot.status.observedCr3 = directory;
     slot.status.observedEflags = cpu.eflags;
 }
 CPUState* NativeRuntime::Stop(Slot& slot, CPUState* cpu, uint32_t code) {
@@ -577,6 +580,7 @@ int NativeRuntime::CreateThread(Slot& caller, const GtosThreadCreateRequest& req
     cpu.eip = request.entry; cpu.esp = esp; cpu.eflags = 0x202;
     target->task.userMode = true; target->task.directoryAddress = space.DirectoryAddress();
     target->task.kernelStackTop = top;
+    target->task.nativeSlot = index;
     target->task.cpuProcess = &process.task;
     if (!fp.Initialize(target->fp, nextId)) return GTOS_THREAD_ERR_BAD_STATE;
     if (!scheduler->AddTask(&target->task)) {
@@ -686,11 +690,13 @@ CPUState* NativeRuntime::WaitForEvents(Slot& thread, CPUState* cpu) {
     return scheduler->Reschedule(cpu);
 }
 CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
-    Slot* thread = Current();
-    if (!cpu || (cpu->cs & 3) != 3 || !thread) return 0;
+    if (!cpu || (cpu->cs & 3) != 3) return 0;
+    uint32_t directory;
+    Slot* thread = Current(&directory);
+    if (!thread) return 0;
     thread->eventWaitCount = 0; thread->eventWaitFrame = 0;
     Slot* slot = thread->process;
-    Observe(*thread, *cpu); ++thread->status.systemCalls;
+    Observe(*thread, *cpu, directory); ++thread->status.systemCalls;
     cpu->eflags = (cpu->eflags & 0xCD5U) | 0x202U;
     switch (cpu->eax) {
     case GTOS_SYS_ENVIRONMENT_READ: {
@@ -1222,8 +1228,9 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
 }
 CPUState* NativeRuntime::HandleFault(CPUState* cpu, uint32_t address) {
     if (!cpu || !RecoverableUserFault(*cpu)) return 0;
-    Slot* slot = Current(); if (!slot) return 0;
-    Observe(*slot, *cpu); slot->status.faultVector = cpu->vector;
+    uint32_t directory;
+    Slot* slot = Current(&directory); if (!slot) return 0;
+    Observe(*slot, *cpu, directory); slot->status.faultVector = cpu->vector;
     slot->status.faultError = cpu->error; slot->status.faultAddress = address;
     ++statistics.faulted;
     printf("\nNATIVE USER FAULT id="); printfHex32(slot->status.id);

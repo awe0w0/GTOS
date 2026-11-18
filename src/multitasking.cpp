@@ -59,6 +59,7 @@ void Task::Initialize(uint16_t codeSelector, void (*entry)()) {
     cpustate = (CPUState*)(stack + sizeof(stack) - sizeof(CPUState) - 12);
     cpustate->ds = cpustate->es = cpustate->fs = cpustate->gs = 0x18;
     userMode = false; directoryAddress = kernelStackTop = 0;
+    nativeSlot = ~0U;
     cpustate->eax = cpustate->ebx = cpustate->ecx = cpustate->edx = 0;
     cpustate->esi = cpustate->edi = cpustate->ebp = 0;
     cpustate->vector = cpustate->error = 0;

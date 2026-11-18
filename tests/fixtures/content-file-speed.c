@@ -1,6 +1,7 @@
 /* CPL3 workload for measuring the disk-backed Content volume through the file ABI. */
 #include <process/abi.h>
 #include <process/file_abi.h>
+#include <process/info_abi.h>
 
 enum { TransferBytes = GTOS_FILE_TRANSFER_LIMIT, BlockCount = 8192 };
 enum { PositionedReadCount = 512, PositionedReadBytes = 512 };
@@ -71,7 +72,30 @@ static int read_positioned_and_check(const unsigned* pattern, unsigned tag) {
     return control(GTOS_SYS_FILE_CLOSE, handle) == 0;
 }
 
+#ifdef GTOS_PROCESS_INFO_BENCH_CALLS
+static int measure_process_info(void) {
+    GtosProcessInfoResult result;
+    const GtosProcessInfoRequest request = {
+        GTOS_PROCESS_INFO_ABI_VERSION, 0, (unsigned)&result, sizeof(result)
+    };
+    if (call(GTOS_SYS_PROCESS_INFO, &request, sizeof(request)) != 0) return 0;
+    const unsigned process = result.process_id, thread = result.thread_id;
+    if (!process || !thread) return 0;
+    Log("GTOS PROCESS INFO BENCH BEGIN\n");
+    for (unsigned i = 0; i < GTOS_PROCESS_INFO_BENCH_CALLS; ++i) {
+        if (call(GTOS_SYS_PROCESS_INFO, &request, sizeof(request)) != 0
+            || result.version != GTOS_PROCESS_INFO_ABI_VERSION
+            || result.process_id != process || result.thread_id != thread) return 0;
+    }
+    Log("GTOS PROCESS INFO BENCH END\n");
+    return 1;
+}
+#endif
+
 int browser_probe_main(void) {
+#ifdef GTOS_PROCESS_INFO_BENCH_CALLS
+    if (!measure_process_info()) return 8;
+#endif
     unsigned pattern[TransferBytes / sizeof(unsigned)];
     for (unsigned word = 1; word < TransferBytes / sizeof(unsigned); ++word)
         pattern[word] = 0x6ca49d81u ^ (word * 0x9e3779b9u);

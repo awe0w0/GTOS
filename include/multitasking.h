@@ -58,6 +58,7 @@ namespace gtos {
             Task* cpuProcess;
             bool userMode;
             uint32_t directoryAddress, kernelStackTop;
+            uint32_t nativeSlot;
             void Initialize(uint16_t codeSelector, void (*entry)());
             static void Bootstrap(Task* task) __attribute__((noreturn));
             Task(const Task&);

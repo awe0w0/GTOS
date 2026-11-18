@@ -22,6 +22,7 @@
 #include <memory/multiboot.h>
 #include <memory/physical.h>
 #include <memory/paging.h>
+#include <process/identity_abi.h>
 #include <process/native_runtime.h>
 
 using namespace gtos;
@@ -684,6 +685,30 @@ Expect(frameSetComplete, "the frame walk covered every addressable frame");
             for (u32 j = i + 1; j < created; ++j) if (ids[i] == ids[j]) distinct = false;
         }
         Expect(distinct, "every identifier is distinct and non-zero");
+
+        TaskManager& tasks = Tasks();
+        CPUState bootFrame = {};
+        CPUState* frame = &bootFrame;
+        for (u32 i = 0; i < created; ++i) {
+            frame = tasks.Reschedule(frame);
+            NativeRuntime::SlotObservation slot = {};
+            const bool scheduled = frame != &bootFrame && runtime.ObserveSlot(ids[i], slot);
+            Expect(scheduled, "the scheduler visits every admitted native task");
+            if (!scheduled) break;
+            frame->eax = GTOS_SYS_PROCESS_IDENTITY;
+            gtos_host_runtime_cr3_value = slot.directory ^ 0x1000U;
+            Expect(runtime.HandleSyscall(frame) == 0 && frame->eax == GTOS_SYS_PROCESS_IDENTITY,
+                   "a scheduled native task cannot call into a different address space");
+            gtos_host_runtime_cr3_value = slot.directory;
+            const u32 reads = gtos_host_runtime_cr3_reads;
+            Expect(runtime.HandleSyscall(frame) == frame && frame->eax == 0
+                       && frame->ebx == ids[i] && frame->edx == ids[i],
+                   "identity resolves the scheduled native task");
+            ExpectHex(gtos_host_runtime_cr3_reads - reads, 1,
+                      "a syscall reuses its validated directory for observation");
+        }
+        Expect(tasks.Reschedule(frame) == &bootFrame, "the scheduler returns to the kernel");
+        gtos_host_runtime_cr3_value = paging.getStatistics().directoryAddress;
 
         const u32 victimId = ids[0];
         uint8_t* victimData = readBuffer;
