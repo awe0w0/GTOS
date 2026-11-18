@@ -78,6 +78,17 @@ namespace {
         uint32_t* page = (uint32_t*)address;
         for (uint32_t i = 0; i < 1024; ++i) page[i] = 0;
     }
+    void CopyCheckedBytes(uint8_t* destination, const uint8_t* source, uint32_t length) {
+        if (length >= 512) {
+            // The checked ranges are disjoint. Copy whole words within this
+            // mapped span, then any remaining bytes.
+            uint32_t words = length / sizeof(uint32_t);
+            asm volatile("cld; rep movsl" : "+D"(destination), "+S"(source), "+c"(words)
+                         : : "memory", "cc");
+            length %= sizeof(uint32_t);
+        }
+        for (uint32_t i = 0; i < length; ++i) destination[i] = source[i];
+    }
     uint64_t FrameAddress(uint32_t number) { return (uint64_t)number << 12; }
     bool HighFrame(uint32_t number) { return number >= (AddressLimit >> 12); }
     uint64_t PageEntry(uint32_t number, bool writable) {
@@ -1168,7 +1179,7 @@ bool ProcessAddressSpace::CopyToUserWithCheckedLayout(uint32_t destination, cons
         const uint32_t chunk = length < 4096 - offset ? length : 4096 - offset;
         const uint32_t number = pages[IndexedLayoutPage(destination & AddressMask)].frameNumber;
         uint8_t* output = (uint8_t*)(MapDataFrame(number) + offset);
-        for (uint32_t i = 0; i < chunk; ++i) output[i] = input[i];
+        CopyCheckedBytes(output, input, chunk);
         UnmapDataFrame(number);
         destination += chunk; input += chunk; length -= chunk;
     }
@@ -1207,7 +1218,7 @@ bool ProcessAddressSpace::CopyFromUserWithCheckedLayout(void* destination, uint3
         const uint32_t chunk = length < 4096 - offset ? length : 4096 - offset;
         const uint32_t number = pages[IndexedLayoutPage(source & AddressMask)].frameNumber;
         const uint8_t* input = (const uint8_t*)(MapDataFrame(number) + offset);
-        for (uint32_t i = 0; i < chunk; ++i) output[i] = input[i];
+        CopyCheckedBytes(output, input, chunk);
         UnmapDataFrame(number);
         source += chunk; output += chunk; length -= chunk;
     }

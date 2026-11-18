@@ -1105,6 +1105,14 @@ namespace {
         const uint32_t boundary = ProcessAddressSpace::DynamicBase;
         CHECK(paeDirectory(root, boundary) != paeDirectory(sharedRoot, boundary));
         CHECK(first.MapNewRange(boundary - 4096, 8192, true));
+        // Large unaligned chunks on both sides of the PAE boundary, with
+        // one tail byte before the boundary and two after it.
+        for (uint32_t i = 1; i <= 1031; ++i) input[i] = (uint8_t)(i * 37 + 13);
+        fill(output, 1033, 0xCC);
+        CHECK(first.CopyToUser(boundary - 517, input + 1, 1031));
+        CHECK(first.CopyFromUser(output + 1, boundary - 517, 1031) &&
+              equal(input + 1, output + 1, 1031));
+        CHECK(output[0] == 0xCC && output[1032] == 0xCC);
         fill(input, 32, 0x79);
         CHECK(first.CopyToUser(boundary - 16, input, 32));
         CHECK(first.CopyFromUser(output, boundary - 16, 32) && equal(input, output, 32));
