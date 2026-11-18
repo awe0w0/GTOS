@@ -1,6 +1,7 @@
 #ifndef GTOS_STORAGE_FILESTORE_H
 #define GTOS_STORAGE_FILESTORE_H
 #include <storage/blockdevice.h>
+#include <storage/content_volume_layout.h>
 #include <storage/littlefs_port.h>
 #include <storage/littlefs/lfs.h>
 #undef memcpy
@@ -22,9 +23,11 @@ public:
     struct ReclaimResult { uint32_t released;int32_t error; };
     struct AllocationLookahead { uint8_t bytes[32*1024]; };
     struct BlockCaches {
-        uint8_t read[BlockSize], program[BlockSize];
-        uint8_t files[MaximumHandles][BlockSize];
+        uint32_t blockBytes;
+        uint8_t* buffer;
+        uint32_t length;
     };
+    static constexpr uint32_t BlockCacheBytes(uint32_t blockBytes) { return (MaximumHandles+2)*blockBytes; }
 private:
     friend struct FileStoreDescriptorFixture;
     struct Resource {
@@ -41,13 +44,13 @@ private:
     bool mounted,readOnly;
     lfs_t filesystem;
     lfs_config config;
-    BlockCaches* blockCaches;
+    uint8_t* fileCaches;
     uint8_t readCache[SectorSize],progCache[SectorSize],lookahead[128],eraseCache[BlockSize];
     Slot slots[MaximumHandles];
     Resource resources[MaximumHandles];
     FileStore(const FileStore&);
     FileStore& operator=(const FileStore&);
-    int32_t Configure(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect);
+    int32_t Configure(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect,const BlockCaches* caches);
     static int32_t ValidPath(const char* path);
     Slot* FindSlot(uint32_t owner,uint32_t handle);
     Resource* Find(uint32_t owner,uint32_t handle,uint32_t kind=0);
@@ -63,12 +66,13 @@ private:
 public:
     FileStore();
     // Never formats implicitly. Format is an explicit destructive operation.
-    int32_t Format(BlockDevice* device,uint32_t first,uint32_t sectors);
+    int32_t Format(BlockDevice* device,uint32_t first,uint32_t sectors,const BlockCaches* caches=nullptr);
     // An optional allocation bitmap belongs exclusively to this mount and
     // must outlive it. A full bitmap avoids another traversal per small window.
     // Optional block-sized buffers belong to this mount for its entire lifetime.
+    // Without them, the existing 4 KiB volume uses sector-sized caches.
     int32_t Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect=false,
-                  AllocationLookahead* allocation=nullptr,BlockCaches* caches=nullptr);
+                  AllocationLookahead* allocation=nullptr,const BlockCaches* caches=nullptr);
     int32_t Unmount();
     bool Mounted() const { return mounted; }
     uint32_t OpenCount() const;

@@ -243,7 +243,8 @@ static void Volume(NvmeDisk& disk) {
     Check(store.Close(1,reader)==0&&store.OpenCount()==0&&store.Unmount()==0,"all handles close before final unmount");
     Check(F::writes>0&&F::reads>0&&F::flushes>0,"filesystem used real read, write and flush paths");
 
-    static FileStore::BlockCaches caches;
+    static uint8_t cacheBuffer[FileStore::BlockCacheBytes(FileStore::BlockSize)];
+    const FileStore::BlockCaches caches={FileStore::BlockSize,cacheBuffer,sizeof(cacheBuffer)};
     Check(store.Mount(&cache,8,2040,false,nullptr,&caches)==0,"block caches mount the same on-disk volume");
     reader=store.Open(1,"/profile",FileStore::Read);
     const uint32_t blockCacheStart=F::reads;
@@ -298,11 +299,42 @@ static void Volume(NvmeDisk& disk) {
     Check(recovered.Close(1,sparse)==0&&recovered.Unmount()==0&&F::blockErases==0,
           "recovery, reformat and sparse writes require no erase writes");
 }
+static void LargeVolume(NvmeDisk& disk) {
+    F::Setup(disk);
+    Fill(F::media,0xA5,sizeof(F::media));
+    const uint32_t blockBytes=GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES;
+    const uint32_t diskSectors=1984;
+    F::TransferLimit(disk,blockBytes);
+    NvmeBlockDevice device(disk);
+    static FileStore store;
+    static uint8_t cacheBuffer[FileStore::BlockCacheBytes(blockBytes)];
+    FileStore::BlockCaches caches={blockBytes,cacheBuffer,sizeof(cacheBuffer)};
+    BlockHeaderCache cache(device,blockBytes/FileStore::SectorSize,8);
+    --caches.length;
+    Check(store.Format(&cache,8,diskSectors,&caches)==LFS_ERR_INVAL&&F::commands==0,
+          "undersized block cache is refused before touching the volume");
+    ++caches.length;
+    Check(store.Format(&cache,8,diskSectors-8,&caches)==LFS_ERR_INVAL&&F::commands==0,
+          "large geometry requires a whole number of blocks");
+    Check(store.Format(&cache,8,diskSectors,&caches)==0
+          &&store.Mount(&cache,8,diskSectors,false,nullptr,&caches)==0,"large LittleFS blocks format and mount");
+    int32_t handle=store.Open(1,"/profile",FileStore::Create|FileStore::ReadWrite);
+    const uint32_t size=2*blockBytes+17;
+    Check(handle>0&&store.WriteFile(1,handle,input,size)==(int32_t)size
+          &&store.Sync(1,handle)==0&&store.Close(1,handle)==0&&store.Unmount()==0,
+          "a file crossing large block boundaries is committed");
+    Check(store.Mount(&cache,8,diskSectors,true)!=0,"the legacy mount refuses the different block geometry");
+    Check(store.Mount(&cache,8,diskSectors,true,nullptr,&caches)==0,"explicit geometry remounts the volume");
+    handle=store.Open(1,"/profile",FileStore::Read);
+    Check(handle>0&&store.ReadFile(1,handle,output,size)==(int32_t)size&&Equal(input,output,size),
+          "every byte survives a read-only large-block remount");
+    Check(store.Close(1,handle)==0&&store.Unmount()==0,"close all large-block resources");
+}
 int main() {
     PeripheralComponentInterconnectController pci;
     PhysicalMemoryManager frames;
     NvmeDisk disk(pci,frames,Ticks);
-    Transfers(disk);Refusals(disk);Volume(disk);
+    Transfers(disk);Refusals(disk);Volume(disk);LargeVolume(disk);
     puts(failures?"NVME IO FAIL":"NVME IO PASS: queues, DMA, read/write/flush, refusals and FileStore");
     return failures?1:0;
 }

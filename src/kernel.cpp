@@ -597,7 +597,7 @@ static void ProbeNvme(PeripheralComponentInterconnectController& pci,
                ? "NVME DMA REAP PASS\n" : "NVME DMA REAP FAIL\n");
 }
 static storage::FileStore *contentVolume;
-static bool AttachContentAssets(storage::BlockDevice &disk, bool writable) {
+static bool AttachContentAssets(storage::BlockDevice &disk, bool writable, uint32_t blockBytes) {
     if (!disk.Identify() ||
         disk.SectorCount() <= GTOS_CONTENT_VOLUME_FIRST_SECTOR) return false;
 
@@ -609,17 +609,37 @@ static bool AttachContentAssets(storage::BlockDevice &disk, bool writable) {
         storage::FileStore::AllocationLookahead allocation;
         storage::FileStore::BlockCaches caches;
 
-        explicit Volume(storage::BlockDevice& source):disk(source) {}
+        explicit Volume(storage::BlockDevice& source, uint32_t size)
+            :disk(source,size/storage::FileStore::SectorSize,GTOS_CONTENT_VOLUME_FIRST_SECTOR),
+             caches{size,nullptr,storage::FileStore::BlockCacheBytes(size)} {}
+        ~Volume() {
+            if (caches.buffer && !frames.freeContiguous((uint32_t)caches.buffer,caches.length/4096))
+                printf("CONTENT ASSET CACHE REAP FAILED\n");
+        }
     };
-    Volume *volume = new Volume(disk);
+    Volume *volume = new Volume(disk,blockBytes);
     if (!volume) return false;
+    // Reserve the mount's buffers separately from the desktop heap, in the
+    // identity-mapped kernel range used by the block drivers.
+    uint32_t bufferAddress = 0;
+    const uint32_t cachePages=volume->caches.length/4096;
+    if (!frames.allocateContiguous(cachePages,bufferAddress,1,memory::ProcessAddressSpace::UserBase-1U)) {
+        LogValue("CONTENT ASSET CACHE ALLOCATION FAILED ",volume->caches.length);
+        delete volume;
+        return false;
+    }
+    volume->caches.buffer=(uint8_t*)bufferAddress;
     storage::FileStore::Info info;
-    if (volume->store.Mount(&volume->disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
-                            disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable,
-                            writable ? &volume->allocation : nullptr, &volume->caches) == 0 &&
+    const int32_t mounted = volume->store.Mount(&volume->disk, GTOS_CONTENT_VOLUME_FIRST_SECTOR,
+        disk.SectorCount() - GTOS_CONTENT_VOLUME_FIRST_SECTOR, !writable,
+        writable ? &volume->allocation : nullptr, &volume->caches);
+    if (mounted) LogValue("CONTENT ASSET MOUNT ERROR ",(uint32_t)mounted);
+    if (mounted == 0 &&
         volume->store.Stat(GTOS_CONTENT_ASSET_DIRECTORY, info) == 0 &&
         info.type == LFS_TYPE_DIR && nativeRuntime.AttachFiles(volume->files)) {
         contentVolume = &volume->store;
+        LogValue("CONTENT ASSET BLOCK BYTES ",blockBytes);
+        LogValue("CONTENT ASSET CACHE PAGES ",cachePages);
         return true;
     }
     if (volume->store.Mounted()) volume->store.Unmount();
@@ -3333,6 +3353,8 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     AdvancedTechnologyAttachment contentDisk(0x1F0, false);
     const bool contentBoot = BootOption(mbi, "content-shell");
     const bool contentNvme = BootOption(mbi, "content-nvme");
+    const uint32_t contentBlockBytes = BootOption(mbi,"content-assets-large-blocks")
+        ? GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES : (uint32_t)storage::FileStore::BlockSize;
     if (contentNvme && (!contentBoot || !BootOption(mbi, "content-assets") || liveBoot ||
                         BootOption(mbi, "nvme-probe") || BootOption(mbi, "nvme-files")))
         Panic("CONTENT NVME EXCLUSIVE DEVICE", "E28");
@@ -3341,7 +3363,7 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
         // Live boot must not probe any internal ATA device.
         const bool writable = contentBoot && BootOption(mbi, "content-profile-write");
         contentAssetsReady = !liveBoot && contentDisk.ConfigureWaitClock(DiskWaitTicks, 500U) &&
-                             AttachContentAssets(contentDisk, writable);
+                             AttachContentAssets(contentDisk, writable, contentBlockBytes);
         if (contentAssetsReady) {
             printf("CONTENT ASSET TRANSPORT ATA\n");
             printf("CONTENT ASSET VOLUME READY\n");
@@ -3517,7 +3539,7 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     if (contentNvme) {
         const bool writable = BootOption(mbi, "content-profile-write");
         contentAssetsReady = nvmeFound && filesDisk.Start(nvmeController, paging) &&
-                             AttachContentAssets(contentNvmeDisk, writable);
+                             AttachContentAssets(contentNvmeDisk, writable, contentBlockBytes);
         if (contentAssetsReady) {
             printf("CONTENT ASSET TRANSPORT NVME\n");
             LogValue("CONTENT NVME COMMAND BYTES ", filesDisk.MaxReadBytes());

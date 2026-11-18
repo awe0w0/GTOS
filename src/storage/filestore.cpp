@@ -3,80 +3,88 @@
 using namespace gtos::storage;
 using gtos::memory::InterruptGuard;
 FileStore::FileStore():disk(0),firstSector(0),volumeSectors(0),nextHandle(1),mounted(false),readOnly(false),
-                        blockCaches(nullptr) {
+                        fileCaches(nullptr) {
     gtos_lfs_memset(&filesystem,0,sizeof(filesystem));gtos_lfs_memset(&config,0,sizeof(config));
     gtos_lfs_memset(slots,0,sizeof(slots));
     gtos_lfs_memset(resources,0,sizeof(resources));
     gtos_lfs_memset(eraseCache,255,sizeof(eraseCache));
 }
-int32_t FileStore::Configure(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect) {
-    if (!device||first%SectorsPerBlock||sectors%SectorsPerBlock||sectors<2*SectorsPerBlock
+int32_t FileStore::Configure(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect,const BlockCaches* caches) {
+    const uint32_t blockBytes=caches?caches->blockBytes:(uint32_t)BlockSize;
+    if (blockBytes!=BlockSize&&blockBytes!=GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES) return LFS_ERR_INVAL;
+    const uint32_t blockSectors=blockBytes/SectorSize;
+    if (caches&&(!caches->buffer||caches->length<BlockCacheBytes(blockBytes)
+        ||BlockCacheBytes(blockBytes)>~(__UINTPTR_TYPE__)0-(__UINTPTR_TYPE__)caches->buffer)) return LFS_ERR_INVAL;
+    if (!device||first%SectorsPerBlock||sectors%blockSectors||sectors<2*blockSectors
         ||first>device->SectorCount()||sectors>device->SectorCount()-first) return LFS_ERR_INVAL;
     disk=device;firstSector=first;volumeSectors=sectors;readOnly=protect;
     gtos_lfs_memset(&filesystem,0,sizeof(filesystem));gtos_lfs_memset(&config,0,sizeof(config));
     config.context=this;config.read=ReadBlock;config.prog=ProgBlock;config.erase=EraseBlock;config.sync=SyncBlock;
-    config.read_size=SectorSize;config.prog_size=SectorSize;config.block_size=BlockSize;
-    config.block_count=sectors/SectorsPerBlock;config.block_cycles=500;config.cache_size=SectorSize;
+    config.read_size=SectorSize;config.prog_size=SectorSize;config.block_size=blockBytes;
+    config.block_count=sectors/blockSectors;config.block_cycles=500;config.cache_size=SectorSize;
     config.lookahead_size=sizeof(lookahead);config.read_buffer=readCache;config.prog_buffer=progCache;
     config.lookahead_buffer=lookahead;
+    if (caches) {
+        // The CTZ links can leave file data unaligned. Buffer the block so its
+        // following data can still be fetched or programmed as a single transfer.
+        config.cache_size=blockBytes;
+        config.read_buffer=caches->buffer;
+        config.prog_buffer=caches->buffer+blockBytes;
+    }
     return 0;
 }
 bool FileStore::ValidRegion(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,lfs_size_t size,const void* buffer) {
-    return cfg&&cfg->context&&block<cfg->block_count&&off<=BlockSize&&size<=BlockSize-off
+    return cfg&&cfg->context&&block<cfg->block_count&&off<=cfg->block_size&&size<=cfg->block_size-off
         &&off%SectorSize==0&&size%SectorSize==0&&(!size||buffer);
 }
 int FileStore::ReadBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,void* buffer,lfs_size_t size) {
     if (!ValidRegion(cfg,block,off,size,buffer)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;
-    uint32_t start=self->firstSector+block*SectorsPerBlock+off/SectorSize;
+    uint32_t start=self->firstSector+block*(cfg->block_size/SectorSize)+off/SectorSize;
     if (size&&!self->disk->ReadSectors(start,size/SectorSize,(uint8_t*)buffer)) return LFS_ERR_IO;
     return 0;
 }
 int FileStore::ProgBlock(const lfs_config* cfg,lfs_block_t block,lfs_off_t off,const void* buffer,lfs_size_t size) {
     if (!ValidRegion(cfg,block,off,size,buffer)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;if (self->readOnly) return ReadOnly;
-    uint32_t start=self->firstSector+block*SectorsPerBlock+off/SectorSize;
+    uint32_t start=self->firstSector+block*(cfg->block_size/SectorSize)+off/SectorSize;
     if (size&&!self->disk->WriteSectors(start,size/SectorSize,(const uint8_t*)buffer)) return LFS_ERR_IO;
     return 0;
 }
 int FileStore::EraseBlock(const lfs_config* cfg,lfs_block_t block) {
-    if (!ValidRegion(cfg,block,0,BlockSize,cfg)) return LFS_ERR_INVAL;
+    if (!cfg||!ValidRegion(cfg,block,0,cfg->block_size,cfg)) return LFS_ERR_INVAL;
     FileStore* self=(FileStore*)cfg->context;if (self->readOnly) return ReadOnly;
     // LittleFS leaves erased bytes undefined. Devices that allow overwrites
     // can program directly, with the same copy-on-write and sync boundaries.
     if (self->disk->CanOverwriteSectors()) return 0;
-    return self->disk->WriteSectors(self->firstSector+block*SectorsPerBlock,SectorsPerBlock,self->eraseCache)
-        ?0:LFS_ERR_IO;
+    const uint32_t blockSectors=cfg->block_size/SectorSize;
+    const uint32_t first=self->firstSector+block*blockSectors;
+    for (uint32_t offset=0;offset<blockSectors;offset+=SectorsPerBlock)
+        if (!self->disk->WriteSectors(first+offset,SectorsPerBlock,self->eraseCache)) return LFS_ERR_IO;
+    return 0;
 }
 int FileStore::SyncBlock(const lfs_config* cfg) {
     FileStore* self=(FileStore*)cfg->context;
     if (self->readOnly) return 0;
     return self->disk->Flush()?0:LFS_ERR_IO;
 }
-int32_t FileStore::Format(BlockDevice* device,uint32_t first,uint32_t sectors) {
+int32_t FileStore::Format(BlockDevice* device,uint32_t first,uint32_t sectors,const BlockCaches* caches) {
     InterruptGuard guard;if (mounted) return Busy;
-    int32_t error=Configure(device,first,sectors,false);if (error) return error;
+    int32_t error=Configure(device,first,sectors,false,caches);if (error) return error;
     return lfs_format(&filesystem,&config);
 }
 int32_t FileStore::Mount(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect,
-                         AllocationLookahead* allocation,BlockCaches* caches) {
+                         AllocationLookahead* allocation,const BlockCaches* caches) {
     InterruptGuard guard;if (mounted) return Busy;
-    int32_t error=Configure(device,first,sectors,protect);if (error) return error;
+    int32_t error=Configure(device,first,sectors,protect,caches);if (error) return error;
     if (allocation) {
         const uint32_t needed=(config.block_count+7)/8;
         config.lookahead_size=needed<sizeof(allocation->bytes)?needed:sizeof(allocation->bytes);
         config.lookahead_buffer=allocation->bytes;
     }
-    if (caches) {
-        // LittleFS data follows the CTZ links at an unaligned offset. Its
-        // buffered read can fetch the rest of that block in one transfer.
-        config.cache_size=BlockSize;
-        config.read_buffer=caches->read;
-        config.prog_buffer=caches->program;
-    }
     error=lfs_mount(&filesystem,&config);
     mounted=error==0;
-    blockCaches=mounted?caches:nullptr;
+    fileCaches=mounted&&caches?caches->buffer+2*config.cache_size:nullptr;
     return error;
 }
 uint32_t FileStore::OpenCount() const {
@@ -90,7 +98,7 @@ int32_t FileStore::Unmount() {
     int32_t error=lfs_unmount(&filesystem);
     if (!error) {
         mounted=false;
-        blockCaches=nullptr;
+        fileCaches=nullptr;
     }
     return error;
 }
@@ -139,7 +147,7 @@ int32_t FileStore::Open(uint32_t owner,const char* path,uint32_t flags) {
     Slot* slot=FreeSlot();if (!slot) return TooManyHandles;
     Resource* resource=FreeResource();if (!resource) return TooManyHandles;
     gtos_lfs_memset(resource,0,sizeof(*resource));
-    resource->config.buffer=blockCaches?blockCaches->files[resource-resources]:resource->cache;
+    resource->config.buffer=fileCaches?fileCaches+(resource-resources)*config.cache_size:resource->cache;
     error=lfs_file_opencfg(&filesystem,&resource->file,path,flags&~(Temporary|Locked),&resource->config);if (error) return error;
     if (flags&Locked) {
         for (uint32_t i=0;i<MaximumHandles;i++) {

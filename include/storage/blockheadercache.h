@@ -13,18 +13,21 @@ class BlockHeaderCache : public BlockDevice {
         uint8_t bytes[FileStore::SectorSize];
     };
     BlockDevice& device;
+    const uint32_t sectorsPerBlock;
+    const uint32_t firstSector;
     Entry entries[Entries];
 
     void Clear() {
         for (uint32_t i=0;i<Entries;i++) entries[i].sector=Empty;
     }
     Entry* Find(uint32_t sector) {
-        if (sector%FileStore::SectorsPerBlock) return 0;
-        const uint32_t block=sector/FileStore::SectorsPerBlock;
+        if (sector<firstSector||!sectorsPerBlock||(sector-firstSector)%sectorsPerBlock) return 0;
+        const uint32_t block=(sector-firstSector)/sectorsPerBlock;
         return &entries[(block^(block/Entries))%Entries];
     }
 public:
-    explicit BlockHeaderCache(BlockDevice& source):device(source) { Clear(); }
+    explicit BlockHeaderCache(BlockDevice& source,uint32_t blockSectors=FileStore::SectorsPerBlock,
+                              uint32_t first=0):device(source),sectorsPerBlock(blockSectors),firstSector(first) { Clear(); }
     bool Identify() override {
         Clear();
         return device.Identify();

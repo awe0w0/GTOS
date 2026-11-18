@@ -3,6 +3,7 @@
 
 // A dedicated LittleFS asset disk. Leave the first block outside the volume.
 #define GTOS_CONTENT_VOLUME_FIRST_SECTOR 8U
+#define GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES 32768U
 #define GTOS_CONTENT_ASSET_DIRECTORY "/content"
 
 #endif

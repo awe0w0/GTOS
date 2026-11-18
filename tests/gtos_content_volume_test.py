@@ -12,9 +12,10 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test(root, tool, name, expected, diagnostic, *args):
+def test(root, tool, name, expected, diagnostic, *args, large_blocks=False):
     output = root / name
-    result = subprocess.run([tool, output, *args], stdout=subprocess.PIPE,
+    profile = ["--large-blocks"] if large_blocks else []
+    result = subprocess.run([tool, *profile, output, *args], stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True)
     print(name, f"rc={result.returncode}", result.stdout, sep="\n", flush=True)
     assert result.returncode == expected and diagnostic in result.stdout
@@ -39,6 +40,10 @@ def main():
                  "16", icu_arg, page_arg, f"empty={empty}")
     assert valid.stat().st_size == 4096 + 16 * 1024 * 1024
     before = sha(valid)
+    large = test(root, tool, "large-blocks.img", 0,
+                 "CONTENT VOLUME VERIFIED assets=3 first_sector=8 sectors=32768 block_bytes=32768",
+                 "16", icu_arg, page_arg, f"empty={empty}", large_blocks=True)
+    assert large.stat().st_size == valid.stat().st_size and sha(large) != before
     test(root, tool, "assets.img", 1, "cannot create fresh image", "16", page_arg)
     assert sha(valid) == before
     assert not test(root, tool, "duplicate.img", 1, "duplicate asset name",

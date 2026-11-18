@@ -31,9 +31,9 @@ static void require(int condition, const char* operation, const char* subject) {
 
 static int block_seek(const struct lfs_config* cfg, lfs_block_t block,
                       lfs_off_t offset, lfs_size_t length) {
-    if (block >= cfg->block_count || offset > BlockSize ||
-        length > BlockSize - offset) return LFS_ERR_INVAL;
-    const off_t address = VolumeOffset + (off_t)block * BlockSize + offset;
+    if (block >= cfg->block_count || offset > cfg->block_size ||
+        length > cfg->block_size - offset) return LFS_ERR_INVAL;
+    const off_t address = VolumeOffset + (off_t)block * cfg->block_size + offset;
     return fseeko(cfg->context, address, SEEK_SET) ? LFS_ERR_IO : 0;
 }
 
@@ -52,9 +52,9 @@ static int block_write(const struct lfs_config* cfg, lfs_block_t block,
 }
 
 static int block_erase(const struct lfs_config* cfg, lfs_block_t block) {
-    unsigned char erased[BlockSize];
-    memset(erased, 0xff, sizeof(erased));
-    return block_write(cfg, block, 0, erased, sizeof(erased));
+    unsigned char erased[GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES];
+    memset(erased, 0xff, cfg->block_size);
+    return block_write(cfg, block, 0, erased, cfg->block_size);
 }
 
 static int block_sync(const struct lfs_config* cfg) {
@@ -106,19 +106,24 @@ static void verify_asset(lfs_t* store, const struct Asset* asset) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 4 || argc > MaximumAssets + 3) {
-        fprintf(stderr, "usage: %s NEW_IMAGE VOLUME_MIB NAME=INPUT ...\n", argv[0]);
+    const int large = argc > 1 && !strcmp(argv[1], "--large-blocks");
+    const int first = large ? 2 : 1;
+    const lfs_size_t block_size = large ? GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES : BlockSize;
+    const int count = argc - first - 2;
+    if (count < 1 || count > MaximumAssets) {
+        fprintf(stderr, "usage: %s [--large-blocks] NEW_IMAGE VOLUME_MIB NAME=INPUT ...\n", argv[0]);
         return 2;
     }
+    const char* path = argv[first];
+    const char* size_arg = argv[first + 1];
     errno = 0;
     char* end;
-    const unsigned long mib = strtoul(argv[2], &end, 10);
-    require(!errno && end != argv[2] && !*end && mib && mib <= 1024,
-            "invalid volume size in MiB", argv[2]);
+    const unsigned long mib = strtoul(size_arg, &end, 10);
+    require(!errno && end != size_arg && !*end && mib && mib <= 1024,
+            "invalid volume size in MiB", size_arg);
     struct Asset assets[MaximumAssets];
-    const int count = argc - 3;
     for (int i = 0; i < count; ++i) {
-        const char* spec = argv[i + 3];
+        const char* spec = argv[first + 2 + i];
         const char* equal = strchr(spec, '=');
         require(equal && equal != spec && equal[1] && equal - spec <= LFS_NAME_MAX,
                 "expected NAME=INPUT", spec);
@@ -135,32 +140,32 @@ int main(int argc, char** argv) {
                 S_ISREG(info.st_mode) && info.st_size <= LFS_FILE_MAX,
                 "expected a readable regular input", equal + 1);
     }
-    const int descriptor = open(argv[1], O_RDWR | O_CREAT | O_EXCL, 0600);
-    require(descriptor >= 0, "cannot create fresh image", argv[1]);
+    const int descriptor = open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
+    require(descriptor >= 0, "cannot create fresh image", path);
     FILE* image = fdopen(descriptor, "r+b");
     const off_t volume_size = (off_t)mib * 1024 * 1024;
     require(image && ftruncate(descriptor, VolumeOffset + volume_size) == 0,
-            "cannot size fresh image", argv[1]);
+            "cannot size fresh image", path);
     const struct lfs_config config = {
         .context = image, .read = block_read, .prog = block_write,
         .erase = block_erase, .sync = block_sync, .read_size = SectorSize,
-        .prog_size = SectorSize, .block_size = BlockSize,
-        .block_count = (lfs_size_t)(volume_size / BlockSize), .block_cycles = 500,
-        .cache_size = SectorSize, .lookahead_size = 128
+        .prog_size = SectorSize, .block_size = block_size,
+        .block_count = (lfs_size_t)(volume_size / block_size), .block_cycles = 500,
+        .cache_size = large ? block_size : SectorSize, .lookahead_size = 128
     };
     lfs_t store;
-    require(lfs_format(&store, &config) == 0, "cannot format", argv[1]);
-    require(lfs_mount(&store, &config) == 0, "cannot mount", argv[1]);
+    require(lfs_format(&store, &config) == 0, "cannot format", path);
+    require(lfs_mount(&store, &config) == 0, "cannot mount", path);
     require(lfs_mkdir(&store, GTOS_CONTENT_ASSET_DIRECTORY) == 0,
-            "cannot create " GTOS_CONTENT_ASSET_DIRECTORY, argv[1]);
+            "cannot create " GTOS_CONTENT_ASSET_DIRECTORY, path);
     for (int i = 0; i < count; ++i) copy_asset(&store, &assets[i]);
     require(lfs_unmount(&store) == 0 && fflush(image) == 0 && fsync(descriptor) == 0,
-            "cannot flush image", argv[1]);
-    require(lfs_mount(&store, &config) == 0, "cannot remount", argv[1]);
+            "cannot flush image", path);
+    require(lfs_mount(&store, &config) == 0, "cannot remount", path);
     for (int i = 0; i < count; ++i) verify_asset(&store, &assets[i]);
     require(lfs_unmount(&store) == 0 && fclose(image) == 0,
-            "cannot close image", argv[1]);
-    printf("CONTENT VOLUME VERIFIED assets=%d first_sector=%u sectors=%ld\n",
-           count, GTOS_CONTENT_VOLUME_FIRST_SECTOR, (long)(volume_size / SectorSize));
+            "cannot close image", path);
+    printf("CONTENT VOLUME VERIFIED assets=%d first_sector=%u sectors=%ld block_bytes=%u\n",
+           count, GTOS_CONTENT_VOLUME_FIRST_SECTOR, (long)(volume_size / SectorSize), block_size);
     return 0;
 }
