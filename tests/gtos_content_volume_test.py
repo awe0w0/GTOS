@@ -12,9 +12,8 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test(root, tool, name, expected, diagnostic, *args, large_blocks=False):
+def test(root, tool, name, expected, diagnostic, *args, profile=()):
     output = root / name
-    profile = ["--large-blocks"] if large_blocks else []
     result = subprocess.run([tool, *profile, output, *args], stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True)
     print(name, f"rc={result.returncode}", result.stdout, sep="\n", flush=True)
@@ -42,8 +41,12 @@ def main():
     before = sha(valid)
     large = test(root, tool, "large-blocks.img", 0,
                  "CONTENT VOLUME VERIFIED assets=3 first_sector=8 sectors=32768 block_bytes=32768",
-                 "16", icu_arg, page_arg, f"empty={empty}", large_blocks=True)
-    assert large.stat().st_size == valid.stat().st_size and sha(large) != before
+                 "16", icu_arg, page_arg, f"empty={empty}", profile=("--large-blocks",))
+    wide = test(root, tool, "128k-blocks.img", 0,
+                "CONTENT VOLUME VERIFIED assets=3 first_sector=8 sectors=32768 block_bytes=131072",
+                "16", icu_arg, page_arg, f"empty={empty}", profile=("--block-kib=128",))
+    assert large.stat().st_size == wide.stat().st_size == valid.stat().st_size
+    assert len({before, sha(large), sha(wide)}) == 3
     test(root, tool, "assets.img", 1, "cannot create fresh image", "16", page_arg)
     assert sha(valid) == before
     assert not test(root, tool, "duplicate.img", 1, "duplicate asset name",

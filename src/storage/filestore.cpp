@@ -11,7 +11,8 @@ FileStore::FileStore():disk(0),firstSector(0),volumeSectors(0),nextHandle(1),mou
 }
 int32_t FileStore::Configure(BlockDevice* device,uint32_t first,uint32_t sectors,bool protect,const BlockCaches* caches) {
     const uint32_t blockBytes=caches?caches->blockBytes:(uint32_t)BlockSize;
-    if (blockBytes!=BlockSize&&blockBytes!=GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES) return LFS_ERR_INVAL;
+    if (blockBytes!=BlockSize&&blockBytes!=GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES
+        &&blockBytes!=GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES) return LFS_ERR_INVAL;
     const uint32_t blockSectors=blockBytes/SectorSize;
     if (caches&&(!caches->buffer||caches->length<BlockCacheBytes(blockBytes)
         ||BlockCacheBytes(blockBytes)>~(__UINTPTR_TYPE__)0-(__UINTPTR_TYPE__)caches->buffer)) return LFS_ERR_INVAL;

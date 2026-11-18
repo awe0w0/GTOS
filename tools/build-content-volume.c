@@ -52,7 +52,7 @@ static int block_write(const struct lfs_config* cfg, lfs_block_t block,
 }
 
 static int block_erase(const struct lfs_config* cfg, lfs_block_t block) {
-    unsigned char erased[GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES];
+    unsigned char erased[GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES];
     memset(erased, 0xff, cfg->block_size);
     return block_write(cfg, block, 0, erased, cfg->block_size);
 }
@@ -106,12 +106,15 @@ static void verify_asset(lfs_t* store, const struct Asset* asset) {
 }
 
 int main(int argc, char** argv) {
-    const int large = argc > 1 && !strcmp(argv[1], "--large-blocks");
-    const int first = large ? 2 : 1;
-    const lfs_size_t block_size = large ? GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES : BlockSize;
+    lfs_size_t block_size = BlockSize;
+    if (argc > 1 && !strcmp(argv[1], "--large-blocks"))
+        block_size = GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES;
+    if (argc > 1 && !strcmp(argv[1], "--block-kib=128"))
+        block_size = GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES;
+    const int first = block_size != BlockSize ? 2 : 1;
     const int count = argc - first - 2;
     if (count < 1 || count > MaximumAssets) {
-        fprintf(stderr, "usage: %s [--large-blocks] NEW_IMAGE VOLUME_MIB NAME=INPUT ...\n", argv[0]);
+        fprintf(stderr, "usage: %s [--large-blocks|--block-kib=128] NEW_IMAGE VOLUME_MIB NAME=INPUT ...\n", argv[0]);
         return 2;
     }
     const char* path = argv[first];
@@ -151,7 +154,7 @@ int main(int argc, char** argv) {
         .erase = block_erase, .sync = block_sync, .read_size = SectorSize,
         .prog_size = SectorSize, .block_size = block_size,
         .block_count = (lfs_size_t)(volume_size / block_size), .block_cycles = 500,
-        .cache_size = large ? block_size : SectorSize, .lookahead_size = 128
+        .cache_size = block_size != BlockSize ? block_size : SectorSize, .lookahead_size = 128
     };
     lfs_t store;
     require(lfs_format(&store, &config) == 0, "cannot format", path);

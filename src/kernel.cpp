@@ -3353,8 +3353,13 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
     AdvancedTechnologyAttachment contentDisk(0x1F0, false);
     const bool contentBoot = BootOption(mbi, "content-shell");
     const bool contentNvme = BootOption(mbi, "content-nvme");
-    const uint32_t contentBlockBytes = BootOption(mbi,"content-assets-large-blocks")
-        ? GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES : (uint32_t)storage::FileStore::BlockSize;
+    const bool contentBlocks32K = BootOption(mbi, "content-assets-large-blocks");
+    const bool contentBlocks128K = BootOption(mbi, "content-assets-128k-blocks");
+    if (contentBlocks32K && contentBlocks128K)
+        Panic("CONFLICTING CONTENT ASSET BLOCK SIZES", "E29");
+    uint32_t contentBlockBytes = storage::FileStore::BlockSize;
+    if (contentBlocks128K) contentBlockBytes = GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES;
+    else if (contentBlocks32K) contentBlockBytes = GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES;
     if (contentNvme && (!contentBoot || !BootOption(mbi, "content-assets") || liveBoot ||
                         BootOption(mbi, "nvme-probe") || BootOption(mbi, "nvme-files")))
         Panic("CONTENT NVME EXCLUSIVE DEVICE", "E28");

@@ -301,16 +301,15 @@ static void Volume(NvmeDisk& disk) {
     Check(recovered.Close(1,sparse)==0&&recovered.Unmount()==0&&F::blockErases==0,
           "recovery, reformat and sparse writes require no erase writes");
 }
-static void LargeVolume(NvmeDisk& disk) {
+static void LargeVolume(NvmeDisk& disk,uint32_t blockBytes) {
     F::Setup(disk);
     Fill(F::media,0xA5,sizeof(F::media));
-    const uint32_t blockBytes=GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES;
-    const uint32_t diskSectors=1984;
+    const uint32_t diskSectors=1792;
     F::TransferLimit(disk,blockBytes);
     NvmeBlockDevice device(disk);
     static FileStore store;
-    static uint8_t cacheBuffer[FileStore::BlockCacheBytes(blockBytes)];
-    FileStore::BlockCaches caches={blockBytes,cacheBuffer,sizeof(cacheBuffer)};
+    static uint8_t cacheBuffer[FileStore::BlockCacheBytes(GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES)];
+    FileStore::BlockCaches caches={blockBytes,cacheBuffer,FileStore::BlockCacheBytes(blockBytes)};
     BlockHeaderCache cache(device,blockBytes/FileStore::SectorSize,8);
     --caches.length;
     Check(store.Format(&cache,8,diskSectors,&caches)==LFS_ERR_INVAL&&F::commands==0,
@@ -326,6 +325,11 @@ static void LargeVolume(NvmeDisk& disk) {
           &&store.Sync(1,handle)==0&&store.Close(1,handle)==0&&store.Unmount()==0,
           "a file crossing large block boundaries is committed");
     Check(store.Mount(&cache,8,diskSectors,true)!=0,"the legacy mount refuses the different block geometry");
+    const uint32_t otherBlockBytes=blockBytes==GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES
+        ? GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES : GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES;
+    FileStore::BlockCaches otherCaches={otherBlockBytes,cacheBuffer,FileStore::BlockCacheBytes(otherBlockBytes)};
+    Check(store.Mount(&cache,8,diskSectors,true,nullptr,&otherCaches)!=0,
+          "an explicitly different large block geometry is refused");
     Check(store.Mount(&cache,8,diskSectors,true,nullptr,&caches)==0,"explicit geometry remounts the volume");
     handle=store.Open(1,"/profile",FileStore::Read);
     const uint32_t sectorEdge=3*FileStore::SectorSize-7;
@@ -356,7 +360,9 @@ int main() {
     PeripheralComponentInterconnectController pci;
     PhysicalMemoryManager frames;
     NvmeDisk disk(pci,frames,Ticks);
-    Transfers(disk);Refusals(disk);Volume(disk);LargeVolume(disk);
+    Transfers(disk);Refusals(disk);Volume(disk);
+    LargeVolume(disk,GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES);
+    LargeVolume(disk,GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES);
     puts(failures?"NVME IO FAIL":"NVME IO PASS: queues, DMA, read/write/flush, refusals and FileStore");
     return failures?1:0;
 }

@@ -1,9 +1,10 @@
 #ifndef GTOS_STORAGE_CONTENT_VOLUME_LAYOUT_H
 #define GTOS_STORAGE_CONTENT_VOLUME_LAYOUT_H
 
-// A dedicated LittleFS asset disk. Leave the first block outside the volume.
+// A dedicated LittleFS asset disk. Leave the first 4 KiB outside the volume.
 #define GTOS_CONTENT_VOLUME_FIRST_SECTOR 8U
 #define GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES 32768U
+#define GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES 131072U
 #define GTOS_CONTENT_ASSET_DIRECTORY "/content"
 
 #endif
