@@ -361,7 +361,7 @@ bool PhysicalMemoryManager::reserveRegion(uint64_t address, uint64_t length) {
     InterruptGuard guard;
     if (!ready || !checkedRange(address, length) || bootstrap.intersectsClaimed(address, length)) return false;
     if (!length) return true;
-    uint32_t highFirst, highLast;
+    uint32_t highFirst = 0, highLast = 0;
     const bool high = highRange(address, address + length, false, highFirst, highLast);
     if (high)
         for (uint32_t frame = highFirst; frame < highLast; ++frame)

@@ -916,8 +916,10 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (cpu->ecx != GTOS_PROCESS_INFO_REQUEST_BYTES) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;
         }
+        InterruptGuard guard;
         GtosProcessInfoRequest request;
-        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+        if (!slot->space.CheckCopyLayout()
+            || !slot->space.CopyFromUserWithCheckedLayout(&request, cpu->ebx, sizeof(request))) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
         }
         if (request.version != GTOS_PROCESS_INFO_ABI_VERSION) {
@@ -931,9 +933,9 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
             GTOS_VM_PAGE_BYTES, slot->space.CapacityPages(),
             slot->space.CapacityRegions(), threadsEnabled ? slotCount : 1, 1};
-        // The request was consumed before any write. CopyToUser validates the
-        // entire output before writing, including aliases and mixed-page ranges.
-        cpu->eax = slot->space.CopyToUser(request.result_va, &result, sizeof(result))
+        // The mappings stay fixed between the request and response. The copy
+        // checks the full output range before writing, including mixed pages.
+        cpu->eax = slot->space.CopyToUserWithCheckedLayout(request.result_va, &result, sizeof(result))
             ? 0 : (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS;
         break;
     }

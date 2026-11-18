@@ -104,6 +104,11 @@ namespace gtos { namespace memory {
         bool Layout(bool complete, bool* unreservedDynamicPages = nullptr) const;
         bool Range(uint32_t address, uint32_t length, bool writable) const;
         bool Buffer(uint32_t address, uint32_t length, bool writable) const;
+        bool CheckCopyLayout() const;
+        bool CheckCopyRange(uint32_t address, uint32_t length, bool writable) const;
+        // The caller holds interrupts disabled and preserves the checked mappings.
+        bool CopyToUserWithCheckedLayout(uint32_t destination, const void* source, uint32_t length);
+        bool CopyFromUserWithCheckedLayout(void* destination, uint32_t source, uint32_t length) const;
         bool Mutable() const;
         bool RuntimeMutable(bool* unreservedDynamicPages = nullptr) const;
         bool PrepareWithLimit(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,

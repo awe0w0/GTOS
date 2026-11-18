@@ -1131,8 +1131,7 @@ bool ProcessAddressSpace::Buffer(uint32_t address, uint32_t length, bool writabl
     }
     return true;
 }
-bool ProcessAddressSpace::ValidateUserRange(uint32_t address, uint32_t length, bool writable) const {
-    InterruptGuard guard;
+bool ProcessAddressSpace::CheckCopyLayout() const {
     if (!prepared) return Fail(ProcessMemoryBadState);
     if (!Context(true)) return false;
     if (sealed && contentCopyLayoutValid) {
@@ -1146,13 +1145,23 @@ bool ProcessAddressSpace::ValidateUserRange(uint32_t address, uint32_t length, b
     } else if (!Layout(false)) {
         return false;
     }
+    return true;
+}
+bool ProcessAddressSpace::CheckCopyRange(uint32_t address, uint32_t length, bool writable) const {
     if (!Range(address, length, writable)) return false;
     error = ProcessMemoryOk;
     return true;
 }
+bool ProcessAddressSpace::ValidateUserRange(uint32_t address, uint32_t length, bool writable) const {
+    InterruptGuard guard;
+    return CheckCopyLayout() && CheckCopyRange(address, length, writable);
+}
 bool ProcessAddressSpace::CopyToUser(uint32_t destination, const void* source, uint32_t length) {
     InterruptGuard guard;
-    if (!ValidateUserRange(destination, length, true) || !Buffer((uint32_t)source, length, false)) return false;
+    return CheckCopyLayout() && CopyToUserWithCheckedLayout(destination, source, length);
+}
+bool ProcessAddressSpace::CopyToUserWithCheckedLayout(uint32_t destination, const void* source, uint32_t length) {
+    if (!CheckCopyRange(destination, length, true) || !Buffer((uint32_t)source, length, false)) return false;
     const uint8_t* input = (const uint8_t*)source;
     while (length) {
         const uint32_t offset = destination & 4095;
@@ -1188,7 +1197,10 @@ bool ProcessAddressSpace::LoadImageRange(uint32_t address, uint32_t fileOffset, 
 }
 bool ProcessAddressSpace::CopyFromUser(void* destination, uint32_t source, uint32_t length) const {
     InterruptGuard guard;
-    if (!ValidateUserRange(source, length, false) || !Buffer((uint32_t)destination, length, true)) return false;
+    return CheckCopyLayout() && CopyFromUserWithCheckedLayout(destination, source, length);
+}
+bool ProcessAddressSpace::CopyFromUserWithCheckedLayout(void* destination, uint32_t source, uint32_t length) const {
+    if (!CheckCopyRange(source, length, false) || !Buffer((uint32_t)destination, length, true)) return false;
     uint8_t* output = (uint8_t*)destination;
     while (length) {
         const uint32_t offset = source & 4095;
