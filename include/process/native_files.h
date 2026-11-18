@@ -10,7 +10,10 @@ class NativeFiles:public NativeFileEndpoint {
     uint8_t bounce[GTOS_FILE_TRANSFER_LIMIT];
     char paths[2][GTOS_FILE_PATH_LIMIT];
     NativeFileStatistics statistics;
-    int32_t Path(memory::ProcessAddressSpace& space,uint32_t address,uint32_t bytes,uint32_t index=0);
+    template<class Request>
+    int32_t Snapshot(memory::ProcessAddressSpace& space,uint32_t address,uint32_t bytes,Request& request);
+    int32_t ReadPathWithCheckedLayout(memory::ProcessAddressSpace& space,uint32_t address,
+        uint32_t bytes,uint32_t index=0);
     NativeFiles(const NativeFiles&);
     NativeFiles& operator=(const NativeFiles&);
 public:

@@ -3,7 +3,7 @@
 #include <memory/paging.h>
 #include <process/elf32.h>
 #include <process/vm_abi.h>
-namespace gtos { namespace process { class NativeRuntime; class NativeSharedMemory; } }
+namespace gtos { namespace process { class NativeFiles; class NativeRuntime; class NativeSharedMemory; } }
 namespace gtos { namespace memory {
     enum ProcessMemoryError : uint32_t {
         ProcessMemoryOk, ProcessMemoryBadState, ProcessMemoryBadRange,
@@ -41,6 +41,7 @@ namespace gtos { namespace memory {
         // Browser heaps, stacks and video buffers reserve independent ranges.
         static const uint32_t MaximumContentRegions = GTOS_VM_CONTENT_REGION_LIMIT;
     private:
+        friend class gtos::process::NativeFiles;
         friend class gtos::process::NativeRuntime;
         friend class gtos::process::NativeSharedMemory;
         // Bounded kernel-only admission from storage. The slot stays unrunnable

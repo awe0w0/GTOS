@@ -12,11 +12,6 @@ static_assert(FileStore::Read==GTOS_FILE_READ&&FileStore::Write==GTOS_FILE_WRITE
     &&FileStore::Append==GTOS_FILE_APPEND&&FileStore::Temporary==GTOS_FILE_TEMPORARY,"Real store open flags");
 static_assert(LFS_TYPE_REG==GTOS_FILE_TYPE_REGULAR&&LFS_TYPE_DIR==GTOS_FILE_TYPE_DIRECTORY,"Real file types");
 namespace {
-    template<class Request> int32_t Snapshot(ProcessAddressSpace& space,uint32_t address,uint32_t bytes,Request& request) {
-        if (bytes!=sizeof(Request)) return GTOS_FILE_ERR_INVALID;
-        if (!space.CopyFromUser(&request,address,sizeof(request))) return GTOS_FILE_ERR_BAD_ADDRESS;
-        return request.version==GTOS_FILE_ABI_VERSION?0:GTOS_FILE_ERR_VERSION;
-    }
     int64_t Offset(uint32_t low,uint32_t high) {
         return (int64_t)(int32_t)high*4294967296LL+low;
     }
@@ -27,10 +22,18 @@ namespace {
     }
 }
 NativeFiles::NativeFiles(FileStore& files):store(files),statistics() {}
-int32_t NativeFiles::Path(ProcessAddressSpace& space,uint32_t address,uint32_t bytes,uint32_t index) {
+template<class Request>
+int32_t NativeFiles::Snapshot(ProcessAddressSpace& space,uint32_t address,uint32_t bytes,Request& request) {
+    if (bytes!=sizeof(request)) return GTOS_FILE_ERR_INVALID;
+    if (!space.CheckCopyLayout()||!space.CopyFromUserWithCheckedLayout(&request,address,sizeof(request)))
+        return GTOS_FILE_ERR_BAD_ADDRESS;
+    return request.version==GTOS_FILE_ABI_VERSION?0:GTOS_FILE_ERR_VERSION;
+}
+int32_t NativeFiles::ReadPathWithCheckedLayout(ProcessAddressSpace& space,uint32_t address,
+        uint32_t bytes,uint32_t index) {
     if (bytes<2) return GTOS_FILE_ERR_INVALID;
     if (bytes>GTOS_FILE_PATH_LIMIT) return GTOS_FILE_ERR_TOO_LARGE;
-    if (!space.CopyFromUser(paths[index],address,bytes)) return GTOS_FILE_ERR_BAD_ADDRESS;
+    if (!space.CopyFromUserWithCheckedLayout(paths[index],address,bytes)) return GTOS_FILE_ERR_BAD_ADDRESS;
     if (paths[index][bytes-1]) return GTOS_FILE_ERR_INVALID;
     for (uint32_t i=0;i<bytes-1;i++) if (!paths[index][i]) return GTOS_FILE_ERR_INVALID;
     return 0;
@@ -38,10 +41,12 @@ int32_t NativeFiles::Path(ProcessAddressSpace& space,uint32_t address,uint32_t b
 int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t operation,uint32_t address,uint32_t bytes) {
     InterruptGuard guard;statistics.calls++;
     if (!owner||!store.Mounted()) return GTOS_FILE_ERR_UNAVAILABLE;
+    // After Snapshot audits the layout, reuse it under this interrupt guard.
+    // File operations preserve the process mappings.
     switch (operation) {
     case GTOS_SYS_FILE_OPEN: {
         GtosFileOpenRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
-        error=Path(space,request.path,request.path_bytes);if (error) return error;
+        error=ReadPathWithCheckedLayout(space,request.path,request.path_bytes);if (error) return error;
         return store.Open(owner,paths[0],request.flags);
     }
     case GTOS_SYS_FILE_READ:
@@ -71,15 +76,15 @@ int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t ope
         };
         int32_t error=reading?read(0,0):write(0,0);
         if (error) return error;
-        if (!space.ValidateUserRange(request.buffer,request.bytes,reading)) return GTOS_FILE_ERR_BAD_ADDRESS;
+        if (!space.CheckCopyRange(request.buffer,request.bytes,reading)) return GTOS_FILE_ERR_BAD_ADDRESS;
         if (!request.bytes) return 0;
         if (!reading) {
-            if (!space.CopyFromUser(bounce,request.buffer,request.bytes)) return GTOS_FILE_ERR_BAD_ADDRESS;
+            if (!space.CopyFromUserWithCheckedLayout(bounce,request.buffer,request.bytes)) return GTOS_FILE_ERR_BAD_ADDRESS;
             return write(bounce,request.bytes);
         }
         int32_t count=read(bounce,request.bytes);
         if (count<=0) return count;
-        return space.CopyToUser(request.buffer,bounce,count)?count:GTOS_FILE_ERR_BAD_ADDRESS;
+        return space.CopyToUserWithCheckedLayout(request.buffer,bounce,count)?count:GTOS_FILE_ERR_BAD_ADDRESS;
     }
     case GTOS_SYS_FILE_SEEK: {
         GtosFileSeekRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
@@ -110,45 +115,45 @@ int32_t NativeFiles::Call(uint32_t owner,ProcessAddressSpace& space,uint32_t ope
     case GTOS_SYS_FILE_REMOVE:
     case GTOS_SYS_FILE_DIR_OPEN: {
         GtosFilePathRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
-        error=Path(space,request.path,request.path_bytes);if (error) return error;
+        error=ReadPathWithCheckedLayout(space,request.path,request.path_bytes);if (error) return error;
         if (operation==GTOS_SYS_FILE_MKDIR) return store.MakeDirectory(paths[0]);
         if (operation==GTOS_SYS_FILE_REMOVE) return store.Remove(paths[0]);
         return store.OpenDirectory(owner,paths[0]);
     }
     case GTOS_SYS_FILE_RENAME: {
         GtosFileRenameRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
-        error=Path(space,request.old_path,request.old_bytes);if (error) return error;
-        error=Path(space,request.new_path,request.new_bytes,1);if (error) return error;
+        error=ReadPathWithCheckedLayout(space,request.old_path,request.old_bytes);if (error) return error;
+        error=ReadPathWithCheckedLayout(space,request.new_path,request.new_bytes,1);if (error) return error;
         return store.Rename(paths[0],paths[1]);
     }
     case GTOS_SYS_FILE_REMOVE_TYPED: {
         GtosFileRemoveTypedRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
         if (request.type!=GTOS_FILE_TYPE_REGULAR&&request.type!=GTOS_FILE_TYPE_DIRECTORY) return GTOS_FILE_ERR_INVALID;
-        error=Path(space,request.path,request.path_bytes);if (error) return error;
+        error=ReadPathWithCheckedLayout(space,request.path,request.path_bytes);if (error) return error;
         FileStore::Info value={};error=store.Stat(paths[0],value);if (error) return error;
         if (value.type!=request.type) return request.type==GTOS_FILE_TYPE_REGULAR?LFS_ERR_ISDIR:LFS_ERR_NOTDIR;
         return store.Remove(paths[0]);
     }
     case GTOS_SYS_FILE_STAT: {
         GtosFileStatRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
-        error=Path(space,request.path,request.path_bytes);if (error) return error;
+        error=ReadPathWithCheckedLayout(space,request.path,request.path_bytes);if (error) return error;
         if (request.result_bytes!=GTOS_FILE_INFO_BYTES) return GTOS_FILE_ERR_INVALID;
-        if (!space.ValidateUserRange(request.result,sizeof(GtosFileInfo),true)) return GTOS_FILE_ERR_BAD_ADDRESS;
+        if (!space.CheckCopyRange(request.result,sizeof(GtosFileInfo),true)) return GTOS_FILE_ERR_BAD_ADDRESS;
         FileStore::Info value={};error=store.Stat(paths[0],value);if (error) return error;
         const GtosFileInfo result=Info(value);
-        return space.CopyToUser(request.result,&result,sizeof(result))?0:GTOS_FILE_ERR_BAD_ADDRESS;
+        return space.CopyToUserWithCheckedLayout(request.result,&result,sizeof(result))?0:GTOS_FILE_ERR_BAD_ADDRESS;
     }
     case GTOS_SYS_FILE_DIR_READ:
     case GTOS_SYS_FILE_HANDLE_INFO: {
         GtosFileInfoRequest request;int32_t error=Snapshot(space,address,bytes,request);if (error) return error;
         if (request.result_bytes!=GTOS_FILE_INFO_BYTES) return GTOS_FILE_ERR_INVALID;
-        if (!space.ValidateUserRange(request.result,sizeof(GtosFileInfo),true)) return GTOS_FILE_ERR_BAD_ADDRESS;
+        if (!space.CheckCopyRange(request.result,sizeof(GtosFileInfo),true)) return GTOS_FILE_ERR_BAD_ADDRESS;
         FileStore::Info value={};
         const bool directory=operation==GTOS_SYS_FILE_DIR_READ;
         int32_t count=directory?store.ReadDirectory(owner,request.handle,value):store.HandleInfo(owner,request.handle,value);
         if (count<0||(directory&&!count)) return count;
         const GtosFileInfo result=Info(value);
-        return space.CopyToUser(request.result,&result,sizeof(result))?count:GTOS_FILE_ERR_BAD_ADDRESS;
+        return space.CopyToUserWithCheckedLayout(request.result,&result,sizeof(result))?count:GTOS_FILE_ERR_BAD_ADDRESS;
     }
     default:return GTOS_ERR_UNSUPPORTED;
     }

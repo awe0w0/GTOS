@@ -7,7 +7,7 @@ enum { TransferBytes = GTOS_FILE_TRANSFER_LIMIT, BlockCount = 8192 };
 enum { PositionedReadCount = 512, PositionedReadBytes = 512 };
 static const char input_path[] = "/content/io-seed.bin";
 static const char output_path[] = "/content/io-write.bin";
-static unsigned received[TransferBytes / sizeof(unsigned)];
+static unsigned received[TransferBytes / sizeof(unsigned)] __attribute__((aligned(TransferBytes)));
 
 static int call(unsigned operation, const void* request, unsigned bytes) {
     int result;
@@ -33,6 +33,40 @@ static int transfer(unsigned operation, int handle, void* buffer) {
         GTOS_FILE_ABI_VERSION, (unsigned)handle, (unsigned)buffer, TransferBytes
     };
     return call(operation, &request, sizeof(request));
+}
+
+static int reject_invalid_read(int handle) {
+    unsigned char* last = (unsigned char*)received + TransferBytes - 1;
+    *last = 0xA5;
+    GtosFileTransferRequest request = {
+        GTOS_FILE_ABI_VERSION, (unsigned)handle, (unsigned)last, 2
+    };
+    if (call(GTOS_SYS_FILE_READ, &request, sizeof(request) - 1) != GTOS_FILE_ERR_INVALID
+        || call(GTOS_SYS_FILE_READ, &request, sizeof(request)) != GTOS_FILE_ERR_BAD_ADDRESS
+        || *last != 0xA5) return 0;
+    request.buffer = (unsigned)input_path;
+    if (call(GTOS_SYS_FILE_READ, &request, sizeof(request)) != GTOS_FILE_ERR_BAD_ADDRESS) return 0;
+
+    GtosFileInfo info;
+    GtosFileStatRequest stat = {
+        GTOS_FILE_ABI_VERSION, (unsigned)input_path, sizeof(input_path),
+        (unsigned)input_path, sizeof(info)
+    };
+    if (call(GTOS_SYS_FILE_STAT, &stat, sizeof(stat)) != GTOS_FILE_ERR_BAD_ADDRESS) return 0;
+    stat.result = (unsigned)&info;
+    if (call(GTOS_SYS_FILE_STAT, &stat, sizeof(stat)) != 0
+        || info.type != GTOS_FILE_TYPE_REGULAR || info.bytes != BlockCount * TransferBytes) return 0;
+
+    const GtosFileSeekRequest cursor = {GTOS_FILE_ABI_VERSION, (unsigned)handle, 0, 0, 1};
+    return call(GTOS_SYS_FILE_SEEK, &cursor, sizeof(cursor)) == 0;
+}
+
+static int reject_invalid_write(int handle) {
+    const GtosFilePositionedTransferRequest request = {
+        GTOS_FILE_ABI_VERSION, (unsigned)handle, (unsigned)received + TransferBytes - 1, 2, 512, 0
+    };
+    return call(GTOS_SYS_FILE_WRITE_AT, &request, sizeof(request)) == GTOS_FILE_ERR_BAD_ADDRESS
+        && control(GTOS_SYS_FILE_SIZE, handle) == 0;
 }
 
 static int read_and_check(int handle, unsigned* pattern, unsigned tag) {
@@ -111,6 +145,7 @@ int browser_probe_main(void) {
 
     Log("GTOS FILE SPEED READ BEGIN\n");
     int handle = open_file(input_path, sizeof(input_path), GTOS_FILE_READ);
+    if (handle <= 0 || !reject_invalid_read(handle)) return 10;
     if (!read_and_check(handle, pattern, 0xa23f89d5u)) return 1;
     Log("GTOS FILE SPEED READ END\n");
 
@@ -118,6 +153,7 @@ int browser_probe_main(void) {
     handle = open_file(output_path, sizeof(output_path),
                        GTOS_FILE_WRITE | GTOS_FILE_CREATE | GTOS_FILE_EXCLUSIVE);
     if (handle <= 0) return 2;
+    if (!reject_invalid_write(handle)) return 11;
     for (unsigned block = 0; block < BlockCount; ++block) {
         pattern[0] = block ^ 0x783bcc0du;
         if (transfer(GTOS_SYS_FILE_WRITE, handle, pattern) != TransferBytes) return 3;
@@ -128,6 +164,7 @@ int browser_probe_main(void) {
 
     handle = open_file(output_path, sizeof(output_path), GTOS_FILE_READ);
     if (!read_and_check(handle, pattern, 0x783bcc0du)) return 6;
+    Log("GTOS FILE ABI RANGE AND CURSOR PASS\n");
     Log("GTOS FILE SPEED SYNC AND READBACK PASS\n");
     return 0;
 }
