@@ -130,6 +130,7 @@ InterruptsManager::InterruptsManager(uint16_t hardwareInterruptOffset, GlobalDes
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x31, CodeSegment, &HandleInterruptRequest0x31, 0, IDT_INTERRUPT_GATE);
 
     SetInterruptDescriptorTableEntry(                          0x80, CodeSegment, &HandleInterruptRequest0x80, 3, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(                          0x81, CodeSegment, &HandleInterruptRequest0x81, 0, IDT_INTERRUPT_GATE);
 
     picMasterCommand.Write(0x11);
     picSlaveCommand.Write(0x11);
@@ -177,6 +178,16 @@ void InterruptsManager::Deactivate() {
     }
 }
 
+void InterruptsManager::IdleBootContext() {
+    asm volatile("cli" : : : "memory");
+    if (taskManager && taskManager->BootHasReadyTask()) {
+        // Save the boot continuation with IF set. STI's shadow covers INT.
+        asm volatile("sti; int $0x81" : : : "memory", "cc");
+    } else {
+        asm volatile("sti; hlt" : : : "memory");
+    }
+}
+
 //汇编调用的入口函数
 uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t esp) {
     if (ActivateInterruptsManager != 0) {
@@ -187,6 +198,12 @@ uint32_t InterruptsManager::handleInterrupt(uint8_t interruptNumber, uint32_t es
 }
 
 uint32_t InterruptsManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp) {
+    if (interruptNumber == 0x81) {
+        CPUState* state = (CPUState*)esp;
+        if (taskManager && (state->cs & 3) == 0 && !taskManager->CurrentTask())
+            return (uint32_t)taskManager->Reschedule(state);
+        return esp;
+    }
     if (interruptNumber < 0x20) {
         CPUState* state = (CPUState*)esp;
         uint32_t cr2; asm volatile("mov %%cr2,%0" : "=r"(cr2));

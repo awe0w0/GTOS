@@ -115,6 +115,8 @@ namespace gtos {
             CPUState* Schedule(CPUState* cpustate);
             // Used by bounded syscall/fault handlers with IF clear; no fake tick.
             CPUState* Reschedule(CPUState* cpustate);
+            // Called from the BSP boot context with interrupts masked.
+            bool BootHasReadyTask() const;
             uint32_t Ticks() const;
             // BSP-only, preserves entering IF. Returns 0, BAD_STATE or OVERFLOW.
             int ReadClock(GtosClockReadResult& result) const;

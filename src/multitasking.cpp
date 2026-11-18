@@ -182,6 +182,12 @@ void TaskManager::ExitCurrent() {
 
 CPUState* TaskManager::Schedule(CPUState* cpustate) { return Dispatch(cpustate, true); }
 CPUState* TaskManager::Reschedule(CPUState* cpustate) { return Dispatch(cpustate, false); }
+bool TaskManager::BootHasReadyTask() const {
+    if (currentTask >= 0) return false;
+    for (int i = 0; i < numTasks; ++i)
+        if (tasks[i]->state == TaskReady && tasks[i]->affinityMask == 1) return true;
+    return false;
+}
 CPUState* TaskManager::SelectContext(Task* task, CPUState* frame) {
 #ifndef GTOS_CPU_TEST
     if (nativeGdt) {
@@ -277,12 +283,17 @@ bool TaskManager::RunSelfTests(GlobalDescriptorTable* gdt) {
     TaskManager manager;
     Task first(gdt, SelfTestEntry), second(gdt, SelfTestEntry);
     CPUState boot = {}, firstFrame = {}, secondFrame = {};
+    if (manager.BootHasReadyTask()) return false;
     if (manager.Schedule(&boot) != &boot || manager.Ticks() != 1) return false;
     if (!manager.AddTask(&first) || !manager.AddTask(&second)
         || manager.AddTask(&first) || manager.AddTask(0)) return false;
     if (manager.SetAffinity(&first, 2) || manager.SetAffinity(&first, 3)
         || !manager.SetAffinity(&first, 1)) return false;
-    if (manager.Schedule(&boot) != first.cpustate || first.State() != TaskRunning) return false;
+    if (!manager.BootHasReadyTask() || !manager.SleepTask(&first, 1) || !manager.SleepTask(&second, 1)
+        || manager.BootHasReadyTask() || !manager.WakeTask(&first) || !manager.WakeTask(&second)
+        || !manager.BootHasReadyTask()) return false;
+    if (manager.Schedule(&boot) != first.cpustate || first.State() != TaskRunning
+        || manager.BootHasReadyTask()) return false;
     if (manager.Schedule(&firstFrame) != second.cpustate) return false;
     if (manager.Schedule(&secondFrame) != &boot) return false;
     if (!manager.SleepTask(&first, 3) || manager.SleepTask(&first, 1)) return false;
@@ -296,5 +307,5 @@ bool TaskManager::RunSelfTests(GlobalDescriptorTable* gdt) {
     if (!manager.TerminateTask(&second) || manager.Schedule(&secondFrame) != &boot) return false;
     if (!manager.RemoveTask(&second) || manager.Schedule(&boot) != &boot) return false;
     if (manager.Ticks() != 10 || first.Statistics().runTicks != 2) return false;
-    return manager.OnlineProcessors() == 1;
+    return !manager.BootHasReadyTask() && manager.OnlineProcessors() == 1;
 }

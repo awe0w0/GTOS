@@ -76,6 +76,7 @@ namespace gtos {
                 static void HandleInterruptRequest0x31();
 
                 static void HandleInterruptRequest0x80();
+                static void HandleInterruptRequest0x81();
 
                 static void HandleException0x00();
                 static void HandleException0x01();
@@ -126,6 +127,7 @@ namespace gtos {
                 uint16_t HardwareInterruptOffset();
                 void Activate();
                 void Deactivate();
+                void IdleBootContext();
                 void Load(InterruptHandler* handler,uint8_t interruptNumber);
                 void Load(TaskManager* taskManager);
                 void Load(uint8_t InterruptNumber, InterruptsManager* InterruptManager);

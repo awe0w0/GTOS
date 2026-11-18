@@ -3661,6 +3661,6 @@ extern "C" void kernelMain(const void *multiboot, uint32_t magic) {
             if (modern) ReclaimObserveGui(*modern);
         }
 #endif
-        asm volatile("sti; hlt");
+        interrupts.IdleBootContext();
     }
 }

@@ -72,6 +72,7 @@ HandleInterruptRequest 0x0E, 0x2E
 HandleInterruptRequest 0x0F, 0x2F
 HandleInterruptRequest 0x31, 0x51
 HandleInterruptRequest 0x80, 0x80
+HandleInterruptRequest 0x81, 0x81
 
 int_bottom:
     pushl %ebp
