@@ -27,6 +27,10 @@ static int probe_vm(void) {
     GtosVmReserveResult result = {0};
     GtosVmReserveRequest request = {GTOS_VM_ABI_VERSION, bytes, GTOS_VM_PAGE_BYTES,
                                   0x801ff000u, (u32)&result};
+    request.result = (u32)"read-only reservation result";
+    if (syscall2(GTOS_SYS_VM_RESERVE, (u32)&request, sizeof(request)) != GTOS_VM_ERR_BAD_ADDRESS)
+        return 0;
+    request.result = (u32)&result;
     if (syscall2(GTOS_SYS_VM_RESERVE, (u32)&request, sizeof(request)) != 0 ||
         result.base != request.hint || result.length != bytes ||
         result.page_size != GTOS_VM_PAGE_BYTES || !result.handle) return 0;
@@ -37,6 +41,14 @@ static int probe_vm(void) {
     const u32 edge = GTOS_VM_PAGE_BYTES - 8;
     volatile GtosVmRegionInfo* region = (volatile GtosVmRegionInfo*)(result.base + edge);
     GtosVmQueryRequest query = {GTOS_VM_ABI_VERSION, result.handle, (u32)region};
+    GtosVmRangeRequest protect = {GTOS_VM_ABI_VERSION, result.handle, GTOS_VM_PAGE_BYTES,
+                                 GTOS_VM_PAGE_BYTES, GTOS_VM_READ};
+    for (u32 i = 0; i < 8; ++i) memory[edge + i] = 0x35;
+    if (syscall2(GTOS_SYS_VM_SET_PERMISSIONS, (u32)&protect, sizeof(protect)) != 0 ||
+        syscall2(GTOS_SYS_VM_QUERY, (u32)&query, sizeof(query)) != GTOS_VM_ERR_BAD_ADDRESS) return 0;
+    for (u32 i = 0; i < 8; ++i) if (memory[edge + i] != 0x35) return 0;
+    protect.protection = GTOS_VM_READ_WRITE;
+    if (syscall2(GTOS_SYS_VM_SET_PERMISSIONS, (u32)&protect, sizeof(protect)) != 0) return 0;
     if (syscall2(GTOS_SYS_VM_QUERY, (u32)&query, sizeof(query)) != 0 ||
         region->handle != result.handle || region->base != result.base ||
         region->resident_pages != 2) return 0;

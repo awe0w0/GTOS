@@ -1086,14 +1086,16 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (cpu->ecx != GTOS_VM_RESERVE_REQUEST_BYTES) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
         }
+        InterruptGuard guard;
         GtosVmReserveRequest request;
-        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+        if (!slot->space.CheckCopyLayout()
+            || !slot->space.CopyFromUserWithCheckedLayout(&request, cpu->ebx, sizeof(request))) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
         }
         if (request.version != GTOS_VM_ABI_VERSION) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_UNSUPPORTED_VERSION; break;
         }
-        if (!slot->space.ValidateUserRange(request.result, GTOS_VM_RESERVE_RESULT_BYTES, true)) {
+        if (!slot->space.CheckCopyRange(request.result, GTOS_VM_RESERVE_RESULT_BYTES, true)) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
         }
         uint32_t base = 0, handle = 0;
@@ -1102,9 +1104,8 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         else {
             const GtosVmReserveResult result = {GTOS_VM_ABI_VERSION, handle, base,
                 request.length, GTOS_VM_PAGE_BYTES};
-            // Reserve changes only region metadata. With IF clear the fully
-            // validated output mappings remain unchanged throughout this copy.
-            if (slot->space.CopyToUser(request.result, &result, sizeof(result))) cpu->eax = 0;
+            // Reserve audits the layout and changes only region metadata.
+            if (slot->space.CopyToUserWithCheckedLayout(request.result, &result, sizeof(result))) cpu->eax = 0;
             else {
                 slot->space.Release(handle);
                 cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS;
@@ -1203,14 +1204,16 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         if (cpu->ecx != GTOS_VM_QUERY_REQUEST_BYTES) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_SIZE; break;
         }
+        InterruptGuard guard;
         GtosVmQueryRequest request;
-        if (!slot->space.CopyFromUser(&request, cpu->ebx, sizeof(request))) {
+        if (!slot->space.CheckCopyLayout()
+            || !slot->space.CopyFromUserWithCheckedLayout(&request, cpu->ebx, sizeof(request))) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
         }
         if (request.version != GTOS_VM_ABI_VERSION) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_UNSUPPORTED_VERSION; break;
         }
-        if (!slot->space.ValidateUserRange(request.result, GTOS_VM_REGION_INFO_BYTES, true)) {
+        if (!slot->space.CheckCopyRange(request.result, GTOS_VM_REGION_INFO_BYTES, true)) {
             cpu->eax = (uint32_t)GTOS_VM_ERR_BAD_ADDRESS; break;
         }
         ProcessMemoryRegionInfo info;
@@ -1219,7 +1222,8 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
         else {
             const GtosVmRegionInfo result = {GTOS_VM_ABI_VERSION, request.handle,
                 info.base, info.bytes, info.residentPages};
-            cpu->eax = slot->space.CopyToUser(request.result, &result, sizeof(result))
+            // QueryRegion has just audited this same layout.
+            cpu->eax = slot->space.CopyToUserWithCheckedLayout(request.result, &result, sizeof(result))
                 ? 0 : (uint32_t)GTOS_VM_ERR_BAD_ADDRESS;
         }
         break;
