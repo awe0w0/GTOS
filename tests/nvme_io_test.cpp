@@ -60,6 +60,7 @@ struct NvmeTestFixture {
     static uint32_t multiSectorReads,readSectors,blockErases,multiSectorPrograms;
     static uint32_t failAt;
     static bool reverse,badCid,resetFails,dropCompletion;
+    static bool corruptNextBatch;
     static uint8_t* mutate;
 
     static void Setup(NvmeDisk& disk) {
@@ -78,7 +79,8 @@ struct NvmeTestFixture {
         }
         submission=completion=commands=reads=writes=flushes=batches=multiSectorReads=0;phase=1;
         readSectors=blockErases=multiSectorPrograms=0;
-        failAt=0xFFFFFFFFU;reverse=badCid=resetFails=dropCompletion=false;mutate=nullptr;
+        failAt=0xFFFFFFFFU;reverse=badCid=resetFails=dropCompletion=corruptNextBatch=false;
+        mutate=nullptr;
         releases=0;pciCommand=4;clockTicks=0;registers[0x1C/4]=1;
     }
     static void Geometry(NvmeDisk& disk,uint32_t bytes,uint64_t sectors) {
@@ -130,7 +132,12 @@ struct NvmeTestFixture {
                         for (uint32_t i=0;i<bytes;i++) erased&=bounce[i]==0xFF;
                         if (erased&&bytes==FileStore::BlockSize) ++blockErases;
                         if (!erased&&count>1) ++multiSectorPrograms;
-                        Copy(media+(uint32_t)first*512U,bounce,bytes);
+                        uint8_t* destination=media+(uint32_t)first*512U;
+                        Copy(destination,bounce,bytes);
+                        if (corruptNextBatch&&count>1&&!erased) {
+                            destination[bytes-1]^=0xFF;
+                            corruptNextBatch=false;
+                        }
                     }
                     else {
                         ++reads;
@@ -160,6 +167,7 @@ uint32_t NvmeTestFixture::multiSectorReads,NvmeTestFixture::readSectors;
 uint32_t NvmeTestFixture::blockErases,NvmeTestFixture::multiSectorPrograms;
 bool NvmeTestFixture::reverse,NvmeTestFixture::badCid,NvmeTestFixture::resetFails;
 bool NvmeTestFixture::dropCompletion;
+bool NvmeTestFixture::corruptNextBatch;
 uint8_t* NvmeTestFixture::mutate;
 void NvmeTestWriteRegister(NvmeDisk& disk,uint32_t offset,uint32_t value) {
     NvmeTestFixture::Doorbell(disk,offset,value);
@@ -321,9 +329,11 @@ static void LargeVolume(NvmeDisk& disk,uint32_t blockBytes) {
           &&store.Mount(&cache,8,diskSectors,false,nullptr,&caches)==0,"large LittleFS blocks format and mount");
     int32_t handle=store.Open(1,"/profile",FileStore::Create|FileStore::ReadWrite);
     const uint32_t size=2*blockBytes+17;
+    F::corruptNextBatch=true;
     Check(handle>0&&store.WriteFile(1,handle,input,size)==(int32_t)size
           &&store.Sync(1,handle)==0&&store.Close(1,handle)==0&&store.Unmount()==0,
-          "a file crossing large block boundaries is committed");
+          "a file crossing large block boundaries is committed despite a recoverable bad block");
+    Check(!F::corruptNextBatch,"the device accepted a batch with a corrupt last byte");
     Check(store.Mount(&cache,8,diskSectors,true)!=0,"the legacy mount refuses the different block geometry");
     const uint32_t otherBlockBytes=blockBytes==GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES
         ? GTOS_CONTENT_VOLUME_128K_BLOCK_BYTES : GTOS_CONTENT_VOLUME_LARGE_BLOCK_BYTES;

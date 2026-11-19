@@ -145,16 +145,26 @@ static int lfs_bd_cmp(lfs_t *lfs,
 
     for (lfs_off_t i = 0; i < size; i += diff) {
         uint8_t dat[8];
-
-        diff = lfs_min(size-i, sizeof(dat));
-        int err = lfs_bd_read(lfs,
-                pcache, rcache, hint-i,
-                block, off+i, &dat, diff);
-        if (err) {
-            return err;
+        const uint8_t *actual;
+        lfs_off_t pos = off + i;
+        if (!pcache && block == rcache->block
+                && pos >= rcache->off && pos - rcache->off < rcache->size) {
+            // Compare the cached span directly once it has been read back.
+            lfs_off_t offset = pos - rcache->off;
+            diff = lfs_min(size-i, rcache->size-offset);
+            actual = rcache->buffer + offset;
+        } else {
+            diff = lfs_min(size-i, sizeof(dat));
+            int err = lfs_bd_read(lfs,
+                    pcache, rcache, hint-i,
+                    block, pos, &dat, diff);
+            if (err) {
+                return err;
+            }
+            actual = dat;
         }
 
-        int res = memcmp(dat, data + i, diff);
+        int res = memcmp(actual, data + i, diff);
         if (res) {
             return res < 0 ? LFS_CMP_LT : LFS_CMP_GT;
         }
