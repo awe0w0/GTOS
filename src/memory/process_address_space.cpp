@@ -76,7 +76,8 @@ namespace {
     }
     void ClearPage(uint32_t address) {
         uint32_t* page = (uint32_t*)address;
-        for (uint32_t i = 0; i < 1024; ++i) page[i] = 0;
+        uint32_t words = 4096 / sizeof(uint32_t);
+        asm volatile("cld; rep stosl" : "+D"(page), "+c"(words) : "a"(0) : "memory", "cc");
     }
     void CopyCheckedBytes(uint8_t* destination, const uint8_t* source, uint32_t length) {
         if (length >= 512) {

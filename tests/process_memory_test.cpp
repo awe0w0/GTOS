@@ -1179,6 +1179,13 @@ namespace {
         CHECK(first.SetPermissions(handle, 0, 8192, ProcessMemoryReadWrite));
         CHECK(first.CopyToUser(base + 4092, input, 8));
         CHECK(first.CopyFromUser(output, base + 4092, 8) && equal(input, output, 8));
+        // The reservation crosses a PAE table boundary. Clear precisely the
+        // first page and preserve the adjacent page and the mapping itself.
+        fill(input, 4096, 0xA7);
+        CHECK(first.CopyToUser(base, input, 4096) && first.CopyToUser(base + 4096, input, 4096));
+        CHECK(first.Discard(handle, 0, 4096));
+        CHECK(first.CopyFromUser(output, base, 4096) && all(output, 4096, 0));
+        CHECK(first.CopyFromUser(output, base + 4096, 4096) && all(output, 4096, 0xA7));
         CHECK(first.Release(handle));
         CHECK(!first.ValidateUserRange(base, 1, false));
         gtos_process_memory_test_cr3 = sharedRoot;
