@@ -110,6 +110,9 @@ namespace gtos { namespace memory {
         // The caller holds interrupts disabled and preserves the checked mappings.
         bool CopyToUserWithCheckedLayout(uint32_t destination, const void* source, uint32_t length);
         bool CopyFromUserWithCheckedLayout(void* destination, uint32_t source, uint32_t length) const;
+        // Both the kernel buffer and user range have been verified under the same guard.
+        void WriteCheckedUserBytes(uint32_t destination, const void* source, uint32_t length);
+        void ReadCheckedUserBytes(void* destination, uint32_t source, uint32_t length) const;
         bool Mutable() const;
         bool RuntimeMutable(bool* unreservedDynamicPages = nullptr) const;
         bool PrepareWithLimit(KernelPaging& sharedKernel, PhysicalMemoryManager& allocator,

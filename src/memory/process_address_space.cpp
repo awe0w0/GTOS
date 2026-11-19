@@ -1174,6 +1174,10 @@ bool ProcessAddressSpace::CopyToUser(uint32_t destination, const void* source, u
 }
 bool ProcessAddressSpace::CopyToUserWithCheckedLayout(uint32_t destination, const void* source, uint32_t length) {
     if (!CheckCopyRange(destination, length, true) || !Buffer((uint32_t)source, length, false)) return false;
+    WriteCheckedUserBytes(destination, source, length);
+    return true;
+}
+void ProcessAddressSpace::WriteCheckedUserBytes(uint32_t destination, const void* source, uint32_t length) {
     const uint8_t* input = (const uint8_t*)source;
     while (length) {
         const uint32_t offset = destination & 4095;
@@ -1184,8 +1188,6 @@ bool ProcessAddressSpace::CopyToUserWithCheckedLayout(uint32_t destination, cons
         UnmapDataFrame(number);
         destination += chunk; input += chunk; length -= chunk;
     }
-    error = ProcessMemoryOk;
-    return true;
 }
 bool ProcessAddressSpace::LoadImageRange(uint32_t address, uint32_t fileOffset, uint32_t bytes,
                                          process::Elf32ReadAt read, void* source) {
@@ -1213,6 +1215,10 @@ bool ProcessAddressSpace::CopyFromUser(void* destination, uint32_t source, uint3
 }
 bool ProcessAddressSpace::CopyFromUserWithCheckedLayout(void* destination, uint32_t source, uint32_t length) const {
     if (!CheckCopyRange(source, length, false) || !Buffer((uint32_t)destination, length, true)) return false;
+    ReadCheckedUserBytes(destination, source, length);
+    return true;
+}
+void ProcessAddressSpace::ReadCheckedUserBytes(void* destination, uint32_t source, uint32_t length) const {
     uint8_t* output = (uint8_t*)destination;
     while (length) {
         const uint32_t offset = source & 4095;
@@ -1223,8 +1229,6 @@ bool ProcessAddressSpace::CopyFromUserWithCheckedLayout(void* destination, uint3
         UnmapDataFrame(number);
         source += chunk; output += chunk; length -= chunk;
     }
-    error = ProcessMemoryOk;
-    return true;
 }
 bool ProcessAddressSpace::Destroy() {
     InterruptGuard guard;

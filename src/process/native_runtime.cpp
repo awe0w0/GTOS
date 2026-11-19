@@ -917,26 +917,35 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;
         }
         InterruptGuard guard;
-        GtosProcessInfoRequest request;
+        struct ProcessInfoExchange {
+            GtosProcessInfoRequest request;
+            GtosProcessInfoResult result;
+        } exchange;
+        // Both copies use the same checked kernel buffer. The guard keeps
+        // the buffer and the audited user layout fixed through the reply.
         if (!slot->space.CheckCopyLayout()
-            || !slot->space.CopyFromUserWithCheckedLayout(&request, cpu->ebx, sizeof(request))) {
+            || !slot->space.CheckCopyRange(cpu->ebx, sizeof(exchange.request), false)
+            || !slot->space.Buffer((uint32_t)&exchange, sizeof(exchange), true)) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
         }
+        slot->space.ReadCheckedUserBytes(&exchange.request, cpu->ebx, sizeof(exchange.request));
+        const GtosProcessInfoRequest& request = exchange.request;
         if (request.version != GTOS_PROCESS_INFO_ABI_VERSION) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_UNSUPPORTED; break;
         }
         if (request.flags || request.result_bytes != GTOS_PROCESS_INFO_RESULT_BYTES) {
             cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_SIZE; break;
         }
-        const GtosProcessInfoResult result = {GTOS_PROCESS_INFO_ABI_VERSION,
+        if (!slot->space.CheckCopyRange(request.result_va, sizeof(exchange.result), true)) {
+            cpu->eax = (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS; break;
+        }
+        exchange.result = {GTOS_PROCESS_INFO_ABI_VERSION,
             slot->status.id, thread->status.id, thread->userStackBegin, thread->userStackEnd,
             ProcessAddressSpace::UserBase, ProcessAddressSpace::UserLimit,
             GTOS_VM_PAGE_BYTES, slot->space.CapacityPages(),
             slot->space.CapacityRegions(), threadsEnabled ? slotCount : 1, 1};
-        // The mappings stay fixed between the request and response. The copy
-        // checks the full output range before writing, including mixed pages.
-        cpu->eax = slot->space.CopyToUserWithCheckedLayout(request.result_va, &result, sizeof(result))
-            ? 0 : (uint32_t)GTOS_PROCESS_INFO_ERR_BAD_ADDRESS;
+        slot->space.WriteCheckedUserBytes(request.result_va, &exchange.result, sizeof(exchange.result));
+        cpu->eax = 0;
         break;
     }
     case GTOS_SYS_YIELD:
