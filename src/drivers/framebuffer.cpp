@@ -186,15 +186,18 @@ void Framebuffer::Present() {
     if (!ready || dirtyX >= dirtyR || dirtyY >= dirtyB)
         return;
     for (int32_t y = dirtyY; y < dirtyB; ++y) {
-        volatile uint32_t *dst = (volatile uint32_t *)(video + y * mode.pitch);
-        const uint32_t *src = pixels + y * mode.width;
+        volatile uint32_t *dst = (volatile uint32_t *)(video + y * mode.pitch) + dirtyX;
+        const uint32_t *src = pixels + y * mode.width + dirtyX;
+        if (nativeRGB) {
+            uint32_t words = dirtyR - dirtyX;
+            asm volatile("cld; rep movsl" : "+D"(dst), "+S"(src), "+c"(words) : : "memory", "cc");
+            continue;
+        }
         for (int32_t x = dirtyX; x < dirtyR; ++x) {
-            uint32_t c = src[x];
-            if (!nativeRGB)
-                c = ((((c >> 16) & 255) >> (8 - mode.redSize)) << mode.redPosition) |
-                    ((((c >> 8) & 255) >> (8 - mode.greenSize)) << mode.greenPosition) |
-                    (((c & 255) >> (8 - mode.blueSize)) << mode.bluePosition);
-            dst[x] = c;
+            const uint32_t c = *src++;
+            *dst++ = ((((c >> 16) & 255) >> (8 - mode.redSize)) << mode.redPosition) |
+                     ((((c >> 8) & 255) >> (8 - mode.greenSize)) << mode.greenPosition) |
+                     (((c & 255) >> (8 - mode.blueSize)) << mode.bluePosition);
         }
     }
     dirtyX = mode.width;
