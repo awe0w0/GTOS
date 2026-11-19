@@ -9,9 +9,9 @@ extern "C" uint8_t kernel_start, kernel_end, kernel_readonly_start, kernel_reado
 namespace {
     const uint32_t LocalIP = 0x0f02000a;
     const uint32_t FixtureIP = 0x6402000a;
-    const unsigned BodyBytes = 6917;
+    const unsigned BodyBytes = 65573;
     const char RequestLine[] = "GET /network-proof HTTP/1.0\r\nHost: gtos.test\r\nX-Pad: ";
-    const char ResponseHeader[] = "HTTP/1.0 200 OK\r\nContent-Length: 6917\r\n\r\n";
+    const char ResponseHeader[] = "HTTP/1.0 200 OK\r\nContent-Length: 65573\r\n\r\n";
 
     class Timer : public InterruptHandler {
     public:
@@ -173,9 +173,19 @@ extern "C" void NativeProcessSmoke(void* boot, unsigned magic) {
     }
     Require(writeCalls >= 2, "TCP divided the request by maximum segment size");
 
+    // Receive a burst larger than the old window without draining the ring.
+    unsigned buffered = 0;
+    bool eof = false;
+    while (buffered < 8192) {
+        Require(client.Describe(handle, buffered, eof) == 0 && !eof,
+                "TCP receives a burst before the application reads");
+        if (buffered < 8192) WaitTick(client, timer);
+    }
+
     uint8_t fragment[379];
     unsigned received = 0;
-    const unsigned expectedBytes = sizeof(ResponseHeader) - 1 + BodyBytes;
+    const unsigned headerBytes = sizeof(ResponseHeader) - 1;
+    const unsigned expectedBytes = headerBytes + BodyBytes;
     while (received < expectedBytes) {
         const int count = client.Read(handle, fragment, sizeof(fragment));
         if (count == TcpClient::Again) {
@@ -185,9 +195,13 @@ extern "C" void NativeProcessSmoke(void* boot, unsigned magic) {
         Require(count > 0, "TCP read completes before EOF");
         for (int i = 0; i < count; ++i, ++received) {
             Require(received < expectedBytes, "TCP response length");
-            const uint8_t expected = received < sizeof(ResponseHeader) - 1
-                ? static_cast<uint8_t>(ResponseHeader[received])
-                : static_cast<uint8_t>((received - sizeof(ResponseHeader) + 1) * 17);
+            uint8_t expected;
+            if (received < headerBytes) {
+                expected = static_cast<uint8_t>(ResponseHeader[received]);
+            } else {
+                const unsigned offset = received - headerBytes;
+                expected = static_cast<uint8_t>(offset * 17 + (offset >> 8) * 7);
+            }
             Require(fragment[i] == expected, "TCP response bytes");
         }
     }

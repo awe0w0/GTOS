@@ -34,7 +34,8 @@ public:
 private:
     enum Phase { Free, Connecting, Established, Failed };
     static const unsigned MSS = 536;
-    static const unsigned ReceiveBytes = 4096;
+    // Allow a full TLS record to arrive while the application is off CPU.
+    static const unsigned ReceiveBytes = 32 * 1024;
     struct Connection {
         uint32_t remoteIP;
         uint16_t remotePort, localPort, peerWindow;
