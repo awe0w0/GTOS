@@ -31,6 +31,8 @@ private:
     uint32_t nextPort, sequence;
     uint8_t bounce[GTOS_TCP_TRANSFER_LIMIT];
 
+    template<class Request>
+    static bool Snapshot(memory::ProcessAddressSpace& space, uint32_t address, Request& request);
     Socket* Find(uint32_t owner, uint32_t handle);
     int32_t Connect(uint32_t owner, const GtosTcpConnectRequest& request);
     void Release(Socket& socket);

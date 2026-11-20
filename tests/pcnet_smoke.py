@@ -140,7 +140,8 @@ def exercise_tcp(publication, output, identity):
     from tcp_http_peer import request, response
     for level in LEVELS:
         iso = verified_iso(publication, identity, level)
-        transcript = output / (level + '.http-request.raw')
+        transcripts = (output / (level + '.http-request.raw'),
+                       output / (level + '.native-http-request.raw'))
         address = output / (level + '.sock')
         guest = output / (level + '.guest.log')
         # The only forwarded endpoint is a Unix socket inside this stage.
@@ -164,20 +165,23 @@ def exercise_tcp(publication, output, identity):
             listener.settimeout(25)
             with subprocess.Popen(command, cwd=REPO, stdout=log, stderr=subprocess.STDOUT) as child:
                 try:
+                    # The guest forwarding rule connects a single Unix stream
+                    # to both sequential guest TCP connections.
                     connection, _ = listener.accept()
                     with connection:
                         connection.settimeout(25)
-                        received = bytearray()
-                        while len(received) < len(request):
-                            part = connection.recv(len(request) - len(received))
-                            if not part:
-                                raise RuntimeError('TCP fixture closed during its HTTP request')
-                            received.extend(part)
-                        with transcript.open('xb') as trace:
-                            trace.write(received)
-                        if received != request:
-                            raise RuntimeError('TCP peer received different request bytes')
-                        connection.sendall(response)
+                        for transcript in transcripts:
+                            received = bytearray()
+                            while len(received) < len(request):
+                                part = connection.recv(len(request) - len(received))
+                                if not part:
+                                    raise RuntimeError('TCP fixture closed during its HTTP request')
+                                received.extend(part)
+                            with transcript.open('xb') as trace:
+                                trace.write(received)
+                            if received != request:
+                                raise RuntimeError(f'TCP peer received different request bytes: {transcript}')
+                            connection.sendall(response)
                         result = child.wait(timeout=45)
                     if result != 33:
                         raise RuntimeError(f'TCP guest returned {result}: {guest}')
@@ -186,7 +190,8 @@ def exercise_tcp(publication, output, identity):
                         child.kill()
         if guest.read_text().splitlines() != [
                 'AMD am79c973', 'TCP CONNECTED AFTER ARP', 'TCP HTTP RESPONSE VERIFIED',
-                'TCP NATIVE ENDPOINT PASS', 'PCNET TCP HTTP PASS', 'PCNET GUEST PASS']:
+                'TCP NATIVE TRANSFERS VERIFIED', 'TCP NATIVE ENDPOINT PASS',
+                'PCNET TCP HTTP PASS', 'PCNET GUEST PASS']:
             raise RuntimeError(f'Unexpected TCP guest transcript: {guest}')
         print('PCNET TCP', level, 'PASS', file_identity(guest))
         no_peer = output / (level + '-no-peer.guest.log')

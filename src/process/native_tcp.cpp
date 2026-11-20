@@ -44,29 +44,37 @@ void NativeTcp::Release(Socket& socket) {
     socket = {};
 }
 
+template<class Request>
+bool NativeTcp::Snapshot(memory::ProcessAddressSpace& space, uint32_t address, Request& request) {
+    return space.CheckCopyLayout() &&
+        space.CopyFromUserWithCheckedLayout(&request, address, sizeof(request));
+}
+
 int32_t NativeTcp::Call(uint32_t owner, memory::ProcessAddressSpace& space,
                         uint32_t operation, uint32_t address, uint32_t bytes) {
     memory::InterruptGuard guard;
     if (!owner) return GTOS_TCP_ERR_UNAVAILABLE;
     const uint32_t milliseconds = tasks.Ticks() * (GTOS_CLOCK_RESOLUTION_US / 1000);
 
+    // Socket operations leave this address space's mappings intact.
+    // The checked layout remains valid until this call releases the guard.
     switch (operation) {
     case GTOS_SYS_TCP_CONNECT: {
         GtosTcpConnectRequest request;
         if (bytes != sizeof(request)) return GTOS_TCP_ERR_INVALID;
-        if (!space.CopyFromUser(&request, address, sizeof(request)))
+        if (!Snapshot(space, address, request))
             return GTOS_TCP_ERR_BAD_ADDRESS;
         return Connect(owner, request);
     }
     case GTOS_SYS_TCP_INFO: {
         GtosTcpInfoRequest request;
         if (bytes != sizeof(request)) return GTOS_TCP_ERR_INVALID;
-        if (!space.CopyFromUser(&request, address, sizeof(request)))
+        if (!Snapshot(space, address, request))
             return GTOS_TCP_ERR_BAD_ADDRESS;
         if (request.version != GTOS_TCP_ABI_VERSION) return GTOS_TCP_ERR_INVALID;
         const auto* socket = Find(owner, request.handle);
         if (!socket) return GTOS_TCP_ERR_BAD_HANDLE;
-        if (!space.ValidateUserRange(request.result_va, sizeof(GtosTcpInfo), true))
+        if (!space.CheckCopyRange(request.result_va, sizeof(GtosTcpInfo), true))
             return GTOS_TCP_ERR_BAD_ADDRESS;
         client.Poll(milliseconds);
         unsigned readable = 0;
@@ -75,14 +83,14 @@ int32_t NativeTcp::Call(uint32_t owner, memory::ProcessAddressSpace& space,
         const GtosTcpInfo result = {GTOS_TCP_ABI_VERSION, status,
             localAddress, socket->port, peerAddress, peerPort, readable,
             endOfStream ? GTOS_TCP_END_OF_STREAM : 0};
-        return space.CopyToUser(request.result_va, &result, sizeof(result))
+        return space.CopyToUserWithCheckedLayout(request.result_va, &result, sizeof(result))
             ? 0 : GTOS_TCP_ERR_BAD_ADDRESS;
     }
     case GTOS_SYS_TCP_READ:
     case GTOS_SYS_TCP_WRITE: {
         GtosTcpTransferRequest request;
         if (bytes != sizeof(request)) return GTOS_TCP_ERR_INVALID;
-        if (!space.CopyFromUser(&request, address, sizeof(request)))
+        if (!Snapshot(space, address, request))
             return GTOS_TCP_ERR_BAD_ADDRESS;
         if (request.version != GTOS_TCP_ABI_VERSION || request.bytes > sizeof(bounce))
             return GTOS_TCP_ERR_INVALID;
@@ -91,14 +99,14 @@ int32_t NativeTcp::Call(uint32_t owner, memory::ProcessAddressSpace& space,
         if (!request.bytes) return 0;
         if (operation == GTOS_SYS_TCP_READ) {
             // Validate the entire destination before consuming received bytes.
-            if (!space.ValidateUserRange(request.buffer_va, request.bytes, true))
+            if (!space.CheckCopyRange(request.buffer_va, request.bytes, true))
                 return GTOS_TCP_ERR_BAD_ADDRESS;
             client.Poll(milliseconds);
             const int count = client.Read(socket->handle, bounce, request.bytes);
-            return count <= 0 || space.CopyToUser(request.buffer_va, bounce, count)
+            return count <= 0 || space.CopyToUserWithCheckedLayout(request.buffer_va, bounce, count)
                 ? count : GTOS_TCP_ERR_BAD_ADDRESS;
         }
-        if (!space.CopyFromUser(bounce, request.buffer_va, request.bytes))
+        if (!space.CopyFromUserWithCheckedLayout(bounce, request.buffer_va, request.bytes))
             return GTOS_TCP_ERR_BAD_ADDRESS;
         client.Poll(milliseconds);
         return client.Write(socket->handle, bounce, request.bytes);
@@ -107,7 +115,7 @@ int32_t NativeTcp::Call(uint32_t owner, memory::ProcessAddressSpace& space,
     case GTOS_SYS_TCP_CLOSE: {
         GtosTcpControlRequest request;
         if (bytes != sizeof(request)) return GTOS_TCP_ERR_INVALID;
-        if (!space.CopyFromUser(&request, address, sizeof(request)))
+        if (!Snapshot(space, address, request))
             return GTOS_TCP_ERR_BAD_ADDRESS;
         if (request.version != GTOS_TCP_ABI_VERSION) return GTOS_TCP_ERR_INVALID;
         auto* socket = Find(owner, request.handle);

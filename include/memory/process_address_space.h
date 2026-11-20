@@ -3,7 +3,12 @@
 #include <memory/paging.h>
 #include <process/elf32.h>
 #include <process/vm_abi.h>
-namespace gtos { namespace process { class NativeFiles; class NativeRuntime; class NativeSharedMemory; } }
+namespace gtos { namespace process {
+    class NativeFiles;
+    class NativeRuntime;
+    class NativeSharedMemory;
+    class NativeTcp;
+} }
 namespace gtos { namespace memory {
     enum ProcessMemoryError : uint32_t {
         ProcessMemoryOk, ProcessMemoryBadState, ProcessMemoryBadRange,
@@ -44,6 +49,7 @@ namespace gtos { namespace memory {
         friend class gtos::process::NativeFiles;
         friend class gtos::process::NativeRuntime;
         friend class gtos::process::NativeSharedMemory;
+        friend class gtos::process::NativeTcp;
         // Bounded kernel-only admission from storage. The slot stays unrunnable
         // until every segment is loaded and the reader has closed its source.
         bool LoadImageRange(uint32_t address, uint32_t fileOffset, uint32_t bytes,
