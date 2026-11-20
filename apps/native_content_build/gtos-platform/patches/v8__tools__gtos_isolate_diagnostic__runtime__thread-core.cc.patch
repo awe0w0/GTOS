@@ -16,3 +16,30 @@
  }
  
  template <class Mutex>
+@@ -39,9 +40,14 @@
+   if (mutex == nullptr) return EINVAL;
+-  const auto info = v8::base::gtos::CurrentProcessInfo();
+-  for (;;) {
+-    const int result = Acquire(mutex, info.thread_id, recursive);
+-    if (result != EBUSY) return result;
+-    if (info.maximum_parallel_threads == 1) return recursive ? EPERM : EDEADLK;
++  const uint32_t owner = CurrentOwner();
++  int result = Acquire(mutex, owner, recursive);
++  if (result != EBUSY) return result;
++  // The full process profile is needed only to decide whether waiting can
++  // make progress. Uncontended acquisition needs only the current owner.
++  if (v8::base::gtos::CurrentProcessInfo().maximum_parallel_threads == 1)
++    return recursive ? EPERM : EDEADLK;
++  do {
+     v8::base::gtos::Yield();
+-  }
++    result = Acquire(mutex, owner, recursive);
++  } while (result == EBUSY);
++  return result;
+ }
+@@ -121,4 +127,5 @@
+   if (flag == nullptr || function == nullptr) return EINVAL;
++  if (__atomic_load_n(flag, __ATOMIC_ACQUIRE) == 2) return 0;
+   const auto info = v8::base::gtos::CurrentProcessInfo();
+   const uint32_t pending = 0x80000000U | info.thread_id;
+   for (;;) {
