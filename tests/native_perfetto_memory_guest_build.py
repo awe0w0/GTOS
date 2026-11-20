@@ -323,6 +323,10 @@ else:
         image_limit = 2 * 1024 * 1024
         layout_text = (layout_text.replace('0x40020000', '0x' + record_address)
                        .replace('0x20000', '0x200000').replace('<= 4096,', '<= 65536,'))
+    elif args.component == 'base_tls':
+        # The real adapter reserves cells for all 64 Content thread slots.
+        layout_text = layout_text.replace('<= 4096, "VM probe data exceeds one page"',
+                                          '<= 12288, "Base TLS probe data exceeds three pages"')
     if args.component == 'content_capacity':
         layout_text = layout_text.replace('*(.bss*)', '*(.bss)').replace(
             '    /DISCARD/',

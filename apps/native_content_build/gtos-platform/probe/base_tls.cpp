@@ -43,6 +43,13 @@ GtosThreadSlotInfo CurrentThreadSlot() {
   Check(Call(GTOS_SYS_THREAD_SLOT_INFO, request) == 0 &&
         info.version == GTOS_THREAD_SLOT_ABI_VERSION &&
         info.index < GTOS_THREAD_SLOT_LIMIT && info.thread_id != 0);
+  unsigned operation = GTOS_SYS_THREAD_SLOT_IDENTITY;
+  unsigned index, id;
+  unsigned ecx = 0x13572468U;
+  asm volatile("int $0x80" : "+a"(operation), "=b"(index), "=d"(id), "+c"(ecx)
+               : : "cc");
+  Check(operation == 0 && index == info.index && id == info.thread_id &&
+        ecx == 0x13572468U);
   return info;
 }
 

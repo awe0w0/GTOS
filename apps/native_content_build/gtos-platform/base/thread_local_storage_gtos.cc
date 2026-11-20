@@ -11,7 +11,6 @@
 #include <process/thread_slot_abi.h>
 
 #include "base/check_op.h"
-#include "base/immediate_crash.h"
 
 extern "C" int __cxa_thread_atexit(void (*)(void*), void*, void*) noexcept;
 extern "C" void* __dso_handle;
@@ -43,16 +42,7 @@ constinit std::array<ThreadValues, GTOS_CONTENT_THREAD_SLOT_LIMIT> thread_values
 ThreadValues& CurrentValues() {
   // This lookup also runs in allocator and lock instrumentation. Compiler
   // emulated TLS would allocate here and could reenter those callers.
-  GtosThreadSlotInfo info{};
-  const GtosThreadSlotRequest request{GTOS_THREAD_SLOT_ABI_VERSION,
-                                       reinterpret_cast<unsigned>(&info)};
-  unsigned operation = GTOS_SYS_THREAD_SLOT_INFO;
-  asm volatile("int $0x80" : "+a"(operation)
-               : "b"(&request), "c"(sizeof(request)) : "memory", "cc");
-  if (operation || info.version != GTOS_THREAD_SLOT_ABI_VERSION ||
-      info.index >= thread_values.size() || !info.thread_id) {
-    ImmediateCrash();
-  }
+  const auto info = ::gtos::native::CurrentThreadSlot();
   ThreadValues& values = thread_values[info.index];
   if (values.owner != info.thread_id) {
     values = {};

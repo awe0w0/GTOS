@@ -1,17 +1,24 @@
 --- a/v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc
 +++ b/v8/tools/gtos_isolate_diagnostic/runtime/thread-context.cc
-@@ -1,8 +1,9 @@
+@@ -1,8 +1,16 @@
  #include "thread-context.h"
-+#include <process/identity_abi.h>
++#include <process/thread_slot_abi.h>
  #include "src/base/platform/gtos-native-services.h"
  namespace v8 { namespace base { namespace gtos {
  namespace {
 -NativeThreadState states[4];
 +NativeThreadState states[GTOS_CONTENT_THREAD_SLOT_LIMIT];
++struct SlotCache {
++  uint32_t id;
++  NativeThreadState* state;
++};
++// An index has a single running owner. The ID changes when the kernel reuses
++// the index, so a new owner never reads the previous owner's cached pointer.
++SlotCache slot_cache[GTOS_CONTENT_THREAD_SLOT_LIMIT];
  uint32_t context_lock;
  class ContextGuard {
   public:
-@@ -20,28 +21,10 @@
+@@ -20,45 +28,43 @@
  };
  }
  GtosProcessInfoResult CurrentNativeThreadInfo() {
@@ -38,16 +45,51 @@
  }
  NativeThreadState& CurrentNativeThreadState() {
 -  const uint32_t id = CurrentNativeThreadInfo().thread_id;
-+  const uint32_t id = ::gtos::native::CurrentProcessIdentity().thread_id;
++  const auto owner = ::gtos::native::CurrentThreadSlot();
++  auto& cache = slot_cache[owner.index];
++  if (__atomic_load_n(&cache.id, __ATOMIC_ACQUIRE) == owner.thread_id)
++    return *cache.state;
++
    ContextGuard guard;
++  NativeThreadState* state = nullptr;
    NativeThreadState* vacant = nullptr;
-   for (auto& state : states) {
-@@ -53,7 +36,7 @@
-   return *vacant;
+-  for (auto& state : states) {
+-    if (state.id == id) return state;
+-    if (state.id == 0 && vacant == nullptr) vacant = &state;
++  for (auto& candidate : states) {
++    if (candidate.id == owner.thread_id) {
++      state = &candidate;
++      break;
++    }
++    if (candidate.id == 0 && vacant == nullptr) vacant = &candidate;
+   }
+-  if (vacant == nullptr) UnsupportedService();
+-  *vacant = {id, 0, nullptr, nullptr, false};
+-  return *vacant;
++  if (!state) {
++    if (!vacant) UnsupportedService();
++    *vacant = {owner.thread_id, 0, nullptr, nullptr, false};
++    state = vacant;
++  }
++  cache.state = state;
++  __atomic_store_n(&cache.id, owner.thread_id, __ATOMIC_RELEASE);
++  return *state;
  }
  void ReleaseNativeThreadState(NativeThreadState& state) {
 -  const uint32_t id = CurrentNativeThreadInfo().thread_id;
-+  const uint32_t id = ::gtos::native::CurrentProcessIdentity().thread_id;
++  const auto owner = ::gtos::native::CurrentThreadSlot();
++  auto& cache = slot_cache[owner.index];
    ContextGuard guard;
-   bool registered = false;
-   for (auto& candidate : states) if (&candidate == &state) registered = true;
+-  bool registered = false;
+-  for (auto& candidate : states) if (&candidate == &state) registered = true;
+-  if (!registered || state.id != id || state.tls_array != nullptr ||
+-      state.destructors != nullptr || state.cleaning) UnsupportedService();
++  if (__atomic_load_n(&cache.id, __ATOMIC_RELAXED) != owner.thread_id ||
++      cache.state != &state || state.id != owner.thread_id ||
++      state.tls_array != nullptr || state.destructors != nullptr || state.cleaning)
++    UnsupportedService();
++  __atomic_store_n(&cache.id, 0U, __ATOMIC_RELEASE);
++  cache.state = nullptr;
+   state = {};
+ }
+ } } }

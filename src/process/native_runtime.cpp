@@ -782,6 +782,11 @@ CPUState* NativeRuntime::HandleSyscall(CPUState* cpu) {
             ? 0 : (uint32_t)GTOS_SYSTEM_MEMORY_ERR_ADDRESS;
         break;
     }
+    case GTOS_SYS_THREAD_SLOT_IDENTITY:
+        cpu->ebx = (uint32_t)(thread - slots);
+        cpu->edx = thread->status.id;
+        cpu->eax = 0;
+        break;
     case GTOS_SYS_THREAD_SLOT_INFO: {
         if (cpu->ecx != sizeof(GtosThreadSlotRequest)) {
             cpu->eax = (uint32_t)GTOS_THREAD_SLOT_ERR_SIZE; break;

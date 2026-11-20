@@ -54,8 +54,8 @@ static const unsigned ExpectedChecks = 25;
 static const char* const CheckDescription = "guarded thread start, join and detach";
 #elif defined(GTOS_CONTENT_TLS_PROBE)
 #define CONTENT_BASE_PROBE "CONTENT BASE TLS"
-static const unsigned ExpectedChecks = 28;
-static const char* const CheckDescription = "isolated values and exit callbacks";
+static const unsigned ExpectedChecks = 31;
+static const char* const CheckDescription = "register and buffered slot identity, isolated values and exit callbacks";
 #else
 #define CONTENT_BASE_PROBE "CONTENT BASE IDENTITY"
 static const unsigned ExpectedChecks = 23;
