@@ -1,0 +1,68 @@
+--- a/content/browser/network_service_instance_impl.cc
++++ b/content/browser/network_service_instance_impl.cc
+@@ -37,8 +37,10 @@
+ #include "base/task/single_thread_task_runner.h"
+ #include "base/task/task_traits.h"
+ #include "base/task/thread_pool.h"
++#include "base/task/thread_pool/thread_pool_instance.h"
+ #include "base/threading/platform_thread_metrics.h"
+ #include "base/threading/scoped_thread_priority.h"
++#include "base/threading/sequence_bound.h"
+ #include "base/threading/sequence_local_storage_slot.h"
+ #include "base/threading/thread.h"
+ #include "base/threading/thread_checker.h"
+@@ -906,9 +908,33 @@
+   return service_factory_slot.GetOrCreateValue();
+ }
+ 
++#if BUILDFLAG(IS_GTOS)
++using BackgroundCertVerifierFactorySlot = base::SequenceLocalStorageSlot<
++    base::SequenceBound<cert_verifier::CertVerifierServiceFactoryImpl>>;
++
++BackgroundCertVerifierFactorySlot& GetBackgroundCertVerifierFactorySlot() {
++  static BackgroundCertVerifierFactorySlot slot;
++  return slot;
++}
++#endif
++
+ void RunInProcessCertVerifierServiceFactory(
+     mojo::PendingReceiver<cert_verifier::mojom::CertVerifierServiceFactory>
+         receiver) {
++#if BUILDFLAG(IS_GTOS)
++  if (!g_force_create_network_service_directly &&
++      base::ThreadPoolInstance::Get()) {
++    // Keep the Mojo watchers on a single thread. This lets certificate
++    // verification reply independently of a busy browser UI thread.
++    GetBackgroundCertVerifierFactorySlot().GetOrCreateValue().emplace(
++        base::ThreadPool::CreateSingleThreadTaskRunner(
++            {base::TaskPriority::USER_BLOCKING,
++             base::TaskShutdownBehavior::BLOCK_SHUTDOWN},
++            base::SingleThreadTaskRunnerThreadMode::DEDICATED),
++        std::move(receiver));
++    return;
++  }
++#endif
+   GetCertVerifierServiceFactoryImplStorage() =
+       std::make_unique<cert_verifier::CertVerifierServiceFactoryImpl>(
+           std::move(receiver));
+@@ -925,6 +951,20 @@
+ }
+ 
+ }  // namespace
++
++#if BUILDFLAG(IS_GTOS)
++void ShutDownInProcessCertVerifierServiceFactory() {
++  DCHECK_CURRENTLY_ON(BrowserThread::UI);
++  auto& slot = GetBackgroundCertVerifierFactorySlot();
++  if (!slot.GetValuePointer()) {
++    return;
++  }
++  GetCertVerifierServiceFactoryRemoteStorage().reset();
++  // SequenceBound posts destruction. ThreadPool shutdown drains this
++  // BLOCK_SHUTDOWN runner before the UI's sequence-local storage is destroyed.
++  slot.reset();
++}
++#endif
+ 
+ // Returns a pointer to a CertVerifierServiceFactory usable on the UI thread.
+ cert_verifier::mojom::CertVerifierServiceFactory*

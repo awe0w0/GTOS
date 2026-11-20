@@ -1,0 +1,12 @@
+--- a/content/browser/browser_main_loop.cc
++++ b/content/browser/browser_main_loop.cc
+@@ -1305,6 +1305,9 @@
+   }
+ 
+   GetContentClient()->browser()->ThreadPoolWillTerminate();
++#if BUILDFLAG(IS_GTOS)
++  ShutDownInProcessCertVerifierServiceFactory();
++#endif
+   {
+     TRACE_EVENT0("shutdown", "BrowserMainLoop::Subsystem:ThreadPool");
+     base::ThreadPoolInstance::Get()->Shutdown();
