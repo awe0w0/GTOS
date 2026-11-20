@@ -5,8 +5,10 @@
 #include "memory_record.h"
 
 #include <errno.h>
+#include <process/abi.h>
 #include <process/system_memory_abi.h>
 
+#include "build/config/gtos/include/process/vm_abi.h"
 #include "src/base/once.h"
 #include "src/base/page-allocator.h"
 #include "src/base/platform/gtos-native-services.h"
@@ -22,10 +24,19 @@ volatile gtos_perfetto_probe::Record native_memory_record = {1, 0, 0, 0, 0, 0, 0
 
 namespace {
 
-bool Check(bool value) {
+bool Check(bool value, unsigned line = __builtin_LINE()) {
   native_memory_record.checks = native_memory_record.checks + 1;
-  if (!value)
+  if (!value) {
     native_memory_record.failures = native_memory_record.failures + 1;
+    char message[] = "CONTENT V8 CHECK FAILED line=0000\n";
+    for (unsigned digit = 0; digit < 4; ++digit) {
+      message[sizeof(message) - 3 - digit] = '0' + line % 10;
+      line /= 10;
+    }
+    unsigned operation = GTOS_SYS_WRITE;
+    asm volatile("int $0x80" : "+a"(operation)
+                 : "b"(message), "c"(sizeof(message) - 1) : "memory", "cc");
+  }
   return value;
 }
 
@@ -37,7 +48,7 @@ using Permission = v8::PageAllocator::Permission;
 void TestPages(const GtosProcessInfoResult& process) {
   PageAllocator allocator;
   const size_t page = process.page_bytes;
-  Check(process.maximum_regions == 128);
+  Check(process.maximum_regions == GTOS_VM_CONTENT_REGION_LIMIT);
   Check(OS::GetCurrentProcessId() == static_cast<int>(process.process_id));
   Check(v8::base::Stack::GetCommittedStackLimit() == process.stack_begin);
   Check(allocator.AllocatePageSize() == page && allocator.CommitPageSize() == page);
