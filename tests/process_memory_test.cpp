@@ -1037,6 +1037,24 @@ namespace {
     uint64_t* paeDirectory(uint32_t root, uint32_t address) {
         return (uint64_t*)(uint32_t)(((uint64_t*)root)[address >> 30] & ~4095ULL);
     }
+    void destroyScrubsOwnedRuns() {
+        CHECK(first.Prepare(kernel, frames));
+        CHECK(first.MapNewRange(UserBase, 8192, true));
+        uint32_t held = 0;
+        CHECK(frames.allocate(held));
+        CHECK(first.MapNewPage(UserBase + 8192, true));
+        const uint32_t owned[] = {physical(first, UserBase), physical(first, UserBase + 4096),
+                                  physical(first, UserBase + 8192)};
+        CHECK(owned[1] == owned[0] + 4096);
+        CHECK(held == owned[1] + 4096 && owned[2] == held + 4096);
+        for (uint32_t address : owned) fill((uint8_t*)address, 4096, 0xA7);
+        fill((uint8_t*)held, 4096, 0x53);
+        CHECK(first.Seal() && first.Destroy());
+        for (uint32_t address : owned)
+            CHECK(frames.isFree(address) && all((uint8_t*)address, 4096, 0));
+        CHECK(used() == baseline + 1 && all((uint8_t*)held, 4096, 0x53));
+        CHECK(frames.free(held) && used() == baseline);
+    }
     void paeAddressSpaces() {
         PagingConfig config = {(uint32_t)&__executable_start, ((uint32_t)&_end + 4095) & ~4095u,
             (uint32_t)&__executable_start, (uint32_t)&__executable_start + 4096, &info, 0, 0};
@@ -1204,7 +1222,7 @@ extern "C" int processMemoryTests() {
     if (address != BufferAlias) { print("FAIL: mmap kernel buffer alias\n"); return 1; }
     diagnostics(); initialize(); preparationAndHardware(); allocatorIdentity(); templateRejections(); isolationAndCopies();
     corruptedMappings(); exhaustionAndAliases(); lifetimeAndLimits();
-    dynamicVirtualMemory(); paeAddressSpaces();
+    dynamicVirtualMemory(); destroyScrubsOwnedRuns(); paeAddressSpaces();
     print("Process memory tests: "); number(checks); print(" checks, "); number(failures); print(" failures\n");
     return failures ? 1 : 0;
 }

@@ -74,11 +74,21 @@ namespace {
         return !(address & 4095) && address >= ProcessAddressSpace::UserBase
             && address < ProcessAddressSpace::UserLimit;
     }
-    void ClearPage(uint32_t address) {
-        uint32_t* page = (uint32_t*)address;
-        uint32_t words = 4096 / sizeof(uint32_t);
-        asm volatile("cld; rep stosl" : "+D"(page), "+c"(words) : "a"(0) : "memory", "cc");
+    void ClearPages(uint32_t address, uint32_t count) {
+        volatile uint32_t* words = (volatile uint32_t*)address;
+        // Eight aligned stores per iteration without using a task's FP state.
+        for (uint32_t blocks = count * (4096 / (8 * sizeof(uint32_t))); blocks; --blocks, words += 8) {
+            words[0] = 0;
+            words[1] = 0;
+            words[2] = 0;
+            words[3] = 0;
+            words[4] = 0;
+            words[5] = 0;
+            words[6] = 0;
+            words[7] = 0;
+        }
     }
+    void ClearPage(uint32_t address) { ClearPages(address, 1); }
     void CopyCheckedBytes(uint8_t* destination, const uint8_t* source, uint32_t length) {
         if (length >= 512) {
             // The checked ranges are disjoint. Copy whole words within this
@@ -1237,10 +1247,25 @@ bool ProcessAddressSpace::Destroy() {
     // A sealed process is reclaimable ONLY after the runtime has removed all
     // references and switched CR3. This module cannot inspect scheduler queues.
     contentCopyLayoutValid = false;
-    for (uint32_t i = 0; i < pageCount; ++i) {
-        if (!SharesFrame(pages[i])) FreeDataFrame(pages[i].frameNumber);
-        pages[i].address = pages[i].frameNumber = pages[i].region = 0;
-        pages[i].writable = pages[i].present = false;
+    for (uint32_t i = 0; i < pageCount;) {
+        const uint32_t first = pages[i].frameNumber;
+        const bool shared = SharesFrame(pages[i]);
+        if (shared || HighFrame(first)) {
+            if (!shared) FreeDataFrame(first);
+            pages[i++] = {};
+            continue;
+        }
+
+        // Layout checked each owned frame and its writable kernel alias.
+        // Scrub an adjacent low-memory run before returning any of it.
+        uint32_t end = i + 1;
+        while (end < pageCount && pages[end].frameNumber == first + (end - i)
+               && !HighFrame(pages[end].frameNumber) && !SharesFrame(pages[end]))
+            ++end;
+        const uint32_t address = first << 12;
+        ClearPages(address, end - i);
+        frames->freeContiguous(address, end - i);
+        while (i < end) pages[i++] = {};
     }
     for (uint32_t& table : tables)
         if (table) { ClearPage(table); frames->free(table); table = 0; }
@@ -1249,7 +1274,7 @@ bool ProcessAddressSpace::Destroy() {
         inlineRegions[i] = {};
     regions = inlineRegions; regionLimit = MaximumRegions;
     if (metadataBase) {
-        for (uint32_t i = 0; i < metadataPages; ++i) ClearPage(metadataBase + i * 4096);
+        ClearPages(metadataBase, metadataPages);
         frames->freeContiguous(metadataBase, metadataPages);
         metadataBase = metadataPages = 0; pages = inlinePages; pageLimit = MaximumPages;
     }
