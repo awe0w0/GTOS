@@ -33,7 +33,7 @@ public:
 
 private:
     enum Phase { Free, Connecting, Established, Failed };
-    static const unsigned MSS = 536;
+    static const unsigned SendMssLimit = 536;
     // Allow a full TLS record to arrive while the application is off CPU.
     static const unsigned ReceiveBytes = 32 * 1024;
     struct Connection {
@@ -47,7 +47,7 @@ private:
         bool peerFinished, writeFinished;
         int handle, error;
         Phase phase;
-        uint8_t transmit[MSS];
+        uint8_t transmit[SendMssLimit];
         uint8_t receive[ReceiveBytes];
     };
 

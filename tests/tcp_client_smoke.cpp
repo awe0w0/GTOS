@@ -187,6 +187,7 @@ extern "C" void NativeProcessSmoke(void* boot, unsigned magic) {
     EtherFrameProvider link(&adapter);
     AddressResolutionProtocol arp(&link);
     InternetProtocolProvider ip(&link, &arp, 0, 0x00ffffff);
+    Require(ip.IsOnLink(FixtureIP) && !ip.IsOnLink(0x016433c6), "TCP distinguishes directly connected peers");
     TcpClient client(ip);
     Timer timer(interrupts);
     adapter.Activate();

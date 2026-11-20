@@ -69,12 +69,15 @@ bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t* etherframePayload, 
     return sendBack;
 }
 
+bool InternetProtocolProvider::IsOnLink(uint32_t address) const {
+    return (address & subnetMask) == (backend->GetIPAddress() & subnetMask);
+}
+
 void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t* data, uint32_t size) {
-    constexpr uint32_t mtu = 1500;
     auto* memory = MemoryManager::activeMemoryManager;
-    if (!memory || !arp || (size && !data) || size > mtu - sizeof(InternetProtocolV4Message)) return;
+    if (!memory || !arp || (size && !data) || size > LinkMtu - sizeof(InternetProtocolV4Message)) return;
     const uint32_t sourceIP = backend->GetIPAddress();
-    const uint32_t route = (dstIP_BE & subnetMask) == (sourceIP & subnetMask) ? dstIP_BE : gatewayIP;
+    const uint32_t route = IsOnLink(dstIP_BE) ? dstIP_BE : gatewayIP;
     uint64_t destinationMAC = 0;
     if (!arp->Resolve(route, destinationMAC)) return;
     //构建ipv4表头

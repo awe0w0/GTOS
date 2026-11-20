@@ -84,7 +84,7 @@ TcpClient::Connection* TcpClient::Find(int handle) {
 void TcpClient::SendSegment(const Connection& connection, uint32_t sequence, uint8_t flags,
                             const uint8_t* data, unsigned bytes) {
     const unsigned header = HeaderBytes + ((flags & Syn) ? 4 : 0);
-    uint8_t packet[HeaderBytes + 4 + MSS];
+    uint8_t packet[HeaderBytes + 4 + SendMssLimit];
     for (unsigned i = 0; i < header; ++i) packet[i] = 0;
     Write16(packet, connection.localPort);
     Write16(packet + 2, connection.remotePort);
@@ -96,7 +96,12 @@ void TcpClient::SendSegment(const Connection& connection, uint32_t sequence, uin
     if (flags & Syn) {
         packet[HeaderBytes] = 2;
         packet[HeaderBytes + 1] = 4;
-        Write16(packet + HeaderBytes + 2, MSS);
+        // On the directly connected Ethernet, receive a full frame's worth.
+        // Keep the IPv4 default on routes that may have a smaller path MTU.
+        const unsigned receiveMss = backend->IsOnLink(connection.remoteIP)
+            ? InternetProtocolProvider::LinkMtu - sizeof(InternetProtocolV4Message) - HeaderBytes
+            : SendMssLimit;
+        Write16(packet + HeaderBytes + 2, receiveMss);
     }
     for (unsigned i = 0; i < bytes; ++i) packet[header + i] = data[i];
     Write16(packet + 16, Checksum(backend->GetIPAddress(), connection.remoteIP, packet, header + bytes));
@@ -268,7 +273,7 @@ bool TcpClient::OnInternetProtocolReceived(uint32_t source, uint32_t destination
                 connection.error = Refused;
                 return false;
             }
-            uint16_t mss = MSS;
+            uint16_t mss = SendMssLimit;
             if (flags != (Syn | Ack) || payload || !ParseMss(packet + HeaderBytes, header - HeaderBytes, mss))
                 return false;
             connection.phase = Established;

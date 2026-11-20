@@ -51,9 +51,11 @@ namespace gtos {
             uint32_t subnetMask;
 
         public:
+            static constexpr uint32_t LinkMtu = 1500;
             InternetProtocolProvider(EtherFrameProvider* backend, AddressResolutionProtocol* arp, uint32_t gatewayIP, uint32_t subnetMask);
             ~InternetProtocolProvider();
 
+            bool IsOnLink(uint32_t address) const;
             virtual bool OnEtherFrameReceived(uint8_t* etherframePayload, uint32_t size);
             void Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t* buffer, uint32_t size);
             static uint16_t Checksum(const void* data, uint32_t lengthInBytes);
